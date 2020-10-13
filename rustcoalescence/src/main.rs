@@ -1,8 +1,11 @@
+#![deny(clippy::pedantic)]
+
+use anyhow::{Context, Result};
 use array2d::Array2D;
 use gdal::raster::{Buffer, Dataset};
 use structopt::StructOpt;
 
-use necsim::{simulate, InconsistentDispersalMapSize, Landscape};
+use necsim::{simulate, Landscape};
 
 /// Search for a pattern in a file and display the lines that contain it.
 #[derive(Debug, StructOpt)]
@@ -16,49 +19,77 @@ struct Cli {
     seed: u64,
 }
 
-fn load_array2d_from_gdal_raster<T: Copy + gdal::raster::types::GdalType>(
-    path: &std::path::PathBuf,
-) -> Array2D<T> {
-    let habitat_dataset = match Dataset::open(path) {
-        Ok(dataset) => dataset,
-        Err(_) => {
-            println!("Error: The map file '{:?}' could not be opened.", path);
-            std::process::abort()
-        }
-    };
+struct GdalError(gdal::errors::Error);
 
-    let habitat_data: Buffer<T> = match habitat_dataset.read_full_raster_as(1) {
-        Ok(data) => data,
-        Err(_) => {
-            println!("Error: The map file '{:?}' could not be read.", path);
-            std::process::abort()
-        }
-    };
-
-    Array2D::from_row_major(&habitat_data.data, habitat_data.size.0, habitat_data.size.1)
+impl std::fmt::Debug for GdalError {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&self.0, fmt)
+    }
 }
 
-fn main() {
+impl std::fmt::Display for GdalError {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self.0, fmt)
+    }
+}
+
+impl std::error::Error for GdalError {}
+
+fn load_array2d_from_gdal_raster<T: Copy + gdal::raster::types::GdalType>(
+    path: &std::path::PathBuf,
+) -> Result<Array2D<T>> {
+    let dataset = Dataset::open(path)
+        .map_err(GdalError)
+        .with_context(|| format!("The map file {:?} could not be opened.", path))?;
+
+    let data: Buffer<T> = dataset
+        .read_full_raster_as(1)
+        .map_err(GdalError)
+        .with_context(|| format!("The map file {:?} could not be read.", path))?;
+
+    Ok(Array2D::from_row_major(
+        &data.data,
+        data.size.1,
+        data.size.0,
+    ))
+}
+
+fn main() -> Result<()> {
     let args = Cli::from_args();
 
-    println!("Simulation args: {:?}", args);
+    println!("Simulation args: {:#?}", args);
 
-    let habitat: Array2D<u32> = load_array2d_from_gdal_raster(&args.habitat_map);
-    let dispersal: Array2D<f64> = load_array2d_from_gdal_raster(&args.dispersal_map);
+    let habitat: Array2D<u32> = load_array2d_from_gdal_raster(&args.habitat_map)
+        .context("Failed to load the habitat map")?;
 
-    let landscape = match Landscape::new(habitat, &dispersal) {
-        Ok(landscape) => landscape,
-        Err(InconsistentDispersalMapSize) => {
-            println!(
-                concat!(
-                    "Error: The size of the dispersal map '{:?}' is inconsistent ",
-                    "with the size of the habitat map '{:?}'."
-                ),
-                args.dispersal_map, args.habitat_map
-            );
-            std::process::abort()
-        }
-    };
+    println!(
+        "Successfully loaded the habitat map {:?} with dimensions {}x{} [cols x rows].",
+        args.habitat_map,
+        habitat.num_columns(),
+        habitat.num_rows()
+    );
+
+    let dispersal: Array2D<f64> = load_array2d_from_gdal_raster(&args.dispersal_map)
+        .context("Failed to load the dispersal map")?;
+
+    println!(
+        "Successfully loaded the dispersal map {:?} with dimensions {}x{} [cols x rows].",
+        args.dispersal_map,
+        dispersal.num_columns(),
+        dispersal.num_rows()
+    );
+
+    let landscape = Landscape::new(habitat, &dispersal).with_context(|| {
+        format!(
+            concat!(
+                "Failed to create a Landscape with the habitat ",
+                "map {:?} and the dispersal map {:?}."
+            ),
+            args.dispersal_map, args.habitat_map
+        )
+    })?;
+
+    println!("Starting the simulation ...");
 
     let biodiversity = simulate(
         args.speciation_probability_per_generation,
@@ -67,4 +98,6 @@ fn main() {
     );
 
     println!("Resulting biodiversity: {}", biodiversity);
+
+    Ok(())
 }

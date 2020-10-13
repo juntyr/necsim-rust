@@ -1,10 +1,9 @@
 #![deny(clippy::pedantic)]
 
-use std::cmp::Ordering;
-
-use rand::rngs::StdRng;
-
 use array2d::Array2D;
+use rand::rngs::StdRng;
+use std::cmp::Ordering;
+use thiserror::Error;
 
 trait RngCore {
     fn from_seed(seed: u64) -> Self;
@@ -69,7 +68,18 @@ pub fn simulate(
     let mut simulation: Simulation<StdRng> =
         Simulation::new(speciation_probability_per_generation, landscape, seed);
 
+    println!(
+        "Successfully initialised the simulation with {} lineages.",
+        simulation.lineages.len()
+    );
+
+    let mut steps: usize = 0;
+
+    let mut speciation_count: usize = 0;
+    let mut speciation_time_sum: f64 = 0.0_f64;
+
     while simulation.active_lineages.len() > 1 {
+        steps += 1;
         simulation.time += simulation.sample_delta_t();
 
         let chosen_lineage = simulation.choose_active_lineage();
@@ -77,9 +87,25 @@ pub fn simulate(
         if let Event::Speciation =
             simulation.choose_and_perform_event_for_active_lineage(chosen_lineage)
         {
+            speciation_count += 1;
+            speciation_time_sum += simulation.time;
+
             simulation.biodiversity += 1;
         }
     }
+
+    #[allow(clippy::cast_precision_loss)]
+    let average_inter_speciation_time = speciation_time_sum / (speciation_count as f64);
+
+    println!(
+        "The average inter-speciation-time was {}.",
+        average_inter_speciation_time
+    );
+
+    println!(
+        "{} generations were simulated in {} steps.",
+        simulation.time, steps
+    );
 
     simulation.biodiversity + 1
 }
@@ -87,12 +113,14 @@ pub fn simulate(
 impl<R: Rng> Simulation<R> {
     fn new(
         speciation_probability_per_generation: f64,
-        landscape: Landscape,
+        mut landscape: Landscape,
         seed: u64,
     ) -> Simulation<R> {
+        let lineages = landscape.fill_lineages();
+
         Simulation {
-            lineages: Vec::new(),
-            active_lineages: Vec::new(),
+            active_lineages: (0..lineages.len()).collect(),
+            lineages,
             time: 0.0_f64,
             speciation_probability_per_generation,
             biodiversity: 0,
@@ -186,6 +214,8 @@ pub struct Landscape {
     lineages: Array2D<Vec<usize>>,
 }
 
+#[derive(Error, Debug)]
+#[error("The size of the dispersal map was inconsistent with the size of the habitat map.")]
 pub struct InconsistentDispersalMapSize;
 
 impl Landscape {
@@ -224,6 +254,36 @@ impl Landscape {
             habitat,
             cumulative_dispersal,
         })
+    }
+
+    fn fill_lineages(&mut self) -> Vec<Lineage> {
+        let mut lineages = Vec::with_capacity(self.get_total_habitat() as usize);
+
+        for row_index in 0..self.habitat.num_rows() {
+            for col_index in 0..self.habitat.num_columns() {
+                #[allow(clippy::cast_possible_truncation)]
+                let pos = Position {
+                    x: col_index as u32,
+                    y: row_index as u32,
+                };
+
+                let lineages_at_pos = &mut self.lineages[(row_index, col_index)];
+
+                for lin_index in 0..self.habitat[(row_index, col_index)] {
+                    lineages_at_pos.push(lineages.len());
+                    lineages.push(Lineage {
+                        pos: pos.clone(),
+                        index: lin_index as usize,
+                    });
+                }
+            }
+        }
+
+        lineages
+    }
+
+    fn get_total_habitat(&self) -> u32 {
+        self.habitat.elements_row_major_iter().sum()
     }
 
     fn sample_dispersal_from_position(&self, rng: &mut impl Rng, pos: &Position) -> Position {
