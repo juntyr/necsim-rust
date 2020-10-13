@@ -1,0 +1,22 @@
+#[derive(Eq, PartialEq, Clone)]
+pub struct Location {
+    x: u32,
+    y: u32,
+}
+
+impl Location {
+    #[must_use]
+    pub fn new(x: u32, y: u32) -> Self {
+        Self { x, y }
+    }
+
+    #[must_use]
+    pub fn x(&self) -> u32 {
+        self.x
+    }
+
+    #[must_use]
+    pub fn y(&self) -> u32 {
+        self.y
+    }
+}
