@@ -3,24 +3,71 @@
 use std::cmp::Ordering;
 
 use rand::rngs::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
 
 use array2d::Array2D;
 
-struct Simulation {
+trait RngCore {
+    fn from_seed(seed: u64) -> Self;
+
+    fn sample_uniform(&mut self) -> f64;
+}
+
+trait Rng: RngCore {
+    fn sample_index(&mut self, length: usize) -> usize {
+        // attributes on expressions are experimental
+        // note: see issue #15701 <https://github.com/rust-lang/rust/issues/15701> for more information
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
+        let index = (self.sample_uniform() * (length as f64)).floor() as usize;
+        index
+    }
+
+    fn sample_exponential(&mut self, lambda: f64) -> f64 {
+        -self.sample_uniform().ln() / lambda
+    }
+
+    fn sample_event(&mut self, probability: f64) -> bool {
+        self.sample_uniform() < probability
+    }
+}
+
+impl<T: RngCore> Rng for T {}
+
+impl RngCore for StdRng {
+    fn from_seed(seed: u64) -> Self {
+        use rand::SeedableRng;
+
+        StdRng::seed_from_u64(seed)
+    }
+
+    fn sample_uniform(&mut self) -> f64 {
+        use rand::Rng;
+
+        self.gen_range(0.0_f64, 1.0_f64)
+    }
+}
+
+struct Simulation<R: RngCore> {
     lineages: Vec<Lineage>,
     active_lineages: Vec<usize>,
     time: f64,
-    speciation_rate: f64,
+    speciation_probability_per_generation: f64,
     biodiversity: usize,
     landscape: Landscape,
-    rng: StdRng,
+    rng: R,
 }
 
 #[must_use]
-pub fn simulate(speciation_rate: f64, landscape: Landscape, seed: u64) -> usize {
-    let mut simulation = Simulation::new(speciation_rate, landscape, seed);
+pub fn simulate(
+    speciation_probability_per_generation: f64,
+    landscape: Landscape,
+    seed: u64,
+) -> usize {
+    let mut simulation: Simulation<StdRng> =
+        Simulation::new(speciation_probability_per_generation, landscape, seed);
 
     while simulation.active_lineages.len() > 1 {
         simulation.time += simulation.sample_delta_t();
@@ -37,16 +84,20 @@ pub fn simulate(speciation_rate: f64, landscape: Landscape, seed: u64) -> usize 
     simulation.biodiversity + 1
 }
 
-impl Simulation {
-    fn new(speciation_rate: f64, landscape: Landscape, seed: u64) -> Simulation {
+impl<R: Rng> Simulation<R> {
+    fn new(
+        speciation_probability_per_generation: f64,
+        landscape: Landscape,
+        seed: u64,
+    ) -> Simulation<R> {
         Simulation {
             lineages: Vec::new(),
             active_lineages: Vec::new(),
             time: 0.0_f64,
-            speciation_rate,
+            speciation_probability_per_generation,
             biodiversity: 0,
             landscape,
-            rng: StdRng::seed_from_u64(seed),
+            rng: R::from_seed(seed),
         }
     }
 
@@ -54,11 +105,11 @@ impl Simulation {
         #[allow(clippy::cast_precision_loss)]
         let lambda = 0.5_f64 * (self.active_lineages.len() as f64);
 
-        self.rng.gen_range(0.0_f64, 1.0_f64).ln() / lambda
+        self.rng.sample_exponential(lambda)
     }
 
     fn choose_active_lineage(&mut self) -> usize {
-        self.rng.gen_range(0, self.active_lineages.len())
+        self.rng.sample_index(self.active_lineages.len())
     }
 
     fn drop_active_lineage(&mut self, active_lineage: usize) {
@@ -75,7 +126,10 @@ impl Simulation {
         self.landscape
             .remove_lineage(&mut self.lineages, lineage_reference);
 
-        if self.rng.gen_range(0.0, 1.0) < self.speciation_rate {
+        if self
+            .rng
+            .sample_event(self.speciation_probability_per_generation)
+        {
             self.drop_active_lineage(active_lineage);
 
             return Event::Speciation;
@@ -127,7 +181,7 @@ enum Event {
 }
 
 pub struct Landscape {
-    habitat: Array2D<usize>,
+    habitat: Array2D<u32>,
     cumulative_dispersal: Vec<f64>,
     lineages: Array2D<Vec<usize>>,
 }
@@ -143,7 +197,7 @@ impl Landscape {
     /// `dispersal` are not `ExE` given `E=RxC` where `habitat` has dimension
     /// `RxC`.
     pub fn new(
-        habitat: Array2D<usize>,
+        habitat: Array2D<u32>,
         dispersal: &Array2D<f64>,
     ) -> Result<Landscape, InconsistentDispersalMapSize> {
         if dispersal.num_rows() != habitat.num_elements()
@@ -173,9 +227,9 @@ impl Landscape {
     }
 
     fn sample_dispersal_from_position(&self, rng: &mut impl Rng, pos: &Position) -> Position {
-        let sample = rng.gen_range(0.0, 1.0);
+        let sample = rng.sample_uniform();
 
-        let pos_index = pos.y * self.habitat.row_len() + pos.x;
+        let pos_index = (pos.y as usize) * self.habitat.row_len() + (pos.x as usize);
 
         let cumulative_dispersals_at_pos = &self.cumulative_dispersal[pos_index
             * self.habitat.num_elements()
@@ -187,19 +241,20 @@ impl Landscape {
             Ok(index) | Err(index) => index,
         };
 
+        #[allow(clippy::cast_possible_truncation)]
         Position {
-            y: dispersal_target_index / self.habitat.row_len(),
-            x: dispersal_target_index % self.habitat.row_len(),
+            y: (dispersal_target_index / self.habitat.row_len()) as u32,
+            x: (dispersal_target_index % self.habitat.row_len()) as u32,
         }
     }
 
     fn add_lineage(&mut self, lineages: &mut Vec<Lineage>, lineage_reference: usize) {
         let lineage = &lineages[lineage_reference];
-        let position = (lineage.pos.y, lineage.pos.x);
+        let position = (lineage.pos.y as usize, lineage.pos.x as usize);
 
         let lineages_at_pos = &mut self.lineages[position];
 
-        assert!(lineages_at_pos.len() < self.habitat[position]);
+        assert!(lineages_at_pos.len() < (self.habitat[position] as usize));
 
         lineages_at_pos.push(lineage_reference);
         lineages[lineage_reference].index = lineages_at_pos.len();
@@ -207,7 +262,7 @@ impl Landscape {
 
     fn remove_lineage(&mut self, lineages: &mut Vec<Lineage>, lineage_reference: usize) {
         let lineage = &lineages[lineage_reference];
-        let position = (lineage.pos.y, lineage.pos.x);
+        let position = (lineage.pos.y as usize, lineage.pos.x as usize);
 
         let lineages_at_pos = &mut self.lineages[position];
 
@@ -219,11 +274,11 @@ impl Landscape {
     }
 
     fn get_number_active_lineages_at_position(&self, pos: &Position) -> usize {
-        self.lineages[(pos.y, pos.x)].len()
+        self.lineages[(pos.y as usize, pos.x as usize)].len()
     }
 
     fn get_habitat_at_position(&self, pos: &Position) -> usize {
-        self.habitat[(pos.y, pos.x)]
+        self.habitat[(pos.y as usize, pos.x as usize)] as usize
     }
 
     fn sample_optional_coalescence_lineage_at_position(
@@ -234,13 +289,13 @@ impl Landscape {
         let habitat = self.get_habitat_at_position(pos);
         let population = self.get_number_active_lineages_at_position(pos);
 
-        let chosen_coalescence = rng.gen_range(0, habitat);
+        let chosen_coalescence = rng.sample_index(habitat);
 
         if chosen_coalescence >= population {
             return None;
         }
 
-        Some(self.lineages[(pos.y, pos.x)][chosen_coalescence])
+        Some(self.lineages[(pos.y as usize, pos.x as usize)][chosen_coalescence])
     }
 }
 
@@ -251,6 +306,6 @@ struct Lineage {
 
 #[derive(Eq, PartialEq, Clone)]
 struct Position {
-    x: usize,
-    y: usize,
+    x: u32,
+    y: u32,
 }
