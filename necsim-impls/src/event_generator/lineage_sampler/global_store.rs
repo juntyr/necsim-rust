@@ -101,10 +101,13 @@ impl GlobalLineageStore {
             if chosen_active_lineage_index == self.active_lineage_references.len() {
                 last_active_lineage_reference
             } else {
+                let chosen_lineage_reference =
+                    self.active_lineage_references[chosen_active_lineage_index];
+
                 self.active_lineage_references[chosen_active_lineage_index] =
                     last_active_lineage_reference;
 
-                self.active_lineage_references[chosen_active_lineage_index]
+                chosen_lineage_reference
             };
 
         self.remove_lineage_from_its_location(chosen_lineage_reference);
