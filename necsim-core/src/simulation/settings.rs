@@ -1,5 +1,6 @@
 use crate::landscape::Landscape;
 
+#[allow(clippy::module_name_repetitions)]
 pub struct SimulationSettings<L: Landscape> {
     speciation_probability_per_generation: f64,
     landscape: L,

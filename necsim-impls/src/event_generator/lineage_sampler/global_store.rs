@@ -2,20 +2,20 @@ use std::ops::Index;
 
 use array2d::Array2D;
 
-use super::{Lineage, LineageReference};
+use necsim_core::landscape::{Landscape, Location};
+use necsim_core::lineage::Lineage;
+use necsim_core::rng::Rng;
 
-use crate::{
-    landscape::{Landscape, Location},
-    rng,
-};
+#[derive(Copy, Clone)]
+pub struct LineageReference(usize);
 
-pub struct SimulationLineages {
+pub struct GlobalLineageStore {
     lineages_store: Vec<Lineage>,
     active_lineage_references: Vec<LineageReference>,
     location_to_lineage_references: Array2D<Vec<LineageReference>>,
 }
 
-impl SimulationLineages {
+impl GlobalLineageStore {
     #[must_use]
     pub fn new(landscape: &impl Landscape) -> Self {
         let mut lineages_store = Vec::with_capacity(landscape.get_total_habitat() as usize);
@@ -36,16 +36,14 @@ impl SimulationLineages {
                     &mut location_to_lineage_references[(y as usize, x as usize)];
 
                 for index_at_location in 0..landscape.get_habitat_at_location(&location) {
-                    lineages_at_location.push(LineageReference::new(lineages_store.len()));
+                    lineages_at_location.push(LineageReference(lineages_store.len()));
                     lineages_store.push(Lineage::new(location.clone(), index_at_location as usize));
                 }
             }
         }
 
         Self {
-            active_lineage_references: (0..lineages_store.len())
-                .map(LineageReference::new)
-                .collect(),
+            active_lineage_references: (0..lineages_store.len()).map(LineageReference).collect(),
             lineages_store,
             location_to_lineage_references,
         }
@@ -59,7 +57,9 @@ impl SimulationLineages {
 
         lineages_at_location.push(reference);
 
-        self.lineages_store[reference.0].move_to_location(location, lineages_at_location.len());
+        unsafe {
+            self.lineages_store[reference.0].move_to_location(location, lineages_at_location.len())
+        };
     }
 
     fn remove_lineage_from_its_location(&mut self, reference: LineageReference) {
@@ -76,8 +76,10 @@ impl SimulationLineages {
             if lineage_index_at_location < lineages_at_location.len() {
                 lineages_at_location[lineage_index_at_location] = last_lineage_at_location;
 
-                self.lineages_store[last_lineage_at_location.0]
-                    .update_index_at_location(lineage_index_at_location);
+                unsafe {
+                    self.lineages_store[last_lineage_at_location.0]
+                        .update_index_at_location(lineage_index_at_location)
+                };
             }
         }
     }
@@ -85,7 +87,7 @@ impl SimulationLineages {
     #[must_use]
     pub fn pop_random_active_lineage_reference(
         &mut self,
-        rng: &mut impl rng::Rng,
+        rng: &mut impl Rng,
     ) -> Option<LineageReference> {
         let last_active_lineage_reference = match self.active_lineage_references.pop() {
             Some(reference) => reference,
@@ -130,7 +132,7 @@ impl SimulationLineages {
         &self,
         location: &Location,
         habitat: u32,
-        rng: &mut impl rng::Rng,
+        rng: &mut impl Rng,
     ) -> Option<LineageReference> {
         let population = self.get_number_active_lineages_at_location(location);
 
@@ -152,7 +154,7 @@ impl SimulationLineages {
     }
 }
 
-impl Index<LineageReference> for SimulationLineages {
+impl Index<LineageReference> for GlobalLineageStore {
     type Output = Lineage;
 
     #[must_use]
