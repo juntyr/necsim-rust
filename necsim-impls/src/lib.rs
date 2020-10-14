@@ -1,5 +1,5 @@
 #![deny(clippy::pedantic)]
 
+pub mod event_generator;
 pub mod landscape;
-pub mod rng;
-pub mod simulation;
+pub mod reporter;

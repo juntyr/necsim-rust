@@ -4,9 +4,7 @@ mod location;
 pub use extent::LandscapeExtent;
 pub use location::Location;
 
-pub mod impls;
-
-use crate::rng;
+use crate::rng::Rng;
 
 pub trait Landscape {
     #[must_use]
@@ -18,9 +16,5 @@ pub trait Landscape {
     fn get_habitat_at_location(&self, location: &Location) -> u32;
 
     #[must_use]
-    fn sample_dispersal_from_location(
-        &self,
-        location: &Location,
-        rng: &mut impl rng::Rng,
-    ) -> Location;
+    fn sample_dispersal_from_location(&self, location: &Location, rng: &mut impl Rng) -> Location;
 }
