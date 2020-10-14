@@ -15,7 +15,7 @@ impl Reporter for NullReporter {
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ReporterGroup<'r> {
-    reporters: &'r mut [Box<dyn Reporter>],
+    reporters: &'r mut [&'r mut dyn Reporter],
 }
 
 impl<'r> Reporter for ReporterGroup<'r> {
@@ -27,7 +27,7 @@ impl<'r> Reporter for ReporterGroup<'r> {
 }
 
 impl<'r> ReporterGroup<'r> {
-    pub fn new(reporters: &'r mut [Box<dyn Reporter>]) -> Self {
+    pub fn new(reporters: &'r mut [&'r mut dyn Reporter]) -> Self {
         Self { reporters }
     }
 }

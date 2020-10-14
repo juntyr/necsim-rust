@@ -8,7 +8,9 @@ mod gdal;
 mod stdrng;
 
 use necsim_classical::ClassicalSimulation;
+use necsim_core::reporter::{Reporter, ReporterGroup};
 use necsim_impls::reporter::biodiversity::BiodiversityReporter;
+use necsim_impls::reporter::events::EventReporter;
 
 use self::gdal::load_map_from_gdal_raster;
 use stdrng::NewStdRng;
@@ -57,6 +59,13 @@ fn main() -> Result<()> {
 
     let mut rng = NewStdRng::from_seed(args.seed);
     let mut biodiversity_reporter = BiodiversityReporter::default();
+    let mut event_reporter = EventReporter::default();
+
+    let mut reporter_group = vec![
+        &mut biodiversity_reporter as &mut dyn Reporter,
+        &mut event_reporter,
+    ];
+    let mut reporter_group = ReporterGroup::new(&mut reporter_group);
 
     println!("Setting up the classical coalescence algorithm ...");
 
@@ -67,7 +76,7 @@ fn main() -> Result<()> {
         &args.dispersal_map,
         args.speciation_probability_per_generation,
         &mut rng,
-        &mut biodiversity_reporter,
+        &mut reporter_group,
     )?;
 
     println!("Simulation finished after {} ({} steps).", time, steps);
@@ -75,6 +84,7 @@ fn main() -> Result<()> {
         "Simulation resulted with biodiversity of {} unique species.",
         biodiversity_reporter.biodiversity()
     );
+    event_reporter.report();
 
     Ok(())
 }

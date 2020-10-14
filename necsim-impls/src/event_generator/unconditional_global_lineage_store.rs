@@ -26,13 +26,14 @@ impl EventGenerator for GlobalLineageStoreUnconditionalEventGenerator {
                 None => return None,
             };
 
-        let event_time = time + self.sample_delta_time(rng);
-
         if self.lineage_store.number_active_lineages() == 0 {
             // Early stop iff only one active lineage remains
+            let event_time = time + Self::sample_final_speciation_delta_time(settings, rng);
+
             return Some(Event::new(event_time, EventType::Speciation));
         }
 
+        let event_time = time + self.sample_delta_time(rng);
         let event_location = self.lineage_store[chosen_active_lineage_reference].location();
 
         let event_type_no_coalescence =
@@ -57,11 +58,20 @@ impl EventGenerator for GlobalLineageStoreUnconditionalEventGenerator {
 
                 if optional_coalescence.is_none() {
                     // Apply the move to the chosen lineage
+
+                    // TODO: assert success of dispersal in debug mode
+                    //let pre = self.lineage_store.get_number_active_lineages_at_location(&dispersal_target);
+
                     self.lineage_store
                         .push_active_lineage_reference_at_location(
                             chosen_active_lineage_reference,
                             dispersal_target.clone(),
                         );
+
+                    //let post = self.lineage_store.get_number_active_lineages_at_location(&dispersal_target);
+
+                    //assert_eq!(post, pre + 1);
+                    //assert_eq!(self.lineage_store[chosen_active_lineage_reference].location(), &dispersal_target);
                 }
 
                 EventType::Dispersal {
@@ -89,5 +99,12 @@ impl GlobalLineageStoreUnconditionalEventGenerator {
         let lambda = 0.5_f64 * (self.lineage_store.number_active_lineages() + 1) as f64;
 
         rng.sample_exponential(lambda)
+    }
+
+    fn sample_final_speciation_delta_time(
+        settings: &SimulationSettings<impl Landscape>,
+        rng: &mut impl Rng,
+    ) -> f64 {
+        rng.sample_exponential(0.5_f64 * settings.speciation_probability_per_generation())
     }
 }
