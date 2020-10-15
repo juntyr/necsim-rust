@@ -14,20 +14,37 @@ impl Reporter for NullReporter {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct ReporterGroup<'r> {
-    reporters: &'r mut [&'r mut dyn Reporter],
+pub struct ReporterCombinator<'r, L: Reporter, R: Reporter> {
+    first: &'r mut L,
+    second: R,
 }
 
-impl<'r> Reporter for ReporterGroup<'r> {
+impl<'r, L: Reporter, R: Reporter> Reporter for ReporterCombinator<'r, L, R> {
+    #[inline]
     fn report_event(&mut self, event: &Event) {
-        self.reporters
-            .iter_mut()
-            .for_each(|reporter| reporter.report_event(event))
+        self.first.report_event(event);
+        self.second.report_event(event);
     }
 }
 
-impl<'r> ReporterGroup<'r> {
-    pub fn new(reporters: &'r mut [&'r mut dyn Reporter]) -> Self {
-        Self { reporters }
+impl<'r, L: Reporter, R: Reporter> ReporterCombinator<'r, L, R> {
+    #[must_use]
+    pub fn new(first: &'r mut L, second: R) -> Self {
+        Self { first, second }
+    }
+}
+
+#[macro_export]
+macro_rules! ReporterGroup {
+    () => {
+        necsim_core::reporter::NullReporter
+    };
+    ($first_reporter:ident $(,$reporter_tail:ident)*) => {
+        {
+            necsim_core::reporter::ReporterCombinator::new(
+                &mut $first_reporter,
+                ReporterGroup![$($reporter_tail),*]
+            )
+        }
     }
 }
