@@ -5,6 +5,7 @@ use array2d::Array2D;
 use necsim_core::landscape::{Landscape, Location};
 use necsim_core::lineage::Lineage;
 use necsim_core::rng::Rng;
+use necsim_core::simulation::SimulationSettings;
 
 #[derive(Copy, Clone)]
 pub struct LineageReference(usize);
@@ -17,8 +18,16 @@ pub struct GlobalLineageStore {
 
 impl GlobalLineageStore {
     #[must_use]
-    pub fn new(landscape: &impl Landscape) -> Self {
-        let mut lineages_store = Vec::with_capacity(landscape.get_total_habitat() as usize);
+    pub fn new(settings: &SimulationSettings<impl Landscape>, rng: &mut impl Rng) -> Self {
+        let landscape = settings.landscape();
+        let sample_percentage = settings.sample_percentage();
+
+        #[allow(clippy::cast_possible_truncation)]
+        #[allow(clippy::cast_sign_loss)]
+        #[allow(clippy::cast_lossless)]
+        let mut lineages_store = Vec::with_capacity(
+            ((landscape.get_total_habitat() as f64) * sample_percentage) as usize,
+        );
 
         let landscape_extent = landscape.get_extent();
 
@@ -36,11 +45,18 @@ impl GlobalLineageStore {
                     &mut location_to_lineage_references[(y as usize, x as usize)];
 
                 for index_at_location in 0..landscape.get_habitat_at_location(&location) {
-                    lineages_at_location.push(LineageReference(lineages_store.len()));
-                    lineages_store.push(Lineage::new(location.clone(), index_at_location as usize));
+                    if (sample_percentage - 1.0_f64).abs() < f64::EPSILON
+                        || rng.sample_event(sample_percentage)
+                    {
+                        lineages_at_location.push(LineageReference(lineages_store.len()));
+                        lineages_store
+                            .push(Lineage::new(location.clone(), index_at_location as usize));
+                    }
                 }
             }
         }
+
+        lineages_store.shrink_to_fit();
 
         Self {
             active_lineage_references: (0..lineages_store.len()).map(LineageReference).collect(),

@@ -59,6 +59,19 @@ impl EventReporter {
     pub fn report(self) {
         println!("{:=^80}", " Event Summary ");
 
+        println!(
+            "Total #species:\n\t{}",
+            self.speciation + self.self_coalescence + self.out_coalescence
+        );
+        println!(
+            "Total #events:\n\t{}",
+            self.speciation
+                + self.self_coalescence
+                + self.out_coalescence
+                + self.self_dispersal
+                + self.out_dispersal
+        );
+
         println!("Speciation:\n\t{}", self.speciation);
         println!(
             "Dispersal outside cell without coalescence:\n\t{}",

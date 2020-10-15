@@ -11,6 +11,7 @@ use necsim_classical::ClassicalSimulation;
 use necsim_core::reporter::{Reporter, ReporterGroup};
 use necsim_impls::reporter::biodiversity::BiodiversityReporter;
 use necsim_impls::reporter::events::EventReporter;
+use necsim_impls::reporter::execution_time::ExecutionTimeReporter;
 
 use self::gdal::load_map_from_gdal_raster;
 use stdrng::NewStdRng;
@@ -22,7 +23,7 @@ struct CommandLineArguments {
     #[structopt(parse(from_os_str))]
     dispersal_map: std::path::PathBuf,
     speciation_probability_per_generation: f64,
-    //sample_percentage: f64, // TODO: Check [0; 1]
+    sample_percentage: f64,
     seed: u64,
 }
 
@@ -34,7 +35,12 @@ fn main() -> Result<()> {
     anyhow::ensure!(
         args.speciation_probability_per_generation > 0.0_f64
             && args.speciation_probability_per_generation <= 1.0_f64,
-        "The speciation probability per generation must be in range [0; 1)."
+        "The speciation probability per generation must be in range 0 < s <= 1."
+    );
+
+    anyhow::ensure!(
+        args.sample_percentage >= 0.0_f64 && args.sample_percentage <= 1.0_f64,
+        "The sampling percentage must be in range 0 <= s <= 1."
     );
 
     let habitat: Array2D<u32> =
@@ -60,10 +66,12 @@ fn main() -> Result<()> {
     let mut rng = NewStdRng::from_seed(args.seed);
     let mut biodiversity_reporter = BiodiversityReporter::default();
     let mut event_reporter = EventReporter::default();
+    let mut execution_time_reporter = ExecutionTimeReporter::default();
 
     let mut reporter_group = vec![
         &mut biodiversity_reporter as &mut dyn Reporter,
         &mut event_reporter,
+        &mut execution_time_reporter,
     ];
     let mut reporter_group = ReporterGroup::new(&mut reporter_group);
 
@@ -71,20 +79,35 @@ fn main() -> Result<()> {
 
     let (time, steps) = ClassicalSimulation::simulate(
         habitat,
-        &args.habitat_map,
         &dispersal,
-        &args.dispersal_map,
         args.speciation_probability_per_generation,
+        args.sample_percentage,
         &mut rng,
         &mut reporter_group,
-    )?;
+    )
+    .with_context(|| {
+        format!(
+            concat!(
+                "Failed to create a Landscape with the habitat ",
+                "map {:?} and the dispersal map {:?}."
+            ),
+            args.dispersal_map, args.habitat_map
+        )
+    })?;
 
+    let execution_time = execution_time_reporter.execution_time();
+
+    event_reporter.report();
+
+    println!(
+        "The simulation took {}s to execute.",
+        execution_time.as_secs_f32()
+    );
     println!("Simulation finished after {} ({} steps).", time, steps);
     println!(
         "Simulation resulted with biodiversity of {} unique species.",
         biodiversity_reporter.biodiversity()
     );
-    event_reporter.report();
 
     Ok(())
 }

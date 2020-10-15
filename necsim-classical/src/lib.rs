@@ -1,8 +1,6 @@
 #![deny(clippy::pedantic)]
 
-use std::path::PathBuf;
-
-use anyhow::{Context, Result};
+use anyhow::Result;
 use array2d::Array2D;
 
 use necsim_core::reporter::Reporter;
@@ -24,30 +22,24 @@ impl ClassicalSimulation {
     /// `RxC`.
     pub fn simulate(
         habitat: Array2D<u32>,
-        habitat_map: &PathBuf,
         dispersal: &Array2D<f64>,
-        dispersal_map: &PathBuf,
         speciation_probability_per_generation: f64,
+        sample_percentage: f64,
         rng: &mut impl Rng,
         reporter: &mut impl Reporter,
     ) -> Result<(f64, usize)> {
         let landscape =
-            LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal::new(habitat, &dispersal)
-                .with_context(|| {
-                    format!(
-                        concat!(
-                            "Failed to create a Landscape with the habitat ",
-                            "map {:?} and the dispersal map {:?}."
-                        ),
-                        dispersal_map, habitat_map
-                    )
-                })?;
+            LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal::new(habitat, &dispersal)?;
 
-        let settings = SimulationSettings::new(speciation_probability_per_generation, landscape);
+        let settings = SimulationSettings::new(
+            speciation_probability_per_generation,
+            sample_percentage,
+            landscape,
+        );
 
         let (time, steps) = Simulation::simulate(
             &settings,
-            GlobalLineageStoreUnconditionalEventGenerator::new(settings.landscape()),
+            GlobalLineageStoreUnconditionalEventGenerator::new(&settings, rng),
             rng,
             reporter,
         );
