@@ -87,10 +87,10 @@ impl EventGenerator for GlobalLineageStoreUnconditionalEventGenerator {
 }
 
 impl GlobalLineageStoreUnconditionalEventGenerator {
-    pub fn new(landscape: &impl Landscape) -> Self {
+    pub fn new(settings: &SimulationSettings<impl Landscape>, rng: &mut impl Rng) -> Self {
         Self {
             event_type_sampler: UnconditionalNoCoalescenceEventTypeSampler,
-            lineage_store: GlobalLineageStore::new(landscape),
+            lineage_store: GlobalLineageStore::new(settings, rng),
         }
     }
 
