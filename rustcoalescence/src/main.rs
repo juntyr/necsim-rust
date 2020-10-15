@@ -8,7 +8,8 @@ mod gdal;
 mod stdrng;
 
 use necsim_classical::ClassicalSimulation;
-use necsim_core::reporter::{Reporter, ReporterGroup};
+#[macro_use]
+extern crate necsim_core;
 use necsim_impls::reporter::biodiversity::BiodiversityReporter;
 use necsim_impls::reporter::events::EventReporter;
 use necsim_impls::reporter::execution_time::ExecutionTimeReporter;
@@ -68,12 +69,11 @@ fn main() -> Result<()> {
     let mut event_reporter = EventReporter::default();
     let mut execution_time_reporter = ExecutionTimeReporter::default();
 
-    let mut reporter_group = vec![
-        &mut biodiversity_reporter as &mut dyn Reporter,
-        &mut event_reporter,
-        &mut execution_time_reporter,
+    let mut reporter_group = ReporterGroup![
+        biodiversity_reporter,
+        event_reporter,
+        execution_time_reporter
     ];
-    let mut reporter_group = ReporterGroup::new(&mut reporter_group);
 
     println!("Setting up the classical coalescence algorithm ...");
 
