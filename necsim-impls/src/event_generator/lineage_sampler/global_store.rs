@@ -2,7 +2,7 @@ use std::ops::Index;
 
 use array2d::Array2D;
 
-use necsim_core::landscape::{Landscape, Location};
+use necsim_core::landscape::{Landscape, LandscapeExtent, Location};
 use necsim_core::lineage::Lineage;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::SimulationSettings;
@@ -13,6 +13,7 @@ pub struct LineageReference(usize);
 impl necsim_core::lineage::LineageReference for LineageReference {}
 
 pub struct GlobalLineageStore {
+    landscape_extent: LandscapeExtent,
     lineages_store: Vec<Lineage>,
     active_lineage_references: Vec<LineageReference>,
     location_to_lineage_references: Array2D<Vec<LineageReference>>,
@@ -20,6 +21,15 @@ pub struct GlobalLineageStore {
 
 impl GlobalLineageStore {
     #[must_use]
+    #[allow(clippy::float_cmp)]
+    #[debug_ensures(ret.landscape_extent == settings.landscape().get_extent())]
+    #[debug_ensures(if settings.sample_percentage() == 0.0_f64 {
+        ret.number_active_lineages() == 0
+    } else if settings.sample_percentage() == 1.0_f64 {
+        ret.number_active_lineages() == settings.landscape().get_total_habitat()
+    } else {
+        true
+    })]
     pub fn new(settings: &SimulationSettings<impl Landscape>, rng: &mut impl Rng) -> Self {
         let landscape = settings.landscape();
         let sample_percentage = settings.sample_percentage();
@@ -40,12 +50,15 @@ impl GlobalLineageStore {
             landscape_extent.width() as usize,
         );
 
-        for y in landscape_extent.y()..(landscape_extent.y() + landscape_extent.height()) {
-            for x in landscape_extent.x()..(landscape_extent.x() + landscape_extent.width()) {
-                let location = Location::new(x, y);
+        let x_from = landscape_extent.x();
+        let y_from = landscape_extent.y();
+
+        for y_offset in 0..landscape_extent.height() {
+            for x_offset in 0..landscape_extent.width() {
+                let location = Location::new(x_from + x_offset, y_from + y_offset);
 
                 let lineages_at_location =
-                    &mut location_to_lineage_references[(y as usize, x as usize)];
+                    &mut location_to_lineage_references[(y_offset as usize, x_offset as usize)];
 
                 for index_at_location in 0..landscape.get_habitat_at_location(&location) {
                     if (sample_percentage - 1.0_f64).abs() < f64::EPSILON
@@ -62,31 +75,67 @@ impl GlobalLineageStore {
         lineages_store.shrink_to_fit();
 
         Self {
+            landscape_extent,
             active_lineage_references: (0..lineages_store.len()).map(LineageReference).collect(),
             lineages_store,
             location_to_lineage_references,
         }
     }
 
+    #[debug_requires(reference.0 < self.lineages_store.len())]
+    #[debug_requires(
+        location.x() >= self.landscape_extent.x() &&
+        location.x() < self.landscape_extent.x() + self.landscape_extent.width() &&
+        location.y() >= self.landscape_extent.y() &&
+        location.y() < self.landscape_extent.y() + self.landscape_extent.height()
+    )]
+    // TODO: Check that the lineage was added to the correct location
+    // TODO: Check that all lineages at the position point to themselves
     fn add_lineage_to_location(&mut self, reference: LineageReference, location: Location) {
-        let lineages_at_location = &mut self.location_to_lineage_references
-            [(location.y() as usize, location.x() as usize)];
+        let lineages_at_location = &mut self.location_to_lineage_references[(
+            (location.y() - self.landscape_extent.y()) as usize,
+            (location.x() - self.landscape_extent.x()) as usize,
+        )];
 
-        // TODO: We should assert that we never surpass the available habitat
+        // TODO: We should be able to assert that we never surpass the available habitat
 
         lineages_at_location.push(reference);
 
         unsafe {
-            self.lineages_store[reference.0].move_to_location(location, lineages_at_location.len())
+            self.lineages_store[reference.0]
+                .move_to_location(location, lineages_at_location.len() - 1)
         };
     }
 
+    #[debug_requires(reference.0 < self.lineages_store.len())]
+    #[debug_requires(
+        self[reference].location().x() >= self.landscape_extent.x() &&
+        self[reference].location().x() < (
+            self.landscape_extent.x() + self.landscape_extent.width()
+        ) &&
+        self[reference].location().y() >= self.landscape_extent.y() &&
+        self[reference].location().y() < (
+            self.landscape_extent.y() + self.landscape_extent.height()
+        )
+    )]
+    #[debug_requires({
+        let lineage = &self[reference];
+
+        let lineages_at_location = &self.location_to_lineage_references[(
+            (lineage.location().y() - self.landscape_extent.y()) as usize,
+            (lineage.location().x() - self.landscape_extent.x()) as usize,
+        )];
+
+        lineages_at_location[lineage.index_at_location()] == reference
+    })]
+    // TODO: Check that the lineage was removed
+    // TODO: Check that all lineages at the position point to themselves
     fn remove_lineage_from_its_location(&mut self, reference: LineageReference) {
         let lineage = &self.lineages_store[reference.0];
 
         let lineages_at_location = &mut self.location_to_lineage_references[(
-            lineage.location().y() as usize,
-            lineage.location().x() as usize,
+            (lineage.location().y() - self.landscape_extent.y()) as usize,
+            (lineage.location().x() - self.landscape_extent.x()) as usize,
         )];
 
         if let Some(last_lineage_at_location) = lineages_at_location.pop() {
@@ -104,6 +153,8 @@ impl GlobalLineageStore {
     }
 
     #[must_use]
+    // TODO: Check that the number of active lineages has been decremented iff Some
+    // TODO: Check that returned reference is no longer active and not at its location
     pub fn pop_random_active_lineage_reference(
         &mut self,
         rng: &mut impl Rng,
@@ -134,6 +185,10 @@ impl GlobalLineageStore {
         Some(chosen_lineage_reference)
     }
 
+    // TODO: Check that the lineage is not active and not at its location
+    // TODO: Check that the lineage has been added to its location
+    // TODO: Check that the lineage is an active lineage again
+    // TODO: Check that the number of active lineages has been incremented
     pub fn push_active_lineage_reference_at_location(
         &mut self,
         reference: LineageReference,
@@ -150,6 +205,14 @@ impl GlobalLineageStore {
     }
 
     #[must_use]
+    #[debug_requires(
+        location.x() >= self.landscape_extent.x() &&
+        location.x() < self.landscape_extent.x() + self.landscape_extent.width() &&
+        location.y() >= self.landscape_extent.y() &&
+        location.y() < self.landscape_extent.y() + self.landscape_extent.height()
+    )]
+    #[debug_requires(habitat > 0)]
+    // TODO: Check that iff lineage is returned it is active and at the location
     pub fn sample_optional_coalescence_at_location(
         &self,
         location: &Location,
@@ -165,14 +228,20 @@ impl GlobalLineageStore {
         }
 
         Some(
-            self.location_to_lineage_references[(location.y() as usize, location.x() as usize)]
-                [chosen_coalescence],
+            self.location_to_lineage_references[(
+                (location.y() - self.landscape_extent.y()) as usize,
+                (location.x() - self.landscape_extent.x()) as usize,
+            )][chosen_coalescence],
         )
     }
 
     #[must_use]
     pub fn get_number_active_lineages_at_location(&self, location: &Location) -> usize {
-        self.location_to_lineage_references[(location.y() as usize, location.x() as usize)].len()
+        self.location_to_lineage_references[(
+            (location.y() - self.landscape_extent.y()) as usize,
+            (location.x() - self.landscape_extent.x()) as usize,
+        )]
+            .len()
     }
 }
 

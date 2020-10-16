@@ -1,4 +1,5 @@
 #[allow(clippy::module_name_repetitions)]
+#[derive(PartialEq, Eq)]
 pub struct LandscapeExtent {
     x: u32,
     y: u32,

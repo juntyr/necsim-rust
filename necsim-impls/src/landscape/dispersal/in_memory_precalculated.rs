@@ -20,9 +20,22 @@ pub struct InMemoryPrecalculatedDispersal {
 
 impl Dispersal for InMemoryPrecalculatedDispersal {
     #[must_use]
+    #[debug_requires(
+        location.x() >= self.habitat_extent.x() &&
+        location.x() < self.habitat_extent.x() + self.habitat_extent.width() &&
+        location.y() >= self.habitat_extent.y() &&
+        location.y() < self.habitat_extent.y() + self.habitat_extent.height()
+    )]
+    #[debug_ensures(
+        ret.x() >= self.habitat_extent.x() &&
+        ret.x() < self.habitat_extent.x() + self.habitat_extent.width() &&
+        ret.y() >= self.habitat_extent.y() &&
+        ret.y() < self.habitat_extent.y() + self.habitat_extent.height()
+    )]
     fn sample_dispersal_from_location(&self, location: &Location, rng: &mut impl Rng) -> Location {
-        let location_index = (location.y() as usize) * (self.habitat_extent.width() as usize)
-            + (location.x() as usize);
+        let location_index = ((location.y() - self.habitat_extent.y()) as usize)
+            * (self.habitat_extent.width() as usize)
+            + ((location.x() - self.habitat_extent.x()) as usize);
 
         let habitat_area =
             (self.habitat_extent.width() as usize) * (self.habitat_extent.height() as usize);
@@ -41,8 +54,10 @@ impl Dispersal for InMemoryPrecalculatedDispersal {
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
-            (dispersal_target_index % (self.habitat_extent.width() as usize)) as u32,
-            (dispersal_target_index / (self.habitat_extent.width() as usize)) as u32,
+            (dispersal_target_index % (self.habitat_extent.width() as usize)) as u32
+                + self.habitat_extent.x(),
+            (dispersal_target_index / (self.habitat_extent.width() as usize)) as u32
+                + self.habitat_extent.y(),
         )
     }
 }
@@ -56,6 +71,16 @@ impl InMemoryPrecalculatedDispersal {
     /// `Err(InconsistentDispersalMapSize)` is returned iff the dimensions of
     /// `dispersal` are not `ExE` given `E=WxH` where habitat has width `W`
     /// and height `W`.
+    #[debug_ensures(
+        ret.is_ok() == (
+            dispersal.num_columns() == old(
+                (habitat_extent.width() * habitat_extent.height()) as usize
+            ) && dispersal.num_rows() == old(
+                (habitat_extent.width() * habitat_extent.height()) as usize
+            )
+        )
+    )]
+    // TODO: ensure correctness of cumulative_dispersal
     pub fn new(
         dispersal: &Array2D<f64>,
         habitat_extent: LandscapeExtent,

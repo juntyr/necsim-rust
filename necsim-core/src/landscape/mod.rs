@@ -30,6 +30,12 @@ pub trait Landscape {
     })]
     fn get_total_habitat(&self) -> usize;
     #[must_use]
+    #[debug_requires(
+        location.x() >= self.get_extent().x() &&
+        location.x() < self.get_extent().x() + self.get_extent().width() &&
+        location.y() >= self.get_extent().y() &&
+        location.y() < self.get_extent().y() + self.get_extent().height()
+    )]
     fn get_habitat_at_location(&self, location: &Location) -> u32;
 
     #[must_use]
