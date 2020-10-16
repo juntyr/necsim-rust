@@ -9,7 +9,15 @@ use necsim_core::lineage::LineageReference;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::SimulationSettings;
 
+#[contract_trait]
 impl<L: LineageReference> EventTypeSampler<L> for UnconditionalNoCoalescenceEventTypeSampler {
+    #[debug_ensures(match &ret {
+        EventType::Speciation => true,
+        EventType::Dispersal {
+            coalescence,
+            ..
+        } => coalescence.is_none(),
+    })]
     fn sample_event_type_at_location(
         &self,
         location: &Location,

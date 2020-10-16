@@ -9,6 +9,7 @@ pub struct InMemoryHabitat {
     habitat: Array2D<u32>,
 }
 
+#[contract_trait]
 impl Habitat for InMemoryHabitat {
     #[must_use]
     fn get_extent(&self) -> LandscapeExtent {
@@ -37,6 +38,10 @@ impl Habitat for InMemoryHabitat {
 
 impl InMemoryHabitat {
     #[must_use]
+    #[debug_ensures(
+        old(habitat.num_columns()) == ret.get_extent().width() as usize &&
+        old(habitat.num_rows()) == ret.get_extent().height() as usize
+    )]
     pub fn new(habitat: Array2D<u32>) -> Self {
         Self { habitat }
     }

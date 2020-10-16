@@ -15,6 +15,8 @@ pub struct GlobalLineageStoreUnconditionalEventGenerator {
 
 #[contract_trait]
 impl EventGenerator<LineageReference> for GlobalLineageStoreUnconditionalEventGenerator {
+    // TODO: Check that iff only one active left, returns speciation
+    // TODO: Check that dispersed lineage is at the position with reasonable index
     fn generate_next_event(
         &mut self,
         time: f64,
@@ -103,6 +105,7 @@ impl GlobalLineageStoreUnconditionalEventGenerator {
         }
     }
 
+    #[debug_ensures(ret >= 0.0_f64)]
     fn sample_delta_time(&self, rng: &mut impl Rng) -> f64 {
         #[allow(clippy::cast_precision_loss)]
         let lambda = 0.5_f64 * (self.lineage_store.number_active_lineages() + 1) as f64;
@@ -110,6 +113,7 @@ impl GlobalLineageStoreUnconditionalEventGenerator {
         rng.sample_exponential(lambda)
     }
 
+    #[debug_ensures(ret >= 0.0_f64)]
     fn sample_final_speciation_delta_time(
         settings: &SimulationSettings<impl Landscape>,
         rng: &mut impl Rng,

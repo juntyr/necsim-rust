@@ -6,7 +6,12 @@ use necsim_core::lineage::LineageReference;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::SimulationSettings;
 
+#[allow(clippy::inline_always, clippy::inline_fn_without_body)]
+#[contract_trait]
 pub trait EventTypeSampler<L: LineageReference> {
+    #[debug_requires(
+        settings.landscape().get_habitat_at_location(location) > 0
+    )]
     fn sample_event_type_at_location(
         &self,
         location: &Location,
