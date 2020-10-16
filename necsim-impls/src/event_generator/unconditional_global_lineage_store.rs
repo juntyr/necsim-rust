@@ -13,6 +13,7 @@ pub struct GlobalLineageStoreUnconditionalEventGenerator {
     lineage_store: GlobalLineageStore,
 }
 
+#[contract_trait]
 impl EventGenerator for GlobalLineageStoreUnconditionalEventGenerator {
     fn generate_next_event(
         &mut self,

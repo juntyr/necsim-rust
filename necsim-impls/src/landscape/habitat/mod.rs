@@ -7,7 +7,7 @@ pub trait Habitat {
     fn get_extent(&self) -> LandscapeExtent;
 
     #[must_use]
-    fn get_total_habitat(&self) -> u32;
+    fn get_total_habitat(&self) -> usize;
     #[must_use]
     fn get_habitat_at_location(&self, location: &Location) -> u32;
 }

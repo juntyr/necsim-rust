@@ -25,6 +25,7 @@ impl GlobalLineageStore {
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
         #[allow(clippy::cast_lossless)]
+        #[allow(clippy::cast_precision_loss)]
         let mut lineages_store = Vec::with_capacity(
             ((landscape.get_total_habitat() as f64) * sample_percentage) as usize,
         );

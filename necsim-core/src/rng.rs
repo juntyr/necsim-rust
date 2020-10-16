@@ -1,4 +1,7 @@
+#[allow(clippy::inline_always, clippy::inline_fn_without_body)]
+#[contract_trait]
 pub trait Core {
+    #[debug_ensures(ret >= 0.0_f64 && ret <= 1.0_f64)]
     fn sample_uniform(&mut self) -> f64;
 }
 
@@ -19,6 +22,7 @@ pub trait Rng: Core {
         -self.sample_uniform().ln() / lambda
     }
 
+    #[debug_requires(probability >= 0.0_f64 && probability <= 1.0_f64)]
     fn sample_event(&mut self, probability: f64) -> bool {
         self.sample_uniform() < probability
     }
