@@ -1,6 +1,7 @@
 use std::time::{Duration, Instant};
 
 use necsim_core::event_generator::Event;
+use necsim_core::lineage::LineageReference;
 use necsim_core::reporter::Reporter;
 
 #[allow(clippy::module_name_repetitions)]
@@ -16,7 +17,7 @@ impl Reporter for ExecutionTimeReporter {
             t == self.start_time.unwrap()
         },
     })]
-    fn report_event(&mut self, _event: &Event) {
+    fn report_event(&mut self, _event: &Event<impl LineageReference>) {
         self.start_time.get_or_insert_with(Instant::now);
     }
 }

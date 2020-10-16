@@ -1,19 +1,26 @@
 use crate::landscape::Location;
+use crate::lineage::LineageReference;
 
-pub struct Event {
+pub struct Event<L: LineageReference> {
     time: f64,
-    r#type: EventType,
+    lineage_reference: L,
+    r#type: EventType<L>,
 }
 
-impl Event {
+impl<L: LineageReference> Event<L> {
     #[must_use]
     #[allow(clippy::float_cmp)]
     #[debug_ensures(
         /*ret.r#type() == &r#type &&*/
+        /*ret.lineage_reference() == &lineage_reference &&*/
         ret.time() == time
     )]
-    pub fn new(time: f64, r#type: EventType) -> Self {
-        Self { time, r#type }
+    pub fn new(time: f64, lineage_reference: L, r#type: EventType<L>) -> Self {
+        Self {
+            time,
+            lineage_reference,
+            r#type,
+        }
     }
 
     #[must_use]
@@ -22,19 +29,22 @@ impl Event {
     }
 
     #[must_use]
-    pub fn r#type(&self) -> &EventType {
+    pub fn lineage_reference(&self) -> &L {
+        &self.lineage_reference
+    }
+
+    #[must_use]
+    pub fn r#type(&self) -> &EventType<L> {
         &self.r#type
     }
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub enum EventType {
-    // TODO: need to store reference to lineage somehow
+pub enum EventType<L: LineageReference> {
     Speciation,
     Dispersal {
         origin: Location,
         target: Location,
-        // TODO: need to store reference to parent somehow
-        coalescence: bool,
+        coalescence: Option<L>,
     },
 }

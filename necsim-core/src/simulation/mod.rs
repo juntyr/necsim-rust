@@ -1,6 +1,9 @@
 mod settings;
 
-use crate::{event_generator::EventGenerator, landscape::Landscape, reporter::Reporter, rng::Rng};
+use crate::{
+    event_generator::EventGenerator, landscape::Landscape, lineage::LineageReference,
+    reporter::Reporter, rng::Rng,
+};
 
 pub use settings::SimulationSettings;
 
@@ -8,9 +11,9 @@ pub struct Simulation(std::marker::PhantomData<()>);
 
 impl Simulation {
     #[must_use]
-    pub fn simulate(
+    pub fn simulate<L: LineageReference>(
         settings: &SimulationSettings<impl Landscape>,
-        mut event_generator: impl EventGenerator,
+        mut event_generator: impl EventGenerator<L>,
         rng: &mut impl Rng,
         reporter: &mut impl Reporter,
     ) -> (f64, usize) {

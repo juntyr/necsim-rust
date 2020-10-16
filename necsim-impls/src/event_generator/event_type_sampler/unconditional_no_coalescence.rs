@@ -5,16 +5,17 @@ use super::EventTypeSampler;
 
 use necsim_core::event_generator::EventType;
 use necsim_core::landscape::{Landscape, Location};
+use necsim_core::lineage::LineageReference;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::SimulationSettings;
 
-impl EventTypeSampler for UnconditionalNoCoalescenceEventTypeSampler {
+impl<L: LineageReference> EventTypeSampler<L> for UnconditionalNoCoalescenceEventTypeSampler {
     fn sample_event_type_at_location(
         &self,
         location: &Location,
         settings: &SimulationSettings<impl Landscape>,
         rng: &mut impl Rng,
-    ) -> EventType {
+    ) -> EventType<L> {
         if rng.sample_event(settings.speciation_probability_per_generation()) {
             return EventType::Speciation;
         }
@@ -27,7 +28,7 @@ impl EventTypeSampler for UnconditionalNoCoalescenceEventTypeSampler {
         EventType::Dispersal {
             origin: dispersal_origin.clone(),
             target: dispersal_target,
-            coalescence: false,
+            coalescence: None,
         }
     }
 }

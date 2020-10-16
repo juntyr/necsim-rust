@@ -7,8 +7,10 @@ use necsim_core::lineage::Lineage;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::SimulationSettings;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct LineageReference(usize);
+
+impl necsim_core::lineage::LineageReference for LineageReference {}
 
 pub struct GlobalLineageStore {
     lineages_store: Vec<Lineage>,
