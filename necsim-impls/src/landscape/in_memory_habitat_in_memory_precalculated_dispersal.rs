@@ -17,6 +17,7 @@ pub struct LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal {
     dispersal: InMemoryPrecalculatedDispersal,
 }
 
+#[contract_trait]
 impl Landscape for LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal {
     #[must_use]
     fn get_extent(&self) -> LandscapeExtent {
@@ -24,7 +25,7 @@ impl Landscape for LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal {
     }
 
     #[must_use]
-    fn get_total_habitat(&self) -> u32 {
+    fn get_total_habitat(&self) -> usize {
         self.habitat.get_total_habitat()
     }
 

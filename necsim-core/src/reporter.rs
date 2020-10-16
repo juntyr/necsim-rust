@@ -16,7 +16,7 @@ impl Reporter for NullReporter {
 #[allow(clippy::module_name_repetitions)]
 pub struct ReporterCombinator<'r, L: Reporter, R: Reporter> {
     first: &'r mut L,
-    second: R,
+    second: R, // R = ReporterCombinator<...>
 }
 
 impl<'r, L: Reporter, R: Reporter> Reporter for ReporterCombinator<'r, L, R> {
@@ -29,7 +29,10 @@ impl<'r, L: Reporter, R: Reporter> Reporter for ReporterCombinator<'r, L, R> {
 
 impl<'r, L: Reporter, R: Reporter> ReporterCombinator<'r, L, R> {
     #[must_use]
-    pub fn new(first: &'r mut L, second: R) -> Self {
+    /// # Safety
+    /// This constructor should not be used directly to combinate reporters.
+    /// Use the `ReporterGroup![]` macro instead.
+    pub unsafe fn new(first: &'r mut L, second: R) -> Self {
         Self { first, second }
     }
 }
@@ -41,10 +44,10 @@ macro_rules! ReporterGroup {
     };
     ($first_reporter:ident $(,$reporter_tail:ident)*) => {
         {
-            necsim_core::reporter::ReporterCombinator::new(
+            unsafe { necsim_core::reporter::ReporterCombinator::new(
                 &mut $first_reporter,
                 ReporterGroup![$($reporter_tail),*]
-            )
+            ) }
         }
     }
 }

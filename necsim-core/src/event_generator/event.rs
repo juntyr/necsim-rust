@@ -7,6 +7,11 @@ pub struct Event {
 
 impl Event {
     #[must_use]
+    #[allow(clippy::float_cmp)]
+    #[debug_ensures(
+        /*ret.r#type() == &r#type &&*/
+        ret.time() == time
+    )]
     pub fn new(time: f64, r#type: EventType) -> Self {
         Self { time, r#type }
     }

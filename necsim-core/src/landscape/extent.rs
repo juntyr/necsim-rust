@@ -8,6 +8,12 @@ pub struct LandscapeExtent {
 
 impl LandscapeExtent {
     #[must_use]
+    #[debug_ensures(
+        ret.x() == x &&
+        ret.y() == y &&
+        ret.width() == width &&
+        ret.height() == height
+    )]
     pub fn new(x: u32, y: u32, width: u32, height: u32) -> Self {
         Self {
             x,

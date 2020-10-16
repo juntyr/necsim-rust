@@ -11,6 +11,60 @@ pub struct EventReporter {
 }
 
 impl Reporter for EventReporter {
+    #[debug_ensures(match event.r#type() {
+        EventType::Speciation => {
+            self.speciation == old(self.speciation) + 1 &&
+            self.out_dispersal == old(self.out_dispersal) &&
+            self.self_dispersal == old(self.self_dispersal) &&
+            self.out_coalescence == old(self.out_coalescence) &&
+            self.self_coalescence == old(self.self_coalescence)
+        },
+        EventType::Dispersal {
+            origin,
+            target,
+            coalescence: false,
+        } if origin == target => {
+            self.speciation == old(self.speciation) &&
+            self.out_dispersal == old(self.out_dispersal) &&
+            self.self_dispersal == old(self.self_dispersal) + 1 &&
+            self.out_coalescence == old(self.out_coalescence) &&
+            self.self_coalescence == old(self.self_coalescence)
+        },
+        EventType::Dispersal {
+            origin,
+            target,
+            coalescence: true,
+        } if origin == target => {
+            self.speciation == old(self.speciation) &&
+            self.out_dispersal == old(self.out_dispersal) &&
+            self.self_dispersal == old(self.self_dispersal) &&
+            self.out_coalescence == old(self.out_coalescence) &&
+            self.self_coalescence == old(self.self_coalescence) + 1
+        },
+        EventType::Dispersal {
+            origin,
+            target,
+            coalescence: false,
+        } if origin != target => {
+            self.speciation == old(self.speciation) &&
+            self.out_dispersal == old(self.out_dispersal) + 1 &&
+            self.self_dispersal == old(self.self_dispersal) &&
+            self.out_coalescence == old(self.out_coalescence) &&
+            self.self_coalescence == old(self.self_coalescence)
+        },
+        EventType::Dispersal {
+            origin,
+            target,
+            coalescence: true,
+        } if origin != target => {
+            self.speciation == old(self.speciation) &&
+            self.out_dispersal == old(self.out_dispersal) &&
+            self.self_dispersal == old(self.self_dispersal) &&
+            self.out_coalescence == old(self.out_coalescence) + 1 &&
+            self.self_coalescence == old(self.self_coalescence)
+        },
+        _ => unreachable!(),
+    })]
     fn report_event(&mut self, event: &Event) {
         match event.r#type() {
             EventType::Speciation => {
@@ -44,6 +98,13 @@ impl Reporter for EventReporter {
 }
 
 impl Default for EventReporter {
+    #[debug_ensures(
+        ret.speciation == 0 &&
+        ret.out_dispersal == 0 &&
+        ret.self_dispersal == 0 &&
+        ret.out_coalescence == 0 &&
+        ret.self_coalescence == 0
+    )]
     fn default() -> Self {
         Self {
             speciation: 0,

@@ -6,7 +6,11 @@ use crate::landscape::Landscape;
 use crate::rng::Rng;
 use crate::simulation::SimulationSettings;
 
+#[allow(clippy::inline_always, clippy::inline_fn_without_body)]
+#[contract_trait]
 pub trait EventGenerator {
+    #[debug_requires(time >= 0.0_f64)]
+    #[debug_ensures(ret.is_some() -> ret.as_ref().unwrap().time() > time)]
     fn generate_next_event(
         &mut self,
         time: f64,

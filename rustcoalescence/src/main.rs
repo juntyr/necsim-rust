@@ -1,5 +1,8 @@
 #![deny(clippy::pedantic)]
 
+#[macro_use]
+extern crate contracts;
+
 use anyhow::{Context, Result};
 use array2d::Array2D;
 use structopt::StructOpt;

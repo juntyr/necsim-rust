@@ -22,8 +22,11 @@ impl Habitat for InMemoryHabitat {
     }
 
     #[must_use]
-    fn get_total_habitat(&self) -> u32 {
-        self.habitat.elements_row_major_iter().sum()
+    fn get_total_habitat(&self) -> usize {
+        self.habitat
+            .elements_row_major_iter()
+            .map(|x| *x as usize)
+            .sum()
     }
 
     #[must_use]

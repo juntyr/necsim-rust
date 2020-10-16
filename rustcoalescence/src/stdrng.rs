@@ -4,6 +4,7 @@ use rand::SeedableRng;
 
 pub struct NewStdRng(StdRng);
 
+#[contract_trait]
 impl necsim_core::rng::Core for NewStdRng {
     fn sample_uniform(&mut self) -> f64 {
         self.0.gen_range(0.0_f64, 1.0_f64)
