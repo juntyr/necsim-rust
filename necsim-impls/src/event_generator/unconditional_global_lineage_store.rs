@@ -1,7 +1,7 @@
 use super::event_type_sampler::EventTypeSampler;
 
 use super::event_type_sampler::unconditional_no_coalescence::UnconditionalNoCoalescenceEventTypeSampler;
-use super::lineage_sampler::global_store::GlobalLineageStore;
+use super::lineage_sampler::global_store::{GlobalLineageStore, LineageReference};
 
 use necsim_core::event_generator::{Event, EventGenerator, EventType};
 use necsim_core::landscape::Landscape;
@@ -14,13 +14,13 @@ pub struct GlobalLineageStoreUnconditionalEventGenerator {
 }
 
 #[contract_trait]
-impl EventGenerator for GlobalLineageStoreUnconditionalEventGenerator {
+impl EventGenerator<LineageReference> for GlobalLineageStoreUnconditionalEventGenerator {
     fn generate_next_event(
         &mut self,
         time: f64,
         settings: &SimulationSettings<impl Landscape>,
         rng: &mut impl Rng,
-    ) -> Option<Event> {
+    ) -> Option<Event<LineageReference>> {
         let chosen_active_lineage_reference =
             match self.lineage_store.pop_random_active_lineage_reference(rng) {
                 Some(reference) => reference,
@@ -31,15 +31,19 @@ impl EventGenerator for GlobalLineageStoreUnconditionalEventGenerator {
             // Early stop iff only one active lineage remains
             let event_time = time + Self::sample_final_speciation_delta_time(settings, rng);
 
-            return Some(Event::new(event_time, EventType::Speciation));
+            return Some(Event::new(
+                event_time,
+                chosen_active_lineage_reference,
+                EventType::Speciation,
+            ));
         }
 
         let event_time = time + self.sample_delta_time(rng);
         let event_location = self.lineage_store[chosen_active_lineage_reference].location();
 
-        let event_type_no_coalescence =
-            self.event_type_sampler
-                .sample_event_type_at_location(event_location, settings, rng);
+        let event_type_no_coalescence: EventType<LineageReference> = self
+            .event_type_sampler
+            .sample_event_type_at_location(event_location, settings, rng);
 
         let event_type_with_coalescence = match event_type_no_coalescence {
             EventType::Speciation => EventType::Speciation,
@@ -78,12 +82,16 @@ impl EventGenerator for GlobalLineageStoreUnconditionalEventGenerator {
                 EventType::Dispersal {
                     origin,
                     target: dispersal_target,
-                    coalescence: optional_coalescence.is_some(),
+                    coalescence: optional_coalescence,
                 }
             }
         };
 
-        Some(Event::new(event_time, event_type_with_coalescence))
+        Some(Event::new(
+            event_time,
+            chosen_active_lineage_reference,
+            event_type_with_coalescence,
+        ))
     }
 }
 

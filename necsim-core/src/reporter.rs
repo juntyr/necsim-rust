@@ -1,14 +1,15 @@
 use crate::event_generator::Event;
+use crate::lineage::LineageReference;
 
 pub trait Reporter {
-    fn report_event(&mut self, event: &Event);
+    fn report_event(&mut self, event: &Event<impl LineageReference>);
 }
 
 #[allow(clippy::module_name_repetitions)]
 pub struct NullReporter;
 
 impl Reporter for NullReporter {
-    fn report_event(&mut self, _event: &Event) {
+    fn report_event(&mut self, _event: &Event<impl LineageReference>) {
         // no-op
     }
 }
@@ -21,7 +22,7 @@ pub struct ReporterCombinator<'r, L: Reporter, R: Reporter> {
 
 impl<'r, L: Reporter, R: Reporter> Reporter for ReporterCombinator<'r, L, R> {
     #[inline]
-    fn report_event(&mut self, event: &Event) {
+    fn report_event(&mut self, event: &Event<impl LineageReference>) {
         self.first.report_event(event);
         self.second.report_event(event);
     }

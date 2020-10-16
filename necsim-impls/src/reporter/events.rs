@@ -1,4 +1,5 @@
 use necsim_core::event_generator::{Event, EventType};
+use necsim_core::lineage::LineageReference;
 use necsim_core::reporter::Reporter;
 
 #[allow(clippy::module_name_repetitions)]
@@ -22,7 +23,7 @@ impl Reporter for EventReporter {
         EventType::Dispersal {
             origin,
             target,
-            coalescence: false,
+            coalescence: None,
         } if origin == target => {
             self.speciation == old(self.speciation) &&
             self.out_dispersal == old(self.out_dispersal) &&
@@ -33,7 +34,7 @@ impl Reporter for EventReporter {
         EventType::Dispersal {
             origin,
             target,
-            coalescence: true,
+            coalescence: Some(_),
         } if origin == target => {
             self.speciation == old(self.speciation) &&
             self.out_dispersal == old(self.out_dispersal) &&
@@ -44,7 +45,7 @@ impl Reporter for EventReporter {
         EventType::Dispersal {
             origin,
             target,
-            coalescence: false,
+            coalescence: None,
         } if origin != target => {
             self.speciation == old(self.speciation) &&
             self.out_dispersal == old(self.out_dispersal) + 1 &&
@@ -55,7 +56,7 @@ impl Reporter for EventReporter {
         EventType::Dispersal {
             origin,
             target,
-            coalescence: true,
+            coalescence: Some(_),
         } if origin != target => {
             self.speciation == old(self.speciation) &&
             self.out_dispersal == old(self.out_dispersal) &&
@@ -65,7 +66,7 @@ impl Reporter for EventReporter {
         },
         _ => unreachable!(),
     })]
-    fn report_event(&mut self, event: &Event) {
+    fn report_event(&mut self, event: &Event<impl LineageReference>) {
         match event.r#type() {
             EventType::Speciation => {
                 self.speciation += 1;
@@ -77,6 +78,7 @@ impl Reporter for EventReporter {
                 ..
             } => {
                 let self_dispersal = origin == target;
+                let coalescence = coalescence.is_some();
 
                 match (self_dispersal, coalescence) {
                     (true, true) => {

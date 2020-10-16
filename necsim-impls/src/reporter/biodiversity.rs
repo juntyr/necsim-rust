@@ -1,4 +1,5 @@
 use necsim_core::event_generator::{Event, EventType};
+use necsim_core::lineage::LineageReference;
 use necsim_core::reporter::Reporter;
 
 #[allow(clippy::module_name_repetitions)]
@@ -11,7 +12,7 @@ impl Reporter for BiodiversityReporter {
         EventType::Speciation => self.biodiversity == old(self.biodiversity) + 1,
         _ => self.biodiversity == old(self.biodiversity),
     })]
-    fn report_event(&mut self, event: &Event) {
+    fn report_event(&mut self, event: &Event<impl LineageReference>) {
         if let EventType::Speciation = event.r#type() {
             self.biodiversity += 1;
         }
