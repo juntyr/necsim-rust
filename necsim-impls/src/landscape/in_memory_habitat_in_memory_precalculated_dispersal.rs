@@ -53,7 +53,7 @@ impl LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal {
         ret.is_ok() == (
             dispersal.num_columns() == old(habitat.num_elements()) &&
             dispersal.num_rows() == old(habitat.num_elements())
-        )
+        ), "returns error iff dispersal dimensions inconsistent"
     )]
     pub fn new(
         habitat: Array2D<u32>,

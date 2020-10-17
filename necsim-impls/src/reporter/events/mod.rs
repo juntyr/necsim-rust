@@ -2,6 +2,8 @@ use necsim_core::event_generator::{Event, EventType};
 use necsim_core::lineage::LineageReference;
 use necsim_core::reporter::Reporter;
 
+mod contract;
+
 #[allow(clippy::module_name_repetitions)]
 pub struct EventReporter {
     speciation: usize,
@@ -12,60 +14,12 @@ pub struct EventReporter {
 }
 
 impl Reporter for EventReporter {
-    #[debug_ensures(match event.r#type() {
-        EventType::Speciation => {
-            self.speciation == old(self.speciation) + 1 &&
-            self.out_dispersal == old(self.out_dispersal) &&
-            self.self_dispersal == old(self.self_dispersal) &&
-            self.out_coalescence == old(self.out_coalescence) &&
-            self.self_coalescence == old(self.self_coalescence)
-        },
-        EventType::Dispersal {
-            origin,
-            target,
-            coalescence: None,
-        } if origin == target => {
-            self.speciation == old(self.speciation) &&
-            self.out_dispersal == old(self.out_dispersal) &&
-            self.self_dispersal == old(self.self_dispersal) + 1 &&
-            self.out_coalescence == old(self.out_coalescence) &&
-            self.self_coalescence == old(self.self_coalescence)
-        },
-        EventType::Dispersal {
-            origin,
-            target,
-            coalescence: Some(_),
-        } if origin == target => {
-            self.speciation == old(self.speciation) &&
-            self.out_dispersal == old(self.out_dispersal) &&
-            self.self_dispersal == old(self.self_dispersal) &&
-            self.out_coalescence == old(self.out_coalescence) &&
-            self.self_coalescence == old(self.self_coalescence) + 1
-        },
-        EventType::Dispersal {
-            origin,
-            target,
-            coalescence: None,
-        } if origin != target => {
-            self.speciation == old(self.speciation) &&
-            self.out_dispersal == old(self.out_dispersal) + 1 &&
-            self.self_dispersal == old(self.self_dispersal) &&
-            self.out_coalescence == old(self.out_coalescence) &&
-            self.self_coalescence == old(self.self_coalescence)
-        },
-        EventType::Dispersal {
-            origin,
-            target,
-            coalescence: Some(_),
-        } if origin != target => {
-            self.speciation == old(self.speciation) &&
-            self.out_dispersal == old(self.out_dispersal) &&
-            self.self_dispersal == old(self.self_dispersal) &&
-            self.out_coalescence == old(self.out_coalescence) + 1 &&
-            self.self_coalescence == old(self.self_coalescence)
-        },
-        _ => unreachable!(),
-    })]
+    #[debug_ensures(contract::explicit_event_reporter_report_event_contract(
+        event.r#type(), old(self.speciation), old(self.out_dispersal), old(self.self_dispersal),
+        old(self.out_coalescence), old(self.self_coalescence), self.speciation, self.out_dispersal,
+        self.self_dispersal, self.out_coalescence, self.self_coalescence),
+        "counts all distinct event types without changing unaffected counts"
+    )]
     fn report_event(&mut self, event: &Event<impl LineageReference>) {
         match event.r#type() {
             EventType::Speciation => {
@@ -105,7 +59,8 @@ impl Default for EventReporter {
         ret.out_dispersal == 0 &&
         ret.self_dispersal == 0 &&
         ret.out_coalescence == 0 &&
-        ret.self_coalescence == 0
+        ret.self_coalescence == 0,
+        "initialises all events to 0"
     )]
     fn default() -> Self {
         Self {
