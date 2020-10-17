@@ -10,7 +10,8 @@ use necsim_core::simulation::SimulationSettings;
 #[contract_trait]
 pub trait EventTypeSampler<L: LineageReference> {
     #[debug_requires(
-        settings.landscape().get_habitat_at_location(location) > 0
+        settings.landscape().get_habitat_at_location(location) > 0,
+        "location is habitable event origin"
     )]
     fn sample_event_type_at_location(
         &self,

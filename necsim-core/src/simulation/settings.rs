@@ -10,11 +10,12 @@ pub struct SimulationSettings<L: Landscape> {
 impl<L: Landscape> SimulationSettings<L> {
     #[must_use]
     #[allow(clippy::float_cmp)]
+    //#[debug_ensures(ret.landscape() == old(landscape), "stores the landscape")]
     #[debug_ensures(
-        /*ret.landscape() == &landscape &&*/
-        ret.speciation_probability_per_generation() == speciation_probability_per_generation &&
-        ret.sample_percentage() == sample_percentage
+        ret.speciation_probability_per_generation() == speciation_probability_per_generation,
+        "stores the speciation_probability_per_generation",
     )]
+    #[debug_ensures(ret.sample_percentage() == sample_percentage, "stores the sample_percentage")]
     pub fn new(
         speciation_probability_per_generation: f64,
         sample_percentage: f64,

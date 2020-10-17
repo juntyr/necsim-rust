@@ -17,7 +17,7 @@ impl<L: LineageReference> EventTypeSampler<L> for UnconditionalNoCoalescenceEven
             coalescence,
             ..
         } => coalescence.is_none(),
-    })]
+    }, "never coalesces")]
     fn sample_event_type_at_location(
         &self,
         location: &Location,

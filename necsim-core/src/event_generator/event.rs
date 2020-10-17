@@ -10,11 +10,9 @@ pub struct Event<L: LineageReference> {
 impl<L: LineageReference> Event<L> {
     #[must_use]
     #[allow(clippy::float_cmp)]
-    #[debug_ensures(
-        /*ret.r#type() == &r#type &&*/
-        /*ret.lineage_reference() == &lineage_reference &&*/
-        ret.time() == time
-    )]
+    //#[debug_ensures(ret.r#type() == &r#type, "stores r#type")]
+    //#[debug_ensures(ret.lineage_reference() == &lineage_reference, "stores lineage_reference")]
+    #[debug_ensures(ret.time() == time, "stores time")]
     pub fn new(time: f64, lineage_reference: L, r#type: EventType<L>) -> Self {
         Self {
             time,

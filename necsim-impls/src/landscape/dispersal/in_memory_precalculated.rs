@@ -20,18 +20,8 @@ pub struct InMemoryPrecalculatedDispersal {
 
 impl Dispersal for InMemoryPrecalculatedDispersal {
     #[must_use]
-    #[debug_requires(
-        location.x() >= self.habitat_extent.x() &&
-        location.x() < self.habitat_extent.x() + self.habitat_extent.width() &&
-        location.y() >= self.habitat_extent.y() &&
-        location.y() < self.habitat_extent.y() + self.habitat_extent.height()
-    )]
-    #[debug_ensures(
-        ret.x() >= self.habitat_extent.x() &&
-        ret.x() < self.habitat_extent.x() + self.habitat_extent.width() &&
-        ret.y() >= self.habitat_extent.y() &&
-        ret.y() < self.habitat_extent.y() + self.habitat_extent.height()
-    )]
+    #[debug_requires(self.habitat_extent.contains(location), "location is inside habitat extent")]
+    #[debug_ensures(self.habitat_extent.contains(&ret), "target is inside habitat extent")]
     fn sample_dispersal_from_location(&self, location: &Location, rng: &mut impl Rng) -> Location {
         let location_index = ((location.y() - self.habitat_extent.y()) as usize)
             * (self.habitat_extent.width() as usize)
@@ -78,7 +68,8 @@ impl InMemoryPrecalculatedDispersal {
             ) && dispersal.num_rows() == old(
                 (habitat_extent.width() * habitat_extent.height()) as usize
             )
-        )
+        ),
+        "returns error iff dispersal dimensions inconsistent"
     )]
     // TODO: ensure correctness of cumulative_dispersal
     pub fn new(

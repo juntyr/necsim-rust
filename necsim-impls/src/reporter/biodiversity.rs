@@ -11,7 +11,7 @@ impl Reporter for BiodiversityReporter {
     #[debug_ensures(match event.r#type() {
         EventType::Speciation => self.biodiversity == old(self.biodiversity) + 1,
         _ => self.biodiversity == old(self.biodiversity),
-    })]
+    }, "EventType::Speciation increments self.biodiversity")]
     fn report_event(&mut self, event: &Event<impl LineageReference>) {
         if let EventType::Speciation = event.r#type() {
             self.biodiversity += 1;
@@ -20,7 +20,7 @@ impl Reporter for BiodiversityReporter {
 }
 
 impl Default for BiodiversityReporter {
-    #[debug_ensures[ret.biodiversity == 0]]
+    #[debug_ensures(ret.biodiversity == 0, "biodiversity initialised to 0")]
     fn default() -> Self {
         Self { biodiversity: 0 }
     }
@@ -28,7 +28,7 @@ impl Default for BiodiversityReporter {
 
 impl BiodiversityReporter {
     #[must_use]
-    #[debug_ensures(ret == self.biodiversity)]
+    #[debug_ensures(ret == self.biodiversity, "returns biodiversity")]
     pub fn biodiversity(self) -> usize {
         self.biodiversity
     }

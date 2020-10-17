@@ -40,7 +40,8 @@ impl InMemoryHabitat {
     #[must_use]
     #[debug_ensures(
         old(habitat.num_columns()) == ret.get_extent().width() as usize &&
-        old(habitat.num_rows()) == ret.get_extent().height() as usize
+        old(habitat.num_rows()) == ret.get_extent().height() as usize,
+        "habitat extent has the dimension of the habitat array"
     )]
     pub fn new(habitat: Array2D<u32>) -> Self {
         Self { habitat }
