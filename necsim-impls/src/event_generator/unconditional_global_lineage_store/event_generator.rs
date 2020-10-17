@@ -1,17 +1,13 @@
-use super::event_type_sampler::EventTypeSampler;
-
-use super::event_type_sampler::unconditional_no_coalescence::UnconditionalNoCoalescenceEventTypeSampler;
-use super::lineage_sampler::global_store::{GlobalLineageStore, LineageReference};
-
 use necsim_core::event_generator::{Event, EventGenerator, EventType};
 use necsim_core::landscape::Landscape;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::SimulationSettings;
 
-pub struct GlobalLineageStoreUnconditionalEventGenerator {
-    event_type_sampler: UnconditionalNoCoalescenceEventTypeSampler,
-    lineage_store: GlobalLineageStore,
-}
+use crate::event_generator::event_type_sampler::EventTypeSampler;
+
+use crate::event_generator::lineage_sampler::global_store::LineageReference;
+
+use super::GlobalLineageStoreUnconditionalEventGenerator;
 
 #[contract_trait]
 impl EventGenerator<LineageReference> for GlobalLineageStoreUnconditionalEventGenerator {
@@ -25,9 +21,55 @@ impl EventGenerator<LineageReference> for GlobalLineageStoreUnconditionalEventGe
             _ => false,
         }, "last active lineage always speciates"
     )]
-    // TODO: Check if speciation, lineage is no longer active and number active decreased
-    // TODO: Check if dispersal, lineage is active, at location, and number active equal
-    // TODO: Check if coalescence, lineage is no longer active, number active decreased and parent active and at location
+    #[debug_ensures({
+        let old_number_active_lineages = old(self.lineage_store.number_active_lineages());
+        let new_number_active_lineages = self.lineage_store.number_active_lineages();
+
+        match ret.as_ref() {
+            Some(event) => match event.r#type() {
+                EventType::Speciation | EventType::Dispersal {
+                    coalescence: Some(_),
+                    ..
+                } => {
+                    new_number_active_lineages == old_number_active_lineages - 1
+                },
+                EventType::Dispersal {
+                    coalescence: None,
+                    ..
+                } => {
+                    new_number_active_lineages == old_number_active_lineages
+                },
+            },
+            None => new_number_active_lineages == old_number_active_lineages,
+        }
+    }, "an active lineage is only removed on speciation or coalescence")]
+    #[debug_ensures(ret.is_some() -> {
+        let event = ret.as_ref().unwrap();
+
+        if let EventType::Dispersal {
+            origin,
+            target,
+            coalescence: Some(parent_lineage),
+        } = event.r#type() {
+            self.lineage_store[*event.lineage_reference()].location() == origin &&
+            self.lineage_store[*parent_lineage].location() == target
+        } else {
+            true
+        }
+    }, "coalesced lineage's parent is located at dispersal target")]
+    #[debug_ensures(ret.is_some() -> {
+        let event = ret.as_ref().unwrap();
+
+        if let EventType::Dispersal {
+            origin: _origin,
+            target,
+            coalescence: None,
+        } = event.r#type() {
+            self.lineage_store[*event.lineage_reference()].location() == target
+        } else {
+            true
+        }
+    }, "dispersed lineage has moved to dispersal target")]
     fn generate_next_event(
         &mut self,
         time: f64,
@@ -95,30 +137,5 @@ impl EventGenerator<LineageReference> for GlobalLineageStoreUnconditionalEventGe
             chosen_active_lineage_reference,
             event_type_with_coalescence,
         ))
-    }
-}
-
-impl GlobalLineageStoreUnconditionalEventGenerator {
-    pub fn new(settings: &SimulationSettings<impl Landscape>, rng: &mut impl Rng) -> Self {
-        Self {
-            event_type_sampler: UnconditionalNoCoalescenceEventTypeSampler,
-            lineage_store: GlobalLineageStore::new(settings, rng),
-        }
-    }
-
-    #[debug_ensures(ret >= 0.0_f64, "delta_time sample is non-negative")]
-    fn sample_delta_time(&self, rng: &mut impl Rng) -> f64 {
-        #[allow(clippy::cast_precision_loss)]
-        let lambda = 0.5_f64 * (self.lineage_store.number_active_lineages() + 1) as f64;
-
-        rng.sample_exponential(lambda)
-    }
-
-    #[debug_ensures(ret >= 0.0_f64, "delta_time sample is non-negative")]
-    fn sample_final_speciation_delta_time(
-        settings: &SimulationSettings<impl Landscape>,
-        rng: &mut impl Rng,
-    ) -> f64 {
-        rng.sample_exponential(0.5_f64 * settings.speciation_probability_per_generation())
     }
 }
