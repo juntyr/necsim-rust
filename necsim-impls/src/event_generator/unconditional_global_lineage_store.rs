@@ -15,8 +15,19 @@ pub struct GlobalLineageStoreUnconditionalEventGenerator {
 
 #[contract_trait]
 impl EventGenerator<LineageReference> for GlobalLineageStoreUnconditionalEventGenerator {
-    // TODO: Check that iff only one active left, returns speciation
-    // TODO: Check that dispersed lineage is at the position with reasonable index
+    #[debug_ensures(
+        (old(self.lineage_store.number_active_lineages()) == 0) == ret.is_none(),
+        "returns None iff there are no active lineages left"
+    )]
+    #[debug_ensures(old(self.lineage_store.number_active_lineages()) == 1 ->
+        ret.is_some() && match ret.as_ref().unwrap().r#type() {
+            EventType::Speciation => true,
+            _ => false,
+        }, "last active lineage always speciates"
+    )]
+    // TODO: Check if speciation, lineage is no longer active and number active decreased
+    // TODO: Check if dispersal, lineage is active, at location, and number active equal
+    // TODO: Check if coalescence, lineage is no longer active, number active decreased and parent active and at location
     fn generate_next_event(
         &mut self,
         time: f64,
@@ -64,21 +75,11 @@ impl EventGenerator<LineageReference> for GlobalLineageStoreUnconditionalEventGe
                     );
 
                 if optional_coalescence.is_none() {
-                    // Apply the move to the chosen lineage
-
-                    // TODO: assert success of dispersal in debug mode
-                    //let pre = self.lineage_store.get_number_active_lineages_at_location(&dispersal_target);
-
                     self.lineage_store
                         .push_active_lineage_reference_at_location(
                             chosen_active_lineage_reference,
                             dispersal_target.clone(),
                         );
-
-                    //let post = self.lineage_store.get_number_active_lineages_at_location(&dispersal_target);
-
-                    //assert_eq!(post, pre + 1);
-                    //assert_eq!(self.lineage_store[chosen_active_lineage_reference].location(), &dispersal_target);
                 }
 
                 EventType::Dispersal {
@@ -105,7 +106,7 @@ impl GlobalLineageStoreUnconditionalEventGenerator {
         }
     }
 
-    #[debug_ensures(ret >= 0.0_f64)]
+    #[debug_ensures(ret >= 0.0_f64, "delta_time sample is non-negative")]
     fn sample_delta_time(&self, rng: &mut impl Rng) -> f64 {
         #[allow(clippy::cast_precision_loss)]
         let lambda = 0.5_f64 * (self.lineage_store.number_active_lineages() + 1) as f64;
@@ -113,7 +114,7 @@ impl GlobalLineageStoreUnconditionalEventGenerator {
         rng.sample_exponential(lambda)
     }
 
-    #[debug_ensures(ret >= 0.0_f64)]
+    #[debug_ensures(ret >= 0.0_f64, "delta_time sample is non-negative")]
     fn sample_final_speciation_delta_time(
         settings: &SimulationSettings<impl Landscape>,
         rng: &mut impl Rng,
