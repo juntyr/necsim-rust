@@ -71,7 +71,7 @@ impl InMemoryPrecalculatedDispersal {
         ),
         "returns error iff dispersal dimensions inconsistent"
     )]
-    // TODO: ensure correctness of cumulative_dispersal
+    // TODO: We should ensure correctness of the cumulative_dispersal
     pub fn new(
         dispersal: &Array2D<f64>,
         habitat_extent: LandscapeExtent,
