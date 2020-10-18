@@ -44,7 +44,7 @@ impl GlobalLineageStore {
 
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
-        #[allow(clippy::cast_lossless)]
+        //#[allow(clippy::cast_lossless)]
         #[allow(clippy::cast_precision_loss)]
         let mut lineages_store = Vec::with_capacity(
             ((landscape.get_total_habitat() as f64) * sample_percentage) as usize,
@@ -68,12 +68,14 @@ impl GlobalLineageStore {
                 let lineages_at_location =
                     &mut location_to_lineage_references[(y_offset as usize, x_offset as usize)];
 
-                for index_at_location in 0..landscape.get_habitat_at_location(&location) {
+                for _ in 0..landscape.get_habitat_at_location(&location) {
                     #[allow(clippy::float_cmp)]
                     if sample_percentage == 1.0 || rng.sample_event(sample_percentage) {
-                        lineages_at_location.push(LineageReference(lineages_store.len()));
-                        lineages_store
-                            .push(Lineage::new(location.clone(), index_at_location as usize));
+                        let lineage_reference = LineageReference(lineages_store.len());
+                        let index_at_location = lineages_at_location.len();
+
+                        lineages_at_location.push(lineage_reference);
+                        lineages_store.push(Lineage::new(location.clone(), index_at_location));
                     }
                 }
             }
