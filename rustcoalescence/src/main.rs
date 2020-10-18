@@ -16,6 +16,7 @@ extern crate necsim_core;
 use necsim_impls::reporter::biodiversity::BiodiversityReporter;
 use necsim_impls::reporter::events::EventReporter;
 use necsim_impls::reporter::execution_time::ExecutionTimeReporter;
+use necsim_impls::reporter::progress::ProgressReporter;
 
 use self::gdal::load_map_from_gdal_raster;
 use stdrng::NewStdRng;
@@ -67,15 +68,28 @@ fn main() -> Result<()> {
         dispersal.num_rows()
     );
 
+    #[allow(clippy::cast_lossless)]
+    let total_habitat = habitat
+        .elements_row_major_iter()
+        .map(|x| *x as u64)
+        .sum::<u64>();
+
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_sign_loss)]
+    #[allow(clippy::cast_precision_loss)]
+    let estimated_total_lineages = ((total_habitat as f64) * args.sample_percentage).ceil() as u64;
+
     let mut rng = NewStdRng::from_seed(args.seed);
     let mut biodiversity_reporter = BiodiversityReporter::default();
     let mut event_reporter = EventReporter::default();
     let mut execution_time_reporter = ExecutionTimeReporter::default();
+    let mut progress_reporter = ProgressReporter::new(estimated_total_lineages);
 
     let mut reporter_group = ReporterGroup![
         biodiversity_reporter,
         event_reporter,
-        execution_time_reporter
+        execution_time_reporter,
+        progress_reporter
     ];
 
     println!("Setting up the classical coalescence algorithm ...");
@@ -99,6 +113,8 @@ fn main() -> Result<()> {
     })?;
 
     let execution_time = execution_time_reporter.execution_time();
+
+    progress_reporter.finish();
 
     event_reporter.report();
 
