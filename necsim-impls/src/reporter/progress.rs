@@ -20,6 +20,10 @@ impl Reporter for ProgressReporter {
         _ => self.progress.position() == old(self.progress.position()),
     }, "only speciation and coalescence increment the progress")]
     fn report_event(&mut self, event: &Event<impl LineageReference>) {
+        if self.progress.position() == 0 {
+            self.progress.reset();
+        }
+
         match event.r#type() {
             EventType::Speciation
             | EventType::Dispersal {

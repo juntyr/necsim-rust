@@ -91,22 +91,10 @@ impl EventReporter {
         );
 
         println!("Speciation:\n\t{}", self.speciation);
-        println!(
-            "Dispersal outside cell without coalescence:\n\t{}",
-            self.out_dispersal
-        );
-        println!(
-            "Dispersal inside cell without coalescence:\n\t{}",
-            self.self_dispersal
-        );
-        println!(
-            "Dispersal outside cell with coalescence:\n\t{}",
-            self.out_coalescence
-        );
-        println!(
-            "Dispersal inside cell with coalescence:\n\t{}",
-            self.self_coalescence
-        );
+        println!("Dispersal outside cell:\n\t{}", self.out_dispersal);
+        println!("Dispersal inside cell:\n\t{}", self.self_dispersal);
+        println!("Coalescence outside cell:\n\t{}", self.out_coalescence);
+        println!("Coalescence inside cell:\n\t{}", self.self_coalescence);
 
         println!("{:=^80}", " Event Summary ");
     }

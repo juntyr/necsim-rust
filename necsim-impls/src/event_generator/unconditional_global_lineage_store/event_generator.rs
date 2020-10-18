@@ -16,10 +16,8 @@ impl EventGenerator<LineageReference> for GlobalLineageStoreUnconditionalEventGe
         "returns None iff there are no active lineages left"
     )]
     #[debug_ensures(old(self.lineage_store.number_active_lineages()) == 1 ->
-        ret.is_some() && match ret.as_ref().unwrap().r#type() {
-            EventType::Speciation => true,
-            _ => false,
-        }, "last active lineage always speciates"
+        ret.is_some() && matches!(ret.as_ref().unwrap().r#type(), EventType::Speciation),
+        "last active lineage always speciates"
     )]
     #[debug_ensures({
         let old_number_active_lineages = old(self.lineage_store.number_active_lineages());
