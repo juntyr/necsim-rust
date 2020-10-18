@@ -60,7 +60,7 @@ impl LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal {
         dispersal: &Array2D<f64>,
     ) -> Result<Self, InconsistentDispersalMapSize> {
         let habitat = InMemoryHabitat::new(habitat);
-        let dispersal = InMemoryPrecalculatedDispersal::new(dispersal, habitat.get_extent())?;
+        let dispersal = InMemoryPrecalculatedDispersal::new(dispersal, &habitat)?;
 
         Ok(Self { habitat, dispersal })
     }

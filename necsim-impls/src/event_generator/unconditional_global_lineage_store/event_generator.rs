@@ -1,10 +1,11 @@
+use float_next_after::NextAfter;
+
 use necsim_core::event_generator::{Event, EventGenerator, EventType};
 use necsim_core::landscape::Landscape;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::SimulationSettings;
 
 use crate::event_generator::event_type_sampler::EventTypeSampler;
-
 use crate::event_generator::lineage_sampler::global_store::LineageReference;
 
 use super::GlobalLineageStoreUnconditionalEventGenerator;
@@ -84,8 +85,14 @@ impl EventGenerator<LineageReference> for GlobalLineageStoreUnconditionalEventGe
             // Early stop iff only one active lineage remains
             let event_time = time + Self::sample_final_speciation_delta_time(settings, rng);
 
+            let unique_event_time: f64 = if event_time > time {
+                event_time
+            } else {
+                event_time.next_after(f64::INFINITY)
+            };
+
             return Some(Event::new(
-                event_time,
+                unique_event_time,
                 chosen_active_lineage_reference,
                 EventType::Speciation,
             ));
@@ -130,8 +137,14 @@ impl EventGenerator<LineageReference> for GlobalLineageStoreUnconditionalEventGe
             }
         };
 
+        let unique_event_time: f64 = if event_time > time {
+            event_time
+        } else {
+            event_time.next_after(f64::INFINITY)
+        };
+
         Some(Event::new(
-            event_time,
+            unique_event_time,
             chosen_active_lineage_reference,
             event_type_with_coalescence,
         ))
