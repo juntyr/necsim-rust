@@ -52,7 +52,7 @@ impl ClassicalSimulation {
 
         let (time, steps) = Simulation::simulate(
             &settings,
-            GlobalLineageStoreUnconditionalEventGenerator::new(&settings, rng),
+            GlobalLineageStoreUnconditionalEventGenerator::new(&settings),
             rng,
             reporter,
         );

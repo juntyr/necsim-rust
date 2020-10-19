@@ -1,4 +1,4 @@
-#[derive(Eq, PartialEq, Clone, Debug)] // TODO: Remove Debug
+#[derive(Eq, PartialEq, Clone)]
 pub struct Location {
     x: u32,
     y: u32,

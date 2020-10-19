@@ -9,9 +9,19 @@ use necsim_core::rng::Rng;
 use super::Dispersal;
 use crate::landscape::habitat::Habitat;
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Error, Debug)]
-#[error("The size of the dispersal map was inconsistent with the size of the habitat map.")]
-pub struct InconsistentDispersalMapSize;
+pub enum InMemoryPrecalculatedDispersalError {
+    #[error("The size of the dispersal map was inconsistent with the size of the habitat map.")]
+    InconsistentDispersalMapSize,
+    #[error(
+        "{}{}{}",
+        "Habitat must disperse somewhere AND ",
+        "non-habitat must not disperse AND ",
+        "dispersal must only target habitat."
+    )]
+    InconsistentDispersalProbabilities,
+}
 
 #[allow(clippy::module_name_repetitions)]
 pub struct InMemoryPrecalculatedDispersal {
@@ -47,19 +57,15 @@ impl Dispersal for InMemoryPrecalculatedDispersal {
             habitat_area - 1,
         );
 
-        let valid_dispersal_target_index = match self
-            .valid_dispersal_targets
-            .get(location_index * habitat_area + dispersal_target_index)
+        // Sampling the cumulative probability table using binary search can return
+        // non-habitat locations. We correct for this by storing the index of the
+        // last valid habitat (the alias method will make this obsolete).
+        #[allow(clippy::match_on_vec_items)]
+        let valid_dispersal_target_index = match self.valid_dispersal_targets
+            [location_index * habitat_area + dispersal_target_index]
         {
-            Some(Some(valid_dispersal_target_index)) => valid_dispersal_target_index,
-            Some(None) => {
-                println!("{:?}", cumulative_dispersals_at_location);
-                panic!(
-                    "sampled dispersal targets invalid target location {:?} {} {} {}",
-                    location, location_index, dispersal_target_index, cumulative_percentage_sample
-                )
-            }
-            None => panic!("sampled dispersal targets invalid target location v2"),
+            Some(valid_dispersal_target_index) => valid_dispersal_target_index,
+            None => unreachable!("habitat dispersal origin must disperse somewhere"),
         };
 
         #[allow(clippy::cast_possible_truncation)]
@@ -81,7 +87,10 @@ impl InMemoryPrecalculatedDispersal {
     /// `Err(InconsistentDispersalMapSize)` is returned iff the dimensions of
     /// `dispersal` are not `ExE` given `E=WxH` where habitat has width `W`
     /// and height `W`.
-    #[debug_ensures(
+
+    // TODO: Add pre-condition for both error cases to match returned error
+
+    /*#[debug_ensures(
         ret.is_ok() == (
             dispersal.num_columns() == old(
                 (habitat.get_extent().width() * habitat.get_extent().height()) as usize
@@ -90,26 +99,50 @@ impl InMemoryPrecalculatedDispersal {
             )
         ),
         "returns error iff dispersal dimensions inconsistent"
-    )]
-    // TODO: We should ensure correctness of the cumulative_dispersal
+    )]*/
+
+    // TODO: We should ensure correctness of the cumulative_dispersal and the last valid dispersal location
     pub fn new(
         dispersal: &Array2D<f64>,
         habitat: &impl Habitat,
-    ) -> Result<Self, InconsistentDispersalMapSize> {
+    ) -> Result<Self, InMemoryPrecalculatedDispersalError> {
+        /*for row_index in 0..dispersal.num_rows() {
+            let ox = row_index % habitat.row_len();
+            let oy = row_index / habitat.row_len();
+
+            if habitat[(oy, ox)] > 0 {
+                for col_index in 0..dispersal.num_columns() {
+                    let tx = col_index % habitat.row_len();
+                    let ty = col_index / habitat.row_len();
+
+                    if dispersal[(row_index, col_index)] > 0.0_f64 {
+                        assert!(
+                            habitat[(ty, tx)] > 0,
+                            "From ({},{}) to ({},{})",
+                            ox,
+                            oy,
+                            tx,
+                            ty
+                        );
+                    }
+                }
+            } else {
+                for col_index in 0..dispersal.num_columns() {
+                    assert!(dispersal[(row_index, col_index)] == 0.0_f64);
+                }
+            }
+        }*/
+
         let habitat_extent = habitat.get_extent();
 
         let habitat_area = (habitat_extent.width() as usize) * (habitat_extent.height() as usize);
 
         if dispersal.num_rows() != habitat_area || dispersal.num_columns() != habitat_area {
-            return Err(InconsistentDispersalMapSize);
+            return Err(InMemoryPrecalculatedDispersalError::InconsistentDispersalMapSize);
         }
 
         let mut cumulative_dispersal = vec![0.0_f64; dispersal.num_elements()];
         let mut valid_dispersal_targets = vec![None; dispersal.num_elements()];
-
-        // !!!!!
-        // TODO: Try multiplying all dispersal probs by the habitat they target
-        // !!!!!
 
         for row_index in 0..dispersal.num_rows() {
             let sum: f64 = dispersal
@@ -122,19 +155,10 @@ impl InMemoryPrecalculatedDispersal {
                         (col_index / (habitat_extent.width() as usize)) as u32 + habitat_extent.y(),
                     );
 
+                    // Multiply all dispersal probabilities by the habitat of their target
                     dispersal_probability * f64::from(habitat.get_habitat_at_location(&location))
                 })
                 .sum();
-            //let sum: f64 = dispersal.column_iter(row_index).sum();
-
-            /*if sum < 0.0_f64 {
-                panic!("{:?}", dispersal.row_iter(row_index).copied().collect::<Vec<f64>>());
-            }
-
-            let ox = row_index % habitat_extent.width() as usize;
-            let oy = row_index / habitat_extent.width() as usize;
-
-            println!("({},{}) => {}", ox, oy, sum);*/
 
             if sum > 0.0_f64 {
                 let mut acc = 0.0_f64;
@@ -147,10 +171,9 @@ impl InMemoryPrecalculatedDispersal {
                         (col_index / (habitat_extent.width() as usize)) as u32 + habitat_extent.y(),
                     );
 
+                    // Multiply all dispersal probabilities by the habitat of their target
                     let dispersal_probability = dispersal[(row_index, col_index)]
                         * f64::from(habitat.get_habitat_at_location(&location));
-
-                    //let dispersal_probability = dispersal[(col_index, row_index)];
 
                     if dispersal_probability > 0.0_f64 {
                         acc += dispersal_probability;
@@ -159,6 +182,8 @@ impl InMemoryPrecalculatedDispersal {
                     }
 
                     cumulative_dispersal[row_index * dispersal.row_len() + col_index] = acc / sum;
+
+                    // Store the index of the last valid dispersal target
                     valid_dispersal_targets[row_index * dispersal.row_len() + col_index] =
                         last_valid_target;
                 }
