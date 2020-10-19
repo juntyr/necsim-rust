@@ -49,6 +49,16 @@ fn main() -> Result<()> {
         "The sampling percentage must be in range 0 <= s <= 1."
     );
 
+    let dispersal: Array2D<f64> = load_map_f64_from_gdal_raster(&args.dispersal_map)
+        .context("Failed to load the dispersal map")?;
+
+    println!(
+        "Successfully loaded the dispersal map {:?} with dimensions {}x{} [cols x rows].",
+        args.dispersal_map,
+        dispersal.num_columns(),
+        dispersal.num_rows()
+    );
+
     let habitat_f64 = load_map_f64_from_gdal_raster(&args.habitat_map)
         .context("Failed to load the habitat map")?;
 
@@ -61,8 +71,18 @@ fn main() -> Result<()> {
 
             habitat[(y, x)] = if h_f64 < 0.0_f64 {
                 Err(Error::Underflow)
+            } else if h_f64 < 1.0_f64 {
+                // If there is any dispersal from this location, it must be habitat
+                if dispersal
+                    .row_iter(y * habitat.num_columns() + x)
+                    .any(|p| *p > 0.0_f64)
+                {
+                    Ok(1)
+                } else {
+                    Ok(0)
+                }
             } else {
-                u32::cast(h_f64.ceil())
+                u32::cast(h_f64)
             }
             .context("Failed to interpret the habitat map as u32")?;
         }
@@ -72,16 +92,6 @@ fn main() -> Result<()> {
         args.habitat_map,
         habitat.num_columns(),
         habitat.num_rows()
-    );
-
-    let dispersal: Array2D<f64> = load_map_f64_from_gdal_raster(&args.dispersal_map)
-        .context("Failed to load the dispersal map")?;
-
-    println!(
-        "Successfully loaded the dispersal map {:?} with dimensions {}x{} [cols x rows].",
-        args.dispersal_map,
-        dispersal.num_columns(),
-        dispersal.num_rows()
     );
 
     let total_habitat = habitat
