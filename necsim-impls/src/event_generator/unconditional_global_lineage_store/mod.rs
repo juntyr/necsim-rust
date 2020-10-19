@@ -13,10 +13,10 @@ pub struct GlobalLineageStoreUnconditionalEventGenerator {
 }
 
 impl GlobalLineageStoreUnconditionalEventGenerator {
-    pub fn new(settings: &SimulationSettings<impl Landscape>, rng: &mut impl Rng) -> Self {
+    pub fn new(settings: &SimulationSettings<impl Landscape>) -> Self {
         Self {
             event_type_sampler: UnconditionalNoCoalescenceEventTypeSampler,
-            lineage_store: GlobalLineageStore::new(settings, rng),
+            lineage_store: GlobalLineageStore::new(settings),
         }
     }
 

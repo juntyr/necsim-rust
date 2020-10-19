@@ -7,7 +7,7 @@ use super::dispersal::Dispersal;
 use super::habitat::Habitat;
 
 use super::dispersal::in_memory_precalculated::{
-    InMemoryPrecalculatedDispersal, InconsistentDispersalMapSize,
+    InMemoryPrecalculatedDispersal, InMemoryPrecalculatedDispersalError,
 };
 use super::habitat::in_memory::InMemoryHabitat;
 
@@ -49,16 +49,19 @@ impl LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal {
     /// `Err(InconsistentDispersalMapSize)` is returned iff the dimensions of
     /// `dispersal` are not `ExE` given `E=RxC` where `habitat` has dimension
     /// `RxC`.
-    #[debug_ensures(
+
+    // TODO: Add pre-condition for both error cases to match returned error
+
+    /*#[debug_ensures(
         ret.is_ok() == (
             dispersal.num_columns() == old(habitat.num_elements()) &&
             dispersal.num_rows() == old(habitat.num_elements())
         ), "returns error iff dispersal dimensions inconsistent"
-    )]
+    )]*/
     pub fn new(
         habitat: Array2D<u32>,
         dispersal: &Array2D<f64>,
-    ) -> Result<Self, InconsistentDispersalMapSize> {
+    ) -> Result<Self, InMemoryPrecalculatedDispersalError> {
         let habitat = InMemoryHabitat::new(habitat);
         let dispersal = InMemoryPrecalculatedDispersal::new(dispersal, &habitat)?;
 

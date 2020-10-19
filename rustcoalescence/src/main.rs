@@ -5,6 +5,7 @@ extern crate contracts;
 
 use anyhow::{Context, Result};
 use array2d::Array2D;
+use cast::{Error, From as _From};
 use structopt::StructOpt;
 
 mod gdal;
@@ -18,7 +19,7 @@ use necsim_impls::reporter::events::EventReporter;
 use necsim_impls::reporter::execution_time::ExecutionTimeReporter;
 use necsim_impls::reporter::progress::ProgressReporter;
 
-use self::gdal::load_map_from_gdal_raster;
+use self::gdal::load_map_f64_from_gdal_raster;
 use stdrng::NewStdRng;
 
 #[derive(Debug, StructOpt)]
@@ -32,7 +33,6 @@ struct CommandLineArguments {
     seed: u64,
 }
 
-#[allow(clippy::too_many_lines)] // TODO: Remove
 fn main() -> Result<()> {
     let args = CommandLineArguments::from_args();
 
@@ -49,13 +49,24 @@ fn main() -> Result<()> {
         "The sampling percentage must be in range 0 <= s <= 1."
     );
 
-    //let habitat_f64 = load_map_from_gdal_raster(&args.habitat_map).context("Failed to load the habitat map")?;
+    let habitat_f64 = load_map_f64_from_gdal_raster(&args.habitat_map)
+        .context("Failed to load the habitat map")?;
 
-    let habitat: Array2D<u32> =
-        load_map_from_gdal_raster(&args.habitat_map).context("Failed to load the habitat map")?;
+    let mut habitat: Array2D<u32> =
+        Array2D::filled_with(0, habitat_f64.num_rows(), habitat_f64.num_columns());
 
-    /*let habitat: Array2D<u32> = Array2D::from_iter_row_major(habitat_f64.elements_row_major_iter().map(|x| *x as u32), habitat_f64.num_rows(), habitat_f64.num_columns());*/
+    for y in 0..habitat_f64.num_rows() {
+        for x in 0..habitat_f64.num_columns() {
+            let h_f64 = habitat_f64[(y, x)];
 
+            habitat[(y, x)] = if h_f64 < 0.0_f64 {
+                Err(Error::Underflow)
+            } else {
+                u32::cast(h_f64.ceil())
+            }
+            .context("Failed to interpret the habitat map as u32")?;
+        }
+    }
     println!(
         "Successfully loaded the habitat map {:?} with dimensions {}x{} [cols x rows].",
         args.habitat_map,
@@ -63,7 +74,7 @@ fn main() -> Result<()> {
         habitat.num_rows()
     );
 
-    let dispersal: Array2D<f64> = load_map_from_gdal_raster(&args.dispersal_map)
+    let dispersal: Array2D<f64> = load_map_f64_from_gdal_raster(&args.dispersal_map)
         .context("Failed to load the dispersal map")?;
 
     println!(
@@ -73,37 +84,6 @@ fn main() -> Result<()> {
         dispersal.num_rows()
     );
 
-    for row_index in 0..dispersal.num_rows() {
-        let ox = row_index % habitat.row_len();
-        let oy = row_index / habitat.row_len();
-
-        if habitat[(oy, ox)] > 0 {
-            for col_index in 0..dispersal.num_columns() {
-                let tx = col_index % habitat.row_len();
-                let ty = col_index / habitat.row_len();
-
-                if dispersal[(row_index, col_index)] > 0.0_f64 {
-                    //println!("From ({},{}) to ({},{})", ox, oy, tx, ty);
-                    assert!(
-                        habitat[(ty, tx)] > 0,
-                        "From ({},{}) to ({},{})",
-                        ox,
-                        oy,
-                        tx,
-                        ty
-                    );
-                }
-            }
-        } else {
-            for col_index in 0..dispersal.num_columns() {
-                assert!(dispersal[(row_index, col_index)] == 0.0_f64);
-            }
-        }
-    }
-
-    //panic!("hi");
-
-    //#[allow(clippy::cast_lossless)]
     let total_habitat = habitat
         .elements_row_major_iter()
         .map(|x| u64::from(*x))
