@@ -78,7 +78,7 @@ impl EventReporter {
         println!("{:=^80}", " Event Summary ");
 
         println!(
-            "Total #species:\n\t{}",
+            "Total #individuals:\n\t{}",
             self.speciation + self.self_coalescence + self.out_coalescence
         );
         println!(
