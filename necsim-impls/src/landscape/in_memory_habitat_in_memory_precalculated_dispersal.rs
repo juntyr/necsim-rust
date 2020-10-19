@@ -49,15 +49,12 @@ impl LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal {
     /// `Err(InconsistentDispersalMapSize)` is returned iff the dimensions of
     /// `dispersal` are not `ExE` given `E=RxC` where `habitat` has dimension
     /// `RxC`.
-
-    // TODO: Add pre-condition for both error cases to match returned error
-
-    /*#[debug_ensures(
-        ret.is_ok() == (
-            dispersal.num_columns() == old(habitat.num_elements()) &&
-            dispersal.num_rows() == old(habitat.num_elements())
-        ), "returns error iff dispersal dimensions inconsistent"
-    )]*/
+    ///
+    /// `Err(InconsistentDispersalProbabilities)` is returned iff any of the
+    /// following conditions is violated:
+    /// - habitat cells must disperse somewhere
+    /// - non-habitat cells must not disperse
+    /// - dispersal must only target habitat cells
     pub fn new(
         habitat: Array2D<u32>,
         dispersal: &Array2D<f64>,

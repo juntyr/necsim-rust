@@ -1,13 +1,12 @@
-use std::cmp::Ordering;
-
 use array2d::Array2D;
 use thiserror::Error;
 
 use necsim_core::landscape::{LandscapeExtent, Location};
-use necsim_core::rng::Rng;
 
-use super::Dispersal;
 use crate::landscape::habitat::Habitat;
+
+mod contract;
+mod dispersal;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Error, Debug)]
@@ -16,9 +15,9 @@ pub enum InMemoryPrecalculatedDispersalError {
     InconsistentDispersalMapSize,
     #[error(
         "{}{}{}",
-        "Habitat must disperse somewhere AND ",
-        "non-habitat must not disperse AND ",
-        "dispersal must only target habitat."
+        "Habitat cells must disperse somewhere AND ",
+        "non-habitat cells must not disperse AND ",
+        "dispersal must only target habitat cells."
     )]
     InconsistentDispersalProbabilities,
 }
@@ -30,54 +29,6 @@ pub struct InMemoryPrecalculatedDispersal {
     habitat_extent: LandscapeExtent,
 }
 
-impl Dispersal for InMemoryPrecalculatedDispersal {
-    #[must_use]
-    #[debug_requires(self.habitat_extent.contains(location), "location is inside habitat extent")]
-    #[debug_ensures(self.habitat_extent.contains(&ret), "target is inside habitat extent")]
-    fn sample_dispersal_from_location(&self, location: &Location, rng: &mut impl Rng) -> Location {
-        let location_index = ((location.y() - self.habitat_extent.y()) as usize)
-            * (self.habitat_extent.width() as usize)
-            + ((location.x() - self.habitat_extent.x()) as usize);
-
-        let habitat_area =
-            (self.habitat_extent.width() as usize) * (self.habitat_extent.height() as usize);
-
-        let cumulative_dispersals_at_location = &self.cumulative_dispersal
-            [location_index * habitat_area..(location_index + 1) * habitat_area];
-
-        let cumulative_percentage_sample = rng.sample_uniform();
-
-        let dispersal_target_index = usize::min(
-            match cumulative_dispersals_at_location.binary_search_by(|v| {
-                v.partial_cmp(&cumulative_percentage_sample)
-                    .unwrap_or(Ordering::Equal)
-            }) {
-                Ok(index) | Err(index) => index,
-            },
-            habitat_area - 1,
-        );
-
-        // Sampling the cumulative probability table using binary search can return
-        // non-habitat locations. We correct for this by storing the index of the
-        // last valid habitat (the alias method will make this obsolete).
-        #[allow(clippy::match_on_vec_items)]
-        let valid_dispersal_target_index = match self.valid_dispersal_targets
-            [location_index * habitat_area + dispersal_target_index]
-        {
-            Some(valid_dispersal_target_index) => valid_dispersal_target_index,
-            None => unreachable!("habitat dispersal origin must disperse somewhere"),
-        };
-
-        #[allow(clippy::cast_possible_truncation)]
-        Location::new(
-            (valid_dispersal_target_index % (self.habitat_extent.width() as usize)) as u32
-                + self.habitat_extent.x(),
-            (valid_dispersal_target_index / (self.habitat_extent.width() as usize)) as u32
-                + self.habitat_extent.y(),
-        )
-    }
-}
-
 impl InMemoryPrecalculatedDispersal {
     /// Creates a new `InMemoryPrecalculatedDispersal` from the
     /// `dispersal` map and extent of the habitat map.
@@ -87,58 +38,49 @@ impl InMemoryPrecalculatedDispersal {
     /// `Err(InconsistentDispersalMapSize)` is returned iff the dimensions of
     /// `dispersal` are not `ExE` given `E=WxH` where habitat has width `W`
     /// and height `W`.
-
-    // TODO: Add pre-condition for both error cases to match returned error
-
-    /*#[debug_ensures(
-        ret.is_ok() == (
+    ///
+    /// `Err(InconsistentDispersalProbabilities)` is returned iff any of the
+    /// following conditions is violated:
+    /// - habitat cells must disperse somewhere
+    /// - non-habitat cells must not disperse
+    /// - dispersal must only target habitat cells
+    #[debug_ensures(
+        matches!(ret, Err(InMemoryPrecalculatedDispersalError::InconsistentDispersalMapSize)) != (
             dispersal.num_columns() == old(
                 (habitat.get_extent().width() * habitat.get_extent().height()) as usize
             ) && dispersal.num_rows() == old(
                 (habitat.get_extent().width() * habitat.get_extent().height()) as usize
             )
         ),
-        "returns error iff dispersal dimensions inconsistent"
-    )]*/
-
-    // TODO: We should ensure correctness of the cumulative_dispersal and the last valid dispersal location
+        "returns Err(InconsistentDispersalMapSize) iff dispersal dimensions inconsistent"
+    )]
+    #[debug_ensures(
+        matches!(ret, Err(
+            InMemoryPrecalculatedDispersalError::InconsistentDispersalProbabilities
+        )) != old(
+            contract::explicit_in_memory_precalculated_dispersal_check_contract(dispersal, habitat)
+        ), "returns Err(InconsistentDispersalMapSize) iff dispersal dimensions inconsistent"
+    )]
+    //#[debug_ensures(..., "cumulative_dispersal stores the cumulative distribution function")]
+    #[debug_ensures(ret.is_ok() -> ret.as_ref().unwrap()
+        .explicit_only_valid_targets_dispersal_contract(old(habitat)),
+        "valid_dispersal_targets only allows dispersal to habitat"
+    )]
     pub fn new(
         dispersal: &Array2D<f64>,
         habitat: &impl Habitat,
     ) -> Result<Self, InMemoryPrecalculatedDispersalError> {
-        /*for row_index in 0..dispersal.num_rows() {
-            let ox = row_index % habitat.row_len();
-            let oy = row_index / habitat.row_len();
-
-            if habitat[(oy, ox)] > 0 {
-                for col_index in 0..dispersal.num_columns() {
-                    let tx = col_index % habitat.row_len();
-                    let ty = col_index / habitat.row_len();
-
-                    if dispersal[(row_index, col_index)] > 0.0_f64 {
-                        assert!(
-                            habitat[(ty, tx)] > 0,
-                            "From ({},{}) to ({},{})",
-                            ox,
-                            oy,
-                            tx,
-                            ty
-                        );
-                    }
-                }
-            } else {
-                for col_index in 0..dispersal.num_columns() {
-                    assert!(dispersal[(row_index, col_index)] == 0.0_f64);
-                }
-            }
-        }*/
-
         let habitat_extent = habitat.get_extent();
 
         let habitat_area = (habitat_extent.width() as usize) * (habitat_extent.height() as usize);
 
         if dispersal.num_rows() != habitat_area || dispersal.num_columns() != habitat_area {
             return Err(InMemoryPrecalculatedDispersalError::InconsistentDispersalMapSize);
+        }
+
+        if !contract::explicit_in_memory_precalculated_dispersal_check_contract(dispersal, habitat)
+        {
+            return Err(InMemoryPrecalculatedDispersalError::InconsistentDispersalProbabilities);
         }
 
         let mut cumulative_dispersal = vec![0.0_f64; dispersal.num_elements()];
