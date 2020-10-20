@@ -1,7 +1,7 @@
 use necsim_core::landscape::Location;
 use necsim_core::rng::Rng;
 
-pub mod in_memory_precalculated;
+pub mod in_memory;
 
 pub trait Dispersal {
     #[must_use]

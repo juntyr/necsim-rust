@@ -6,15 +6,16 @@ use necsim_core::rng::Rng;
 use super::dispersal::Dispersal;
 use super::habitat::Habitat;
 
-use super::dispersal::in_memory_precalculated::{
-    InMemoryPrecalculatedDispersal, InMemoryPrecalculatedDispersalError,
-};
+use super::dispersal::in_memory::alias::InMemoryAliasDispersal as InMemoryDispersal;
+//use super::dispersal::in_memory::cumulative::InMemoryCumulativeDispersal as InMemoryDispersal;
 use super::habitat::in_memory::InMemoryHabitat;
+
+use super::dispersal::in_memory::error::InMemoryDispersalError;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal {
     habitat: InMemoryHabitat,
-    dispersal: InMemoryPrecalculatedDispersal,
+    dispersal: InMemoryDispersal,
 }
 
 #[contract_trait]
@@ -58,9 +59,9 @@ impl LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal {
     pub fn new(
         habitat: Array2D<u32>,
         dispersal: &Array2D<f64>,
-    ) -> Result<Self, InMemoryPrecalculatedDispersalError> {
+    ) -> Result<Self, InMemoryDispersalError> {
         let habitat = InMemoryHabitat::new(habitat);
-        let dispersal = InMemoryPrecalculatedDispersal::new(dispersal, &habitat)?;
+        let dispersal = InMemoryDispersal::new(dispersal, &habitat)?;
 
         Ok(Self { habitat, dispersal })
     }

@@ -3,9 +3,9 @@ use necsim_core::rng::Rng;
 
 use crate::landscape::dispersal::Dispersal;
 
-use super::InMemoryPrecalculatedDispersal;
+use super::InMemoryCumulativeDispersal;
 
-impl Dispersal for InMemoryPrecalculatedDispersal {
+impl Dispersal for InMemoryCumulativeDispersal {
     #[must_use]
     #[debug_requires(self.habitat_extent.contains(location), "location is inside habitat extent")]
     #[debug_ensures(self.habitat_extent.contains(&ret), "target is inside habitat extent")]
