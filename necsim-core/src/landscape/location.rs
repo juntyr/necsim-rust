@@ -1,4 +1,4 @@
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, Hash)]
 pub struct Location {
     x: u32,
     y: u32,
