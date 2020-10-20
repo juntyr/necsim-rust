@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-
 use necsim_core::landscape::Location;
 use necsim_core::rng::Rng;
 
@@ -25,10 +23,9 @@ impl Dispersal for InMemoryPrecalculatedDispersal {
         let cumulative_percentage_sample = rng.sample_uniform();
 
         let dispersal_target_index = usize::min(
-            match cumulative_dispersals_at_location.binary_search_by(|v| {
-                v.partial_cmp(&cumulative_percentage_sample)
-                    .unwrap_or(Ordering::Equal)
-            }) {
+            match cumulative_dispersals_at_location
+                .binary_search_by(|v| crate::f64::total_cmp_f64(*v, cumulative_percentage_sample))
+            {
                 Ok(index) | Err(index) => index,
             },
             habitat_area - 1,
