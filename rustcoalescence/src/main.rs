@@ -8,10 +8,13 @@ use array2d::Array2D;
 use cast::{Error, From as _From};
 use structopt::StructOpt;
 
+use structopt::clap::arg_enum;
+
 mod gdal;
 mod stdrng;
 
 use necsim_classical::ClassicalSimulation;
+use necsim_gillespie::GillespieSimulation;
 #[macro_use]
 extern crate necsim_core;
 use necsim_impls::reporter::biodiversity::BiodiversityReporter;
@@ -22,6 +25,14 @@ use necsim_impls::reporter::progress::ProgressReporter;
 use self::gdal::load_map_f64_from_gdal_raster;
 use stdrng::NewStdRng;
 
+arg_enum! {
+    #[derive(Debug)]
+    enum Algorithm {
+        Classical,
+        Gillespie
+    }
+}
+
 #[derive(Debug, StructOpt)]
 struct CommandLineArguments {
     #[structopt(parse(from_os_str))]
@@ -31,8 +42,11 @@ struct CommandLineArguments {
     speciation_probability_per_generation: f64,
     sample_percentage: f64,
     seed: u64,
+    #[structopt(possible_values = &Algorithm::variants(), case_insensitive = true)]
+    algorithm: Algorithm,
 }
 
+#[allow(clippy::too_many_lines)] // TODO: Refactor
 fn main() -> Result<()> {
     let args = CommandLineArguments::from_args();
 
@@ -107,16 +121,29 @@ fn main() -> Result<()> {
         progress_reporter
     ];
 
-    println!("Setting up the classical coalescence algorithm ...");
+    println!(
+        "Setting up the {:?} coalescence algorithm ...",
+        args.algorithm
+    );
 
-    let (time, steps) = ClassicalSimulation::simulate(
-        habitat,
-        &dispersal,
-        args.speciation_probability_per_generation,
-        args.sample_percentage,
-        &mut rng,
-        &mut reporter_group,
-    )
+    let (time, steps) = match args.algorithm {
+        Algorithm::Classical => ClassicalSimulation::simulate(
+            habitat,
+            &dispersal,
+            args.speciation_probability_per_generation,
+            args.sample_percentage,
+            &mut rng,
+            &mut reporter_group,
+        ),
+        Algorithm::Gillespie => GillespieSimulation::simulate(
+            habitat,
+            &dispersal,
+            args.speciation_probability_per_generation,
+            args.sample_percentage,
+            &mut rng,
+            &mut reporter_group,
+        ),
+    }
     .with_context(|| {
         format!(
             concat!(

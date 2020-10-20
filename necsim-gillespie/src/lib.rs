@@ -9,13 +9,13 @@ use array2d::Array2D;
 use necsim_core::reporter::Reporter;
 use necsim_core::rng::Rng;
 use necsim_core::{simulation::Simulation, simulation::SimulationSettings};
-use necsim_impls::event_generator::unconditional_global_lineage_store::GlobalLineageStoreUnconditionalEventGenerator;
+use necsim_impls::event_generator::unconditional_global_gillespie::GlobalGillespieUnconditionalEventGenerator;
 use necsim_impls::landscape::in_memory_habitat_in_memory_precalculated_dispersal::LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal;
 
-pub struct ClassicalSimulation(std::marker::PhantomData<Simulation>);
+pub struct GillespieSimulation(std::marker::PhantomData<Simulation>);
 
-impl ClassicalSimulation {
-    /// Simulates the classical coalescence algorithm on an in memory
+impl GillespieSimulation {
+    /// Simulates the Gillespie coalescence algorithm on an in memory
     /// `habitat` with precalculated `dispersal`.
     ///
     /// # Errors
@@ -52,7 +52,7 @@ impl ClassicalSimulation {
 
         let (time, steps) = Simulation::simulate(
             &settings,
-            GlobalLineageStoreUnconditionalEventGenerator::new(&settings),
+            GlobalGillespieUnconditionalEventGenerator::new(&settings, rng),
             rng,
             reporter,
         );
