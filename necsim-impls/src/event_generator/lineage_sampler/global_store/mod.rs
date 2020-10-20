@@ -8,8 +8,7 @@ use necsim_core::simulation::SimulationSettings;
 
 mod coalescence;
 mod contract;
-mod r#impl;
-mod store;
+mod update;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct LineageReference(usize);
@@ -19,7 +18,6 @@ impl necsim_core::lineage::LineageReference for LineageReference {}
 pub struct GlobalLineageStore {
     landscape_extent: LandscapeExtent,
     lineages_store: Vec<Lineage>,
-    active_lineage_references: Vec<LineageReference>,
     location_to_lineage_references: Array2D<Vec<LineageReference>>,
 }
 
@@ -31,9 +29,9 @@ impl GlobalLineageStore {
         "stores landscape_extent"
     )]
     #[debug_ensures(if settings.sample_percentage() == 0.0_f64 {
-        ret.number_active_lineages() == 0
+        ret.lineages_store.is_empty()
     } else if settings.sample_percentage() == 1.0_f64 {
-        ret.number_active_lineages() == settings.landscape().get_total_habitat()
+        ret.lineages_store.len() == settings.landscape().get_total_habitat()
     } else {
         true
     }, "samples active lineages according to settings.sample_percentage()")]
@@ -86,15 +84,9 @@ impl GlobalLineageStore {
 
         Self {
             landscape_extent,
-            active_lineage_references: (0..lineages_store.len()).map(LineageReference).collect(),
             lineages_store,
             location_to_lineage_references,
         }
-    }
-
-    #[must_use]
-    pub fn number_active_lineages(&self) -> usize {
-        self.active_lineage_references.len()
     }
 
     #[must_use]
@@ -102,12 +94,11 @@ impl GlobalLineageStore {
         self.landscape_extent.contains(location),
         "location is inside landscape extent"
     )]
-    pub fn get_number_active_lineages_at_location(&self, location: &Location) -> usize {
-        self.location_to_lineage_references[(
+    pub fn get_active_lineages_at_location(&self, location: &Location) -> &[LineageReference] {
+        &self.location_to_lineage_references[(
             (location.y() - self.landscape_extent.y()) as usize,
             (location.x() - self.landscape_extent.x()) as usize,
         )]
-            .len()
     }
 }
 

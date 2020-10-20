@@ -3,7 +3,8 @@ use necsim_core::landscape::Location;
 use super::{GlobalLineageStore, LineageReference};
 
 impl GlobalLineageStore {
-    pub(super) fn explicit_global_store_lineage_at_location_contract(
+    #[must_use]
+    pub fn explicit_global_store_lineage_at_location_contract(
         &self,
         reference: LineageReference,
     ) -> bool {
@@ -24,6 +25,7 @@ impl GlobalLineageStore {
         }
     }
 
+    #[must_use]
     pub(super) fn explicit_global_store_invariant_contract(&self, location: &Location) -> bool {
         let lineages_at_location = &self.location_to_lineage_references[(
             (location.y() - self.landscape_extent.y()) as usize,

@@ -9,7 +9,8 @@ use array2d::Array2D;
 use necsim_core::reporter::Reporter;
 use necsim_core::rng::Rng;
 use necsim_core::{simulation::Simulation, simulation::SimulationSettings};
-use necsim_impls::event_generator::unconditional_global_lineage_store::GlobalLineageStoreUnconditionalEventGenerator;
+use necsim_impls::event_generator::lineage_sampler::active_list::ActiveLineageListSampler;
+use necsim_impls::event_generator::unconditional_global::UnconditionalGlobalEventGenerator;
 use necsim_impls::landscape::in_memory_habitat_in_memory_precalculated_dispersal::LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal;
 
 pub struct ClassicalSimulation(std::marker::PhantomData<Simulation>);
@@ -52,7 +53,7 @@ impl ClassicalSimulation {
 
         let (time, steps) = Simulation::simulate(
             &settings,
-            GlobalLineageStoreUnconditionalEventGenerator::new(&settings),
+            UnconditionalGlobalEventGenerator::new(ActiveLineageListSampler::new(&settings)),
             rng,
             reporter,
         );
