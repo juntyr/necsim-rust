@@ -28,11 +28,7 @@ impl GlobalLineageStore {
         self.explicit_global_store_invariant_contract(&old(location.clone())),
         "maintains invariant of lineage-location bijection"
     )]
-    pub(super) fn add_lineage_to_location(
-        &mut self,
-        reference: LineageReference,
-        location: Location,
-    ) {
+    pub fn add_lineage_to_location(&mut self, reference: LineageReference, location: Location) {
         let lineages_at_location = &mut self.location_to_lineage_references[(
             (location.y() - self.landscape_extent.y()) as usize,
             (location.x() - self.landscape_extent.x()) as usize,
@@ -69,7 +65,7 @@ impl GlobalLineageStore {
         self.explicit_global_store_invariant_contract(self[reference].location()),
         "maintains invariant of lineage-location bijection"
     )]
-    pub(super) fn remove_lineage_from_its_location(&mut self, reference: LineageReference) {
+    pub fn remove_lineage_from_its_location(&mut self, reference: LineageReference) {
         let lineage = &self.lineages_store[reference.0];
 
         let lineages_at_location = &mut self.location_to_lineage_references[(
