@@ -3,111 +3,62 @@
 #[macro_use]
 extern crate contracts;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use array2d::Array2D;
-use cast::{Error, From as _From};
 use structopt::StructOpt;
 
-use structopt::clap::arg_enum;
-
+mod args;
 mod gdal;
+mod maps;
+mod simulation;
 mod stdrng;
 
-use necsim_classical::ClassicalSimulation;
-use necsim_gillespie::GillespieSimulation;
 #[macro_use]
 extern crate necsim_core;
+
 use necsim_impls::reporter::biodiversity::BiodiversityReporter;
 use necsim_impls::reporter::events::EventReporter;
 use necsim_impls::reporter::execution_time::ExecutionTimeReporter;
 use necsim_impls::reporter::progress::ProgressReporter;
 
-use self::gdal::load_map_f64_from_gdal_raster;
 use stdrng::NewStdRng;
 
-arg_enum! {
-    #[derive(Debug)]
-    enum Algorithm {
-        Classical,
-        Gillespie
-    }
-}
-
-#[derive(Debug, StructOpt)]
-struct CommandLineArguments {
-    #[structopt(parse(from_os_str))]
-    habitat_map: std::path::PathBuf,
-    #[structopt(parse(from_os_str))]
-    dispersal_map: std::path::PathBuf,
-    speciation_probability_per_generation: f64,
-    sample_percentage: f64,
-    seed: u64,
-    #[structopt(possible_values = &Algorithm::variants(), case_insensitive = true)]
-    algorithm: Algorithm,
-}
-
-#[allow(clippy::too_many_lines)] // TODO: Refactor
 fn main() -> Result<()> {
-    let args = CommandLineArguments::from_args();
+    // Parse and validate all command line arguments
+    let args = args::CommandLineArguments::from_args();
 
     println!("Parsed arguments:\n{:#?}", args);
 
     anyhow::ensure!(
-        args.speciation_probability_per_generation > 0.0_f64
-            && args.speciation_probability_per_generation <= 1.0_f64,
+        *args.speciation_probability_per_generation() > 0.0_f64
+            && *args.speciation_probability_per_generation() <= 1.0_f64,
         "The speciation probability per generation must be in range 0 < s <= 1."
     );
 
     anyhow::ensure!(
-        args.sample_percentage >= 0.0_f64 && args.sample_percentage <= 1.0_f64,
+        *args.sample_percentage() >= 0.0_f64 && *args.sample_percentage() <= 1.0_f64,
         "The sampling percentage must be in range 0 <= s <= 1."
     );
 
-    let dispersal: Array2D<f64> = load_map_f64_from_gdal_raster(&args.dispersal_map)
-        .context("Failed to load the dispersal map")?;
+    let dispersal: Array2D<f64> = maps::load_dispersal_map(args.dispersal_map())?;
 
     println!(
         "Successfully loaded the dispersal map {:?} with dimensions {}x{} [cols x rows].",
-        args.dispersal_map,
+        args.dispersal_map(),
         dispersal.num_columns(),
         dispersal.num_rows()
     );
 
-    let habitat_f64 = load_map_f64_from_gdal_raster(&args.habitat_map)
-        .context("Failed to load the habitat map")?;
+    let habitat: Array2D<u32> = maps::load_habitat_map(args.habitat_map(), &dispersal)?;
 
-    let mut habitat: Array2D<u32> =
-        Array2D::filled_with(0, habitat_f64.num_rows(), habitat_f64.num_columns());
-
-    for y in 0..habitat_f64.num_rows() {
-        for x in 0..habitat_f64.num_columns() {
-            let h_f64 = habitat_f64[(y, x)];
-
-            habitat[(y, x)] = if h_f64 < 0.0_f64 {
-                Err(Error::Underflow)
-            } else if h_f64 < 1.0_f64 {
-                // If there is any dispersal from this location, it must be habitat
-                if dispersal
-                    .row_iter(y * habitat.num_columns() + x)
-                    .any(|p| *p > 0.0_f64)
-                {
-                    Ok(1)
-                } else {
-                    Ok(0)
-                }
-            } else {
-                u32::cast(h_f64)
-            }
-            .context("Failed to interpret the habitat map as u32")?;
-        }
-    }
     println!(
         "Successfully loaded the habitat map {:?} with dimensions {}x{} [cols x rows].",
-        args.habitat_map,
+        args.habitat_map(),
         habitat.num_columns(),
         habitat.num_rows()
     );
 
+    // Initialise the reporters
     let total_habitat = habitat
         .elements_row_major_iter()
         .map(|x| u64::from(*x))
@@ -116,9 +67,10 @@ fn main() -> Result<()> {
     #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::cast_sign_loss)]
     #[allow(clippy::cast_precision_loss)]
-    let estimated_total_lineages = ((total_habitat as f64) * args.sample_percentage).ceil() as u64;
+    let estimated_total_lineages =
+        ((total_habitat as f64) * args.sample_percentage()).ceil() as u64;
 
-    let mut rng = NewStdRng::from_seed(args.seed);
+    let mut rng = NewStdRng::from_seed(*args.seed());
     let mut biodiversity_reporter = BiodiversityReporter::default();
     let mut event_reporter = EventReporter::default();
     let mut execution_time_reporter = ExecutionTimeReporter::default();
@@ -131,43 +83,14 @@ fn main() -> Result<()> {
         progress_reporter
     ];
 
-    println!(
-        "Setting up the {:?} coalescence algorithm ...",
-        args.algorithm
-    );
+    // Run the simulation
+    let (time, steps) =
+        simulation::simulate(&args, habitat, &dispersal, &mut rng, &mut reporter_group)?;
 
-    let (time, steps) = match args.algorithm {
-        Algorithm::Classical => ClassicalSimulation::simulate(
-            habitat,
-            &dispersal,
-            args.speciation_probability_per_generation,
-            args.sample_percentage,
-            &mut rng,
-            &mut reporter_group,
-        ),
-        Algorithm::Gillespie => GillespieSimulation::simulate(
-            habitat,
-            &dispersal,
-            args.speciation_probability_per_generation,
-            args.sample_percentage,
-            &mut rng,
-            &mut reporter_group,
-        ),
-    }
-    .with_context(|| {
-        format!(
-            concat!(
-                "Failed to create a Landscape with the habitat ",
-                "map {:?} and the dispersal map {:?}."
-            ),
-            args.dispersal_map, args.habitat_map
-        )
-    })?;
-
+    // Output the simulation result and report summaries
     let execution_time = execution_time_reporter.execution_time();
 
     progress_reporter.finish();
-
     event_reporter.report();
 
     println!(
