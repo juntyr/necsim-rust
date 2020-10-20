@@ -1,5 +1,4 @@
 use array2d::Array2D;
-use thiserror::Error;
 
 use necsim_core::landscape::{LandscapeExtent, Location};
 
@@ -8,29 +7,18 @@ use crate::landscape::habitat::Habitat;
 mod contract;
 mod dispersal;
 
-#[allow(clippy::module_name_repetitions)]
-#[derive(Error, Debug)]
-pub enum InMemoryPrecalculatedDispersalError {
-    #[error("The size of the dispersal map was inconsistent with the size of the habitat map.")]
-    InconsistentDispersalMapSize,
-    #[error(
-        "{}{}{}",
-        "Habitat cells must disperse somewhere AND ",
-        "non-habitat cells must not disperse AND ",
-        "dispersal must only target habitat cells."
-    )]
-    InconsistentDispersalProbabilities,
-}
+use crate::landscape::dispersal::in_memory::contract::explicit_in_memory_dispersal_check_contract;
+use crate::landscape::dispersal::in_memory::error::InMemoryDispersalError;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct InMemoryPrecalculatedDispersal {
+pub struct InMemoryCumulativeDispersal {
     cumulative_dispersal: Vec<f64>,
     valid_dispersal_targets: Vec<Option<usize>>,
     habitat_extent: LandscapeExtent,
 }
 
-impl InMemoryPrecalculatedDispersal {
-    /// Creates a new `InMemoryPrecalculatedDispersal` from the
+impl InMemoryCumulativeDispersal {
+    /// Creates a new `InMemoryCumulativeDispersal` from the
     /// `dispersal` map and extent of the habitat map.
     ///
     /// # Errors
@@ -45,7 +33,7 @@ impl InMemoryPrecalculatedDispersal {
     /// - non-habitat cells must not disperse
     /// - dispersal must only target habitat cells
     #[debug_ensures(
-        matches!(ret, Err(InMemoryPrecalculatedDispersalError::InconsistentDispersalMapSize)) != (
+        matches!(ret, Err(InMemoryDispersalError::InconsistentDispersalMapSize)) != (
             dispersal.num_columns() == old(
                 (habitat.get_extent().width() * habitat.get_extent().height()) as usize
             ) && dispersal.num_rows() == old(
@@ -56,9 +44,9 @@ impl InMemoryPrecalculatedDispersal {
     )]
     #[debug_ensures(
         matches!(ret, Err(
-            InMemoryPrecalculatedDispersalError::InconsistentDispersalProbabilities
+            InMemoryDispersalError::InconsistentDispersalProbabilities
         )) != old(
-            contract::explicit_in_memory_precalculated_dispersal_check_contract(dispersal, habitat)
+            explicit_in_memory_dispersal_check_contract(dispersal, habitat)
         ), "returns Err(InconsistentDispersalMapSize) iff dispersal dimensions inconsistent"
     )]
     //#[debug_ensures(..., "cumulative_dispersal stores the cumulative distribution function")]
@@ -69,18 +57,17 @@ impl InMemoryPrecalculatedDispersal {
     pub fn new(
         dispersal: &Array2D<f64>,
         habitat: &impl Habitat,
-    ) -> Result<Self, InMemoryPrecalculatedDispersalError> {
+    ) -> Result<Self, InMemoryDispersalError> {
         let habitat_extent = habitat.get_extent();
 
         let habitat_area = (habitat_extent.width() as usize) * (habitat_extent.height() as usize);
 
         if dispersal.num_rows() != habitat_area || dispersal.num_columns() != habitat_area {
-            return Err(InMemoryPrecalculatedDispersalError::InconsistentDispersalMapSize);
+            return Err(InMemoryDispersalError::InconsistentDispersalMapSize);
         }
 
-        if !contract::explicit_in_memory_precalculated_dispersal_check_contract(dispersal, habitat)
-        {
-            return Err(InMemoryPrecalculatedDispersalError::InconsistentDispersalProbabilities);
+        if !explicit_in_memory_dispersal_check_contract(dispersal, habitat) {
+            return Err(InMemoryDispersalError::InconsistentDispersalProbabilities);
         }
 
         let mut cumulative_dispersal = vec![0.0_f64; dispersal.num_elements()];
@@ -132,7 +119,7 @@ impl InMemoryPrecalculatedDispersal {
             }
         }
 
-        Ok(Self {
+        Ok(InMemoryCumulativeDispersal {
             cumulative_dispersal,
             valid_dispersal_targets,
             habitat_extent,
