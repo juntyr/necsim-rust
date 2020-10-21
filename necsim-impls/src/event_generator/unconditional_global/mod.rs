@@ -5,8 +5,8 @@ use necsim_core::lineage::LineageReference;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::SimulationSettings;
 
-use crate::event_generator::coalescence_sampler::CoalescenceSampler;
-use crate::event_generator::event_type_sampler::unconditional_no_coalescence::UnconditionalNoCoalescenceEventTypeSampler;
+use crate::event_generator::coalescence_sampler::ConditionalCoalescenceSampler;
+use crate::event_generator::event_type_sampler::unconditional::UnconditionalEventTypeSampler;
 use crate::event_generator::lineage_sampler::LineageSampler;
 
 mod event_generator;
@@ -14,19 +14,19 @@ mod event_generator;
 #[allow(clippy::module_name_repetitions)]
 pub struct UnconditionalGlobalEventGenerator<
     L: LineageReference,
-    S: LineageSampler<L> + CoalescenceSampler<L>,
+    S: LineageSampler<L> + ConditionalCoalescenceSampler<L>,
 > {
-    event_type_sampler: UnconditionalNoCoalescenceEventTypeSampler,
+    event_type_sampler: UnconditionalEventTypeSampler,
     lineage_coalescence_sampler: S,
     lineage_reference: PhantomData<L>,
 }
 
-impl<L: LineageReference, S: LineageSampler<L> + CoalescenceSampler<L>>
+impl<L: LineageReference, S: LineageSampler<L> + ConditionalCoalescenceSampler<L>>
     UnconditionalGlobalEventGenerator<L, S>
 {
     pub fn new(lineage_coalescence_sampler: S) -> Self {
         Self {
-            event_type_sampler: UnconditionalNoCoalescenceEventTypeSampler,
+            event_type_sampler: UnconditionalEventTypeSampler,
             lineage_coalescence_sampler,
             lineage_reference: PhantomData,
         }

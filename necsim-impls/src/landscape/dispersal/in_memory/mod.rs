@@ -7,6 +7,7 @@ pub mod error;
 
 pub mod alias;
 pub mod cumulative;
+pub mod separable_alias;
 
 use super::Dispersal;
 

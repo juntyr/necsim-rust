@@ -3,7 +3,9 @@ use necsim_core::rng::Rng;
 
 use super::{GillespieLineageSampler, LineageReference};
 
-use crate::event_generator::coalescence_sampler::CoalescenceSampler;
+use crate::event_generator::coalescence_sampler::{
+    CoalescenceSampler, ConditionalCoalescenceSampler,
+};
 
 #[contract_trait]
 impl CoalescenceSampler<LineageReference> for GillespieLineageSampler {
@@ -16,5 +18,24 @@ impl CoalescenceSampler<LineageReference> for GillespieLineageSampler {
     ) -> Option<LineageReference> {
         self.lineages_store
             .sample_optional_coalescence_at_location(location, habitat, rng)
+    }
+}
+
+#[contract_trait]
+impl ConditionalCoalescenceSampler<LineageReference> for GillespieLineageSampler {
+    #[must_use]
+    fn sample_coalescence_at_location(
+        &self,
+        location: &Location,
+        rng: &mut impl Rng,
+    ) -> LineageReference {
+        self.lineages_store
+            .sample_coalescence_at_location(location, rng)
+    }
+
+    #[must_use]
+    fn get_coalescence_probability_at_location(&self, location: &Location, habitat: u32) -> f64 {
+        self.lineages_store
+            .get_coalescence_probability_at_location(location, habitat)
     }
 }

@@ -6,14 +6,14 @@ use necsim_core::lineage::LineageReference;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::SimulationSettings;
 
-use crate::event_generator::coalescence_sampler::CoalescenceSampler;
+use crate::event_generator::coalescence_sampler::ConditionalCoalescenceSampler;
 use crate::event_generator::event_type_sampler::EventTypeSampler;
 use crate::event_generator::lineage_sampler::LineageSampler;
 
 use super::UnconditionalGlobalEventGenerator;
 
 #[contract_trait]
-impl<L: LineageReference, S: LineageSampler<L> + CoalescenceSampler<L>> EventGenerator<L>
+impl<L: LineageReference, S: LineageSampler<L> + ConditionalCoalescenceSampler<L>> EventGenerator<L>
     for UnconditionalGlobalEventGenerator<L, S>
 {
     #[debug_ensures(
@@ -109,49 +109,32 @@ impl<L: LineageReference, S: LineageSampler<L> + CoalescenceSampler<L>> EventGen
         let event_location =
             self.lineage_coalescence_sampler[chosen_active_lineage_reference.clone()].location();
 
-        let event_type_no_coalescence: EventType<L> = self
-            .event_type_sampler
-            .sample_event_type_at_location(event_location, settings, rng);
+        let event_type: EventType<L> = self.event_type_sampler.sample_event_type_at_location(
+            event_location,
+            settings,
+            &self.lineage_coalescence_sampler,
+            rng,
+        );
 
-        let event_type_with_coalescence = match event_type_no_coalescence {
-            EventType::Speciation => EventType::Speciation,
-            EventType::Dispersal {
-                origin,
-                target: dispersal_target,
-                ..
-            } => {
-                let optional_coalescence = self
-                    .lineage_coalescence_sampler
-                    .sample_optional_coalescence_at_location(
-                        &dispersal_target,
-                        settings
-                            .landscape()
-                            .get_habitat_at_location(&dispersal_target),
-                        rng,
-                    );
-
-                if optional_coalescence.is_none() {
-                    self.lineage_coalescence_sampler
-                        .add_lineage_reference_to_location(
-                            chosen_active_lineage_reference.clone(),
-                            dispersal_target.clone(),
-                            chosen_event_time,
-                            rng,
-                        );
-                }
-
-                EventType::Dispersal {
-                    origin,
-                    target: dispersal_target,
-                    coalescence: optional_coalescence,
-                }
-            }
-        };
+        if let EventType::Dispersal {
+            target: ref dispersal_target,
+            coalescence: None,
+            ..
+        } = event_type
+        {
+            self.lineage_coalescence_sampler
+                .add_lineage_reference_to_location(
+                    chosen_active_lineage_reference.clone(),
+                    dispersal_target.clone(),
+                    chosen_event_time,
+                    rng,
+                );
+        }
 
         Some(Event::new(
             chosen_event_time,
             chosen_active_lineage_reference,
-            event_type_with_coalescence,
+            event_type,
         ))
     }
 }
