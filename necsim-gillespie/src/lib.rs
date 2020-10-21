@@ -11,7 +11,9 @@ use necsim_core::rng::Rng;
 use necsim_core::{simulation::Simulation, simulation::SimulationSettings};
 use necsim_impls::event_generator::lineage_sampler::gillespie::GillespieLineageSampler;
 use necsim_impls::event_generator::unconditional_global::UnconditionalGlobalEventGenerator;
-use necsim_impls::landscape::in_memory_habitat_in_memory_precalculated_dispersal::LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal;
+use necsim_impls::landscape::dispersal::in_memory::alias::InMemoryAliasDispersal as InMemoryDispersal;
+use necsim_impls::landscape::in_memory_habitat_in_memory_dispersal::LandscapeInMemoryHabitatInMemoryDispersal;
+//use necsim_impls::landscape::dispersal::in_memory::cumulative::InMemoryCumulativeDispersal as InMemoryDispersal;
 
 pub struct GillespieSimulation(std::marker::PhantomData<Simulation>);
 
@@ -42,8 +44,8 @@ impl GillespieSimulation {
         rng: &mut impl Rng,
         reporter: &mut impl Reporter,
     ) -> Result<(f64, usize)> {
-        let landscape =
-            LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal::new(habitat, &dispersal)?;
+        let landscape: LandscapeInMemoryHabitatInMemoryDispersal<InMemoryDispersal> =
+            LandscapeInMemoryHabitatInMemoryDispersal::new(habitat, &dispersal)?;
 
         let settings = SimulationSettings::new(
             speciation_probability_per_generation,

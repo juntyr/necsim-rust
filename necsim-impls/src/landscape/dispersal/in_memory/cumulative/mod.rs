@@ -10,6 +10,8 @@ mod dispersal;
 use crate::landscape::dispersal::in_memory::contract::explicit_in_memory_dispersal_check_contract;
 use crate::landscape::dispersal::in_memory::error::InMemoryDispersalError;
 
+use super::InMemoryDispersal;
+
 #[allow(clippy::module_name_repetitions)]
 pub struct InMemoryCumulativeDispersal {
     cumulative_dispersal: Vec<f64>,
@@ -17,7 +19,8 @@ pub struct InMemoryCumulativeDispersal {
     habitat_extent: LandscapeExtent,
 }
 
-impl InMemoryCumulativeDispersal {
+#[contract_trait]
+impl InMemoryDispersal for InMemoryCumulativeDispersal {
     /// Creates a new `InMemoryCumulativeDispersal` from the
     /// `dispersal` map and extent of the habitat map.
     ///
@@ -32,29 +35,12 @@ impl InMemoryCumulativeDispersal {
     /// - habitat cells must disperse somewhere
     /// - non-habitat cells must not disperse
     /// - dispersal must only target habitat cells
-    #[debug_ensures(
-        matches!(ret, Err(InMemoryDispersalError::InconsistentDispersalMapSize)) != (
-            dispersal.num_columns() == old(
-                (habitat.get_extent().width() * habitat.get_extent().height()) as usize
-            ) && dispersal.num_rows() == old(
-                (habitat.get_extent().width() * habitat.get_extent().height()) as usize
-            )
-        ),
-        "returns Err(InconsistentDispersalMapSize) iff dispersal dimensions inconsistent"
-    )]
-    #[debug_ensures(
-        matches!(ret, Err(
-            InMemoryDispersalError::InconsistentDispersalProbabilities
-        )) != old(
-            explicit_in_memory_dispersal_check_contract(dispersal, habitat)
-        ), "returns Err(InconsistentDispersalMapSize) iff dispersal dimensions inconsistent"
-    )]
-    //#[debug_ensures(..., "cumulative_dispersal stores the cumulative distribution function")]
     #[debug_ensures(ret.is_ok() -> ret.as_ref().unwrap()
         .explicit_only_valid_targets_dispersal_contract(old(habitat)),
         "valid_dispersal_targets only allows dispersal to habitat"
     )]
-    pub fn new(
+    //#[debug_ensures(..., "cumulative_dispersal stores the cumulative distribution function")]
+    fn new(
         dispersal: &Array2D<f64>,
         habitat: &impl Habitat,
     ) -> Result<Self, InMemoryDispersalError> {
