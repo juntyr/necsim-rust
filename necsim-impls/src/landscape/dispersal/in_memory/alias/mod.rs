@@ -10,13 +10,16 @@ use crate::alias::AliasMethodSampler;
 use crate::landscape::dispersal::in_memory::contract::explicit_in_memory_dispersal_check_contract;
 use crate::landscape::dispersal::in_memory::error::InMemoryDispersalError;
 
+use super::InMemoryDispersal;
+
 #[allow(clippy::module_name_repetitions)]
 pub struct InMemoryAliasDispersal {
     alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
     habitat_extent: LandscapeExtent,
 }
 
-impl InMemoryAliasDispersal {
+#[contract_trait]
+impl InMemoryDispersal for InMemoryAliasDispersal {
     /// Creates a new `InMemoryAliasDispersal` from the
     /// `dispersal` map and extent of the habitat map.
     ///
@@ -31,24 +34,7 @@ impl InMemoryAliasDispersal {
     /// - habitat cells must disperse somewhere
     /// - non-habitat cells must not disperse
     /// - dispersal must only target habitat cells
-    #[debug_ensures(
-        matches!(ret, Err(InMemoryDispersalError::InconsistentDispersalMapSize)) != (
-            dispersal.num_columns() == old(
-                (habitat.get_extent().width() * habitat.get_extent().height()) as usize
-            ) && dispersal.num_rows() == old(
-                (habitat.get_extent().width() * habitat.get_extent().height()) as usize
-            )
-        ),
-        "returns Err(InconsistentDispersalMapSize) iff dispersal dimensions inconsistent"
-    )]
-    #[debug_ensures(
-        matches!(ret, Err(
-            InMemoryDispersalError::InconsistentDispersalProbabilities
-        )) != old(
-            explicit_in_memory_dispersal_check_contract(dispersal, habitat)
-        ), "returns Err(InconsistentDispersalMapSize) iff dispersal dimensions inconsistent"
-    )]
-    pub fn new(
+    fn new(
         dispersal: &Array2D<f64>,
         habitat: &impl Habitat,
     ) -> Result<Self, InMemoryDispersalError> {

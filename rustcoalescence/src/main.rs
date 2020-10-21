@@ -71,6 +71,7 @@ fn main() -> Result<()> {
         ((total_habitat as f64) * args.sample_percentage()).ceil() as u64;
 
     let mut rng = NewStdRng::from_seed(*args.seed());
+
     let mut biodiversity_reporter = BiodiversityReporter::default();
     let mut event_reporter = EventReporter::default();
     let mut execution_time_reporter = ExecutionTimeReporter::default();

@@ -3,23 +3,20 @@ use array2d::Array2D;
 use necsim_core::landscape::{Landscape, LandscapeExtent, Location};
 use necsim_core::rng::Rng;
 
-use super::dispersal::Dispersal;
-use super::habitat::Habitat;
-
-use super::dispersal::in_memory::alias::InMemoryAliasDispersal as InMemoryDispersal;
-//use super::dispersal::in_memory::cumulative::InMemoryCumulativeDispersal as InMemoryDispersal;
-use super::habitat::in_memory::InMemoryHabitat;
+use crate::landscape::dispersal::in_memory::InMemoryDispersal;
+use crate::landscape::habitat::in_memory::InMemoryHabitat;
+use crate::landscape::habitat::Habitat;
 
 use super::dispersal::in_memory::error::InMemoryDispersalError;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal {
+pub struct LandscapeInMemoryHabitatInMemoryDispersal<D: InMemoryDispersal> {
     habitat: InMemoryHabitat,
-    dispersal: InMemoryDispersal,
+    dispersal: D,
 }
 
 #[contract_trait]
-impl Landscape for LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal {
+impl<D: InMemoryDispersal> Landscape for LandscapeInMemoryHabitatInMemoryDispersal<D> {
     #[must_use]
     fn get_extent(&self) -> LandscapeExtent {
         self.habitat.get_extent()
@@ -41,8 +38,8 @@ impl Landscape for LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal {
     }
 }
 
-impl LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal {
-    /// Creates a new `LandscapeInMemoryWithPrecalculatedDispersal` from the
+impl<D: InMemoryDispersal> LandscapeInMemoryHabitatInMemoryDispersal<D> {
+    /// Creates a new `LandscapeInMemoryHabitatInMemoryDispersal` from the
     /// `habitat` and `dispersal` map.
     ///
     /// # Errors
@@ -61,7 +58,7 @@ impl LandscapeInMemoryHabitatInMemoryPrecalculatedDispersal {
         dispersal: &Array2D<f64>,
     ) -> Result<Self, InMemoryDispersalError> {
         let habitat = InMemoryHabitat::new(habitat);
-        let dispersal = InMemoryDispersal::new(dispersal, &habitat)?;
+        let dispersal = D::new(dispersal, &habitat)?;
 
         Ok(Self { habitat, dispersal })
     }
