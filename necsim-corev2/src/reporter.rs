@@ -1,0 +1,54 @@
+use crate::event_generator::Event;
+use crate::lineage::LineageReference;
+
+pub trait Reporter {
+    fn report_event(&mut self, event: &Event<impl LineageReference>);
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub struct NullReporter;
+
+impl Reporter for NullReporter {
+    fn report_event(&mut self, _event: &Event<impl LineageReference>) {
+        // no-op
+    }
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub struct ReporterCombinator<'r, L: Reporter, R: Reporter> {
+    first: &'r mut L,
+    second: R, // R = ReporterCombinator<...>
+}
+
+impl<'r, L: Reporter, R: Reporter> Reporter for ReporterCombinator<'r, L, R> {
+    #[inline]
+    fn report_event(&mut self, event: &Event<impl LineageReference>) {
+        self.first.report_event(event);
+        self.second.report_event(event);
+    }
+}
+
+impl<'r, L: Reporter, R: Reporter> ReporterCombinator<'r, L, R> {
+    #[must_use]
+    /// # Safety
+    /// This constructor should not be used directly to combinate reporters.
+    /// Use the `ReporterGroup![]` macro instead.
+    pub unsafe fn new(first: &'r mut L, second: R) -> Self {
+        Self { first, second }
+    }
+}
+
+#[macro_export]
+macro_rules! ReporterGroup {
+    () => {
+        necsim_core::reporter::NullReporter
+    };
+    ($first_reporter:ident $(,$reporter_tail:ident)*) => {
+        {
+            unsafe { necsim_core::reporter::ReporterCombinator::new(
+                &mut $first_reporter,
+                ReporterGroup![$($reporter_tail),*]
+            ) }
+        }
+    }
+}
