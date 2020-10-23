@@ -17,7 +17,6 @@ impl ProbabilityAtLocation {
         D: SeparableDispersalSampler<H>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
-        C: ConditionalCoalescenceSampler<H, R, S>,
     >(
         location: &Location,
         speciation_probability_per_generation: f64,
@@ -25,12 +24,11 @@ impl ProbabilityAtLocation {
         dispersal_sampler: &D,
         lineage_store: &S,
         lineage_store_includes_self: bool,
-        coalescence_sampler: &C,
     ) -> Self {
         let self_dispersal_probability =
             dispersal_sampler.get_self_dispersal_probability_at_location(location);
-        let coalescence_probability_at_location = coalescence_sampler
-            .get_coalescence_probability_at_location(
+        let coalescence_probability_at_location =
+            ConditionalCoalescenceSampler::get_coalescence_probability_at_location(
                 location,
                 habitat,
                 lineage_store,

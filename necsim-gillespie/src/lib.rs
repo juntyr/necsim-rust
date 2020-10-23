@@ -15,7 +15,7 @@ use necsim_implsv2::cogs::active_lineage_sampler::gillespie::GillespieActiveLine
 use necsim_implsv2::cogs::coalescence_sampler::unconditional::UnconditionalCoalescenceSampler;
 use necsim_implsv2::cogs::dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler;
 use necsim_implsv2::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
-use necsim_implsv2::cogs::event_sampler::unconditional::UnconditionalEventSampler;
+use necsim_implsv2::cogs::event_sampler::gillespie::unconditional::UnconditionalGillespieEventSampler;
 use necsim_implsv2::cogs::habitat::in_memory::InMemoryHabitat;
 use necsim_implsv2::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use necsim_implsv2::cogs::lineage_store::in_memory::InMemoryLineageStore;
@@ -52,8 +52,8 @@ impl GillespieSimulation {
         let habitat = InMemoryHabitat::new(habitat);
         let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
         let lineage_store = InMemoryLineageStore::new(sample_percentage, &habitat);
-        let coalescence_sampler = UnconditionalCoalescenceSampler;
-        let event_sampler = UnconditionalEventSampler;
+        let coalescence_sampler = UnconditionalCoalescenceSampler::default();
+        let event_sampler = UnconditionalGillespieEventSampler::default();
         let active_lineage_sampler = GillespieActiveLineageSampler::new(
             speciation_probability_per_generation,
             &habitat,

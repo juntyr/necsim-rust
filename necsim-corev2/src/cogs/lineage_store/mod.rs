@@ -37,7 +37,7 @@ pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
 
     #[debug_requires(self.get(reference.clone()).is_some(), "lineage reference is valid")]
     #[debug_requires(
-        contract::explicit_lineage_store_lineage_at_location_contract(self, reference.clone()),
+        !contract::explicit_lineage_store_lineage_at_location_contract(self, reference.clone()),
         "lineage is not at the location and index it references"
     )]
     #[debug_requires(

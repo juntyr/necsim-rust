@@ -45,8 +45,6 @@ impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for InMemoryLineageSt
             (location.x() - self.landscape_extent.x()) as usize,
         )];
 
-        // TODO: We should be able to assert that we never surpass the available habitat
-
         lineages_at_location.push(reference);
 
         unsafe {

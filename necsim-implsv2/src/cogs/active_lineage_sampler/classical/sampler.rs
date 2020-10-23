@@ -14,8 +14,14 @@ use super::ClassicalActiveLineageSampler;
 
 #[contract_trait]
 impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: LineageStore<H, R>>
-    ActiveLineageSampler<H, D, R, S, UnconditionalCoalescenceSampler, UnconditionalEventSampler>
-    for ClassicalActiveLineageSampler<H, D, R, S>
+    ActiveLineageSampler<
+        H,
+        D,
+        R,
+        S,
+        UnconditionalCoalescenceSampler<H, R, S>,
+        UnconditionalEventSampler<H, D, R, S, UnconditionalCoalescenceSampler<H, R, S>>,
+    > for ClassicalActiveLineageSampler<H, D, R, S>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -23,6 +29,7 @@ impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: LineageStore
     }
 
     #[must_use]
+    #[allow(clippy::type_complexity)]
     fn pop_active_lineage_and_time_of_next_event(
         time: f64,
         simulation: &mut Simulation<
@@ -30,8 +37,8 @@ impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: LineageStore
             D,
             R,
             S,
-            UnconditionalCoalescenceSampler,
-            UnconditionalEventSampler,
+            UnconditionalCoalescenceSampler<H, R, S>,
+            UnconditionalEventSampler<H, D, R, S, UnconditionalCoalescenceSampler<H, R, S>>,
             Self,
         >,
         rng: &mut impl Rng,
@@ -65,9 +72,10 @@ impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: LineageStore
 
         #[allow(clippy::cast_precision_loss)]
         let lambda = 0.5_f64
-            * (simulation
+            * ((simulation
                 .active_lineage_sampler_mut()
-                .number_active_lineages() as f64);
+                .number_active_lineages()
+                + 1) as f64);
 
         let event_time = time + rng.sample_exponential(lambda);
 
@@ -80,6 +88,7 @@ impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: LineageStore
         Some((chosen_lineage_reference, unique_event_time))
     }
 
+    #[allow(clippy::type_complexity)]
     fn push_active_lineage_to_location(
         lineage_reference: R,
         location: Location,
@@ -89,8 +98,8 @@ impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: LineageStore
             D,
             R,
             S,
-            UnconditionalCoalescenceSampler,
-            UnconditionalEventSampler,
+            UnconditionalCoalescenceSampler<H, R, S>,
+            UnconditionalEventSampler<H, D, R, S, UnconditionalCoalescenceSampler<H, R, S>>,
             Self,
         >,
         _rng: &mut impl Rng,

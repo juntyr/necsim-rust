@@ -1,12 +1,14 @@
 use float_next_after::NextAfter;
 
 use necsim_corev2::cogs::{
-    ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler, Habitat,
-    LineageReference, LineageStore,
+    ActiveLineageSampler, CoalescenceSampler, DispersalSampler, Habitat, LineageReference,
+    LineageStore,
 };
 use necsim_corev2::landscape::Location;
 use necsim_corev2::rng::Rng;
 use necsim_corev2::simulation::Simulation;
+
+use crate::cogs::event_sampler::gillespie::GillespieEventSampler;
 
 use super::{EventTime, GillespieActiveLineageSampler};
 
@@ -17,7 +19,7 @@ impl<
         R: LineageReference<H>,
         S: LineageStore<H, R>,
         C: CoalescenceSampler<H, R, S>,
-        E: EventSampler<H, D, R, S, C>,
+        E: GillespieEventSampler<H, D, R, S, C>,
     > ActiveLineageSampler<H, D, R, S, C, E> for GillespieActiveLineageSampler<H, D, R, S, C, E>
 {
     #[must_use]
@@ -61,8 +63,6 @@ impl<
         let unique_event_time: f64 = if chosen_event_time > time {
             chosen_event_time
         } else {
-            // println!("Event time not increased: {} {}", time, chosen_event_time.0);
-
             time.next_after(f64::INFINITY)
         };
 

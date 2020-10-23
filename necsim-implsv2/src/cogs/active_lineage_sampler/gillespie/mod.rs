@@ -1,10 +1,12 @@
 use priority_queue::PriorityQueue;
 
 use necsim_corev2::cogs::{
-    CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference, LineageStore,
+    CoalescenceSampler, DispersalSampler, Habitat, LineageReference, LineageStore,
 };
 use necsim_corev2::landscape::Location;
 use necsim_corev2::rng::Rng;
+
+use crate::cogs::event_sampler::gillespie::GillespieEventSampler;
 
 mod event_time;
 mod sampler;
@@ -18,7 +20,7 @@ pub struct GillespieActiveLineageSampler<
     R: LineageReference<H>,
     S: LineageStore<H, R>,
     C: CoalescenceSampler<H, R, S>,
-    E: EventSampler<H, D, R, S, C>,
+    E: GillespieEventSampler<H, D, R, S, C>,
 > {
     active_locations: PriorityQueue<Location, EventTime>,
     number_active_lineages: usize,
@@ -31,7 +33,7 @@ impl<
         R: LineageReference<H>,
         S: LineageStore<H, R>,
         C: CoalescenceSampler<H, R, S>,
-        E: EventSampler<H, D, R, S, C>,
+        E: GillespieEventSampler<H, D, R, S, C>,
     > GillespieActiveLineageSampler<H, D, R, S, C, E>
 {
     #[must_use]
