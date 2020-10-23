@@ -1,4 +1,2 @@
-mod final_speciation_event;
-
-pub mod conditional;
+pub mod gillespie;
 pub mod unconditional;

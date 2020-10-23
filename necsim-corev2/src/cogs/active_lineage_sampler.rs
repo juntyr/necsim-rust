@@ -40,6 +40,10 @@ pub trait ActiveLineageSampler<
     ) -> Option<(R, f64)>;
 
     #[debug_requires(time >= 0.0_f64, "time is non-negative")]
+    #[debug_requires((
+        simulation.lineage_store().get_active_lineages_at_location(&location).len() <
+        (simulation.habitat().get_habitat_at_location(&location) as usize)
+    ), "location has habitat capacity for the lineage")]
     fn push_active_lineage_to_location(
         lineage_reference: R,
         location: Location,

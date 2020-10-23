@@ -2,14 +2,24 @@ use necsim_corev2::cogs::{CoalescenceSampler, Habitat, LineageReference, Lineage
 use necsim_corev2::landscape::Location;
 use necsim_corev2::rng::Rng;
 
-use super::super::optional_coalescence;
-use super::ConditionalCoalescenceSampler as ConditionalCoalescenceSamplerTrait;
+use super::optional_coalescence;
 
-pub struct ConditionalCoalescenceSampler;
+#[allow(clippy::module_name_repetitions)]
+pub struct ConditionalCoalescenceSampler<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>>(
+    std::marker::PhantomData<(H, R, S)>,
+);
+
+impl<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>> Default
+    for ConditionalCoalescenceSampler<H, R, S>
+{
+    fn default() -> Self {
+        Self(std::marker::PhantomData::<(H, R, S)>)
+    }
+}
 
 #[contract_trait]
 impl<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>> CoalescenceSampler<H, R, S>
-    for ConditionalCoalescenceSampler
+    for ConditionalCoalescenceSampler<H, R, S>
 {
     #[must_use]
     fn sample_optional_coalescence_at_location(
@@ -28,13 +38,11 @@ impl<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>> CoalescenceSampl
     }
 }
 
-#[contract_trait]
 impl<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>>
-    ConditionalCoalescenceSamplerTrait<H, R, S> for ConditionalCoalescenceSampler
+    ConditionalCoalescenceSampler<H, R, S>
 {
     #[must_use]
-    fn sample_coalescence_at_location(
-        &self,
+    pub fn sample_coalescence_at_location(
         location: &Location,
         lineage_store: &S,
         rng: &mut impl Rng,
@@ -48,8 +56,9 @@ impl<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>>
     }
 
     #[must_use]
-    fn get_coalescence_probability_at_location(
-        &self,
+    #[debug_requires(habitat.get_habitat_at_location(location) > 0, "location is habitable")]
+    #[debug_ensures(ret >= 0.0_f64 && ret <= 1.0_f64, "returns probability")]
+    pub fn get_coalescence_probability_at_location(
         location: &Location,
         habitat: &H,
         lineage_store: &S,

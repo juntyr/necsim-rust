@@ -1,4 +1,4 @@
-use crate::landscape::Location;
+use float_next_after::NextAfter;
 
 use super::{CoalescenceSampler, DispersalSampler, Habitat, LineageReference, LineageStore};
 use crate::event::{Event, EventType};
@@ -58,24 +58,19 @@ pub trait EventSampler<
         time: f64,
         speciation_probability_per_generation: f64,
         rng: &mut impl Rng,
-    ) -> Event<H, R>;
+    ) -> Event<H, R> {
+        let delta_time = rng.sample_exponential(speciation_probability_per_generation * 0.5_f64);
 
-    // TODO: Move to gillespie trait, no longer required in classical
-    #[must_use]
-    #[debug_requires(
-        speciation_probability_per_generation >= 0.0_f64 &&
-        speciation_probability_per_generation <= 1.0_f64,
-        "speciation_probability_per_generation is a probability"
-    )]
-    #[debug_ensures(ret >= 0.0_f64, "returns a rate")]
-    fn get_event_rate_at_location(
-        &self,
-        location: &Location,
-        speciation_probability_per_generation: f64,
-        habitat: &H,
-        dispersal_sampler: &D,
-        lineage_store: &S,
-        lineage_store_includes_self: bool,
-        coalescence_sampler: &C,
-    ) -> f64;
+        let event_time = time + delta_time;
+
+        Event::new(
+            if event_time > time {
+                event_time
+            } else {
+                event_time.next_after(f64::INFINITY)
+            },
+            lineage_reference,
+            EventType::Speciation,
+        )
+    }
 }

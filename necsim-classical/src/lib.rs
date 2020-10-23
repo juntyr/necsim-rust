@@ -52,8 +52,8 @@ impl ClassicalSimulation {
         let habitat = InMemoryHabitat::new(habitat);
         let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
         let lineage_store = InMemoryLineageStore::new(sample_percentage, &habitat);
-        let coalescence_sampler = UnconditionalCoalescenceSampler;
-        let event_sampler = UnconditionalEventSampler;
+        let coalescence_sampler = UnconditionalCoalescenceSampler::default();
+        let event_sampler = UnconditionalEventSampler::default();
         let active_lineage_sampler = ClassicalActiveLineageSampler::new(&habitat, &lineage_store);
 
         let simulation = Simulation::builder()
