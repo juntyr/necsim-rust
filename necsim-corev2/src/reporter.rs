@@ -1,40 +1,55 @@
-use crate::event_generator::Event;
-use crate::lineage::LineageReference;
+use crate::cogs::{Habitat, LineageReference};
+use crate::event::Event;
 
-pub trait Reporter {
-    fn report_event(&mut self, event: &Event<impl LineageReference>);
+pub trait Reporter<H: Habitat, R: LineageReference<H>> {
+    fn report_event(&mut self, event: &Event<H, R>);
 }
 
 #[allow(clippy::module_name_repetitions)]
 pub struct NullReporter;
 
-impl Reporter for NullReporter {
-    fn report_event(&mut self, _event: &Event<impl LineageReference>) {
+impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for NullReporter {
+    fn report_event(&mut self, _event: &Event<H, R>) {
         // no-op
     }
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct ReporterCombinator<'r, L: Reporter, R: Reporter> {
-    first: &'r mut L,
-    second: R, // R = ReporterCombinator<...>
+pub struct ReporterCombinator<
+    'r,
+    H: Habitat,
+    R: LineageReference<H>,
+    F: Reporter<H, R>,
+    T: Reporter<H, R>,
+> {
+    front: &'r mut F,
+    tail: T, // R = ReporterCombinator<...>
+    _marker: std::marker::PhantomData<(H, R)>,
 }
 
-impl<'r, L: Reporter, R: Reporter> Reporter for ReporterCombinator<'r, L, R> {
+impl<'r, H: Habitat, R: LineageReference<H>, F: Reporter<H, R>, T: Reporter<H, R>> Reporter<H, R>
+    for ReporterCombinator<'r, H, R, F, T>
+{
     #[inline]
-    fn report_event(&mut self, event: &Event<impl LineageReference>) {
-        self.first.report_event(event);
-        self.second.report_event(event);
+    fn report_event(&mut self, event: &Event<H, R>) {
+        self.front.report_event(event);
+        self.tail.report_event(event);
     }
 }
 
-impl<'r, L: Reporter, R: Reporter> ReporterCombinator<'r, L, R> {
+impl<'r, H: Habitat, R: LineageReference<H>, F: Reporter<H, R>, T: Reporter<H, R>>
+    ReporterCombinator<'r, H, R, F, T>
+{
     #[must_use]
     /// # Safety
     /// This constructor should not be used directly to combinate reporters.
     /// Use the `ReporterGroup![]` macro instead.
-    pub unsafe fn new(first: &'r mut L, second: R) -> Self {
-        Self { first, second }
+    pub unsafe fn new(front: &'r mut F, tail: T) -> Self {
+        Self {
+            front,
+            tail,
+            _marker: std::marker::PhantomData::<(H, R)>,
+        }
     }
 }
 
