@@ -12,19 +12,19 @@ use necsim_corev2::rng::Rng;
 use necsim_corev2::simulation::Simulation;
 
 use necsim_implsv2::cogs::active_lineage_sampler::gillespie::GillespieActiveLineageSampler;
-use necsim_implsv2::cogs::coalescence_sampler::unconditional::UnconditionalCoalescenceSampler;
-use necsim_implsv2::cogs::dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler;
+use necsim_implsv2::cogs::coalescence_sampler::conditional::r#impl::ConditionalCoalescenceSampler;
+use necsim_implsv2::cogs::dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler;
 use necsim_implsv2::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
-use necsim_implsv2::cogs::event_sampler::unconditional::UnconditionalEventSampler;
+use necsim_implsv2::cogs::event_sampler::conditional::ConditionalEventSampler;
 use necsim_implsv2::cogs::habitat::in_memory::InMemoryHabitat;
 use necsim_implsv2::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use necsim_implsv2::cogs::lineage_store::in_memory::InMemoryLineageStore;
 
-pub struct GillespieSimulation;
+pub struct SkippingGillespieSimulation;
 
-impl GillespieSimulation {
-    /// Simulates the Gillespie coalescence algorithm on an in memory
-    /// `habitat` with precalculated `dispersal`.
+impl SkippingGillespieSimulation {
+    /// Simulates the Gillespie coalescence algorithm with self-dispersal event
+    /// skippingon an in memory `habitat` with precalculated `dispersal`.
     ///
     /// # Errors
     ///
@@ -50,10 +50,10 @@ impl GillespieSimulation {
         reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
     ) -> Result<(f64, usize)> {
         let habitat = InMemoryHabitat::new(habitat);
-        let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
+        let dispersal_sampler = InMemorySeparableAliasDispersalSampler::new(dispersal, &habitat)?;
         let lineage_store = InMemoryLineageStore::new(sample_percentage, &habitat);
-        let coalescence_sampler = UnconditionalCoalescenceSampler;
-        let event_sampler = UnconditionalEventSampler;
+        let coalescence_sampler = ConditionalCoalescenceSampler;
+        let event_sampler = ConditionalEventSampler;
         let active_lineage_sampler = GillespieActiveLineageSampler::new(
             speciation_probability_per_generation,
             &habitat,

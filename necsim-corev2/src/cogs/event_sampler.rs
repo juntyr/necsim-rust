@@ -60,6 +60,7 @@ pub trait EventSampler<
         rng: &mut impl Rng,
     ) -> Event<H, R>;
 
+    // TODO: Move to gillespie trait, no longer required in classical
     #[must_use]
     #[debug_requires(
         speciation_probability_per_generation >= 0.0_f64 &&

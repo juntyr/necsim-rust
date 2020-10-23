@@ -6,16 +6,21 @@ extern crate contracts;
 use anyhow::Result;
 use array2d::Array2D;
 
-use necsim_core::reporter::Reporter;
-use necsim_core::rng::Rng;
-use necsim_core::{simulation::Simulation, simulation::SimulationSettings};
-use necsim_impls::event_generator::lineage_sampler::active_list::ActiveLineageListSampler;
-use necsim_impls::event_generator::unconditional_global::UnconditionalGlobalEventGenerator;
-use necsim_impls::landscape::dispersal::in_memory::alias::InMemoryAliasDispersal as InMemoryDispersal;
-use necsim_impls::landscape::in_memory_habitat_in_memory_dispersal::LandscapeInMemoryHabitatInMemoryDispersal;
-//use necsim_impls::landscape::dispersal::in_memory::cumulative::InMemoryCumulativeDispersal as InMemoryDispersal;
+use necsim_corev2::cogs::LineageStore;
+use necsim_corev2::reporter::Reporter;
+use necsim_corev2::rng::Rng;
+use necsim_corev2::simulation::Simulation;
 
-pub struct ClassicalSimulation(std::marker::PhantomData<Simulation>);
+use necsim_implsv2::cogs::active_lineage_sampler::classical::ClassicalActiveLineageSampler;
+use necsim_implsv2::cogs::coalescence_sampler::unconditional::UnconditionalCoalescenceSampler;
+use necsim_implsv2::cogs::dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler;
+use necsim_implsv2::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
+use necsim_implsv2::cogs::event_sampler::unconditional::UnconditionalEventSampler;
+use necsim_implsv2::cogs::habitat::in_memory::InMemoryHabitat;
+use necsim_implsv2::cogs::lineage_reference::in_memory::InMemoryLineageReference;
+use necsim_implsv2::cogs::lineage_store::in_memory::InMemoryLineageStore;
+
+pub struct ClassicalSimulation;
 
 impl ClassicalSimulation {
     /// Simulates the classical coalescence algorithm on an in memory
@@ -42,23 +47,27 @@ impl ClassicalSimulation {
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
         rng: &mut impl Rng,
-        reporter: &mut impl Reporter,
+        reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
     ) -> Result<(f64, usize)> {
-        let landscape: LandscapeInMemoryHabitatInMemoryDispersal<InMemoryDispersal> =
-            LandscapeInMemoryHabitatInMemoryDispersal::new(habitat, &dispersal)?;
+        let habitat = InMemoryHabitat::new(habitat);
+        let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
+        let lineage_store = InMemoryLineageStore::new(sample_percentage, &habitat);
+        let coalescence_sampler = UnconditionalCoalescenceSampler;
+        let event_sampler = UnconditionalEventSampler;
+        let active_lineage_sampler = ClassicalActiveLineageSampler::new(&habitat, &lineage_store);
 
-        let settings = SimulationSettings::new(
-            speciation_probability_per_generation,
-            sample_percentage,
-            landscape,
-        );
+        let simulation = Simulation::builder()
+            .speciation_probability_per_generation(speciation_probability_per_generation)
+            .habitat(habitat)
+            .dispersal_sampler(dispersal_sampler)
+            .lineage_reference(std::marker::PhantomData::<InMemoryLineageReference>)
+            .lineage_store(lineage_store)
+            .coalescence_sampler(coalescence_sampler)
+            .event_sampler(event_sampler)
+            .active_lineage_sampler(active_lineage_sampler)
+            .build();
 
-        let (time, steps) = Simulation::simulate(
-            &settings,
-            UnconditionalGlobalEventGenerator::new(ActiveLineageListSampler::new(&settings)),
-            rng,
-            reporter,
-        );
+        let (time, steps) = simulation.simulate(rng, reporter);
 
         Ok((time, steps))
     }
