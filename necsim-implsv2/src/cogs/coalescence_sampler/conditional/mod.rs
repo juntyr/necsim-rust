@@ -2,7 +2,7 @@ use necsim_corev2::cogs::{CoalescenceSampler, Habitat, LineageReference, Lineage
 use necsim_corev2::landscape::Location;
 use necsim_corev2::rng::Rng;
 
-mod r#impl;
+pub mod r#impl;
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]

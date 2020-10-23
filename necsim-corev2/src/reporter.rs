@@ -56,11 +56,11 @@ impl<'r, H: Habitat, R: LineageReference<H>, F: Reporter<H, R>, T: Reporter<H, R
 #[macro_export]
 macro_rules! ReporterGroup {
     () => {
-        necsim_core::reporter::NullReporter
+        necsim_corev2::reporter::NullReporter
     };
     ($first_reporter:ident $(,$reporter_tail:ident)*) => {
         {
-            unsafe { necsim_core::reporter::ReporterCombinator::new(
+            unsafe { necsim_corev2::reporter::ReporterCombinator::new(
                 &mut $first_reporter,
                 ReporterGroup![$($reporter_tail),*]
             ) }
