@@ -6,19 +6,19 @@ extern crate contracts;
 use anyhow::Result;
 use array2d::Array2D;
 
-use necsim_corev2::cogs::LineageStore;
-use necsim_corev2::reporter::Reporter;
-use necsim_corev2::rng::Rng;
-use necsim_corev2::simulation::Simulation;
+use necsim_core::cogs::LineageStore;
+use necsim_core::reporter::Reporter;
+use necsim_core::rng::Rng;
+use necsim_core::simulation::Simulation;
 
-use necsim_implsv2::cogs::active_lineage_sampler::gillespie::GillespieActiveLineageSampler;
-use necsim_implsv2::cogs::coalescence_sampler::unconditional::UnconditionalCoalescenceSampler;
-use necsim_implsv2::cogs::dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler;
-use necsim_implsv2::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
-use necsim_implsv2::cogs::event_sampler::gillespie::unconditional::UnconditionalGillespieEventSampler;
-use necsim_implsv2::cogs::habitat::in_memory::InMemoryHabitat;
-use necsim_implsv2::cogs::lineage_reference::in_memory::InMemoryLineageReference;
-use necsim_implsv2::cogs::lineage_store::in_memory::InMemoryLineageStore;
+use necsim_impls::cogs::active_lineage_sampler::gillespie::GillespieActiveLineageSampler;
+use necsim_impls::cogs::coalescence_sampler::unconditional::UnconditionalCoalescenceSampler;
+use necsim_impls::cogs::dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler;
+use necsim_impls::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
+use necsim_impls::cogs::event_sampler::gillespie::unconditional::UnconditionalGillespieEventSampler;
+use necsim_impls::cogs::habitat::in_memory::InMemoryHabitat;
+use necsim_impls::cogs::lineage_reference::in_memory::InMemoryLineageReference;
+use necsim_impls::cogs::lineage_store::in_memory::InMemoryLineageStore;
 
 pub struct GillespieSimulation;
 

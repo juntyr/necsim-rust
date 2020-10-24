@@ -1,5 +1,5 @@
-use necsim_core::event_generator::{Event, EventType};
-use necsim_core::lineage::LineageReference;
+use necsim_core::cogs::{Habitat, LineageReference};
+use necsim_core::event::{Event, EventType};
 use necsim_core::reporter::Reporter;
 
 mod contract;
@@ -13,14 +13,14 @@ pub struct EventReporter {
     self_coalescence: usize,
 }
 
-impl Reporter for EventReporter {
+impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for EventReporter {
     #[debug_ensures(contract::explicit_event_reporter_report_event_contract(
         event.r#type(), old(self.speciation), old(self.out_dispersal), old(self.self_dispersal),
         old(self.out_coalescence), old(self.self_coalescence), self.speciation, self.out_dispersal,
         self.self_dispersal, self.out_coalescence, self.self_coalescence),
         "counts all distinct event types without changing unaffected counts"
     )]
-    fn report_event(&mut self, event: &Event<impl LineageReference>) {
+    fn report_event(&mut self, event: &Event<H, R>) {
         match event.r#type() {
             EventType::Speciation => {
                 self.speciation += 1;
