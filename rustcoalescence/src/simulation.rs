@@ -2,11 +2,11 @@ use anyhow::{Context, Result};
 use array2d::Array2D;
 
 use necsim_classical::ClassicalSimulation;
-use necsim_corev2::reporter::Reporter;
-use necsim_corev2::rng::Rng;
+use necsim_core::reporter::Reporter;
+use necsim_core::rng::Rng;
 use necsim_gillespie::GillespieSimulation;
-use necsim_implsv2::cogs::habitat::in_memory::InMemoryHabitat;
-use necsim_implsv2::cogs::lineage_reference::in_memory::InMemoryLineageReference;
+use necsim_impls::cogs::habitat::in_memory::InMemoryHabitat;
+use necsim_impls::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use necsim_skipping_gillespie::SkippingGillespieSimulation;
 
 use super::args::{Algorithm, CommandLineArguments};

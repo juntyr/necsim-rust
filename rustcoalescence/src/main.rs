@@ -14,12 +14,12 @@ mod simulation;
 mod stdrng;
 
 #[macro_use]
-extern crate necsim_corev2;
+extern crate necsim_core;
 
-use necsim_implsv2::reporter::biodiversity::BiodiversityReporter;
-use necsim_implsv2::reporter::events::EventReporter;
-use necsim_implsv2::reporter::execution_time::ExecutionTimeReporter;
-use necsim_implsv2::reporter::progress::ProgressReporter;
+use necsim_impls::reporter::biodiversity::BiodiversityReporter;
+use necsim_impls::reporter::events::EventReporter;
+use necsim_impls::reporter::execution_time::ExecutionTimeReporter;
+use necsim_impls::reporter::progress::ProgressReporter;
 
 use stdrng::NewStdRng;
 
