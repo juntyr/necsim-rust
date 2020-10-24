@@ -67,7 +67,7 @@ pub trait EventSampler<
             if event_time > time {
                 event_time
             } else {
-                event_time.next_after(f64::INFINITY)
+                time.next_after(f64::INFINITY)
             },
             lineage_reference,
             EventType::Speciation,

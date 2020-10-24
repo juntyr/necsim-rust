@@ -82,7 +82,7 @@ impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: LineageStore
         let unique_event_time: f64 = if event_time > time {
             event_time
         } else {
-            event_time.next_after(f64::INFINITY)
+            time.next_after(f64::INFINITY)
         };
 
         Some((chosen_lineage_reference, unique_event_time))
