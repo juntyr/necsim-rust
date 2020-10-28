@@ -11,12 +11,14 @@
 //! [llvm_docs]:
 //! https://llvm.org/docs/NVPTXUsage.html
 
+#![allow(clippy::missing_safety_doc)]
+
 use core::ffi::c_void;
 
 #[allow(improper_ctypes)]
 extern "C" {
     #[link_name = "llvm.nvvm.barrier0"]
-    fn syncthreads() -> ();
+    fn syncthreads();
     #[link_name = "llvm.nvvm.read.ptx.sreg.ntid.x"]
     fn block_dim_x() -> i32;
     #[link_name = "llvm.nvvm.read.ptx.sreg.ntid.y"]
@@ -45,78 +47,90 @@ extern "C" {
 
 /// Synchronizes all threads in the block.
 #[inline]
-pub unsafe fn _syncthreads() -> () {
+pub unsafe fn _syncthreads() {
     syncthreads()
 }
 
 /// x-th thread-block dimension.
 #[inline]
+#[must_use]
 pub unsafe fn _block_dim_x() -> i32 {
     block_dim_x()
 }
 
 /// y-th thread-block dimension.
 #[inline]
+#[must_use]
 pub unsafe fn _block_dim_y() -> i32 {
     block_dim_y()
 }
 
 /// z-th thread-block dimension.
 #[inline]
+#[must_use]
 pub unsafe fn _block_dim_z() -> i32 {
     block_dim_z()
 }
 
 /// x-th thread-block index.
 #[inline]
+#[must_use]
 pub unsafe fn _block_idx_x() -> i32 {
     block_idx_x()
 }
 
 /// y-th thread-block index.
 #[inline]
+#[must_use]
 pub unsafe fn _block_idx_y() -> i32 {
     block_idx_y()
 }
 
 /// z-th thread-block index.
 #[inline]
+#[must_use]
 pub unsafe fn _block_idx_z() -> i32 {
     block_idx_z()
 }
 
 /// x-th block-grid dimension.
 #[inline]
+#[must_use]
 pub unsafe fn _grid_dim_x() -> i32 {
     grid_dim_x()
 }
 
 /// y-th block-grid dimension.
 #[inline]
+#[must_use]
 pub unsafe fn _grid_dim_y() -> i32 {
     grid_dim_y()
 }
 
 /// z-th block-grid dimension.
 #[inline]
+#[must_use]
 pub unsafe fn _grid_dim_z() -> i32 {
     grid_dim_z()
 }
 
 /// x-th thread index.
 #[inline]
+#[must_use]
 pub unsafe fn _thread_idx_x() -> i32 {
     thread_idx_x()
 }
 
 /// y-th thread index.
 #[inline]
+#[must_use]
 pub unsafe fn _thread_idx_y() -> i32 {
     thread_idx_y()
 }
 
 /// z-th thread index.
 #[inline]
+#[must_use]
 pub unsafe fn _thread_idx_z() -> i32 {
     thread_idx_z()
 }
