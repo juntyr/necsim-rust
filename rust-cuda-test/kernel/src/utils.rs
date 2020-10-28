@@ -9,20 +9,16 @@
 extern crate alloc;
 
 use crate::arch::nvptx;
-use alloc::alloc::*;
+use alloc::alloc::{GlobalAlloc, Layout};
 
 /// Memory allocator using CUDA malloc/free
 pub struct PTXAllocator;
 
 unsafe impl GlobalAlloc for PTXAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        //crate::arch::nvptx::vprintf("Alloc %u\n".as_ptr(), core::mem::transmute(&layout.size()));
-
         nvptx::malloc(layout.size()) as *mut u8
     }
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        //crate::arch::nvptx::vprintf("Dealloc %u\n".as_ptr(), core::mem::transmute(&layout.size()));
-
+    unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
         nvptx::free(ptr as *mut _);
     }
 }
@@ -47,6 +43,7 @@ macro_rules! function {
 macro_rules! print {
     ($($arg:tt)*) => {
         let msg = ::alloc::format!($($arg)*);
+        #[allow(unused_unsafe)]
         unsafe {
             crate::arch::nvptx::vprintf(msg.as_ptr(), ::core::ptr::null_mut());
         }
@@ -145,6 +142,7 @@ pub struct Idx3 {
     pub z: i32,
 }
 
+#[must_use]
 pub fn block_dim() -> Dim3 {
     unsafe {
         Dim3 {
@@ -155,6 +153,7 @@ pub fn block_dim() -> Dim3 {
     }
 }
 
+#[must_use]
 pub fn block_idx() -> Idx3 {
     unsafe {
         Idx3 {
@@ -165,6 +164,7 @@ pub fn block_idx() -> Idx3 {
     }
 }
 
+#[must_use]
 pub fn grid_dim() -> Dim3 {
     unsafe {
         Dim3 {
@@ -175,6 +175,7 @@ pub fn grid_dim() -> Dim3 {
     }
 }
 
+#[must_use]
 pub fn thread_idx() -> Idx3 {
     unsafe {
         Idx3 {
@@ -186,19 +187,23 @@ pub fn thread_idx() -> Idx3 {
 }
 
 impl Dim3 {
+    #[must_use]
     pub fn size(&self) -> i32 {
-        (self.x * self.y * self.z)
+        self.x * self.y * self.z
     }
 }
 
 impl Idx3 {
-    pub fn into_id(&self, dim: Dim3) -> i32 {
+    #[must_use]
+    pub fn as_id(&self, dim: &Dim3) -> i32 {
         self.x + self.y * dim.x + self.z * dim.x * dim.y
     }
 }
 
+#[must_use]
 pub fn index() -> isize {
-    let block_id = block_idx().into_id(grid_dim());
-    let thread_id = thread_idx().into_id(block_dim());
+    let block_id = block_idx().as_id(&grid_dim());
+    let thread_id = thread_idx().as_id(&block_dim());
+
     (block_id + thread_id) as isize
 }

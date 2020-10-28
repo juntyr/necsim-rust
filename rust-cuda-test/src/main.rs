@@ -1,3 +1,5 @@
+#![deny(clippy::pedantic)]
+
 #[macro_use]
 extern crate rustacuda;
 
@@ -60,42 +62,20 @@ fn main() -> Result<()> {
 
         let habitat = InMemoryHabitatBuilder::from_array2d(&habitat_arr);
 
-        InMemoryHabitatBuilder::lend_to_cuda(&habitat, |habitat| {
-
-        // Allocate space on the device and copy numbers to it.
-        //with_cuda!(DeviceBuffer::from_slice(&[10.0f32, 20.0f32])? => |mut x: DeviceBuffer<f32>| {
-        //with_cuda!(DeviceBuffer::from_slice(&[20.0f32, -1.0f32])? => |mut y: DeviceBuffer<f32>| {
-        //with_cuda!(DeviceBuffer::from_slice(&[0.0f32, 0.0f32])? => |mut result: DeviceBuffer<f32>| {
-
+        if let Err(err) = InMemoryHabitatBuilder::lend_to_cuda(&habitat, |habitat| {
             // Launching kernels is unsafe since Rust can't enforce safety - think of kernel launches
             // as a foreign-function call. In this case, it is - this kernel is written in CUDA C.
             unsafe {
-                // Launch the `add` function with one block containing one thread on the given stream.
-                //launch!(module.add<<<1, 2, 0, stream>>>(
-                launch!(module.test<<<1, 2, 0, stream>>>(
+                launch!(module.test<<<1, 27, 0, stream>>>(
                     habitat
-                    //x.as_device_ptr(),
-                    //y.as_device_ptr(),
-                    //result.as_device_ptr(),
-                    //result.len() // Length (usize type MUST match)
                 ))?;
             }
 
             stream.synchronize()
 
-            // The kernel launch is asynchronous, so we wait for the kernel to finish executing
-            //if let Err(err) = stream.synchronize() {
-            //    eprintln!("Synchronisation failed with {:#?}", err);
-            //} else {
-                // Copy the result back to the host
-                //let mut result_host = [0.0f32, 0.0f32];
-                //result.copy_to(&mut result_host)?;
-
-                //println!("Sum is {:?}", result_host);
-            //}
-
-        })?;
-        //});});});
+        }) {
+            eprintln!("Running kernel failed with {:#?}!", err);
+        }
 
     });});});
 

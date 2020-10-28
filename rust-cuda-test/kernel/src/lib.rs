@@ -1,4 +1,5 @@
 #![cfg(target_os = "cuda")]
+#![deny(clippy::pedantic)]
 #![no_std]
 #![feature(abi_ptx)]
 #![feature(doc_cfg)]
@@ -41,51 +42,30 @@ impl core::fmt::Debug for F64 {
     }
 }
 
-#[no_mangle]
-pub unsafe extern "ptx-kernel" fn add(a: *const f32, b: *const f32, c: *mut f32, n: usize) {
-    let a: &[f32] = core::slice::from_raw_parts(a, n);
-    let b: &[f32] = core::slice::from_raw_parts(b, n);
-
-    let c: &mut [f32] = core::slice::from_raw_parts_mut(c, n);
-
-    println!(
-        "a={:?}",
-        core::slice::from_raw_parts(a.as_ptr() as *const F32, n)
-    );
-    println!(
-        "b={:?}",
-        core::slice::from_raw_parts(b.as_ptr() as *const F32, n)
-    );
-
-    add_impl(&a, &b, c);
-
-    println!(
-        "c={:?}",
-        core::slice::from_raw_parts(c.as_ptr() as *const F32, n)
-    );
-}
-
-pub fn add_impl(a: &[f32], b: &[f32], c: &mut [f32]) {
-    let i = utils::index() as usize;
-
-    if let (Some(a), Some(b), Some(c)) = (a.get(i), b.get(i), c.get_mut(i)) {
-        *c = a + b;
-    }
-}
-
 use necsim_core::cogs::Habitat;
 use necsim_core::landscape::Location;
 use necsim_impls_no_std::cogs::habitat::in_memory::cuda::InMemoryHabitatCuda;
 use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
 
 #[no_mangle]
+/// # Safety
+/// This CUDA kernel is unsafe as it is called with raw pointers
 pub unsafe extern "ptx-kernel" fn test(habitat: *const InMemoryHabitatCuda) {
     InMemoryHabitat::with_ref(habitat, |habitat| {
-        println!("Extent: {:#?}", habitat.get_extent());
-        println!("Total habitat: {}", habitat.get_total_habitat());
+        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+        let thread_index = utils::index() as u32;
+
+        let location = Location::new(
+            thread_index % habitat.get_extent().width(),
+            thread_index / habitat.get_extent().width(),
+        );
+
         println!(
-            "Habitat at (2,8): {}",
-            habitat.get_habitat_at_location(&Location::new(2, 8))
+            "Habitat with extent {:?}, total habitat {}, and habitat {} at {:?}.",
+            habitat.get_extent(),
+            habitat.get_total_habitat(),
+            habitat.get_habitat_at_location(&location),
+            location,
         );
     })
 }

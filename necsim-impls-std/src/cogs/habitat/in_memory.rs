@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use array2d::Array2D;
 use rustacuda::error::CudaError;
-use rustacuda::memory::DeviceBuffer;
+use rustacuda::memory::{DeviceBox, DeviceBuffer, DevicePointer};
 
 use necsim_core::cogs::Habitat;
 
@@ -33,7 +33,10 @@ impl InMemoryHabitatBuilder {
 
     /// # Errors
     /// Returns a `CudaError` if an error occurs inside CUDA.
-    pub fn lend_to_cuda<O, F: FnOnce(InMemoryHabitatCuda) -> Result<O, CudaError>>(
+    pub fn lend_to_cuda<
+        O,
+        F: FnOnce(DevicePointer<InMemoryHabitatCuda>) -> Result<O, CudaError>,
+    >(
         habitat: &InMemoryHabitat,
         inner: F,
     ) -> Result<O, CudaError> {
@@ -49,7 +52,17 @@ impl InMemoryHabitatBuilder {
             )
         };
 
-        let result = inner(habitat_cuda);
+        // TODO: Better error handling for CUDA allocations
+        let result = match DeviceBox::new(&habitat_cuda) {
+            Ok(mut habitat_box) => {
+                let result = inner(habitat_box.as_device_ptr());
+
+                let _ = DeviceBox::drop(habitat_box);
+
+                result
+            }
+            Err(err) => Err(err),
+        };
 
         match DeviceBuffer::drop(device_buffer) {
             Ok(()) => result,

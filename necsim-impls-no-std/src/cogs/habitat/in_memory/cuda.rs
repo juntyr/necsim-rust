@@ -5,7 +5,8 @@ use rustacuda_core::DevicePointer;
 use super::InMemoryHabitat;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Copy, DeviceCopy)]
+#[derive(DeviceCopy, Debug)]
+#[repr(C)]
 pub struct InMemoryHabitatCuda {
     habitat: DevicePointer<u32>,
     width: u32,
