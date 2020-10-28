@@ -5,15 +5,15 @@ use necsim_classical::ClassicalSimulation;
 use necsim_core::reporter::Reporter;
 use necsim_core::rng::Rng;
 use necsim_gillespie::GillespieSimulation;
-use necsim_impls::cogs::habitat::in_memory::InMemoryHabitat;
-use necsim_impls::cogs::lineage_reference::in_memory::InMemoryLineageReference;
+use necsim_impls_std::cogs::habitat::in_memory::InMemoryHabitat;
+use necsim_impls_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use necsim_skipping_gillespie::SkippingGillespieSimulation;
 
 use super::args::{Algorithm, CommandLineArguments};
 
 pub fn simulate(
     args: &CommandLineArguments,
-    habitat: Array2D<u32>,
+    habitat: &Array2D<u32>,
     dispersal: &Array2D<f64>,
     rng: &mut impl Rng,
     reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,

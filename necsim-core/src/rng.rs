@@ -15,14 +15,14 @@ pub trait Rng: Core {
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let index = (self.sample_uniform() * (length as f64)).floor() as usize;
+        let index = floor(self.sample_uniform() * (length as f64)) as usize;
         index
     }
 
     #[debug_requires(lambda > 0.0, "lambda > 0.0")]
     #[debug_ensures(ret >= 0.0, "samples Exp(lambda)")]
     fn sample_exponential(&mut self, lambda: f64) -> f64 {
-        -self.sample_uniform().ln() / lambda
+        -ln(self.sample_uniform()) / lambda
     }
 
     #[debug_requires(
@@ -35,3 +35,11 @@ pub trait Rng: Core {
 }
 
 impl<T: Core> Rng for T {}
+
+fn floor(val: f64) -> f64 {
+    unsafe { core::intrinsics::floorf64(val) }
+}
+
+fn ln(val: f64) -> f64 {
+    unsafe { core::intrinsics::logf64(val) }
+}

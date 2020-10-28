@@ -1,6 +1,8 @@
 #![allow(clippy::used_underscore_binding)]
 #![allow(clippy::empty_enum)]
 
+use core::marker::PhantomData;
+
 use crate::cogs::{
     ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler, Habitat,
     LineageReference, LineageStore,
@@ -19,7 +21,7 @@ pub struct Simulation<
     pub(super) speciation_probability_per_generation: f64,
     pub(super) habitat: H,
     pub(super) dispersal_sampler: D,
-    pub(super) lineage_reference: std::marker::PhantomData<R>,
+    pub(super) lineage_reference: PhantomData<R>,
     pub(super) lineage_store: S,
     pub(super) coalescence_sampler: C,
     pub(super) event_sampler: E,

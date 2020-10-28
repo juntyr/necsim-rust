@@ -1,3 +1,5 @@
+use core::marker::PhantomData;
+
 use crate::cogs::{Habitat, LineageReference};
 use crate::landscape::Location;
 
@@ -5,7 +7,7 @@ pub struct Event<H: Habitat, R: LineageReference<H>> {
     time: f64,
     lineage_reference: R,
     r#type: EventType<H, R>,
-    _marker: std::marker::PhantomData<H>,
+    _marker: PhantomData<H>,
 }
 
 impl<H: Habitat, R: LineageReference<H>> Event<H, R> {
@@ -19,7 +21,7 @@ impl<H: Habitat, R: LineageReference<H>> Event<H, R> {
             time,
             lineage_reference,
             r#type,
-            _marker: std::marker::PhantomData::<H>,
+            _marker: PhantomData::<H>,
         }
     }
 
@@ -46,6 +48,6 @@ pub enum EventType<H: Habitat, R: LineageReference<H>> {
         origin: Location,
         target: Location,
         coalescence: Option<R>,
-        _marker: std::marker::PhantomData<H>,
+        _marker: PhantomData<H>,
     },
 }

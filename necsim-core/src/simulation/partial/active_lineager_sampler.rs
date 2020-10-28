@@ -1,3 +1,5 @@
+use core::marker::PhantomData;
+
 use crate::cogs::{
     CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference, LineageStore,
 };
@@ -14,7 +16,7 @@ pub struct PartialSimulation<
     pub speciation_probability_per_generation: &'s f64,
     pub habitat: &'s H,
     pub dispersal_sampler: &'s D,
-    pub lineage_reference: &'s std::marker::PhantomData<R>,
+    pub lineage_reference: &'s PhantomData<R>,
     pub lineage_store: &'s mut S,
     pub coalescence_sampler: &'s C,
     pub event_sampler: &'s E,
