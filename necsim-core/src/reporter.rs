@@ -1,3 +1,5 @@
+use core::marker::PhantomData;
+
 use crate::cogs::{Habitat, LineageReference};
 use crate::event::Event;
 
@@ -24,7 +26,7 @@ pub struct ReporterCombinator<
 > {
     front: &'r mut F,
     tail: T, // R = ReporterCombinator<...>
-    _marker: std::marker::PhantomData<(H, R)>,
+    _marker: PhantomData<(H, R)>,
 }
 
 impl<'r, H: Habitat, R: LineageReference<H>, F: Reporter<H, R>, T: Reporter<H, R>> Reporter<H, R>
@@ -48,7 +50,7 @@ impl<'r, H: Habitat, R: LineageReference<H>, F: Reporter<H, R>, T: Reporter<H, R
         Self {
             front,
             tail,
-            _marker: std::marker::PhantomData::<(H, R)>,
+            _marker: PhantomData::<(H, R)>,
         }
     }
 }

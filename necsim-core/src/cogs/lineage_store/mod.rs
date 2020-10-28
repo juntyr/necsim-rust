@@ -1,4 +1,4 @@
-use std::ops::Index;
+use core::ops::Index;
 
 use super::{Habitat, LineageReference};
 use crate::landscape::Location;
