@@ -3,14 +3,23 @@ use alloc::boxed::Box;
 use necsim_core::cogs::Habitat;
 use necsim_core::landscape::{LandscapeExtent, Location};
 
+#[cfg(not(target_os = "cuda"))]
 pub mod cuda;
 
 #[allow(clippy::module_name_repetitions)]
+//#[derive(CudaBorrow)]
 pub struct InMemoryHabitat {
+    //#[repr_cuda(Box<[u32]>)]
     habitat: Box<[u32]>,
     width: u32,
     height: u32,
 }
+
+/*#[derive(CudaBorrow)]
+pub struct Simulation<H: Habitat + necsim_cuda::CudaBorrow> {
+    #[repr_cuda(H)]
+    habitat: H,
+}*/
 
 #[contract_trait]
 impl Habitat for InMemoryHabitat {
