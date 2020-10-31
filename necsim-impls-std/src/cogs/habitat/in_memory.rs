@@ -1,12 +1,9 @@
 use core::marker::PhantomData;
 
 use array2d::Array2D;
-use rustacuda::error::CudaError;
-use rustacuda::memory::{DeviceBox, DeviceBuffer, DevicePointer};
 
 use necsim_core::cogs::Habitat;
 
-use necsim_impls_no_std::cogs::habitat::in_memory::cuda::InMemoryHabitatCuda;
 pub use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
 
 #[allow(clippy::module_name_repetitions)]
@@ -29,47 +26,5 @@ impl InMemoryHabitatBuilder {
             habitat.num_columns() as u32,
             habitat.num_rows() as u32,
         )
-    }
-
-    /// # Errors
-    /// Returns a `CudaError` if an error occurs inside CUDA.
-    pub fn lend_to_cuda<
-        O,
-        F: FnOnce(DevicePointer<InMemoryHabitatCuda>) -> Result<O, CudaError>,
-    >(
-        habitat: &InMemoryHabitat,
-        inner: F,
-    ) -> Result<O, CudaError> {
-        let mut device_buffer = DeviceBuffer::from_slice(unsafe { habitat.as_ref() })?;
-
-        let extent = habitat.get_extent();
-
-        let habitat_cuda = unsafe {
-            InMemoryHabitatCuda::new(
-                device_buffer.as_device_ptr(),
-                extent.width(),
-                extent.height(),
-            )
-        };
-
-        // TODO: Better error handling for CUDA allocations
-        let result = match DeviceBox::new(&habitat_cuda) {
-            Ok(mut habitat_box) => {
-                let result = inner(habitat_box.as_device_ptr());
-
-                let _ = DeviceBox::drop(habitat_box);
-
-                result
-            }
-            Err(err) => Err(err),
-        };
-
-        match DeviceBuffer::drop(device_buffer) {
-            Ok(()) => result,
-            Err((err, device_buffer)) => {
-                core::mem::forget(device_buffer);
-                Err(err)
-            }
-        }
     }
 }

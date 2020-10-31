@@ -1,3 +1,4 @@
+#![deny(clippy::pedantic)]
 #![allow(clippy::float_cmp)]
 #![no_std]
 
@@ -50,10 +51,10 @@ use num_traits::Float;
 ///
 /// # Safety
 ///
-/// This trait uses the ToBits and FromBits functions from f32 and f64.
-/// Those both use unsafe { mem::transmute(self) } / unsafe { mem::transmute(v) }
+/// This trait uses the `ToBits` and `FromBits` functions from f32 and f64.
+/// Those both use `unsafe { mem::transmute(self) }` / `unsafe { mem::transmute(v) }`
 /// to convert a f32/f64 to u32/u64.  The docs for those functions claim they are safe
-/// and that "the safety issues with sNaN were overblown!"
+/// and that "the safety issues with `sNaN` were overblown!"
 ///
 pub trait NextAfter<T: Float> {
     fn next_after(self, y: T) -> T;
@@ -82,10 +83,10 @@ impl NextAfter<f64> for f64 {
                 f64::from_bits(self.to_bits() - 1)
             };
             // If return value is zero remember its original sign.
-            if return_value != zero {
-                return_value
-            } else {
+            if return_value == zero {
                 copy_sign(return_value, self)
+            } else {
+                return_value
             }
         }
     }
@@ -110,10 +111,10 @@ impl NextAfter<f32> for f32 {
                 f32::from_bits(self.to_bits() - 1)
             };
             // If return value is zero remember its original sign.
-            if return_value != zero {
-                return_value
-            } else {
+            if return_value == zero {
                 copy_sign(return_value, self)
+            } else {
+                return_value
             }
         }
     }
@@ -270,8 +271,8 @@ mod tests_f64 {
     fn step_to_largest_is_possible() {
         let smaller = LARGEST_POS.next_after(NEG_INF);
         assert_eq!(smaller.next_after(POS_INF), LARGEST_POS);
-        let smaller = LARGEST_NEG.next_after(POS_INF);
-        assert_eq!(smaller.next_after(NEG_INF), LARGEST_NEG);
+        let smaller2 = LARGEST_NEG.next_after(POS_INF);
+        assert_eq!(smaller2.next_after(NEG_INF), LARGEST_NEG);
     }
 
     #[test]
@@ -311,7 +312,7 @@ mod tests_f64 {
             LARGEST_POS,
             LARGEST_NEG,
         ];
-        for x in values.iter() {
+        for x in values {
             assert_eq!(x.next_after(*x), *x);
         }
     }
@@ -495,7 +496,7 @@ mod tests_f32 {
             LARGEST_POS,
             LARGEST_NEG,
         ];
-        for x in values.iter() {
+        for x in values {
             assert_eq!(x.next_after(*x), *x);
         }
     }
