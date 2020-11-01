@@ -393,9 +393,21 @@ impl<'a> BuildOutput<'a> {
             .skip(1)
             .collect::<String>();
 
+        let mut cargo_lock_dir = self.builder.source_crate.get_path();
+
+        // Traverse the workspace directory structure towards the root
+        while !cargo_lock_dir.join("Cargo.lock").is_file() {
+            cargo_lock_dir = match cargo_lock_dir.parent() {
+                Some(parent) => parent,
+                None => bail!(BuildErrorKind::InternalError(String::from(
+                    "Unable to find Cargo.lock file",
+                ))),
+            }
+        }
+
         let cargo_deps = vec![
             self.builder.source_crate.get_path().join("Cargo.toml"),
-            self.builder.source_crate.get_path().join("Cargo.lock"),
+            cargo_lock_dir.join("Cargo.lock"),
         ];
 
         Ok(deps_contents
