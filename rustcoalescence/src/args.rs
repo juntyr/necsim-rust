@@ -6,7 +6,8 @@ arg_enum! {
     #[derive(Debug)]
     pub enum Algorithm {
         Classical,
-        Gillespie
+        Gillespie,
+        SkippingGillespie,
     }
 }
 
