@@ -16,10 +16,10 @@ mod stdrng;
 #[macro_use]
 extern crate necsim_core;
 
-use necsim_impls::reporter::biodiversity::BiodiversityReporter;
-use necsim_impls::reporter::events::EventReporter;
-use necsim_impls::reporter::execution_time::ExecutionTimeReporter;
-use necsim_impls::reporter::progress::ProgressReporter;
+use necsim_impls_std::reporter::biodiversity::BiodiversityReporter;
+use necsim_impls_std::reporter::events::EventReporter;
+use necsim_impls_std::reporter::execution_time::ExecutionTimeReporter;
+use necsim_impls_std::reporter::progress::ProgressReporter;
 
 use stdrng::NewStdRng;
 
@@ -86,7 +86,7 @@ fn main() -> Result<()> {
 
     // Run the simulation
     let (time, steps) =
-        simulation::simulate(&args, habitat, &dispersal, &mut rng, &mut reporter_group)?;
+        simulation::simulate(&args, &habitat, &dispersal, &mut rng, &mut reporter_group)?;
 
     // Output the simulation result and report summaries
     let execution_time = execution_time_reporter.execution_time();

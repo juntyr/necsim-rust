@@ -1,9 +1,15 @@
 #![deny(clippy::pedantic)]
+#![no_std]
+#![feature(core_intrinsics)]
 
 #[macro_use]
 extern crate contracts;
 
-pub mod event_generator;
+#[macro_use]
+extern crate typed_builder;
+
+pub mod cogs;
+pub mod event;
 pub mod landscape;
 pub mod lineage;
 pub mod reporter;

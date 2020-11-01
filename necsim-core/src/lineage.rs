@@ -1,9 +1,4 @@
-use std::hash::Hash;
-
 use crate::landscape::Location;
-
-#[allow(clippy::module_name_repetitions)]
-pub trait LineageReference: PartialEq + Eq + Hash + Clone {}
 
 pub struct Lineage {
     location: Location,
