@@ -44,14 +44,14 @@ impl core::fmt::Debug for F64 {
 
 use necsim_core::cogs::Habitat;
 use necsim_core::landscape::Location;
-use necsim_cuda::BorrowFromRust;
+use necsim_cuda::device::BorrowFromRust;
 use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
 
 #[no_mangle]
 /// # Safety
 /// This CUDA kernel is unsafe as it is called with raw pointers
-pub unsafe extern "ptx-kernel" fn test(
-    habitat_ptr: *const <InMemoryHabitat as necsim_cuda::RustToCuda>::CudaRepresentation,
+pub unsafe extern "ptx-kernel" fn test_habitat(
+    habitat_ptr: *const <InMemoryHabitat as necsim_cuda::common::RustToCuda>::CudaRepresentation,
 ) {
     InMemoryHabitat::with_borrow_from_rust(habitat_ptr, |habitat| {
         #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]

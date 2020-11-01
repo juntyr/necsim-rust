@@ -6,15 +6,20 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+cuda = ["necsim-cuda", "necsim-cuda-derive", "rustacuda"]
+
 [dependencies]
 necsim-core = { path = "../necsim-core" }
-necsim-cuda-derive = { path = "../necsim-cuda/necsim-cuda-derive" }
 contracts = "0.6.0"
 rustacuda_core = "0.1.2"
 
+necsim-cuda-derive = { path = "../necsim-cuda/necsim-cuda-derive", optional = true }
+
 [target.'cfg(target_os = "cuda")'.dependencies]
-necsim-cuda = { path = "../necsim-cuda", default-features = false, features = [] }
+necsim-cuda = { path = "../necsim-cuda", features = [], optional = true }
 
 [target.'cfg(not(target_os = "cuda"))'.dependencies]
-necsim-cuda = { path = "../necsim-cuda", default-features = false, features = ["cpu"] }
-rustacuda = "0.1.2"
+necsim-cuda = { path = "../necsim-cuda", features = ["host"], optional = true }
+rustacuda = { version = "0.1.2", optional = true }

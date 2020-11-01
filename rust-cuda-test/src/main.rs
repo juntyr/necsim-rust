@@ -9,7 +9,7 @@ use array2d::Array2D;
 use rustacuda::context::Context as CudaContext;
 use rustacuda::prelude::*;
 
-use necsim_cuda::LendToCuda;
+use necsim_cuda::host::LendToCuda;
 use necsim_impls_std::cogs::habitat::in_memory::InMemoryHabitatBuilder;
 
 use std::ffi::CString;
@@ -67,7 +67,7 @@ fn main() -> Result<()> {
             // Launching kernels is unsafe since Rust can't enforce safety - think of kernel launches
             // as a foreign-function call. In this case, it is - this kernel is written in CUDA C.
             unsafe {
-                launch!(module.test<<<1, 27, 0, stream>>>(
+                launch!(module.test_habitat<<<1, 27, 0, stream>>>(
                     habitat_ptr
                 ))?;
             }

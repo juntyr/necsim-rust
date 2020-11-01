@@ -4,18 +4,17 @@ use necsim_core::cogs::Habitat;
 use necsim_core::landscape::{LandscapeExtent, Location};
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(RustToCuda, LendToCuda)]
+#[cfg_attr(feature = "cuda", derive(RustToCuda, LendToCuda))]
 pub struct InMemoryHabitat {
-    #[repr_cuda(Box<[u32]>)]
+    #[cfg_attr(feature = "cuda", r2c)]
     habitat: Box<[u32]>,
     width: u32,
     height: u32,
 }
 
-/*#[derive(LendToCuda)]
-#[derive(RustToCuda)]
-pub struct Simulation<H: Habitat + necsim_cuda::RustToCuda> {
-    #[repr_cuda(H)]
+/*#[cfg_attr(feature = "cuda", derive(RustToCuda, LendToCuda))]
+pub struct Simulation<H: Habitat + crate::shim::cuda::RustToCuda> {
+    #[cfg_attr(feature = "cuda", r2c)]
     habitat: H,
 }*/
 
