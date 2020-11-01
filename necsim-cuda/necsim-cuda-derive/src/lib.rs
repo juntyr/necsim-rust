@@ -29,7 +29,9 @@ fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
 
     let name_cuda = get_cuda_repr_ident(name);
 
-    let mut alloc_combined_type: proc_macro2::TokenStream = quote! { necsim_cuda::NullCudaAlloc };
+    let mut alloc_combined_type: proc_macro2::TokenStream = quote! {
+        necsim_cuda::host::NullCudaAlloc
+    };
     let mut field_declare_streams: Vec<proc_macro2::TokenStream> = Vec::new();
     let mut field_borrow_streams: Vec<proc_macro2::TokenStream> = Vec::new();
     let mut field_as_rust_streams: Vec<proc_macro2::TokenStream> = Vec::new();
@@ -45,14 +47,17 @@ fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
         }) => {
             for (i, mut field) in fields.iter_mut().enumerate() {
                 let mut recursive_cuda_borrow: Option<CudaBorrowType> = None;
-                let mut field_cuda_repr_ty: Option<syn::Type> = None;
+                let mut field_ty = field.ty.clone();
 
                 field.attrs.retain(|attr| match attr.path.get_ident() {
                     Some(ident)
-                        if recursive_cuda_borrow.is_none()
-                            && format!("{}", ident) == "repr_cuda" =>
+                        if recursive_cuda_borrow.is_none() && format!("{}", ident) == "r2c" =>
                     {
-                        let attribute_str = format!("{}", attr.tokens);
+                        let attribute_str = if attr.tokens.is_empty() {
+                            format!("({})", quote! { #field_ty })
+                        } else {
+                            format!("{}", attr.tokens)
+                        };
 
                         if let Some(slice_type) = attribute_str
                             .strip_prefix("(Box < [")
@@ -60,9 +65,9 @@ fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
                         {
                             let slice_type = slice_type.parse().unwrap();
 
-                            field_cuda_repr_ty = Some(syn::parse_quote! {
+                            field_ty = syn::parse_quote! {
                                 (rustacuda_core::DevicePointer<#slice_type>, usize)
-                            });
+                            };
 
                             recursive_cuda_borrow = Some(CudaBorrowType::BoxedSlice(slice_type));
                         } else if let Some(struct_type) = attribute_str
@@ -71,9 +76,9 @@ fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
                         {
                             let field_type = format_ident!("{}", struct_type);
 
-                            field_cuda_repr_ty = Some(syn::parse_quote! {
-                                <#field_type as necsim_cuda::RustToCuda>::CudaRepresentation
-                            });
+                            field_ty = syn::parse_quote! {
+                                <#field_type as necsim_cuda::common::RustToCuda>::CudaRepresentation
+                            };
 
                             recursive_cuda_borrow = Some(CudaBorrowType::Recursive(field_type));
                         }
@@ -83,9 +88,7 @@ fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
                     _ => true,
                 });
 
-                if let Some(ty) = field_cuda_repr_ty {
-                    field.ty = ty;
-                }
+                field.ty = field_ty;
 
                 let field_accessor = match &field.ident {
                     Some(ident) => ident.clone(),
@@ -100,8 +103,8 @@ fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
                 match recursive_cuda_borrow {
                     Some(CudaBorrowType::BoxedSlice(slice_type)) => {
                         alloc_combined_type = quote! {
-                            necsim_cuda::ScopedCudaAlloc<
-                                necsim_cuda::CudaDropWrapper<
+                            necsim_cuda::host::CombinedCudaAlloc<
+                                necsim_cuda::host::CudaDropWrapper<
                                     rustacuda::memory::DeviceBuffer<
                                         #slice_type
                                     >
@@ -112,7 +115,7 @@ fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
 
                         field_declare_streams.push(quote! {
                             let (#field_ptr, alloc_front) = {
-                                let mut device_buffer = necsim_cuda::CudaDropWrapper::from(
+                                let mut device_buffer = necsim_cuda::host::CudaDropWrapper::from(
                                     rustacuda::memory::DeviceBuffer::from_slice(
                                         &self.#field_accessor
                                     )?
@@ -120,7 +123,9 @@ fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
 
                                 (
                                     (device_buffer.as_device_ptr(), device_buffer.len()),
-                                    necsim_cuda::ScopedCudaAlloc::new(device_buffer, alloc_front)
+                                    necsim_cuda::host::CombinedCudaAlloc::new(
+                                        device_buffer, alloc_front
+                                    )
                                 )
                             };
                         });
@@ -146,8 +151,8 @@ fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
                     }
                     Some(CudaBorrowType::Recursive(field_type)) => {
                         alloc_combined_type = quote! {
-                            necsim_cuda::ScopedCudaAlloc<
-                                <#field_type as necsim_cuda::RustToCuda>::CudaAllocation,
+                            necsim_cuda::host::CombinedCudaAlloc<
+                                <#field_type as necsim_cuda::common::RustToCuda>::CudaAllocation,
                                 #alloc_combined_type
                             >
                         };
@@ -221,32 +226,33 @@ fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
         unsafe impl #impl_generics rustacuda_core::DeviceCopy for #name_cuda #ty_generics
             #where_clause {}
 
-        unsafe impl #impl_generics necsim_cuda::RustToCuda for #name #ty_generics #where_clause {
+        unsafe impl #impl_generics necsim_cuda::common::RustToCuda for #name #ty_generics
+            #where_clause
+        {
             type CudaRepresentation = #name_cuda #ty_generics;
 
             #[cfg(not(target_os = "cuda"))]
             type CudaAllocation = #alloc_combined_type;
 
             #[cfg(not(target_os = "cuda"))]
-            //#[allow(clippy::type_complexity)]
-            unsafe fn borrow<A: necsim_cuda::CudaAlloc>(
+            unsafe fn borrow<A: necsim_cuda::host::CudaAlloc>(
                 &self, alloc: A
             ) -> rustacuda::error::CudaResult<(
                 Self::CudaRepresentation,
-                necsim_cuda::ScopedCudaAlloc<Self::CudaAllocation, A>
+                necsim_cuda::host::CombinedCudaAlloc<Self::CudaAllocation, A>
             )> {
-                let alloc_front = necsim_cuda::NullCudaAlloc;
+                let alloc_front = necsim_cuda::host::NullCudaAlloc;
                 let alloc_tail = alloc;
 
                 #(#field_declare_streams)*
 
                 let borrow = #borrow_impl;
 
-                Ok((borrow, necsim_cuda::ScopedCudaAlloc::new(alloc_front, alloc_tail)))
+                Ok((borrow, necsim_cuda::host::CombinedCudaAlloc::new(alloc_front, alloc_tail)))
             }
         }
 
-        unsafe impl #impl_generics necsim_cuda::CudaAsRust for #name_cuda #ty_generics
+        unsafe impl #impl_generics necsim_cuda::common::CudaAsRust for #name_cuda #ty_generics
             #where_clause
         {
             type RustRepresentation = #name #ty_generics;
@@ -260,7 +266,7 @@ fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
     .into()
 }
 
-#[proc_macro_derive(RustToCuda, attributes(repr_cuda))]
+#[proc_macro_derive(RustToCuda, attributes(r2c))]
 pub fn rust_to_cuda_derive(input: TokenStream) -> TokenStream {
     // Construct a representation of Rust code as a syntax tree
     // that we can manipulate
@@ -281,28 +287,32 @@ fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
 
     (quote! {
         #[cfg(not(target_os = "cuda"))]
-        unsafe impl #impl_generics necsim_cuda::LendToCuda for #name #ty_generics #where_clause {
+        unsafe impl #impl_generics necsim_cuda::host::LendToCuda for #name #ty_generics
+            #where_clause
+        {
             fn lend_to_cuda<
                 O,
                 F: FnOnce(
                     rustacuda_core::DevicePointer<
-                        <Self as necsim_cuda::RustToCuda>::CudaRepresentation
+                        <Self as necsim_cuda::common::RustToCuda>::CudaRepresentation
                     >
                 ) -> rustacuda::error::CudaResult<O>,
             >(
                 &self,
                 inner: F,
             ) -> rustacuda::error::CudaResult<O> {
-                use necsim_cuda::RustToCuda;
+                use necsim_cuda::common::RustToCuda;
 
-                let (cuda_repr, tail_alloc) = unsafe { self.borrow(necsim_cuda::NullCudaAlloc) }?;
+                let (cuda_repr, tail_alloc) = unsafe {
+                    self.borrow(necsim_cuda::host::NullCudaAlloc)
+                }?;
 
-                let mut device_box = necsim_cuda::CudaDropWrapper::from(
+                let mut device_box = necsim_cuda::host::CudaDropWrapper::from(
                     rustacuda::memory::DeviceBox::new(&cuda_repr)?
                 );
                 let cuda_ptr = device_box.as_device_ptr();
 
-                let alloc = necsim_cuda::ScopedCudaAlloc::new(device_box, tail_alloc);
+                let alloc = necsim_cuda::host::CombinedCudaAlloc::new(device_box, tail_alloc);
 
                 let result = inner(cuda_ptr);
 
@@ -313,18 +323,20 @@ fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
         }
 
         #[cfg(target_os = "cuda")]
-        unsafe impl #impl_generics necsim_cuda::BorrowFromRust for #name #ty_generics
+        unsafe impl #impl_generics necsim_cuda::device::BorrowFromRust for #name #ty_generics
             #where_clause
         {
             unsafe fn with_borrow_from_rust<O, F: FnOnce(
                 &Self
             ) -> O>(
-                this: *const <Self as necsim_cuda::RustToCuda>::CudaRepresentation,
+                this: *const <Self as necsim_cuda::common::RustToCuda>::CudaRepresentation,
                 inner: F,
             ) -> O {
-                use necsim_cuda::CudaAsRust;
+                use necsim_cuda::common::CudaAsRust;
 
-                let cuda_repr_ref: &<Self as necsim_cuda::RustToCuda>::CudaRepresentation = &*this;
+                let cuda_repr_ref: &<
+                    Self as necsim_cuda::common::RustToCuda
+                >::CudaRepresentation = &*this;
 
                 let rust_repr = cuda_repr_ref.as_rust();
 
