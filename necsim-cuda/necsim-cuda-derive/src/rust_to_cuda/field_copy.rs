@@ -98,11 +98,11 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
         }
         None => {
             r2c_field_initialisations.push(quote! {
-                #optional_field_ident self.#field_accessor,
+                #optional_field_ident self.#field_accessor.clone(),
             });
 
             c2r_field_initialisations.push(quote! {
-                #optional_field_ident self.#field_accessor,
+                #optional_field_ident self.#field_accessor.clone(),
             });
         }
     }

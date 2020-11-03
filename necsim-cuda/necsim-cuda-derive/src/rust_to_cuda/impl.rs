@@ -2,15 +2,13 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 pub fn cuda_struct_declaration(
-    ast: &syn::DeriveInput,
+    struct_attrs_cuda: &[syn::Attribute],
+    struct_vis_cuda: &syn::Visibility,
     struct_name_cuda: &syn::Ident,
+    struct_generics_cuda: &syn::Generics,
     struct_fields_cuda: &syn::Fields,
     struct_semi_cuda: Option<syn::token::Semi>,
 ) -> TokenStream {
-    let struct_attrs_cuda = &ast.attrs;
-    let struct_vis_cuda = &ast.vis;
-    let struct_generics_cuda = &ast.generics;
-
     let (impl_generics, ty_generics, where_clause) = struct_generics_cuda.split_for_impl();
 
     quote! {
@@ -26,9 +24,9 @@ pub fn cuda_struct_declaration(
 }
 
 pub fn rust_to_cuda_trait(
-    ast: &syn::DeriveInput,
     struct_name: &syn::Ident,
     struct_name_cuda: &syn::Ident,
+    struct_generics_cuda: &syn::Generics,
     struct_fields_cuda: &syn::Fields,
     combined_cuda_alloc_type: &TokenStream,
     r2c_field_declarations: &[TokenStream],
@@ -48,7 +46,7 @@ pub fn rust_to_cuda_trait(
         syn::Fields::Unit => quote! { #struct_name_cuda },
     };
 
-    let (impl_generics, ty_generics, where_clause) = &ast.generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = struct_generics_cuda.split_for_impl();
 
     quote! {
         unsafe impl #impl_generics necsim_cuda::common::RustToCuda for #struct_name #ty_generics
@@ -80,9 +78,9 @@ pub fn rust_to_cuda_trait(
 }
 
 pub fn cuda_as_rust_trait(
-    ast: &syn::DeriveInput,
     struct_name: &syn::Ident,
     struct_name_cuda: &syn::Ident,
+    struct_generics_cuda: &syn::Generics,
     struct_fields_cuda: &syn::Fields,
     c2r_field_initialisations: &[TokenStream],
 ) -> TokenStream {
@@ -100,7 +98,7 @@ pub fn cuda_as_rust_trait(
         syn::Fields::Unit => quote! { #struct_name },
     };
 
-    let (impl_generics, ty_generics, where_clause) = &ast.generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = &struct_generics_cuda.split_for_impl();
 
     quote! {
         unsafe impl #impl_generics necsim_cuda::common::CudaAsRust

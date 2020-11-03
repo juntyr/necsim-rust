@@ -10,7 +10,7 @@ use rustacuda::context::Context as CudaContext;
 use rustacuda::prelude::*;
 
 use necsim_cuda::host::LendToCuda;
-use necsim_impls_std::cogs::habitat::in_memory::InMemoryHabitatBuilder;
+use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
 
 use std::ffi::CString;
 
@@ -59,9 +59,8 @@ fn main() -> Result<()> {
             0, 1, 2, 3, 4, 5, 6, 7, 8
         ];
 
-        let habitat_arr = Array2D::from_row_major(&habitat_vec, 3, 9);
-
-        let habitat = InMemoryHabitatBuilder::from_array2d(&habitat_arr);
+        let habitat_arr = Array2D::from_row_major(&habitat_vec, 3, 9).unwrap();
+        let habitat = InMemoryHabitat::new(habitat_arr);
 
         if let Err(err) = habitat.lend_to_cuda(|habitat_ptr| {
             // Launching kernels is unsafe since Rust can't enforce safety - think of kernel launches

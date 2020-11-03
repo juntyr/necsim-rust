@@ -1,3 +1,5 @@
+use crate::intrinsics::{floor, ln};
+
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait Core {
@@ -35,11 +37,3 @@ pub trait Rng: Core {
 }
 
 impl<T: Core> Rng for T {}
-
-fn floor(val: f64) -> f64 {
-    unsafe { core::intrinsics::floorf64(val) }
-}
-
-fn ln(val: f64) -> f64 {
-    unsafe { core::intrinsics::logf64(val) }
-}

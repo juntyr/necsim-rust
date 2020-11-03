@@ -1,7 +1,7 @@
 use super::Location;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct LandscapeExtent {
     x: u32,
     y: u32,
