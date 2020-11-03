@@ -80,4 +80,12 @@ pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
         ), "maintains invariant of lineage-location bijection"
     )]
     fn remove_lineage_from_its_location(&mut self, reference: R);
+
+    #[allow(clippy::float_cmp)]
+    #[debug_requires(self.get(reference.clone()).is_some(), "lineage reference is valid")]
+    #[debug_ensures(
+        self[old(reference.clone())].time_of_last_event() == old(event_time),
+        "updates the time of the last event of the lineage reference"
+    )]
+    fn update_lineage_time_of_last_event(&mut self, reference: R, event_time: f64);
 }

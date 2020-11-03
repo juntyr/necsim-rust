@@ -8,7 +8,7 @@ use necsim_core::landscape::Location;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::partial::active_lineager_sampler::PartialSimulation;
 
-use crate::cogs::event_sampler::gillespie::GillespieEventSampler;
+use necsim_impls_no_std::cogs::event_sampler::gillespie::GillespieEventSampler;
 
 use super::{EventTime, GillespieActiveLineageSampler};
 
@@ -76,6 +76,10 @@ impl<
                 EventTime::from(unique_event_time + rng.sample_exponential(event_rate_at_location)),
             );
         }
+
+        simulation
+            .lineage_store
+            .update_lineage_time_of_last_event(chosen_lineage_reference.clone(), unique_event_time);
 
         Some((chosen_lineage_reference, unique_event_time))
     }

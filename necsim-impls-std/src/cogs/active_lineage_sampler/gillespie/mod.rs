@@ -7,7 +7,7 @@ use necsim_core::landscape::Location;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
-use crate::cogs::event_sampler::gillespie::GillespieEventSampler;
+use necsim_impls_no_std::cogs::event_sampler::gillespie::GillespieEventSampler;
 
 mod event_time;
 mod sampler;

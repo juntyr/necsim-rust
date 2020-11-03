@@ -6,7 +6,7 @@ use necsim_core::reporter::Reporter;
 use necsim_core::rng::Rng;
 use necsim_gillespie::GillespieSimulation;
 use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
-use necsim_impls_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
+use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use necsim_skipping_gillespie::SkippingGillespieSimulation;
 
 use super::args::{Algorithm, CommandLineArguments};

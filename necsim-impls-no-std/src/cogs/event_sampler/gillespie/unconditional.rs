@@ -1,3 +1,5 @@
+use core::marker::PhantomData;
+
 use necsim_core::cogs::{
     CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference, LineageStore,
 };
@@ -9,13 +11,19 @@ use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 use super::GillespieEventSampler;
 
 #[allow(clippy::module_name_repetitions)]
+#[cfg_attr(feature = "cuda", derive(RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(H: necsim_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(D: necsim_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(R: necsim_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(S: necsim_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(C: necsim_cuda::common::RustToCuda))]
 pub struct UnconditionalGillespieEventSampler<
     H: Habitat,
     D: DispersalSampler<H>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
     C: CoalescenceSampler<H, R, S>,
->(std::marker::PhantomData<(H, D, R, S, C)>);
+>(PhantomData<(H, D, R, S, C)>);
 
 impl<
         H: Habitat,
@@ -26,7 +34,7 @@ impl<
     > Default for UnconditionalGillespieEventSampler<H, D, R, S, C>
 {
     fn default() -> Self {
-        Self(std::marker::PhantomData::<(H, D, R, S, C)>)
+        Self(PhantomData::<(H, D, R, S, C)>)
     }
 }
 
@@ -66,7 +74,7 @@ impl<
                         rng,
                     ),
                 target: dispersal_target,
-                _marker: std::marker::PhantomData::<H>,
+                _marker: PhantomData::<H>,
             }
         };
 
