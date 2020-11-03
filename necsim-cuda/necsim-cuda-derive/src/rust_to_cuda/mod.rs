@@ -3,6 +3,7 @@ use quote::{format_ident, quote};
 
 mod field_copy;
 mod field_ty;
+mod generics;
 mod r#impl;
 
 use field_ty::CudaReprFieldTy;
@@ -56,17 +57,22 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
         syn::Fields::Unit => (),
     }
 
+    let (struct_attrs_cuda, struct_generics_cuda) =
+        generics::expand_cuda_struct_generics_where_requested_in_attrs(ast);
+
     let cuda_struct_declaration = r#impl::cuda_struct_declaration(
-        ast,
+        &struct_attrs_cuda,
+        &ast.vis,
         &struct_name_cuda,
+        &struct_generics_cuda,
         &struct_fields_cuda,
         struct_semi_cuda,
     );
 
     let rust_to_cuda_trait_impl = r#impl::rust_to_cuda_trait(
-        ast,
         &struct_name,
         &struct_name_cuda,
+        &struct_generics_cuda,
         &struct_fields_cuda,
         &combined_cuda_alloc_type,
         &r2c_field_declarations,
@@ -74,9 +80,9 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
     );
 
     let cuda_as_rust_trait_impl = r#impl::cuda_as_rust_trait(
-        ast,
         &struct_name,
         &struct_name_cuda,
+        &struct_generics_cuda,
         &struct_fields_cuda,
         &c2r_field_initialisations,
     );

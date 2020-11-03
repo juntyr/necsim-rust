@@ -27,7 +27,7 @@ pub fn load_habitat_map(path: &PathBuf, dispersal: &Array2D<f64>) -> Result<Arra
                 // If there is any dispersal from this location, it must be habitat
                 if dispersal
                     .row_iter(y * habitat.num_columns() + x)
-                    .any(|p| *p > 0.0_f64)
+                    .map_or(false, |mut it| it.any(|p| *p > 0.0_f64))
                 {
                     Ok(1)
                 } else {

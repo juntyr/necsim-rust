@@ -1,15 +1,11 @@
-use array2d::Array2D;
+use array2d::{Array2D, Error};
 
 use necsim_core::cogs::Habitat;
 use necsim_core::landscape::{LandscapeExtent, Location};
+use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
 mod contract;
 mod dispersal;
-
-use crate::cogs::dispersal_sampler::in_memory::contract::explicit_in_memory_dispersal_check_contract;
-use crate::cogs::dispersal_sampler::in_memory::error::InMemoryDispersalSamplerError;
-
-use super::InMemoryDispersalSampler;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct InMemoryCumulativeDispersalSampler {
@@ -25,39 +21,21 @@ impl<H: Habitat> InMemoryDispersalSampler<H> for InMemoryCumulativeDispersalSamp
     ///
     /// # Errors
     ///
-    /// `Err(InconsistentDispersalMapSize)` is returned iff the dimensions of
-    /// `dispersal` are not `ExE` given `E=WxH` where habitat has width `W`
-    /// and height `W`.
-    ///
-    /// `Err(InconsistentDispersalProbabilities)` is returned iff any of the
-    /// following conditions is violated:
-    /// - habitat cells must disperse somewhere
-    /// - non-habitat cells must not disperse
-    /// - dispersal must only target habitat cells
+    /// `Err(_)` is returned iff the dispersal `Array2D` cannot
+    /// be constructed successfully.
     #[debug_ensures(ret.is_ok() -> ret.as_ref().unwrap()
         .explicit_only_valid_targets_dispersal_contract(old(habitat)),
         "valid_dispersal_targets only allows dispersal to habitat"
     )]
     //#[debug_ensures(..., "cumulative_dispersal stores the cumulative distribution function")]
-    fn new(dispersal: &Array2D<f64>, habitat: &H) -> Result<Self, InMemoryDispersalSamplerError> {
+    fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Result<Self, Error> {
         let habitat_extent = habitat.get_extent();
-
-        let habitat_area = (habitat_extent.width() as usize) * (habitat_extent.height() as usize);
-
-        if dispersal.num_rows() != habitat_area || dispersal.num_columns() != habitat_area {
-            return Err(InMemoryDispersalSamplerError::InconsistentDispersalMapSize);
-        }
-
-        if !explicit_in_memory_dispersal_check_contract(dispersal, habitat) {
-            return Err(InMemoryDispersalSamplerError::InconsistentDispersalProbabilities);
-        }
 
         let mut cumulative_dispersal = vec![0.0_f64; dispersal.num_elements()];
         let mut valid_dispersal_targets = vec![None; dispersal.num_elements()];
 
-        for row_index in 0..dispersal.num_rows() {
-            let sum: f64 = dispersal
-                .row_iter(row_index)
+        for (row_index, row) in dispersal.rows_iter().enumerate() {
+            let sum: f64 = row
                 .enumerate()
                 .map(|(col_index, dispersal_probability)| {
                     #[allow(clippy::cast_possible_truncation)]

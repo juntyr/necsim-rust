@@ -11,12 +11,12 @@ use necsim_core::reporter::Reporter;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::Simulation;
 
+use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler;
+use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
 use necsim_impls_std::cogs::active_lineage_sampler::classical::ClassicalActiveLineageSampler;
 use necsim_impls_std::cogs::coalescence_sampler::unconditional::UnconditionalCoalescenceSampler;
-use necsim_impls_std::cogs::dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler;
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 use necsim_impls_std::cogs::event_sampler::unconditional::UnconditionalEventSampler;
-use necsim_impls_std::cogs::habitat::in_memory::{InMemoryHabitat, InMemoryHabitatBuilder};
 use necsim_impls_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use necsim_impls_std::cogs::lineage_store::in_memory::InMemoryLineageStore;
 
@@ -49,7 +49,7 @@ impl ClassicalSimulation {
         rng: &mut impl Rng,
         reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
     ) -> Result<(f64, usize)> {
-        let habitat = InMemoryHabitatBuilder::from_array2d(habitat);
+        let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
         let lineage_store = InMemoryLineageStore::new(sample_percentage, &habitat);
         let coalescence_sampler = UnconditionalCoalescenceSampler::default();

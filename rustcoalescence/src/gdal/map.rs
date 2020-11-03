@@ -26,7 +26,8 @@ pub fn load_map_f64_from_gdal_raster(path: &PathBuf) -> Result<Array2D<f64>> {
         .map_err(NewGdalError::from)
         .with_context(|| format!("The map file {:?} could not be read as Buffer<f64>.", path))?;
 
-    let mut data: Array2D<f64> = Array2D::from_row_major(&data.data, data.size.1, data.size.0);
+    let mut data: Array2D<f64> =
+        Array2D::from_row_major(&data.data, data.size.1, data.size.0).unwrap();
 
     let no_data_value = rasterband.no_data_value().unwrap_or(0.0_f64);
 

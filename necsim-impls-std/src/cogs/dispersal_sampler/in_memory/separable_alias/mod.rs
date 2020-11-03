@@ -1,15 +1,12 @@
-use array2d::Array2D;
+use array2d::{Array2D, Error};
 
 use necsim_core::cogs::Habitat;
 use necsim_core::landscape::{LandscapeExtent, Location};
+use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
 mod dispersal;
 
 use crate::alias::AliasMethodSampler;
-use crate::cogs::dispersal_sampler::in_memory::contract::explicit_in_memory_dispersal_check_contract;
-use crate::cogs::dispersal_sampler::in_memory::error::InMemoryDispersalSamplerError;
-
-use super::InMemoryDispersalSampler;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct InMemorySeparableAliasDispersalSampler<H: Habitat> {
@@ -26,27 +23,10 @@ impl<H: Habitat> InMemoryDispersalSampler<H> for InMemorySeparableAliasDispersal
     ///
     /// # Errors
     ///
-    /// `Err(InconsistentDispersalMapSize)` is returned iff the dimensions of
-    /// `dispersal` are not `ExE` given `E=WxH` where habitat has width `W`
-    /// and height `W`.
-    ///
-    /// `Err(InconsistentDispersalProbabilities)` is returned iff any of the
-    /// following conditions is violated:
-    /// - habitat cells must disperse somewhere
-    /// - non-habitat cells must not disperse
-    /// - dispersal must only target habitat cells
-    fn new(dispersal: &Array2D<f64>, habitat: &H) -> Result<Self, InMemoryDispersalSamplerError> {
+    /// `Err(_)` is returned iff the dispersal `Array2D` cannot
+    /// be constructed successfully.
+    fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Result<Self, Error> {
         let habitat_extent = habitat.get_extent();
-
-        let habitat_area = (habitat_extent.width() as usize) * (habitat_extent.height() as usize);
-
-        if dispersal.num_rows() != habitat_area || dispersal.num_columns() != habitat_area {
-            return Err(InMemoryDispersalSamplerError::InconsistentDispersalMapSize);
-        }
-
-        if !explicit_in_memory_dispersal_check_contract(dispersal, habitat) {
-            return Err(InMemoryDispersalSamplerError::InconsistentDispersalProbabilities);
-        }
 
         let mut event_weights: Vec<(usize, f64)> = Vec::with_capacity(dispersal.row_len());
 
@@ -98,7 +78,7 @@ impl<H: Habitat> InMemoryDispersalSampler<H> for InMemorySeparableAliasDispersal
             }),
             habitat_extent.height() as usize,
             habitat_extent.width() as usize,
-        );
+        )?;
 
         Ok(Self {
             alias_dispersal,

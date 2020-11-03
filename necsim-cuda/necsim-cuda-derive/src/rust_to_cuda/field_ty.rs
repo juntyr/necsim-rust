@@ -1,10 +1,9 @@
-use quote::format_ident;
 use syn::parse_quote;
 
 #[allow(clippy::module_name_repetitions)]
 pub enum CudaReprFieldTy {
     BoxedSlice(proc_macro2::TokenStream),
-    Embedded(proc_macro2::Ident),
+    Embedded(Box<syn::Type>),
 }
 
 pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<CudaReprFieldTy> {
@@ -13,7 +12,7 @@ pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<Cu
 
     // Helper attribute `r2c` must be filtered out inside cuda representation
     field.attrs.retain(|attr| match attr.path.get_ident() {
-        Some(ident) if cuda_repr_field_ty.is_none() && format!("{}", ident) == "r2c" => {
+        Some(ident) if cuda_repr_field_ty.is_none() && format!("{}", ident) == "r2cEmbed" => {
             // Allow the shorthand `#[r2c]` which uses the field type
             // as well as the explicit `#[r2c(ty)]` which overwrites the type
             let attribute_str = if attr.tokens.is_empty() {
@@ -39,13 +38,13 @@ pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<Cu
                 .and_then(|rest| rest.strip_suffix(")"))
             {
                 // Check for the case where a type implementing is `RustToCuda` embedded
-                let field_type = format_ident!("{}", struct_type);
+                let field_type = syn::parse_str(struct_type).unwrap();
 
                 field_ty = parse_quote! {
                     <#field_type as necsim_cuda::common::RustToCuda>::CudaRepresentation
                 };
 
-                cuda_repr_field_ty = Some(CudaReprFieldTy::Embedded(field_type));
+                cuda_repr_field_ty = Some(CudaReprFieldTy::Embedded(Box::new(field_type)));
             }
 
             false
