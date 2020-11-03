@@ -2,7 +2,8 @@ use necsim_core::cogs::{Habitat, LineageReference, LineageStore};
 use necsim_core::landscape::Location;
 use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
-use crate::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
+use necsim_impls_no_std::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
+
 use crate::cogs::dispersal_sampler::separable::SeparableDispersalSampler;
 
 #[allow(clippy::module_name_repetitions)]

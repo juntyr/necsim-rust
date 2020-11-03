@@ -2,12 +2,13 @@ use necsim_core::cogs::{Habitat, LineageStore};
 use necsim_core::landscape::Location;
 use necsim_core::lineage::Lineage;
 
-use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
+use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
+use necsim_impls_no_std::cogs::lineage_store::coherent::CoherentLineageStore;
 
-use super::InMemoryLineageStore;
+use super::CoherentInMemoryLineageStore;
 
 #[contract_trait]
-impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for InMemoryLineageStore<H> {
+impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for CoherentInMemoryLineageStore<H> {
     #[must_use]
     fn new(sample_percentage: f64, habitat: &H) -> Self {
         Self::new_impl(sample_percentage, habitat)
@@ -78,4 +79,21 @@ impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for InMemoryLineageSt
             }
         }
     }
+
+    fn update_lineage_time_of_last_event(
+        &mut self,
+        reference: InMemoryLineageReference,
+        event_time: f64,
+    ) {
+        unsafe {
+            self.lineages_store[Into::<usize>::into(reference)]
+                .update_time_of_last_event(event_time)
+        }
+    }
+}
+
+#[contract_trait]
+impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
+    for CoherentInMemoryLineageStore<H>
+{
 }

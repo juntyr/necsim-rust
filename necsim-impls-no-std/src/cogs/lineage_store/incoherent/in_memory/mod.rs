@@ -1,8 +1,13 @@
-use std::ops::Index;
+use core::marker::PhantomData;
+use core::ops::Index;
+
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 use array2d::Array2D;
 
 use necsim_core::cogs::Habitat;
+use necsim_core::intrinsics::floor;
 use necsim_core::landscape::{LandscapeExtent, Location};
 use necsim_core::lineage::Lineage;
 
@@ -11,14 +16,16 @@ use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 mod store;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct InMemoryLineageStore<H: Habitat> {
+#[cfg_attr(feature = "cuda", derive(RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(H: necsim_cuda::common::RustToCuda))]
+pub struct IncoherentInMemoryLineageStore<H: Habitat> {
     landscape_extent: LandscapeExtent,
-    lineages_store: Vec<Lineage>,
-    location_to_lineage_references: Array2D<Vec<InMemoryLineageReference>>,
-    _marker: std::marker::PhantomData<H>,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    lineages_store: Box<[Lineage]>,
+    marker: PhantomData<H>,
 }
 
-impl<H: Habitat> Index<InMemoryLineageReference> for InMemoryLineageStore<H> {
+impl<H: Habitat> Index<InMemoryLineageReference> for IncoherentInMemoryLineageStore<H> {
     type Output = Lineage;
 
     #[must_use]
@@ -31,7 +38,7 @@ impl<H: Habitat> Index<InMemoryLineageReference> for InMemoryLineageStore<H> {
     }
 }
 
-impl<H: Habitat> InMemoryLineageStore<H> {
+impl<H: Habitat> IncoherentInMemoryLineageStore<H> {
     #[must_use]
     #[debug_ensures(
         ret.landscape_extent == habitat.get_extent(),
@@ -47,7 +54,7 @@ impl<H: Habitat> InMemoryLineageStore<H> {
         let landscape_extent = habitat.get_extent();
 
         let mut location_to_lineage_references = Array2D::filled_with(
-            Vec::new(),
+            0_usize,
             landscape_extent.height() as usize,
             landscape_extent.width() as usize,
         );
@@ -64,15 +71,14 @@ impl<H: Habitat> InMemoryLineageStore<H> {
 
                 #[allow(clippy::cast_possible_truncation)]
                 #[allow(clippy::cast_sign_loss)]
-                let sampled_habitat_at_location =
-                    (f64::from(habitat.get_habitat_at_location(&location)) * sample_percentage)
-                        .floor() as usize;
+                let sampled_habitat_at_location = floor(
+                    f64::from(habitat.get_habitat_at_location(&location)) * sample_percentage,
+                ) as usize;
 
                 for _ in 0..sampled_habitat_at_location {
-                    let lineage_reference = InMemoryLineageReference::from(lineages_store.len());
-                    let index_at_location = lineages_at_location.len();
+                    let index_at_location = *lineages_at_location;
 
-                    lineages_at_location.push(lineage_reference);
+                    *lineages_at_location += 1;
                     lineages_store.push(Lineage::new(location.clone(), index_at_location));
                 }
             }
@@ -82,9 +88,8 @@ impl<H: Habitat> InMemoryLineageStore<H> {
 
         Self {
             landscape_extent,
-            lineages_store,
-            location_to_lineage_references,
-            _marker: std::marker::PhantomData::<H>,
+            lineages_store: lineages_store.into_boxed_slice(),
+            marker: PhantomData::<H>,
         }
     }
 }

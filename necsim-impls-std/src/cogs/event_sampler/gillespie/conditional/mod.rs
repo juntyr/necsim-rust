@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use necsim_core::cogs::{
     CoalescenceSampler, EventSampler, Habitat, LineageReference, LineageStore,
 };
@@ -6,10 +8,10 @@ use necsim_core::landscape::Location;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
-use crate::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
-use crate::cogs::dispersal_sampler::separable::SeparableDispersalSampler;
+use necsim_impls_no_std::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
+use necsim_impls_no_std::cogs::event_sampler::gillespie::GillespieEventSampler;
 
-use super::GillespieEventSampler;
+use crate::cogs::dispersal_sampler::separable::SeparableDispersalSampler;
 
 mod probability;
 
@@ -21,7 +23,7 @@ pub struct ConditionalGillespieEventSampler<
     D: SeparableDispersalSampler<H>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
->(std::marker::PhantomData<(H, D, R, S)>);
+>(PhantomData<(H, D, R, S)>);
 
 impl<
         H: Habitat,
@@ -31,7 +33,7 @@ impl<
     > Default for ConditionalGillespieEventSampler<H, D, R, S>
 {
     fn default() -> Self {
-        Self(std::marker::PhantomData::<(H, D, R, S)>)
+        Self(PhantomData::<(H, D, R, S)>)
     }
 }
 
@@ -92,7 +94,7 @@ impl<
                         rng,
                     ),
                 target: dispersal_target,
-                _marker: std::marker::PhantomData::<H>,
+                _marker: PhantomData::<H>,
             }
         } else {
             EventType::Dispersal {
@@ -105,7 +107,7 @@ impl<
                         rng,
                     ),
                 ),
-                _marker: std::marker::PhantomData::<H>,
+                _marker: PhantomData::<H>,
             }
         };
 

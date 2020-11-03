@@ -1,4 +1,5 @@
 #[derive(Eq, PartialEq, Clone, Hash, Debug)]
+#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub struct Location {
     x: u32,
     y: u32,

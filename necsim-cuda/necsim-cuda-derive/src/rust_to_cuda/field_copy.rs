@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
+use quote::{format_ident, quote, ToTokens};
 
 use super::CudaReprFieldTy;
 
@@ -16,12 +16,12 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
     c2r_field_initialisations: &mut Vec<TokenStream>,
 ) -> TokenStream {
     let field_accessor = match &field.ident {
-        Some(ident) => ident.clone(),
-        None => format_ident!("{}", field_index),
+        Some(ident) => quote! { #ident },
+        None => proc_macro2::Literal::usize_unsuffixed(field_index).to_token_stream(),
     };
     let field_repr_ident = match &field.ident {
-        Some(ident) => format_ident!("{}_repr", ident),
-        None => format_ident!("{}_repr", field_index),
+        Some(ident) => format_ident!("field_{}_repr", ident),
+        None => format_ident!("field_{}_repr", field_index),
     };
     let optional_field_ident = field.ident.as_ref().map(|ident| quote! { #ident: });
 

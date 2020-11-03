@@ -1,3 +1,5 @@
+use core::marker::PhantomData;
+
 use necsim_core::cogs::{
     CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference, LineageStore,
 };
@@ -12,7 +14,7 @@ pub struct UnconditionalEventSampler<
     R: LineageReference<H>,
     S: LineageStore<H, R>,
     C: CoalescenceSampler<H, R, S>,
->(std::marker::PhantomData<(H, D, R, S, C)>);
+>(PhantomData<(H, D, R, S, C)>);
 
 impl<
         H: Habitat,
@@ -23,7 +25,7 @@ impl<
     > Default for UnconditionalEventSampler<H, D, R, S, C>
 {
     fn default() -> Self {
-        Self(std::marker::PhantomData::<(H, D, R, S, C)>)
+        Self(PhantomData::<(H, D, R, S, C)>)
     }
 }
 
@@ -63,7 +65,7 @@ impl<
                         rng,
                     ),
                 target: dispersal_target,
-                _marker: std::marker::PhantomData::<H>,
+                _marker: PhantomData::<H>,
             }
         };
 

@@ -21,6 +21,7 @@ pub trait ActiveLineageSampler<
     fn number_active_lineages(&self) -> usize;
 
     #[must_use]
+    #[allow(clippy::float_cmp)]
     #[debug_requires(time >= 0.0_f64, "time is non-negative")]
     #[debug_ensures(match ret {
         Some(_) => {
@@ -33,6 +34,12 @@ pub trait ActiveLineageSampler<
         ret.is_some() -> ret.as_ref().unwrap().1 > time,
         "event occurs later than time"
     )]
+    #[debug_ensures(match ret {
+        None => true,
+        Some((ref reference, event_time)) => {
+            simulation.lineage_store[reference.clone()].time_of_last_event() == event_time
+        },
+    }, "updates the time of the last event of the returned lineage to the time of the event")]
     fn pop_active_lineage_and_time_of_next_event(
         &mut self,
         time: f64,

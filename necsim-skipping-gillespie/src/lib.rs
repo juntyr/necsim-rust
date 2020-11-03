@@ -11,14 +11,14 @@ use necsim_core::reporter::Reporter;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::Simulation;
 
+use necsim_impls_no_std::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
 use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
+use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use necsim_impls_std::cogs::active_lineage_sampler::gillespie::GillespieActiveLineageSampler;
-use necsim_impls_std::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler;
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 use necsim_impls_std::cogs::event_sampler::gillespie::conditional::ConditionalGillespieEventSampler;
-use necsim_impls_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
-use necsim_impls_std::cogs::lineage_store::in_memory::InMemoryLineageStore;
+use necsim_impls_std::cogs::lineage_store::coherent::in_memory::CoherentInMemoryLineageStore;
 
 pub struct SkippingGillespieSimulation;
 
@@ -51,7 +51,7 @@ impl SkippingGillespieSimulation {
     ) -> Result<(f64, usize)> {
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemorySeparableAliasDispersalSampler::new(dispersal, &habitat)?;
-        let lineage_store = InMemoryLineageStore::new(sample_percentage, &habitat);
+        let lineage_store = CoherentInMemoryLineageStore::new(sample_percentage, &habitat);
         let coalescence_sampler = ConditionalCoalescenceSampler::default();
         let event_sampler = ConditionalGillespieEventSampler::default();
         let active_lineage_sampler = GillespieActiveLineageSampler::new(

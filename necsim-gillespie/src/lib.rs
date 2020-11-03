@@ -11,14 +11,14 @@ use necsim_core::reporter::Reporter;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::Simulation;
 
+use necsim_impls_no_std::cogs::coalescence_sampler::unconditional::UnconditionalCoalescenceSampler;
+use necsim_impls_no_std::cogs::event_sampler::gillespie::unconditional::UnconditionalGillespieEventSampler;
 use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
+use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use necsim_impls_std::cogs::active_lineage_sampler::gillespie::GillespieActiveLineageSampler;
-use necsim_impls_std::cogs::coalescence_sampler::unconditional::UnconditionalCoalescenceSampler;
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler;
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
-use necsim_impls_std::cogs::event_sampler::gillespie::unconditional::UnconditionalGillespieEventSampler;
-use necsim_impls_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
-use necsim_impls_std::cogs::lineage_store::in_memory::InMemoryLineageStore;
+use necsim_impls_std::cogs::lineage_store::coherent::in_memory::CoherentInMemoryLineageStore;
 
 pub struct GillespieSimulation;
 
@@ -51,7 +51,7 @@ impl GillespieSimulation {
     ) -> Result<(f64, usize)> {
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
-        let lineage_store = InMemoryLineageStore::new(sample_percentage, &habitat);
+        let lineage_store = CoherentInMemoryLineageStore::new(sample_percentage, &habitat);
         let coalescence_sampler = UnconditionalCoalescenceSampler::default();
         let event_sampler = UnconditionalGillespieEventSampler::default();
         let active_lineage_sampler = GillespieActiveLineageSampler::new(
