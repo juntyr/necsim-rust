@@ -1,0 +1,26 @@
+[package]
+name = "array2d"
+version = "0.2.1"
+authors = ["Harrison McCullough <mccullough.harrison@gmail.com>"]
+edition = "2018"
+description = "A fixed sized two-dimensional array"
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/HarrisonMc555/array2d"
+
+[features]
+default = []
+cuda = ["necsim-cuda", "necsim-cuda-derive", "rustacuda_core", "rustacuda_derive", "rustacuda"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"], optional = true }
+necsim-cuda-derive = { path = "../necsim-cuda/necsim-cuda-derive", optional = true }
+rustacuda_core = { version = "0.1.2", optional = true }
+rustacuda_derive = { version = "0.1.2", optional = true }
+
+[target.'cfg(target_os = "cuda")'.dependencies]
+necsim-cuda = { path = "../necsim-cuda", features = [], optional = true }
+
+[target.'cfg(not(target_os = "cuda"))'.dependencies]
+necsim-cuda = { path = "../necsim-cuda", features = ["host"], optional = true }
+rustacuda = { version = "0.1.2", optional = true }
