@@ -4,10 +4,10 @@ USER gitpod
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections && \
-    echo keyboard-configuration keyboard-configuration/layout select 'English (US)' | debconf-set-selections && \
-    echo keyboard-configuration keyboard-configuration/layoutcode select 'us' | debconf-set-selections && \
-    echo "resolvconf resolvconf/linkify-resolvconf boolean false" | debconf-set-selections && \
+RUN echo "debconf debconf/frontend select Noninteractive" | sudo debconf-set-selections && \
+    echo "keyboard-configuration keyboard-configuration/layout select 'English (US)'" | sudo debconf-set-selections && \
+    echo "keyboard-configuration keyboard-configuration/layoutcode select 'us'" | sudo debconf-set-selections && \
+    echo "resolvconf resolvconf/linkify-resolvconf boolean false" | sudo debconf-set-selections && \
     wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin && \
     sudo mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600 && \
     sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub && \
