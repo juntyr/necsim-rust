@@ -4,7 +4,7 @@ use necsim_core::cogs::Habitat;
 use necsim_core::landscape::{LandscapeExtent, Location};
 
 #[allow(clippy::module_name_repetitions)]
-#[cfg_attr(feature = "cuda", derive(RustToCuda, LendToCuda))]
+#[cfg_attr(feature = "cuda", derive(RustToCuda, LendToCuda /* TODO: Remove */))]
 pub struct InMemoryHabitat {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     habitat: Array2D<u32>,

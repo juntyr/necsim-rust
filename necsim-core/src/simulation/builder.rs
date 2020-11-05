@@ -9,6 +9,14 @@ use crate::cogs::{
 };
 
 #[derive(TypedBuilder)]
+#[cfg_attr(feature = "cuda", derive(RustToCuda, LendToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(R: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(S: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(C: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(E: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(A: rust_cuda::common::RustToCuda))]
 pub struct Simulation<
     H: Habitat,
     D: DispersalSampler<H>,
@@ -19,12 +27,18 @@ pub struct Simulation<
     A: ActiveLineageSampler<H, D, R, S, C, E>,
 > {
     pub(super) speciation_probability_per_generation: f64,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) habitat: H,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) dispersal_sampler: D,
     pub(super) lineage_reference: PhantomData<R>,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) lineage_store: S,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) coalescence_sampler: C,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) event_sampler: E,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) active_lineage_sampler: A,
 }
 

@@ -15,6 +15,7 @@ use super::InMemoryDispersalSampler;
 
 #[derive(Clone)]
 #[allow(clippy::module_name_repetitions)]
+#[doc(hidden)]
 pub struct AliasSamplerRange(Range<usize>);
 
 impl From<Range<usize>> for AliasSamplerRange {
@@ -33,7 +34,7 @@ impl Into<Range<usize>> for AliasSamplerRange {
 unsafe impl rustacuda_core::DeviceCopy for AliasSamplerRange {}
 
 #[allow(clippy::module_name_repetitions)]
-#[cfg_attr(feature = "cuda", derive(RustToCuda, LendToCuda))]
+#[cfg_attr(feature = "cuda", derive(RustToCuda))]
 pub struct InMemoryPackedAliasDispersalSampler {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     alias_dispersal_ranges: Array2D<AliasSamplerRange>,
