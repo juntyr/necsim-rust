@@ -9,22 +9,22 @@
 
 extern crate alloc;
 
-pub mod arch;
-
-#[macro_use]
-pub mod utils;
+use rust_cuda::{
+    device::{nvptx, utils},
+    println,
+};
 
 #[global_allocator]
 static _GLOBAL_ALLOCATOR: utils::PTXAllocator = utils::PTXAllocator;
 
 #[panic_handler]
 fn panic(_info: &::core::panic::PanicInfo) -> ! {
-    unsafe { arch::nvptx::trap() }
+    unsafe { nvptx::trap() }
 }
 
 #[alloc_error_handler]
 fn alloc_error_handler(_: core::alloc::Layout) -> ! {
-    unsafe { arch::nvptx::trap() }
+    unsafe { nvptx::trap() }
 }
 
 struct F32(f32);
