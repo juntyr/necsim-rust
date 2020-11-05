@@ -4,7 +4,7 @@ use necsim_core::cogs::{
 use necsim_core::landscape::Location;
 use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
-use necsim_impls_no_std::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
+use crate::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ProbabilityAtLocation {

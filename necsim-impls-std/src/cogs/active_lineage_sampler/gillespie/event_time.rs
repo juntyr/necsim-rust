@@ -13,7 +13,7 @@ impl PartialOrd for EventTime {
 
 impl Ord for EventTime {
     fn cmp(&self, other: &Self) -> Ordering {
-        crate::f64::total_cmp_f64(other.0, self.0)
+        necsim_impls_no_std::r#f64::total_cmp_f64(other.0, self.0)
     }
 }
 

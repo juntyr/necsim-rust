@@ -39,3 +39,16 @@ impl<H: Habitat, R: LineageReference<H>, S: IncoherentLineageStore<H, R>>
         None
     }
 }
+
+impl<H: Habitat, R: LineageReference<H>, S: IncoherentLineageStore<H, R>>
+    IndependentCoalescenceSampler<H, R, S>
+{
+    #[must_use]
+    pub fn sample_coalescence_index_at_location(
+        location: &Location,
+        habitat: &H,
+        rng: &mut impl Rng,
+    ) -> usize {
+        rng.sample_index(habitat.get_habitat_at_location(location) as usize)
+    }
+}

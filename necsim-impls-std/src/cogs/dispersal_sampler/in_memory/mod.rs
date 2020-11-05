@@ -4,10 +4,6 @@ use necsim_core::cogs::Habitat;
 
 pub mod error;
 
-pub mod alias;
-pub mod cumulative;
-pub mod separable_alias;
-
 use error::InMemoryDispersalSamplerError;
 use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::contract::explicit_in_memory_dispersal_check_contract;
 use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler as InMemoryDispersalSamplerNoError;

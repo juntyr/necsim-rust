@@ -1,8 +1,11 @@
 use array2d::{Array2D, Error};
 
+use alloc::vec::Vec;
+
 use necsim_core::cogs::Habitat;
 use necsim_core::landscape::{LandscapeExtent, Location};
-use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
+
+use crate::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
 mod contract;
 mod dispersal;
@@ -31,8 +34,8 @@ impl<H: Habitat> InMemoryDispersalSampler<H> for InMemoryCumulativeDispersalSamp
     fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Result<Self, Error> {
         let habitat_extent = habitat.get_extent();
 
-        let mut cumulative_dispersal = vec![0.0_f64; dispersal.num_elements()];
-        let mut valid_dispersal_targets = vec![None; dispersal.num_elements()];
+        let mut cumulative_dispersal = alloc::vec![0.0_f64; dispersal.num_elements()];
+        let mut valid_dispersal_targets = alloc::vec![None; dispersal.num_elements()];
 
         for (row_index, row) in dispersal.rows_iter().enumerate() {
             let sum: f64 = row

@@ -7,8 +7,8 @@ use necsim_core::landscape::Location;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::partial::active_lineager_sampler::PartialSimulation;
 
-use necsim_impls_no_std::cogs::coalescence_sampler::unconditional::UnconditionalCoalescenceSampler;
-use necsim_impls_no_std::cogs::event_sampler::unconditional::UnconditionalEventSampler;
+use crate::cogs::coalescence_sampler::unconditional::UnconditionalCoalescenceSampler;
+use crate::cogs::event_sampler::unconditional::UnconditionalEventSampler;
 
 use super::ClassicalActiveLineageSampler;
 
