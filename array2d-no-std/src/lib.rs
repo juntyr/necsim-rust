@@ -167,7 +167,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "cuda")]
 #[macro_use]
-extern crate necsim_cuda_derive;
+extern crate rust_cuda_derive;
 
 /// A fixed sized two-dimensional array.
 #[derive(Debug, Clone, Eq, PartialEq)]

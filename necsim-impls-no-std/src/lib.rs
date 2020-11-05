@@ -5,7 +5,7 @@ extern crate alloc;
 
 #[cfg(feature = "cuda")]
 #[macro_use]
-extern crate necsim_cuda_derive;
+extern crate rust_cuda_derive;
 
 #[cfg(feature = "cuda")]
 #[macro_use]

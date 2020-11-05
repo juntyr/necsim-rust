@@ -49,7 +49,7 @@ pub fn rust_to_cuda_trait(
     let (impl_generics, ty_generics, where_clause) = struct_generics_cuda.split_for_impl();
 
     quote! {
-        unsafe impl #impl_generics necsim_cuda::common::RustToCuda for #struct_name #ty_generics
+        unsafe impl #impl_generics rust_cuda::common::RustToCuda for #struct_name #ty_generics
             #where_clause
         {
             type CudaRepresentation = #struct_name_cuda #ty_generics;
@@ -58,20 +58,20 @@ pub fn rust_to_cuda_trait(
             type CudaAllocation = #combined_cuda_alloc_type;
 
             #[cfg(not(target_os = "cuda"))]
-            unsafe fn borrow<A: necsim_cuda::host::CudaAlloc>(
+            unsafe fn borrow<A: rust_cuda::host::CudaAlloc>(
                 &self, alloc: A
             ) -> rustacuda::error::CudaResult<(
                 Self::CudaRepresentation,
-                necsim_cuda::host::CombinedCudaAlloc<Self::CudaAllocation, A>
+                rust_cuda::host::CombinedCudaAlloc<Self::CudaAllocation, A>
             )> {
-                let alloc_front = necsim_cuda::host::NullCudaAlloc;
+                let alloc_front = rust_cuda::host::NullCudaAlloc;
                 let alloc_tail = alloc;
 
                 #(#r2c_field_declarations)*
 
                 let borrow = #rust_to_cuda_struct_construction;
 
-                Ok((borrow, necsim_cuda::host::CombinedCudaAlloc::new(alloc_front, alloc_tail)))
+                Ok((borrow, rust_cuda::host::CombinedCudaAlloc::new(alloc_front, alloc_tail)))
             }
         }
     }
@@ -101,7 +101,7 @@ pub fn cuda_as_rust_trait(
     let (impl_generics, ty_generics, where_clause) = &struct_generics_cuda.split_for_impl();
 
     quote! {
-        unsafe impl #impl_generics necsim_cuda::common::CudaAsRust
+        unsafe impl #impl_generics rust_cuda::common::CudaAsRust
             for #struct_name_cuda #ty_generics #where_clause
         {
             type RustRepresentation = #struct_name #ty_generics;
