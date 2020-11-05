@@ -1,3 +1,4 @@
+pub mod conditional;
 pub mod unconditional;
 
 use necsim_core::cogs::{

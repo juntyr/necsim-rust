@@ -1,8 +1,13 @@
+use core::marker::PhantomData;
+
+use alloc::vec::Vec;
+
 use array2d::{Array2D, Error};
 
 use necsim_core::cogs::Habitat;
 use necsim_core::landscape::{LandscapeExtent, Location};
-use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
+
+use crate::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
 mod dispersal;
 
@@ -13,7 +18,7 @@ pub struct InMemorySeparableAliasDispersalSampler<H: Habitat> {
     alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
     self_dispersal: Array2D<f64>,
     habitat_extent: LandscapeExtent,
-    _marker: std::marker::PhantomData<H>,
+    _marker: PhantomData<H>,
 }
 
 #[contract_trait]
@@ -84,7 +89,7 @@ impl<H: Habitat> InMemoryDispersalSampler<H> for InMemorySeparableAliasDispersal
             alias_dispersal,
             self_dispersal,
             habitat_extent,
-            _marker: std::marker::PhantomData::<H>,
+            _marker: PhantomData::<H>,
         })
     }
 }

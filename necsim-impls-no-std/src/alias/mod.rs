@@ -1,5 +1,11 @@
 use necsim_core::rng::Rng;
 
+use alloc::vec::Vec;
+
+use necsim_core::intrinsics::floor;
+
+pub mod packed;
+
 #[allow(clippy::module_name_repetitions)]
 #[allow(non_snake_case)]
 #[derive(Clone)]
@@ -86,7 +92,7 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let i = (x * (self.Es.len() as f64)).floor() as usize; // index into events
+        let i = floor(x * (self.Es.len() as f64)) as usize; // index into events
 
         #[allow(clippy::cast_precision_loss)]
         let y = x * (self.Es.len() as f64) - (i as f64); // U(0,1) to compare against U[i]

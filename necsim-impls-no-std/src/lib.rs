@@ -16,3 +16,4 @@ extern crate contracts;
 
 pub mod alias;
 pub mod cogs;
+pub mod r#f64;

@@ -1,22 +1,50 @@
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use core::ops::Range;
+
 use array2d::{Array2D, Error};
 
 use necsim_core::cogs::Habitat;
 use necsim_core::landscape::{LandscapeExtent, Location};
-use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
 mod dispersal;
 
-use crate::alias::AliasMethodSampler;
+use crate::alias::packed::AliasMethodSamplerAtom;
+
+use super::InMemoryDispersalSampler;
+
+#[derive(Clone)]
+#[allow(clippy::module_name_repetitions)]
+pub struct AliasSamplerRange(Range<usize>);
+
+impl From<Range<usize>> for AliasSamplerRange {
+    fn from(range: Range<usize>) -> Self {
+        Self(range)
+    }
+}
+
+impl Into<Range<usize>> for AliasSamplerRange {
+    fn into(self) -> Range<usize> {
+        self.0
+    }
+}
+
+#[cfg(feature = "cuda")]
+unsafe impl rustacuda_core::DeviceCopy for AliasSamplerRange {}
 
 #[allow(clippy::module_name_repetitions)]
-pub struct InMemoryAliasDispersalSampler {
-    alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
+#[cfg_attr(feature = "cuda", derive(RustToCuda, LendToCuda))]
+pub struct InMemoryPackedAliasDispersalSampler {
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    alias_dispersal_ranges: Array2D<AliasSamplerRange>,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    alias_dispersal_buffer: Box<[AliasMethodSamplerAtom<usize>]>,
     habitat_extent: LandscapeExtent,
 }
 
 #[contract_trait]
-impl<H: Habitat> InMemoryDispersalSampler<H> for InMemoryAliasDispersalSampler {
-    /// Creates a new `InMemoryAliasDispersalSampler` from the
+impl<H: Habitat> InMemoryDispersalSampler<H> for InMemoryPackedAliasDispersalSampler {
+    /// Creates a new `InMemoryPackedAliasDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
     ///
     /// # Errors
@@ -28,7 +56,9 @@ impl<H: Habitat> InMemoryDispersalSampler<H> for InMemoryAliasDispersalSampler {
 
         let mut event_weights: Vec<(usize, f64)> = Vec::with_capacity(dispersal.row_len());
 
-        let alias_dispersal = Array2D::from_iter_row_major(
+        let mut alias_dispersal_buffer = Vec::new();
+
+        let alias_dispersal_ranges = Array2D::from_iter_row_major(
             dispersal.rows_iter().map(|row| {
                 event_weights.clear();
 
@@ -48,10 +78,15 @@ impl<H: Habitat> InMemoryDispersalSampler<H> for InMemoryAliasDispersalSampler {
                     }
                 }
 
+                let range_from = alias_dispersal_buffer.len();
+
                 if event_weights.is_empty() {
-                    None
+                    AliasSamplerRange::from(range_from..range_from)
                 } else {
-                    Some(AliasMethodSampler::new(&event_weights))
+                    alias_dispersal_buffer
+                        .append(&mut AliasMethodSamplerAtom::create(&event_weights));
+
+                    AliasSamplerRange::from(range_from..alias_dispersal_buffer.len())
                 }
             }),
             habitat_extent.height() as usize,
@@ -59,7 +94,8 @@ impl<H: Habitat> InMemoryDispersalSampler<H> for InMemoryAliasDispersalSampler {
         )?;
 
         Ok(Self {
-            alias_dispersal,
+            alias_dispersal_ranges,
+            alias_dispersal_buffer: alias_dispersal_buffer.into_boxed_slice(),
             habitat_extent,
         })
     }

@@ -1,3 +1,7 @@
+use core::marker::PhantomData;
+
+use alloc::vec::Vec;
+
 use necsim_core::cogs::{CoherentLineageStore, DispersalSampler, Habitat, LineageReference};
 use necsim_core::landscape::Location;
 
@@ -11,7 +15,7 @@ pub struct ClassicalActiveLineageSampler<
     S: CoherentLineageStore<H, R>,
 > {
     active_lineage_references: Vec<R>,
-    _marker: std::marker::PhantomData<(H, D, S)>,
+    _marker: PhantomData<(H, D, S)>,
 }
 
 impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: CoherentLineageStore<H, R>>
@@ -35,7 +39,7 @@ impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: CoherentLine
 
         Self {
             active_lineage_references,
-            _marker: std::marker::PhantomData::<(H, D, S)>,
+            _marker: PhantomData::<(H, D, S)>,
         }
     }
 }

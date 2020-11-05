@@ -1,22 +1,28 @@
+use core::ops::Range;
+
 use necsim_core::cogs::{DispersalSampler, Habitat};
 use necsim_core::landscape::Location;
 use necsim_core::rng::Rng;
 
-use super::InMemoryAliasDispersalSampler;
+use crate::alias::packed::AliasMethodSamplerAtom;
 
-impl<H: Habitat> DispersalSampler<H> for InMemoryAliasDispersalSampler {
+use super::InMemoryPackedAliasDispersalSampler;
+
+impl<H: Habitat> DispersalSampler<H> for InMemoryPackedAliasDispersalSampler {
     #[must_use]
     #[debug_requires(self.habitat_extent.contains(location), "location is inside habitat extent")]
     #[debug_ensures(self.habitat_extent.contains(&ret), "target is inside habitat extent")]
     fn sample_dispersal_from_location(&self, location: &Location, rng: &mut impl Rng) -> Location {
-        let alias_dispersal_at_location = self.alias_dispersal[(
+        let location_index = (
             (location.y() - self.habitat_extent.y()) as usize,
             (location.x() - self.habitat_extent.x()) as usize,
-        )]
-            .as_ref()
-            .expect("habitat dispersal origin must disperse somewhere");
+        );
 
-        let dispersal_target_index = alias_dispersal_at_location.sample_event(rng);
+        let alias_dispersals_at_location = &self.alias_dispersal_buffer
+            [Into::<Range<usize>>::into(self.alias_dispersal_ranges[location_index].clone())];
+
+        let dispersal_target_index: usize =
+            AliasMethodSamplerAtom::sample_event(alias_dispersals_at_location, rng);
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(

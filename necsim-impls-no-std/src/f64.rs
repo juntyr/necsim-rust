@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use core::cmp::Ordering;
 
 /// Patches in `f64.total_cmp` <https://github.com/rust-lang/rust/issues/72599>
 #[must_use]
