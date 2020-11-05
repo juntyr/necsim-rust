@@ -17,7 +17,7 @@ mod store;
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(H: necsim_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
 pub struct IncoherentInMemoryLineageStore<H: Habitat> {
     landscape_extent: LandscapeExtent,
     #[cfg_attr(feature = "cuda", r2cEmbed)]

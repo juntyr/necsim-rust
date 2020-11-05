@@ -13,32 +13,32 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
 
     (quote! {
         #[cfg(not(target_os = "cuda"))]
-        unsafe impl #impl_generics necsim_cuda::host::LendToCuda for #struct_name #ty_generics
+        unsafe impl #impl_generics rust_cuda::host::LendToCuda for #struct_name #ty_generics
             #where_clause
         {
             fn lend_to_cuda<
                 O,
                 F: FnOnce(
                     rustacuda_core::DevicePointer<
-                        <Self as necsim_cuda::common::RustToCuda>::CudaRepresentation
+                        <Self as rust_cuda::common::RustToCuda>::CudaRepresentation
                     >
                 ) -> rustacuda::error::CudaResult<O>,
             >(
                 &self,
                 inner: F,
             ) -> rustacuda::error::CudaResult<O> {
-                use necsim_cuda::common::RustToCuda;
+                use rust_cuda::common::RustToCuda;
 
                 let (cuda_repr, tail_alloc) = unsafe {
-                    self.borrow(necsim_cuda::host::NullCudaAlloc)
+                    self.borrow(rust_cuda::host::NullCudaAlloc)
                 }?;
 
-                let mut device_box = necsim_cuda::host::CudaDropWrapper::from(
+                let mut device_box = rust_cuda::host::CudaDropWrapper::from(
                     rustacuda::memory::DeviceBox::new(&cuda_repr)?
                 );
                 let cuda_ptr = device_box.as_device_ptr();
 
-                let alloc = necsim_cuda::host::CombinedCudaAlloc::new(device_box, tail_alloc);
+                let alloc = rust_cuda::host::CombinedCudaAlloc::new(device_box, tail_alloc);
 
                 let result = inner(cuda_ptr);
 
@@ -49,19 +49,19 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
         }
 
         #[cfg(target_os = "cuda")]
-        unsafe impl #impl_generics necsim_cuda::device::BorrowFromRust for #struct_name #ty_generics
+        unsafe impl #impl_generics rust_cuda::device::BorrowFromRust for #struct_name #ty_generics
             #where_clause
         {
             unsafe fn with_borrow_from_rust<O, F: FnOnce(
                 &Self
             ) -> O>(
-                this: *const <Self as necsim_cuda::common::RustToCuda>::CudaRepresentation,
+                this: *const <Self as rust_cuda::common::RustToCuda>::CudaRepresentation,
                 inner: F,
             ) -> O {
-                use necsim_cuda::common::CudaAsRust;
+                use rust_cuda::common::CudaAsRust;
 
                 let cuda_repr_ref: &<
-                    Self as necsim_cuda::common::RustToCuda
+                    Self as rust_cuda::common::RustToCuda
                 >::CudaRepresentation = &*this;
 
                 let rust_repr = cuda_repr_ref.as_rust();

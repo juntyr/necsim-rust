@@ -24,7 +24,7 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
     let struct_name_cuda = get_cuda_repr_ident(struct_name);
 
     let mut combined_cuda_alloc_type: TokenStream = quote! {
-        necsim_cuda::host::NullCudaAlloc
+        rust_cuda::host::NullCudaAlloc
     };
     let mut r2c_field_declarations: Vec<TokenStream> = Vec::new();
     let mut r2c_field_initialisations: Vec<TokenStream> = Vec::new();

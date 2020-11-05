@@ -28,8 +28,8 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
     match cuda_repr_field_ty {
         Some(CudaReprFieldTy::BoxedSlice(slice_type)) => {
             combined_cuda_alloc_type = quote! {
-                necsim_cuda::host::CombinedCudaAlloc<
-                    necsim_cuda::host::CudaDropWrapper<
+                rust_cuda::host::CombinedCudaAlloc<
+                    rust_cuda::host::CudaDropWrapper<
                         rustacuda::memory::DeviceBuffer<
                             #slice_type
                         >
@@ -40,7 +40,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
 
             r2c_field_declarations.push(quote! {
                 let (#field_repr_ident, alloc_front) = {
-                    let mut device_buffer = necsim_cuda::host::CudaDropWrapper::from(
+                    let mut device_buffer = rust_cuda::host::CudaDropWrapper::from(
                         rustacuda::memory::DeviceBuffer::from_slice(
                             &self.#field_accessor
                         )?
@@ -48,7 +48,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
 
                     (
                         (device_buffer.as_device_ptr(), device_buffer.len()),
-                        necsim_cuda::host::CombinedCudaAlloc::new(
+                        rust_cuda::host::CombinedCudaAlloc::new(
                             device_buffer, alloc_front
                         )
                     )
@@ -76,8 +76,8 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
         }
         Some(CudaReprFieldTy::Embedded(field_type)) => {
             combined_cuda_alloc_type = quote! {
-                necsim_cuda::host::CombinedCudaAlloc<
-                    <#field_type as necsim_cuda::common::RustToCuda>::CudaAllocation,
+                rust_cuda::host::CombinedCudaAlloc<
+                    <#field_type as rust_cuda::common::RustToCuda>::CudaAllocation,
                     #combined_cuda_alloc_type
                 >
             };

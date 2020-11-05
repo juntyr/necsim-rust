@@ -13,10 +13,10 @@ use crate::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(H: necsim_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(D: necsim_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(R: necsim_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(S: necsim_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(R: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(S: rust_cuda::common::RustToCuda))]
 pub struct IndependentEventSampler<
     H: Habitat,
     D: DispersalSampler<H>,

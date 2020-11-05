@@ -41,7 +41,7 @@ pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<Cu
                 let field_type = syn::parse_str(struct_type).unwrap();
 
                 field_ty = parse_quote! {
-                    <#field_type as necsim_cuda::common::RustToCuda>::CudaRepresentation
+                    <#field_type as rust_cuda::common::RustToCuda>::CudaRepresentation
                 };
 
                 cuda_repr_field_ty = Some(CudaReprFieldTy::Embedded(Box::new(field_type)));

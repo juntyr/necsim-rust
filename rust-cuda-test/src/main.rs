@@ -9,8 +9,8 @@ use array2d::Array2D;
 use rustacuda::context::Context as CudaContext;
 use rustacuda::prelude::*;
 
-use necsim_cuda::host::LendToCuda;
 use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
+use rust_cuda::host::LendToCuda;
 
 use std::ffi::CString;
 
