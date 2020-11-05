@@ -16,9 +16,9 @@ use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::alias::InMemoryAlia
 use necsim_impls_no_std::cogs::event_sampler::unconditional::UnconditionalEventSampler;
 use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
 use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
+use necsim_impls_no_std::cogs::lineage_store::coherent::in_memory::CoherentInMemoryLineageStore;
 use necsim_impls_std::cogs::active_lineage_sampler::classical::ClassicalActiveLineageSampler;
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
-use necsim_impls_std::cogs::lineage_store::coherent::in_memory::CoherentInMemoryLineageStore;
 
 pub struct ClassicalSimulation;
 

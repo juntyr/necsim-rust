@@ -1,10 +1,10 @@
-use necsim_core::cogs::{Habitat, LineageReference, LineageStore};
+use necsim_core::cogs::{
+    CoherentLineageStore, Habitat, LineageReference, SeparableDispersalSampler,
+};
 use necsim_core::landscape::Location;
 use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
 use necsim_impls_no_std::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
-
-use crate::cogs::dispersal_sampler::separable::SeparableDispersalSampler;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ProbabilityAtLocation {
@@ -18,7 +18,7 @@ impl ProbabilityAtLocation {
         H: Habitat,
         D: SeparableDispersalSampler<H>,
         R: LineageReference<H>,
-        S: LineageStore<H, R>,
+        S: CoherentLineageStore<H, R>,
     >(
         location: &Location,
         simulation: &PartialSimulation<H, D, R, S, ConditionalCoalescenceSampler<H, R, S>>,

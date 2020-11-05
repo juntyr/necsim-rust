@@ -1,12 +1,16 @@
-use std::ops::Index;
+use core::marker::PhantomData;
+use core::ops::Index;
+
+use alloc::vec::Vec;
 
 use array2d::Array2D;
 
 use necsim_core::cogs::Habitat;
+use necsim_core::intrinsics::floor;
 use necsim_core::landscape::{LandscapeExtent, Location};
 use necsim_core::lineage::Lineage;
 
-use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
+use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 
 mod store;
 
@@ -15,7 +19,7 @@ pub struct CoherentInMemoryLineageStore<H: Habitat> {
     landscape_extent: LandscapeExtent,
     lineages_store: Vec<Lineage>,
     location_to_lineage_references: Array2D<Vec<InMemoryLineageReference>>,
-    _marker: std::marker::PhantomData<H>,
+    _marker: PhantomData<H>,
 }
 
 impl<H: Habitat> Index<InMemoryLineageReference> for CoherentInMemoryLineageStore<H> {
@@ -64,9 +68,9 @@ impl<H: Habitat> CoherentInMemoryLineageStore<H> {
 
                 #[allow(clippy::cast_possible_truncation)]
                 #[allow(clippy::cast_sign_loss)]
-                let sampled_habitat_at_location =
-                    (f64::from(habitat.get_habitat_at_location(&location)) * sample_percentage)
-                        .floor() as usize;
+                let sampled_habitat_at_location = floor(
+                    f64::from(habitat.get_habitat_at_location(&location)) * sample_percentage,
+                ) as usize;
 
                 for _ in 0..sampled_habitat_at_location {
                     let lineage_reference = InMemoryLineageReference::from(lineages_store.len());
@@ -84,7 +88,7 @@ impl<H: Habitat> CoherentInMemoryLineageStore<H> {
             landscape_extent,
             lineages_store,
             location_to_lineage_references,
-            _marker: std::marker::PhantomData::<H>,
+            _marker: PhantomData::<H>,
         }
     }
 }

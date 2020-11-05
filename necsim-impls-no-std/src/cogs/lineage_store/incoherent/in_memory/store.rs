@@ -1,9 +1,8 @@
-use necsim_core::cogs::{Habitat, LineageStore};
+use necsim_core::cogs::{Habitat, IncoherentLineageStore, LineageStore};
 use necsim_core::landscape::Location;
 use necsim_core::lineage::Lineage;
 
 use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
-use crate::cogs::lineage_store::incoherent::IncoherentLineageStore;
 
 use super::IncoherentInMemoryLineageStore;
 
@@ -20,41 +19,8 @@ impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for IncoherentInMemor
     }
 
     #[must_use]
-    #[debug_requires(
-        self.landscape_extent.contains(location),
-        "location is inside landscape extent"
-    )]
-    fn get_active_lineages_at_location(&self, location: &Location) -> &[InMemoryLineageReference] {
-        unimplemented!("Need to return single element we are tracking")
-    }
-
-    #[must_use]
     fn get(&self, reference: InMemoryLineageReference) -> Option<&Lineage> {
         self.lineages_store.get(Into::<usize>::into(reference))
-    }
-
-    #[debug_requires(
-        self.landscape_extent.contains(&location),
-        "location is inside landscape extent"
-    )]
-    fn add_lineage_to_location(
-        &mut self,
-        _reference: InMemoryLineageReference,
-        location: Location,
-    ) {
-        unimplemented!("Need to also pass index at location")
-        /*unsafe {
-            self.lineages_store[Into::<usize>::into(reference)]
-                .move_to_location(location, lineages_at_location.len() - 1)
-        };*/
-    }
-
-    #[debug_requires(
-        self.landscape_extent.contains(self[reference].location()),
-        "lineage's location is inside landscape extent"
-    )]
-    fn remove_lineage_from_its_location(&mut self, reference: InMemoryLineageReference) {
-        unimplemented!("How can we remove from a location when we do not store if it has been removed right now -> maybe change index at location to optional?")
     }
 
     fn update_lineage_time_of_last_event(
@@ -73,4 +39,31 @@ impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for IncoherentInMemor
 impl<H: Habitat> IncoherentLineageStore<H, InMemoryLineageReference>
     for IncoherentInMemoryLineageStore<H>
 {
+    #[debug_requires(
+        self.landscape_extent.contains(&location),
+        "location is inside landscape extent"
+    )]
+    fn insert_lineage_to_location_at_index(
+        &mut self,
+        reference: InMemoryLineageReference,
+        location: Location,
+        index_at_location: usize,
+    ) {
+        unsafe {
+            self.lineages_store[Into::<usize>::into(reference)]
+                .move_to_location(location, index_at_location)
+        }
+    }
+
+    #[must_use]
+    #[debug_requires(
+        self.landscape_extent.contains(self[reference].location().unwrap()),
+        "lineage's location is inside landscape extent"
+    )]
+    fn extract_lineage_from_its_location(
+        &mut self,
+        reference: InMemoryLineageReference,
+    ) -> Location {
+        unsafe { self.lineages_store[Into::<usize>::into(reference)].remove_from_location() }
+    }
 }

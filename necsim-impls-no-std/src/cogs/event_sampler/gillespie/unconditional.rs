@@ -1,7 +1,8 @@
 use core::marker::PhantomData;
 
 use necsim_core::cogs::{
-    CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference, LineageStore,
+    CoalescenceSampler, CoherentLineageStore, DispersalSampler, EventSampler, Habitat,
+    LineageReference,
 };
 use necsim_core::event::{Event, EventType};
 use necsim_core::landscape::Location;
@@ -21,7 +22,7 @@ pub struct UnconditionalGillespieEventSampler<
     H: Habitat,
     D: DispersalSampler<H>,
     R: LineageReference<H>,
-    S: LineageStore<H, R>,
+    S: CoherentLineageStore<H, R>,
     C: CoalescenceSampler<H, R, S>,
 >(PhantomData<(H, D, R, S, C)>);
 
@@ -29,7 +30,7 @@ impl<
         H: Habitat,
         D: DispersalSampler<H>,
         R: LineageReference<H>,
-        S: LineageStore<H, R>,
+        S: CoherentLineageStore<H, R>,
         C: CoalescenceSampler<H, R, S>,
     > Default for UnconditionalGillespieEventSampler<H, D, R, S, C>
 {
@@ -43,14 +44,15 @@ impl<
         H: Habitat,
         D: DispersalSampler<H>,
         R: LineageReference<H>,
-        S: LineageStore<H, R>,
+        S: CoherentLineageStore<H, R>,
         C: CoalescenceSampler<H, R, S>,
     > EventSampler<H, D, R, S, C> for UnconditionalGillespieEventSampler<H, D, R, S, C>
 {
     #[must_use]
-    fn sample_event_for_lineage_at_time(
+    fn sample_event_for_lineage_at_location_time(
         &self,
         lineage_reference: R,
+        location: Location,
         event_time: f64,
         simulation: &PartialSimulation<H, D, R, S, C>,
         rng: &mut impl Rng,
@@ -58,13 +60,13 @@ impl<
         let event_type = if rng.sample_event(*simulation.speciation_probability_per_generation) {
             EventType::Speciation
         } else {
-            let dispersal_origin = simulation.lineage_store[lineage_reference.clone()].location();
+            let dispersal_origin = location;
             let dispersal_target = simulation
                 .dispersal_sampler
-                .sample_dispersal_from_location(dispersal_origin, rng);
+                .sample_dispersal_from_location(&dispersal_origin, rng);
 
             EventType::Dispersal {
-                origin: dispersal_origin.clone(),
+                origin: dispersal_origin,
                 coalescence: simulation
                     .coalescence_sampler
                     .sample_optional_coalescence_at_location(
@@ -87,7 +89,7 @@ impl<
         H: Habitat,
         D: DispersalSampler<H>,
         R: LineageReference<H>,
-        S: LineageStore<H, R>,
+        S: CoherentLineageStore<H, R>,
         C: CoalescenceSampler<H, R, S>,
     > GillespieEventSampler<H, D, R, S, C> for UnconditionalGillespieEventSampler<H, D, R, S, C>
 {

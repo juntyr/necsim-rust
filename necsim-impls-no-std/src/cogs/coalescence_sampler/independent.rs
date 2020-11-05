@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{CoalescenceSampler, Habitat, LineageReference, LineageStore};
+use necsim_core::cogs::{CoalescenceSampler, Habitat, IncoherentLineageStore, LineageReference};
 use necsim_core::landscape::Location;
 use necsim_core::rng::Rng;
 
@@ -9,11 +9,13 @@ use necsim_core::rng::Rng;
 #[cfg_attr(feature = "cuda", r2cBound(H: necsim_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(R: necsim_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(S: necsim_cuda::common::RustToCuda))]
-pub struct IndependentCoalescenceSampler<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>>(
-    PhantomData<(H, R, S)>,
-);
+pub struct IndependentCoalescenceSampler<
+    H: Habitat,
+    R: LineageReference<H>,
+    S: IncoherentLineageStore<H, R>,
+>(PhantomData<(H, R, S)>);
 
-impl<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>> Default
+impl<H: Habitat, R: LineageReference<H>, S: IncoherentLineageStore<H, R>> Default
     for IndependentCoalescenceSampler<H, R, S>
 {
     fn default() -> Self {
@@ -22,8 +24,8 @@ impl<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>> Default
 }
 
 #[contract_trait]
-impl<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>> CoalescenceSampler<H, R, S>
-    for IndependentCoalescenceSampler<H, R, S>
+impl<H: Habitat, R: LineageReference<H>, S: IncoherentLineageStore<H, R>>
+    CoalescenceSampler<H, R, S> for IndependentCoalescenceSampler<H, R, S>
 {
     #[must_use]
     #[debug_ensures(ret.is_none(), "never finds coalescence")]

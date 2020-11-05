@@ -1,17 +1,19 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{CoalescenceSampler, Habitat, LineageReference, LineageStore};
+use necsim_core::cogs::{CoalescenceSampler, CoherentLineageStore, Habitat, LineageReference};
 use necsim_core::landscape::Location;
 use necsim_core::rng::Rng;
 
 use super::optional_coalescence;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct ConditionalCoalescenceSampler<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>>(
-    PhantomData<(H, R, S)>,
-);
+pub struct ConditionalCoalescenceSampler<
+    H: Habitat,
+    R: LineageReference<H>,
+    S: CoherentLineageStore<H, R>,
+>(PhantomData<(H, R, S)>);
 
-impl<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>> Default
+impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> Default
     for ConditionalCoalescenceSampler<H, R, S>
 {
     fn default() -> Self {
@@ -20,7 +22,7 @@ impl<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>> Default
 }
 
 #[contract_trait]
-impl<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>> CoalescenceSampler<H, R, S>
+impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> CoalescenceSampler<H, R, S>
     for ConditionalCoalescenceSampler<H, R, S>
 {
     #[must_use]
@@ -40,7 +42,7 @@ impl<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>> CoalescenceSampl
     }
 }
 
-impl<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>>
+impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>>
     ConditionalCoalescenceSampler<H, R, S>
 {
     #[must_use]
