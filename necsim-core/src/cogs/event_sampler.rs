@@ -2,6 +2,7 @@ use float_next_after::NextAfter;
 
 use super::{CoalescenceSampler, DispersalSampler, Habitat, LineageReference, LineageStore};
 use crate::event::{Event, EventType};
+use crate::landscape::Location;
 use crate::rng::Rng;
 use crate::simulation::partial::event_sampler::PartialSimulation;
 
@@ -28,9 +29,10 @@ pub trait EventSampler<
         "event occurs for lineage_reference"
     )]
     #[debug_ensures(ret.time() == event_time, "event occurs at event_time")]
-    fn sample_event_for_lineage_at_time(
+    fn sample_event_for_lineage_at_location_time(
         &self,
         lineage_reference: R,
+        location: Location,
         event_time: f64,
         simulation: &PartialSimulation<H, D, R, S, C>,
         rng: &mut impl Rng,

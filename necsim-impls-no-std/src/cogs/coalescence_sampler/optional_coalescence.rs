@@ -1,4 +1,4 @@
-use necsim_core::cogs::{Habitat, LineageReference, LineageStore};
+use necsim_core::cogs::{CoherentLineageStore, Habitat, LineageReference};
 use necsim_core::landscape::Location;
 use necsim_core::rng::Rng;
 
@@ -6,7 +6,7 @@ use necsim_core::rng::Rng;
 pub fn sample_optional_coalescence_at_location<
     H: Habitat,
     R: LineageReference<H>,
-    S: LineageStore<H, R>,
+    S: CoherentLineageStore<H, R>,
 >(
     location: &Location,
     habitat: &H,

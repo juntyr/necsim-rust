@@ -1,8 +1,8 @@
 use float_next_after::NextAfter;
 
 use necsim_core::cogs::{
-    ActiveLineageSampler, CoalescenceSampler, DispersalSampler, Habitat, LineageReference,
-    LineageStore,
+    ActiveLineageSampler, CoalescenceSampler, CoherentLineageStore, DispersalSampler, Habitat,
+    LineageReference,
 };
 use necsim_core::landscape::Location;
 use necsim_core::rng::Rng;
@@ -17,7 +17,7 @@ impl<
         H: Habitat,
         D: DispersalSampler<H>,
         R: LineageReference<H>,
-        S: LineageStore<H, R>,
+        S: CoherentLineageStore<H, R>,
         C: CoalescenceSampler<H, R, S>,
         E: GillespieEventSampler<H, D, R, S, C>,
     > ActiveLineageSampler<H, D, R, S, C, E> for GillespieActiveLineageSampler<H, D, R, S, C, E>
@@ -28,12 +28,12 @@ impl<
     }
 
     #[must_use]
-    fn pop_active_lineage_and_time_of_next_event(
+    fn pop_active_lineage_location_event_time(
         &mut self,
         time: f64,
         simulation: &mut PartialSimulation<H, D, R, S, C, E>,
         rng: &mut impl Rng,
-    ) -> Option<(R, f64)> {
+    ) -> Option<(R, Location, f64)> {
         let (chosen_active_location, chosen_event_time) = match self.active_locations.pop() {
             Some((chosen_active_location, chosen_event_time)) => {
                 (chosen_active_location, chosen_event_time.into())
@@ -50,9 +50,9 @@ impl<
         let chosen_lineage_reference =
             lineages_at_location[chosen_lineage_index_at_location].clone();
 
-        simulation
+        let lineage_location = simulation
             .lineage_store
-            .remove_lineage_from_its_location(chosen_lineage_reference.clone());
+            .pop_lineage_from_its_location(chosen_lineage_reference.clone());
         self.number_active_lineages -= 1;
 
         let unique_event_time: f64 = if chosen_event_time > time {
@@ -81,7 +81,11 @@ impl<
             .lineage_store
             .update_lineage_time_of_last_event(chosen_lineage_reference.clone(), unique_event_time);
 
-        Some((chosen_lineage_reference, unique_event_time))
+        Some((
+            chosen_lineage_reference,
+            lineage_location,
+            unique_event_time,
+        ))
     }
 
     fn push_active_lineage_to_location(
@@ -94,7 +98,7 @@ impl<
     ) {
         simulation
             .lineage_store
-            .add_lineage_to_location(lineage_reference, location.clone());
+            .append_lineage_to_location(lineage_reference, location.clone());
 
         let event_rate_at_location =
             simulation.with_split_event_sampler(|event_sampler, simulation| {

@@ -31,27 +31,27 @@ pub trait ActiveLineageSampler<
         None => old(self.number_active_lineages()) == 0,
     }, "removes an active lineage if some left")]
     #[debug_ensures(
-        ret.is_some() -> ret.as_ref().unwrap().1 > time,
+        ret.is_some() -> ret.as_ref().unwrap().2 > time,
         "event occurs later than time"
     )]
     #[debug_ensures(match ret {
         None => true,
-        Some((ref reference, event_time)) => {
+        Some((ref reference, ref _location, event_time)) => {
             simulation.lineage_store[reference.clone()].time_of_last_event() == event_time
         },
     }, "updates the time of the last event of the returned lineage to the time of the event")]
-    fn pop_active_lineage_and_time_of_next_event(
+    fn pop_active_lineage_location_event_time(
         &mut self,
         time: f64,
         simulation: &mut PartialSimulation<H, D, R, S, C, E>,
         rng: &mut impl Rng,
-    ) -> Option<(R, f64)>;
+    ) -> Option<(R, Location, f64)>;
 
     #[debug_requires(time >= 0.0_f64, "time is non-negative")]
-    #[debug_requires((
+    /*#[debug_requires(( TODO: How can we assert this only for coherent lineage stores?
         simulation.lineage_store.get_active_lineages_at_location(&location).len() <
         (simulation.habitat.get_habitat_at_location(&location) as usize)
-    ), "location has habitat capacity for the lineage")]
+    ), "location has habitat capacity for the lineage")]*/
     fn push_active_lineage_to_location(
         &mut self,
         lineage_reference: R,

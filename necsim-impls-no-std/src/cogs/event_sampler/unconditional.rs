@@ -4,6 +4,7 @@ use necsim_core::cogs::{
     CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference, LineageStore,
 };
 use necsim_core::event::{Event, EventType};
+use necsim_core::landscape::Location;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
@@ -39,9 +40,10 @@ impl<
     > EventSampler<H, D, R, S, C> for UnconditionalEventSampler<H, D, R, S, C>
 {
     #[must_use]
-    fn sample_event_for_lineage_at_time(
+    fn sample_event_for_lineage_at_location_time(
         &self,
         lineage_reference: R,
+        location: Location,
         event_time: f64,
         simulation: &PartialSimulation<H, D, R, S, C>,
         rng: &mut impl Rng,
@@ -49,13 +51,13 @@ impl<
         let event_type = if rng.sample_event(*simulation.speciation_probability_per_generation) {
             EventType::Speciation
         } else {
-            let dispersal_origin = simulation.lineage_store[lineage_reference.clone()].location();
+            let dispersal_origin = location;
             let dispersal_target = simulation
                 .dispersal_sampler
-                .sample_dispersal_from_location(dispersal_origin, rng);
+                .sample_dispersal_from_location(&dispersal_origin, rng);
 
             EventType::Dispersal {
-                origin: dispersal_origin.clone(),
+                origin: dispersal_origin,
                 coalescence: simulation
                     .coalescence_sampler
                     .sample_optional_coalescence_at_location(

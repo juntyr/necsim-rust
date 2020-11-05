@@ -15,10 +15,10 @@ use necsim_impls_no_std::cogs::coalescence_sampler::unconditional::Unconditional
 use necsim_impls_no_std::cogs::event_sampler::gillespie::unconditional::UnconditionalGillespieEventSampler;
 use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
 use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
+use necsim_impls_no_std::cogs::lineage_store::coherent::in_memory::CoherentInMemoryLineageStore;
 use necsim_impls_std::cogs::active_lineage_sampler::gillespie::GillespieActiveLineageSampler;
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler;
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
-use necsim_impls_std::cogs::lineage_store::coherent::in_memory::CoherentInMemoryLineageStore;
 
 pub struct GillespieSimulation;
 

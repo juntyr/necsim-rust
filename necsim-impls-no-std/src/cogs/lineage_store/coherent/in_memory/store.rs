@@ -1,9 +1,8 @@
-use necsim_core::cogs::{Habitat, LineageStore};
+use necsim_core::cogs::{CoherentLineageStore, Habitat, LineageStore};
 use necsim_core::landscape::Location;
 use necsim_core::lineage::Lineage;
 
-use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
-use necsim_impls_no_std::cogs::lineage_store::coherent::CoherentLineageStore;
+use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 
 use super::CoherentInMemoryLineageStore;
 
@@ -20,64 +19,8 @@ impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for CoherentInMemoryL
     }
 
     #[must_use]
-    #[debug_requires(
-        self.landscape_extent.contains(location),
-        "location is inside landscape extent"
-    )]
-    fn get_active_lineages_at_location(&self, location: &Location) -> &[InMemoryLineageReference] {
-        &self.location_to_lineage_references[(
-            (location.y() - self.landscape_extent.y()) as usize,
-            (location.x() - self.landscape_extent.x()) as usize,
-        )]
-    }
-
-    #[must_use]
     fn get(&self, reference: InMemoryLineageReference) -> Option<&Lineage> {
         self.lineages_store.get(Into::<usize>::into(reference))
-    }
-
-    #[debug_requires(
-        self.landscape_extent.contains(&location),
-        "location is inside landscape extent"
-    )]
-    fn add_lineage_to_location(&mut self, reference: InMemoryLineageReference, location: Location) {
-        let lineages_at_location = &mut self.location_to_lineage_references[(
-            (location.y() - self.landscape_extent.y()) as usize,
-            (location.x() - self.landscape_extent.x()) as usize,
-        )];
-
-        lineages_at_location.push(reference);
-
-        unsafe {
-            self.lineages_store[Into::<usize>::into(reference)]
-                .move_to_location(location, lineages_at_location.len() - 1)
-        };
-    }
-
-    #[debug_requires(
-        self.landscape_extent.contains(self[reference].location()),
-        "lineage's location is inside landscape extent"
-    )]
-    fn remove_lineage_from_its_location(&mut self, reference: InMemoryLineageReference) {
-        let lineage: &Lineage = &self.lineages_store[Into::<usize>::into(reference)];
-
-        let lineages_at_location = &mut self.location_to_lineage_references[(
-            (lineage.location().y() - self.landscape_extent.y()) as usize,
-            (lineage.location().x() - self.landscape_extent.x()) as usize,
-        )];
-
-        if let Some(last_lineage_at_location) = lineages_at_location.pop() {
-            let lineage_index_at_location = lineage.index_at_location();
-
-            if lineage_index_at_location < lineages_at_location.len() {
-                lineages_at_location[lineage_index_at_location] = last_lineage_at_location;
-
-                unsafe {
-                    self.lineages_store[Into::<usize>::into(last_lineage_at_location)]
-                        .update_index_at_location(lineage_index_at_location)
-                };
-            }
-        }
     }
 
     fn update_lineage_time_of_last_event(
@@ -96,4 +39,70 @@ impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for CoherentInMemoryL
 impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
     for CoherentInMemoryLineageStore<H>
 {
+    #[must_use]
+    #[debug_requires(
+        self.landscape_extent.contains(location),
+        "location is inside landscape extent"
+    )]
+    fn get_active_lineages_at_location(&self, location: &Location) -> &[InMemoryLineageReference] {
+        &self.location_to_lineage_references[(
+            (location.y() - self.landscape_extent.y()) as usize,
+            (location.x() - self.landscape_extent.x()) as usize,
+        )]
+    }
+
+    #[debug_requires(
+        self.landscape_extent.contains(&location),
+        "location is inside landscape extent"
+    )]
+    fn append_lineage_to_location(
+        &mut self,
+        reference: InMemoryLineageReference,
+        location: Location,
+    ) {
+        let lineages_at_location = &mut self.location_to_lineage_references[(
+            (location.y() - self.landscape_extent.y()) as usize,
+            (location.x() - self.landscape_extent.x()) as usize,
+        )];
+
+        lineages_at_location.push(reference);
+
+        unsafe {
+            self.lineages_store[Into::<usize>::into(reference)]
+                .move_to_location(location, lineages_at_location.len() - 1)
+        };
+    }
+
+    #[must_use]
+    #[debug_requires(
+        self.landscape_extent.contains(self[reference].location().unwrap()),
+        "lineage's location is inside landscape extent"
+    )]
+    fn pop_lineage_from_its_location(&mut self, reference: InMemoryLineageReference) -> Location {
+        let lineage: &Lineage = &self.lineages_store[Into::<usize>::into(reference)];
+
+        let lineage_location = lineage.location().unwrap();
+
+        let lineages_at_location = &mut self.location_to_lineage_references[(
+            (lineage_location.y() - self.landscape_extent.y()) as usize,
+            (lineage_location.x() - self.landscape_extent.x()) as usize,
+        )];
+
+        if let Some(last_lineage_at_location) = lineages_at_location.pop() {
+            let lineage_index_at_location = lineage.index_at_location().unwrap();
+
+            if lineage_index_at_location < lineages_at_location.len() {
+                lineages_at_location[lineage_index_at_location] = last_lineage_at_location;
+
+                unsafe {
+                    self.lineages_store[Into::<usize>::into(last_lineage_at_location)]
+                        .update_index_at_location(lineage_index_at_location)
+                };
+            }
+
+            unsafe { self.lineages_store[Into::<usize>::into(reference)].remove_from_location() }
+        } else {
+            unreachable!()
+        }
+    }
 }

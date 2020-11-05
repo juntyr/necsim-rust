@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 
 use necsim_core::cogs::{
-    CoalescenceSampler, EventSampler, Habitat, LineageReference, LineageStore,
+    CoalescenceSampler, CoherentLineageStore, EventSampler, Habitat, LineageReference,
+    SeparableDispersalSampler,
 };
 use necsim_core::event::{Event, EventType};
 use necsim_core::landscape::Location;
@@ -10,8 +11,6 @@ use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
 use necsim_impls_no_std::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
 use necsim_impls_no_std::cogs::event_sampler::gillespie::GillespieEventSampler;
-
-use crate::cogs::dispersal_sampler::separable::SeparableDispersalSampler;
 
 mod probability;
 
@@ -22,14 +21,14 @@ pub struct ConditionalGillespieEventSampler<
     H: Habitat,
     D: SeparableDispersalSampler<H>,
     R: LineageReference<H>,
-    S: LineageStore<H, R>,
+    S: CoherentLineageStore<H, R>,
 >(PhantomData<(H, D, R, S)>);
 
 impl<
         H: Habitat,
         D: SeparableDispersalSampler<H>,
         R: LineageReference<H>,
-        S: LineageStore<H, R>,
+        S: CoherentLineageStore<H, R>,
     > Default for ConditionalGillespieEventSampler<H, D, R, S>
 {
     fn default() -> Self {
@@ -42,7 +41,7 @@ impl<
         H: Habitat,
         D: SeparableDispersalSampler<H>,
         R: LineageReference<H>,
-        S: LineageStore<H, R>,
+        S: CoherentLineageStore<H, R>,
     > EventSampler<H, D, R, S, ConditionalCoalescenceSampler<H, R, S>>
     for ConditionalGillespieEventSampler<H, D, R, S>
 {
@@ -57,17 +56,18 @@ impl<
             ..
         } => ((origin == target) -> coalescence.is_some()),
     }, "always coalesces on self-dispersal")]
-    fn sample_event_for_lineage_at_time(
+    fn sample_event_for_lineage_at_location_time(
         &self,
         lineage_reference: R,
+        location: Location,
         event_time: f64,
         simulation: &PartialSimulation<H, D, R, S, ConditionalCoalescenceSampler<H, R, S>>,
         rng: &mut impl Rng,
     ) -> Event<H, R> {
-        let dispersal_origin = simulation.lineage_store[lineage_reference.clone()].location();
+        let dispersal_origin = location;
 
         let probability_at_location = ProbabilityAtLocation::new(
-            dispersal_origin,
+            &dispersal_origin,
             simulation,
             false, // lineage_reference was popped from the store
         );
@@ -81,10 +81,10 @@ impl<
         {
             let dispersal_target = simulation
                 .dispersal_sampler
-                .sample_non_self_dispersal_from_location(dispersal_origin, rng);
+                .sample_non_self_dispersal_from_location(&dispersal_origin, rng);
 
             EventType::Dispersal {
-                origin: dispersal_origin.clone(),
+                origin: dispersal_origin,
                 coalescence: simulation
                     .coalescence_sampler
                     .sample_optional_coalescence_at_location(
@@ -98,15 +98,15 @@ impl<
             }
         } else {
             EventType::Dispersal {
-                origin: dispersal_origin.clone(),
-                target: dispersal_origin.clone(),
                 coalescence: Some(
                     ConditionalCoalescenceSampler::sample_coalescence_at_location(
-                        dispersal_origin,
+                        &dispersal_origin,
                         simulation.lineage_store,
                         rng,
                     ),
                 ),
+                origin: dispersal_origin.clone(),
+                target: dispersal_origin,
                 _marker: PhantomData::<H>,
             }
         };
@@ -120,7 +120,7 @@ impl<
         H: Habitat,
         D: SeparableDispersalSampler<H>,
         R: LineageReference<H>,
-        S: LineageStore<H, R>,
+        S: CoherentLineageStore<H, R>,
     > GillespieEventSampler<H, D, R, S, ConditionalCoalescenceSampler<H, R, S>>
     for ConditionalGillespieEventSampler<H, D, R, S>
 {

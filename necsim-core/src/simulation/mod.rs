@@ -33,8 +33,8 @@ impl<
         let mut steps: usize = 0;
 
         self.with_mut_split_active_lineage_sampler(|active_lineage_sampler, simulation| {
-            while let Some((chosen_lineage, event_time)) = active_lineage_sampler
-                .pop_active_lineage_and_time_of_next_event(time, simulation, rng)
+            while let Some((chosen_lineage, dispersal_origin, event_time)) =
+                active_lineage_sampler.pop_active_lineage_location_event_time(time, simulation, rng)
             {
                 let event = if active_lineage_sampler.number_active_lineages() == 0 {
                     // Early stop iff only one active lineage is left
@@ -49,8 +49,9 @@ impl<
                     })
                 } else {
                     simulation.with_split_event_sampler(|event_sampler, simulation| {
-                        event_sampler.sample_event_for_lineage_at_time(
+                        event_sampler.sample_event_for_lineage_at_location_time(
                             chosen_lineage,
+                            dispersal_origin,
                             event_time,
                             simulation,
                             rng,

@@ -1,7 +1,7 @@
 use float_next_after::NextAfter;
 
 use necsim_core::cogs::{
-    ActiveLineageSampler, DispersalSampler, Habitat, LineageReference, LineageStore,
+    ActiveLineageSampler, CoherentLineageStore, DispersalSampler, Habitat, LineageReference,
 };
 use necsim_core::landscape::Location;
 use necsim_core::rng::Rng;
@@ -13,7 +13,7 @@ use necsim_impls_no_std::cogs::event_sampler::unconditional::UnconditionalEventS
 use super::ClassicalActiveLineageSampler;
 
 #[contract_trait]
-impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: LineageStore<H, R>>
+impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: CoherentLineageStore<H, R>>
     ActiveLineageSampler<
         H,
         D,
@@ -30,7 +30,7 @@ impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: LineageStore
 
     #[must_use]
     #[allow(clippy::type_complexity)]
-    fn pop_active_lineage_and_time_of_next_event(
+    fn pop_active_lineage_location_event_time(
         &mut self,
         time: f64,
         simulation: &mut PartialSimulation<
@@ -42,7 +42,7 @@ impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: LineageStore
             UnconditionalEventSampler<H, D, R, S, UnconditionalCoalescenceSampler<H, R, S>>,
         >,
         rng: &mut impl Rng,
-    ) -> Option<(R, f64)> {
+    ) -> Option<(R, Location, f64)> {
         let last_active_lineage_reference = match self.active_lineage_references.pop() {
             Some(reference) => reference,
             None => return None,
@@ -64,9 +64,9 @@ impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: LineageStore
                 chosen_lineage_reference
             };
 
-        simulation
+        let lineage_location = simulation
             .lineage_store
-            .remove_lineage_from_its_location(chosen_lineage_reference.clone());
+            .pop_lineage_from_its_location(chosen_lineage_reference.clone());
 
         #[allow(clippy::cast_precision_loss)]
         let lambda = 0.5_f64 * ((self.number_active_lineages() + 1) as f64);
@@ -83,7 +83,11 @@ impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: LineageStore
             .lineage_store
             .update_lineage_time_of_last_event(chosen_lineage_reference.clone(), unique_event_time);
 
-        Some((chosen_lineage_reference, unique_event_time))
+        Some((
+            chosen_lineage_reference,
+            lineage_location,
+            unique_event_time,
+        ))
     }
 
     #[allow(clippy::type_complexity)]
@@ -104,7 +108,7 @@ impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: LineageStore
     ) {
         simulation
             .lineage_store
-            .add_lineage_to_location(lineage_reference.clone(), location);
+            .append_lineage_to_location(lineage_reference.clone(), location);
 
         self.active_lineage_references.push(lineage_reference);
     }
