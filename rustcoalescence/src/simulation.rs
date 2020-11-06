@@ -4,6 +4,7 @@ use array2d::Array2D;
 use necsim_classical::ClassicalSimulation;
 use necsim_core::reporter::Reporter;
 use necsim_core::rng::Rng;
+use necsim_cuda::CudaSimulation;
 use necsim_gillespie::GillespieSimulation;
 use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
 use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
@@ -41,6 +42,14 @@ pub fn simulate(
             reporter,
         ),
         Algorithm::SkippingGillespie => SkippingGillespieSimulation::simulate(
+            habitat,
+            &dispersal,
+            *args.speciation_probability_per_generation(),
+            *args.sample_percentage(),
+            rng,
+            reporter,
+        ),
+        Algorithm::CUDA => CudaSimulation::simulate(
             habitat,
             &dispersal,
             *args.speciation_probability_per_generation(),
