@@ -1,0 +1,24 @@
+cargo install ptx-linker -f
+rustup target add nvptx64-nvidia-cuda
+
+source /vol/cuda/10.0.130/setup.sh
+LIBRARY_PATH="$LD_LIBRARY_PATH" cargo build
+
+// https://trac.osgeo.org/gdal/wiki/BuildingOnUnixGDAL25dev
+git clone https://github.com/OSGeo/PROJ.git
+cd PROJ
+./autogen.sh
+./configure --prefix=/my/install/prefix --disable-static
+make -j8
+make install
+
+// https://trac.osgeo.org/gdal/wiki/BuildingOnUnix
+// https://github.com/OSGeo/gdal/issues/1352#issuecomment-501096951
+// https://gis.stackexchange.com/a/336834
+git clone https://github.com/OSGeo/gdal.git
+cd gdal/gdal
+./configure --prefix=/path/to/install/prefix --with-proj=/my/install/prefix --disable-static
+make install -j8
+
+// https://github.com/georust/gdal/tree/master/gdal-sys
+LIBRARY_PATH="$LD_LIBRARY_PATH" GDAL_HOME="/vol/bitbucket/ml5717/gdal-install/" cargo run --bin rustcoalescence maps/habitat.tif maps/dispersal.tif --sample 1.0 --seed 42 --speciation 0.1 --algorithm cuda
