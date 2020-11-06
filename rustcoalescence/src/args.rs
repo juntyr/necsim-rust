@@ -8,6 +8,7 @@ arg_enum! {
         Classical,
         Gillespie,
         SkippingGillespie,
+        CUDA,
     }
 }
 

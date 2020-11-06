@@ -46,6 +46,7 @@ use necsim_core::cogs::{
 use necsim_core::simulation::Simulation;
 use rust_cuda::common::RustToCuda;
 use rust_cuda::device::BorrowFromRust;
+use rustacuda_core::DeviceCopy;
 
 #[no_mangle]
 /// # Safety
@@ -53,7 +54,7 @@ use rust_cuda::device::BorrowFromRust;
 pub unsafe extern "ptx-kernel" fn simulate<
     H: Habitat + RustToCuda,
     D: DispersalSampler<H> + RustToCuda,
-    R: LineageReference<H> + RustToCuda,
+    R: LineageReference<H> + DeviceCopy,
     S: IncoherentLineageStore<H, R> + RustToCuda,
     C: CoalescenceSampler<H, R, S> + RustToCuda,
     E: EventSampler<H, D, R, S, C> + RustToCuda,
@@ -61,10 +62,7 @@ pub unsafe extern "ptx-kernel" fn simulate<
 >(
     simulation_ptr: *const <Simulation<H, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
 ) {
-    <Simulation<H, D, R, S, C, E, A> as BorrowFromRust>::with_borrow_from_rust(
-        simulation_ptr,
-        |simulation| {
-            println!("Hello Simulation on CUDA!");
-        },
-    )
+    Simulation::with_borrow_from_rust(simulation_ptr, |simulation| {
+        println!("Hello Simulation on CUDA!");
+    })
 }

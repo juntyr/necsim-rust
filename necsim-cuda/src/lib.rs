@@ -1,10 +1,20 @@
 #![deny(clippy::pedantic)]
 
+use std::ffi::CString;
+
 #[macro_use]
 extern crate contracts;
 
+#[macro_use]
+extern crate rustacuda;
+
 use anyhow::Result;
 use array2d::Array2D;
+
+use rustacuda::context::Context as CudaContext;
+use rustacuda::prelude::*;
+
+use rust_cuda::host::LendToCuda;
 
 use necsim_core::cogs::LineageStore;
 use necsim_core::reporter::Reporter;
@@ -19,6 +29,29 @@ use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
 use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use necsim_impls_no_std::cogs::lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore;
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
+
+macro_rules! with_cuda {
+    ($init:expr => |$var:ident: $r#type:ty| $inner:block) => {
+        let $var = $init;
+
+        $inner
+
+        if let Err((_err, val)) = <$r#type>::drop($var) {
+            //eprintln!("{:?}", err);
+            std::mem::forget(val);
+        }
+    };
+    ($init:expr => |mut $var:ident: $r#type:ty| $inner:block) => {
+        let mut $var = $init;
+
+        $inner
+
+        if let Err((_err, val)) = <$r#type>::drop($var) {
+            //eprintln!("{:?}", err);
+            std::mem::forget(val);
+        }
+    };
+}
 
 pub struct CudaSimulation;
 
@@ -46,8 +79,8 @@ impl CudaSimulation {
         dispersal: &Array2D<f64>,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
-        rng: &mut impl Rng,
-        reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
+        _rng: &mut impl Rng,
+        _reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
     ) -> Result<(f64, usize)> {
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemoryPackedAliasDispersalSampler::new(dispersal, &habitat)?;
@@ -70,7 +103,40 @@ impl CudaSimulation {
             .active_lineage_sampler(active_lineage_sampler)
             .build();
 
-        let (time, steps) = simulation.simulate(rng, reporter);
+        //let (time, steps) = simulation.simulate(rng, reporter);
+
+        let module_data = CString::new(include_str!(env!("KERNEL_PTX_PATH"))).unwrap();
+
+        // Initialize the CUDA API
+        rustacuda::init(CudaFlags::empty())?;
+
+        // Get the first device
+        let device = Device::get_device(0)?;
+
+        // Create a context associated to this device
+        with_cuda!(CudaContext::create_and_push(ContextFlags::MAP_HOST | ContextFlags::SCHED_AUTO, device)? => |context: CudaContext| {
+        // Load the module containing the function we want to call
+        with_cuda!(Module::load_from_string(&module_data)? => |module: Module| {
+        // Create a stream to submit work to
+        with_cuda!(Stream::new(StreamFlags::NON_BLOCKING, None)? => |stream: Stream| {
+
+            if let Err(err) = simulation.lend_to_cuda(|simulation_ptr| {
+                // Launching kernels is unsafe since Rust can't enforce safety - think of kernel launches
+                // as a foreign-function call. In this case, it is - this kernel is written in CUDA C.
+                unsafe {
+                    launch!(module.simulate<<<1, 1, 0, stream>>>(
+                        simulation_ptr
+                    ))?;
+                }
+
+                stream.synchronize()
+            }) {
+                eprintln!("Running kernel failed with {:#?}!", err);
+            }
+
+        });});});
+
+        let (time, steps) = (4.2_f64, 42);
 
         Ok((time, steps))
     }
