@@ -7,7 +7,7 @@ use necsim_core::rng::Rng;
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(non_snake_case)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AliasMethodSamplerAtom<E: Copy + PartialEq> {
     U: f64,
     E: E,

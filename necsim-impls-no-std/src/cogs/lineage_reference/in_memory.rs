@@ -2,13 +2,10 @@ use core::hash::Hash;
 
 use necsim_core::cogs::{Habitat, LineageReference};
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub struct InMemoryLineageReference(usize);
-
-//#[cfg(feature = "cuda")]
-//unsafe impl rustacuda_core::DeviceCopy for InMemoryLineageReference {}
 
 impl<H: Habitat> LineageReference<H> for InMemoryLineageReference {}
 

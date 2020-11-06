@@ -1,7 +1,7 @@
 use super::Location;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub struct LandscapeExtent {
     x: u32,

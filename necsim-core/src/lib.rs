@@ -1,6 +1,9 @@
 #![deny(clippy::pedantic)]
 #![no_std]
 #![feature(core_intrinsics)]
+#![feature(stmt_expr_attributes)]
+
+extern crate alloc;
 
 #[macro_use]
 extern crate contracts;

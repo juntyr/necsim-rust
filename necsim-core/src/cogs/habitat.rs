@@ -3,7 +3,7 @@ use crate::landscape::Location;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait Habitat {
+pub trait Habitat: core::fmt::Debug {
     #[must_use]
     fn get_extent(&self) -> LandscapeExtent;
 

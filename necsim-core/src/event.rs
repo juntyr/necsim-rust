@@ -42,6 +42,7 @@ impl<H: Habitat, R: LineageReference<H>> Event<H, R> {
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug)]
 pub enum EventType<H: Habitat, R: LineageReference<H>> {
     Speciation,
     Dispersal {
@@ -50,4 +51,18 @@ pub enum EventType<H: Habitat, R: LineageReference<H>> {
         coalescence: Option<R>,
         _marker: PhantomData<H>,
     },
+}
+
+impl<H: Habitat, R: LineageReference<H>> core::fmt::Debug for Event<H, R> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Event")
+            .field(
+                "time",
+                &format_args!("{}", ryu::Buffer::new().format(self.time)),
+            )
+            .field("lineage_reference", &self.lineage_reference)
+            .field("type", &self.r#type)
+            .field("_marker", &format_args!("PhantomData"))
+            .finish()
+    }
 }

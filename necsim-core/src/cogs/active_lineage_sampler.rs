@@ -15,7 +15,7 @@ pub trait ActiveLineageSampler<
     S: LineageStore<H, R>,
     C: CoalescenceSampler<H, R, S>,
     E: EventSampler<H, D, R, S, C>,
->: Sized
+>: core::fmt::Debug
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize;

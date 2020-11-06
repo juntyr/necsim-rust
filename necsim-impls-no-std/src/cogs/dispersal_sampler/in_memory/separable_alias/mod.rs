@@ -14,6 +14,7 @@ mod dispersal;
 use crate::alias::AliasMethodSampler;
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug)]
 pub struct InMemorySeparableAliasDispersalSampler<H: Habitat> {
     alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
     self_dispersal: Array2D<f64>,

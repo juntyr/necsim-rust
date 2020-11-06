@@ -1,5 +1,6 @@
 #![deny(clippy::pedantic)]
 #![no_std]
+#![feature(stmt_expr_attributes)]
 
 extern crate alloc;
 
@@ -17,3 +18,4 @@ extern crate contracts;
 pub mod alias;
 pub mod cogs;
 pub mod r#f64;
+pub mod rng;

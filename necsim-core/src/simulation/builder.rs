@@ -8,7 +8,7 @@ use crate::cogs::{
     LineageReference, LineageStore,
 };
 
-#[derive(TypedBuilder)]
+#[derive(TypedBuilder, Debug)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda, LendToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
@@ -26,6 +26,8 @@ pub struct Simulation<
     E: EventSampler<H, D, R, S, C>,
     A: ActiveLineageSampler<H, D, R, S, C, E>,
 > {
+    #[builder(default = 0.0_f64, setter(skip))]
+    pub(super) time: f64,
     pub(super) speciation_probability_per_generation: f64,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) habitat: H,

@@ -8,6 +8,7 @@ use necsim_core::landscape::Location;
 mod sampler;
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug)]
 pub struct ClassicalActiveLineageSampler<
     H: Habitat,
     D: DispersalSampler<H>,

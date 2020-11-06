@@ -14,7 +14,7 @@ pub trait EventSampler<
     R: LineageReference<H>,
     S: LineageStore<H, R>,
     C: CoalescenceSampler<H, R, S>,
->
+>: core::fmt::Debug
 {
     #[must_use]
     #[allow(clippy::float_cmp)]

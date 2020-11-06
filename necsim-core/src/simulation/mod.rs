@@ -23,20 +23,24 @@ impl<
         A: ActiveLineageSampler<H, D, R, S, C, E>,
     > Simulation<H, D, R, S, C, E, A>
 {
+    #[debug_requires(max_steps > 0, "must run for at least one step")]
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
-    pub fn simulate(
-        mut self,
+    pub fn simulate_incremental(
+        &mut self,
+        max_steps: usize,
         rng: &mut impl Rng,
         reporter: &mut impl Reporter<H, R>,
     ) -> (f64, usize) {
-        let mut time: f64 = 0.0;
+        let mut time = self.time;
         let mut steps: usize = 0;
 
         self.with_mut_split_active_lineage_sampler(|active_lineage_sampler, simulation| {
             while let Some((chosen_lineage, dispersal_origin, event_time)) =
                 active_lineage_sampler.pop_active_lineage_location_event_time(time, simulation, rng)
             {
-                let event = if active_lineage_sampler.number_active_lineages() == 0 {
+                let event = if cfg!(not(target_os = "cuda"))
+                    && active_lineage_sampler.number_active_lineages() == 0
+                {
                     // Early stop iff only one active lineage is left
                     //  -> jump immediately to its speciation
                     simulation.with_split_event_sampler(|event_sampler, simulation| {
@@ -80,9 +84,40 @@ impl<
                 }
 
                 reporter.report_event(&event);
+
+                // TODO: If reporters are ever to suggest an early stop, max_steps should become one
+                if steps >= max_steps {
+                    break;
+                }
             }
         });
 
-        (time, steps)
+        self.time = time;
+
+        (self.time, steps)
+    }
+
+    #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
+    pub fn simulate(
+        mut self,
+        rng: &mut impl Rng,
+        reporter: &mut impl Reporter<H, R>,
+    ) -> (f64, usize) {
+        let mut total_steps: usize = 0;
+
+        let (mut final_time, mut new_steps) = self.simulate_incremental(usize::MAX, rng, reporter);
+
+        while new_steps > 0 {
+            total_steps += new_steps;
+
+            // Waiting for tuple destructuring RFC #2909 at:
+            //   https://github.com/rust-lang/rust/pull/78748
+            let (new_final_time, new_new_steps) =
+                self.simulate_incremental(usize::MAX, rng, reporter);
+            final_time = new_final_time;
+            new_steps = new_new_steps;
+        }
+
+        (final_time, total_steps)
     }
 }

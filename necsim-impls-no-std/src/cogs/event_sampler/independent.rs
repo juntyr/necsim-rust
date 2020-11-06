@@ -17,6 +17,7 @@ use crate::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler
 #[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(R: rustacuda_core::DeviceCopy))]
 #[cfg_attr(feature = "cuda", r2cBound(S: rust_cuda::common::RustToCuda))]
+#[derive(Debug)]
 pub struct IndependentEventSampler<
     H: Habitat,
     D: DispersalSampler<H>,
