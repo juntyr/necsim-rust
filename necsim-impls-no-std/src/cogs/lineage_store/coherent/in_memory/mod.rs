@@ -15,6 +15,7 @@ use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 mod store;
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug)]
 pub struct CoherentInMemoryLineageStore<H: Habitat> {
     landscape_extent: LandscapeExtent,
     lineages_store: Vec<Lineage>,

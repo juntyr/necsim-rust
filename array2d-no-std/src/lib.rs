@@ -170,7 +170,7 @@ use serde::{Deserialize, Serialize};
 extern crate rust_cuda_derive;
 
 /// A fixed sized two-dimensional array.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(T: rustacuda_core::DeviceCopy))]
@@ -179,6 +179,19 @@ pub struct Array2D<T> {
     array: Box<[T]>,
     num_rows: usize,
     num_columns: usize,
+}
+
+impl<T> core::fmt::Debug for Array2D<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Array2D")
+            .field(
+                "array",
+                &format_args!("Box [ {:p}; {} ]", &self.array, self.array.len()),
+            )
+            .field("num_rows", &self.num_rows)
+            .field("num_columns", &self.num_columns)
+            .finish()
+    }
 }
 
 /// An error that can arise during the use of an [`Array2D`].

@@ -9,6 +9,7 @@ use necsim_core::rng::Rng;
 use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug)]
 pub struct UnconditionalEventSampler<
     H: Habitat,
     D: DispersalSampler<H>,

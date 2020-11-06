@@ -13,7 +13,7 @@ use crate::alias::packed::AliasMethodSamplerAtom;
 
 use super::InMemoryDispersalSampler;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[allow(clippy::module_name_repetitions)]
 #[doc(hidden)]
 pub struct AliasSamplerRange(Range<usize>);
@@ -99,5 +99,22 @@ impl<H: Habitat> InMemoryDispersalSampler<H> for InMemoryPackedAliasDispersalSam
             alias_dispersal_buffer: alias_dispersal_buffer.into_boxed_slice(),
             habitat_extent,
         })
+    }
+}
+
+impl core::fmt::Debug for InMemoryPackedAliasDispersalSampler {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("InMemoryPackedAliasDispersalSampler")
+            .field("alias_dispersal_ranges", &self.alias_dispersal_ranges)
+            .field(
+                "alias_dispersal_buffer",
+                &format_args!(
+                    "Box [ {:p}; {} ]",
+                    &self.alias_dispersal_buffer,
+                    self.alias_dispersal_buffer.len()
+                ),
+            )
+            .field("habitat_extent", &self.habitat_extent)
+            .finish()
     }
 }

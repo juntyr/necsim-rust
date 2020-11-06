@@ -17,6 +17,7 @@ mod probability;
 use probability::ProbabilityAtLocation;
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug)]
 pub struct ConditionalGillespieEventSampler<
     H: Habitat,
     D: SeparableDispersalSampler<H>,

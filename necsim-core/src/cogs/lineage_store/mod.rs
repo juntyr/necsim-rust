@@ -9,7 +9,7 @@ mod contract;
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
-    Sized + Index<R, Output = Lineage>
+    Sized + Index<R, Output = Lineage> + core::fmt::Debug
 {
     #[must_use]
     #[allow(clippy::float_cmp)]

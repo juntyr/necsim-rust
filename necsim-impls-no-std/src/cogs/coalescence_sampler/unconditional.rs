@@ -7,6 +7,7 @@ use necsim_core::rng::Rng;
 use super::optional_coalescence;
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug)]
 pub struct UnconditionalCoalescenceSampler<
     H: Habitat,
     R: LineageReference<H>,

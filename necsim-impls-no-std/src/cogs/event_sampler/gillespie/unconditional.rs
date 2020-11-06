@@ -12,6 +12,7 @@ use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 use super::GillespieEventSampler;
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug)]
 pub struct UnconditionalGillespieEventSampler<
     H: Habitat,
     D: DispersalSampler<H>,

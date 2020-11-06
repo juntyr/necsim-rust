@@ -1,12 +1,14 @@
 use crate::landscape::Location;
 
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
+#[derive(Debug)]
 struct LineageLocation {
     location: Location,
     index_at_location: usize,
 }
 
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
+#[derive(Debug)]
 pub struct Lineage {
     location: Option<LineageLocation>,
     time_of_last_event: f64,

@@ -11,6 +11,7 @@ mod contract;
 mod dispersal;
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug)]
 pub struct InMemoryCumulativeDispersalSampler {
     cumulative_dispersal: Vec<f64>,
     valid_dispersal_targets: Vec<Option<usize>>,

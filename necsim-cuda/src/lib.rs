@@ -88,11 +88,12 @@ impl CudaSimulation {
         let coalescence_sampler = IndependentCoalescenceSampler::default();
         let event_sampler = IndependentEventSampler::default();
         let active_lineage_sampler = IndependentActiveLineageSampler::new(
-            InMemoryLineageReference::from(0_usize),
+            InMemoryLineageReference::from(9780_usize),
             &lineage_store,
         ); // TODO
 
-        let simulation = Simulation::builder()
+        // TODO: Should we copy the heap contents back over?
+        let mut simulation = Simulation::builder()
             .speciation_probability_per_generation(speciation_probability_per_generation)
             .habitat(habitat)
             .dispersal_sampler(dispersal_sampler)
@@ -107,6 +108,8 @@ impl CudaSimulation {
 
         let module_data = CString::new(include_str!(env!("KERNEL_PTX_PATH"))).unwrap();
 
+        //println!("{}", module_data.to_str().unwrap());
+
         // Initialize the CUDA API
         rustacuda::init(CudaFlags::empty())?;
 
@@ -120,12 +123,23 @@ impl CudaSimulation {
         // Create a stream to submit work to
         with_cuda!(Stream::new(StreamFlags::NON_BLOCKING, None)? => |stream: Stream| {
 
-            if let Err(err) = simulation.lend_to_cuda(|simulation_ptr| {
+            use rustacuda::context::{CurrentContext, ResourceLimit};
+
+            CurrentContext::set_resource_limit(ResourceLimit::StackSize, 4096)?;
+
+            //println!("{:?}", CurrentContext::get_resource_limit(ResourceLimit::StackSize));
+            //println!("{:?}", CurrentContext::get_resource_limit(ResourceLimit::PrintfFifoSize));
+            //println!("{:?}", CurrentContext::get_resource_limit(ResourceLimit::MallocHeapSize));
+            //println!("{:?}", CurrentContext::get_resource_limit(ResourceLimit::DeviceRuntimeSynchronizeDepth));
+            //println!("{:?}", CurrentContext::get_resource_limit(ResourceLimit::DeviceRuntimePendingLaunchCount));
+            //println!("{:?}", CurrentContext::get_resource_limit(ResourceLimit::MaxL2FetchGranularity));
+
+            if let Err(err) = simulation.lend_to_cuda_mut(|simulation_mut_ptr| {
                 // Launching kernels is unsafe since Rust can't enforce safety - think of kernel launches
                 // as a foreign-function call. In this case, it is - this kernel is written in CUDA C.
                 unsafe {
                     launch!(module.simulate<<<1, 1, 0, stream>>>(
-                        simulation_ptr
+                        simulation_mut_ptr
                     ))?;
                 }
 

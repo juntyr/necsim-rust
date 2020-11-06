@@ -99,3 +99,19 @@ impl<
         }
     }
 }
+
+impl<
+        H: Habitat,
+        D: DispersalSampler<H>,
+        R: LineageReference<H>,
+        S: CoherentLineageStore<H, R>,
+        C: CoalescenceSampler<H, R, S>,
+        E: GillespieEventSampler<H, D, R, S, C>,
+    > core::fmt::Debug for GillespieActiveLineageSampler<H, D, R, S, C, E>
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "GillespieActiveLineageSampler {{ ")?;
+        write!(f, "number_active_lineages: {}", self.number_active_lineages)?;
+        write!(f, " }}")
+    }
+}

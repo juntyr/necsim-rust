@@ -3,7 +3,7 @@ use crate::rng::Rng;
 
 use super::Habitat;
 
-pub trait DispersalSampler<H: Habitat> {
+pub trait DispersalSampler<H: Habitat>: core::fmt::Debug {
     #[must_use]
     fn sample_dispersal_from_location(&self, location: &Location, rng: &mut impl Rng) -> Location;
 }

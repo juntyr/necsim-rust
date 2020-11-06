@@ -93,3 +93,20 @@ impl<H: Habitat> IncoherentInMemoryLineageStore<H> {
         }
     }
 }
+
+impl<H: Habitat> core::fmt::Debug for IncoherentInMemoryLineageStore<H> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("IncoherentInMemoryLineageStore")
+            .field("landscape_extent", &self.landscape_extent)
+            .field(
+                "lineages_store",
+                &format_args!(
+                    "Box [ {:p}; {} ]",
+                    &self.lineages_store,
+                    self.lineages_store.len()
+                ),
+            )
+            .field("marker", &self.marker)
+            .finish()
+    }
+}
