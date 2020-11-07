@@ -28,6 +28,7 @@ use necsim_impls_no_std::cogs::event_sampler::independent::IndependentEventSampl
 use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
 use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use necsim_impls_no_std::cogs::lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore;
+use necsim_impls_no_std::rng::cuda::CudaRng;
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
 macro_rules! with_cuda {
@@ -79,7 +80,7 @@ impl CudaSimulation {
         dispersal: &Array2D<f64>,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
-        _rng: &mut impl Rng,
+        rng: &mut impl Rng,
         _reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
     ) -> Result<(f64, usize)> {
         let habitat = InMemoryHabitat::new(habitat.clone());
@@ -103,6 +104,8 @@ impl CudaSimulation {
             .event_sampler(event_sampler)
             .active_lineage_sampler(active_lineage_sampler)
             .build();
+
+        let mut cuda_rng = CudaRng::from_cloned(rng);
 
         //let (time, steps) = simulation.simulate(rng, reporter);
 
@@ -135,15 +138,19 @@ impl CudaSimulation {
             //println!("{:?}", CurrentContext::get_resource_limit(ResourceLimit::MaxL2FetchGranularity));
 
             if let Err(err) = simulation.lend_to_cuda_mut(|simulation_mut_ptr| {
-                // Launching kernels is unsafe since Rust can't enforce safety - think of kernel launches
-                // as a foreign-function call. In this case, it is - this kernel is written in CUDA C.
-                unsafe {
-                    launch!(module.simulate<<<1, 1, 0, stream>>>(
-                        simulation_mut_ptr
-                    ))?;
-                }
+                cuda_rng.lend_to_cuda_mut(|cuda_rng_mut_ptr| {
+                    // Launching kernels is unsafe since Rust can't enforce safety - think of kernel launches
+                    // as a foreign-function call. In this case, it is - this kernel is written in CUDA C.
+                    unsafe {
+                        launch!(module.simulate<<<1, 1, 0, stream>>>(
+                            simulation_mut_ptr,
+                            cuda_rng_mut_ptr,
+                            1_000_usize // max steps on GPU
+                        ))?;
+                    }
 
-                stream.synchronize()
+                    stream.synchronize()
+                })
             }) {
                 eprintln!("Running kernel failed with {:#?}!", err);
             }
