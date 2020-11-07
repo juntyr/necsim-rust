@@ -57,7 +57,15 @@ impl<
             .lineage_store
             .extract_lineage_from_its_location(chosen_lineage_reference.clone());
 
+        // TODO: As we are only doing geometric sampling for now, need to immediately increment discrete time step
+        // TODO: How do we choose the time step for now?
+        // TODO: Need to prime incoherent RNG here with location, discrete time step and substep 0
+
+        // TODO: Need to get time to next event in while loop with exponential (simplest option)
+
         let event_time = time + rng.sample_exponential(0.5_f64);
+
+        // TODO: Need to prime incoherent RNG here with location, discrete time step and substep 0
 
         let unique_event_time: f64 = if event_time > time {
             event_time

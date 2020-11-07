@@ -1,8 +1,5 @@
 #![deny(clippy::pedantic)]
 
-#[macro_use]
-extern crate contracts;
-
 use anyhow::Result;
 use array2d::Array2D;
 use structopt::StructOpt;
@@ -11,17 +8,16 @@ mod args;
 mod gdal;
 mod maps;
 mod simulation;
-mod stdrng;
 
 #[macro_use]
 extern crate necsim_core;
 
+use necsim_core::rng::RngCore;
+use necsim_impls_no_std::rng::aes::AesRng as Rng;
 use necsim_impls_std::reporter::biodiversity::BiodiversityReporter;
 use necsim_impls_std::reporter::events::EventReporter;
 use necsim_impls_std::reporter::execution_time::ExecutionTimeReporter;
 use necsim_impls_std::reporter::progress::ProgressReporter;
-
-use stdrng::NewStdRng;
 
 fn main() -> Result<()> {
     // Parse and validate all command line arguments
@@ -70,7 +66,7 @@ fn main() -> Result<()> {
     let estimated_total_lineages =
         ((total_habitat as f64) * args.sample_percentage()).ceil() as u64;
 
-    let mut rng = NewStdRng::from_seed(*args.seed());
+    let mut rng = Rng::seed_from_u64(*args.seed());
 
     let mut biodiversity_reporter = BiodiversityReporter::default();
     let mut event_reporter = EventReporter::default();
