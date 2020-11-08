@@ -12,6 +12,7 @@ use anyhow::Result;
 use array2d::Array2D;
 
 use rustacuda::context::Context as CudaContext;
+use rustacuda::function::Function;
 use rustacuda::prelude::*;
 
 use rust_cuda::host::LendToCuda;
@@ -54,6 +55,80 @@ macro_rules! with_cuda {
     };
 }
 
+fn print_context_resource_limits() {
+    use rustacuda::context::{CurrentContext, ResourceLimit};
+
+    println!("{:=^80}", " Context Resource Limits ");
+
+    println!(
+        "StackSize: {:?}",
+        CurrentContext::get_resource_limit(ResourceLimit::StackSize)
+    );
+    println!(
+        "PrintfFifoSize: {:?}",
+        CurrentContext::get_resource_limit(ResourceLimit::PrintfFifoSize)
+    );
+    println!(
+        "MallocHeapSize: {:?}",
+        CurrentContext::get_resource_limit(ResourceLimit::MallocHeapSize)
+    );
+    println!(
+        "DeviceRuntimeSynchronizeDepth: {:?}",
+        CurrentContext::get_resource_limit(ResourceLimit::DeviceRuntimeSynchronizeDepth)
+    );
+    println!(
+        "DeviceRuntimePendingLaunchCount: {:?}",
+        CurrentContext::get_resource_limit(ResourceLimit::DeviceRuntimePendingLaunchCount)
+    );
+    println!(
+        "MaxL2FetchGranularity: {:?}",
+        CurrentContext::get_resource_limit(ResourceLimit::MaxL2FetchGranularity)
+    );
+
+    println!("{:=^80}", "");
+}
+
+fn print_kernel_function_attributes(kernel: &Function) {
+    use rustacuda::function::FunctionAttribute;
+
+    println!("{:=^80}", " Kernel Function Attributes ");
+
+    println!(
+        "MaxThreadsPerBlock: {:?}",
+        kernel.get_attribute(FunctionAttribute::MaxThreadsPerBlock)
+    );
+    println!(
+        "SharedMemorySizeBytes: {:?}",
+        kernel.get_attribute(FunctionAttribute::SharedMemorySizeBytes)
+    );
+    println!(
+        "ConstSizeBytes: {:?}",
+        kernel.get_attribute(FunctionAttribute::ConstSizeBytes)
+    );
+    println!(
+        "LocalSizeBytes: {:?}",
+        kernel.get_attribute(FunctionAttribute::LocalSizeBytes)
+    );
+    println!(
+        "NumRegisters: {:?}",
+        kernel.get_attribute(FunctionAttribute::NumRegisters)
+    );
+    println!(
+        "PtxVersion: {:?}",
+        kernel.get_attribute(FunctionAttribute::PtxVersion)
+    );
+    println!(
+        "BinaryVersion: {:?}",
+        kernel.get_attribute(FunctionAttribute::BinaryVersion)
+    );
+    println!(
+        "CacheModeCa: {:?}",
+        kernel.get_attribute(FunctionAttribute::CacheModeCa)
+    );
+
+    println!("{:=^80}", "");
+}
+
 pub struct CudaSimulation;
 
 impl CudaSimulation {
@@ -88,10 +163,7 @@ impl CudaSimulation {
         let lineage_store = IncoherentInMemoryLineageStore::new(sample_percentage, &habitat);
         let coalescence_sampler = IndependentCoalescenceSampler::default();
         let event_sampler = IndependentEventSampler::default();
-        let active_lineage_sampler = IndependentActiveLineageSampler::new(
-            InMemoryLineageReference::from(9780_usize),
-            &lineage_store,
-        ); // TODO
+        let active_lineage_sampler = IndependentActiveLineageSampler::default();
 
         // TODO: Should we copy the heap contents back over?
         let mut simulation = Simulation::builder()
@@ -107,6 +179,16 @@ impl CudaSimulation {
 
         let mut cuda_rng = CudaRng::from_cloned(rng);
 
+        let cuda_block_size = rustacuda::function::BlockSize::xy(16, 16);
+        let cuda_grid_size = rustacuda::function::GridSize::x({
+            #[allow(clippy::cast_possible_truncation)]
+            let total_individuals = simulation.lineage_store().get_number_total_lineages() as u32;
+            let cuda_block_length = cuda_block_size.x * cuda_block_size.y * cuda_block_size.z;
+
+            (total_individuals / cuda_block_length)
+                + (total_individuals % cuda_block_length > 0) as u32
+        });
+
         //let (time, steps) = simulation.simulate(rng, reporter);
 
         let module_data = CString::new(include_str!(env!("KERNEL_PTX_PATH"))).unwrap();
@@ -121,8 +203,10 @@ impl CudaSimulation {
 
         // Create a context associated to this device
         with_cuda!(CudaContext::create_and_push(ContextFlags::MAP_HOST | ContextFlags::SCHED_AUTO, device)? => |context: CudaContext| {
-        // Load the module containing the function we want to call
+        // Load the module containing the kernel function
         with_cuda!(Module::load_from_string(&module_data)? => |module: Module| {
+        // Load the kernel function from the module
+        let simulate_kernel = module.get_function(&CString::new("simulate").unwrap())?;
         // Create a stream to submit work to
         with_cuda!(Stream::new(StreamFlags::NON_BLOCKING, None)? => |stream: Stream| {
 
@@ -130,19 +214,15 @@ impl CudaSimulation {
 
             CurrentContext::set_resource_limit(ResourceLimit::StackSize, 4096)?;
 
-            //println!("{:?}", CurrentContext::get_resource_limit(ResourceLimit::StackSize));
-            //println!("{:?}", CurrentContext::get_resource_limit(ResourceLimit::PrintfFifoSize));
-            //println!("{:?}", CurrentContext::get_resource_limit(ResourceLimit::MallocHeapSize));
-            //println!("{:?}", CurrentContext::get_resource_limit(ResourceLimit::DeviceRuntimeSynchronizeDepth));
-            //println!("{:?}", CurrentContext::get_resource_limit(ResourceLimit::DeviceRuntimePendingLaunchCount));
-            //println!("{:?}", CurrentContext::get_resource_limit(ResourceLimit::MaxL2FetchGranularity));
+            print_context_resource_limits();
+            print_kernel_function_attributes(&simulate_kernel);
 
             if let Err(err) = simulation.lend_to_cuda_mut(|simulation_mut_ptr| {
                 cuda_rng.lend_to_cuda_mut(|cuda_rng_mut_ptr| {
                     // Launching kernels is unsafe since Rust can't enforce safety - think of kernel launches
                     // as a foreign-function call. In this case, it is - this kernel is written in CUDA C.
                     unsafe {
-                        launch!(module.simulate<<<1, 1, 0, stream>>>(
+                        launch!(simulate_kernel<<<cuda_grid_size, cuda_block_size, 0, stream>>>(
                             simulation_mut_ptr,
                             cuda_rng_mut_ptr,
                             1_000_usize // max steps on GPU
