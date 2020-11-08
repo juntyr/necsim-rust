@@ -3,6 +3,7 @@ use float_next_after::NextAfter;
 use necsim_core::cogs::{
     ActiveLineageSampler, DispersalSampler, Habitat, IncoherentLineageStore, LineageReference,
 };
+use necsim_core::intrinsics::{exp, floor};
 use necsim_core::landscape::Location;
 use necsim_core::rng::Rng;
 use necsim_core::simulation::partial::active_lineager_sampler::PartialSimulation;
@@ -53,19 +54,62 @@ impl<
             None => return None,
         };
 
+        #[allow(clippy::question_mark)]
+        if simulation
+            .lineage_store
+            .get(chosen_lineage_reference.clone())
+            .is_none()
+        {
+            // Check for extraneously simulated lineages
+            return None;
+        }
+
         let lineage_location = simulation
             .lineage_store
             .extract_lineage_from_its_location(chosen_lineage_reference.clone());
 
-        // TODO: As we are only doing geometric sampling for now, need to immediately increment discrete time step
-        // TODO: How do we choose the time step for now?
-        // TODO: Need to prime incoherent RNG here with location, discrete time step and substep 0
+        let delta_t = 0.1_f64;
+        let lambda = 0.5_f64;
 
-        // TODO: Need to get time to next event in while loop with exponential (simplest option)
+        let p = 1.0_f64 - exp(-lambda * delta_t);
 
-        let event_time = time + rng.sample_exponential(0.5_f64);
+        #[allow(clippy::cast_possible_truncation)]
+        #[allow(clippy::cast_sign_loss)]
+        let mut time_step = floor(time / delta_t) as u64 + 1;
 
-        // TODO: Need to prime incoherent RNG here with location, discrete time step and substep 0
+        loop {
+            /*let location_x_bytes = lineage_location.x().to_le_bytes();
+            let location_y_bytes = lineage_location.y().to_le_bytes();
+            let time_step_bytes = time_step.to_le_bytes();
+
+            rng.prime_with([
+                location_x_bytes[0],
+                location_x_bytes[1],
+                location_x_bytes[2],
+                location_x_bytes[3],
+                location_y_bytes[0],
+                location_y_bytes[1],
+                location_y_bytes[2],
+                location_y_bytes[3],
+                time_step_bytes[0],
+                time_step_bytes[1],
+                time_step_bytes[2],
+                time_step_bytes[3],
+                time_step_bytes[4],
+                time_step_bytes[5],
+                time_step_bytes[6],
+                time_step_bytes[7],
+            ]);*/
+
+            if rng.sample_event(p) {
+                break;
+            }
+
+            time_step += 1;
+        }
+
+        #[allow(clippy::cast_precision_loss)]
+        let event_time = (time_step as f64) * delta_t;
 
         let unique_event_time: f64 = if event_time > time {
             event_time

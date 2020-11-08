@@ -102,11 +102,16 @@ unsafe fn simulate_generic<
         CudaRng::with_borrow_from_rust_mut(cuda_rng_ptr, |cuda_rng| {
             let mut reporter = NullReporter;
 
-            //println!("{:#?}", simulation);
-
             let (time, steps) = simulation.simulate_incremental(max_steps, cuda_rng, &mut reporter);
 
-            println!("time = {:?}, steps = {}", F64(time), steps);
+            if utils::thread_idx().as_id(&utils::block_dim()) == 0 {
+                println!(
+                    "index = {}, time = {:?}, steps = {}",
+                    utils::index(),
+                    F64(time),
+                    steps
+                );
+            }
         })
     })
 }
