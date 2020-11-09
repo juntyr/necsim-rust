@@ -17,9 +17,8 @@ use rustacuda::prelude::*;
 
 use rust_cuda::host::LendToCuda;
 
-use necsim_core::cogs::LineageStore;
+use necsim_core::cogs::{LineageStore, PrimeableRng};
 use necsim_core::reporter::Reporter;
-use necsim_core::rng::Rng;
 use necsim_core::simulation::Simulation;
 
 use necsim_impls_no_std::cogs::active_lineage_sampler::independent::IndependentActiveLineageSampler;
@@ -29,7 +28,7 @@ use necsim_impls_no_std::cogs::event_sampler::independent::IndependentEventSampl
 use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
 use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use necsim_impls_no_std::cogs::lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore;
-use necsim_impls_no_std::rng::cuda::CudaRng;
+use necsim_impls_no_std::cogs::rng::cuda::CudaRng;
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
 macro_rules! with_cuda {
@@ -150,12 +149,12 @@ impl CudaSimulation {
         sample_percentage <= 1.0_f64,
         "0.0 <= sample_percentage <= 1.0"
     )]
-    pub fn simulate(
+    pub fn simulate<G: PrimeableRng<Prime = [u8; 16]>>(
         habitat: &Array2D<u32>,
         dispersal: &Array2D<f64>,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
-        rng: &mut impl Rng,
+        rng: G,
         _reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
     ) -> Result<(f64, usize)> {
         let habitat = InMemoryHabitat::new(habitat.clone());
@@ -169,6 +168,7 @@ impl CudaSimulation {
         let mut simulation = Simulation::builder()
             .speciation_probability_per_generation(speciation_probability_per_generation)
             .habitat(habitat)
+            .rng(CudaRng::from(rng))
             .dispersal_sampler(dispersal_sampler)
             .lineage_reference(std::marker::PhantomData::<InMemoryLineageReference>)
             .lineage_store(lineage_store)
@@ -176,8 +176,6 @@ impl CudaSimulation {
             .event_sampler(event_sampler)
             .active_lineage_sampler(active_lineage_sampler)
             .build();
-
-        let mut cuda_rng = CudaRng::from_cloned(rng);
 
         let cuda_block_size = rustacuda::function::BlockSize::xy(16, 16);
         let cuda_grid_size = rustacuda::function::GridSize::x({
@@ -218,19 +216,16 @@ impl CudaSimulation {
             print_kernel_function_attributes(&simulate_kernel);
 
             if let Err(err) = simulation.lend_to_cuda_mut(|simulation_mut_ptr| {
-                cuda_rng.lend_to_cuda_mut(|cuda_rng_mut_ptr| {
-                    // Launching kernels is unsafe since Rust can't enforce safety - think of kernel launches
-                    // as a foreign-function call. In this case, it is - this kernel is written in CUDA C.
-                    unsafe {
-                        launch!(simulate_kernel<<<cuda_grid_size, cuda_block_size, 0, stream>>>(
-                            simulation_mut_ptr,
-                            cuda_rng_mut_ptr,
-                            1_000_usize // max steps on GPU
-                        ))?;
-                    }
+                // Launching kernels is unsafe since Rust can't enforce safety - think of kernel launches
+                // as a foreign-function call. In this case, it is - this kernel is written in CUDA C.
+                unsafe {
+                    launch!(simulate_kernel<<<cuda_grid_size, cuda_block_size, 0, stream>>>(
+                        simulation_mut_ptr,
+                        1_000_usize // max steps on GPU
+                    ))?;
+                }
 
-                    stream.synchronize()
-                })
+                stream.synchronize()
             }) {
                 eprintln!("Running kernel failed with {:#?}!", err);
             }

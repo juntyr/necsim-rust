@@ -3,6 +3,7 @@ pub mod unconditional;
 
 use necsim_core::cogs::{
     CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference, LineageStore,
+    RngCore,
 };
 use necsim_core::landscape::Location;
 use necsim_core::simulation::partial::event_sampler::PartialSimulation;
@@ -12,11 +13,12 @@ use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 #[allow(clippy::module_name_repetitions)]
 pub trait GillespieEventSampler<
     H: Habitat,
-    D: DispersalSampler<H>,
+    G: RngCore,
+    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
-    C: CoalescenceSampler<H, R, S>,
->: EventSampler<H, D, R, S, C>
+    C: CoalescenceSampler<H, G, R, S>,
+>: EventSampler<H, G, D, R, S, C>
 {
     #[must_use]
     #[debug_requires(
@@ -28,7 +30,7 @@ pub trait GillespieEventSampler<
     fn get_event_rate_at_location(
         &self,
         location: &Location,
-        simulation: &PartialSimulation<H, D, R, S, C>,
+        simulation: &PartialSimulation<H, G, D, R, S, C>,
         lineage_store_includes_self: bool,
     ) -> f64;
 }

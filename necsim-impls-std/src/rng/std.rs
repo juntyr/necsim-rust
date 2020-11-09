@@ -3,10 +3,10 @@ use rand::RngCore;
 use rand::SeedableRng;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct StdRng(StdRngImpl);
 
-impl necsim_core::rng::RngCore for StdRng {
+impl necsim_core::cogs::RngCore for StdRng {
     type Seed = <StdRngImpl as SeedableRng>::Seed;
 
     #[must_use]

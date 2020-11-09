@@ -5,7 +5,7 @@ use core::default::Default;
 use core::ptr::copy_nonoverlapping;
 
 #[allow(clippy::module_name_repetitions)]
-pub trait RngCore: Sized + Clone {
+pub trait RngCore: Sized + Clone + core::fmt::Debug {
     type Seed: AsMut<[u8]> + Default + Sized;
 
     #[must_use]
@@ -46,15 +46,10 @@ pub trait RngCore: Sized + Clone {
     fn sample_u64(&mut self) -> u64;
 }
 
-pub trait IncoherentRngCore: RngCore {
-    type Prime: AsMut<[u8]> + Sized;
-
-    fn prime_with(&mut self, prime: Self::Prime);
-}
-
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
+#[allow(clippy::module_name_repetitions)]
 #[contract_trait]
-pub trait Rng: RngCore {
+pub trait RngSampler: RngCore {
     #[must_use]
     #[inline]
     #[debug_ensures(ret >= 0.0_f64 && ret <= 1.0_f64, "samples U(0.0, 1.0)")]
@@ -99,4 +94,11 @@ pub trait Rng: RngCore {
     }
 }
 
-impl<R: RngCore> Rng for R {}
+impl<R: RngCore> RngSampler for R {}
+
+#[allow(clippy::module_name_repetitions)]
+pub trait PrimeableRng: RngCore {
+    type Prime: AsMut<[u8]> + Sized;
+
+    fn prime_with(&mut self, prime: Self::Prime);
+}

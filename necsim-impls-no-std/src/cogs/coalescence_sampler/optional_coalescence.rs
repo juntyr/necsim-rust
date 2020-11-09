@@ -1,18 +1,20 @@
-use necsim_core::cogs::{CoherentLineageStore, Habitat, LineageReference};
+use necsim_core::cogs::{CoherentLineageStore, Habitat, LineageReference, RngCore};
 use necsim_core::landscape::Location;
-use necsim_core::rng::Rng;
 
 #[must_use]
 pub fn sample_optional_coalescence_at_location<
     H: Habitat,
+    G: RngCore,
     R: LineageReference<H>,
     S: CoherentLineageStore<H, R>,
 >(
     location: &Location,
     habitat: &H,
     lineage_store: &S,
-    rng: &mut impl Rng,
+    rng: &mut G,
 ) -> Option<R> {
+    use necsim_core::cogs::RngSampler;
+
     let lineages_at_location = lineage_store.get_active_lineages_at_location(location);
     let population = lineages_at_location.len();
 

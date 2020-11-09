@@ -2,7 +2,7 @@ use array2d::{Array2D, Error};
 
 use alloc::vec::Vec;
 
-use necsim_core::cogs::Habitat;
+use necsim_core::cogs::{Habitat, RngCore};
 use necsim_core::landscape::{LandscapeExtent, Location};
 
 use crate::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
@@ -19,7 +19,7 @@ pub struct InMemoryCumulativeDispersalSampler {
 }
 
 #[contract_trait]
-impl<H: Habitat> InMemoryDispersalSampler<H> for InMemoryCumulativeDispersalSampler {
+impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G> for InMemoryCumulativeDispersalSampler {
     /// Creates a new `InMemoryCumulativeDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
     ///

@@ -2,43 +2,46 @@ use core::marker::PhantomData;
 
 use necsim_core::cogs::{
     CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference, LineageStore,
+    RngCore,
 };
 use necsim_core::event::{Event, EventType};
 use necsim_core::landscape::Location;
-use necsim_core::rng::Rng;
 use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct UnconditionalEventSampler<
     H: Habitat,
-    D: DispersalSampler<H>,
+    G: RngCore,
+    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
-    C: CoalescenceSampler<H, R, S>,
->(PhantomData<(H, D, R, S, C)>);
+    C: CoalescenceSampler<H, G, R, S>,
+>(PhantomData<(H, G, D, R, S, C)>);
 
 impl<
         H: Habitat,
-        D: DispersalSampler<H>,
+        G: RngCore,
+        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
-        C: CoalescenceSampler<H, R, S>,
-    > Default for UnconditionalEventSampler<H, D, R, S, C>
+        C: CoalescenceSampler<H, G, R, S>,
+    > Default for UnconditionalEventSampler<H, G, D, R, S, C>
 {
     fn default() -> Self {
-        Self(PhantomData::<(H, D, R, S, C)>)
+        Self(PhantomData::<(H, G, D, R, S, C)>)
     }
 }
 
 #[contract_trait]
 impl<
         H: Habitat,
-        D: DispersalSampler<H>,
+        G: RngCore,
+        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
-        C: CoalescenceSampler<H, R, S>,
-    > EventSampler<H, D, R, S, C> for UnconditionalEventSampler<H, D, R, S, C>
+        C: CoalescenceSampler<H, G, R, S>,
+    > EventSampler<H, G, D, R, S, C> for UnconditionalEventSampler<H, G, D, R, S, C>
 {
     #[must_use]
     fn sample_event_for_lineage_at_location_time(
@@ -46,9 +49,11 @@ impl<
         lineage_reference: R,
         location: Location,
         event_time: f64,
-        simulation: &PartialSimulation<H, D, R, S, C>,
-        rng: &mut impl Rng,
+        simulation: &PartialSimulation<H, G, D, R, S, C>,
+        rng: &mut G,
     ) -> Event<H, R> {
+        use necsim_core::cogs::RngSampler;
+
         let event_type = if rng.sample_event(*simulation.speciation_probability_per_generation) {
             EventType::Speciation
         } else {

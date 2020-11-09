@@ -2,9 +2,9 @@ use float_next_after::NextAfter;
 
 use necsim_core::cogs::{
     ActiveLineageSampler, CoherentLineageStore, DispersalSampler, Habitat, LineageReference,
+    RngCore,
 };
 use necsim_core::landscape::Location;
-use necsim_core::rng::Rng;
 use necsim_core::simulation::partial::active_lineager_sampler::PartialSimulation;
 
 use crate::cogs::coalescence_sampler::unconditional::UnconditionalCoalescenceSampler;
@@ -13,15 +13,22 @@ use crate::cogs::event_sampler::unconditional::UnconditionalEventSampler;
 use super::ClassicalActiveLineageSampler;
 
 #[contract_trait]
-impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: CoherentLineageStore<H, R>>
+impl<
+        H: Habitat,
+        G: RngCore,
+        D: DispersalSampler<H, G>,
+        R: LineageReference<H>,
+        S: CoherentLineageStore<H, R>,
+    >
     ActiveLineageSampler<
         H,
+        G,
         D,
         R,
         S,
-        UnconditionalCoalescenceSampler<H, R, S>,
-        UnconditionalEventSampler<H, D, R, S, UnconditionalCoalescenceSampler<H, R, S>>,
-    > for ClassicalActiveLineageSampler<H, D, R, S>
+        UnconditionalCoalescenceSampler<H, G, R, S>,
+        UnconditionalEventSampler<H, G, D, R, S, UnconditionalCoalescenceSampler<H, G, R, S>>,
+    > for ClassicalActiveLineageSampler<H, G, D, R, S>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -35,14 +42,17 @@ impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: CoherentLine
         time: f64,
         simulation: &mut PartialSimulation<
             H,
+            G,
             D,
             R,
             S,
-            UnconditionalCoalescenceSampler<H, R, S>,
-            UnconditionalEventSampler<H, D, R, S, UnconditionalCoalescenceSampler<H, R, S>>,
+            UnconditionalCoalescenceSampler<H, G, R, S>,
+            UnconditionalEventSampler<H, G, D, R, S, UnconditionalCoalescenceSampler<H, G, R, S>>,
         >,
-        rng: &mut impl Rng,
+        rng: &mut G,
     ) -> Option<(R, Location, f64)> {
+        use necsim_core::cogs::RngSampler;
+
         let last_active_lineage_reference = match self.active_lineage_references.pop() {
             Some(reference) => reference,
             None => return None,
@@ -98,13 +108,14 @@ impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: CoherentLine
         _time: f64,
         simulation: &mut PartialSimulation<
             H,
+            G,
             D,
             R,
             S,
-            UnconditionalCoalescenceSampler<H, R, S>,
-            UnconditionalEventSampler<H, D, R, S, UnconditionalCoalescenceSampler<H, R, S>>,
+            UnconditionalCoalescenceSampler<H, G, R, S>,
+            UnconditionalEventSampler<H, G, D, R, S, UnconditionalCoalescenceSampler<H, G, R, S>>,
         >,
-        _rng: &mut impl Rng,
+        _rng: &mut G,
     ) {
         simulation
             .lineage_store

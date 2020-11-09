@@ -5,7 +5,7 @@ use nanorand::RNG;
 #[derive(Clone)]
 pub struct WyRng(WyRand);
 
-impl necsim_core::rng::RngCore for WyRng {
+impl necsim_core::cogs::RngCore for WyRng {
     type Seed = [u8; 8];
 
     #[must_use]
@@ -18,5 +18,11 @@ impl necsim_core::rng::RngCore for WyRng {
     #[inline]
     fn sample_u64(&mut self) -> u64 {
         self.0.generate()
+    }
+}
+
+impl core::fmt::Debug for WyRng {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.debug_tuple("WyRng").field(&"WyRand").finish()
     }
 }

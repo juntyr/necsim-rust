@@ -1,12 +1,12 @@
 use core::marker::PhantomData;
 
+use necsim_core::cogs::RngSampler;
 use necsim_core::cogs::{
-    CoalescenceSampler, CoherentLineageStore, EventSampler, Habitat, LineageReference,
+    CoalescenceSampler, CoherentLineageStore, EventSampler, Habitat, LineageReference, RngCore,
     SeparableDispersalSampler,
 };
 use necsim_core::event::{Event, EventType};
 use necsim_core::landscape::Location;
-use necsim_core::rng::Rng;
 use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
 use crate::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
@@ -20,31 +20,34 @@ use probability::ProbabilityAtLocation;
 #[derive(Debug)]
 pub struct ConditionalGillespieEventSampler<
     H: Habitat,
-    D: SeparableDispersalSampler<H>,
+    G: RngCore,
+    D: SeparableDispersalSampler<H, G>,
     R: LineageReference<H>,
     S: CoherentLineageStore<H, R>,
->(PhantomData<(H, D, R, S)>);
+>(PhantomData<(H, G, D, R, S)>);
 
 impl<
         H: Habitat,
-        D: SeparableDispersalSampler<H>,
+        G: RngCore,
+        D: SeparableDispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-    > Default for ConditionalGillespieEventSampler<H, D, R, S>
+    > Default for ConditionalGillespieEventSampler<H, G, D, R, S>
 {
     fn default() -> Self {
-        Self(PhantomData::<(H, D, R, S)>)
+        Self(PhantomData::<(H, G, D, R, S)>)
     }
 }
 
 #[contract_trait]
 impl<
         H: Habitat,
-        D: SeparableDispersalSampler<H>,
+        G: RngCore,
+        D: SeparableDispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-    > EventSampler<H, D, R, S, ConditionalCoalescenceSampler<H, R, S>>
-    for ConditionalGillespieEventSampler<H, D, R, S>
+    > EventSampler<H, G, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>
+    for ConditionalGillespieEventSampler<H, G, D, R, S>
 {
     #[must_use]
     #[allow(clippy::double_parens)]
@@ -62,8 +65,8 @@ impl<
         lineage_reference: R,
         location: Location,
         event_time: f64,
-        simulation: &PartialSimulation<H, D, R, S, ConditionalCoalescenceSampler<H, R, S>>,
-        rng: &mut impl Rng,
+        simulation: &PartialSimulation<H, G, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>,
+        rng: &mut G,
     ) -> Event<H, R> {
         let dispersal_origin = location;
 
@@ -119,17 +122,18 @@ impl<
 #[contract_trait]
 impl<
         H: Habitat,
-        D: SeparableDispersalSampler<H>,
+        G: RngCore,
+        D: SeparableDispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-    > GillespieEventSampler<H, D, R, S, ConditionalCoalescenceSampler<H, R, S>>
-    for ConditionalGillespieEventSampler<H, D, R, S>
+    > GillespieEventSampler<H, G, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>
+    for ConditionalGillespieEventSampler<H, G, D, R, S>
 {
     #[must_use]
     fn get_event_rate_at_location(
         &self,
         location: &Location,
-        simulation: &PartialSimulation<H, D, R, S, ConditionalCoalescenceSampler<H, R, S>>,
+        simulation: &PartialSimulation<H, G, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>,
         lineage_store_includes_self: bool,
     ) -> f64 {
         let probability_at_location =

@@ -2,8 +2,8 @@ use core::cmp::Ordering;
 
 use alloc::vec::Vec;
 
+use necsim_core::cogs::RngCore;
 use necsim_core::intrinsics::floor;
-use necsim_core::rng::Rng;
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(non_snake_case)]
@@ -98,7 +98,12 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
         old(alias_samplers).iter().map(|s| s.E).any(|e| e == ret),
         "returns one of the weighted events"
     )]
-    pub fn sample_event(alias_samplers: &[AliasMethodSamplerAtom<E>], rng: &mut impl Rng) -> E {
+    pub fn sample_event<G: RngCore>(
+        alias_samplers: &[AliasMethodSamplerAtom<E>],
+        rng: &mut G,
+    ) -> E {
+        use necsim_core::cogs::RngSampler;
+
         let x = rng.sample_uniform();
 
         #[allow(

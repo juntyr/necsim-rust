@@ -1,5 +1,5 @@
 use necsim_core::cogs::{
-    CoherentLineageStore, Habitat, LineageReference, SeparableDispersalSampler,
+    CoherentLineageStore, Habitat, LineageReference, RngCore, SeparableDispersalSampler,
 };
 use necsim_core::landscape::Location;
 use necsim_core::simulation::partial::event_sampler::PartialSimulation;
@@ -16,19 +16,20 @@ pub struct ProbabilityAtLocation {
 impl ProbabilityAtLocation {
     pub fn new<
         H: Habitat,
-        D: SeparableDispersalSampler<H>,
+        G: RngCore,
+        D: SeparableDispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
     >(
         location: &Location,
-        simulation: &PartialSimulation<H, D, R, S, ConditionalCoalescenceSampler<H, R, S>>,
+        simulation: &PartialSimulation<H, G, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>,
         lineage_store_includes_self: bool,
     ) -> Self {
         let self_dispersal_probability = simulation
             .dispersal_sampler
             .get_self_dispersal_probability_at_location(location);
         let coalescence_probability_at_location =
-            ConditionalCoalescenceSampler::get_coalescence_probability_at_location(
+            ConditionalCoalescenceSampler::<H, G, R, S>::get_coalescence_probability_at_location(
                 location,
                 simulation.habitat,
                 simulation.lineage_store,

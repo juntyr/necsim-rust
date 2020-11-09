@@ -312,7 +312,7 @@ mod tests_f64 {
             LARGEST_POS,
             LARGEST_NEG,
         ];
-        for x in values {
+        for x in &values {
             assert_eq!(x.next_after(*x), *x);
         }
     }
@@ -455,8 +455,8 @@ mod tests_f32 {
     fn step_to_largest_is_possible() {
         let smaller = LARGEST_POS.next_after(NEG_INF);
         assert_eq!(smaller.next_after(POS_INF), LARGEST_POS);
-        let smaller = LARGEST_NEG.next_after(POS_INF);
-        assert_eq!(smaller.next_after(NEG_INF), LARGEST_NEG);
+        let smaller2 = LARGEST_NEG.next_after(POS_INF);
+        assert_eq!(smaller2.next_after(NEG_INF), LARGEST_NEG);
     }
 
     #[test]
@@ -496,7 +496,7 @@ mod tests_f32 {
             LARGEST_POS,
             LARGEST_NEG,
         ];
-        for x in values {
+        for x in &values {
             assert_eq!(x.next_after(*x), *x);
         }
     }

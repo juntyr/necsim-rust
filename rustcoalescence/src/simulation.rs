@@ -2,8 +2,8 @@ use anyhow::{Context, Result};
 use array2d::Array2D;
 
 use necsim_classical::ClassicalSimulation;
+use necsim_core::cogs::PrimeableRng;
 use necsim_core::reporter::Reporter;
-use necsim_core::rng::Rng;
 use necsim_cuda::CudaSimulation;
 use necsim_gillespie::GillespieSimulation;
 use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
@@ -12,11 +12,11 @@ use necsim_skipping_gillespie::SkippingGillespieSimulation;
 
 use super::args::{Algorithm, CommandLineArguments};
 
-pub fn simulate(
+pub fn simulate<G: PrimeableRng<Prime = [u8; 16]>>(
     args: &CommandLineArguments,
     habitat: &Array2D<u32>,
     dispersal: &Array2D<f64>,
-    rng: &mut impl Rng,
+    rng: G,
     reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
 ) -> Result<(f64, usize)> {
     println!(

@@ -12,8 +12,8 @@ mod simulation;
 #[macro_use]
 extern crate necsim_core;
 
-use necsim_core::rng::RngCore;
-use necsim_impls_no_std::rng::aes::AesRng as Rng;
+use necsim_core::cogs::RngCore;
+use necsim_impls_no_std::cogs::rng::aes::AesRng as Rng;
 use necsim_impls_std::reporter::biodiversity::BiodiversityReporter;
 use necsim_impls_std::reporter::events::EventReporter;
 use necsim_impls_std::reporter::execution_time::ExecutionTimeReporter;
@@ -66,8 +66,6 @@ fn main() -> Result<()> {
     let estimated_total_lineages =
         ((total_habitat as f64) * args.sample_percentage()).ceil() as u64;
 
-    let mut rng = Rng::seed_from_u64(*args.seed());
-
     let mut biodiversity_reporter = BiodiversityReporter::default();
     let mut event_reporter = EventReporter::default();
     let mut execution_time_reporter = ExecutionTimeReporter::default();
@@ -81,8 +79,13 @@ fn main() -> Result<()> {
     ];
 
     // Run the simulation
-    let (time, steps) =
-        simulation::simulate(&args, &habitat, &dispersal, &mut rng, &mut reporter_group)?;
+    let (time, steps) = simulation::simulate(
+        &args,
+        &habitat,
+        &dispersal,
+        Rng::seed_from_u64(*args.seed()),
+        &mut reporter_group,
+    )?;
 
     // Output the simulation result and report summaries
     let execution_time = execution_time_reporter.execution_time();

@@ -1,10 +1,11 @@
+use std::marker::PhantomData;
+
 use priority_queue::PriorityQueue;
 
 use necsim_core::cogs::{
-    CoalescenceSampler, CoherentLineageStore, DispersalSampler, Habitat, LineageReference,
+    CoalescenceSampler, CoherentLineageStore, DispersalSampler, Habitat, LineageReference, RngCore,
 };
 use necsim_core::landscape::Location;
-use necsim_core::rng::Rng;
 use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
 use necsim_impls_no_std::cogs::event_sampler::gillespie::GillespieEventSampler;
@@ -17,25 +18,27 @@ use event_time::EventTime;
 #[allow(clippy::module_name_repetitions)]
 pub struct GillespieActiveLineageSampler<
     H: Habitat,
-    D: DispersalSampler<H>,
+    G: RngCore,
+    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: CoherentLineageStore<H, R>,
-    C: CoalescenceSampler<H, R, S>,
-    E: GillespieEventSampler<H, D, R, S, C>,
+    C: CoalescenceSampler<H, G, R, S>,
+    E: GillespieEventSampler<H, G, D, R, S, C>,
 > {
     active_locations: PriorityQueue<Location, EventTime>,
     number_active_lineages: usize,
-    _marker: std::marker::PhantomData<(H, D, R, S, C, E)>,
+    marker: std::marker::PhantomData<(H, G, D, R, S, C, E)>,
 }
 
 impl<
         H: Habitat,
-        D: DispersalSampler<H>,
+        G: RngCore,
+        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        C: CoalescenceSampler<H, R, S>,
-        E: GillespieEventSampler<H, D, R, S, C>,
-    > GillespieActiveLineageSampler<H, D, R, S, C, E>
+        C: CoalescenceSampler<H, G, R, S>,
+        E: GillespieEventSampler<H, G, D, R, S, C>,
+    > GillespieActiveLineageSampler<H, G, D, R, S, C, E>
 {
     #[must_use]
     pub fn new(
@@ -45,8 +48,10 @@ impl<
         lineage_store: &S,
         coalescence_sampler: &C,
         event_sampler: &E,
-        rng: &mut impl Rng,
+        rng: &mut G,
     ) -> Self {
+        use necsim_core::cogs::RngSampler;
+
         let landscape_extent = habitat.get_extent();
 
         let mut active_locations: Vec<(Location, EventTime)> = Vec::with_capacity(
@@ -56,6 +61,7 @@ impl<
         let lineage_reference = std::marker::PhantomData::<R>;
         let partial_simulation = PartialSimulation {
             speciation_probability_per_generation: &speciation_probability_per_generation,
+            rng: PhantomData::<G>,
             habitat,
             dispersal_sampler,
             lineage_reference: &lineage_reference,
@@ -95,23 +101,26 @@ impl<
         Self {
             active_locations: PriorityQueue::from(active_locations),
             number_active_lineages,
-            _marker: std::marker::PhantomData::<(H, D, R, S, C, E)>,
+            marker: std::marker::PhantomData::<(H, G, D, R, S, C, E)>,
         }
     }
 }
 
 impl<
         H: Habitat,
-        D: DispersalSampler<H>,
+        G: RngCore,
+        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        C: CoalescenceSampler<H, R, S>,
-        E: GillespieEventSampler<H, D, R, S, C>,
-    > core::fmt::Debug for GillespieActiveLineageSampler<H, D, R, S, C, E>
+        C: CoalescenceSampler<H, G, R, S>,
+        E: GillespieEventSampler<H, G, D, R, S, C>,
+    > core::fmt::Debug for GillespieActiveLineageSampler<H, G, D, R, S, C, E>
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "GillespieActiveLineageSampler {{ ")?;
-        write!(f, "number_active_lineages: {}", self.number_active_lineages)?;
-        write!(f, " }}")
+        f.debug_struct("GillespieActiveLineageSampler")
+            .field("active_locations", &"PriorityQueue")
+            .field("number_active_lineages", &self.number_active_lineages)
+            .field("marker", &self.marker)
+            .finish()
     }
 }
