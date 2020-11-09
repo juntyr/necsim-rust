@@ -51,6 +51,7 @@ impl<
 {
     #[must_use]
     #[allow(clippy::double_parens)]
+    #[allow(clippy::type_complexity)]
     #[debug_ensures(match &ret.r#type() {
         EventType::Speciation => true,
         EventType::Dispersal {
@@ -130,6 +131,7 @@ impl<
     for ConditionalGillespieEventSampler<H, G, D, R, S>
 {
     #[must_use]
+    #[allow(clippy::type_complexity)]
     fn get_event_rate_at_location(
         &self,
         location: &Location,

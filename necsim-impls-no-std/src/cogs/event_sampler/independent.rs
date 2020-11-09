@@ -50,6 +50,7 @@ impl<
     for IndependentEventSampler<H, G, D, R, S>
 {
     #[must_use]
+    #[allow(clippy::type_complexity)]
     fn sample_event_for_lineage_at_location_time(
         &self,
         lineage_reference: R,
