@@ -1,19 +1,21 @@
 use float_next_after::NextAfter;
 
-use super::{CoalescenceSampler, DispersalSampler, Habitat, LineageReference, LineageStore};
+use super::{
+    CoalescenceSampler, DispersalSampler, Habitat, LineageReference, LineageStore, RngCore,
+};
 use crate::event::{Event, EventType};
 use crate::landscape::Location;
-use crate::rng::Rng;
 use crate::simulation::partial::event_sampler::PartialSimulation;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait EventSampler<
     H: Habitat,
-    D: DispersalSampler<H>,
+    G: RngCore,
+    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
-    C: CoalescenceSampler<H, R, S>,
+    C: CoalescenceSampler<H, G, R, S>,
 >: core::fmt::Debug
 {
     #[must_use]
@@ -34,8 +36,8 @@ pub trait EventSampler<
         lineage_reference: R,
         location: Location,
         event_time: f64,
-        simulation: &PartialSimulation<H, D, R, S, C>,
-        rng: &mut impl Rng,
+        simulation: &PartialSimulation<H, G, D, R, S, C>,
+        rng: &mut G,
     ) -> Event<H, R>;
 
     #[must_use]
@@ -55,9 +57,11 @@ pub trait EventSampler<
         &self,
         lineage_reference: R,
         time: f64,
-        simulation: &PartialSimulation<H, D, R, S, C>,
-        rng: &mut impl Rng,
+        simulation: &PartialSimulation<H, G, D, R, S, C>,
+        rng: &mut G,
     ) -> Event<H, R> {
+        use crate::cogs::RngSampler;
+
         let delta_time =
             rng.sample_exponential(simulation.speciation_probability_per_generation * 0.5_f64);
 

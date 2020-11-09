@@ -41,22 +41,21 @@ impl core::fmt::Debug for F64 {
 
 use necsim_core::cogs::{
     ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler, Habitat,
-    IncoherentLineageStore, LineageReference,
+    IncoherentLineageStore, LineageReference, PrimeableRng,
 };
 use necsim_core::reporter::NullReporter;
-use necsim_core::rng::Rng;
 use necsim_core::simulation::Simulation;
-use necsim_impls_no_std::rng::cuda::CudaRng;
 use rust_cuda::common::RustToCuda;
 use rust_cuda::device::BorrowFromRust;
 use rustacuda_core::DeviceCopy;
+
+use necsim_impls_no_std::cogs::rng::cuda::CudaRng;
 
 #[no_mangle]
 /// # Safety
 /// This CUDA kernel is unsafe as it is called with raw pointers
 pub unsafe extern "ptx-kernel" fn simulate(
     simulation_c_ptr: *mut core::ffi::c_void,
-    cuda_rng_c_ptr: *mut core::ffi::c_void,
     max_steps: usize,
 ) {
     use necsim_impls_no_std::cogs::active_lineage_sampler::independent::IndependentActiveLineageSampler as ActiveLineageSampler;
@@ -66,52 +65,49 @@ pub unsafe extern "ptx-kernel" fn simulate(
     use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat as Habitat;
     use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference as LineageReference;
     use necsim_impls_no_std::cogs::lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore as LineageStore;
-    use necsim_impls_no_std::rng::aes::AesRng as Rng;
+    use necsim_impls_no_std::cogs::rng::aes::AesRng as Rng;
 
     simulate_generic(
         simulation_c_ptr
             as *mut <Simulation<
                 Habitat,
-                DispersalSampler,
+                CudaRng<Rng>,
+                DispersalSampler<_, _>,
                 LineageReference,
                 LineageStore<_>,
-                CoalescenceSampler<_, _, _>,
-                EventSampler<_, _, _, _>,
-                ActiveLineageSampler<_, _, _, _>,
+                CoalescenceSampler<_, _, _, _>,
+                EventSampler<_, _, _, _, _>,
+                ActiveLineageSampler<_, _, _, _, _>,
             > as RustToCuda>::CudaRepresentation,
-        cuda_rng_c_ptr as *mut <CudaRng<Rng> as RustToCuda>::CudaRepresentation,
         max_steps,
     )
 }
 
 unsafe fn simulate_generic<
     H: Habitat + RustToCuda,
-    D: DispersalSampler<H> + RustToCuda,
+    G: PrimeableRng<Prime = [u8; 16]> + RustToCuda,
+    D: DispersalSampler<H, G> + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
     S: IncoherentLineageStore<H, R> + RustToCuda,
-    C: CoalescenceSampler<H, R, S> + RustToCuda,
-    E: EventSampler<H, D, R, S, C> + RustToCuda,
-    A: ActiveLineageSampler<H, D, R, S, C, E> + RustToCuda,
-    G: Rng,
+    C: CoalescenceSampler<H, G, R, S> + RustToCuda,
+    E: EventSampler<H, G, D, R, S, C> + RustToCuda,
+    A: ActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
 >(
-    simulation_ptr: *mut <Simulation<H, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
-    cuda_rng_ptr: *mut <CudaRng<G> as RustToCuda>::CudaRepresentation,
+    simulation_ptr: *mut <Simulation<H, G, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
     max_steps: usize,
 ) {
     Simulation::with_borrow_from_rust_mut(simulation_ptr, |simulation| {
-        CudaRng::with_borrow_from_rust_mut(cuda_rng_ptr, |cuda_rng| {
-            let mut reporter = NullReporter;
+        let mut reporter = NullReporter;
 
-            let (time, steps) = simulation.simulate_incremental(max_steps, cuda_rng, &mut reporter);
+        let (time, steps) = simulation.simulate_incremental(max_steps, &mut reporter);
 
-            if utils::thread_idx().as_id(&utils::block_dim()) == 0 {
-                println!(
-                    "index = {}, time = {:?}, steps = {}",
-                    utils::index(),
-                    F64(time),
-                    steps
-                );
-            }
-        })
+        if utils::thread_idx().as_id(&utils::block_dim()) == 0 {
+            println!(
+                "index = {}, time = {:?}, steps = {}",
+                utils::index(),
+                F64(time),
+                steps
+            );
+        }
     })
 }

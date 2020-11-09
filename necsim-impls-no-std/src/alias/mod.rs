@@ -1,4 +1,4 @@
-use necsim_core::rng::Rng;
+use necsim_core::cogs::RngCore;
 
 use alloc::vec::Vec;
 
@@ -84,7 +84,9 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
     }
 
     #[debug_ensures(self.Es.contains(&ret), "returns one of the weighted events")]
-    pub fn sample_event(&self, rng: &mut impl Rng) -> E {
+    pub fn sample_event<G: RngCore>(&self, rng: &mut G) -> E {
+        use necsim_core::cogs::RngSampler;
+
         let x = rng.sample_uniform();
 
         #[allow(

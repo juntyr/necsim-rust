@@ -2,10 +2,9 @@ use float_next_after::NextAfter;
 
 use necsim_core::cogs::{
     ActiveLineageSampler, CoalescenceSampler, CoherentLineageStore, DispersalSampler, Habitat,
-    LineageReference,
+    LineageReference, RngCore,
 };
 use necsim_core::landscape::Location;
-use necsim_core::rng::Rng;
 use necsim_core::simulation::partial::active_lineager_sampler::PartialSimulation;
 
 use necsim_impls_no_std::cogs::event_sampler::gillespie::GillespieEventSampler;
@@ -15,12 +14,14 @@ use super::{EventTime, GillespieActiveLineageSampler};
 #[contract_trait]
 impl<
         H: Habitat,
-        D: DispersalSampler<H>,
+        G: RngCore,
+        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        C: CoalescenceSampler<H, R, S>,
-        E: GillespieEventSampler<H, D, R, S, C>,
-    > ActiveLineageSampler<H, D, R, S, C, E> for GillespieActiveLineageSampler<H, D, R, S, C, E>
+        C: CoalescenceSampler<H, G, R, S>,
+        E: GillespieEventSampler<H, G, D, R, S, C>,
+    > ActiveLineageSampler<H, G, D, R, S, C, E>
+    for GillespieActiveLineageSampler<H, G, D, R, S, C, E>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -31,9 +32,11 @@ impl<
     fn pop_active_lineage_location_event_time(
         &mut self,
         time: f64,
-        simulation: &mut PartialSimulation<H, D, R, S, C, E>,
-        rng: &mut impl Rng,
+        simulation: &mut PartialSimulation<H, G, D, R, S, C, E>,
+        rng: &mut G,
     ) -> Option<(R, Location, f64)> {
+        use necsim_core::cogs::RngSampler;
+
         let (chosen_active_location, chosen_event_time) = match self.active_locations.pop() {
             Some((chosen_active_location, chosen_event_time)) => {
                 (chosen_active_location, chosen_event_time.into())
@@ -93,9 +96,11 @@ impl<
         lineage_reference: R,
         location: Location,
         time: f64,
-        simulation: &mut PartialSimulation<H, D, R, S, C, E>,
-        rng: &mut impl Rng,
+        simulation: &mut PartialSimulation<H, G, D, R, S, C, E>,
+        rng: &mut G,
     ) {
+        use necsim_core::cogs::RngSampler;
+
         simulation
             .lineage_store
             .append_lineage_to_location(lineage_reference, location.clone());

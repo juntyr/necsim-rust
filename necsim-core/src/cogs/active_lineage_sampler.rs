@@ -1,20 +1,21 @@
 use super::{
     CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference, LineageStore,
+    RngCore,
 };
 
 use crate::landscape::Location;
-use crate::rng::Rng;
 use crate::simulation::partial::active_lineager_sampler::PartialSimulation;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait ActiveLineageSampler<
     H: Habitat,
-    D: DispersalSampler<H>,
+    G: RngCore,
+    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
-    C: CoalescenceSampler<H, R, S>,
-    E: EventSampler<H, D, R, S, C>,
+    C: CoalescenceSampler<H, G, R, S>,
+    E: EventSampler<H, G, D, R, S, C>,
 >: core::fmt::Debug
 {
     #[must_use]
@@ -43,8 +44,8 @@ pub trait ActiveLineageSampler<
     fn pop_active_lineage_location_event_time(
         &mut self,
         time: f64,
-        simulation: &mut PartialSimulation<H, D, R, S, C, E>,
-        rng: &mut impl Rng,
+        simulation: &mut PartialSimulation<H, G, D, R, S, C, E>,
+        rng: &mut G,
     ) -> Option<(R, Location, f64)>;
 
     #[debug_requires(time >= 0.0_f64, "time is non-negative")]
@@ -57,7 +58,7 @@ pub trait ActiveLineageSampler<
         lineage_reference: R,
         location: Location,
         time: f64,
-        simulation: &mut PartialSimulation<H, D, R, S, C, E>,
-        rng: &mut impl Rng,
+        simulation: &mut PartialSimulation<H, G, D, R, S, C, E>,
+        rng: &mut G,
     );
 }

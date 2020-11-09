@@ -25,5 +25,4 @@ pub mod intrinsics;
 pub mod landscape;
 pub mod lineage;
 pub mod reporter;
-pub mod rng;
 pub mod simulation;

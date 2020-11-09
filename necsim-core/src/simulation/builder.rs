@@ -5,12 +5,13 @@ use core::marker::PhantomData;
 
 use crate::cogs::{
     ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler, Habitat,
-    LineageReference, LineageStore,
+    LineageReference, LineageStore, RngCore,
 };
 
 #[derive(TypedBuilder, Debug)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda, LendToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(R: rustacuda_core::DeviceCopy))]
 #[cfg_attr(feature = "cuda", r2cBound(S: rust_cuda::common::RustToCuda))]
@@ -19,18 +20,21 @@ use crate::cogs::{
 #[cfg_attr(feature = "cuda", r2cBound(A: rust_cuda::common::RustToCuda))]
 pub struct Simulation<
     H: Habitat,
-    D: DispersalSampler<H>,
+    G: RngCore,
+    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
-    C: CoalescenceSampler<H, R, S>,
-    E: EventSampler<H, D, R, S, C>,
-    A: ActiveLineageSampler<H, D, R, S, C, E>,
+    C: CoalescenceSampler<H, G, R, S>,
+    E: EventSampler<H, G, D, R, S, C>,
+    A: ActiveLineageSampler<H, G, D, R, S, C, E>,
 > {
     #[builder(default = 0.0_f64, setter(skip))]
     pub(super) time: f64,
     pub(super) speciation_probability_per_generation: f64,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) habitat: H,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    pub(super) rng: G,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) dispersal_sampler: D,
     pub(super) lineage_reference: PhantomData<R>,
@@ -46,20 +50,22 @@ pub struct Simulation<
 
 impl<
         H: Habitat,
-        D: DispersalSampler<H>,
+        G: RngCore,
+        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
-        C: CoalescenceSampler<H, R, S>,
-        E: EventSampler<H, D, R, S, C>,
-        A: ActiveLineageSampler<H, D, R, S, C, E>,
-    > Simulation<H, D, R, S, C, E, A>
+        C: CoalescenceSampler<H, G, R, S>,
+        E: EventSampler<H, G, D, R, S, C>,
+        A: ActiveLineageSampler<H, G, D, R, S, C, E>,
+    > Simulation<H, G, D, R, S, C, E, A>
 {
-    pub fn with_mut_split_active_lineage_sampler<
+    pub fn with_mut_split_active_lineage_sampler_and_rng<
         's,
         Q,
         F: FnOnce(
             &'s mut A,
-            &mut super::partial::active_lineager_sampler::PartialSimulation<'s, H, D, R, S, C, E>,
+            &mut super::partial::active_lineager_sampler::PartialSimulation<'s, H, G, D, R, S, C, E>,
+            &'s mut G,
         ) -> Q,
     >(
         &'s mut self,
@@ -68,6 +74,7 @@ impl<
         let mut simulation = super::partial::active_lineager_sampler::PartialSimulation {
             speciation_probability_per_generation: &self.speciation_probability_per_generation,
             habitat: &self.habitat,
+            rng: PhantomData::<G>,
             dispersal_sampler: &self.dispersal_sampler,
             lineage_reference: &self.lineage_reference,
             lineage_store: &mut self.lineage_store,
@@ -75,7 +82,15 @@ impl<
             event_sampler: &self.event_sampler,
         };
 
-        func(&mut self.active_lineage_sampler, &mut simulation)
+        func(
+            &mut self.active_lineage_sampler,
+            &mut simulation,
+            &mut self.rng,
+        )
+    }
+
+    pub fn rng_mut(&mut self) -> &mut G {
+        &mut self.rng
     }
 
     pub fn active_lineage_sampler(&self) -> &A {

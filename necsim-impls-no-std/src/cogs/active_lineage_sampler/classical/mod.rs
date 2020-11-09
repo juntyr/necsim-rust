@@ -2,7 +2,9 @@ use core::marker::PhantomData;
 
 use alloc::vec::Vec;
 
-use necsim_core::cogs::{CoherentLineageStore, DispersalSampler, Habitat, LineageReference};
+use necsim_core::cogs::{
+    CoherentLineageStore, DispersalSampler, Habitat, LineageReference, RngCore,
+};
 use necsim_core::landscape::Location;
 
 mod sampler;
@@ -11,16 +13,22 @@ mod sampler;
 #[derive(Debug)]
 pub struct ClassicalActiveLineageSampler<
     H: Habitat,
-    D: DispersalSampler<H>,
+    G: RngCore,
+    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: CoherentLineageStore<H, R>,
 > {
     active_lineage_references: Vec<R>,
-    _marker: PhantomData<(H, D, S)>,
+    _marker: PhantomData<(H, G, D, S)>,
 }
 
-impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: CoherentLineageStore<H, R>>
-    ClassicalActiveLineageSampler<H, D, R, S>
+impl<
+        H: Habitat,
+        G: RngCore,
+        D: DispersalSampler<H, G>,
+        R: LineageReference<H>,
+        S: CoherentLineageStore<H, R>,
+    > ClassicalActiveLineageSampler<H, G, D, R, S>
 {
     #[must_use]
     pub fn new(habitat: &H, lineage_store: &S) -> Self {
@@ -40,7 +48,7 @@ impl<H: Habitat, D: DispersalSampler<H>, R: LineageReference<H>, S: CoherentLine
 
         Self {
             active_lineage_references,
-            _marker: PhantomData::<(H, D, S)>,
+            _marker: PhantomData::<(H, G, D, S)>,
         }
     }
 }

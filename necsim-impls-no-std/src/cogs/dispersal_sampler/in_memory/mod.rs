@@ -1,6 +1,6 @@
 use array2d::{Array2D, Error};
 
-use necsim_core::cogs::{DispersalSampler, Habitat};
+use necsim_core::cogs::{DispersalSampler, Habitat, RngCore};
 
 pub mod contract;
 
@@ -14,7 +14,7 @@ use contract::explicit_in_memory_dispersal_check_contract;
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait InMemoryDispersalSampler<H: Habitat>: DispersalSampler<H> + Sized {
+pub trait InMemoryDispersalSampler<H: Habitat, G: RngCore>: DispersalSampler<H, G> + Sized {
     #[debug_requires((
         dispersal.num_columns() == (
             (habitat.get_extent().width() * habitat.get_extent().height()) as usize

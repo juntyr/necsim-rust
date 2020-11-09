@@ -6,9 +6,8 @@ extern crate contracts;
 use anyhow::Result;
 use array2d::Array2D;
 
-use necsim_core::cogs::LineageStore;
+use necsim_core::cogs::{LineageStore, RngCore};
 use necsim_core::reporter::Reporter;
-use necsim_core::rng::Rng;
 use necsim_core::simulation::Simulation;
 
 use necsim_impls_no_std::cogs::active_lineage_sampler::classical::ClassicalActiveLineageSampler;
@@ -41,12 +40,12 @@ impl ClassicalSimulation {
         sample_percentage <= 1.0_f64,
         "0.0 <= sample_percentage <= 1.0"
     )]
-    pub fn simulate(
+    pub fn simulate<G: RngCore>(
         habitat: &Array2D<u32>,
         dispersal: &Array2D<f64>,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
-        rng: &mut impl Rng,
+        rng: G,
         reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
     ) -> Result<(f64, usize)> {
         let habitat = InMemoryHabitat::new(habitat.clone());
@@ -59,6 +58,7 @@ impl ClassicalSimulation {
         let simulation = Simulation::builder()
             .speciation_probability_per_generation(speciation_probability_per_generation)
             .habitat(habitat)
+            .rng(rng)
             .dispersal_sampler(dispersal_sampler)
             .lineage_reference(std::marker::PhantomData::<InMemoryLineageReference>)
             .lineage_store(lineage_store)
@@ -67,7 +67,7 @@ impl ClassicalSimulation {
             .active_lineage_sampler(active_lineage_sampler)
             .build();
 
-        let (time, steps) = simulation.simulate(rng, reporter);
+        let (time, steps) = simulation.simulate(reporter);
 
         Ok((time, steps))
     }

@@ -1,10 +1,11 @@
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use core::marker::PhantomData;
 use core::ops::Range;
 
 use array2d::{Array2D, Error};
 
-use necsim_core::cogs::Habitat;
+use necsim_core::cogs::{Habitat, RngCore};
 use necsim_core::landscape::{LandscapeExtent, Location};
 
 mod dispersal;
@@ -35,16 +36,21 @@ unsafe impl rustacuda_core::DeviceCopy for AliasSamplerRange {}
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
-pub struct InMemoryPackedAliasDispersalSampler {
+#[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]
+pub struct InMemoryPackedAliasDispersalSampler<H: Habitat, G: RngCore> {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     alias_dispersal_ranges: Array2D<AliasSamplerRange>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     alias_dispersal_buffer: Box<[AliasMethodSamplerAtom<usize>]>,
     habitat_extent: LandscapeExtent,
+    marker: PhantomData<(H, G)>,
 }
 
 #[contract_trait]
-impl<H: Habitat> InMemoryDispersalSampler<H> for InMemoryPackedAliasDispersalSampler {
+impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G>
+    for InMemoryPackedAliasDispersalSampler<H, G>
+{
     /// Creates a new `InMemoryPackedAliasDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
     ///
@@ -98,11 +104,12 @@ impl<H: Habitat> InMemoryDispersalSampler<H> for InMemoryPackedAliasDispersalSam
             alias_dispersal_ranges,
             alias_dispersal_buffer: alias_dispersal_buffer.into_boxed_slice(),
             habitat_extent,
+            marker: PhantomData::<(H, G)>,
         })
     }
 }
 
-impl core::fmt::Debug for InMemoryPackedAliasDispersalSampler {
+impl<H: Habitat, G: RngCore> core::fmt::Debug for InMemoryPackedAliasDispersalSampler<H, G> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("InMemoryPackedAliasDispersalSampler")
             .field("alias_dispersal_ranges", &self.alias_dispersal_ranges)

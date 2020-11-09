@@ -2,10 +2,10 @@ use float_next_after::NextAfter;
 
 use necsim_core::cogs::{
     ActiveLineageSampler, DispersalSampler, Habitat, IncoherentLineageStore, LineageReference,
+    PrimeableRng,
 };
 use necsim_core::intrinsics::{exp, floor};
 use necsim_core::landscape::Location;
-use necsim_core::rng::Rng;
 use necsim_core::simulation::partial::active_lineager_sampler::PartialSimulation;
 
 use crate::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler;
@@ -16,18 +16,20 @@ use super::IndependentActiveLineageSampler;
 #[contract_trait]
 impl<
         H: Habitat,
-        D: DispersalSampler<H>,
+        G: PrimeableRng<Prime = [u8; 16]>,
+        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
     >
     ActiveLineageSampler<
         H,
+        G,
         D,
         R,
         S,
-        IndependentCoalescenceSampler<H, R, S>,
-        IndependentEventSampler<H, D, R, S>,
-    > for IndependentActiveLineageSampler<H, D, R, S>
+        IndependentCoalescenceSampler<H, G, R, S>,
+        IndependentEventSampler<H, G, D, R, S>,
+    > for IndependentActiveLineageSampler<H, G, D, R, S>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -41,14 +43,17 @@ impl<
         time: f64,
         simulation: &mut PartialSimulation<
             H,
+            G,
             D,
             R,
             S,
-            IndependentCoalescenceSampler<H, R, S>,
-            IndependentEventSampler<H, D, R, S>,
+            IndependentCoalescenceSampler<H, G, R, S>,
+            IndependentEventSampler<H, G, D, R, S>,
         >,
-        rng: &mut impl Rng,
+        rng: &mut G,
     ) -> Option<(R, Location, f64)> {
+        use necsim_core::cogs::RngSampler;
+
         let chosen_lineage_reference = match self.active_lineage_reference.take() {
             Some(chosen_active_lineage) => chosen_active_lineage,
             None => return None,
@@ -78,19 +83,19 @@ impl<
         let mut time_step = floor(time / delta_t) as u64 + 1;
 
         loop {
-            /*let location_x_bytes = lineage_location.x().to_le_bytes();
-            let location_y_bytes = lineage_location.y().to_le_bytes();
+            let location_bytes_x = lineage_location.x().to_le_bytes();
+            let location_bytes_y = lineage_location.y().to_le_bytes();
             let time_step_bytes = time_step.to_le_bytes();
 
             rng.prime_with([
-                location_x_bytes[0],
-                location_x_bytes[1],
-                location_x_bytes[2],
-                location_x_bytes[3],
-                location_y_bytes[0],
-                location_y_bytes[1],
-                location_y_bytes[2],
-                location_y_bytes[3],
+                location_bytes_x[0],
+                location_bytes_x[1],
+                location_bytes_x[2],
+                location_bytes_x[3],
+                location_bytes_y[0],
+                location_bytes_y[1],
+                location_bytes_y[2],
+                location_bytes_y[3],
                 time_step_bytes[0],
                 time_step_bytes[1],
                 time_step_bytes[2],
@@ -99,7 +104,7 @@ impl<
                 time_step_bytes[5],
                 time_step_bytes[6],
                 time_step_bytes[7],
-            ]);*/
+            ]);
 
             if rng.sample_event(p) {
                 break;
@@ -140,16 +145,17 @@ impl<
         _time: f64,
         simulation: &mut PartialSimulation<
             H,
+            G,
             D,
             R,
             S,
-            IndependentCoalescenceSampler<H, R, S>,
-            IndependentEventSampler<H, D, R, S>,
+            IndependentCoalescenceSampler<H, G, R, S>,
+            IndependentEventSampler<H, G, D, R, S>,
         >,
-        rng: &mut impl Rng,
+        rng: &mut G,
     ) {
         let index_at_location =
-            IndependentCoalescenceSampler::<H, R, S>::sample_coalescence_index_at_location(
+            IndependentCoalescenceSampler::<H, G, R, S>::sample_coalescence_index_at_location(
                 &location,
                 simulation.habitat,
                 rng,

@@ -1,6 +1,9 @@
 mod habitat;
 pub use habitat::Habitat;
 
+mod rng;
+pub use rng::{PrimeableRng, RngCore, RngSampler};
+
 mod dispersal_sampler;
 pub use dispersal_sampler::{DispersalSampler, SeparableDispersalSampler};
 

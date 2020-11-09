@@ -3,14 +3,14 @@ use aes_soft::cipher::{BlockCipher, NewBlockCipher};
 use aes_soft::Aes128;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AesRng {
     cipher: Aes128,
     state: [u8; 16],
     cached: bool,
 }
 
-impl necsim_core::rng::RngCore for AesRng {
+impl necsim_core::cogs::RngCore for AesRng {
     type Seed = [u8; 16];
 
     #[must_use]
@@ -63,7 +63,7 @@ impl necsim_core::rng::RngCore for AesRng {
     }
 }
 
-impl necsim_core::rng::IncoherentRngCore for AesRng {
+impl necsim_core::cogs::PrimeableRng for AesRng {
     type Prime = [u8; 16];
 
     fn prime_with(&mut self, prime: Self::Prime) {

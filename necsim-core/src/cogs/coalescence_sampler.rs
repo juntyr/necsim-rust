@@ -1,11 +1,11 @@
+use crate::cogs::RngCore;
 use crate::landscape::Location;
-use crate::rng::Rng;
 
 use super::{Habitat, LineageReference, LineageStore};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait CoalescenceSampler<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>>:
+pub trait CoalescenceSampler<H: Habitat, G: RngCore, R: LineageReference<H>, S: LineageStore<H, R>>:
     core::fmt::Debug
 {
     #[must_use]
@@ -15,6 +15,6 @@ pub trait CoalescenceSampler<H: Habitat, R: LineageReference<H>, S: LineageStore
         location: &Location,
         habitat: &H,
         lineage_store: &S,
-        rng: &mut impl Rng,
+        rng: &mut G,
     ) -> Option<R>;
 }

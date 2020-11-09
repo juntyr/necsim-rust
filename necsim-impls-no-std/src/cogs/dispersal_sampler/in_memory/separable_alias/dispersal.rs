@@ -1,14 +1,17 @@
-use necsim_core::cogs::{DispersalSampler, Habitat, SeparableDispersalSampler};
+use necsim_core::cogs::{DispersalSampler, Habitat, RngCore, SeparableDispersalSampler};
 use necsim_core::landscape::Location;
-use necsim_core::rng::Rng;
 
 use super::InMemorySeparableAliasDispersalSampler;
 
-impl<H: Habitat> DispersalSampler<H> for InMemorySeparableAliasDispersalSampler<H> {
+impl<H: Habitat, G: RngCore> DispersalSampler<H, G>
+    for InMemorySeparableAliasDispersalSampler<H, G>
+{
     #[must_use]
     #[debug_requires(self.habitat_extent.contains(location), "location is inside habitat extent")]
     #[debug_ensures(self.habitat_extent.contains(&ret), "target is inside habitat extent")]
-    fn sample_dispersal_from_location(&self, location: &Location, rng: &mut impl Rng) -> Location {
+    fn sample_dispersal_from_location(&self, location: &Location, rng: &mut G) -> Location {
+        use necsim_core::cogs::RngSampler;
+
         let self_dispersal_at_location = self.get_self_dispersal_probability_at_location(location);
 
         if self_dispersal_at_location >= 1.0_f64 {
@@ -24,14 +27,16 @@ impl<H: Habitat> DispersalSampler<H> for InMemorySeparableAliasDispersalSampler<
 }
 
 #[contract_trait]
-impl<H: Habitat> SeparableDispersalSampler<H> for InMemorySeparableAliasDispersalSampler<H> {
+impl<H: Habitat, G: RngCore> SeparableDispersalSampler<H, G>
+    for InMemorySeparableAliasDispersalSampler<H, G>
+{
     #[must_use]
     #[debug_requires(self.habitat_extent.contains(location), "location is inside habitat extent")]
     #[debug_ensures(self.habitat_extent.contains(&ret), "target is inside habitat extent")]
     fn sample_non_self_dispersal_from_location(
         &self,
         location: &Location,
-        rng: &mut impl Rng,
+        rng: &mut G,
     ) -> Location {
         let alias_dispersal_at_location = self.alias_dispersal[(
             (location.y() - self.habitat_extent.y()) as usize,

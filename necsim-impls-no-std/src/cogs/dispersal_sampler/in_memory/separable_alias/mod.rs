@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 
 use array2d::{Array2D, Error};
 
-use necsim_core::cogs::Habitat;
+use necsim_core::cogs::{Habitat, RngCore};
 use necsim_core::landscape::{LandscapeExtent, Location};
 
 use crate::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
@@ -15,15 +15,17 @@ use crate::alias::AliasMethodSampler;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct InMemorySeparableAliasDispersalSampler<H: Habitat> {
+pub struct InMemorySeparableAliasDispersalSampler<H: Habitat, G: RngCore> {
     alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
     self_dispersal: Array2D<f64>,
     habitat_extent: LandscapeExtent,
-    _marker: PhantomData<H>,
+    _marker: PhantomData<(H, G)>,
 }
 
 #[contract_trait]
-impl<H: Habitat> InMemoryDispersalSampler<H> for InMemorySeparableAliasDispersalSampler<H> {
+impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G>
+    for InMemorySeparableAliasDispersalSampler<H, G>
+{
     /// Creates a new `InMemorySeparableAliasDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
     ///
@@ -90,7 +92,7 @@ impl<H: Habitat> InMemoryDispersalSampler<H> for InMemorySeparableAliasDispersal
             alias_dispersal,
             self_dispersal,
             habitat_extent,
-            _marker: PhantomData::<H>,
+            _marker: PhantomData::<(H, G)>,
         })
     }
 }

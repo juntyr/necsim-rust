@@ -1,6 +1,6 @@
 use array2d::Array2D;
 
-use necsim_core::cogs::Habitat;
+use necsim_core::cogs::{Habitat, RngCore};
 
 pub mod error;
 
@@ -11,7 +11,9 @@ use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSa
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait InMemoryDispersalSampler<H: Habitat>: InMemoryDispersalSamplerNoError<H> + Sized {
+pub trait InMemoryDispersalSampler<H: Habitat, G: RngCore>:
+    InMemoryDispersalSamplerNoError<H, G> + Sized
+{
     #[debug_ensures(
         matches!(ret, Err(InMemoryDispersalSamplerError::InconsistentDispersalMapSize)) != (
             dispersal.num_columns() == old(
@@ -33,7 +35,9 @@ pub trait InMemoryDispersalSampler<H: Habitat>: InMemoryDispersalSamplerNoError<
 }
 
 #[contract_trait]
-impl<H: Habitat, T: InMemoryDispersalSamplerNoError<H>> InMemoryDispersalSampler<H> for T {
+impl<H: Habitat, G: RngCore, T: InMemoryDispersalSamplerNoError<H, G>>
+    InMemoryDispersalSampler<H, G> for T
+{
     /// Creates a new `T` from the `dispersal` map and extent of the habitat map.
     ///
     /// # Errors
