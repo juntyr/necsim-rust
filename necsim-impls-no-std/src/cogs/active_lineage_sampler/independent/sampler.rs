@@ -69,6 +69,11 @@ impl<
             return None;
         }
 
+        // TODO: Should be returned upon extraction as well
+        let lineage_index_at_location = simulation.lineage_store[chosen_lineage_reference.clone()]
+            .index_at_location()
+            .unwrap();
+
         let lineage_location = simulation
             .lineage_store
             .extract_lineage_from_its_location(chosen_lineage_reference.clone());
@@ -85,17 +90,21 @@ impl<
         loop {
             let location_bytes_x = lineage_location.x().to_le_bytes();
             let location_bytes_y = lineage_location.y().to_le_bytes();
+            let location_bytes_i = lineage_index_at_location.to_le_bytes();
             let time_step_bytes = time_step.to_le_bytes();
 
+            // TODO: This should be more automatic, similar to Hash -> it should also NOT use simple xor
+            // TODO: It would be much better if we could get a location index here, i.e. bijection from
+            //       u64 to Location & index_at_location (this would require a cumulative habitat)
             rng.prime_with([
-                location_bytes_x[0],
-                location_bytes_x[1],
-                location_bytes_x[2],
-                location_bytes_x[3],
-                location_bytes_y[0],
-                location_bytes_y[1],
-                location_bytes_y[2],
-                location_bytes_y[3],
+                location_bytes_x[0] ^ location_bytes_i[7],
+                location_bytes_x[1] ^ location_bytes_i[6],
+                location_bytes_x[2] ^ location_bytes_i[5],
+                location_bytes_x[3] ^ location_bytes_i[4],
+                location_bytes_y[0] ^ location_bytes_i[3],
+                location_bytes_y[1] ^ location_bytes_i[2],
+                location_bytes_y[2] ^ location_bytes_i[1],
+                location_bytes_y[3] ^ location_bytes_i[0],
                 time_step_bytes[0],
                 time_step_bytes[1],
                 time_step_bytes[2],
