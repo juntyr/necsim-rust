@@ -39,7 +39,6 @@ macro_rules! with_cuda {
         $inner
 
         if let Err((_err, val)) = <$r#type>::drop($var) {
-            //eprintln!("{:?}", err);
             std::mem::forget(val);
         }
     };
@@ -49,7 +48,6 @@ macro_rules! with_cuda {
         $inner
 
         if let Err((_err, val)) = <$r#type>::drop($var) {
-            //eprintln!("{:?}", err);
             std::mem::forget(val);
         }
     };
@@ -158,7 +156,7 @@ impl CudaSimulation {
         rng: G,
         reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
     ) -> Result<(f64, usize)> {
-        const SIMULATION_STEP_SLICE: usize = 1_000_usize;
+        const SIMULATION_STEP_SLICE: usize = 100_usize;
 
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemoryPackedAliasDispersalSampler::new(dispersal, &habitat)?;
@@ -167,7 +165,6 @@ impl CudaSimulation {
         let event_sampler = IndependentEventSampler::default();
         let active_lineage_sampler = IndependentActiveLineageSampler::default();
 
-        // TODO: Should we copy the heap contents back over?
         let mut simulation = Simulation::builder()
             .speciation_probability_per_generation(speciation_probability_per_generation)
             .habitat(habitat)
@@ -190,14 +187,7 @@ impl CudaSimulation {
                 + (total_individuals % cuda_block_length > 0) as u32
         });
 
-        let mut event_buffer: EventBufferHost<InMemoryHabitat, InMemoryLineageReference> =
-            EventBufferHost::new(&cuda_block_size, &cuda_grid_size, SIMULATION_STEP_SLICE)?;
-
-        //let (time, steps) = simulation.simulate(rng, reporter);
-
         let module_data = CString::new(include_str!(env!("KERNEL_PTX_PATH"))).unwrap();
-
-        //println!("{}", module_data.to_str().unwrap());
 
         // Initialize the CUDA API
         rustacuda::init(CudaFlags::empty())?;
@@ -220,6 +210,9 @@ impl CudaSimulation {
 
             print_context_resource_limits();
             print_kernel_function_attributes(&simulate_kernel);
+
+            let mut event_buffer: EventBufferHost<InMemoryHabitat, InMemoryLineageReference> =
+                EventBufferHost::new(&cuda_block_size, &cuda_grid_size, SIMULATION_STEP_SLICE)?;
 
             if let Err(err) = simulation.lend_to_cuda_mut(|simulation_mut_ptr| {
                 let block_index_range = 0..(cuda_grid_size.x * cuda_grid_size.y * cuda_grid_size.z);

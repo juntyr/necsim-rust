@@ -40,7 +40,8 @@ impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> EventBufferDe
         let cuda_repr_ref: &mut super::common::EventBufferCudaRepresentation<H, R> =
             &mut *cuda_repr_ptr;
 
-        let buffer_len = cuda_repr_ref.block_size * cuda_repr_ref.grid_size;
+        let buffer_len =
+            cuda_repr_ref.block_size * cuda_repr_ref.grid_size * cuda_repr_ref.max_events;
 
         let raw_slice: &mut [Option<Event<H, R>>] =
             core::slice::from_raw_parts_mut(cuda_repr_ref.device_buffer.as_raw_mut(), buffer_len);
