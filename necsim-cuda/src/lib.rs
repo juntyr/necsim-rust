@@ -13,6 +13,7 @@ use array2d::Array2D;
 
 use rustacuda::context::Context as CudaContext;
 use rustacuda::function::Function;
+use rustacuda::module::Symbol;
 use rustacuda::prelude::*;
 
 use rust_cuda::host::LendToCuda;
@@ -177,15 +178,23 @@ impl CudaSimulation {
             .active_lineage_sampler(active_lineage_sampler)
             .build();
 
+        // TODO: Need a way to tune these based on the available CUDA device or cmd args
         let cuda_block_size = rustacuda::function::BlockSize::xy(16, 16);
-        let cuda_grid_size = rustacuda::function::GridSize::x({
-            #[allow(clippy::cast_possible_truncation)]
-            let total_individuals = simulation.lineage_store().get_number_total_lineages() as u32;
-            let cuda_block_length = cuda_block_size.x * cuda_block_size.y * cuda_block_size.z;
+        let cuda_grid_size = rustacuda::function::GridSize::xy(16, 16);
 
-            (total_individuals / cuda_block_length)
-                + (total_individuals % cuda_block_length > 0) as u32
-        });
+        #[allow(clippy::cast_possible_truncation)]
+        let cuda_grid_amount = {
+            #[allow(clippy::cast_possible_truncation)]
+            let total_individuals = simulation.lineage_store().get_number_total_lineages();
+
+            let cuda_block_size =
+                (cuda_block_size.x * cuda_block_size.y * cuda_block_size.z) as usize;
+            let cuda_grid_size = (cuda_grid_size.x * cuda_grid_size.y * cuda_grid_size.z) as usize;
+
+            let cuda_task_size = cuda_block_size * cuda_grid_size;
+
+            (total_individuals / cuda_task_size) + (total_individuals % cuda_task_size > 0) as usize
+        } as u32;
 
         let module_data = CString::new(include_str!(env!("KERNEL_PTX_PATH"))).unwrap();
 
@@ -199,6 +208,9 @@ impl CudaSimulation {
         with_cuda!(CudaContext::create_and_push(ContextFlags::MAP_HOST | ContextFlags::SCHED_AUTO, device)? => |context: CudaContext| {
         // Load the module containing the kernel function
         with_cuda!(Module::load_from_string(&module_data)? => |module: Module| {
+        // Load and initialise the grid_id symbol from the module
+        let mut grid_id_symbol: Symbol<u32>  = module.get_global(&CString::new("grid_id").unwrap())?;
+        grid_id_symbol.copy_from(&0_u32)?;
         // Load the kernel function from the module
         let simulate_kernel = module.get_function(&CString::new("simulate").unwrap())?;
         // Create a stream to submit work to
@@ -214,30 +226,54 @@ impl CudaSimulation {
             let mut event_buffer: EventBufferHost<InMemoryHabitat, InMemoryLineageReference> =
                 EventBufferHost::new(&cuda_block_size, &cuda_grid_size, SIMULATION_STEP_SLICE)?;
 
+            let mut remaining_individuals = simulation.lineage_store().get_number_total_lineages();
+
+            // TODO: We should use async launches and callbacks to rotate between simulation, event analysis etc.
             if let Err(err) = simulation.lend_to_cuda_mut(|simulation_mut_ptr| {
-                let block_index_range = 0..(cuda_grid_size.x * cuda_grid_size.y * cuda_grid_size.z);
+                let mut time_slice = 0;
 
-                // Launching kernels is unsafe since Rust can't enforce safety - think of kernel launches
-                // as a foreign-function call. In this case, it is - this kernel is written in CUDA C.
-                unsafe {
-                    launch!(simulate_kernel<<<cuda_grid_size, cuda_block_size, 0, stream>>>(
-                        simulation_mut_ptr,
-                        event_buffer.get_mut_cuda_ptr(),
-                        SIMULATION_STEP_SLICE
-                    ))?;
-                }
+                while remaining_individuals > 0 {
+                    println!("Starting time slice {} with {} remaining individuals ...", time_slice + 1, remaining_individuals);
 
-                stream.synchronize()?;
+                    for grid_id in 0..cuda_grid_amount {
+                        grid_id_symbol.copy_from(&grid_id)?;
 
-                for block_index in block_index_range {
-                    event_buffer.with_fetched_events_for_block(block_index as usize, |events| {
-                        events.iter().for_each(|event| reporter.report_event(event))
-                    })?
+                        let cuda_grid_size = cuda_grid_size.clone();
+                        let cuda_block_size = cuda_block_size.clone();
+
+                        println!("Launching grid {}/{} of time slice {} ...", grid_id + 1, cuda_grid_amount, time_slice + 1);
+
+                        // Launching kernels is unsafe since Rust cannot enforce safety across
+                        // the foreign function CUDA-C language barrier
+                        unsafe {
+                            launch!(simulate_kernel<<<cuda_grid_size, cuda_block_size, 0, stream>>>(
+                                simulation_mut_ptr,
+                                event_buffer.get_mut_cuda_ptr(),
+                                SIMULATION_STEP_SLICE
+                            ))?;
+                        }
+
+                        println!("Synchronising ...");
+
+                        stream.synchronize()?;
+
+                        println!("Analysing events ...");
+
+                        event_buffer.with_fetched_events(|events| {
+                            events.inspect(|event| {
+                                if let necsim_core::event::EventType::Speciation = event.r#type() {
+                                    remaining_individuals -= 1;
+                                }
+                            }).for_each(|event| reporter.report_event(&event))
+                        })?
+                    }
+
+                    time_slice += 1;
                 }
 
                 Ok(())
             }) {
-                eprintln!("Running kernel failed with {:#?}!", err);
+                eprintln!("\nRunning kernel failed with {:#?}!\n", err);
             }
 
         });});});

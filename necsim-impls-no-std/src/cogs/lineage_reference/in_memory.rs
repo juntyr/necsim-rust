@@ -26,6 +26,6 @@ impl rust_cuda::common::FromCudaThreadIdx for InMemoryLineageReference {
     #[cfg(target_os = "cuda")]
     fn from_cuda_thread_idx() -> Self {
         #[allow(clippy::cast_sign_loss)]
-        Self::from(rust_cuda::device::utils::index() as usize)
+        Self::from(rust_cuda::device::utils::index())
     }
 }

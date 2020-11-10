@@ -46,8 +46,8 @@ impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> EventBufferDe
         let raw_slice: &mut [Option<Event<H, R>>] =
             core::slice::from_raw_parts_mut(cuda_repr_ref.device_buffer.as_raw_mut(), buffer_len);
 
-        let (_before_raw_slice, rest_raw_slice) =
-            raw_slice.split_at_mut(rust_cuda::device::utils::index() * cuda_repr_ref.max_events);
+        let (_before_raw_slice, rest_raw_slice) = raw_slice
+            .split_at_mut(rust_cuda::device::utils::index_no_offset() * cuda_repr_ref.max_events);
         let (individual_raw_slice, _after_raw_slice) =
             rest_raw_slice.split_at_mut(cuda_repr_ref.max_events);
 
