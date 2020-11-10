@@ -3,11 +3,17 @@ use core::marker::PhantomData;
 use crate::cogs::{Habitat, LineageReference};
 use crate::landscape::IndexedLocation;
 
+#[cfg(feature = "cuda")]
+use rustacuda_core::DeviceCopy;
+
+#[cfg(feature = "cuda")]
+use rust_cuda::common::RustToCuda;
+
 pub struct Event<H: Habitat, R: LineageReference<H>> {
     time: f64,
     lineage_reference: R,
     r#type: EventType<H, R>,
-    _marker: PhantomData<H>,
+    marker: PhantomData<H>,
 }
 
 impl<H: Habitat, R: LineageReference<H>> Event<H, R> {
@@ -21,7 +27,7 @@ impl<H: Habitat, R: LineageReference<H>> Event<H, R> {
             time,
             lineage_reference,
             r#type,
-            _marker: PhantomData::<H>,
+            marker: PhantomData::<H>,
         }
     }
 
@@ -49,8 +55,38 @@ pub enum EventType<H: Habitat, R: LineageReference<H>> {
         origin: IndexedLocation,
         target: IndexedLocation,
         coalescence: Option<R>,
-        _marker: PhantomData<H>,
+        marker: PhantomData<H>,
     },
+}
+
+impl<H: Habitat, R: LineageReference<H>> Clone for Event<H, R> {
+    fn clone(&self) -> Self {
+        Self {
+            time: self.time,
+            lineage_reference: self.lineage_reference.clone(),
+            r#type: self.r#type.clone(),
+            marker: self.marker.clone(),
+        }
+    }
+}
+
+impl<H: Habitat, R: LineageReference<H>> Clone for EventType<H, R> {
+    fn clone(&self) -> Self {
+        match self {
+            EventType::Speciation => EventType::Speciation,
+            EventType::Dispersal {
+                origin,
+                target,
+                coalescence,
+                marker,
+            } => EventType::Dispersal {
+                origin: origin.clone(),
+                target: target.clone(),
+                coalescence: coalescence.clone(),
+                marker: marker.clone(),
+            },
+        }
+    }
 }
 
 impl<H: Habitat, R: LineageReference<H>> core::fmt::Debug for Event<H, R> {
@@ -62,7 +98,19 @@ impl<H: Habitat, R: LineageReference<H>> core::fmt::Debug for Event<H, R> {
             )
             .field("lineage_reference", &self.lineage_reference)
             .field("type", &self.r#type)
-            .field("_marker", &format_args!("PhantomData"))
+            .field("marker", &format_args!("PhantomData"))
             .finish()
     }
+}
+
+#[cfg(feature = "cuda")]
+unsafe impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> DeviceCopy
+    for Event<H, R>
+{
+}
+
+#[cfg(feature = "cuda")]
+unsafe impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> DeviceCopy
+    for EventType<H, R>
+{
 }

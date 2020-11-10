@@ -101,7 +101,7 @@ impl<
                 origin: dispersal_origin,
                 coalescence: optional_coalescence,
                 target: dispersal_target,
-                _marker: PhantomData::<H>,
+                marker: PhantomData::<H>,
             }
         } else {
             let (dispersal_target, coalescence) =
@@ -115,7 +115,7 @@ impl<
                 coalescence: Some(coalescence),
                 origin: dispersal_origin,
                 target: dispersal_target,
-                _marker: PhantomData::<H>,
+                marker: PhantomData::<H>,
             }
         };
 

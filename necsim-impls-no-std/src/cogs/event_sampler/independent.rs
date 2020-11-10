@@ -82,7 +82,7 @@ impl<
                 origin: dispersal_origin,
                 coalescence: optional_coalescence,
                 target: dispersal_target,
-                _marker: PhantomData::<H>,
+                marker: PhantomData::<H>,
             }
         };
 
