@@ -21,6 +21,8 @@ use necsim_core::cogs::{LineageStore, PrimeableRng};
 use necsim_core::reporter::Reporter;
 use necsim_core::simulation::Simulation;
 
+use necsim_impls_cuda::cogs::rng::CudaRng;
+use necsim_impls_cuda::event_buffer::host::EventBufferHost;
 use necsim_impls_no_std::cogs::active_lineage_sampler::independent::IndependentActiveLineageSampler;
 use necsim_impls_no_std::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler;
 use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler;
@@ -28,7 +30,6 @@ use necsim_impls_no_std::cogs::event_sampler::independent::IndependentEventSampl
 use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
 use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use necsim_impls_no_std::cogs::lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore;
-use necsim_impls_no_std::cogs::rng::cuda::CudaRng;
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
 macro_rules! with_cuda {
@@ -155,8 +156,10 @@ impl CudaSimulation {
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
         rng: G,
-        _reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
+        reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
     ) -> Result<(f64, usize)> {
+        const SIMULATION_STEP_SLICE: usize = 1_000_usize;
+
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemoryPackedAliasDispersalSampler::new(dispersal, &habitat)?;
         let lineage_store = IncoherentInMemoryLineageStore::new(sample_percentage, &habitat);
@@ -187,6 +190,9 @@ impl CudaSimulation {
                 + (total_individuals % cuda_block_length > 0) as u32
         });
 
+        let mut event_buffer: EventBufferHost<InMemoryHabitat, InMemoryLineageReference> =
+            EventBufferHost::new(&cuda_block_size, &cuda_grid_size, SIMULATION_STEP_SLICE)?;
+
         //let (time, steps) = simulation.simulate(rng, reporter);
 
         let module_data = CString::new(include_str!(env!("KERNEL_PTX_PATH"))).unwrap();
@@ -216,16 +222,27 @@ impl CudaSimulation {
             print_kernel_function_attributes(&simulate_kernel);
 
             if let Err(err) = simulation.lend_to_cuda_mut(|simulation_mut_ptr| {
+                let block_index_range = 0..(cuda_grid_size.x * cuda_grid_size.y * cuda_grid_size.z);
+
                 // Launching kernels is unsafe since Rust can't enforce safety - think of kernel launches
                 // as a foreign-function call. In this case, it is - this kernel is written in CUDA C.
                 unsafe {
                     launch!(simulate_kernel<<<cuda_grid_size, cuda_block_size, 0, stream>>>(
                         simulation_mut_ptr,
-                        1_000_usize // max steps on GPU
+                        event_buffer.get_mut_cuda_ptr(),
+                        SIMULATION_STEP_SLICE
                     ))?;
                 }
 
-                stream.synchronize()
+                stream.synchronize()?;
+
+                for block_index in block_index_range {
+                    event_buffer.with_fetched_events_for_block(block_index as usize, |events| {
+                        events.iter().for_each(|event| reporter.report_event(event))
+                    })?
+                }
+
+                Ok(())
             }) {
                 eprintln!("Running kernel failed with {:#?}!", err);
             }

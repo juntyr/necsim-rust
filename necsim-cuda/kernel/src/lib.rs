@@ -43,19 +43,21 @@ use necsim_core::cogs::{
     ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler,
     HabitatToU64Injection, IncoherentLineageStore, LineageReference, PrimeableRng,
 };
-use necsim_core::reporter::NullReporter;
 use necsim_core::simulation::Simulation;
 use rust_cuda::common::RustToCuda;
 use rust_cuda::device::BorrowFromRust;
 use rustacuda_core::DeviceCopy;
 
-use necsim_impls_no_std::cogs::rng::cuda::CudaRng;
+use necsim_impls_cuda::cogs::rng::CudaRng;
+use necsim_impls_cuda::event_buffer::common::EventBufferCudaRepresentation;
+use necsim_impls_cuda::event_buffer::device::EventBufferDevice;
 
 #[no_mangle]
 /// # Safety
 /// This CUDA kernel is unsafe as it is called with raw pointers
 pub unsafe extern "ptx-kernel" fn simulate(
     simulation_c_ptr: *mut core::ffi::c_void,
+    event_buffer_c_ptr: *mut core::ffi::c_void,
     max_steps: usize,
 ) {
     use necsim_impls_no_std::cogs::active_lineage_sampler::independent::IndependentActiveLineageSampler as ActiveLineageSampler;
@@ -79,6 +81,7 @@ pub unsafe extern "ptx-kernel" fn simulate(
                 EventSampler<_, _, _, _, _>,
                 ActiveLineageSampler<_, _, _, _, _>,
             > as RustToCuda>::CudaRepresentation,
+        event_buffer_c_ptr as *mut EventBufferCudaRepresentation<Habitat, LineageReference>,
         max_steps,
     )
 }
@@ -94,20 +97,21 @@ unsafe fn simulate_generic<
     A: ActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
 >(
     simulation_ptr: *mut <Simulation<H, G, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
+    event_buffer_ptr: *mut EventBufferCudaRepresentation<H, R>,
     max_steps: usize,
 ) {
     Simulation::with_borrow_from_rust_mut(simulation_ptr, |simulation| {
-        let mut reporter = NullReporter;
+        EventBufferDevice::with_borrow_from_rust_mut(event_buffer_ptr, |event_buffer_reporter| {
+            let (time, steps) = simulation.simulate_incremental(max_steps, event_buffer_reporter);
 
-        let (time, steps) = simulation.simulate_incremental(max_steps, &mut reporter);
-
-        if utils::thread_idx().as_id(&utils::block_dim()) == 0 {
-            println!(
-                "index = {}, time = {:?}, steps = {}",
-                utils::index(),
-                F64(time),
-                steps
-            );
-        }
+            if utils::thread_idx().as_id(&utils::block_dim()) == 0 {
+                println!(
+                    "index = {}, time = {:?}, steps = {}",
+                    utils::index(),
+                    F64(time),
+                    steps
+                );
+            }
+        })
     })
 }
