@@ -22,6 +22,10 @@ pub trait ActiveLineageSampler<
     fn number_active_lineages(&self) -> usize;
 
     #[must_use]
+    #[debug_ensures(ret >= 0.0_f64, "last event time is non-negative")]
+    fn get_time_of_last_event(&self, lineage_store: &S) -> f64;
+
+    #[must_use]
     #[allow(clippy::float_cmp)]
     #[debug_requires(time >= 0.0_f64, "time is non-negative")]
     #[debug_ensures(match ret {
@@ -53,6 +57,10 @@ pub trait ActiveLineageSampler<
         simulation.lineage_store.get_active_lineages_at_location(&location).len() <
         (simulation.habitat.get_habitat_at_location(&location) as usize)
     ), "location has habitat capacity for the lineage")]*/
+    #[debug_ensures(
+        self.get_time_of_last_event(simulation.lineage_store) == time,
+        "updates time of last event"
+    )]
     fn push_active_lineage_to_indexed_location(
         &mut self,
         lineage_reference: R,

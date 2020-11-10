@@ -30,7 +30,9 @@ impl<
         max_steps: usize,
         reporter: &mut impl Reporter<H, R>,
     ) -> (f64, usize) {
-        let mut time = self.time;
+        let mut time = self
+            .active_lineage_sampler
+            .get_time_of_last_event(&self.lineage_store);
         let mut steps: usize = 0;
 
         self.with_mut_split_active_lineage_sampler_and_rng(
@@ -94,9 +96,7 @@ impl<
             },
         );
 
-        self.time = time;
-
-        (self.time, steps)
+        (time, steps)
     }
 
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]

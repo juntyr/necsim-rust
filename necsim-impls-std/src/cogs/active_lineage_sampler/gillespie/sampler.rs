@@ -28,6 +28,10 @@ impl<
         self.number_active_lineages
     }
 
+    fn get_time_of_last_event(&self, _lineage_store: &S) -> f64 {
+        self.last_event_time
+    }
+
     #[must_use]
     fn pop_active_lineage_indexed_location_event_time(
         &mut self,
@@ -83,6 +87,8 @@ impl<
         simulation
             .lineage_store
             .update_lineage_time_of_last_event(chosen_lineage_reference.clone(), unique_event_time);
+
+        self.last_event_time = unique_event_time;
 
         Some((
             chosen_lineage_reference,

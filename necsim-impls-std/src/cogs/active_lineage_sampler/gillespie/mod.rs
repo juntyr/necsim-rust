@@ -27,6 +27,7 @@ pub struct GillespieActiveLineageSampler<
 > {
     active_locations: PriorityQueue<Location, EventTime>,
     number_active_lineages: usize,
+    last_event_time: f64,
     marker: std::marker::PhantomData<(H, G, D, R, S, C, E)>,
 }
 
@@ -101,6 +102,7 @@ impl<
         Self {
             active_locations: PriorityQueue::from(active_locations),
             number_active_lineages,
+            last_event_time: 0.0_f64,
             marker: std::marker::PhantomData::<(H, G, D, R, S, C, E)>,
         }
     }
