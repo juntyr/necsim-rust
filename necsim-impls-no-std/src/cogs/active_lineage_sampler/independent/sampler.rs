@@ -36,6 +36,13 @@ impl<
         self.active_lineage_reference.is_some() as usize
     }
 
+    fn get_time_of_last_event(&self, lineage_store: &S) -> f64 {
+        self.active_lineage_reference
+            .as_ref()
+            .and_then(|lineage_reference| lineage_store.get(lineage_reference.clone()))
+            .map_or(0.0_f64, |lineage| lineage.time_of_last_event())
+    }
+
     #[must_use]
     #[allow(clippy::type_complexity)]
     fn pop_active_lineage_indexed_location_event_time(

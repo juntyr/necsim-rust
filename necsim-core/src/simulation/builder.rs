@@ -28,8 +28,6 @@ pub struct Simulation<
     E: EventSampler<H, G, D, R, S, C>,
     A: ActiveLineageSampler<H, G, D, R, S, C, E>,
 > {
-    #[builder(default = 0.0_f64, setter(skip))]
-    pub(super) time: f64,
     pub(super) speciation_probability_per_generation: f64,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) habitat: H,

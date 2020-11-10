@@ -19,6 +19,7 @@ pub struct ClassicalActiveLineageSampler<
     S: CoherentLineageStore<H, R>,
 > {
     active_lineage_references: Vec<R>,
+    last_event_time: f64,
     _marker: PhantomData<(H, G, D, S)>,
 }
 
@@ -48,6 +49,7 @@ impl<
 
         Self {
             active_lineage_references,
+            last_event_time: 0.0_f64,
             _marker: PhantomData::<(H, G, D, S)>,
         }
     }
