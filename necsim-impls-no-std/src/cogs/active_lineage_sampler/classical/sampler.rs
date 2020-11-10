@@ -4,7 +4,7 @@ use necsim_core::cogs::{
     ActiveLineageSampler, CoherentLineageStore, DispersalSampler, Habitat, LineageReference,
     RngCore,
 };
-use necsim_core::landscape::Location;
+use necsim_core::landscape::IndexedLocation;
 use necsim_core::simulation::partial::active_lineager_sampler::PartialSimulation;
 
 use crate::cogs::coalescence_sampler::unconditional::UnconditionalCoalescenceSampler;
@@ -37,7 +37,7 @@ impl<
 
     #[must_use]
     #[allow(clippy::type_complexity)]
-    fn pop_active_lineage_location_event_time(
+    fn pop_active_lineage_indexed_location_event_time(
         &mut self,
         time: f64,
         simulation: &mut PartialSimulation<
@@ -50,7 +50,7 @@ impl<
             UnconditionalEventSampler<H, G, D, R, S, UnconditionalCoalescenceSampler<H, G, R, S>>,
         >,
         rng: &mut G,
-    ) -> Option<(R, Location, f64)> {
+    ) -> Option<(R, IndexedLocation, f64)> {
         use necsim_core::cogs::RngSampler;
 
         let last_active_lineage_reference = match self.active_lineage_references.pop() {
@@ -74,7 +74,7 @@ impl<
                 chosen_lineage_reference
             };
 
-        let lineage_location = simulation
+        let lineage_indexed_location = simulation
             .lineage_store
             .pop_lineage_from_its_location(chosen_lineage_reference.clone());
 
@@ -95,16 +95,23 @@ impl<
 
         Some((
             chosen_lineage_reference,
-            lineage_location,
+            lineage_indexed_location,
             unique_event_time,
         ))
     }
 
     #[allow(clippy::type_complexity)]
-    fn push_active_lineage_to_location(
+    #[debug_requires(
+        indexed_location.index() as usize ==
+            simulation.lineage_store.get_active_lineages_at_location(
+                indexed_location.location()
+            ).len(),
+        "location index equals the append index at the location"
+    )]
+    fn push_active_lineage_to_indexed_location(
         &mut self,
         lineage_reference: R,
-        location: Location,
+        indexed_location: IndexedLocation,
         _time: f64,
         simulation: &mut PartialSimulation<
             H,
@@ -119,7 +126,7 @@ impl<
     ) {
         simulation
             .lineage_store
-            .append_lineage_to_location(lineage_reference.clone(), location);
+            .append_lineage_to_location(lineage_reference.clone(), indexed_location.into());
 
         self.active_lineage_references.push(lineage_reference);
     }

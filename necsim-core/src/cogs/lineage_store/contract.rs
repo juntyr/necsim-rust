@@ -1,3 +1,5 @@
+use core::convert::TryFrom;
+
 use crate::cogs::{CoherentLineageStore, Habitat, LineageReference};
 use crate::landscape::Location;
 
@@ -18,19 +20,14 @@ pub fn explicit_lineage_store_lineage_at_location_contract<
         None => return false,
     };
 
-    let location = match lineage.location() {
-        Some(location) => location,
+    let indexed_location = match lineage.indexed_location() {
+        Some(indexed_location) => indexed_location,
         None => return false,
     };
 
-    let lineages_at_location = &store.get_active_lineages_at_location(location);
+    let lineages_at_location = &store.get_active_lineages_at_location(indexed_location.location());
 
-    let index_at_location = match lineage.index_at_location() {
-        Some(index_at_location) => index_at_location,
-        None => return false,
-    };
-
-    match lineages_at_location.get(index_at_location) {
+    match lineages_at_location.get(indexed_location.index() as usize) {
         Some(reference_at_location) => reference_at_location == &input_reference,
         None => false,
     }
@@ -50,8 +47,15 @@ pub(super) fn explicit_lineage_store_invariant_contract<
     lineages_at_location
         .iter()
         .enumerate()
-        .all(|(i, reference)| {
-            store[reference.clone()].location() == Some(location)
-                && store[reference.clone()].index_at_location() == Some(i)
+        .all(|(index, reference)| {
+            match (
+                u32::try_from(index),
+                store[reference.clone()].indexed_location(),
+            ) {
+                (Ok(index), Some(indexed_location)) => {
+                    indexed_location.location() == location && indexed_location.index() == index
+                }
+                _ => false,
+            }
         })
 }

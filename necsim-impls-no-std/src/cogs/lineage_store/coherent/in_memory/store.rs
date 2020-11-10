@@ -1,5 +1,5 @@
 use necsim_core::cogs::{CoherentLineageStore, Habitat, LineageStore};
-use necsim_core::landscape::Location;
+use necsim_core::landscape::{IndexedLocation, Location};
 use necsim_core::lineage::Lineage;
 
 use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
@@ -67,21 +67,31 @@ impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
 
         lineages_at_location.push(reference);
 
+        #[allow(clippy::cast_possible_truncation)]
+        let new_indexed_location =
+            IndexedLocation::new(location, (lineages_at_location.len() - 1) as u32);
+
         unsafe {
             self.lineages_store[Into::<usize>::into(reference)]
-                .move_to_location(location, lineages_at_location.len() - 1)
+                .move_to_indexed_location(new_indexed_location)
         };
     }
 
     #[must_use]
     #[debug_requires(
-        self.landscape_extent.contains(self[reference].location().unwrap()),
+        self.landscape_extent.contains(self[reference].indexed_location().unwrap().location()),
         "lineage's location is inside landscape extent"
     )]
-    fn pop_lineage_from_its_location(&mut self, reference: InMemoryLineageReference) -> Location {
+    fn pop_lineage_from_its_location(
+        &mut self,
+        reference: InMemoryLineageReference,
+    ) -> IndexedLocation {
         let lineage: &Lineage = &self.lineages_store[Into::<usize>::into(reference)];
 
-        let lineage_location = lineage.location().unwrap();
+        let lineage_indexed_location = lineage.indexed_location().unwrap();
+
+        let lineage_location = lineage_indexed_location.location();
+        let lineage_index_at_location = lineage_indexed_location.index();
 
         let lineages_at_location = &mut self.location_to_lineage_references[(
             (lineage_location.y() - self.landscape_extent.y()) as usize,
@@ -89,10 +99,8 @@ impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
         )];
 
         if let Some(last_lineage_at_location) = lineages_at_location.pop() {
-            let lineage_index_at_location = lineage.index_at_location().unwrap();
-
-            if lineage_index_at_location < lineages_at_location.len() {
-                lineages_at_location[lineage_index_at_location] = last_lineage_at_location;
+            if (lineage_index_at_location as usize) < lineages_at_location.len() {
+                lineages_at_location[lineage_index_at_location as usize] = last_lineage_at_location;
 
                 unsafe {
                     self.lineages_store[Into::<usize>::into(last_lineage_at_location)]

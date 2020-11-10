@@ -6,7 +6,7 @@ use necsim_core::cogs::{
     SeparableDispersalSampler,
 };
 use necsim_core::event::{Event, EventType};
-use necsim_core::landscape::Location;
+use necsim_core::landscape::{IndexedLocation, Location};
 use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
 use crate::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
@@ -61,18 +61,18 @@ impl<
             ..
         } => ((origin == target) -> coalescence.is_some()),
     }, "always coalesces on self-dispersal")]
-    fn sample_event_for_lineage_at_location_time(
+    fn sample_event_for_lineage_at_indexed_location_time(
         &self,
         lineage_reference: R,
-        location: Location,
+        indexed_location: IndexedLocation,
         event_time: f64,
         simulation: &PartialSimulation<H, G, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>,
         rng: &mut G,
     ) -> Event<H, R> {
-        let dispersal_origin = location;
+        let dispersal_origin = indexed_location;
 
         let probability_at_location = ProbabilityAtLocation::new(
-            &dispersal_origin,
+            dispersal_origin.location(),
             simulation,
             false, // lineage_reference was popped from the store
         );
@@ -86,32 +86,35 @@ impl<
         {
             let dispersal_target = simulation
                 .dispersal_sampler
-                .sample_non_self_dispersal_from_location(&dispersal_origin, rng);
+                .sample_non_self_dispersal_from_location(dispersal_origin.location(), rng);
+
+            let (dispersal_target, optional_coalescence) = simulation
+                .coalescence_sampler
+                .sample_optional_coalescence_at_location(
+                    dispersal_target,
+                    simulation.habitat,
+                    simulation.lineage_store,
+                    rng,
+                );
 
             EventType::Dispersal {
                 origin: dispersal_origin,
-                coalescence: simulation
-                    .coalescence_sampler
-                    .sample_optional_coalescence_at_location(
-                        &dispersal_target,
-                        simulation.habitat,
-                        simulation.lineage_store,
-                        rng,
-                    ),
+                coalescence: optional_coalescence,
                 target: dispersal_target,
                 _marker: PhantomData::<H>,
             }
         } else {
+            let (dispersal_target, coalescence) =
+                ConditionalCoalescenceSampler::sample_coalescence_at_location(
+                    dispersal_origin.location().clone(),
+                    simulation.lineage_store,
+                    rng,
+                );
+
             EventType::Dispersal {
-                coalescence: Some(
-                    ConditionalCoalescenceSampler::sample_coalescence_at_location(
-                        &dispersal_origin,
-                        simulation.lineage_store,
-                        rng,
-                    ),
-                ),
-                origin: dispersal_origin.clone(),
-                target: dispersal_origin,
+                coalescence: Some(coalescence),
+                origin: dispersal_origin,
+                target: dispersal_target,
                 _marker: PhantomData::<H>,
             }
         };

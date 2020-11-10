@@ -1,5 +1,5 @@
 use crate::cogs::RngCore;
-use crate::landscape::Location;
+use crate::landscape::{IndexedLocation, Location};
 
 use super::{Habitat, LineageReference, LineageStore};
 
@@ -9,12 +9,12 @@ pub trait CoalescenceSampler<H: Habitat, G: RngCore, R: LineageReference<H>, S: 
     core::fmt::Debug
 {
     #[must_use]
-    #[debug_requires(habitat.get_habitat_at_location(location) > 0, "location is habitable")]
+    #[debug_requires(habitat.get_habitat_at_location(&location) > 0, "location is habitable")]
     fn sample_optional_coalescence_at_location(
         &self,
-        location: &Location,
+        location: Location,
         habitat: &H,
         lineage_store: &S,
         rng: &mut G,
-    ) -> Option<R>;
+    ) -> (IndexedLocation, Option<R>);
 }

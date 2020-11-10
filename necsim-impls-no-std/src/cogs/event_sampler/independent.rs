@@ -5,7 +5,7 @@ use necsim_core::cogs::{
     LineageReference, RngCore,
 };
 use necsim_core::event::{Event, EventType};
-use necsim_core::landscape::Location;
+use necsim_core::landscape::IndexedLocation;
 use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
 use crate::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler;
@@ -51,10 +51,10 @@ impl<
 {
     #[must_use]
     #[allow(clippy::type_complexity)]
-    fn sample_event_for_lineage_at_location_time(
+    fn sample_event_for_lineage_at_indexed_location_time(
         &self,
         lineage_reference: R,
-        location: Location,
+        indexed_location: IndexedLocation,
         event_time: f64,
         simulation: &PartialSimulation<H, G, D, R, S, IndependentCoalescenceSampler<H, G, R, S>>,
         rng: &mut G,
@@ -64,21 +64,23 @@ impl<
         let event_type = if rng.sample_event(*simulation.speciation_probability_per_generation) {
             EventType::Speciation
         } else {
-            let dispersal_origin = location;
+            let dispersal_origin = indexed_location;
             let dispersal_target = simulation
                 .dispersal_sampler
-                .sample_dispersal_from_location(&dispersal_origin, rng);
+                .sample_dispersal_from_location(dispersal_origin.location(), rng);
+
+            let (dispersal_target, optional_coalescence) = simulation
+                .coalescence_sampler
+                .sample_optional_coalescence_at_location(
+                    dispersal_target,
+                    simulation.habitat,
+                    simulation.lineage_store,
+                    rng,
+                );
 
             EventType::Dispersal {
                 origin: dispersal_origin,
-                coalescence: simulation
-                    .coalescence_sampler
-                    .sample_optional_coalescence_at_location(
-                        &dispersal_target,
-                        simulation.habitat,
-                        simulation.lineage_store,
-                        rng,
-                    ),
+                coalescence: optional_coalescence,
                 target: dispersal_target,
                 _marker: PhantomData::<H>,
             }

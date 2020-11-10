@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use necsim_core::cogs::{
     CoalescenceSampler, Habitat, IncoherentLineageStore, LineageReference, RngCore,
 };
-use necsim_core::landscape::Location;
+use necsim_core::landscape::{IndexedLocation, Location};
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
@@ -32,29 +32,22 @@ impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: IncoherentLineageStore<H
     CoalescenceSampler<H, G, R, S> for IndependentCoalescenceSampler<H, G, R, S>
 {
     #[must_use]
-    #[debug_ensures(ret.is_none(), "never finds coalescence")]
+    #[debug_ensures(ret.1.is_none(), "never finds coalescence")]
     fn sample_optional_coalescence_at_location(
         &self,
-        _location: &Location,
-        _habitat: &H,
-        _lineage_store: &S,
-        _rng: &mut G,
-    ) -> Option<R> {
-        None
-    }
-}
-
-impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: IncoherentLineageStore<H, R>>
-    IndependentCoalescenceSampler<H, G, R, S>
-{
-    #[must_use]
-    pub fn sample_coalescence_index_at_location(
-        location: &Location,
+        location: Location,
         habitat: &H,
+        _lineage_store: &S,
         rng: &mut G,
-    ) -> usize {
+    ) -> (IndexedLocation, Option<R>) {
         use necsim_core::cogs::RngSampler;
 
-        rng.sample_index(habitat.get_habitat_at_location(location) as usize)
+        let chosen_coalescence_index =
+            rng.sample_index(habitat.get_habitat_at_location(&location) as usize);
+
+        #[allow(clippy::cast_possible_truncation)]
+        let indexed_location = IndexedLocation::new(location, chosen_coalescence_index as u32);
+
+        (indexed_location, None)
     }
 }

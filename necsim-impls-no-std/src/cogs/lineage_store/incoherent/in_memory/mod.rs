@@ -4,11 +4,9 @@ use core::ops::Index;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
-use array2d::Array2D;
-
 use necsim_core::cogs::Habitat;
 use necsim_core::intrinsics::floor;
-use necsim_core::landscape::{LandscapeExtent, Location};
+use necsim_core::landscape::{IndexedLocation, LandscapeExtent, Location};
 use necsim_core::lineage::Lineage;
 
 use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
@@ -53,12 +51,6 @@ impl<H: Habitat> IncoherentInMemoryLineageStore<H> {
 
         let landscape_extent = habitat.get_extent();
 
-        let mut location_to_lineage_references = Array2D::filled_with(
-            0_usize,
-            landscape_extent.height() as usize,
-            landscape_extent.width() as usize,
-        );
-
         let x_from = landscape_extent.x();
         let y_from = landscape_extent.y();
 
@@ -66,20 +58,17 @@ impl<H: Habitat> IncoherentInMemoryLineageStore<H> {
             for x_offset in 0..landscape_extent.width() {
                 let location = Location::new(x_from + x_offset, y_from + y_offset);
 
-                let lineages_at_location =
-                    &mut location_to_lineage_references[(y_offset as usize, x_offset as usize)];
-
                 #[allow(clippy::cast_possible_truncation)]
                 #[allow(clippy::cast_sign_loss)]
                 let sampled_habitat_at_location = floor(
                     f64::from(habitat.get_habitat_at_location(&location)) * sample_percentage,
-                ) as usize;
+                ) as u32;
 
-                for _ in 0..sampled_habitat_at_location {
-                    let index_at_location = *lineages_at_location;
-
-                    *lineages_at_location += 1;
-                    lineages_store.push(Lineage::new(location.clone(), index_at_location));
+                for index_at_location in 0..sampled_habitat_at_location {
+                    lineages_store.push(Lineage::new(IndexedLocation::new(
+                        location.clone(),
+                        index_at_location,
+                    )));
                 }
             }
         }
