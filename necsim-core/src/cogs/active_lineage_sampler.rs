@@ -45,6 +45,12 @@ pub trait ActiveLineageSampler<
             simulation.lineage_store[reference.clone()].time_of_last_event() == event_time
         },
     }, "updates the time of the last event of the returned lineage to the time of the event")]
+    #[debug_ensures(match ret {
+        None => true,
+        Some((ref _reference, ref _location, event_time)) => {
+            self.get_time_of_last_event(simulation.lineage_store) == event_time
+        },
+    }, "updates the time of the last event")]
     fn pop_active_lineage_indexed_location_event_time(
         &mut self,
         time: f64,
@@ -57,10 +63,6 @@ pub trait ActiveLineageSampler<
         simulation.lineage_store.get_active_lineages_at_location(&location).len() <
         (simulation.habitat.get_habitat_at_location(&location) as usize)
     ), "location has habitat capacity for the lineage")]*/
-    #[debug_ensures(
-        self.get_time_of_last_event(simulation.lineage_store) == time,
-        "updates time of last event"
-    )]
     fn push_active_lineage_to_indexed_location(
         &mut self,
         lineage_reference: R,

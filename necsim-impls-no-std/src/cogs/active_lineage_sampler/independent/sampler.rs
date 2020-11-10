@@ -40,7 +40,7 @@ impl<
         self.active_lineage_reference
             .as_ref()
             .and_then(|lineage_reference| lineage_store.get(lineage_reference.clone()))
-            .map_or(0.0_f64, |lineage| lineage.time_of_last_event())
+            .map_or(0.0_f64, necsim_core::lineage::Lineage::time_of_last_event)
     }
 
     #[must_use]
@@ -66,14 +66,13 @@ impl<
             None => return None,
         };
 
-        #[allow(clippy::question_mark)]
-        if simulation
+        // Check for extraneously simulated lineages
+        match simulation
             .lineage_store
             .get(chosen_lineage_reference.clone())
-            .is_none()
         {
-            // Check for extraneously simulated lineages
-            return None;
+            Some(lineage) if lineage.is_active() => (),
+            _ => return None,
         }
 
         let lineage_indexed_location = simulation

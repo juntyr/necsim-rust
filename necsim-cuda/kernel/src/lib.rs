@@ -3,6 +3,7 @@
 #![no_std]
 #![feature(abi_ptx)]
 #![feature(alloc_error_handler)]
+#![feature(panic_info_message)]
 
 extern crate alloc;
 
@@ -15,7 +16,15 @@ use rust_cuda::{
 static _GLOBAL_ALLOCATOR: utils::PTXAllocator = utils::PTXAllocator;
 
 #[panic_handler]
-fn panic(_info: &::core::panic::PanicInfo) -> ! {
+fn panic(panic_info: &::core::panic::PanicInfo) -> ! {
+    println!(
+        "Panic occurred at {:?}: {:?}!",
+        panic_info.location(),
+        panic_info
+            .message()
+            .unwrap_or(&format_args!("unknown reason"))
+    );
+
     unsafe { nvptx::trap() }
 }
 
@@ -102,17 +111,7 @@ unsafe fn simulate_generic<
 ) {
     Simulation::with_borrow_from_rust_mut(simulation_ptr, |simulation| {
         EventBufferDevice::with_borrow_from_rust_mut(event_buffer_ptr, |event_buffer_reporter| {
-            /*let (time, steps) =*/
             simulation.simulate_incremental(max_steps, event_buffer_reporter);
-
-            /*if utils::thread_idx().as_id(&utils::block_dim()) == 0 {
-                println!(
-                    "index = {}, time = {:?}, steps = {}",
-                    utils::index(),
-                    F64(time),
-                    steps
-                );
-            }*/
         })
     })
 }
