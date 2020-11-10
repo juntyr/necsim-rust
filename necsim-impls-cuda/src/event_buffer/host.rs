@@ -1,4 +1,4 @@
-use alloc::vec::Vec;
+use core::ops::DerefMut;
 
 use rustacuda::error::CudaResult;
 use rustacuda::function::{BlockSize, GridSize};
@@ -15,13 +15,17 @@ use necsim_core::event::Event;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct EventBufferHost<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> {
-    block_size: usize,
-    grid_size: usize,
-    max_events: usize,
     host_buffer: CudaDropWrapper<LockedBuffer<Option<Event<H, R>>>>,
     device_buffer: CudaDropWrapper<DeviceBuffer<Option<Event<H, R>>>>,
     cuda_repr_box: CudaDropWrapper<DeviceBox<super::common::EventBufferCudaRepresentation<H, R>>>,
 }
+
+pub type EventIterator<'e, H, R> = core::iter::FilterMap<
+    core::slice::IterMut<'e, Option<necsim_core::event::Event<H, R>>>,
+    for<'r> fn(
+        &'r mut Option<necsim_core::event::Event<H, R>>,
+    ) -> Option<necsim_core::event::Event<H, R>>,
+>;
 
 impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> EventBufferHost<H, R> {
     /// # Errors
@@ -49,44 +53,24 @@ impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> EventBufferHo
         let cuda_repr_box = CudaDropWrapper::from(DeviceBox::new(&cuda_repr)?);
 
         Ok(Self {
-            block_size,
-            grid_size,
-            max_events,
             host_buffer,
             device_buffer,
             cuda_repr_box,
         })
     }
 
-    #[debug_requires(block_index < self.grid_size, "block_index is in range")]
-    pub fn with_fetched_events_for_block<O, F: FnOnce(Vec<Event<H, R>>) -> O>(
+    /// # Errors
+    /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
+    pub fn with_fetched_events<O, F: FnOnce(EventIterator<'_, H, R>) -> O>(
         &mut self,
-        block_index: usize,
         inner: F,
     ) -> CudaResult<O> {
-        let full_host_buffer = self.host_buffer.as_mut_slice();
-        let (_before_host_buffer, rest_host_buffer) =
-            full_host_buffer.split_at_mut(block_index * self.block_size * self.max_events);
-        let (block_host_buffer, _after_host_buffer) =
-            rest_host_buffer.split_at_mut(self.block_size * self.max_events);
-
-        let full_device_buffer = &mut self.device_buffer;
-        let (_before_device_buffer, rest_device_buffer) =
-            full_device_buffer.split_at_mut(block_index * self.block_size * self.max_events);
-        let (block_device_buffer, _after_device_buffer) =
-            rest_device_buffer.split_at_mut(self.block_size * self.max_events);
-
-        block_device_buffer.copy_to(block_host_buffer)?;
+        self.device_buffer.copy_to(self.host_buffer.deref_mut())?;
 
         // Collect the events and reset the buffer slice to all None's
-        let result = inner(
-            block_host_buffer
-                .iter_mut()
-                .filter_map(Option::take)
-                .collect::<Vec<Event<H, R>>>(),
-        );
+        let result = inner(self.host_buffer.iter_mut().filter_map(Option::take));
 
-        block_device_buffer.copy_from(block_host_buffer)?;
+        self.device_buffer.copy_from(self.host_buffer.deref_mut())?;
 
         Ok(result)
     }

@@ -65,7 +65,7 @@ impl<H: Habitat, R: LineageReference<H>> Clone for Event<H, R> {
             time: self.time,
             lineage_reference: self.lineage_reference.clone(),
             r#type: self.r#type.clone(),
-            marker: self.marker.clone(),
+            marker: self.marker,
         }
     }
 }
@@ -83,7 +83,7 @@ impl<H: Habitat, R: LineageReference<H>> Clone for EventType<H, R> {
                 origin: origin.clone(),
                 target: target.clone(),
                 coalescence: coalescence.clone(),
-                marker: marker.clone(),
+                marker: *marker,
             },
         }
     }

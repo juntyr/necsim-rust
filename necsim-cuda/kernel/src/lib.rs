@@ -102,16 +102,17 @@ unsafe fn simulate_generic<
 ) {
     Simulation::with_borrow_from_rust_mut(simulation_ptr, |simulation| {
         EventBufferDevice::with_borrow_from_rust_mut(event_buffer_ptr, |event_buffer_reporter| {
-            let (time, steps) = simulation.simulate_incremental(max_steps, event_buffer_reporter);
+            /*let (time, steps) =*/
+            simulation.simulate_incremental(max_steps, event_buffer_reporter);
 
-            if utils::thread_idx().as_id(&utils::block_dim()) == 0 {
+            /*if utils::thread_idx().as_id(&utils::block_dim()) == 0 {
                 println!(
                     "index = {}, time = {:?}, steps = {}",
                     utils::index(),
                     F64(time),
                     steps
                 );
-            }
+            }*/
         })
     })
 }
