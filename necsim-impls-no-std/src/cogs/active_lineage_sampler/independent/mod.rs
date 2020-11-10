@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::cogs::{
-    DispersalSampler, Habitat, IncoherentLineageStore, LineageReference, PrimeableRng,
+    DispersalSampler, HabitatToU64Injection, IncoherentLineageStore, LineageReference, PrimeableRng,
 };
 
 mod sampler;
@@ -15,7 +15,7 @@ mod sampler;
 #[cfg_attr(feature = "cuda", r2cBound(S: rust_cuda::common::RustToCuda))]
 #[derive(Debug)]
 pub struct IndependentActiveLineageSampler<
-    H: Habitat,
+    H: HabitatToU64Injection,
     G: PrimeableRng<Prime = [u8; 16]>,
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
@@ -27,7 +27,7 @@ pub struct IndependentActiveLineageSampler<
 }
 
 impl<
-        H: Habitat,
+        H: HabitatToU64Injection,
         G: PrimeableRng<Prime = [u8; 16]>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
@@ -46,7 +46,7 @@ impl<
 }
 
 impl<
-        H: Habitat,
+        H: HabitatToU64Injection,
         G: PrimeableRng<Prime = [u8; 16]>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,

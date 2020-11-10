@@ -1,5 +1,5 @@
 mod habitat;
-pub use habitat::Habitat;
+pub use habitat::{Habitat, HabitatToU64Injection};
 
 mod rng;
 pub use rng::{PrimeableRng, RngCore, RngSampler};
