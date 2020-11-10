@@ -12,7 +12,7 @@ use necsim_skipping_gillespie::SkippingGillespieSimulation;
 
 use super::args::{Algorithm, CommandLineArguments};
 
-pub fn simulate<G: PrimeableRng<Prime = [u8; 16]>>(
+pub fn simulate<G: PrimeableRng<InMemoryHabitat>>(
     args: &CommandLineArguments,
     habitat: &Array2D<u32>,
     dispersal: &Array2D<f64>,

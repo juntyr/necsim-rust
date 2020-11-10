@@ -1,3 +1,6 @@
+use necsim_core::cogs::HabitatToU64Injection;
+use necsim_core::landscape::IndexedLocation;
+
 use aes_soft::cipher::generic_array::GenericArray;
 use aes_soft::cipher::{BlockCipher, NewBlockCipher};
 use aes_soft::Aes128;
@@ -63,11 +66,32 @@ impl necsim_core::cogs::RngCore for AesRng {
     }
 }
 
-impl necsim_core::cogs::PrimeableRng for AesRng {
-    type Prime = [u8; 16];
+impl<H: HabitatToU64Injection> necsim_core::cogs::PrimeableRng<H> for AesRng {
+    fn prime_with(&mut self, habitat: &H, indexed_location: &IndexedLocation, time_index: u64) {
+        let location_bytes = habitat
+            .map_indexed_location_to_u64_injective(indexed_location)
+            .to_le_bytes();
 
-    fn prime_with(&mut self, prime: Self::Prime) {
-        self.state = prime;
+        self.state[0] = location_bytes[0];
+        self.state[1] = location_bytes[1];
+        self.state[2] = location_bytes[2];
+        self.state[3] = location_bytes[3];
+        self.state[4] = location_bytes[4];
+        self.state[5] = location_bytes[5];
+        self.state[6] = location_bytes[6];
+        self.state[7] = location_bytes[7];
+
+        let time_index_bytes = time_index.to_le_bytes();
+
+        self.state[8] = time_index_bytes[0];
+        self.state[9] = time_index_bytes[1];
+        self.state[10] = time_index_bytes[2];
+        self.state[11] = time_index_bytes[3];
+        self.state[12] = time_index_bytes[4];
+        self.state[13] = time_index_bytes[5];
+        self.state[14] = time_index_bytes[6];
+        self.state[15] = time_index_bytes[7];
+
         self.cached = false;
     }
 }

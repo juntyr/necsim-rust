@@ -149,7 +149,7 @@ impl CudaSimulation {
         sample_percentage <= 1.0_f64,
         "0.0 <= sample_percentage <= 1.0"
     )]
-    pub fn simulate<G: PrimeableRng<Prime = [u8; 16]>>(
+    pub fn simulate<G: PrimeableRng<InMemoryHabitat>>(
         habitat: &Array2D<u32>,
         dispersal: &Array2D<f64>,
         speciation_probability_per_generation: f64,

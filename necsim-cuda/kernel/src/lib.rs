@@ -40,8 +40,8 @@ impl core::fmt::Debug for F64 {
 }
 
 use necsim_core::cogs::{
-    ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler, Habitat,
-    IncoherentLineageStore, LineageReference, PrimeableRng,
+    ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler,
+    HabitatToU64Injection, IncoherentLineageStore, LineageReference, PrimeableRng,
 };
 use necsim_core::reporter::NullReporter;
 use necsim_core::simulation::Simulation;
@@ -84,8 +84,8 @@ pub unsafe extern "ptx-kernel" fn simulate(
 }
 
 unsafe fn simulate_generic<
-    H: Habitat + RustToCuda,
-    G: PrimeableRng<Prime = [u8; 16]> + RustToCuda,
+    H: HabitatToU64Injection + RustToCuda,
+    G: PrimeableRng<H> + RustToCuda,
     D: DispersalSampler<H, G> + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
     S: IncoherentLineageStore<H, R> + RustToCuda,

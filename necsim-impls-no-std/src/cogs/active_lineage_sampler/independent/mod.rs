@@ -16,7 +16,7 @@ mod sampler;
 #[derive(Debug)]
 pub struct IndependentActiveLineageSampler<
     H: HabitatToU64Injection,
-    G: PrimeableRng<Prime = [u8; 16]>,
+    G: PrimeableRng<H>,
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: IncoherentLineageStore<H, R>,
@@ -28,7 +28,7 @@ pub struct IndependentActiveLineageSampler<
 
 impl<
         H: HabitatToU64Injection,
-        G: PrimeableRng<Prime = [u8; 16]>,
+        G: PrimeableRng<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
@@ -47,7 +47,7 @@ impl<
 
 impl<
         H: HabitatToU64Injection,
-        G: PrimeableRng<Prime = [u8; 16]>,
+        G: PrimeableRng<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
