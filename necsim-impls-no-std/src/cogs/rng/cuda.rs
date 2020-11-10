@@ -1,4 +1,5 @@
-use necsim_core::cogs::{PrimeableRng, RngCore};
+use necsim_core::cogs::{HabitatToU64Injection, PrimeableRng, RngCore};
+use necsim_core::landscape::IndexedLocation;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, RustToCuda, LendToCuda)]
@@ -28,10 +29,8 @@ impl<R: RngCore> RngCore for CudaRng<R> {
     }
 }
 
-impl<R: PrimeableRng> PrimeableRng for CudaRng<R> {
-    type Prime = <R as PrimeableRng>::Prime;
-
-    fn prime_with(&mut self, prime: Self::Prime) {
-        self.0.prime_with(prime)
+impl<H: HabitatToU64Injection, R: PrimeableRng<H>> PrimeableRng<H> for CudaRng<R> {
+    fn prime_with(&mut self, habitat: &H, indexed_location: &IndexedLocation, time_index: u64) {
+        self.0.prime_with(habitat, indexed_location, time_index)
     }
 }

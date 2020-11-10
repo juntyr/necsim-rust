@@ -1,4 +1,6 @@
+use crate::cogs::HabitatToU64Injection;
 use crate::intrinsics::{floor, ln};
+use crate::landscape::IndexedLocation;
 
 use core::convert::AsMut;
 use core::default::Default;
@@ -97,8 +99,6 @@ pub trait RngSampler: RngCore {
 impl<R: RngCore> RngSampler for R {}
 
 #[allow(clippy::module_name_repetitions)]
-pub trait PrimeableRng: RngCore {
-    type Prime: AsMut<[u8]> + Sized;
-
-    fn prime_with(&mut self, prime: Self::Prime);
+pub trait PrimeableRng<H: HabitatToU64Injection>: RngCore {
+    fn prime_with(&mut self, habitat: &H, indexed_location: &IndexedLocation, time_index: u64);
 }

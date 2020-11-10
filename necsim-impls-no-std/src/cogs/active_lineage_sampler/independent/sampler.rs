@@ -16,7 +16,7 @@ use super::IndependentActiveLineageSampler;
 #[contract_trait]
 impl<
         H: HabitatToU64Injection,
-        G: PrimeableRng<Prime = [u8; 16]>,
+        G: PrimeableRng<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
@@ -83,30 +83,7 @@ impl<
         let mut time_step = floor(time / delta_t) as u64 + 1;
 
         loop {
-            let location_bytes = simulation
-                .habitat
-                .map_indexed_location_to_u64_injective(&lineage_indexed_location)
-                .to_le_bytes();
-            let time_step_bytes = time_step.to_le_bytes();
-
-            rng.prime_with([
-                location_bytes[0],
-                location_bytes[1],
-                location_bytes[2],
-                location_bytes[3],
-                location_bytes[4],
-                location_bytes[5],
-                location_bytes[6],
-                location_bytes[7],
-                time_step_bytes[0],
-                time_step_bytes[1],
-                time_step_bytes[2],
-                time_step_bytes[3],
-                time_step_bytes[4],
-                time_step_bytes[5],
-                time_step_bytes[6],
-                time_step_bytes[7],
-            ]);
+            rng.prime_with(simulation.habitat, &lineage_indexed_location, time_step);
 
             if rng.sample_event(p) {
                 break;
