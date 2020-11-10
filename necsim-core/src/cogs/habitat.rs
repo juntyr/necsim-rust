@@ -1,5 +1,5 @@
 use crate::landscape::LandscapeExtent;
-use crate::landscape::Location;
+use crate::landscape::{IndexedLocation, Location};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
@@ -33,11 +33,13 @@ pub trait Habitat: core::fmt::Debug {
 #[contract_trait]
 pub trait HabitatToU64Injection: Habitat {
     #[must_use]
-    #[debug_requires(self.get_extent().contains(location), "location is inside habitat extent")]
-    #[debug_requires(index_at_location < self.get_habitat_at_location(location) as usize)]
-    fn map_indexed_location_to_u64_injective(
-        &self,
-        location: &Location,
-        index_at_location: usize,
-    ) -> u64;
+    #[debug_requires(
+        self.get_extent().contains(indexed_location.location()),
+        "location is inside habitat extent"
+    )]
+    #[debug_requires(
+        indexed_location.index() < self.get_habitat_at_location(indexed_location.location()),
+        "index is within the location's habitat capacity"
+    )]
+    fn map_indexed_location_to_u64_injective(&self, indexed_location: &IndexedLocation) -> u64;
 }

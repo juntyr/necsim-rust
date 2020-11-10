@@ -7,7 +7,7 @@ use array2d::Array2D;
 
 use necsim_core::cogs::Habitat;
 use necsim_core::intrinsics::floor;
-use necsim_core::landscape::{LandscapeExtent, Location};
+use necsim_core::landscape::{IndexedLocation, LandscapeExtent, Location};
 use necsim_core::lineage::Lineage;
 
 use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
@@ -71,14 +71,16 @@ impl<H: Habitat> CoherentInMemoryLineageStore<H> {
                 #[allow(clippy::cast_sign_loss)]
                 let sampled_habitat_at_location = floor(
                     f64::from(habitat.get_habitat_at_location(&location)) * sample_percentage,
-                ) as usize;
+                ) as u32;
 
-                for _ in 0..sampled_habitat_at_location {
+                for index_at_location in 0..sampled_habitat_at_location {
                     let lineage_reference = InMemoryLineageReference::from(lineages_store.len());
-                    let index_at_location = lineages_at_location.len();
 
                     lineages_at_location.push(lineage_reference);
-                    lineages_store.push(Lineage::new(location.clone(), index_at_location));
+                    lineages_store.push(Lineage::new(IndexedLocation::new(
+                        location.clone(),
+                        index_at_location,
+                    )));
                 }
             }
         }

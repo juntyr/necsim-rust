@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use necsim_core::cogs::{
     CoalescenceSampler, CoherentLineageStore, Habitat, LineageReference, RngCore,
 };
-use necsim_core::landscape::Location;
+use necsim_core::landscape::{IndexedLocation, Location};
 
 use super::optional_coalescence;
 
@@ -31,11 +31,11 @@ impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: CoherentLineageStore<H, 
     #[must_use]
     fn sample_optional_coalescence_at_location(
         &self,
-        location: &Location,
+        location: Location,
         habitat: &H,
         lineage_store: &S,
         rng: &mut G,
-    ) -> Option<R> {
+    ) -> (IndexedLocation, Option<R>) {
         optional_coalescence::sample_optional_coalescence_at_location(
             location,
             habitat,
@@ -50,18 +50,22 @@ impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: CoherentLineageStore<H, 
 {
     #[must_use]
     pub fn sample_coalescence_at_location(
-        location: &Location,
+        location: Location,
         lineage_store: &S,
         rng: &mut G,
-    ) -> R {
+    ) -> (IndexedLocation, R) {
         use necsim_core::cogs::RngSampler;
 
-        let lineages_at_location = lineage_store.get_active_lineages_at_location(location);
+        let lineages_at_location = lineage_store.get_active_lineages_at_location(&location);
         let population = lineages_at_location.len();
 
-        let chosen_coalescence = rng.sample_index(population);
+        let chosen_coalescence_index = rng.sample_index(population);
 
-        lineages_at_location[chosen_coalescence].clone()
+        #[allow(clippy::cast_possible_truncation)]
+        let indexed_location = IndexedLocation::new(location, chosen_coalescence_index as u32);
+        let chosen_coalescence = lineages_at_location[chosen_coalescence_index].clone();
+
+        (indexed_location, chosen_coalescence)
     }
 
     #[must_use]

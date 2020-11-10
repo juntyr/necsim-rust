@@ -1,7 +1,7 @@
 use array2d::Array2D;
 
 use necsim_core::cogs::{Habitat, HabitatToU64Injection};
-use necsim_core::landscape::{LandscapeExtent, Location};
+use necsim_core::landscape::{IndexedLocation, LandscapeExtent, Location};
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda, LendToCuda /* TODO: Remove */))]
@@ -43,13 +43,11 @@ impl Habitat for InMemoryHabitat {
 #[contract_trait]
 impl HabitatToU64Injection for InMemoryHabitat {
     #[must_use]
-    fn map_indexed_location_to_u64_injective(
-        &self,
-        location: &Location,
-        index_at_location: usize,
-    ) -> u64 {
-        self.u64_injection[(location.y() as usize, location.x() as usize)]
-            + index_at_location as u64
+    fn map_indexed_location_to_u64_injective(&self, indexed_location: &IndexedLocation) -> u64 {
+        self.u64_injection[(
+            indexed_location.location().y() as usize,
+            indexed_location.location().x() as usize,
+        )] + u64::from(indexed_location.index())
     }
 }
 

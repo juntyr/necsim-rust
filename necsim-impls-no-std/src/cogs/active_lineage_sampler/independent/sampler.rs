@@ -5,7 +5,7 @@ use necsim_core::cogs::{
     LineageReference, PrimeableRng,
 };
 use necsim_core::intrinsics::{exp, floor};
-use necsim_core::landscape::Location;
+use necsim_core::landscape::IndexedLocation;
 use necsim_core::simulation::partial::active_lineager_sampler::PartialSimulation;
 
 use crate::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler;
@@ -38,7 +38,7 @@ impl<
 
     #[must_use]
     #[allow(clippy::type_complexity)]
-    fn pop_active_lineage_location_event_time(
+    fn pop_active_lineage_indexed_location_event_time(
         &mut self,
         time: f64,
         simulation: &mut PartialSimulation<
@@ -51,7 +51,7 @@ impl<
             IndependentEventSampler<H, G, D, R, S>,
         >,
         rng: &mut G,
-    ) -> Option<(R, Location, f64)> {
+    ) -> Option<(R, IndexedLocation, f64)> {
         use necsim_core::cogs::RngSampler;
 
         let chosen_lineage_reference = match self.active_lineage_reference.take() {
@@ -69,12 +69,7 @@ impl<
             return None;
         }
 
-        // TODO: Should be returned upon extraction as well
-        let lineage_index_at_location = simulation.lineage_store[chosen_lineage_reference.clone()]
-            .index_at_location()
-            .unwrap();
-
-        let lineage_location = simulation
+        let lineage_indexed_location = simulation
             .lineage_store
             .extract_lineage_from_its_location(chosen_lineage_reference.clone());
 
@@ -90,7 +85,7 @@ impl<
         loop {
             let location_bytes = simulation
                 .habitat
-                .map_indexed_location_to_u64_injective(&lineage_location, lineage_index_at_location)
+                .map_indexed_location_to_u64_injective(&lineage_indexed_location)
                 .to_le_bytes();
             let time_step_bytes = time_step.to_le_bytes();
 
@@ -135,7 +130,7 @@ impl<
 
         Some((
             chosen_lineage_reference,
-            lineage_location,
+            lineage_indexed_location,
             unique_event_time,
         ))
     }
@@ -145,10 +140,10 @@ impl<
         "does not overwrite the independent lineage"
     )]
     #[allow(clippy::type_complexity)]
-    fn push_active_lineage_to_location(
+    fn push_active_lineage_to_indexed_location(
         &mut self,
         lineage_reference: R,
-        location: Location,
+        indexed_location: IndexedLocation,
         _time: f64,
         simulation: &mut PartialSimulation<
             H,
@@ -159,22 +154,11 @@ impl<
             IndependentCoalescenceSampler<H, G, R, S>,
             IndependentEventSampler<H, G, D, R, S>,
         >,
-        rng: &mut G,
+        _rng: &mut G,
     ) {
-        let index_at_location =
-            IndependentCoalescenceSampler::<H, G, R, S>::sample_coalescence_index_at_location(
-                &location,
-                simulation.habitat,
-                rng,
-            );
-
         simulation
             .lineage_store
-            .insert_lineage_to_location_at_index(
-                lineage_reference.clone(),
-                location,
-                index_at_location,
-            );
+            .insert_lineage_to_indexed_location(lineage_reference.clone(), indexed_location);
 
         self.active_lineage_reference = Some(lineage_reference);
     }

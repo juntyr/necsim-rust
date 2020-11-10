@@ -3,7 +3,7 @@ use super::{
     RngCore,
 };
 
-use crate::landscape::Location;
+use crate::landscape::IndexedLocation;
 use crate::simulation::partial::active_lineager_sampler::PartialSimulation;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
@@ -41,22 +41,22 @@ pub trait ActiveLineageSampler<
             simulation.lineage_store[reference.clone()].time_of_last_event() == event_time
         },
     }, "updates the time of the last event of the returned lineage to the time of the event")]
-    fn pop_active_lineage_location_event_time(
+    fn pop_active_lineage_indexed_location_event_time(
         &mut self,
         time: f64,
         simulation: &mut PartialSimulation<H, G, D, R, S, C, E>,
         rng: &mut G,
-    ) -> Option<(R, Location, f64)>;
+    ) -> Option<(R, IndexedLocation, f64)>;
 
     #[debug_requires(time >= 0.0_f64, "time is non-negative")]
     /*#[debug_requires(( TODO: How can we assert this only for coherent lineage stores?
         simulation.lineage_store.get_active_lineages_at_location(&location).len() <
         (simulation.habitat.get_habitat_at_location(&location) as usize)
     ), "location has habitat capacity for the lineage")]*/
-    fn push_active_lineage_to_location(
+    fn push_active_lineage_to_indexed_location(
         &mut self,
         lineage_reference: R,
-        location: Location,
+        indexed_location: IndexedLocation,
         time: f64,
         simulation: &mut PartialSimulation<H, G, D, R, S, C, E>,
         rng: &mut G,

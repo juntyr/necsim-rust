@@ -1,5 +1,5 @@
 use necsim_core::cogs::{Habitat, IncoherentLineageStore, LineageStore};
-use necsim_core::landscape::Location;
+use necsim_core::landscape::IndexedLocation;
 use necsim_core::lineage::Lineage;
 
 use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
@@ -40,30 +40,29 @@ impl<H: Habitat> IncoherentLineageStore<H, InMemoryLineageReference>
     for IncoherentInMemoryLineageStore<H>
 {
     #[debug_requires(
-        self.landscape_extent.contains(&location),
+        self.landscape_extent.contains(indexed_location.location()),
         "location is inside landscape extent"
     )]
-    fn insert_lineage_to_location_at_index(
+    fn insert_lineage_to_indexed_location(
         &mut self,
         reference: InMemoryLineageReference,
-        location: Location,
-        index_at_location: usize,
+        indexed_location: IndexedLocation,
     ) {
         unsafe {
             self.lineages_store[Into::<usize>::into(reference)]
-                .move_to_location(location, index_at_location)
+                .move_to_indexed_location(indexed_location)
         }
     }
 
     #[must_use]
     #[debug_requires(
-        self.landscape_extent.contains(self[reference].location().unwrap()),
+        self.landscape_extent.contains(self[reference].indexed_location().unwrap().location()),
         "lineage's location is inside landscape extent"
     )]
     fn extract_lineage_from_its_location(
         &mut self,
         reference: InMemoryLineageReference,
-    ) -> Location {
+    ) -> IndexedLocation {
         unsafe { self.lineages_store[Into::<usize>::into(reference)].remove_from_location() }
     }
 }

@@ -1,50 +1,34 @@
-use crate::landscape::Location;
-
-#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
-#[derive(Debug)]
-struct LineageLocation {
-    location: Location,
-    index_at_location: usize,
-}
+use crate::landscape::IndexedLocation;
 
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 #[derive(Debug)]
 pub struct Lineage {
-    location: Option<LineageLocation>,
+    indexed_location: Option<IndexedLocation>,
     time_of_last_event: f64,
 }
 
 impl Lineage {
     #[must_use]
-    #[debug_ensures(ret.location() == Some(&old(location.clone())), "stores the location")]
     #[debug_ensures(
-        ret.index_at_location() == Some(index_at_location),
-        "stores the index_at_location"
+        ret.indexed_location() == Some(&old(indexed_location.clone())),
+        "stores the indexed_location"
     )]
     #[debug_ensures(ret.time_of_last_event() == 0.0_f64, "starts at t_0 = 0.0")]
-    pub fn new(location: Location, index_at_location: usize) -> Self {
+    pub fn new(indexed_location: IndexedLocation) -> Self {
         Self {
-            location: Some(LineageLocation {
-                location,
-                index_at_location,
-            }),
+            indexed_location: Some(indexed_location),
             time_of_last_event: 0.0_f64,
         }
     }
 
     #[must_use]
     pub fn is_active(&self) -> bool {
-        self.location.is_some()
+        self.indexed_location.is_some()
     }
 
     #[must_use]
-    pub fn location(&self) -> Option<&Location> {
-        self.location.as_ref().map(|l| &l.location)
-    }
-
-    #[must_use]
-    pub fn index_at_location(&self) -> Option<usize> {
-        self.location.as_ref().map(|l| l.index_at_location)
+    pub fn indexed_location(&self) -> Option<&IndexedLocation> {
+        self.indexed_location.as_ref()
     }
 
     #[must_use]
@@ -58,12 +42,12 @@ impl Lineage {
     #[debug_requires(self.is_active(), "lineage must be active to be deactivated")]
     #[debug_ensures(!self.is_active(), "lineages has been deactivated")]
     #[debug_ensures(
-        ret == old(self.location().unwrap().clone()),
-        "returns the individual's prior location"
+        ret == old(self.indexed_location.as_ref().unwrap().clone()),
+        "returns the individual's prior indexed_location"
     )]
-    pub unsafe fn remove_from_location(&mut self) -> Location {
-        match self.location.take() {
-            Some(location) => location.location,
+    pub unsafe fn remove_from_location(&mut self) -> IndexedLocation {
+        match self.indexed_location.take() {
+            Some(indexed_location) => indexed_location,
             None => unreachable!(),
         }
     }
@@ -72,28 +56,25 @@ impl Lineage {
     /// This method should only be called by internal `LineageStore` code to update the
     /// state of the lineages being simulated.
     #[debug_requires(!self.is_active(), "lineage must be inactive to move")]
-    #[debug_ensures(self.location() == Some(&old(location.clone())), "updates the location")]
     #[debug_ensures(
-        self.index_at_location() == Some(index_at_location),
-        "updates the index_at_location"
+        self.indexed_location() == Some(&old(indexed_location.clone())),
+        "updates the indexed_location"
     )]
-    pub unsafe fn move_to_location(&mut self, location: Location, index_at_location: usize) {
-        self.location = Some(LineageLocation {
-            location,
-            index_at_location,
-        });
+    pub unsafe fn move_to_indexed_location(&mut self, indexed_location: IndexedLocation) {
+        self.indexed_location = Some(indexed_location);
     }
 
     /// # Safety
     /// This method should only be called by internal `LineageStore` code to update the
     /// state of the lineages being simulated.
+    #[debug_requires(self.is_active())]
     #[debug_ensures(
-        self.index_at_location() == Some(index_at_location),
+        self.indexed_location.as_ref().unwrap().index() == index_at_location,
         "updates the index_at_location"
     )]
-    pub unsafe fn update_index_at_location(&mut self, index_at_location: usize) {
-        if let Some(ref mut location) = self.location {
-            location.index_at_location = index_at_location;
+    pub unsafe fn update_index_at_location(&mut self, index_at_location: u32) {
+        if let Some(ref mut indexed_location) = self.indexed_location {
+            indexed_location.index = index_at_location;
         }
     }
 

@@ -37,7 +37,7 @@ impl<
             |active_lineage_sampler, simulation, rng| {
                 while let Some((chosen_lineage, dispersal_origin, event_time)) =
                     active_lineage_sampler
-                        .pop_active_lineage_location_event_time(time, simulation, rng)
+                        .pop_active_lineage_indexed_location_event_time(time, simulation, rng)
                 {
                     let event = if cfg!(not(target_os = "cuda"))
                         && active_lineage_sampler.number_active_lineages() == 0
@@ -54,7 +54,7 @@ impl<
                         })
                     } else {
                         simulation.with_split_event_sampler(|event_sampler, simulation| {
-                            event_sampler.sample_event_for_lineage_at_location_time(
+                            event_sampler.sample_event_for_lineage_at_indexed_location_time(
                                 chosen_lineage,
                                 dispersal_origin,
                                 event_time,
@@ -75,7 +75,7 @@ impl<
                     } = event.r#type()
                     {
                         // In the event of dispersal without coalescence, the lineage remains active
-                        active_lineage_sampler.push_active_lineage_to_location(
+                        active_lineage_sampler.push_active_lineage_to_indexed_location(
                             event.lineage_reference().clone(),
                             dispersal_target.clone(),
                             time,
