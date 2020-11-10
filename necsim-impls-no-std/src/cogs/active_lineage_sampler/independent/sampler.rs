@@ -1,8 +1,8 @@
 use float_next_after::NextAfter;
 
 use necsim_core::cogs::{
-    ActiveLineageSampler, DispersalSampler, Habitat, IncoherentLineageStore, LineageReference,
-    PrimeableRng,
+    ActiveLineageSampler, DispersalSampler, HabitatToU64Injection, IncoherentLineageStore,
+    LineageReference, PrimeableRng,
 };
 use necsim_core::intrinsics::{exp, floor};
 use necsim_core::landscape::Location;
@@ -15,7 +15,7 @@ use super::IndependentActiveLineageSampler;
 
 #[contract_trait]
 impl<
-        H: Habitat,
+        H: HabitatToU64Injection,
         G: PrimeableRng<Prime = [u8; 16]>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
@@ -88,23 +88,21 @@ impl<
         let mut time_step = floor(time / delta_t) as u64 + 1;
 
         loop {
-            let location_bytes_x = lineage_location.x().to_le_bytes();
-            let location_bytes_y = lineage_location.y().to_le_bytes();
-            let location_bytes_i = lineage_index_at_location.to_le_bytes();
+            let location_bytes = simulation
+                .habitat
+                .map_indexed_location_to_u64_injective(&lineage_location, lineage_index_at_location)
+                .to_le_bytes();
             let time_step_bytes = time_step.to_le_bytes();
 
-            // TODO: This should be more automatic, similar to Hash -> it should also NOT use simple xor
-            // TODO: It would be much better if we could get a location index here, i.e. bijection from
-            //       u64 to Location & index_at_location (this would require a cumulative habitat)
             rng.prime_with([
-                location_bytes_x[0] ^ location_bytes_i[7],
-                location_bytes_x[1] ^ location_bytes_i[6],
-                location_bytes_x[2] ^ location_bytes_i[5],
-                location_bytes_x[3] ^ location_bytes_i[4],
-                location_bytes_y[0] ^ location_bytes_i[3],
-                location_bytes_y[1] ^ location_bytes_i[2],
-                location_bytes_y[2] ^ location_bytes_i[1],
-                location_bytes_y[3] ^ location_bytes_i[0],
+                location_bytes[0],
+                location_bytes[1],
+                location_bytes[2],
+                location_bytes[3],
+                location_bytes[4],
+                location_bytes[5],
+                location_bytes[6],
+                location_bytes[7],
                 time_step_bytes[0],
                 time_step_bytes[1],
                 time_step_bytes[2],

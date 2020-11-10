@@ -27,3 +27,17 @@ pub trait Habitat: core::fmt::Debug {
     #[debug_requires(self.get_extent().contains(location), "location is inside habitat extent")]
     fn get_habitat_at_location(&self, location: &Location) -> u32;
 }
+
+#[allow(clippy::inline_always, clippy::inline_fn_without_body)]
+#[allow(clippy::module_name_repetitions)]
+#[contract_trait]
+pub trait HabitatToU64Injection: Habitat {
+    #[must_use]
+    #[debug_requires(self.get_extent().contains(location), "location is inside habitat extent")]
+    #[debug_requires(index_at_location < self.get_habitat_at_location(location) as usize)]
+    fn map_indexed_location_to_u64_injective(
+        &self,
+        location: &Location,
+        index_at_location: usize,
+    ) -> u64;
+}
