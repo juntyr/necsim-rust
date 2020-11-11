@@ -10,6 +10,9 @@ pub struct ProgressReporter {
 }
 
 impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for ProgressReporter {
+    const REPORT_SPECIATION: bool = true;
+    const REPORT_DISPERSAL: bool = false;
+
     #[debug_ensures(match event.r#type() {
         EventType::Speciation | EventType::Dispersal {
             coalescence: Some(_),

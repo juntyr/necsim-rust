@@ -8,6 +8,9 @@ pub struct BiodiversityReporter {
 }
 
 impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for BiodiversityReporter {
+    const REPORT_SPECIATION: bool = true;
+    const REPORT_DISPERSAL: bool = false;
+
     #[debug_ensures(match event.r#type() {
         EventType::Speciation => self.biodiversity == old(self.biodiversity) + 1,
         _ => self.biodiversity == old(self.biodiversity),

@@ -10,6 +10,8 @@ use necsim_core::event::Event;
 pub struct EventBufferCudaRepresentation<
     H: Habitat + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
+    const S: bool,
+    const D: bool,
 > {
     pub(super) block_size: usize,
     pub(super) grid_size: usize,
@@ -17,7 +19,11 @@ pub struct EventBufferCudaRepresentation<
     pub(super) device_buffer: DevicePointer<Option<Event<H, R>>>,
 }
 
-unsafe impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> DeviceCopy
-    for EventBufferCudaRepresentation<H, R>
+unsafe impl<
+        H: Habitat + RustToCuda,
+        R: LineageReference<H> + DeviceCopy,
+        const REPORT_SPECIATION: bool,
+        const REPORT_DISPERSAL: bool,
+    > DeviceCopy for EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>
 {
 }

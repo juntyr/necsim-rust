@@ -14,6 +14,9 @@ pub struct EventReporter {
 }
 
 impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for EventReporter {
+    const REPORT_SPECIATION: bool = true;
+    const REPORT_DISPERSAL: bool = true;
+
     #[debug_ensures(contract::explicit_event_reporter_report_event_contract(
         event.r#type(), old(self.speciation), old(self.out_dispersal), old(self.self_dispersal),
         old(self.out_coalescence), old(self.self_coalescence), self.speciation, self.out_dispersal,

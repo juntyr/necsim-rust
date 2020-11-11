@@ -10,6 +10,9 @@ pub struct ExecutionTimeReporter {
 }
 
 impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for ExecutionTimeReporter {
+    const REPORT_SPECIATION: bool = true;
+    const REPORT_DISPERSAL: bool = true;
+
     #[debug_ensures(self.start_time.is_some(), "start_time is set after first call")]
     #[debug_ensures(
         old(self.start_time).is_some() -> old(self.start_time) == self.start_time,
