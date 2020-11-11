@@ -15,8 +15,8 @@ extern crate necsim_core;
 use necsim_core::cogs::RngCore;
 use necsim_impls_no_std::cogs::rng::wyhash::WyHash as Rng;
 use necsim_impls_std::reporter::biodiversity::BiodiversityReporter;
-use necsim_impls_std::reporter::events::EventReporter;
-use necsim_impls_std::reporter::execution_time::ExecutionTimeReporter;
+/*use necsim_impls_std::reporter::events::EventReporter;
+use necsim_impls_std::reporter::execution_time::ExecutionTimeReporter;*/
 use necsim_impls_std::reporter::progress::ProgressReporter;
 
 fn main() -> Result<()> {
@@ -67,14 +67,14 @@ fn main() -> Result<()> {
         ((total_habitat as f64) * args.sample_percentage()).ceil() as u64;
 
     let mut biodiversity_reporter = BiodiversityReporter::default();
-    let mut event_reporter = EventReporter::default();
-    let mut execution_time_reporter = ExecutionTimeReporter::default();
+    /*let mut event_reporter = EventReporter::default();
+    let mut execution_time_reporter = ExecutionTimeReporter::default();*/
     let mut progress_reporter = ProgressReporter::new(estimated_total_lineages);
 
     let mut reporter_group = ReporterGroup![
         biodiversity_reporter,
-        event_reporter,
-        execution_time_reporter,
+        //event_reporter,
+        //execution_time_reporter,
         progress_reporter
     ];
 
@@ -88,15 +88,15 @@ fn main() -> Result<()> {
     )?;
 
     // Output the simulation result and report summaries
-    let execution_time = execution_time_reporter.execution_time();
+    //let execution_time = execution_time_reporter.execution_time();
 
     progress_reporter.finish();
-    event_reporter.report();
+    /*event_reporter.report();
 
     println!(
         "The simulation took {}s to execute.",
         execution_time.as_secs_f32()
-    );
+    );*/
     println!("Simulation finished after {} ({} steps).", time, steps);
     println!(
         "Simulation resulted with biodiversity of {} unique species.",

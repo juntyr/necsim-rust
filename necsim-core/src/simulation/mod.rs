@@ -27,13 +27,13 @@ impl<
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
     pub fn simulate_incremental(
         &mut self,
-        max_steps: usize,
+        max_steps: u64,
         reporter: &mut impl Reporter<H, R>,
-    ) -> (f64, usize) {
+    ) -> (f64, u64) {
         let mut time = self
             .active_lineage_sampler
             .get_time_of_last_event(&self.lineage_store);
-        let mut steps: usize = 0;
+        let mut steps = 0_u64;
 
         self.with_mut_split_active_lineage_sampler_and_rng(
             |active_lineage_sampler, simulation, rng| {
@@ -100,17 +100,17 @@ impl<
     }
 
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
-    pub fn simulate(mut self, reporter: &mut impl Reporter<H, R>) -> (f64, usize) {
-        let mut total_steps: usize = 0;
+    pub fn simulate(mut self, reporter: &mut impl Reporter<H, R>) -> (f64, u64) {
+        let mut total_steps = 0_u64;
 
-        let (mut final_time, mut new_steps) = self.simulate_incremental(usize::MAX, reporter);
+        let (mut final_time, mut new_steps) = self.simulate_incremental(u64::MAX, reporter);
 
         while new_steps > 0 {
             total_steps += new_steps;
 
             // Waiting for tuple destructuring RFC #2909 at:
             //   https://github.com/rust-lang/rust/pull/78748
-            let (new_final_time, new_new_steps) = self.simulate_incremental(usize::MAX, reporter);
+            let (new_final_time, new_new_steps) = self.simulate_incremental(u64::MAX, reporter);
             final_time = new_final_time;
             new_steps = new_new_steps;
         }
