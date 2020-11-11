@@ -76,7 +76,7 @@ pub unsafe extern "ptx-kernel" fn simulate(
     use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat as Habitat;
     use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference as LineageReference;
     use necsim_impls_no_std::cogs::lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore as LineageStore;
-    use necsim_impls_no_std::cogs::rng::aes::AesRng as Rng;
+    use necsim_impls_no_std::cogs::rng::wyhash::WyHash as Rng;
 
     simulate_generic(
         simulation_c_ptr

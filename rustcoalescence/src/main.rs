@@ -13,7 +13,7 @@ mod simulation;
 extern crate necsim_core;
 
 use necsim_core::cogs::RngCore;
-use necsim_impls_no_std::cogs::rng::aes::AesRng as Rng;
+use necsim_impls_no_std::cogs::rng::wyhash::WyHash as Rng;
 use necsim_impls_std::reporter::biodiversity::BiodiversityReporter;
 use necsim_impls_std::reporter::events::EventReporter;
 use necsim_impls_std::reporter::execution_time::ExecutionTimeReporter;
