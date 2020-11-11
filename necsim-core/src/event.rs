@@ -1,3 +1,4 @@
+use core::hash::{Hash, Hasher};
 use core::marker::PhantomData;
 
 use crate::cogs::{Habitat, LineageReference};
@@ -14,6 +15,21 @@ pub struct Event<H: Habitat, R: LineageReference<H>> {
     lineage_reference: R,
     r#type: EventType<H, R>,
     marker: PhantomData<H>,
+}
+
+impl<H: Habitat, R: LineageReference<H>> Eq for Event<H, R> {}
+
+impl<H: Habitat, R: LineageReference<H>> PartialEq for Event<H, R> {
+    fn eq(&self, other: &Self) -> bool {
+        self.time == other.time && self.r#type == other.r#type
+    }
+}
+
+impl<H: Habitat, R: LineageReference<H>> Hash for Event<H, R> {
+    fn hash<S: Hasher>(&self, state: &mut S) {
+        self.time.to_bits().hash(state);
+        self.r#type.hash(state);
+    }
 }
 
 impl<H: Habitat, R: LineageReference<H>> Event<H, R> {
@@ -57,6 +73,40 @@ pub enum EventType<H: Habitat, R: LineageReference<H>> {
         coalescence: Option<R>,
         marker: PhantomData<H>,
     },
+}
+
+impl<H: Habitat, R: LineageReference<H>> Eq for EventType<H, R> {}
+
+impl<H: Habitat, R: LineageReference<H>> PartialEq for EventType<H, R> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (EventType::Speciation, EventType::Speciation) => true,
+            (
+                EventType::Dispersal {
+                    origin: self_origin,
+                    target: self_target,
+                    ..
+                },
+                EventType::Dispersal {
+                    origin: other_origin,
+                    target: other_target,
+                    ..
+                },
+            ) => self_origin == other_origin && self_target == other_target,
+            _ => false,
+        }
+    }
+}
+
+impl<H: Habitat, R: LineageReference<H>> Hash for EventType<H, R> {
+    fn hash<S: Hasher>(&self, state: &mut S) {
+        core::mem::discriminant(self).hash(state);
+
+        if let EventType::Dispersal { origin, target, .. } = self {
+            origin.hash(state);
+            target.hash(state);
+        }
+    }
 }
 
 impl<H: Habitat, R: LineageReference<H>> Clone for Event<H, R> {
