@@ -156,7 +156,7 @@ impl CudaSimulation {
         sample_percentage: f64,
         rng: G,
         reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
-    ) -> Result<(f64, usize)> {
+    ) -> Result<(f64, u64)> {
         const SIMULATION_STEP_SLICE: usize = 100_usize;
 
         let habitat = InMemoryHabitat::new(habitat.clone());
@@ -198,11 +198,16 @@ impl CudaSimulation {
 
         let module_data = CString::new(include_str!(env!("KERNEL_PTX_PATH"))).unwrap();
 
+        // unimplemented!("{}", include_str!(env!("KERNEL_PTX_PATH")));
+
         // Initialize the CUDA API
         rustacuda::init(CudaFlags::empty())?;
 
         // Get the first device
         let device = Device::get_device(0)?;
+
+        let mut global_time_max = 0.0_f64;
+        let mut global_steps_sum = 0_u64;
 
         // Create a context associated to this device
         with_cuda!(CudaContext::create_and_push(ContextFlags::MAP_HOST | ContextFlags::SCHED_AUTO, device)? => |context: CudaContext| {
@@ -223,10 +228,17 @@ impl CudaSimulation {
             print_context_resource_limits();
             print_kernel_function_attributes(&simulate_kernel);
 
-            let mut event_buffer: EventBufferHost<InMemoryHabitat, InMemoryLineageReference, true, true> =
+            let mut event_buffer: EventBufferHost<InMemoryHabitat, InMemoryLineageReference, true, false> =
                 EventBufferHost::new(&cuda_block_size, &cuda_grid_size, SIMULATION_STEP_SLICE)?;
 
             let mut remaining_individuals = simulation.lineage_store().get_number_total_lineages();
+
+            // Load and initialise the global_time_max and global_steps_sum symbols
+            let mut global_time_max_symbol: Symbol<f64> = module.get_global(&CString::new("global_time_max").unwrap())?;
+            global_time_max_symbol.copy_from(&0.0_f64)?;
+            let mut global_steps_sum_symbol: Symbol<u64> = module.get_global(&CString::new("global_steps_sum").unwrap())?;
+            global_steps_sum_symbol.copy_from(&0_u64)?;
+
 
             // TODO: We should use async launches and callbacks to rotate between simulation, event analysis etc.
             if let Err(err) = simulation.lend_to_cuda_mut(|simulation_mut_ptr| {
@@ -249,7 +261,7 @@ impl CudaSimulation {
                             launch!(simulate_kernel<<<cuda_grid_size, cuda_block_size, 0, stream>>>(
                                 simulation_mut_ptr,
                                 event_buffer.get_mut_cuda_ptr(),
-                                SIMULATION_STEP_SLICE
+                                SIMULATION_STEP_SLICE as u64
                             ))?;
                         }
 
@@ -276,10 +288,11 @@ impl CudaSimulation {
                 eprintln!("\nRunning kernel failed with {:#?}!\n", err);
             }
 
+            global_time_max_symbol.copy_to(&mut global_time_max)?;
+            global_steps_sum_symbol.copy_to(&mut global_steps_sum)?;
+
         });});});
 
-        let (time, steps) = (4.2_f64, 42);
-
-        Ok((time, steps))
+        Ok((global_time_max, global_steps_sum))
     }
 }

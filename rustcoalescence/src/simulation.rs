@@ -18,7 +18,7 @@ pub fn simulate<G: PrimeableRng<InMemoryHabitat>>(
     dispersal: &Array2D<f64>,
     rng: G,
     reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
-) -> Result<(f64, usize)> {
+) -> Result<(f64, u64)> {
     println!(
         "Setting up the {:?} coalescence algorithm ...",
         args.algorithm()
@@ -61,7 +61,7 @@ pub fn simulate<G: PrimeableRng<InMemoryHabitat>>(
     .with_context(|| {
         format!(
             concat!(
-                "Failed to create a Landscape with the habitat ",
+                "Failed to create the Simulation with the habitat ",
                 "map {:?} and the dispersal map {:?}."
             ),
             args.dispersal_map(),

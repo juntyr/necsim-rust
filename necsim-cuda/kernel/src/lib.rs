@@ -62,13 +62,22 @@ use necsim_impls_cuda::cogs::rng::CudaRng;
 use necsim_impls_cuda::event_buffer::common::EventBufferCudaRepresentation;
 use necsim_impls_cuda::event_buffer::device::EventBufferDevice;
 
+use core::sync::atomic::{AtomicU64, Ordering};
+
+extern "C" {
+    #[no_mangle]
+    static global_time_max: AtomicU64;
+    #[no_mangle]
+    static global_steps_sum: AtomicU64;
+}
+
 #[no_mangle]
 /// # Safety
 /// This CUDA kernel is unsafe as it is called with raw pointers
 pub unsafe extern "ptx-kernel" fn simulate(
     simulation_c_ptr: *mut core::ffi::c_void,
     event_buffer_c_ptr: *mut core::ffi::c_void,
-    max_steps: usize,
+    max_steps: u64,
 ) {
     use necsim_impls_no_std::cogs::active_lineage_sampler::independent::IndependentActiveLineageSampler as ActiveLineageSampler;
     use necsim_impls_no_std::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler as CoalescenceSampler;
@@ -92,7 +101,7 @@ pub unsafe extern "ptx-kernel" fn simulate(
                 ActiveLineageSampler<_, _, _, _, _>,
             > as RustToCuda>::CudaRepresentation,
         event_buffer_c_ptr
-            as *mut EventBufferCudaRepresentation<Habitat, LineageReference, true, true>,
+            as *mut EventBufferCudaRepresentation<Habitat, LineageReference, true, false>,
         max_steps,
     )
 }
@@ -111,11 +120,14 @@ unsafe fn simulate_generic<
 >(
     simulation_ptr: *mut <Simulation<H, G, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
     event_buffer_ptr: *mut EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
-    max_steps: usize,
+    max_steps: u64,
 ) {
     Simulation::with_borrow_from_rust_mut(simulation_ptr, |simulation| {
         EventBufferDevice::with_borrow_from_rust_mut(event_buffer_ptr, |event_buffer_reporter| {
-            simulation.simulate_incremental(max_steps, event_buffer_reporter);
+            let (time, steps) = simulation.simulate_incremental(max_steps, event_buffer_reporter);
+
+            global_time_max.fetch_max(time.to_bits(), Ordering::Relaxed);
+            global_steps_sum.fetch_add(steps, Ordering::Relaxed);
         })
     })
 }

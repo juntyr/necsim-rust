@@ -47,7 +47,7 @@ impl GillespieSimulation {
         sample_percentage: f64,
         mut rng: G,
         reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
-    ) -> Result<(f64, usize)> {
+    ) -> Result<(f64, u64)> {
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
         let lineage_store = CoherentInMemoryLineageStore::new(sample_percentage, &habitat);
