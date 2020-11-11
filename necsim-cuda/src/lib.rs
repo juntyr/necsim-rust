@@ -297,6 +297,8 @@ impl CudaSimulation {
 
         });});});
 
+        println!("{:#?}", event_deduplicator);
+
         Ok((global_time_max, global_steps_sum))
     }
 }

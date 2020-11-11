@@ -55,11 +55,10 @@ impl<
     #[debug_ensures(match &ret.r#type() {
         EventType::Speciation => true,
         EventType::Dispersal {
-            origin,
             target,
             coalescence,
             ..
-        } => ((origin == target) -> coalescence.is_some()),
+        } => ((ret.origin() == target) -> coalescence.is_some()),
     }, "always coalesces on self-dispersal")]
     fn sample_event_for_lineage_at_indexed_location_time(
         &self,
@@ -98,7 +97,6 @@ impl<
                 );
 
             EventType::Dispersal {
-                origin: dispersal_origin,
                 coalescence: optional_coalescence,
                 target: dispersal_target,
                 marker: PhantomData::<H>,
@@ -113,13 +111,12 @@ impl<
 
             EventType::Dispersal {
                 coalescence: Some(coalescence),
-                origin: dispersal_origin,
                 target: dispersal_target,
                 marker: PhantomData::<H>,
             }
         };
 
-        Event::new(event_time, lineage_reference, event_type)
+        Event::new(dispersal_origin, event_time, lineage_reference, event_type)
     }
 }
 

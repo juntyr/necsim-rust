@@ -56,6 +56,7 @@ pub trait EventSampler<
     fn sample_final_speciation_event_for_lineage_after_time(
         &self,
         lineage_reference: R,
+        indexed_location: IndexedLocation,
         time: f64,
         simulation: &PartialSimulation<H, G, D, R, S, C>,
         rng: &mut G,
@@ -68,6 +69,7 @@ pub trait EventSampler<
         let event_time = time + delta_time;
 
         Event::new(
+            indexed_location,
             if event_time > time {
                 event_time
             } else {

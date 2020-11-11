@@ -56,10 +56,11 @@ impl<
     ) -> Event<H, R> {
         use necsim_core::cogs::RngSampler;
 
+        let dispersal_origin = indexed_location;
+
         let event_type = if rng.sample_event(*simulation.speciation_probability_per_generation) {
             EventType::Speciation
         } else {
-            let dispersal_origin = indexed_location;
             let dispersal_target = simulation
                 .dispersal_sampler
                 .sample_dispersal_from_location(dispersal_origin.location(), rng);
@@ -74,14 +75,13 @@ impl<
                 );
 
             EventType::Dispersal {
-                origin: dispersal_origin,
                 coalescence: optional_coalescence,
                 target: dispersal_target,
                 marker: PhantomData::<H>,
             }
         };
 
-        Event::new(event_time, lineage_reference, event_type)
+        Event::new(dispersal_origin, event_time, lineage_reference, event_type)
     }
 }
 

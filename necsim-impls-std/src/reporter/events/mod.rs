@@ -18,23 +18,22 @@ impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for EventReporter {
     const REPORT_DISPERSAL: bool = true;
 
     #[debug_ensures(contract::explicit_event_reporter_report_event_contract(
-        event.r#type(), old(self.speciation), old(self.out_dispersal), old(self.self_dispersal),
-        old(self.out_coalescence), old(self.self_coalescence), self.speciation, self.out_dispersal,
-        self.self_dispersal, self.out_coalescence, self.self_coalescence),
-        "counts all distinct event types without changing unaffected counts"
-    )]
+        event.origin(), event.r#type(), old(self.speciation), old(self.out_dispersal),
+        old(self.self_dispersal), old(self.out_coalescence), old(self.self_coalescence),
+        self.speciation, self.out_dispersal, self.self_dispersal, self.out_coalescence,
+        self.self_coalescence
+    ), "counts all distinct event types without changing unaffected counts")]
     fn report_event(&mut self, event: &Event<H, R>) {
         match event.r#type() {
             EventType::Speciation => {
                 self.speciation += 1;
             }
             EventType::Dispersal {
-                origin,
                 target,
                 coalescence,
                 ..
             } => {
-                let self_dispersal = origin == target;
+                let self_dispersal = event.origin() == target;
                 let coalescence = coalescence.is_some();
 
                 match (self_dispersal, coalescence) {
