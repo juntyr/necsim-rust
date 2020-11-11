@@ -28,7 +28,7 @@ pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
     #[must_use]
     #[allow(clippy::double_parens)]
     #[debug_ensures(ret.is_some() -> (
-        (&self[old(reference.clone())] as *const Lineage) == (ret.unwrap() as *const Lineage)
+        core::ptr::eq(&self[old(reference.clone())], ret.unwrap())
     ), "provides the checked version of the Index<R, Output = Lineage> trait")]
     fn get(&self, reference: R) -> Option<&Lineage>;
 
