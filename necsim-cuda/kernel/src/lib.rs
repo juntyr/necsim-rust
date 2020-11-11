@@ -4,6 +4,7 @@
 #![feature(abi_ptx)]
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
+#![feature(min_const_generics)]
 
 extern crate alloc;
 
@@ -90,7 +91,8 @@ pub unsafe extern "ptx-kernel" fn simulate(
                 EventSampler<_, _, _, _, _>,
                 ActiveLineageSampler<_, _, _, _, _>,
             > as RustToCuda>::CudaRepresentation,
-        event_buffer_c_ptr as *mut EventBufferCudaRepresentation<Habitat, LineageReference>,
+        event_buffer_c_ptr
+            as *mut EventBufferCudaRepresentation<Habitat, LineageReference, true, true>,
         max_steps,
     )
 }
@@ -104,9 +106,11 @@ unsafe fn simulate_generic<
     C: CoalescenceSampler<H, G, R, S> + RustToCuda,
     E: EventSampler<H, G, D, R, S, C> + RustToCuda,
     A: ActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
+    const REPORT_SPECIATION: bool,
+    const REPORT_DISPERSAL: bool,
 >(
     simulation_ptr: *mut <Simulation<H, G, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
-    event_buffer_ptr: *mut EventBufferCudaRepresentation<H, R>,
+    event_buffer_ptr: *mut EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
     max_steps: usize,
 ) {
     Simulation::with_borrow_from_rust_mut(simulation_ptr, |simulation| {

@@ -14,10 +14,19 @@ use necsim_core::cogs::{Habitat, LineageReference};
 use necsim_core::event::Event;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct EventBufferHost<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> {
+pub struct EventBufferHost<
+    H: Habitat + RustToCuda,
+    R: LineageReference<H> + DeviceCopy,
+    const REPORT_SPECIATION: bool,
+    const REPORT_DISPERSAL: bool,
+> {
     host_buffer: CudaDropWrapper<LockedBuffer<Option<Event<H, R>>>>,
     device_buffer: CudaDropWrapper<DeviceBuffer<Option<Event<H, R>>>>,
-    cuda_repr_box: CudaDropWrapper<DeviceBox<super::common::EventBufferCudaRepresentation<H, R>>>,
+    cuda_repr_box: CudaDropWrapper<
+        DeviceBox<
+            super::common::EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
+        >,
+    >,
 }
 
 pub type EventIterator<'e, H, R> = core::iter::FilterMap<
@@ -27,7 +36,13 @@ pub type EventIterator<'e, H, R> = core::iter::FilterMap<
     ) -> Option<necsim_core::event::Event<H, R>>,
 >;
 
-impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> EventBufferHost<H, R> {
+impl<
+        H: Habitat + RustToCuda,
+        R: LineageReference<H> + DeviceCopy,
+        const REPORT_SPECIATION: bool,
+        const REPORT_DISPERSAL: bool,
+    > EventBufferHost<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>
+{
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     pub fn new(
@@ -35,6 +50,14 @@ impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> EventBufferHo
         grid_size: &GridSize,
         max_events: usize,
     ) -> CudaResult<Self> {
+        let max_events = if REPORT_DISPERSAL {
+            max_events
+        } else if REPORT_SPECIATION {
+            1_usize
+        } else {
+            0_usize
+        };
+
         let block_size = (block_size.x * block_size.y * block_size.z) as usize;
         let grid_size = (grid_size.x * grid_size.y * grid_size.z) as usize;
         let total_capacity = max_events * block_size * grid_size;
@@ -77,7 +100,9 @@ impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> EventBufferHo
 
     pub fn get_mut_cuda_ptr(
         &mut self,
-    ) -> DevicePointer<super::common::EventBufferCudaRepresentation<H, R>> {
+    ) -> DevicePointer<
+        super::common::EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
+    > {
         self.cuda_repr_box.as_device_ptr()
     }
 }

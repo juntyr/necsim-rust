@@ -223,7 +223,7 @@ impl CudaSimulation {
             print_context_resource_limits();
             print_kernel_function_attributes(&simulate_kernel);
 
-            let mut event_buffer: EventBufferHost<InMemoryHabitat, InMemoryLineageReference> =
+            let mut event_buffer: EventBufferHost<InMemoryHabitat, InMemoryLineageReference, true, true> =
                 EventBufferHost::new(&cuda_block_size, &cuda_grid_size, SIMULATION_STEP_SLICE)?;
 
             let mut remaining_individuals = simulation.lineage_store().get_number_total_lineages();

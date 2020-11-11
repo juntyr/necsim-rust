@@ -4,6 +4,9 @@ use crate::cogs::{Habitat, LineageReference};
 use crate::event::Event;
 
 pub trait Reporter<H: Habitat, R: LineageReference<H>> {
+    const REPORT_SPECIATION: bool;
+    const REPORT_DISPERSAL: bool;
+
     fn report_event(&mut self, event: &Event<H, R>);
 }
 
@@ -11,6 +14,9 @@ pub trait Reporter<H: Habitat, R: LineageReference<H>> {
 pub struct NullReporter;
 
 impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for NullReporter {
+    const REPORT_SPECIATION: bool = false;
+    const REPORT_DISPERSAL: bool = false;
+
     fn report_event(&mut self, _event: &Event<H, R>) {
         // no-op
     }
@@ -32,6 +38,9 @@ pub struct ReporterCombinator<
 impl<'r, H: Habitat, R: LineageReference<H>, F: Reporter<H, R>, T: Reporter<H, R>> Reporter<H, R>
     for ReporterCombinator<'r, H, R, F, T>
 {
+    const REPORT_SPECIATION: bool = F::REPORT_SPECIATION || T::REPORT_SPECIATION;
+    const REPORT_DISPERSAL: bool = F::REPORT_DISPERSAL || T::REPORT_DISPERSAL;
+
     #[inline]
     fn report_event(&mut self, event: &Event<H, R>) {
         self.front.report_event(event);
