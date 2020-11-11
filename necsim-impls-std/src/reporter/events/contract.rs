@@ -1,9 +1,11 @@
 use necsim_core::cogs::{Habitat, LineageReference};
 use necsim_core::event::EventType;
+use necsim_core::landscape::IndexedLocation;
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::too_many_arguments)]
 pub fn explicit_event_reporter_report_event_contract<H: Habitat, R: LineageReference<H>>(
+    dispersal_origin: &IndexedLocation,
     event_type: &EventType<H, R>,
     old_speciation: usize,
     old_out_dispersal: usize,
@@ -25,11 +27,10 @@ pub fn explicit_event_reporter_report_event_contract<H: Habitat, R: LineageRefer
             self_coalescence == old_self_coalescence
         },
         EventType::Dispersal {
-            origin,
             target,
             coalescence: None,
             ..
-        } if origin == target => {
+        } if dispersal_origin == target => {
             speciation == old_speciation &&
             out_dispersal == old_out_dispersal &&
             self_dispersal == old_self_dispersal + 1 &&
@@ -37,8 +38,6 @@ pub fn explicit_event_reporter_report_event_contract<H: Habitat, R: LineageRefer
             self_coalescence == old_self_coalescence
         },
         EventType::Dispersal {
-            origin: _origin,
-            target: _target,
             coalescence: None,
             ..
         } /*if origin != target*/ => {
@@ -49,11 +48,10 @@ pub fn explicit_event_reporter_report_event_contract<H: Habitat, R: LineageRefer
             self_coalescence == old_self_coalescence
         },
         EventType::Dispersal {
-            origin,
             target,
             coalescence: Some(_),
             ..
-        } if origin == target => {
+        } if dispersal_origin == target => {
             speciation == old_speciation &&
             out_dispersal == old_out_dispersal &&
             self_dispersal == old_self_dispersal &&
@@ -61,8 +59,6 @@ pub fn explicit_event_reporter_report_event_contract<H: Habitat, R: LineageRefer
             self_coalescence == old_self_coalescence + 1
         },
         EventType::Dispersal {
-            origin: _origin,
-            target: _target,
             coalescence: Some(_),
             ..
         } /*if origin != target*/ => {

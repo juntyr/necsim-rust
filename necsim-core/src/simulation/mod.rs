@@ -49,6 +49,7 @@ impl<
                         simulation.with_split_event_sampler(|event_sampler, simulation| {
                             event_sampler.sample_final_speciation_event_for_lineage_after_time(
                                 chosen_lineage,
+                                dispersal_origin,
                                 time,
                                 simulation,
                                 rng,

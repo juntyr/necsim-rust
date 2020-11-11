@@ -215,9 +215,6 @@ impl Builder {
         args.push("cdylib");
         args.push("-Zcrate-attr=no_main");
 
-        args.push("-C");
-        args.push("link-args=--arch sm_32");
-
         let output_path = {
             self.source_crate
                 .get_output_path()
