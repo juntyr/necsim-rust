@@ -1,5 +1,6 @@
 #![deny(clippy::pedantic)]
 
+use std::collections::HashSet;
 use std::ffi::CString;
 
 #[macro_use]
@@ -209,6 +210,8 @@ impl CudaSimulation {
         let mut global_time_max = 0.0_f64;
         let mut global_steps_sum = 0_u64;
 
+        let mut event_deduplicator = HashSet::new();
+
         // Create a context associated to this device
         with_cuda!(CudaContext::create_and_push(ContextFlags::MAP_HOST | ContextFlags::SCHED_AUTO, device)? => |context: CudaContext| {
         // Load the module containing the kernel function
@@ -238,7 +241,6 @@ impl CudaSimulation {
             global_time_max_symbol.copy_from(&0.0_f64)?;
             let mut global_steps_sum_symbol: Symbol<u64> = module.get_global(&CString::new("global_steps_sum").unwrap())?;
             global_steps_sum_symbol.copy_from(&0_u64)?;
-
 
             // TODO: We should use async launches and callbacks to rotate between simulation, event analysis etc.
             if let Err(err) = simulation.lend_to_cuda_mut(|simulation_mut_ptr| {
@@ -272,10 +274,12 @@ impl CudaSimulation {
                         println!("Analysing events ...");
 
                         event_buffer.with_fetched_events(|events| {
-                            events.inspect(|event| {
+                            events.filter(|event| {
                                 if let necsim_core::event::EventType::Speciation = event.r#type() {
                                     remaining_individuals -= 1;
                                 }
+
+                                event_deduplicator.insert(event.clone())
                             }).for_each(|event| reporter.report_event(&event))
                         })?
                     }
