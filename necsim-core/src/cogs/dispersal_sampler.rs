@@ -18,6 +18,6 @@ pub trait SeparableDispersalSampler<H: Habitat, G: RngCore>: DispersalSampler<H,
         -> Location;
 
     #[must_use]
-    #[debug_ensures(ret >= 0.0_f64 && ret <= 1.0_f64, "returns probability")]
+    #[debug_ensures((0.0_f64..=1.0_f64).contains(&ret), "returns probability")]
     fn get_self_dispersal_probability_at_location(&self, location: &Location) -> f64;
 }

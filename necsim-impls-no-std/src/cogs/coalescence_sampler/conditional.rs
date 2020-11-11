@@ -70,7 +70,7 @@ impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: CoherentLineageStore<H, 
 
     #[must_use]
     #[debug_requires(habitat.get_habitat_at_location(location) > 0, "location is habitable")]
-    #[debug_ensures(ret >= 0.0_f64 && ret <= 1.0_f64, "returns probability")]
+    #[debug_ensures((0.0_f64..=1.0_f64).contains(&ret), "returns probability")]
     pub fn get_coalescence_probability_at_location(
         location: &Location,
         habitat: &H,

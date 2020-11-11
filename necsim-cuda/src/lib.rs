@@ -141,13 +141,11 @@ impl CudaSimulation {
     /// `dispersal` are not `ExE` given `E=RxC` where `habitat` has dimension
     /// `RxC`.
     #[debug_requires(
-        speciation_probability_per_generation >= 0.0_f64 &&
-        speciation_probability_per_generation <= 1.0_f64,
+        (0.0_f64..=1.0_f64).contains(&speciation_probability_per_generation),
         "0.0 <= speciation_probability_per_generation <= 1.0"
     )]
     #[debug_requires(
-        sample_percentage >= 0.0_f64 &&
-        sample_percentage <= 1.0_f64,
+        (0.0_f64..=1.0_f64).contains(&sample_percentage),
         "0.0 <= sample_percentage <= 1.0"
     )]
     pub fn simulate<G: PrimeableRng<InMemoryHabitat>>(
