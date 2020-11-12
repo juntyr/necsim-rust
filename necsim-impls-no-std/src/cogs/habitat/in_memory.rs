@@ -4,7 +4,7 @@ use necsim_core::cogs::{Habitat, HabitatToU64Injection};
 use necsim_core::landscape::{IndexedLocation, LandscapeExtent, Location};
 
 #[allow(clippy::module_name_repetitions)]
-#[cfg_attr(feature = "cuda", derive(RustToCuda, LendToCuda /* TODO: Remove */))]
+#[cfg_attr(feature = "cuda", derive(RustToCuda))]
 #[derive(Debug)]
 pub struct InMemoryHabitat {
     #[cfg_attr(feature = "cuda", r2cEmbed)]

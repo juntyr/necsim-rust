@@ -66,6 +66,8 @@ use core::sync::atomic::{AtomicU64, Ordering};
 
 extern "C" {
     #[no_mangle]
+    static global_lineages_remaining: AtomicU64;
+    #[no_mangle]
     static global_time_max: AtomicU64;
     #[no_mangle]
     static global_steps_sum: AtomicU64;
@@ -101,7 +103,7 @@ pub unsafe extern "ptx-kernel" fn simulate(
                 ActiveLineageSampler<_, _, _, _, _>,
             > as RustToCuda>::CudaRepresentation,
         event_buffer_c_ptr
-            as *mut EventBufferCudaRepresentation<Habitat, LineageReference, true, false>,
+            as *mut EventBufferCudaRepresentation<Habitat, LineageReference, false, false>,
         max_steps,
     )
 }
@@ -124,10 +126,24 @@ unsafe fn simulate_generic<
 ) {
     Simulation::with_borrow_from_rust_mut(simulation_ptr, |simulation| {
         EventBufferDevice::with_borrow_from_rust_mut(event_buffer_ptr, |event_buffer_reporter| {
+            let active_lineages_remaining_before =
+                simulation.active_lineage_sampler().number_active_lineages();
+
             let (time, steps) = simulation.simulate_incremental(max_steps, event_buffer_reporter);
 
-            global_time_max.fetch_max(time.to_bits(), Ordering::Relaxed);
-            global_steps_sum.fetch_add(steps, Ordering::Relaxed);
+            let active_lineages_remaining_after =
+                simulation.active_lineage_sampler().number_active_lineages();
+
+            if steps > 0
+                && active_lineages_remaining_after == 0
+                && active_lineages_remaining_before > 0
+            {
+                global_lineages_remaining
+                    .fetch_sub(active_lineages_remaining_before as u64, Ordering::Relaxed);
+
+                global_time_max.fetch_max(time.to_bits(), Ordering::Relaxed);
+                global_steps_sum.fetch_add(steps, Ordering::Relaxed);
+            }
         })
     })
 }
