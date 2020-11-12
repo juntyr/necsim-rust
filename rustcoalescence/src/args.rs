@@ -1,14 +1,69 @@
 use derive_getters::Getters;
-use structopt::clap::arg_enum;
 use structopt::StructOpt;
 
-arg_enum! {
-    #[derive(Debug)]
-    pub enum Algorithm {
-        Classical,
-        Gillespie,
-        SkippingGillespie,
-        CUDA,
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum Algorithm {
+    #[cfg(feature = "necsim-classical")]
+    Classical,
+    #[cfg(feature = "necsim-gillespie")]
+    Gillespie,
+    #[cfg(feature = "necsim-skipping-gillespie")]
+    SkippingGillespie,
+    #[cfg(feature = "necsim-cuda")]
+    CUDA,
+}
+
+impl std::fmt::Display for Algorithm {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl std::str::FromStr for Algorithm {
+    type Err = String;
+
+    fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        match s {
+            #[cfg(feature = "necsim-classical")]
+            "Classical" | _ if s.eq_ignore_ascii_case("Classical") => Ok(Algorithm::Classical),
+            #[cfg(feature = "necsim-gillespie")]
+            "Gillespie" | _ if s.eq_ignore_ascii_case("Gillespie") => Ok(Algorithm::Gillespie),
+            #[cfg(feature = "necsim-skipping-gillespie")]
+            "SkippingGillespie" | _ if s.eq_ignore_ascii_case("SkippingGillespie") => {
+                Ok(Algorithm::SkippingGillespie)
+            }
+            #[cfg(feature = "necsim-cuda")]
+            "CUDA" | _ if s.eq_ignore_ascii_case("CUDA") => Ok(Algorithm::CUDA),
+            _ => Err({
+                let v: Vec<&'static str> = vec![
+                    #[cfg(feature = "necsim-classical")]
+                    "Classical",
+                    #[cfg(feature = "necsim-gillespie")]
+                    "Gillespie",
+                    #[cfg(feature = "necsim-skipping-gillespie")]
+                    "SkippingGillespie",
+                    #[cfg(feature = "necsim-cuda")]
+                    "CUDA",
+                ];
+                format!("valid values: {}", v.join(", "))
+            }),
+        }
+    }
+}
+
+impl Algorithm {
+    pub fn variants() -> Vec<&'static str> {
+        vec![
+            #[cfg(feature = "necsim-classical")]
+            "Classical",
+            #[cfg(feature = "necsim-gillespie")]
+            "Gillespie",
+            #[cfg(feature = "necsim-skipping-gillespie")]
+            "SkippingGillespie",
+            #[cfg(feature = "necsim-cuda")]
+            "CUDA",
+        ]
     }
 }
 
@@ -27,7 +82,6 @@ pub struct CommandLineArguments {
     #[structopt(
         possible_values = &Algorithm::variants(),
         case_insensitive = true,
-        default_value = "Classical",
         long = "algorithm"
     )]
     algorithm: Algorithm,
