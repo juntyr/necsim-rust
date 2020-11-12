@@ -54,7 +54,7 @@ pub trait RngCore: Sized + Clone + core::fmt::Debug {
 pub trait RngSampler: RngCore {
     #[must_use]
     #[inline]
-    #[debug_ensures(ret >= 0.0_f64 && ret <= 1.0_f64, "samples U(0.0, 1.0)")]
+    #[debug_ensures((0.0_f64..=1.0_f64).contains(&ret), "samples U(0.0, 1.0)")]
     fn sample_uniform(&mut self) -> f64 {
         // http://prng.di.unimi.it -> Generating uniform doubles in the unit interval
         #[allow(clippy::cast_precision_loss)]
@@ -88,7 +88,7 @@ pub trait RngSampler: RngCore {
     #[must_use]
     #[inline]
     #[debug_requires(
-        probability >= 0.0_f64 && probability <= 1.0_f64,
+        (0.0_f64..=1.0_f64).contains(&probability),
         "0.0 <= probability <= 1.0"
     )]
     fn sample_event(&mut self, probability: f64) -> bool {

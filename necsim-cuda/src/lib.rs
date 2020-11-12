@@ -141,13 +141,11 @@ impl CudaSimulation {
     /// `dispersal` are not `ExE` given `E=RxC` where `habitat` has dimension
     /// `RxC`.
     #[debug_requires(
-        speciation_probability_per_generation >= 0.0_f64 &&
-        speciation_probability_per_generation <= 1.0_f64,
+        (0.0_f64..=1.0_f64).contains(&speciation_probability_per_generation),
         "0.0 <= speciation_probability_per_generation <= 1.0"
     )]
     #[debug_requires(
-        sample_percentage >= 0.0_f64 &&
-        sample_percentage <= 1.0_f64,
+        (0.0_f64..=1.0_f64).contains(&sample_percentage),
         "0.0 <= sample_percentage <= 1.0"
     )]
     pub fn simulate<G: PrimeableRng<InMemoryHabitat>>(
@@ -231,10 +229,14 @@ impl CudaSimulation {
             print_context_resource_limits();
             print_kernel_function_attributes(&simulate_kernel);
 
-            let mut event_buffer: EventBufferHost<InMemoryHabitat, InMemoryLineageReference, true, false> =
+            let mut event_buffer: EventBufferHost<InMemoryHabitat, InMemoryLineageReference, false, false> =
                 EventBufferHost::new(&cuda_block_size, &cuda_grid_size, SIMULATION_STEP_SLICE)?;
 
-            let mut remaining_individuals = simulation.lineage_store().get_number_total_lineages();
+            // Load and initialise the global_lineages_remaining symbol
+            let mut global_lineages_remaining = simulation.lineage_store().get_number_total_lineages() as u64;
+            let mut global_lineages_remaining_symbol: Symbol<u64> =
+                module.get_global(&CString::new("global_lineages_remaining").unwrap())?;
+            global_lineages_remaining_symbol.copy_from(&global_lineages_remaining)?;
 
             // Load and initialise the global_time_max and global_steps_sum symbols
             let mut global_time_max_symbol: Symbol<f64> = module.get_global(&CString::new("global_time_max").unwrap())?;
@@ -246,8 +248,8 @@ impl CudaSimulation {
             if let Err(err) = simulation.lend_to_cuda_mut(|simulation_mut_ptr| {
                 let mut time_slice = 0;
 
-                while remaining_individuals > 0 {
-                    println!("Starting time slice {} with {} remaining individuals ...", time_slice + 1, remaining_individuals);
+                while global_lineages_remaining > 0 {
+                    println!("Starting time slice {} with {} remaining individuals ...", time_slice + 1, global_lineages_remaining);
 
                     for grid_id in 0..cuda_grid_amount {
                         grid_id_symbol.copy_from(&grid_id)?;
@@ -271,14 +273,12 @@ impl CudaSimulation {
 
                         stream.synchronize()?;
 
+                        global_lineages_remaining_symbol.copy_to(&mut global_lineages_remaining)?;
+
                         println!("Analysing events ...");
 
                         event_buffer.with_fetched_events(|events| {
                             events.filter(|event| {
-                                if let necsim_core::event::EventType::Speciation = event.r#type() {
-                                    remaining_individuals -= 1;
-                                }
-
                                 event_deduplicator.insert(event.clone())
                             }).for_each(|event| reporter.report_event(&event))
                         })?
@@ -297,7 +297,7 @@ impl CudaSimulation {
 
         });});});
 
-        println!("{:#?}", event_deduplicator);
+        //println!("{:#?}", event_deduplicator);
 
         Ok((global_time_max, global_steps_sum))
     }
