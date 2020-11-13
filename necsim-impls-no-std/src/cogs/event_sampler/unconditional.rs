@@ -1,12 +1,14 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{
-    CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference, LineageStore,
-    RngCore,
+use necsim_core::{
+    cogs::{
+        CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference,
+        LineageStore, RngCore,
+    },
+    event::{Event, EventType},
+    landscape::IndexedLocation,
+    simulation::partial::event_sampler::PartialSimulation,
 };
-use necsim_core::event::{Event, EventType};
-use necsim_core::landscape::IndexedLocation;
-use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]

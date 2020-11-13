@@ -1,8 +1,12 @@
-use core::hash::{Hash, Hasher};
-use core::marker::PhantomData;
+use core::{
+    hash::{Hash, Hasher},
+    marker::PhantomData,
+};
 
-use crate::cogs::{Habitat, LineageReference};
-use crate::landscape::IndexedLocation;
+use crate::{
+    cogs::{Habitat, LineageReference},
+    landscape::IndexedLocation,
+};
 
 #[cfg(feature = "cuda")]
 use rustacuda_core::DeviceCopy;

@@ -5,8 +5,10 @@ use necsim_core::cogs::{Habitat, RngCore};
 pub mod error;
 
 use error::InMemoryDispersalSamplerError;
-use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::contract::explicit_in_memory_dispersal_check_contract;
-use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler as InMemoryDispersalSamplerNoError;
+use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::{
+    contract::explicit_in_memory_dispersal_check_contract,
+    InMemoryDispersalSampler as InMemoryDispersalSamplerNoError,
+};
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
@@ -38,7 +40,8 @@ pub trait InMemoryDispersalSampler<H: Habitat, G: RngCore>:
 impl<H: Habitat, G: RngCore, T: InMemoryDispersalSamplerNoError<H, G>>
     InMemoryDispersalSampler<H, G> for T
 {
-    /// Creates a new `T` from the `dispersal` map and extent of the habitat map.
+    /// Creates a new `T` from the `dispersal` map and extent of the habitat
+    /// map.
     ///
     /// # Errors
     ///

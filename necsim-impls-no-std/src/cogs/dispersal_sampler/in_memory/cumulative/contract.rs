@@ -1,5 +1,4 @@
-use necsim_core::cogs::Habitat;
-use necsim_core::landscape::Location;
+use necsim_core::{cogs::Habitat, landscape::Location};
 
 use super::InMemoryCumulativeDispersalSampler;
 

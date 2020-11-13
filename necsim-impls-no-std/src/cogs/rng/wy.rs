@@ -1,5 +1,4 @@
-use nanorand::WyRand;
-use nanorand::RNG;
+use nanorand::{WyRand, RNG};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone)]

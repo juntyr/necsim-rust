@@ -1,7 +1,6 @@
 use failure::ResultExt;
 
-use ptx_builder::error::*;
-use ptx_builder::reporter::ErrorLogPrinter;
+use ptx_builder::{error::*, reporter::ErrorLogPrinter};
 
 #[test]
 fn should_report_in_cargo_style() {

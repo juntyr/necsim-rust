@@ -1,12 +1,14 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{
-    CoalescenceSampler, DispersalSampler, EventSampler, Habitat, IncoherentLineageStore,
-    LineageReference, RngCore,
+use necsim_core::{
+    cogs::{
+        CoalescenceSampler, DispersalSampler, EventSampler, Habitat, IncoherentLineageStore,
+        LineageReference, RngCore,
+    },
+    event::{Event, EventType},
+    landscape::IndexedLocation,
+    simulation::partial::event_sampler::PartialSimulation,
 };
-use necsim_core::event::{Event, EventType};
-use necsim_core::landscape::IndexedLocation;
-use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
 use crate::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler;
 

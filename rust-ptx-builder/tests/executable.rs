@@ -1,7 +1,9 @@
 use semver::VersionReq;
 
-use ptx_builder::error::*;
-use ptx_builder::executable::{Cargo, Executable, ExecutableRunner};
+use ptx_builder::{
+    error::*,
+    executable::{Cargo, Executable, ExecutableRunner},
+};
 
 mod cargo {
     use super::*;
@@ -34,7 +36,7 @@ mod cargo {
                 assert_eq!(code, 1);
 
                 assert!(stderr.contains("argument '--unknown-flag'"));
-            }
+            },
 
             _ => unreachable!("it should fail with proper error"),
         }
@@ -72,7 +74,7 @@ mod non_existing_command {
             BuildErrorKind::CommandNotFound { command, hint } => {
                 assert_eq!(command, String::from("almost-unique-name"));
                 assert_eq!(hint, String::from("Some useful hint"));
-            }
+            },
 
             _ => unreachable!("it should fail with proper error"),
         }
@@ -116,7 +118,7 @@ mod unrealistic_version_requirement {
                 assert_eq!(command, String::from("cargo"));
                 assert_eq!(required, VersionReq::parse("> 100.0.0").unwrap());
                 assert_eq!(hint, String::from("Some useful hint about version"));
-            }
+            },
 
             _ => unreachable!("it should fail with proper error"),
         }

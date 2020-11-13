@@ -1,15 +1,19 @@
 use float_next_after::NextAfter;
 
-use necsim_core::cogs::{
-    ActiveLineageSampler, DispersalSampler, HabitatToU64Injection, IncoherentLineageStore,
-    LineageReference, PrimeableRng,
+use necsim_core::{
+    cogs::{
+        ActiveLineageSampler, DispersalSampler, HabitatToU64Injection, IncoherentLineageStore,
+        LineageReference, PrimeableRng,
+    },
+    intrinsics::{exp, floor},
+    landscape::IndexedLocation,
+    simulation::partial::active_lineager_sampler::PartialSimulation,
 };
-use necsim_core::intrinsics::{exp, floor};
-use necsim_core::landscape::IndexedLocation;
-use necsim_core::simulation::partial::active_lineager_sampler::PartialSimulation;
 
-use crate::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler;
-use crate::cogs::event_sampler::independent::IndependentEventSampler;
+use crate::cogs::{
+    coalescence_sampler::independent::IndependentCoalescenceSampler,
+    event_sampler::independent::IndependentEventSampler,
+};
 
 use super::IndependentActiveLineageSampler;
 

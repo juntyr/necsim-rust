@@ -1,6 +1,8 @@
-use necsim_core::cogs::{Habitat, LineageReference};
-use necsim_core::event::{Event, EventType};
-use necsim_core::reporter::Reporter;
+use necsim_core::{
+    cogs::{Habitat, LineageReference},
+    event::{Event, EventType},
+    reporter::{EventFilter, Reporter},
+};
 
 mod contract;
 
@@ -13,10 +15,12 @@ pub struct EventReporter {
     self_coalescence: usize,
 }
 
-impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for EventReporter {
-    const REPORT_SPECIATION: bool = true;
+impl EventFilter for EventReporter {
     const REPORT_DISPERSAL: bool = true;
+    const REPORT_SPECIATION: bool = true;
+}
 
+impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for EventReporter {
     #[debug_ensures(contract::explicit_event_reporter_report_event_contract(
         event.origin(), event.r#type(), old(self.speciation), old(self.out_dispersal),
         old(self.self_dispersal), old(self.out_coalescence), old(self.self_coalescence),
@@ -27,7 +31,7 @@ impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for EventReporter {
         match event.r#type() {
             EventType::Speciation => {
                 self.speciation += 1;
-            }
+            },
             EventType::Dispersal {
                 target,
                 coalescence,
@@ -39,18 +43,18 @@ impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for EventReporter {
                 match (self_dispersal, coalescence) {
                     (true, true) => {
                         self.self_coalescence += 1;
-                    }
+                    },
                     (true, false) => {
                         self.self_dispersal += 1;
-                    }
+                    },
                     (false, true) => {
                         self.out_coalescence += 1;
-                    }
+                    },
                     (false, false) => {
                         self.out_dispersal += 1;
-                    }
+                    },
                 }
-            }
+            },
         }
     }
 }

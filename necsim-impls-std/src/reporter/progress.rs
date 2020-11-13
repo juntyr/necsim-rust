@@ -1,6 +1,8 @@
-use necsim_core::cogs::{Habitat, LineageReference};
-use necsim_core::event::{Event, EventType};
-use necsim_core::reporter::Reporter;
+use necsim_core::{
+    cogs::{Habitat, LineageReference},
+    event::{Event, EventType},
+    reporter::{EventFilter, Reporter},
+};
 
 use indicatif::{ProgressBar, ProgressStyle};
 
@@ -9,10 +11,12 @@ pub struct ProgressReporter {
     progress: ProgressBar,
 }
 
-impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for ProgressReporter {
-    const REPORT_SPECIATION: bool = true;
+impl EventFilter for ProgressReporter {
     const REPORT_DISPERSAL: bool = false;
+    const REPORT_SPECIATION: bool = true;
+}
 
+impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for ProgressReporter {
     #[debug_ensures(match event.r#type() {
         EventType::Speciation | EventType::Dispersal {
             coalescence: Some(_),

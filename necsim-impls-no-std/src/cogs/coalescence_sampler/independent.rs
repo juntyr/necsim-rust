@@ -1,9 +1,9 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{
-    CoalescenceSampler, Habitat, IncoherentLineageStore, LineageReference, RngCore,
+use necsim_core::{
+    cogs::{CoalescenceSampler, Habitat, IncoherentLineageStore, LineageReference, RngCore},
+    landscape::{IndexedLocation, Location},
 };
-use necsim_core::landscape::{IndexedLocation, Location};
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]

@@ -1,16 +1,19 @@
-use std::env;
-use std::fmt;
-use std::fs::{read_to_string, write, File};
-use std::io::{BufReader, Read};
-use std::path::{Path, PathBuf};
+use std::{
+    env, fmt,
+    fs::{read_to_string, write, File},
+    io::{BufReader, Read},
+    path::{Path, PathBuf},
+};
 
 use failure::ResultExt;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::error::{BuildErrorKind, Error, Result};
-use crate::executable::{Cargo, ExecutableRunner, Linker};
-use crate::source::Crate;
+use crate::{
+    error::{BuildErrorKind, Error, Result},
+    executable::{Cargo, ExecutableRunner, Linker},
+    source::Crate,
+};
 
 const LAST_BUILD_CMD: &str = ".last-build-command";
 const TARGET_NAME: &str = "nvptx64-nvidia-cuda";
@@ -41,7 +44,8 @@ pub enum BuildStatus<'a> {
 
     /// The CUDA crate building is not needed. Can happend in several cases:
     /// - `build.rs` script was called by **RLS**,
-    /// - `build.rs` was called **recursively** (e.g. `build.rs` call for device crate in single-source setup)
+    /// - `build.rs` was called **recursively** (e.g. `build.rs` call for device
+    ///   crate in single-source setup)
     NotNeeded,
 }
 
@@ -120,7 +124,7 @@ impl Builder {
         Ok(Builder {
             source_crate: Crate::analyse(path).context("Unable to analyse source crate")?,
 
-            profile: Profile::Release, // TODO: choose automatically, e.g.: `env::var("PROFILE").unwrap_or("release".to_string())`
+            profile: Profile::Release, /* TODO: choose automatically, e.g.: `env::var("PROFILE").unwrap_or("release".to_string())` */
             colors: true,
             crate_type: None,
         })
@@ -169,7 +173,8 @@ impl Builder {
         self
     }
 
-    /// Performs an actual build: runs `cargo` with proper flags and environment.
+    /// Performs an actual build: runs `cargo` with proper flags and
+    /// environment.
     pub fn build(&self) -> Result<BuildStatus> {
         if !Self::is_build_needed() {
             return Ok(BuildStatus::NotNeeded);
@@ -200,13 +205,13 @@ impl Builder {
             Some(CrateType::Binary) => {
                 args.push("--bin");
                 args.push(self.source_crate.get_name());
-            }
+            },
 
             Some(CrateType::Library) => {
                 args.push("--lib");
-            }
+            },
 
-            _ => {}
+            _ => {},
         }
 
         args.push("-v");
@@ -238,7 +243,7 @@ impl Builder {
                     .collect();
 
                 Error::from(BuildErrorKind::BuildFailed(lines))
-            }
+            },
 
             _ => error,
         })?;
@@ -286,7 +291,7 @@ impl Builder {
                 bail!(BuildErrorKind::InternalError(String::from(
                     "Unable to find `extra-filename` rustc flag",
                 )));
-            }
+            },
         };
 
         Ok(BuildOutput::new(self, output_path, file_suffix))

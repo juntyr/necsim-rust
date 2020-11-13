@@ -3,6 +3,7 @@ use structopt::StructOpt;
 
 #[derive(Debug)]
 #[non_exhaustive]
+#[allow(clippy::empty_enum)]
 pub enum Algorithm {
     #[cfg(feature = "necsim-classical")]
     Classical,
@@ -24,6 +25,7 @@ impl std::str::FromStr for Algorithm {
     type Err = String;
 
     fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        #[allow(clippy::match_single_binding)]
         match s {
             #[cfg(feature = "necsim-classical")]
             "Classical" | _ if s.eq_ignore_ascii_case("Classical") => Ok(Algorithm::Classical),
@@ -32,7 +34,7 @@ impl std::str::FromStr for Algorithm {
             #[cfg(feature = "necsim-skipping-gillespie")]
             "SkippingGillespie" | _ if s.eq_ignore_ascii_case("SkippingGillespie") => {
                 Ok(Algorithm::SkippingGillespie)
-            }
+            },
             #[cfg(feature = "necsim-cuda")]
             "CUDA" | _ if s.eq_ignore_ascii_case("CUDA") => Ok(Algorithm::CUDA),
             _ => Err({

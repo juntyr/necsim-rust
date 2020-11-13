@@ -1,5 +1,4 @@
-use necsim_core::cogs::HabitatToU64Injection;
-use necsim_core::landscape::IndexedLocation;
+use necsim_core::{cogs::HabitatToU64Injection, landscape::IndexedLocation};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]

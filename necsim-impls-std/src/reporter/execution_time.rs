@@ -1,18 +1,22 @@
 use std::time::{Duration, Instant};
 
-use necsim_core::cogs::{Habitat, LineageReference};
-use necsim_core::event::Event;
-use necsim_core::reporter::Reporter;
+use necsim_core::{
+    cogs::{Habitat, LineageReference},
+    event::Event,
+    reporter::{EventFilter, Reporter},
+};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ExecutionTimeReporter {
     start_time: Option<Instant>,
 }
 
-impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for ExecutionTimeReporter {
-    const REPORT_SPECIATION: bool = true;
+impl EventFilter for ExecutionTimeReporter {
     const REPORT_DISPERSAL: bool = true;
+    const REPORT_SPECIATION: bool = true;
+}
 
+impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for ExecutionTimeReporter {
     #[debug_ensures(self.start_time.is_some(), "start_time is set after first call")]
     #[debug_ensures(
         old(self.start_time).is_some() -> old(self.start_time) == self.start_time,

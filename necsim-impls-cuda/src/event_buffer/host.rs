@@ -1,8 +1,10 @@
-use core::ops::DerefMut;
+use core::{marker::PhantomData, ops::DerefMut};
 
-use rustacuda::error::CudaResult;
-use rustacuda::function::{BlockSize, GridSize};
-use rustacuda::memory::{CopyDestination, DeviceBox, DeviceBuffer, LockedBuffer};
+use rustacuda::{
+    error::CudaResult,
+    function::{BlockSize, GridSize},
+    memory::{CopyDestination, DeviceBox, DeviceBuffer, LockedBuffer},
+};
 
 use rustacuda_core::{DeviceCopy, DevicePointer};
 
@@ -10,23 +12,23 @@ use rust_cuda::common::RustToCuda;
 
 use rust_cuda::host::CudaDropWrapper;
 
-use necsim_core::cogs::{Habitat, LineageReference};
-use necsim_core::event::Event;
+use necsim_core::{
+    cogs::{Habitat, LineageReference},
+    event::Event,
+    reporter::Reporter,
+};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct EventBufferHost<
     H: Habitat + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
-    const REPORT_SPECIATION: bool,
-    const REPORT_DISPERSAL: bool,
+    P: Reporter<H, R>,
 > {
     host_buffer: CudaDropWrapper<LockedBuffer<Option<Event<H, R>>>>,
     device_buffer: CudaDropWrapper<DeviceBuffer<Option<Event<H, R>>>>,
-    cuda_repr_box: CudaDropWrapper<
-        DeviceBox<
-            super::common::EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
-        >,
-    >,
+    cuda_repr_box:
+        CudaDropWrapper<DeviceBox<super::common::EventBufferCudaRepresentation<H, R, P>>>,
+    marker: PhantomData<P>,
 }
 
 pub type EventIterator<'e, H, R> = core::iter::FilterMap<
@@ -36,12 +38,8 @@ pub type EventIterator<'e, H, R> = core::iter::FilterMap<
     ) -> Option<necsim_core::event::Event<H, R>>,
 >;
 
-impl<
-        H: Habitat + RustToCuda,
-        R: LineageReference<H> + DeviceCopy,
-        const REPORT_SPECIATION: bool,
-        const REPORT_DISPERSAL: bool,
-    > EventBufferHost<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>
+impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy, P: Reporter<H, R>>
+    EventBufferHost<H, R, P>
 {
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
@@ -50,9 +48,9 @@ impl<
         grid_size: &GridSize,
         max_events: usize,
     ) -> CudaResult<Self> {
-        let max_events = if REPORT_DISPERSAL {
+        let max_events = if P::REPORT_DISPERSAL {
             max_events
-        } else if REPORT_SPECIATION {
+        } else if P::REPORT_SPECIATION {
             1_usize
         } else {
             0_usize
@@ -71,6 +69,7 @@ impl<
             grid_size,
             max_events,
             device_buffer: device_buffer.as_device_ptr(),
+            marker: PhantomData,
         };
 
         let cuda_repr_box = CudaDropWrapper::from(DeviceBox::new(&cuda_repr)?);
@@ -79,6 +78,7 @@ impl<
             host_buffer,
             device_buffer,
             cuda_repr_box,
+            marker: PhantomData,
         })
     }
 
@@ -100,9 +100,7 @@ impl<
 
     pub fn get_mut_cuda_ptr(
         &mut self,
-    ) -> DevicePointer<
-        super::common::EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
-    > {
+    ) -> DevicePointer<super::common::EventBufferCudaRepresentation<H, R, P>> {
         self.cuda_repr_box.as_device_ptr()
     }
 }

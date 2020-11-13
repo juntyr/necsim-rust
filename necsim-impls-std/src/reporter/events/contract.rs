@@ -1,6 +1,8 @@
-use necsim_core::cogs::{Habitat, LineageReference};
-use necsim_core::event::EventType;
-use necsim_core::landscape::IndexedLocation;
+use necsim_core::{
+    cogs::{Habitat, LineageReference},
+    event::EventType,
+    landscape::IndexedLocation,
+};
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::too_many_arguments)]

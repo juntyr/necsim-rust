@@ -3,8 +3,9 @@ use super::{
     RngCore,
 };
 
-use crate::landscape::IndexedLocation;
-use crate::simulation::partial::active_lineager_sampler::PartialSimulation;
+use crate::{
+    landscape::IndexedLocation, simulation::partial::active_lineager_sampler::PartialSimulation,
+};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
@@ -59,10 +60,10 @@ pub trait ActiveLineageSampler<
     ) -> Option<(R, IndexedLocation, f64)>;
 
     #[debug_requires(time >= 0.0_f64, "time is non-negative")]
-    /*#[debug_requires(( TODO: How can we assert this only for coherent lineage stores?
-        simulation.lineage_store.get_active_lineages_at_location(&location).len() <
-        (simulation.habitat.get_habitat_at_location(&location) as usize)
-    ), "location has habitat capacity for the lineage")]*/
+    // #[debug_requires(( TODO: How can we assert this only for coherent lineage
+    // stores? simulation.lineage_store.get_active_lineages_at_location(&
+    // location).len() < (simulation.habitat.get_habitat_at_location(&location)
+    // as usize) ), "location has habitat capacity for the lineage")]
     fn push_active_lineage_to_indexed_location(
         &mut self,
         lineage_reference: R,

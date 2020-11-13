@@ -1,5 +1,7 @@
-use necsim_core::cogs::{CoherentLineageStore, Habitat, LineageReference, RngCore};
-use necsim_core::landscape::{IndexedLocation, Location};
+use necsim_core::{
+    cogs::{CoherentLineageStore, Habitat, LineageReference, RngCore},
+    landscape::{IndexedLocation, Location},
+};
 
 #[must_use]
 pub fn sample_optional_coalescence_at_location<

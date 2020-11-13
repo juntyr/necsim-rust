@@ -37,8 +37,8 @@ impl Lineage {
     }
 
     /// # Safety
-    /// This method should only be called by internal `LineageStore` code to update the
-    /// state of the lineages being simulated.
+    /// This method should only be called by internal `LineageStore` code to
+    /// update the state of the lineages being simulated.
     #[debug_requires(self.is_active(), "lineage must be active to be deactivated")]
     #[debug_ensures(!self.is_active(), "lineages has been deactivated")]
     #[debug_ensures(
@@ -53,8 +53,8 @@ impl Lineage {
     }
 
     /// # Safety
-    /// This method should only be called by internal `LineageStore` code to update the
-    /// state of the lineages being simulated.
+    /// This method should only be called by internal `LineageStore` code to
+    /// update the state of the lineages being simulated.
     #[debug_requires(!self.is_active(), "lineage must be inactive to move")]
     #[debug_ensures(
         self.indexed_location() == Some(&old(indexed_location.clone())),
@@ -65,8 +65,8 @@ impl Lineage {
     }
 
     /// # Safety
-    /// This method should only be called by internal `LineageStore` code to update the
-    /// state of the lineages being simulated.
+    /// This method should only be called by internal `LineageStore` code to
+    /// update the state of the lineages being simulated.
     #[debug_requires(self.is_active())]
     #[debug_ensures(
         self.indexed_location.as_ref().unwrap().index() == index_at_location,
@@ -79,8 +79,8 @@ impl Lineage {
     }
 
     /// # Safety
-    /// This method should only be called by internal `LineageStore` code to update the
-    /// state of the lineages being simulated.
+    /// This method should only be called by internal `LineageStore` code to
+    /// update the state of the lineages being simulated.
     #[allow(clippy::float_cmp)]
     #[debug_requires(event_time > self.time_of_last_event(), "event_time is after the last event")]
     #[debug_ensures(self.time_of_last_event() == old(event_time), "updates the time_of_last_event")]

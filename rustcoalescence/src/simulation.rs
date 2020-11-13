@@ -13,28 +13,29 @@ use necsim_gillespie::GillespieSimulation;
 #[cfg(feature = "necsim-skipping-gillespie")]
 use necsim_skipping_gillespie::SkippingGillespieSimulation;
 
-use necsim_core::cogs::PrimeableRng;
-use necsim_core::reporter::Reporter;
-use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
-use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
+use necsim_impls_no_std::cogs::{
+    habitat::in_memory::InMemoryHabitat, lineage_reference::in_memory::InMemoryLineageReference,
+};
 
 #[allow(unused_imports)]
 use super::args::{Algorithm, CommandLineArguments};
 
 #[allow(unreachable_code)]
 #[allow(unused_variables)]
-pub fn simulate<G: PrimeableRng<InMemoryHabitat>>(
+#[allow(clippy::needless_pass_by_value)]
+pub fn simulate(
     args: &CommandLineArguments,
     habitat: &Array2D<u32>,
     dispersal: &Array2D<f64>,
-    rng: G,
-    reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
+    rng: necsim_config::RngType! {},
+    reporter: &mut necsim_config::ReporterType! {<InMemoryHabitat, InMemoryLineageReference>},
 ) -> Result<(f64, u64)> {
     println!(
         "Setting up the {:?} coalescence algorithm ...",
         args.algorithm()
     );
 
+    #[allow(clippy::match_single_binding)]
     let result: Result<(f64, u64)> = match args.algorithm() {
         #[cfg(feature = "necsim-classical")]
         Algorithm::Classical => ClassicalSimulation::simulate(

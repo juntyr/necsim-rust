@@ -1,14 +1,17 @@
-use std::collections::hash_map::DefaultHasher;
-use std::env;
-use std::fs;
-use std::hash::{Hash, Hasher};
-use std::io::{BufReader, Read};
-use std::path::{Path, PathBuf};
+use std::{
+    collections::hash_map::DefaultHasher,
+    env, fs,
+    hash::{Hash, Hasher},
+    io::{BufReader, Read},
+    path::{Path, PathBuf},
+};
 
 use failure::ResultExt;
 
-use crate::builder::CrateType;
-use crate::error::{BuildErrorKind, Result};
+use crate::{
+    builder::CrateType,
+    error::{BuildErrorKind, Result},
+};
 
 #[derive(Hash, Clone, Debug)]
 pub enum FilePrefix {
@@ -40,11 +43,11 @@ impl Crate {
                 if metadata.is_dir() {
                     bail!(BuildErrorKind::InvalidCratePath(path.clone()));
                 }
-            }
+            },
 
             Err(_) => {
                 bail!(BuildErrorKind::InvalidCratePath(path.clone()));
-            }
+            },
         }
 
         let cargo_toml: toml::Value = {
@@ -67,7 +70,7 @@ impl Crate {
                 bail!(BuildErrorKind::InternalError(String::from(
                     "Cannot get crate name"
                 )));
-            }
+            },
         };
 
         let is_library = path.join("src").join("lib.rs").exists();
@@ -88,7 +91,7 @@ impl Crate {
                 bail!(BuildErrorKind::InternalError(
                     "Unable to find neither `lib.rs` nor `main.rs`".into()
                 ));
-            }
+            },
         };
 
         Ok(Crate {
@@ -115,15 +118,15 @@ impl Crate {
             (FilePrefix::Mixed { lib, .. }, Some(CrateType::Library)) => Ok(lib.clone()),
             (FilePrefix::Mixed { .. }, None) => {
                 bail!(BuildErrorKind::MissingCrateType);
-            }
+            },
 
             (FilePrefix::Library(_), Some(CrateType::Binary)) => {
                 bail!(BuildErrorKind::InvalidCrateType("Binary".into()));
-            }
+            },
 
             (FilePrefix::Binary(_), Some(CrateType::Library)) => {
                 bail!(BuildErrorKind::InvalidCrateType("Library".into()));
-            }
+            },
         }
     }
 
@@ -181,7 +184,7 @@ fn should_find_crate_names() {
     {
         BuildErrorKind::InvalidCrateType(kind) => {
             assert_eq!(kind, "Binary");
-        }
+        },
 
         _ => unreachable!("it should fail with proper error"),
     }
@@ -212,7 +215,7 @@ fn should_find_app_crate_names() {
     {
         BuildErrorKind::InvalidCrateType(kind) => {
             assert_eq!(kind, "Library");
-        }
+        },
 
         _ => unreachable!("it should fail with proper error"),
     }
@@ -239,7 +242,7 @@ fn should_find_mixed_crate_names() {
     );
 
     match source.get_deps_file_prefix(None).unwrap_err().kind() {
-        BuildErrorKind::MissingCrateType => {}
+        BuildErrorKind::MissingCrateType => {},
         _ => unreachable!("it should fail with proper error"),
     }
 }
@@ -251,7 +254,7 @@ fn should_check_existence_of_crate_path() {
     match result.unwrap_err().kind() {
         BuildErrorKind::InvalidCratePath(path) => {
             assert!(path.ends_with("tests/fixtures/non-existing-crate"));
-        }
+        },
 
         _ => unreachable!("it should fail with proper error"),
     }
@@ -264,7 +267,7 @@ fn should_check_validity_of_crate_path() {
     match result.unwrap_err().kind() {
         BuildErrorKind::InvalidCratePath(path) => {
             assert!(path.ends_with("tests/builder.rs"));
-        }
+        },
 
         _ => unreachable!("it should fail with proper error"),
     }

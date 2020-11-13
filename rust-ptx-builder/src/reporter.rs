@@ -1,16 +1,18 @@
-use std::fmt;
-use std::process::exit;
+use std::{fmt, process::exit};
 
 use colored::{control, Colorize};
 use failure::Fail;
 
-use crate::builder::{BuildStatus, Builder};
-use crate::error::{Error, Result};
+use crate::{
+    builder::{BuildStatus, Builder},
+    error::{Error, Result},
+};
 
 /// Cargo integration adapter.
 ///
-/// Provides PTX assembly path to Rust through specified environment variable name
-/// and informs Cargo about device crate dependencies, so it can rebuild on changes.
+/// Provides PTX assembly path to Rust through specified environment variable
+/// name and informs Cargo about device crate dependencies, so it can rebuild on
+/// changes.
 ///
 /// # Usage in `build.rs`
 /// ```no_run
@@ -69,11 +71,11 @@ impl CargoAdapter {
                 for path in dependencies {
                     println!("cargo:rerun-if-changed={}", path.display());
                 }
-            }
+            },
 
             BuildStatus::NotNeeded => {
                 println!("cargo:rustc-env={}=/dev/null", self.env_name);
-            }
+            },
         };
 
         Ok(())

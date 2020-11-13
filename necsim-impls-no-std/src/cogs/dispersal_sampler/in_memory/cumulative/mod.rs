@@ -2,8 +2,10 @@ use array2d::{Array2D, Error};
 
 use alloc::vec::Vec;
 
-use necsim_core::cogs::{Habitat, RngCore};
-use necsim_core::landscape::{LandscapeExtent, Location};
+use necsim_core::{
+    cogs::{Habitat, RngCore},
+    landscape::{LandscapeExtent, Location},
+};
 
 use crate::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
@@ -31,7 +33,8 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G> for InMemoryCumulati
         .explicit_only_valid_targets_dispersal_contract(old(habitat)),
         "valid_dispersal_targets only allows dispersal to habitat"
     )]
-    //#[debug_ensures(..., "cumulative_dispersal stores the cumulative distribution function")]
+    //#[debug_ensures(..., "cumulative_dispersal stores the cumulative distribution
+    //#[debug_ensures(..., function")]
     fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Result<Self, Error> {
         let habitat_extent = habitat.get_extent();
 

@@ -1,6 +1,8 @@
-use necsim_core::cogs::{CoherentLineageStore, Habitat, LineageStore};
-use necsim_core::landscape::{IndexedLocation, Location};
-use necsim_core::lineage::Lineage;
+use necsim_core::{
+    cogs::{CoherentLineageStore, Habitat, LineageStore},
+    landscape::{IndexedLocation, Location},
+    lineage::Lineage,
+};
 
 use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 

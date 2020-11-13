@@ -1,7 +1,9 @@
 use core::ops::Range;
 
-use necsim_core::cogs::{DispersalSampler, Habitat, RngCore};
-use necsim_core::landscape::Location;
+use necsim_core::{
+    cogs::{DispersalSampler, Habitat, RngCore},
+    landscape::Location,
+};
 
 use crate::alias::packed::AliasMethodSamplerAtom;
 

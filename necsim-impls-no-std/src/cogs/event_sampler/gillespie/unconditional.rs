@@ -1,12 +1,14 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{
-    CoalescenceSampler, CoherentLineageStore, DispersalSampler, EventSampler, Habitat,
-    LineageReference, RngCore,
+use necsim_core::{
+    cogs::{
+        CoalescenceSampler, CoherentLineageStore, DispersalSampler, EventSampler, Habitat,
+        LineageReference, RngCore,
+    },
+    event::{Event, EventType},
+    landscape::{IndexedLocation, Location},
+    simulation::partial::event_sampler::PartialSimulation,
 };
-use necsim_core::event::{Event, EventType};
-use necsim_core::landscape::{IndexedLocation, Location};
-use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
 use super::GillespieEventSampler;
 

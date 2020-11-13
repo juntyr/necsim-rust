@@ -9,8 +9,7 @@ use crate::cogs::{
 
 pub use builder::Simulation;
 
-use crate::event::EventType;
-use crate::reporter::Reporter;
+use crate::{event::EventType, reporter::Reporter};
 
 impl<
         H: Habitat,
@@ -89,7 +88,8 @@ impl<
 
                     reporter.report_event(&event);
 
-                    // TODO: If reporters are ever to suggest an early stop, max_steps should become one
+                    // TODO: If reporters are ever to suggest an early stop, max_steps should become
+                    // one
                     if steps >= max_steps {
                         break;
                     }

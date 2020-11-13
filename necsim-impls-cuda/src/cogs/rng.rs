@@ -1,5 +1,7 @@
-use necsim_core::cogs::{HabitatToU64Injection, PrimeableRng, RngCore};
-use necsim_core::landscape::IndexedLocation;
+use necsim_core::{
+    cogs::{HabitatToU64Injection, PrimeableRng, RngCore},
+    landscape::IndexedLocation,
+};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, RustToCuda, LendToCuda)]

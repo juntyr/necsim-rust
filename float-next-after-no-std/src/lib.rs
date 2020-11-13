@@ -6,8 +6,8 @@ use num_traits::Float;
 
 /// Returns the next representable float value in the direction of y
 ///
-/// This function is strict and will step to the very next representable floating point,
-/// even if that value is subnormal.
+/// This function is strict and will step to the very next representable
+/// floating point, even if that value is subnormal.
 ///
 /// Base assumptions:
 ///
@@ -52,18 +52,18 @@ use num_traits::Float;
 /// # Safety
 ///
 /// This trait uses the `ToBits` and `FromBits` functions from f32 and f64.
-/// Those both use `unsafe { mem::transmute(self) }` / `unsafe { mem::transmute(v) }`
-/// to convert a f32/f64 to u32/u64.  The docs for those functions claim they are safe
-/// and that "the safety issues with `sNaN` were overblown!"
-///
+/// Those both use `unsafe { mem::transmute(self) }` / `unsafe {
+/// mem::transmute(v) }` to convert a f32/f64 to u32/u64.  The docs for those
+/// functions claim they are safe and that "the safety issues with `sNaN` were
+/// overblown!"
 pub trait NextAfter<T: Float> {
     fn next_after(self, y: T) -> T;
 }
 
-// Note: I made separate implementations for f32 and f64 in order to make the bit
-// conversion explicit to anyone else who might come along to look at this. The f64
-// is converted to u64, incremented by one, then converted back to f64. The f32
-// is converted to u32, incremented by one, then converted back to f32.
+// Note: I made separate implementations for f32 and f64 in order to make the
+// bit conversion explicit to anyone else who might come along to look at this.
+// The f64 is converted to u64, incremented by one, then converted back to f64.
+// The f32 is converted to u32, incremented by one, then converted back to f32.
 impl NextAfter<f64> for f64 {
     fn next_after(self, y: f64) -> f64 {
         if let Some(out) = short_circuit_operands(self, y) {
@@ -76,7 +76,8 @@ impl NextAfter<f64> for f64 {
             let return_value = f64::from_bits(1);
             copy_sign(return_value, y)
         } else {
-            // Use trick f64 -> u64 +- 1 -> f64; increment or decrement depending on same sign.
+            // Use trick f64 -> u64 +- 1 -> f64; increment or decrement depending on same
+            // sign.
             let return_value = if (y > self) == (self > zero) {
                 f64::from_bits(self.to_bits() + 1)
             } else {
@@ -104,7 +105,8 @@ impl NextAfter<f32> for f32 {
             let return_value = f32::from_bits(1);
             copy_sign(return_value, y)
         } else {
-            // Use trick f64 -> u64 +- 1 -> f64; increment or decrement depending on same sign.
+            // Use trick f64 -> u64 +- 1 -> f64; increment or decrement depending on same
+            // sign.
             let return_value = if (y > self) == (self > zero) {
                 f32::from_bits(self.to_bits() + 1)
             } else {
@@ -122,7 +124,8 @@ impl NextAfter<f32> for f32 {
 
 #[inline]
 fn short_circuit_operands<T: Float>(x: T, y: T) -> Option<T> {
-    // If x and y are equal (also -0_f64 == 0_f64 in rust), there is nothing further to do
+    // If x and y are equal (also -0_f64 == 0_f64 in rust), there is nothing further
+    // to do
     if y == x {
         // The policy is to return y in cases of equality,
         // this only matters when x = 0.0 and y = -0.0 (or the reverse)
@@ -167,7 +170,8 @@ mod tests_f64 {
     const POS_ZERO: T = 0.0;
     const NEG_ZERO: T = -0.0;
 
-    // Note: Not the same as f64::MIN_POSITIVE, because that is only the min *normal* number.
+    // Note: Not the same as f64::MIN_POSITIVE, because that is only the min
+    // *normal* number.
     const SMALLEST_POS: T = 5e-324;
     const SMALLEST_NEG: T = -5e-324;
     const LARGEST_POS: T = f64::MAX;
@@ -351,7 +355,8 @@ mod tests_f32 {
     const POS_ZERO: T = 0.0;
     const NEG_ZERO: T = -0.0;
 
-    // Note: Not the same as f32::MIN_POSITIVE, because that is only the min *normal* number.
+    // Note: Not the same as f32::MIN_POSITIVE, because that is only the min
+    // *normal* number.
     const SMALLEST_POS: T = 1e-45;
     const SMALLEST_NEG: T = -1e-45;
     const LARGEST_POS: T = f32::MAX;

@@ -1,8 +1,8 @@
-use necsim_core::cogs::{
-    CoherentLineageStore, Habitat, LineageReference, RngCore, SeparableDispersalSampler,
+use necsim_core::{
+    cogs::{CoherentLineageStore, Habitat, LineageReference, RngCore, SeparableDispersalSampler},
+    landscape::Location,
+    simulation::partial::event_sampler::PartialSimulation,
 };
-use necsim_core::landscape::Location;
-use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
 use crate::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
 

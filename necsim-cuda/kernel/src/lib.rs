@@ -49,18 +49,20 @@ impl core::fmt::Debug for F64 {
     }
 }
 
-use necsim_core::cogs::{
-    ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler,
-    HabitatToU64Injection, IncoherentLineageStore, LineageReference, PrimeableRng,
+use necsim_core::{
+    cogs::{
+        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler,
+        HabitatToU64Injection, IncoherentLineageStore, LineageReference, PrimeableRng,
+    },
+    simulation::Simulation,
 };
-use necsim_core::simulation::Simulation;
-use rust_cuda::common::RustToCuda;
-use rust_cuda::device::BorrowFromRust;
+use rust_cuda::{common::RustToCuda, device::BorrowFromRust};
 use rustacuda_core::DeviceCopy;
 
-use necsim_impls_cuda::cogs::rng::CudaRng;
-use necsim_impls_cuda::event_buffer::common::EventBufferCudaRepresentation;
-use necsim_impls_cuda::event_buffer::device::EventBufferDevice;
+use necsim_impls_cuda::{
+    cogs::rng::CudaRng,
+    event_buffer::{common::EventBufferCudaRepresentation, device::EventBufferDevice},
+};
 
 use core::sync::atomic::{AtomicU64, Ordering};
 
@@ -81,14 +83,16 @@ pub unsafe extern "ptx-kernel" fn simulate(
     event_buffer_c_ptr: *mut core::ffi::c_void,
     max_steps: u64,
 ) {
-    use necsim_impls_no_std::cogs::active_lineage_sampler::independent::IndependentActiveLineageSampler as ActiveLineageSampler;
-    use necsim_impls_no_std::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler as CoalescenceSampler;
-    use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler as DispersalSampler;
-    use necsim_impls_no_std::cogs::event_sampler::independent::IndependentEventSampler as EventSampler;
-    use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat as Habitat;
-    use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference as LineageReference;
-    use necsim_impls_no_std::cogs::lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore as LineageStore;
-    use necsim_impls_no_std::cogs::rng::wyhash::WyHash as Rng;
+    use necsim_impls_no_std::cogs::{
+        active_lineage_sampler::independent::IndependentActiveLineageSampler as ActiveLineageSampler,
+        coalescence_sampler::independent::IndependentCoalescenceSampler as CoalescenceSampler,
+        dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler as DispersalSampler,
+        event_sampler::independent::IndependentEventSampler as EventSampler,
+        habitat::in_memory::InMemoryHabitat as Habitat,
+        lineage_reference::in_memory::InMemoryLineageReference as LineageReference,
+        lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore as LineageStore,
+        rng::wyhash::WyHash as Rng,
+    };
 
     simulate_generic(
         simulation_c_ptr
@@ -103,7 +107,11 @@ pub unsafe extern "ptx-kernel" fn simulate(
                 ActiveLineageSampler<_, _, _, _, _>,
             > as RustToCuda>::CudaRepresentation,
         event_buffer_c_ptr
-            as *mut EventBufferCudaRepresentation<Habitat, LineageReference, false, false>,
+            as *mut EventBufferCudaRepresentation<
+                Habitat,
+                LineageReference,
+                necsim_core::reporter::NullReporter,
+            >,
         max_steps,
     )
 }
@@ -117,11 +125,10 @@ unsafe fn simulate_generic<
     C: CoalescenceSampler<H, G, R, S> + RustToCuda,
     E: EventSampler<H, G, D, R, S, C> + RustToCuda,
     A: ActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
-    const REPORT_SPECIATION: bool,
-    const REPORT_DISPERSAL: bool,
+    P: necsim_core::reporter::Reporter<H, R>,
 >(
     simulation_ptr: *mut <Simulation<H, G, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
-    event_buffer_ptr: *mut EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
+    event_buffer_ptr: *mut EventBufferCudaRepresentation<H, R, P>,
     max_steps: u64,
 ) {
     Simulation::with_borrow_from_rust_mut(simulation_ptr, |simulation| {

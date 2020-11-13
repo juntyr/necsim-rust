@@ -1,5 +1,4 @@
-use crate::landscape::LandscapeExtent;
-use crate::landscape::{IndexedLocation, Location};
+use crate::landscape::{IndexedLocation, LandscapeExtent, Location};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]

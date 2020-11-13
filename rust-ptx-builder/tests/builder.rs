@@ -1,14 +1,15 @@
-use std::env;
-use std::env::current_dir;
-use std::fs::{remove_dir_all, File};
-use std::io::prelude::*;
-use std::path::PathBuf;
+use std::{
+    env,
+    env::current_dir,
+    fs::{remove_dir_all, File},
+    io::prelude::*,
+    path::PathBuf,
+};
 
 use antidote::Mutex;
 use lazy_static::*;
 
-use ptx_builder::error::*;
-use ptx_builder::prelude::*;
+use ptx_builder::{error::*, prelude::*};
 
 lazy_static! {
     static ref ENV_MUTEX: Mutex<()> = Mutex::new(());
@@ -28,7 +29,7 @@ fn should_provide_output_path() {
                     .join("ptx-builder-0.5")
                     .join("sample_ptx_crate"),
             ));
-        }
+        },
 
         BuildStatus::NotNeeded => unreachable!(),
     }
@@ -56,7 +57,7 @@ fn should_write_assembly() {
                 .contains("release"));
 
             assert!(assembly_contents.contains(".visible .entry the_kernel("));
-        }
+        },
 
         BuildStatus::NotNeeded => unreachable!(),
     }
@@ -84,7 +85,7 @@ fn should_build_application_crate() {
                 .contains("release"));
 
             assert!(assembly_contents.contains(".visible .entry the_kernel("));
-        }
+        },
 
         BuildStatus::NotNeeded => unreachable!(),
     }
@@ -119,7 +120,7 @@ fn should_build_mixed_crate_lib() {
                 .contains("release"));
 
             assert!(assembly_contents.contains(".visible .entry the_kernel("));
-        }
+        },
 
         BuildStatus::NotNeeded => unreachable!(),
     }
@@ -154,7 +155,7 @@ fn should_build_mixed_crate_bin() {
                 .contains("release"));
 
             assert!(assembly_contents.contains(".visible .entry the_kernel("));
-        }
+        },
 
         BuildStatus::NotNeeded => unreachable!(),
     }
@@ -188,7 +189,7 @@ fn should_handle_rebuild_without_changes() {
                 .contains("release"));
 
             assert!(assembly_contents.contains(".visible .entry the_kernel("));
-        }
+        },
 
         BuildStatus::NotNeeded => unreachable!(),
     }
@@ -221,7 +222,7 @@ fn should_write_assembly_in_debug_mode() {
                 .contains("debug"));
 
             assert!(assembly_contents.contains(".visible .entry the_kernel("));
-        }
+        },
 
         BuildStatus::NotNeeded => unreachable!(),
     }
@@ -277,7 +278,7 @@ fn should_report_about_build_failure() {
                     String::from(""),
                 ]
             );
-        }
+        },
 
         _ => unreachable!("it should fail with proper error"),
     }
@@ -312,7 +313,7 @@ fn should_provide_crate_source_files() {
             expectations.sort();
 
             assert_eq!(sources, expectations);
-        }
+        },
 
         BuildStatus::NotNeeded => unreachable!(),
     }
@@ -347,7 +348,7 @@ fn should_provide_application_crate_source_files() {
             expectations.sort();
 
             assert_eq!(sources, expectations);
-        }
+        },
 
         BuildStatus::NotNeeded => unreachable!(),
     }
@@ -362,7 +363,7 @@ fn should_not_get_built_from_rls() {
     let builder = Builder::new("tests/fixtures/sample-crate").unwrap();
 
     match builder.disable_colors().build().unwrap() {
-        BuildStatus::NotNeeded => {}
+        BuildStatus::NotNeeded => {},
         BuildStatus::Success(_) => unreachable!(),
     }
 
@@ -378,7 +379,7 @@ fn should_not_get_built_recursively() {
     let builder = Builder::new("tests/fixtures/sample-crate").unwrap();
 
     match builder.disable_colors().build().unwrap() {
-        BuildStatus::NotNeeded => {}
+        BuildStatus::NotNeeded => {},
         BuildStatus::Success(_) => unreachable!(),
     }
 

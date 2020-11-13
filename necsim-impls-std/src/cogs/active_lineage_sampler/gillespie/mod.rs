@@ -2,11 +2,14 @@ use std::marker::PhantomData;
 
 use priority_queue::PriorityQueue;
 
-use necsim_core::cogs::{
-    CoalescenceSampler, CoherentLineageStore, DispersalSampler, Habitat, LineageReference, RngCore,
+use necsim_core::{
+    cogs::{
+        CoalescenceSampler, CoherentLineageStore, DispersalSampler, Habitat, LineageReference,
+        RngCore,
+    },
+    landscape::Location,
+    simulation::partial::event_sampler::PartialSimulation,
 };
-use necsim_core::landscape::Location;
-use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
 use necsim_impls_no_std::cogs::event_sampler::gillespie::GillespieEventSampler;
 

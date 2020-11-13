@@ -1,7 +1,9 @@
 use core::convert::TryFrom;
 
-use crate::cogs::{CoherentLineageStore, Habitat, LineageReference};
-use crate::landscape::Location;
+use crate::{
+    cogs::{CoherentLineageStore, Habitat, LineageReference},
+    landscape::Location,
+};
 
 #[must_use]
 #[allow(clippy::module_name_repetitions)]
@@ -54,7 +56,7 @@ pub(super) fn explicit_lineage_store_invariant_contract<
             ) {
                 (Ok(index), Some(indexed_location)) => {
                     indexed_location.location() == location && indexed_location.index() == index
-                }
+                },
                 _ => false,
             }
         })
