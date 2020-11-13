@@ -1,6 +1,4 @@
-use rand::rngs::StdRng as StdRngImpl;
-use rand::RngCore;
-use rand::SeedableRng;
+use rand::{rngs::StdRng as StdRngImpl, RngCore, SeedableRng};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]

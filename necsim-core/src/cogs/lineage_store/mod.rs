@@ -1,8 +1,10 @@
 use core::ops::Index;
 
 use super::{Habitat, LineageReference};
-use crate::landscape::{IndexedLocation, Location};
-use crate::lineage::Lineage;
+use crate::{
+    landscape::{IndexedLocation, Location},
+    lineage::Lineage,
+};
 
 mod contract;
 

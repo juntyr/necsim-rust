@@ -2,10 +2,10 @@ use core::marker::PhantomData;
 
 use alloc::vec::Vec;
 
-use necsim_core::cogs::{
-    CoherentLineageStore, DispersalSampler, Habitat, LineageReference, RngCore,
+use necsim_core::{
+    cogs::{CoherentLineageStore, DispersalSampler, Habitat, LineageReference, RngCore},
+    landscape::Location,
 };
-use necsim_core::landscape::Location;
 
 mod sampler;
 

@@ -1,7 +1,6 @@
 #![deny(clippy::pedantic)]
 
-use std::collections::HashSet;
-use std::ffi::CString;
+use std::{collections::HashSet, ffi::CString};
 
 #[macro_use]
 extern crate contracts;
@@ -12,26 +11,21 @@ extern crate rustacuda;
 use anyhow::Result;
 use array2d::Array2D;
 
-use rustacuda::context::Context as CudaContext;
-use rustacuda::function::Function;
-use rustacuda::module::Symbol;
-use rustacuda::prelude::*;
+use rustacuda::{context::Context as CudaContext, function::Function, module::Symbol, prelude::*};
 
 use rust_cuda::host::LendToCuda;
 
-use necsim_core::cogs::{LineageStore, PrimeableRng};
-use necsim_core::reporter::Reporter;
-use necsim_core::simulation::Simulation;
+use necsim_core::{cogs::LineageStore, reporter::Reporter, simulation::Simulation};
 
-use necsim_impls_cuda::cogs::rng::CudaRng;
-use necsim_impls_cuda::event_buffer::host::EventBufferHost;
-use necsim_impls_no_std::cogs::active_lineage_sampler::independent::IndependentActiveLineageSampler;
-use necsim_impls_no_std::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler;
-use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler;
-use necsim_impls_no_std::cogs::event_sampler::independent::IndependentEventSampler;
-use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
-use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
-use necsim_impls_no_std::cogs::lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore;
+use necsim_impls_cuda::{cogs::rng::CudaRng, event_buffer::host::EventBufferHost};
+use necsim_impls_no_std::cogs::{
+    active_lineage_sampler::independent::IndependentActiveLineageSampler,
+    coalescence_sampler::independent::IndependentCoalescenceSampler,
+    dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
+    event_sampler::independent::IndependentEventSampler, habitat::in_memory::InMemoryHabitat,
+    lineage_reference::in_memory::InMemoryLineageReference,
+    lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore,
+};
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
 macro_rules! with_cuda {
@@ -51,6 +45,27 @@ macro_rules! with_cuda {
 
         if let Err((_err, val)) = <$r#type>::drop($var) {
             std::mem::forget(val);
+        }
+    };
+}
+
+macro_rules! type_checked_launch {
+    ($module:ident . $function:ident <<<$grid:expr, $block:expr, $shared:expr, $stream:ident>>>( $($param:ident: $ty:ty = $arg:expr),* )) => {
+        {
+            $(
+            let $param: $ty = $arg;
+            )*
+
+            launch!($module.$function<<<$grid, $block, $shared, $stream>>>($($param),*))
+        }
+    };
+    ($function:ident <<<$grid:expr, $block:expr, $shared:expr, $stream:ident>>>( $($param:ident: $ty:ty = $arg:expr),* )) => {
+        {
+            $(
+            let $param: $ty = $arg;
+            )*
+
+            launch!($function<<<$grid, $block, $shared, $stream>>>($($param),*))
         }
     };
 }
@@ -148,13 +163,13 @@ impl CudaSimulation {
         (0.0_f64..=1.0_f64).contains(&sample_percentage),
         "0.0 <= sample_percentage <= 1.0"
     )]
-    pub fn simulate<G: PrimeableRng<InMemoryHabitat>>(
+    pub fn simulate(
         habitat: &Array2D<u32>,
         dispersal: &Array2D<f64>,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
-        rng: G,
-        reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
+        rng: necsim_config::RngType! {},
+        reporter: &mut necsim_config::ReporterType! {<InMemoryHabitat, InMemoryLineageReference>},
     ) -> Result<(f64, u64)> {
         const SIMULATION_STEP_SLICE: usize = 100_usize;
 
@@ -218,7 +233,7 @@ impl CudaSimulation {
         let mut grid_id_symbol: Symbol<u32>  = module.get_global(&CString::new("grid_id").unwrap())?;
         grid_id_symbol.copy_from(&0_u32)?;
         // Load the kernel function from the module
-        let simulate_kernel = module.get_function(&CString::new("simulate").unwrap())?;
+        let simulate = module.get_function(&CString::new("simulate").unwrap())?;
         // Create a stream to submit work to
         with_cuda!(Stream::new(StreamFlags::NON_BLOCKING, None)? => |stream: Stream| {
 
@@ -227,9 +242,9 @@ impl CudaSimulation {
             CurrentContext::set_resource_limit(ResourceLimit::StackSize, 4096)?;
 
             print_context_resource_limits();
-            print_kernel_function_attributes(&simulate_kernel);
+            print_kernel_function_attributes(&simulate);
 
-            let mut event_buffer: EventBufferHost<InMemoryHabitat, InMemoryLineageReference, false, false> =
+            let mut event_buffer: EventBufferHost<InMemoryHabitat, InMemoryLineageReference, necsim_config::ReporterType!{<InMemoryHabitat, InMemoryLineageReference>}> =
                 EventBufferHost::new(&cuda_block_size, &cuda_grid_size, SIMULATION_STEP_SLICE)?;
 
             // Load and initialise the global_lineages_remaining symbol
@@ -262,10 +277,26 @@ impl CudaSimulation {
                         // Launching kernels is unsafe since Rust cannot enforce safety across
                         // the foreign function CUDA-C language barrier
                         unsafe {
-                            launch!(simulate_kernel<<<cuda_grid_size, cuda_block_size, 0, stream>>>(
-                                simulation_mut_ptr,
-                                event_buffer.get_mut_cuda_ptr(),
-                                SIMULATION_STEP_SLICE as u64
+                            type_checked_launch!(simulate<<<cuda_grid_size, cuda_block_size, 0, stream>>>(
+                                simulation_mut_ptr: rustacuda_core::DevicePointer<<necsim_core::simulation::Simulation<
+                                    necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat,
+                                    necsim_impls_cuda::cogs::rng::CudaRng<necsim_config::RngType!{}>,
+                                    necsim_impls_no_std::cogs::dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler<_, _>,
+                                    necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference,
+                                    necsim_impls_no_std::cogs::lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore<_>,
+                                    necsim_impls_no_std::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler<_, _, _, _>,
+                                    necsim_impls_no_std::cogs::event_sampler::independent::IndependentEventSampler<_, _, _, _, _>,
+                                    necsim_impls_no_std::cogs::active_lineage_sampler::independent::IndependentActiveLineageSampler<_, _, _, _, _>,
+                                > as rust_cuda::common::RustToCuda>::CudaRepresentation> = simulation_mut_ptr,
+                                event_buffer_ptr: rustacuda_core::DevicePointer<necsim_impls_cuda::event_buffer::common::EventBufferCudaRepresentation<
+                                    necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat,
+                                    necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference,
+                                    necsim_config::ReporterType!{<
+                                        necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat,
+                                        necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference
+                                    >},
+                                >> = event_buffer.get_mut_cuda_ptr(),
+                                max_steps: u64 = SIMULATION_STEP_SLICE as u64
                             ))?;
                         }
 
@@ -297,7 +328,7 @@ impl CudaSimulation {
 
         });});});
 
-        //println!("{:#?}", event_deduplicator);
+        // println!("{:#?}", event_deduplicator);
 
         Ok((global_time_max, global_steps_sum))
     }

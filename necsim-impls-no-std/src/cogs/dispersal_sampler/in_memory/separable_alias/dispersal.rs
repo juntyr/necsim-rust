@@ -1,5 +1,7 @@
-use necsim_core::cogs::{DispersalSampler, Habitat, RngCore, SeparableDispersalSampler};
-use necsim_core::landscape::Location;
+use necsim_core::{
+    cogs::{DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
+    landscape::Location,
+};
 
 use super::InMemorySeparableAliasDispersalSampler;
 

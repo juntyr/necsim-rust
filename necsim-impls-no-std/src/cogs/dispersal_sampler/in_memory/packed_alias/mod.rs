@@ -1,12 +1,12 @@
-use alloc::boxed::Box;
-use alloc::vec::Vec;
-use core::marker::PhantomData;
-use core::ops::Range;
+use alloc::{boxed::Box, vec::Vec};
+use core::{marker::PhantomData, ops::Range};
 
 use array2d::{Array2D, Error};
 
-use necsim_core::cogs::{Habitat, RngCore};
-use necsim_core::landscape::{LandscapeExtent, Location};
+use necsim_core::{
+    cogs::{Habitat, RngCore},
+    landscape::{LandscapeExtent, Location},
+};
 
 mod dispersal;
 

@@ -1,5 +1,4 @@
-use std::fmt;
-use std::path::PathBuf;
+use std::{fmt, path::PathBuf};
 
 use colored::Colorize;
 use failure::{Backtrace, Context, Fail};
@@ -134,7 +133,8 @@ impl fmt::Display for BuildErrorKind {
                 hint,
             } => write!(
                 formatter,
-                "Command version is not fulfilled: '{}' is currently '{}' but '{}' is required. {}.",
+                "Command version is not fulfilled: '{}' is currently '{}' but '{}' is required. \
+                 {}.",
                 command.bold(),
                 current.to_string().underline(),
                 required.to_string().underline(),

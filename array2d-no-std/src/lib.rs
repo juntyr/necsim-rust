@@ -32,11 +32,11 @@
 //!     usize)`], which panics on out-of-bounds accesses.
 //!   - Using the [`get`], [`get_mut`], and [`set`] methods, which return an
 //!     [`Option`] or a [`Result`] on out-of-bounds accesses.
-//!   - Using the row major or column major version of these methods,
-//!     i.e. [`get_row_major`], [`get_mut_row_major`], [`set_row_major`],
-//!     [`get_column_major`], [`get_mut_column_major`],
-//!     [`set_column_major`]. These perform the same tasks as the non row/column
-//!     major methods, but take one index instead of two.
+//!   - Using the row major or column major version of these methods, i.e.
+//!     [`get_row_major`], [`get_mut_row_major`], [`set_row_major`],
+//!     [`get_column_major`], [`get_mut_column_major`], [`set_column_major`].
+//!     These perform the same tasks as the non row/column major methods, but
+//!     take one index instead of two.
 //!
 //! [`Array2D`] also supports several forms of iteration. You can iterate
 //! through:
@@ -118,7 +118,6 @@
 //!     
 //!     Ok(())
 //! }
-//!
 //! ```
 //!
 //! [`Array2D`]: struct.Array2D.html
@@ -128,23 +127,24 @@
 //! [`from_column_major`]: struct.Array2D.html#method.from_column_major
 //! [`filled_with`]: struct.Array2D.html#method.filled_with
 //! [`filled_by_row_major`]: struct.Array2D.html#method.filled_by_row_major
-//! [`filled_by_column_major`]: struct.Array2D.html#method.filled_by_column_major
-//! [`from_iter_row_major`]: struct.Array2D.html#method.from_iter_row_major
-//! [`from_iter_column_major`]: struct.Array2D.html#method.from_iter_column_major
-//! [`get`]: struct.Array2D.html#method.get
-//! [`get_mut`]: struct.Array2D.html#method.get_mut
+//! [`filled_by_column_major`]:
+//! struct.Array2D.html#method.filled_by_column_major [`from_iter_row_major`]:
+//! struct.Array2D.html#method.from_iter_row_major [`from_iter_column_major`]:
+//! struct.Array2D.html#method.from_iter_column_major [`get`]: struct.Array2D.
+//! html#method.get [`get_mut`]: struct.Array2D.html#method.get_mut
 //! [`set`]: struct.Array2D.html#method.set
-//! [`elements_row_major_iter`]: struct.Array2D.html#method.elements_row_major_iter
-//! [`elements_column_major_iter`]: struct.Array2D.html#method.elements_column_major_iter
-//! [`row_iter`]: struct.Array2D.html#method.row_iter
-//! [`column_iter`]: struct.Array2D.html#method.column_iter
-//! [`rows_iter`]: struct.Array2D.html#method.rows_iter
-//! [`columns_iter`]: struct.Array2D.html#method.columns_iter
-//! [`as_rows`]: struct.Array2D.html#method.as_rows
-//! [`as_columns`]: struct.Array2D.html#method.as_columns
-//! [`as_row_major`]: struct.Array2D.html#method.as_row_major
-//! [`as_column_major`]: struct.Array2D.html#method.as_column_major
-//! [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
+//! [`elements_row_major_iter`]:
+//! struct.Array2D.html#method.elements_row_major_iter
+//! [`elements_column_major_iter`]:
+//! struct.Array2D.html#method.elements_column_major_iter [`row_iter`]:
+//! struct.Array2D.html#method.row_iter [`column_iter`]:
+//! struct.Array2D.html#method.column_iter [`rows_iter`]:
+//! struct.Array2D.html#method.rows_iter [`columns_iter`]:
+//! struct.Array2D.html#method.columns_iter [`as_rows`]:
+//! struct.Array2D.html#method.as_rows [`as_columns`]:
+//! struct.Array2D.html#method.as_columns [`as_row_major`]:
+//! struct.Array2D.html#method.as_row_major [`as_column_major`]:
+//! struct.Array2D.html#method.as_column_major [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
 //! [`Option`]: https://doc.rust-lang.org/std/option/
 //! [`Result`]: https://doc.rust-lang.org/std/result/
 //! [`(usize, usize)`]: https://doc.rust-lang.org/std/primitive.usize.html
@@ -157,8 +157,7 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 
 use core::ops::{Index, IndexMut};
 
@@ -586,9 +585,9 @@ impl<T> Array2D<T> {
         self.num_rows
     }
 
-    /// Returns a reference to the element at the given `row` and `column` if the
-    /// index is in bounds (wrapped in [`Some`]). Returns [`None`] if the index
-    /// is out of bounds.
+    /// Returns a reference to the element at the given `row` and `column` if
+    /// the index is in bounds (wrapped in [`Some`]). Returns [`None`] if
+    /// the index is out of bounds.
     ///
     /// # Examples
     ///

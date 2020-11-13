@@ -1,5 +1,4 @@
-use crate::cogs::RngCore;
-use crate::landscape::Location;
+use crate::{cogs::RngCore, landscape::Location};
 
 use super::Habitat;
 

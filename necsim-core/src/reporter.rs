@@ -1,22 +1,28 @@
 use core::marker::PhantomData;
 
-use crate::cogs::{Habitat, LineageReference};
-use crate::event::Event;
+use crate::{
+    cogs::{Habitat, LineageReference},
+    event::Event,
+};
 
-pub trait Reporter<H: Habitat, R: LineageReference<H>> {
+pub trait EventFilter {
     const REPORT_SPECIATION: bool;
     const REPORT_DISPERSAL: bool;
+}
 
+pub trait Reporter<H: Habitat, R: LineageReference<H>>: EventFilter {
     fn report_event(&mut self, event: &Event<H, R>);
 }
 
 #[allow(clippy::module_name_repetitions)]
 pub struct NullReporter;
 
-impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for NullReporter {
-    const REPORT_SPECIATION: bool = false;
+impl EventFilter for NullReporter {
     const REPORT_DISPERSAL: bool = false;
+    const REPORT_SPECIATION: bool = false;
+}
 
+impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for NullReporter {
     fn report_event(&mut self, _event: &Event<H, R>) {
         // no-op
     }
@@ -35,12 +41,16 @@ pub struct ReporterCombinator<
     _marker: PhantomData<(H, R)>,
 }
 
+impl<'r, H: Habitat, R: LineageReference<H>, F: Reporter<H, R>, T: Reporter<H, R>> EventFilter
+    for ReporterCombinator<'r, H, R, F, T>
+{
+    const REPORT_DISPERSAL: bool = F::REPORT_DISPERSAL || T::REPORT_DISPERSAL;
+    const REPORT_SPECIATION: bool = F::REPORT_SPECIATION || T::REPORT_SPECIATION;
+}
+
 impl<'r, H: Habitat, R: LineageReference<H>, F: Reporter<H, R>, T: Reporter<H, R>> Reporter<H, R>
     for ReporterCombinator<'r, H, R, F, T>
 {
-    const REPORT_SPECIATION: bool = F::REPORT_SPECIATION || T::REPORT_SPECIATION;
-    const REPORT_DISPERSAL: bool = F::REPORT_DISPERSAL || T::REPORT_DISPERSAL;
-
     #[inline]
     fn report_event(&mut self, event: &Event<H, R>) {
         self.front.report_event(event);
@@ -76,5 +86,20 @@ macro_rules! ReporterGroup {
                 ReporterGroup![$($reporter_tail),*]
             ) }
         }
+    }
+}
+
+#[macro_export]
+macro_rules! ReporterGroupType {
+    (<$Habitat:ty, $LineageReference:ty>[]) => {
+        necsim_core::reporter::NullReporter
+    };
+    (<$Habitat:ty, $LineageReference:ty>[$first_reporter:ty $(,$reporter_tail:ty)*]) => {
+        necsim_core::reporter::ReporterCombinator<
+            $Habitat,
+            $LineageReference,
+            $first_reporter,
+            $crate::ReporterGroupType!{<$Habitat, $LineageReference>[$($reporter_tail),*]},
+        >
     }
 }

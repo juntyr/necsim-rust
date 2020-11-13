@@ -1,16 +1,20 @@
-use necsim_core::cogs::{Habitat, LineageReference};
-use necsim_core::event::{Event, EventType};
-use necsim_core::reporter::Reporter;
+use necsim_core::{
+    cogs::{Habitat, LineageReference},
+    event::{Event, EventType},
+    reporter::{EventFilter, Reporter},
+};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct BiodiversityReporter {
     biodiversity: usize,
 }
 
-impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for BiodiversityReporter {
-    const REPORT_SPECIATION: bool = true;
+impl EventFilter for BiodiversityReporter {
     const REPORT_DISPERSAL: bool = false;
+    const REPORT_SPECIATION: bool = true;
+}
 
+impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for BiodiversityReporter {
     #[debug_ensures(match event.r#type() {
         EventType::Speciation => self.biodiversity == old(self.biodiversity) + 1,
         _ => self.biodiversity == old(self.biodiversity),

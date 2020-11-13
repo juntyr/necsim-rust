@@ -1,9 +1,9 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{
-    CoalescenceSampler, CoherentLineageStore, Habitat, LineageReference, RngCore,
+use necsim_core::{
+    cogs::{CoalescenceSampler, CoherentLineageStore, Habitat, LineageReference, RngCore},
+    landscape::{IndexedLocation, Location},
 };
-use necsim_core::landscape::{IndexedLocation, Location};
 
 use super::optional_coalescence;
 

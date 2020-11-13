@@ -1,10 +1,10 @@
-use crate::cogs::HabitatToU64Injection;
-use crate::intrinsics::{floor, ln};
-use crate::landscape::IndexedLocation;
+use crate::{
+    cogs::HabitatToU64Injection,
+    intrinsics::{floor, ln},
+    landscape::IndexedLocation,
+};
 
-use core::convert::AsMut;
-use core::default::Default;
-use core::ptr::copy_nonoverlapping;
+use core::{convert::AsMut, default::Default, ptr::copy_nonoverlapping};
 
 #[allow(clippy::module_name_repetitions)]
 pub trait RngCore: Sized + Clone + core::fmt::Debug {
@@ -59,7 +59,7 @@ pub trait RngSampler: RngCore {
         // http://prng.di.unimi.it -> Generating uniform doubles in the unit interval
         #[allow(clippy::cast_precision_loss)]
         ((self.sample_u64() >> 11) as f64)
-            * f64::from_bits(0x3CA0_0000_0000_0000_u64) //0x1.0p-53
+            * f64::from_bits(0x3CA0_0000_0000_0000_u64) // 0x1.0p-53
     }
 
     #[must_use]

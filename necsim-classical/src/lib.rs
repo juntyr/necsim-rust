@@ -6,17 +6,16 @@ extern crate contracts;
 use anyhow::Result;
 use array2d::Array2D;
 
-use necsim_core::cogs::{LineageStore, RngCore};
-use necsim_core::reporter::Reporter;
-use necsim_core::simulation::Simulation;
+use necsim_core::{cogs::LineageStore, simulation::Simulation};
 
-use necsim_impls_no_std::cogs::active_lineage_sampler::classical::ClassicalActiveLineageSampler;
-use necsim_impls_no_std::cogs::coalescence_sampler::unconditional::UnconditionalCoalescenceSampler;
-use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler;
-use necsim_impls_no_std::cogs::event_sampler::unconditional::UnconditionalEventSampler;
-use necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat;
-use necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference;
-use necsim_impls_no_std::cogs::lineage_store::coherent::in_memory::CoherentInMemoryLineageStore;
+use necsim_impls_no_std::cogs::{
+    active_lineage_sampler::classical::ClassicalActiveLineageSampler,
+    coalescence_sampler::unconditional::UnconditionalCoalescenceSampler,
+    dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
+    event_sampler::unconditional::UnconditionalEventSampler, habitat::in_memory::InMemoryHabitat,
+    lineage_reference::in_memory::InMemoryLineageReference,
+    lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
+};
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
 pub struct ClassicalSimulation;
@@ -38,13 +37,13 @@ impl ClassicalSimulation {
         (0.0_f64..=1.0_f64).contains(&sample_percentage),
         "0.0 <= sample_percentage <= 1.0"
     )]
-    pub fn simulate<G: RngCore>(
+    pub fn simulate(
         habitat: &Array2D<u32>,
         dispersal: &Array2D<f64>,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
-        rng: G,
-        reporter: &mut impl Reporter<InMemoryHabitat, InMemoryLineageReference>,
+        rng: necsim_config::RngType! {},
+        reporter: &mut necsim_config::ReporterType! {<InMemoryHabitat, InMemoryLineageReference>},
     ) -> Result<(f64, u64)> {
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;

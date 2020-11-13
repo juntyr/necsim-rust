@@ -1,9 +1,9 @@
-use necsim_core::cogs::HabitatToU64Injection;
-use necsim_core::landscape::IndexedLocation;
+use necsim_core::{cogs::HabitatToU64Injection, landscape::IndexedLocation};
 
-use aes_soft::cipher::generic_array::GenericArray;
-use aes_soft::cipher::{BlockCipher, NewBlockCipher};
-use aes_soft::Aes128;
+use aes_soft::{
+    cipher::{generic_array::GenericArray, BlockCipher, NewBlockCipher},
+    Aes128,
+};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]

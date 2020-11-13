@@ -1,16 +1,19 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::RngSampler;
-use necsim_core::cogs::{
-    CoalescenceSampler, CoherentLineageStore, EventSampler, Habitat, LineageReference, RngCore,
-    SeparableDispersalSampler,
+use necsim_core::{
+    cogs::{
+        CoalescenceSampler, CoherentLineageStore, EventSampler, Habitat, LineageReference, RngCore,
+        RngSampler, SeparableDispersalSampler,
+    },
+    event::{Event, EventType},
+    landscape::{IndexedLocation, Location},
+    simulation::partial::event_sampler::PartialSimulation,
 };
-use necsim_core::event::{Event, EventType};
-use necsim_core::landscape::{IndexedLocation, Location};
-use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
-use crate::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
-use crate::cogs::event_sampler::gillespie::GillespieEventSampler;
+use crate::cogs::{
+    coalescence_sampler::conditional::ConditionalCoalescenceSampler,
+    event_sampler::gillespie::GillespieEventSampler,
+};
 
 mod probability;
 

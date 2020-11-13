@@ -4,8 +4,10 @@ use alloc::vec::Vec;
 
 use array2d::{Array2D, Error};
 
-use necsim_core::cogs::{Habitat, RngCore};
-use necsim_core::landscape::{LandscapeExtent, Location};
+use necsim_core::{
+    cogs::{Habitat, RngCore},
+    landscape::{LandscapeExtent, Location},
+};
 
 use crate::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 

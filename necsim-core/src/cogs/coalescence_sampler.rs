@@ -1,5 +1,7 @@
-use crate::cogs::RngCore;
-use crate::landscape::{IndexedLocation, Location};
+use crate::{
+    cogs::RngCore,
+    landscape::{IndexedLocation, Location},
+};
 
 use super::{Habitat, LineageReference, LineageStore};
 

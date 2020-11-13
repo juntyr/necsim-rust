@@ -1,13 +1,13 @@
-use core::marker::PhantomData;
-use core::ops::Index;
+use core::{marker::PhantomData, ops::Index};
 
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 
-use necsim_core::cogs::Habitat;
-use necsim_core::intrinsics::floor;
-use necsim_core::landscape::{IndexedLocation, LandscapeExtent, Location};
-use necsim_core::lineage::Lineage;
+use necsim_core::{
+    cogs::Habitat,
+    intrinsics::floor,
+    landscape::{IndexedLocation, LandscapeExtent, Location},
+    lineage::Lineage,
+};
 
 use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 

@@ -3,9 +3,11 @@ use float_next_after::NextAfter;
 use super::{
     CoalescenceSampler, DispersalSampler, Habitat, LineageReference, LineageStore, RngCore,
 };
-use crate::event::{Event, EventType};
-use crate::landscape::IndexedLocation;
-use crate::simulation::partial::event_sampler::PartialSimulation;
+use crate::{
+    event::{Event, EventType},
+    landscape::IndexedLocation,
+    simulation::partial::event_sampler::PartialSimulation,
+};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]

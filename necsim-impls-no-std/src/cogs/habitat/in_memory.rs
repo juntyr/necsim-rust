@@ -1,7 +1,9 @@
 use array2d::Array2D;
 
-use necsim_core::cogs::{Habitat, HabitatToU64Injection};
-use necsim_core::landscape::{IndexedLocation, LandscapeExtent, Location};
+use necsim_core::{
+    cogs::{Habitat, HabitatToU64Injection},
+    landscape::{IndexedLocation, LandscapeExtent, Location},
+};
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]

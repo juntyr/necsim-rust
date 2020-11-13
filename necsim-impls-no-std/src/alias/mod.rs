@@ -75,8 +75,8 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
 
         // Fix rounding errors for full indices:
         //   M. D. Vose, "A linear algorithm for generating random numbers with a given
-        //   distribution", in IEEE Transactions on Software Engineering, vol. 17, no. 9,
-        //   pp. 972-975, Sept. 1991, doi: 10.1109/32.92917.
+        //   distribution", in IEEE Transactions on Software Engineering, vol. 17, no.
+        //   9, pp. 972-975, Sept. 1991, doi: 10.1109/32.92917.
         overfull_indices.into_iter().for_each(|i| Us[i] = 1.0_f64);
         underfull_indices.into_iter().for_each(|i| Us[i] = 1.0_f64);
 
@@ -116,11 +116,11 @@ fn pop_overfull_underfull_pair_atomic(
         (Some(overfull_index), None) => {
             overfull_indices.push(overfull_index);
             None
-        }
+        },
         (None, Some(underfull_index)) => {
             underfull_indices.push(underfull_index);
             None
-        }
+        },
         (None, None) => None,
     }
 }

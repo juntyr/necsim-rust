@@ -1,11 +1,13 @@
 use float_next_after::NextAfter;
 
-use necsim_core::cogs::{
-    ActiveLineageSampler, CoalescenceSampler, CoherentLineageStore, DispersalSampler, Habitat,
-    LineageReference, RngCore,
+use necsim_core::{
+    cogs::{
+        ActiveLineageSampler, CoalescenceSampler, CoherentLineageStore, DispersalSampler, Habitat,
+        LineageReference, RngCore,
+    },
+    landscape::IndexedLocation,
+    simulation::partial::active_lineager_sampler::PartialSimulation,
 };
-use necsim_core::landscape::IndexedLocation;
-use necsim_core::simulation::partial::active_lineager_sampler::PartialSimulation;
 
 use necsim_impls_no_std::cogs::event_sampler::gillespie::GillespieEventSampler;
 
@@ -44,7 +46,7 @@ impl<
         let (chosen_active_location, chosen_event_time) = match self.active_locations.pop() {
             Some((chosen_active_location, chosen_event_time)) => {
                 (chosen_active_location, chosen_event_time.into())
-            }
+            },
             None => return None,
         };
 

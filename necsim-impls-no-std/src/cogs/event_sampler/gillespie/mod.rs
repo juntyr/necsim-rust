@@ -1,12 +1,14 @@
 pub mod conditional;
 pub mod unconditional;
 
-use necsim_core::cogs::{
-    CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference, LineageStore,
-    RngCore,
+use necsim_core::{
+    cogs::{
+        CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference,
+        LineageStore, RngCore,
+    },
+    landscape::Location,
+    simulation::partial::event_sampler::PartialSimulation,
 };
-use necsim_core::landscape::Location;
-use necsim_core::simulation::partial::event_sampler::PartialSimulation;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
