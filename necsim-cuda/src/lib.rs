@@ -17,12 +17,15 @@ use rust_cuda::host::LendToCuda;
 
 use necsim_core::{
     cogs::{LineageStore, RngCore},
-    reporter::Reporter,
     simulation::Simulation,
 };
 
 use necsim_impls_cuda::event_buffer::host::EventBufferHost;
-use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
+use necsim_impls_no_std::reporter::ReporterContext;
+use necsim_impls_std::{
+    cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler,
+    simulation::in_memory::InMemorySimulation,
+};
 
 // TODO: Refactor into generic functions which use rust-cuda safe drop
 macro_rules! with_cuda {
@@ -150,7 +153,9 @@ fn print_kernel_function_attributes(kernel: &Function) {
 
 pub struct CudaSimulation;
 
-impl CudaSimulation {
+#[contract_trait]
+impl InMemorySimulation for CudaSimulation {
+    #[allow(clippy::too_many_lines)] // TODO: Refactor
     /// Simulates the coalescence algorithm on a CUDA-capable GPU on an in
     /// memory `habitat` with precalculated `dispersal`.
     ///
@@ -159,78 +164,72 @@ impl CudaSimulation {
     /// `Err(InconsistentDispersalMapSize)` is returned iff the dimensions of
     /// `dispersal` are not `ExE` given `E=RxC` where `habitat` has dimension
     /// `RxC`.
-    #[debug_requires(
-        (0.0_f64..=1.0_f64).contains(&speciation_probability_per_generation),
-        "0.0 <= speciation_probability_per_generation <= 1.0"
-    )]
-    #[debug_requires(
-        (0.0_f64..=1.0_f64).contains(&sample_percentage),
-        "0.0 <= sample_percentage <= 1.0"
-    )]
-    pub fn simulate<P: Reporter<config::Habitat, config::LineageReference>>(
+    fn simulate<P: ReporterContext>(
         habitat: &Array2D<u32>,
         dispersal: &Array2D<f64>,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
         seed: u64,
-        reporter: &mut P,
+        reporter_context: P,
     ) -> Result<(f64, u64)> {
         const SIMULATION_STEP_SLICE: usize = 100_usize;
 
-        let habitat = config::Habitat::new(habitat.clone());
-        let rng = config::Rng::seed_from_u64(seed);
-        let dispersal_sampler = config::DispersalSampler::new(dispersal, &habitat)?;
-        let lineage_store = config::LineageStore::new(sample_percentage, &habitat);
-        let coalescence_sampler = config::CoalescenceSampler::default();
-        let event_sampler = config::EventSampler::default();
-        let active_lineage_sampler = config::ActiveLineageSampler::default();
+        reporter_context.with_reporter(|reporter| {
+            let habitat = config::Habitat::new(habitat.clone());
+            let rng = config::Rng::seed_from_u64(seed);
+            let dispersal_sampler = config::DispersalSampler::new(dispersal, &habitat)?;
+            let lineage_store = config::LineageStore::new(sample_percentage, &habitat);
+            let coalescence_sampler = config::CoalescenceSampler::default();
+            let event_sampler = config::EventSampler::default();
+            let active_lineage_sampler = config::ActiveLineageSampler::default();
 
-        let mut simulation = Simulation::builder()
-            .speciation_probability_per_generation(speciation_probability_per_generation)
-            .habitat(habitat)
-            .rng(rng)
-            .dispersal_sampler(dispersal_sampler)
-            .lineage_reference(std::marker::PhantomData::<config::LineageReference>)
-            .lineage_store(lineage_store)
-            .coalescence_sampler(coalescence_sampler)
-            .event_sampler(event_sampler)
-            .active_lineage_sampler(active_lineage_sampler)
-            .build();
+            let mut simulation = Simulation::builder()
+                .speciation_probability_per_generation(speciation_probability_per_generation)
+                .habitat(habitat)
+                .rng(rng)
+                .dispersal_sampler(dispersal_sampler)
+                .lineage_reference(std::marker::PhantomData::<config::LineageReference>)
+                .lineage_store(lineage_store)
+                .coalescence_sampler(coalescence_sampler)
+                .event_sampler(event_sampler)
+                .active_lineage_sampler(active_lineage_sampler)
+                .build();
 
-        // TODO: Need a way to tune these based on the available CUDA device or cmd args
-        let cuda_block_size = rustacuda::function::BlockSize::xy(16, 16);
-        let cuda_grid_size = rustacuda::function::GridSize::xy(16, 16);
+            // TODO: Need a way to tune these based on the available CUDA device or cmd args
+            let cuda_block_size = rustacuda::function::BlockSize::xy(16, 16);
+            let cuda_grid_size = rustacuda::function::GridSize::xy(16, 16);
 
-        #[allow(clippy::cast_possible_truncation)]
-        let cuda_grid_amount = {
             #[allow(clippy::cast_possible_truncation)]
-            let total_individuals = simulation.lineage_store().get_number_total_lineages();
+            let cuda_grid_amount = {
+                #[allow(clippy::cast_possible_truncation)]
+                let total_individuals = simulation.lineage_store().get_number_total_lineages();
 
-            let cuda_block_size =
-                (cuda_block_size.x * cuda_block_size.y * cuda_block_size.z) as usize;
-            let cuda_grid_size = (cuda_grid_size.x * cuda_grid_size.y * cuda_grid_size.z) as usize;
+                let cuda_block_size =
+                    (cuda_block_size.x * cuda_block_size.y * cuda_block_size.z) as usize;
+                let cuda_grid_size =
+                    (cuda_grid_size.x * cuda_grid_size.y * cuda_grid_size.z) as usize;
 
-            let cuda_task_size = cuda_block_size * cuda_grid_size;
+                let cuda_task_size = cuda_block_size * cuda_grid_size;
 
-            (total_individuals / cuda_task_size)
-                + ((total_individuals % cuda_task_size > 0) as usize)
-        } as u32;
+                (total_individuals / cuda_task_size)
+                    + ((total_individuals % cuda_task_size > 0) as usize)
+            } as u32;
 
-        let module_data = CString::new(include_str!(env!("KERNEL_PTX_PATH"))).unwrap();
+            let module_data = CString::new(include_str!(env!("KERNEL_PTX_PATH"))).unwrap();
 
-        // unimplemented!("{}", include_str!(env!("KERNEL_PTX_PATH")));
+            // unimplemented!("{}", include_str!(env!("KERNEL_PTX_PATH")));
 
-        // Initialize the CUDA API
-        rustacuda::init(CudaFlags::empty())?;
+            // Initialize the CUDA API
+            rustacuda::init(CudaFlags::empty())?;
 
-        // Get the first device
-        let device = Device::get_device(0)?;
+            // Get the first device
+            let device = Device::get_device(0)?;
 
-        let mut global_time_max = 0.0_f64;
-        let mut global_steps_sum = 0_u64;
+            let mut global_time_max = 0.0_f64;
+            let mut global_steps_sum = 0_u64;
 
-        // Create a context associated to this device
-        with_cuda!(CudaContext::create_and_push(
+            // Create a context associated to this device
+            with_cuda!(CudaContext::create_and_push(
             ContextFlags::MAP_HOST | ContextFlags::SCHED_AUTO, device
         )? => |context: CudaContext| {
         // Load the module containing the kernel function
@@ -255,7 +254,7 @@ impl CudaSimulation {
             let mut event_buffer: EventBufferHost<
                 config::Habitat,
                 config::LineageReference,
-                P,
+                P::Reporter<config::Habitat, config::LineageReference>,
                 true, // REPORT_SPECIATION
                 false, // REPORT_DISPERSAL
             > = EventBufferHost::new(
@@ -342,6 +341,7 @@ impl CudaSimulation {
 
         });});});
 
-        Ok((global_time_max, global_steps_sum))
+            Ok((global_time_max, global_steps_sum))
+        })
     }
 }
