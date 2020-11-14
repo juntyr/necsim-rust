@@ -1,6 +1,6 @@
 #![deny(clippy::pedantic)]
 
-use std::{collections::HashSet, ffi::CString};
+use std::ffi::CString;
 
 #[macro_use]
 extern crate contracts;
@@ -15,19 +15,16 @@ use rustacuda::{context::Context as CudaContext, function::Function, module::Sym
 
 use rust_cuda::host::LendToCuda;
 
-use necsim_core::{cogs::LineageStore, reporter::Reporter, simulation::Simulation};
-
-use necsim_impls_cuda::{cogs::rng::CudaRng, event_buffer::host::EventBufferHost};
-use necsim_impls_no_std::cogs::{
-    active_lineage_sampler::independent::IndependentActiveLineageSampler,
-    coalescence_sampler::independent::IndependentCoalescenceSampler,
-    dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
-    event_sampler::independent::IndependentEventSampler, habitat::in_memory::InMemoryHabitat,
-    lineage_reference::in_memory::InMemoryLineageReference,
-    lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore,
+use necsim_core::{
+    cogs::{LineageStore, RngCore},
+    reporter::Reporter,
+    simulation::Simulation,
 };
+
+use necsim_impls_cuda::event_buffer::host::EventBufferHost;
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
+// TODO: Refactor into generic functions which use rust-cuda safe drop
 macro_rules! with_cuda {
     ($init:expr => |$var:ident: $r#type:ty| $inner:block) => {
         let $var = $init;
@@ -49,8 +46,11 @@ macro_rules! with_cuda {
     };
 }
 
+// TODO: Move to a submodule
 macro_rules! type_checked_launch {
-    ($module:ident . $function:ident <<<$grid:expr, $block:expr, $shared:expr, $stream:ident>>>( $($param:ident: $ty:ty = $arg:expr),* )) => {
+    ($module:ident . $function:ident <<<$grid:expr, $block:expr, $shared:expr, $stream:ident>>>(
+        $($param:ident: $ty:ty = $arg:expr),*
+    )) => {
         {
             $(
             let $param: $ty = $arg;
@@ -59,7 +59,9 @@ macro_rules! type_checked_launch {
             launch!($module.$function<<<$grid, $block, $shared, $stream>>>($($param),*))
         }
     };
-    ($function:ident <<<$grid:expr, $block:expr, $shared:expr, $stream:ident>>>( $($param:ident: $ty:ty = $arg:expr),* )) => {
+    ($function:ident <<<$grid:expr, $block:expr, $shared:expr, $stream:ident>>>(
+        $($param:ident: $ty:ty = $arg:expr),*
+    )) => {
         {
             $(
             let $param: $ty = $arg;
@@ -70,6 +72,7 @@ macro_rules! type_checked_launch {
     };
 }
 
+// TODO: Move to a submodule
 fn print_context_resource_limits() {
     use rustacuda::context::{CurrentContext, ResourceLimit};
 
@@ -103,6 +106,7 @@ fn print_context_resource_limits() {
     println!("{:=^80}", "");
 }
 
+// TODO: Move to a submodule
 fn print_kernel_function_attributes(kernel: &Function) {
     use rustacuda::function::FunctionAttribute;
 
@@ -163,29 +167,30 @@ impl CudaSimulation {
         (0.0_f64..=1.0_f64).contains(&sample_percentage),
         "0.0 <= sample_percentage <= 1.0"
     )]
-    pub fn simulate(
+    pub fn simulate<P: Reporter<config::Habitat, config::LineageReference>>(
         habitat: &Array2D<u32>,
         dispersal: &Array2D<f64>,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
-        rng: necsim_config::RngType! {},
-        reporter: &mut necsim_config::ReporterType! {<InMemoryHabitat, InMemoryLineageReference>},
+        seed: u64,
+        reporter: &mut P,
     ) -> Result<(f64, u64)> {
         const SIMULATION_STEP_SLICE: usize = 100_usize;
 
-        let habitat = InMemoryHabitat::new(habitat.clone());
-        let dispersal_sampler = InMemoryPackedAliasDispersalSampler::new(dispersal, &habitat)?;
-        let lineage_store = IncoherentInMemoryLineageStore::new(sample_percentage, &habitat);
-        let coalescence_sampler = IndependentCoalescenceSampler::default();
-        let event_sampler = IndependentEventSampler::default();
-        let active_lineage_sampler = IndependentActiveLineageSampler::default();
+        let habitat = config::Habitat::new(habitat.clone());
+        let rng = config::Rng::seed_from_u64(seed);
+        let dispersal_sampler = config::DispersalSampler::new(dispersal, &habitat)?;
+        let lineage_store = config::LineageStore::new(sample_percentage, &habitat);
+        let coalescence_sampler = config::CoalescenceSampler::default();
+        let event_sampler = config::EventSampler::default();
+        let active_lineage_sampler = config::ActiveLineageSampler::default();
 
         let mut simulation = Simulation::builder()
             .speciation_probability_per_generation(speciation_probability_per_generation)
             .habitat(habitat)
-            .rng(CudaRng::from(rng))
+            .rng(rng)
             .dispersal_sampler(dispersal_sampler)
-            .lineage_reference(std::marker::PhantomData::<InMemoryLineageReference>)
+            .lineage_reference(std::marker::PhantomData::<config::LineageReference>)
             .lineage_store(lineage_store)
             .coalescence_sampler(coalescence_sampler)
             .event_sampler(event_sampler)
@@ -207,7 +212,8 @@ impl CudaSimulation {
 
             let cuda_task_size = cuda_block_size * cuda_grid_size;
 
-            (total_individuals / cuda_task_size) + (total_individuals % cuda_task_size > 0) as usize
+            (total_individuals / cuda_task_size)
+                + ((total_individuals % cuda_task_size > 0) as usize)
         } as u32;
 
         let module_data = CString::new(include_str!(env!("KERNEL_PTX_PATH"))).unwrap();
@@ -223,14 +229,15 @@ impl CudaSimulation {
         let mut global_time_max = 0.0_f64;
         let mut global_steps_sum = 0_u64;
 
-        let mut event_deduplicator = HashSet::new();
-
         // Create a context associated to this device
-        with_cuda!(CudaContext::create_and_push(ContextFlags::MAP_HOST | ContextFlags::SCHED_AUTO, device)? => |context: CudaContext| {
+        with_cuda!(CudaContext::create_and_push(
+            ContextFlags::MAP_HOST | ContextFlags::SCHED_AUTO, device
+        )? => |context: CudaContext| {
         // Load the module containing the kernel function
         with_cuda!(Module::load_from_string(&module_data)? => |module: Module| {
         // Load and initialise the grid_id symbol from the module
-        let mut grid_id_symbol: Symbol<u32>  = module.get_global(&CString::new("grid_id").unwrap())?;
+        let mut grid_id_symbol: Symbol<u32> =
+            module.get_global(&CString::new("grid_id").unwrap())?;
         grid_id_symbol.copy_from(&0_u32)?;
         // Load the kernel function from the module
         let simulate = module.get_function(&CString::new("simulate").unwrap())?;
@@ -244,27 +251,45 @@ impl CudaSimulation {
             print_context_resource_limits();
             print_kernel_function_attributes(&simulate);
 
-            let mut event_buffer: EventBufferHost<InMemoryHabitat, InMemoryLineageReference, necsim_config::ReporterType!{<InMemoryHabitat, InMemoryLineageReference>}> =
-                EventBufferHost::new(&cuda_block_size, &cuda_grid_size, SIMULATION_STEP_SLICE)?;
+            #[allow(clippy::type_complexity)]
+            let mut event_buffer: EventBufferHost<
+                config::Habitat,
+                config::LineageReference,
+                P,
+                true, // REPORT_SPECIATION
+                false, // REPORT_DISPERSAL
+            > = EventBufferHost::new(
+                reporter,
+                &cuda_block_size,
+                &cuda_grid_size,
+                SIMULATION_STEP_SLICE
+            )?;
 
             // Load and initialise the global_lineages_remaining symbol
-            let mut global_lineages_remaining = simulation.lineage_store().get_number_total_lineages() as u64;
+            let mut global_lineages_remaining =
+                simulation.lineage_store().get_number_total_lineages() as u64;
             let mut global_lineages_remaining_symbol: Symbol<u64> =
                 module.get_global(&CString::new("global_lineages_remaining").unwrap())?;
             global_lineages_remaining_symbol.copy_from(&global_lineages_remaining)?;
 
             // Load and initialise the global_time_max and global_steps_sum symbols
-            let mut global_time_max_symbol: Symbol<f64> = module.get_global(&CString::new("global_time_max").unwrap())?;
+            let mut global_time_max_symbol: Symbol<f64> =
+                module.get_global(&CString::new("global_time_max").unwrap())?;
             global_time_max_symbol.copy_from(&0.0_f64)?;
-            let mut global_steps_sum_symbol: Symbol<u64> = module.get_global(&CString::new("global_steps_sum").unwrap())?;
+            let mut global_steps_sum_symbol: Symbol<u64> =
+                module.get_global(&CString::new("global_steps_sum").unwrap())?;
             global_steps_sum_symbol.copy_from(&0_u64)?;
 
-            // TODO: We should use async launches and callbacks to rotate between simulation, event analysis etc.
+            // TODO: We should use async launches and callbacks to rotate between
+            // simulation, event analysis etc.
             if let Err(err) = simulation.lend_to_cuda_mut(|simulation_mut_ptr| {
                 let mut time_slice = 0;
 
                 while global_lineages_remaining > 0 {
-                    println!("Starting time slice {} with {} remaining individuals ...", time_slice + 1, global_lineages_remaining);
+                    println!(
+                        "Starting time slice {} with {} remaining individuals ...",
+                        time_slice + 1, global_lineages_remaining
+                    );
 
                     for grid_id in 0..cuda_grid_amount {
                         grid_id_symbol.copy_from(&grid_id)?;
@@ -272,30 +297,23 @@ impl CudaSimulation {
                         let cuda_grid_size = cuda_grid_size.clone();
                         let cuda_block_size = cuda_block_size.clone();
 
-                        println!("Launching grid {}/{} of time slice {} ...", grid_id + 1, cuda_grid_amount, time_slice + 1);
+                        println!(
+                            "Launching grid {}/{} of time slice {} ...",
+                            grid_id + 1, cuda_grid_amount, time_slice + 1
+                        );
 
                         // Launching kernels is unsafe since Rust cannot enforce safety across
                         // the foreign function CUDA-C language barrier
                         unsafe {
-                            type_checked_launch!(simulate<<<cuda_grid_size, cuda_block_size, 0, stream>>>(
-                                simulation_mut_ptr: rustacuda_core::DevicePointer<<necsim_core::simulation::Simulation<
-                                    necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat,
-                                    necsim_impls_cuda::cogs::rng::CudaRng<necsim_config::RngType!{}>,
-                                    necsim_impls_no_std::cogs::dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler<_, _>,
-                                    necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference,
-                                    necsim_impls_no_std::cogs::lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore<_>,
-                                    necsim_impls_no_std::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler<_, _, _, _>,
-                                    necsim_impls_no_std::cogs::event_sampler::independent::IndependentEventSampler<_, _, _, _, _>,
-                                    necsim_impls_no_std::cogs::active_lineage_sampler::independent::IndependentActiveLineageSampler<_, _, _, _, _>,
-                                > as rust_cuda::common::RustToCuda>::CudaRepresentation> = simulation_mut_ptr,
-                                event_buffer_ptr: rustacuda_core::DevicePointer<necsim_impls_cuda::event_buffer::common::EventBufferCudaRepresentation<
-                                    necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat,
-                                    necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference,
-                                    necsim_config::ReporterType!{<
-                                        necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat,
-                                        necsim_impls_no_std::cogs::lineage_reference::in_memory::InMemoryLineageReference
-                                    >},
-                                >> = event_buffer.get_mut_cuda_ptr(),
+                            type_checked_launch!(
+                                simulate<<<cuda_grid_size, cuda_block_size, 0, stream>>>(
+                                    simulation_mut_ptr: rustacuda_core::DevicePointer<
+                                        <config::Simulation as rust_cuda::common::RustToCuda>
+                                            ::CudaRepresentation
+                                    > = simulation_mut_ptr,
+                                event_buffer_ptr: rustacuda_core::DevicePointer<
+                                    config::EventBufferCudaRepresentation
+                                > = event_buffer.get_mut_cuda_ptr(),
                                 max_steps: u64 = SIMULATION_STEP_SLICE as u64
                             ))?;
                         }
@@ -308,11 +326,7 @@ impl CudaSimulation {
 
                         println!("Analysing events ...");
 
-                        event_buffer.with_fetched_events(|events| {
-                            events.filter(|event| {
-                                event_deduplicator.insert(event.clone())
-                            }).for_each(|event| reporter.report_event(&event))
-                        })?
+                        event_buffer.fetch_and_report_events()?
                     }
 
                     time_slice += 1;
@@ -327,8 +341,6 @@ impl CudaSimulation {
             global_steps_sum_symbol.copy_to(&mut global_steps_sum)?;
 
         });});});
-
-        // println!("{:#?}", event_deduplicator);
 
         Ok((global_time_max, global_steps_sum))
     }

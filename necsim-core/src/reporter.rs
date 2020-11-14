@@ -88,18 +88,3 @@ macro_rules! ReporterGroup {
         }
     }
 }
-
-#[macro_export]
-macro_rules! ReporterGroupType {
-    (<$Habitat:ty, $LineageReference:ty>[]) => {
-        necsim_core::reporter::NullReporter
-    };
-    (<$Habitat:ty, $LineageReference:ty>[$first_reporter:ty $(,$reporter_tail:ty)*]) => {
-        necsim_core::reporter::ReporterCombinator<
-            $Habitat,
-            $LineageReference,
-            $first_reporter,
-            $crate::ReporterGroupType!{<$Habitat, $LineageReference>[$($reporter_tail),*]},
-        >
-    }
-}

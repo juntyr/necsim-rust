@@ -6,7 +6,11 @@ extern crate contracts;
 use anyhow::Result;
 use array2d::Array2D;
 
-use necsim_core::{cogs::LineageStore, simulation::Simulation};
+use necsim_core::{
+    cogs::{LineageStore, RngCore},
+    reporter::Reporter,
+    simulation::Simulation,
+};
 
 use necsim_impls_no_std::cogs::{
     coalescence_sampler::conditional::ConditionalCoalescenceSampler,
@@ -17,7 +21,7 @@ use necsim_impls_no_std::cogs::{
 };
 use necsim_impls_std::cogs::{
     active_lineage_sampler::gillespie::GillespieActiveLineageSampler,
-    dispersal_sampler::in_memory::InMemoryDispersalSampler,
+    dispersal_sampler::in_memory::InMemoryDispersalSampler, rng::std::StdRng,
 };
 
 pub struct SkippingGillespieSimulation;
@@ -39,15 +43,16 @@ impl SkippingGillespieSimulation {
         (0.0_f64..=1.0_f64).contains(&sample_percentage),
         "0.0 <= sample_percentage <= 1.0"
     )]
-    pub fn simulate(
+    pub fn simulate<P: Reporter<InMemoryHabitat, InMemoryLineageReference>>(
         habitat: &Array2D<u32>,
         dispersal: &Array2D<f64>,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
-        mut rng: necsim_config::RngType! {},
-        reporter: &mut necsim_config::ReporterType! {<InMemoryHabitat, InMemoryLineageReference>},
+        seed: u64,
+        reporter: &mut P,
     ) -> Result<(f64, u64)> {
         let habitat = InMemoryHabitat::new(habitat.clone());
+        let mut rng = StdRng::seed_from_u64(seed);
         let dispersal_sampler = InMemorySeparableAliasDispersalSampler::new(dispersal, &habitat)?;
         let lineage_store = CoherentInMemoryLineageStore::new(sample_percentage, &habitat);
         let coalescence_sampler = ConditionalCoalescenceSampler::default();
