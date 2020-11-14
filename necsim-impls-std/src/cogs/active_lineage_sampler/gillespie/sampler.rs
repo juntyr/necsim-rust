@@ -99,6 +99,18 @@ impl<
         ))
     }
 
+    #[debug_requires(
+        indexed_location.index() as usize ==
+            simulation.lineage_store.get_active_lineages_at_location(
+                indexed_location.location()
+            ).len(),
+        "location index equals the append index at the location"
+    )]
+    #[debug_requires(
+        simulation.lineage_store.get_active_lineages_at_location(indexed_location.location()).len() <
+            (simulation.habitat.get_habitat_at_location(indexed_location.location()) as usize),
+        "location has habitat capacity for the lineage"
+    )]
     fn push_active_lineage_to_indexed_location(
         &mut self,
         lineage_reference: R,

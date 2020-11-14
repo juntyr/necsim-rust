@@ -88,8 +88,6 @@ impl<
 
                     reporter.report_event(&event);
 
-                    // TODO: If reporters are ever to suggest an early stop, max_steps should become
-                    // one
                     if steps >= max_steps {
                         break;
                     }

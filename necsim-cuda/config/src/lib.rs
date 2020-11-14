@@ -46,10 +46,13 @@ pub type Simulation = necsim_core::simulation::Simulation<
     ActiveLineageSampler,
 >;
 
+pub const REPORT_SPECIATION: bool = true;
+pub const REPORT_DISPERSAL: bool = false;
+
 pub type EventBufferCudaRepresentation =
     necsim_impls_cuda::event_buffer::common::EventBufferCudaRepresentation<
         Habitat,
         LineageReference,
-        true,  // REPORT_SPECIATION
-        false, // REPORT_DISPERSAL
+        REPORT_SPECIATION,
+        REPORT_DISPERSAL,
     >;

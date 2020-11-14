@@ -123,8 +123,9 @@ impl Builder {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         Ok(Builder {
             source_crate: Crate::analyse(path).context("Unable to analyse source crate")?,
-
-            profile: Profile::Release, /* TODO: choose automatically, e.g.: `env::var("PROFILE").unwrap_or("release".to_string())` */
+            // TODO: choose automatically, e.g.:
+            // `env::var("PROFILE").unwrap_or("release".to_string())`
+            profile: Profile::Release,
             colors: true,
             crate_type: None,
         })
