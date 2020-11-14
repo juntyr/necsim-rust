@@ -5,4 +5,3 @@ extern crate contracts;
 
 pub mod cogs;
 pub mod reporter;
-pub mod rng;

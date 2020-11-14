@@ -1,5 +1,4 @@
 use alloc::boxed::Box;
-use core::marker::PhantomData;
 
 use rustacuda_core::DeviceCopy;
 
@@ -15,30 +14,38 @@ use necsim_core::{
 pub struct EventBufferDevice<
     H: Habitat + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
-    P: Reporter<H, R>,
+    const REPORT_SPECIATION: bool,
+    const REPORT_DISPERSAL: bool,
 > {
     event_counter: usize,
     event_buffer: Box<[Option<Event<H, R>>]>,
-    marker: PhantomData<P>,
 }
 
-impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy, P: Reporter<H, R>> EventFilter
-    for EventBufferDevice<H, R, P>
+impl<
+        H: Habitat + RustToCuda,
+        R: LineageReference<H> + DeviceCopy,
+        const REPORT_SPECIATION: bool,
+        const REPORT_DISPERSAL: bool,
+    > EventFilter for EventBufferDevice<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>
 {
-    const REPORT_DISPERSAL: bool = P::REPORT_DISPERSAL;
-    const REPORT_SPECIATION: bool = P::REPORT_SPECIATION;
+    const REPORT_DISPERSAL: bool = REPORT_DISPERSAL;
+    const REPORT_SPECIATION: bool = REPORT_SPECIATION;
 }
 
-impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy, P: Reporter<H, R>> Reporter<H, R>
-    for EventBufferDevice<H, R, P>
+impl<
+        H: Habitat + RustToCuda,
+        R: LineageReference<H> + DeviceCopy,
+        const REPORT_SPECIATION: bool,
+        const REPORT_DISPERSAL: bool,
+    > Reporter<H, R> for EventBufferDevice<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>
 {
     #[debug_requires(
         self.event_counter < self.event_buffer.len(),
         "does not report extraneous events"
     )]
     fn report_event(&mut self, event: &Event<H, R>) {
-        if (P::REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
-            || (P::REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal {..}))
+        if (REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
+            || (REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal {..}))
         {
             self.event_buffer[self.event_counter].replace(event.clone());
 
@@ -47,19 +54,32 @@ impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy, P: Reporter<H
     }
 }
 
-impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy, P: Reporter<H, R>>
-    EventBufferDevice<H, R, P>
+impl<
+        H: Habitat + RustToCuda,
+        R: LineageReference<H> + DeviceCopy,
+        const REPORT_SPECIATION: bool,
+        const REPORT_DISPERSAL: bool,
+    > EventBufferDevice<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>
 {
     /// # Safety
     /// This function is only safe to call iff `cuda_repr_ptr` is the
     /// `DevicePointer` borrowed on the CPU using the corresponding
     /// `LendToCuda::lend_to_cuda`.
     pub unsafe fn with_borrow_from_rust_mut<O, F: FnOnce(&mut Self) -> O>(
-        cuda_repr_ptr: *mut super::common::EventBufferCudaRepresentation<H, R, P>,
+        cuda_repr_ptr: *mut super::common::EventBufferCudaRepresentation<
+            H,
+            R,
+            REPORT_SPECIATION,
+            REPORT_DISPERSAL,
+        >,
         inner: F,
     ) -> O {
-        let cuda_repr_ref: &mut super::common::EventBufferCudaRepresentation<H, R, P> =
-            &mut *cuda_repr_ptr;
+        let cuda_repr_ref: &mut super::common::EventBufferCudaRepresentation<
+            H,
+            R,
+            REPORT_SPECIATION,
+            REPORT_DISPERSAL,
+        > = &mut *cuda_repr_ptr;
 
         let buffer_len =
             cuda_repr_ref.block_size * cuda_repr_ref.grid_size * cuda_repr_ref.max_events;
@@ -75,7 +95,6 @@ impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy, P: Reporter<H
         let mut rust_repr = EventBufferDevice {
             event_counter: 0,
             event_buffer: alloc::boxed::Box::from_raw(individual_raw_slice),
-            marker: cuda_repr_ref.marker,
         };
 
         let result = inner(&mut rust_repr);

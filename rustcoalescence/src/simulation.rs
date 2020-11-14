@@ -13,6 +13,8 @@ use necsim_gillespie::GillespieSimulation;
 #[cfg(feature = "necsim-skipping-gillespie")]
 use necsim_skipping_gillespie::SkippingGillespieSimulation;
 
+use necsim_core::reporter::Reporter;
+
 use necsim_impls_no_std::cogs::{
     habitat::in_memory::InMemoryHabitat, lineage_reference::in_memory::InMemoryLineageReference,
 };
@@ -23,12 +25,11 @@ use super::args::{Algorithm, CommandLineArguments};
 #[allow(unreachable_code)]
 #[allow(unused_variables)]
 #[allow(clippy::needless_pass_by_value)]
-pub fn simulate(
+pub fn simulate<P: Reporter<InMemoryHabitat, InMemoryLineageReference>>(
     args: &CommandLineArguments,
     habitat: &Array2D<u32>,
     dispersal: &Array2D<f64>,
-    rng: necsim_config::RngType! {},
-    reporter: &mut necsim_config::ReporterType! {<InMemoryHabitat, InMemoryLineageReference>},
+    reporter: &mut P,
 ) -> Result<(f64, u64)> {
     println!(
         "Setting up the {:?} coalescence algorithm ...",
@@ -43,7 +44,7 @@ pub fn simulate(
             &dispersal,
             *args.speciation_probability_per_generation(),
             *args.sample_percentage(),
-            rng,
+            *args.seed(),
             reporter,
         ),
         #[cfg(feature = "necsim-gillespie")]
@@ -52,7 +53,7 @@ pub fn simulate(
             &dispersal,
             *args.speciation_probability_per_generation(),
             *args.sample_percentage(),
-            rng,
+            *args.seed(),
             reporter,
         ),
         #[cfg(feature = "necsim-skipping-gillespie")]
@@ -61,7 +62,7 @@ pub fn simulate(
             &dispersal,
             *args.speciation_probability_per_generation(),
             *args.sample_percentage(),
-            rng,
+            *args.seed(),
             reporter,
         ),
         #[cfg(feature = "necsim-cuda")]
@@ -70,7 +71,7 @@ pub fn simulate(
             &dispersal,
             *args.speciation_probability_per_generation(),
             *args.sample_percentage(),
-            rng,
+            *args.seed(),
             reporter,
         ),
         #[allow(unreachable_patterns)]
@@ -79,10 +80,7 @@ pub fn simulate(
 
     result.with_context(|| {
         format!(
-            concat!(
-                "Failed to create the Simulation with the habitat ",
-                "map {:?} and the dispersal map {:?}."
-            ),
+            "Failed to run the Simulation with the habitat map {:?} and the dispersal map {:?}.",
             args.dispersal_map(),
             args.habitat_map()
         )

@@ -26,6 +26,7 @@ impl std::str::FromStr for Algorithm {
 
     fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
         #[allow(clippy::match_single_binding)]
+        #[allow(clippy::wildcard_in_or_patterns)]
         match s {
             #[cfg(feature = "necsim-classical")]
             "Classical" | _ if s.eq_ignore_ascii_case("Classical") => Ok(Algorithm::Classical),
