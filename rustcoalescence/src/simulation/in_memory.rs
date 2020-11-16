@@ -18,58 +18,59 @@ use necsim_impls_no_std::reporter::ReporterContext;
 use necsim_impls_std::simulation::in_memory::InMemorySimulation;
 
 #[allow(unused_imports)]
-use super::args::{Algorithm, CommandLineArguments};
+use crate::args::{Algorithm, CommonArgs, InMemoryArgs};
 
 #[allow(unreachable_code)]
 #[allow(unused_variables)]
 #[allow(clippy::needless_pass_by_value)]
 pub fn simulate<P: ReporterContext>(
-    args: &CommandLineArguments,
+    common_args: &CommonArgs,
+    in_memory_args: &InMemoryArgs,
     habitat: &Array2D<u32>,
     dispersal: &Array2D<f64>,
     reporter_context: P,
 ) -> Result<(f64, u64)> {
     println!(
-        "Setting up the {:?} coalescence algorithm ...",
-        args.algorithm()
+        "Setting up the in-memory {:?} coalescence algorithm ...",
+        common_args.algorithm()
     );
 
     #[allow(clippy::match_single_binding)]
-    let result: Result<(f64, u64)> = match args.algorithm() {
+    let result: Result<(f64, u64)> = match common_args.algorithm() {
         #[cfg(feature = "necsim-classical")]
         Algorithm::Classical => ClassicalSimulation::simulate(
             habitat,
             &dispersal,
-            *args.speciation_probability_per_generation(),
-            *args.sample_percentage(),
-            *args.seed(),
+            *common_args.speciation_probability_per_generation(),
+            *common_args.sample_percentage(),
+            *common_args.seed(),
             reporter_context,
         ),
         #[cfg(feature = "necsim-gillespie")]
         Algorithm::Gillespie => GillespieSimulation::simulate(
             habitat,
             &dispersal,
-            *args.speciation_probability_per_generation(),
-            *args.sample_percentage(),
-            *args.seed(),
+            *common_args.speciation_probability_per_generation(),
+            *common_args.sample_percentage(),
+            *common_args.seed(),
             reporter_context,
         ),
         #[cfg(feature = "necsim-skipping-gillespie")]
         Algorithm::SkippingGillespie => SkippingGillespieSimulation::simulate(
             habitat,
             &dispersal,
-            *args.speciation_probability_per_generation(),
-            *args.sample_percentage(),
-            *args.seed(),
+            *common_args.speciation_probability_per_generation(),
+            *common_args.sample_percentage(),
+            *common_args.seed(),
             reporter_context,
         ),
         #[cfg(feature = "necsim-cuda")]
         Algorithm::CUDA => CudaSimulation::simulate(
             habitat,
             &dispersal,
-            *args.speciation_probability_per_generation(),
-            *args.sample_percentage(),
-            *args.seed(),
+            *common_args.speciation_probability_per_generation(),
+            *common_args.sample_percentage(),
+            *common_args.seed(),
             reporter_context,
         ),
         #[allow(unreachable_patterns)]
@@ -78,9 +79,10 @@ pub fn simulate<P: ReporterContext>(
 
     result.with_context(|| {
         format!(
-            "Failed to run the Simulation with the habitat map {:?} and the dispersal map {:?}.",
-            args.dispersal_map(),
-            args.habitat_map()
+            "Failed to run the in-memory simulation with the habitat map {:?} and the dispersal \
+             map {:?}.",
+            in_memory_args.dispersal_map(),
+            in_memory_args.habitat_map()
         )
     })
 }

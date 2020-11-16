@@ -18,7 +18,7 @@ pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
     #[debug_ensures(if sample_percentage == 0.0_f64 {
         ret.get_number_total_lineages() == 0
     } else if sample_percentage == 1.0_f64 {
-        ret.get_number_total_lineages() == habitat.get_total_habitat()
+        ret.get_number_total_lineages() as u64 == habitat.get_total_habitat()
     } else {
         true
     }, "samples active lineages according to settings.sample_percentage()")]

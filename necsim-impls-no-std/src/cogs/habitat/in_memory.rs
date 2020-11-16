@@ -29,10 +29,10 @@ impl Habitat for InMemoryHabitat {
     }
 
     #[must_use]
-    fn get_total_habitat(&self) -> usize {
+    fn get_total_habitat(&self) -> u64 {
         self.habitat
             .elements_row_major_iter()
-            .map(|x| *x as usize)
+            .map(|x| *x as u64)
             .sum()
     }
 
