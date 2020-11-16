@@ -10,11 +10,11 @@ use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampl
 use necsim_impls_no_std::reporter::ReporterContext;
 use necsim_impls_std::simulation::in_memory::InMemorySimulation;
 
-use super::ClassicalSimulation;
+use super::GillespieSimulation;
 
 #[contract_trait]
-impl InMemorySimulation for ClassicalSimulation {
-    /// Simulates the classical coalescence algorithm on an in memory
+impl InMemorySimulation for GillespieSimulation {
+    /// Simulates the Gillespie coalescence algorithm on an in memory
     /// `habitat` with precalculated `dispersal`.
     ///
     /// # Errors
@@ -33,7 +33,7 @@ impl InMemorySimulation for ClassicalSimulation {
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
 
-        Ok(ClassicalSimulation::simulate(
+        Ok(GillespieSimulation::simulate(
             habitat,
             dispersal_sampler,
             speciation_probability_per_generation,

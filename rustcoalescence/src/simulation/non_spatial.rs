@@ -14,7 +14,7 @@ use necsim_skipping_gillespie::SkippingGillespieSimulation;
 
 use necsim_impls_no_std::reporter::ReporterContext;
 #[allow(unused_imports)]
-use necsim_impls_std::simulation::non_spatial::NonSpatialSimulation;
+use necsim_impls_no_std::simulation::non_spatial::NonSpatialSimulation;
 
 #[allow(unused_imports)]
 use crate::args::{Algorithm, CommonArgs, NonSpatialArgs};
@@ -35,41 +35,42 @@ pub fn simulate<P: ReporterContext>(
     #[allow(clippy::match_single_binding)]
     let result: Result<(f64, u64)> = match common_args.algorithm() {
         #[cfg(feature = "necsim-classical")]
-        Algorithm::Classical => ClassicalSimulation::simulate(
+        Algorithm::Classical => Ok(ClassicalSimulation::simulate(
             *non_spatial_args.area(),
             *non_spatial_args.deme(),
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
-        ),
-        // #[cfg(feature = "necsim-gillespie")]
-        // Algorithm::Gillespie => GillespieSimulation::simulate(
-        // habitat,
-        // &dispersal,
-        // common_args.speciation_probability_per_generation(),
-        // common_args.sample_percentage(),
-        // common_args.seed(),
-        // reporter_context,
-        // ),
-        // #[cfg(feature = "necsim-skipping-gillespie")]
-        // Algorithm::SkippingGillespie => SkippingGillespieSimulation::simulate(
-        // habitat,
-        // &dispersal,
-        // common_args.speciation_probability_per_generation(),
-        // common_args.sample_percentage(),
-        // common_args.seed(),
-        // reporter_context,
-        // ),
+        )),
+        #[cfg(feature = "necsim-gillespie")]
+        Algorithm::Gillespie => Ok(GillespieSimulation::simulate(
+            *non_spatial_args.area(),
+            *non_spatial_args.deme(),
+            *common_args.speciation_probability_per_generation(),
+            *common_args.sample_percentage(),
+            *common_args.seed(),
+            reporter_context,
+        )),
+        #[cfg(feature = "necsim-skipping-gillespie")]
+        Algorithm::SkippingGillespie => Ok(SkippingGillespieSimulation::simulate(
+            *non_spatial_args.area(),
+            *non_spatial_args.deme(),
+            *common_args.speciation_probability_per_generation(),
+            *common_args.sample_percentage(),
+            *common_args.seed(),
+            reporter_context,
+        )),
+        // TODO: How can we automatically compile all requested specialised kernel versions?
         // #[cfg(feature = "necsim-cuda")]
-        // Algorithm::CUDA => CudaSimulation::simulate(
-        // habitat,
-        // &dispersal,
-        // common_args.speciation_probability_per_generation(),
-        // common_args.sample_percentage(),
-        // common_args.seed(),
-        // reporter_context,
-        // ),
+        // Algorithm::CUDA => Ok(CudaSimulation::simulate(
+        //     *non_spatial_args.area(),
+        //     *non_spatial_args.deme(),
+        //     *common_args.speciation_probability_per_generation(),
+        //     *common_args.sample_percentage(),
+        //     *common_args.seed(),
+        //     reporter_context,
+        // )),
         #[allow(unreachable_patterns)]
         _ => anyhow::bail!("rustcoalescence does not support the selected algorithm"),
     };

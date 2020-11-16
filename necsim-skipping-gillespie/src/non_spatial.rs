@@ -7,12 +7,12 @@ use necsim_impls_no_std::{
     reporter::ReporterContext, simulation::non_spatial::NonSpatialSimulation,
 };
 
-use super::ClassicalSimulation;
+use super::SkippingGillespieSimulation;
 
 #[contract_trait]
-impl NonSpatialSimulation for ClassicalSimulation {
-    /// Simulates the classical coalescence algorithm on a non-spatial
-    /// `habitat` with non-spatial `dispersal`.
+impl NonSpatialSimulation for SkippingGillespieSimulation {
+    /// Simulates the Gillespie coalescence algorithm with self-dispersal event
+    /// skipping on a non-spatial `habitat` with non-spatial `dispersal`.
     fn simulate<P: ReporterContext>(
         area: (u32, u32),
         deme: u32,
@@ -24,7 +24,7 @@ impl NonSpatialSimulation for ClassicalSimulation {
         let habitat = NonSpatialHabitat::new(area, deme);
         let dispersal_sampler = NonSpatialDispersalSampler::new(&habitat);
 
-        ClassicalSimulation::simulate(
+        SkippingGillespieSimulation::simulate(
             habitat,
             dispersal_sampler,
             speciation_probability_per_generation,

@@ -3,54 +3,41 @@
 #[macro_use]
 extern crate contracts;
 
-use anyhow::Result;
-use array2d::Array2D;
-
 use necsim_core::{
-    cogs::{LineageStore, RngCore},
+    cogs::{Habitat, LineageStore, RngCore, SeparableDispersalSampler},
     simulation::Simulation,
 };
 
 use necsim_impls_no_std::cogs::{
     coalescence_sampler::conditional::ConditionalCoalescenceSampler,
-    dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
     event_sampler::gillespie::conditional::ConditionalGillespieEventSampler,
-    habitat::in_memory::InMemoryHabitat, lineage_reference::in_memory::InMemoryLineageReference,
+    lineage_reference::in_memory::InMemoryLineageReference,
     lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
 };
 use necsim_impls_std::cogs::{
-    active_lineage_sampler::gillespie::GillespieActiveLineageSampler,
-    dispersal_sampler::in_memory::InMemoryDispersalSampler, rng::std::StdRng,
+    active_lineage_sampler::gillespie::GillespieActiveLineageSampler, rng::std::StdRng,
 };
 
 use necsim_impls_no_std::reporter::ReporterContext;
-use necsim_impls_std::simulation::in_memory::InMemorySimulation;
+
+mod in_memory;
+mod non_spatial;
 
 pub struct SkippingGillespieSimulation;
 
-#[contract_trait]
-impl InMemorySimulation for SkippingGillespieSimulation {
+impl SkippingGillespieSimulation {
     /// Simulates the Gillespie coalescence algorithm with self-dispersal event
-    /// skippingon an in memory `habitat` with precalculated `dispersal`.
-    ///
-    /// # Errors
-    ///
-    /// `Err(InconsistentDispersalMapSize)` is returned iff the dimensions of
-    /// `dispersal` are not `ExE` given `E=RxC` where `habitat` has dimension
-    /// `RxC`.
-    fn simulate<P: ReporterContext>(
-        habitat: &Array2D<u32>,
-        dispersal: &Array2D<f64>,
+    /// skipping on the `habitat` with `dispersal`.
+    fn simulate<H: Habitat, D: SeparableDispersalSampler<H, StdRng>, P: ReporterContext>(
+        habitat: H,
+        dispersal_sampler: D,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
-    ) -> Result<(f64, u64)> {
+    ) -> (f64, u64) {
         reporter_context.with_reporter(|reporter| {
-            let habitat = InMemoryHabitat::new(habitat.clone());
             let mut rng = StdRng::seed_from_u64(seed);
-            let dispersal_sampler =
-                InMemorySeparableAliasDispersalSampler::new(dispersal, &habitat)?;
             let lineage_store = CoherentInMemoryLineageStore::new(sample_percentage, &habitat);
             let coalescence_sampler = ConditionalCoalescenceSampler::default();
             let event_sampler = ConditionalGillespieEventSampler::default();
@@ -78,7 +65,7 @@ impl InMemorySimulation for SkippingGillespieSimulation {
 
             let (time, steps) = simulation.simulate(reporter);
 
-            Ok((time, steps))
+            (time, steps)
         })
     }
 }

@@ -21,3 +21,4 @@ pub mod alias;
 pub mod cogs;
 pub mod r#f64;
 pub mod reporter;
+pub mod simulation;
