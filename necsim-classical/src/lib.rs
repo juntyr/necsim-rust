@@ -3,8 +3,6 @@
 #[macro_use]
 extern crate contracts;
 
-use anyhow::Result;
-
 use necsim_core::{
     cogs::{DispersalSampler, Habitat, LineageStore, RngCore},
     simulation::Simulation,
@@ -27,14 +25,8 @@ mod non_spatial;
 pub struct ClassicalSimulation;
 
 impl ClassicalSimulation {
-    /// Simulates the classical coalescence algorithm on an in memory
-    /// `habitat` with precalculated `dispersal`.
-    ///
-    /// # Errors
-    ///
-    /// `Err(InconsistentDispersalMapSize)` is returned iff the dimensions of
-    /// `dispersal` are not `ExE` given `E=RxC` where `habitat` has dimension
-    /// `RxC`.
+    /// Simulates the classical coalescence algorithm on the `habitat` with
+    /// `dispersal`.
     fn simulate<H: Habitat, D: DispersalSampler<H, StdRng>, P: ReporterContext>(
         habitat: H,
         dispersal_sampler: D,
@@ -42,7 +34,7 @@ impl ClassicalSimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
-    ) -> Result<(f64, u64)> {
+    ) -> (f64, u64) {
         reporter_context.with_reporter(|reporter| {
             let rng = StdRng::seed_from_u64(seed);
             let lineage_store = CoherentInMemoryLineageStore::new(sample_percentage, &habitat);
@@ -65,7 +57,7 @@ impl ClassicalSimulation {
 
             let (time, steps) = simulation.simulate(reporter);
 
-            Ok((time, steps))
+            (time, steps)
         })
     }
 }

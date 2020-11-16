@@ -1,6 +1,4 @@
-use anyhow::Result;
-
-use necsim_impls_no_std::reporter::ReporterContext;
+use crate::reporter::ReporterContext;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
@@ -21,5 +19,5 @@ pub trait NonSpatialSimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
-    ) -> Result<(f64, u64)>;
+    ) -> (f64, u64);
 }

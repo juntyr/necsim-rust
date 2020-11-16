@@ -2,7 +2,7 @@ use anyhow::Result;
 use array2d::Array2D;
 
 use necsim_impls_no_std::cogs::{
-    dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
+    dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
     habitat::in_memory::InMemoryHabitat,
 };
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
@@ -10,12 +10,12 @@ use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampl
 use necsim_impls_no_std::reporter::ReporterContext;
 use necsim_impls_std::simulation::in_memory::InMemorySimulation;
 
-use super::ClassicalSimulation;
+use super::SkippingGillespieSimulation;
 
 #[contract_trait]
-impl InMemorySimulation for ClassicalSimulation {
-    /// Simulates the classical coalescence algorithm on an in memory
-    /// `habitat` with precalculated `dispersal`.
+impl InMemorySimulation for SkippingGillespieSimulation {
+    /// Simulates the Gillespie coalescence algorithm with self-dispersal event
+    /// skipping on an in-memory `habitat` with precalculated `dispersal`.
     ///
     /// # Errors
     ///
@@ -31,9 +31,9 @@ impl InMemorySimulation for ClassicalSimulation {
         reporter_context: P,
     ) -> Result<(f64, u64)> {
         let habitat = InMemoryHabitat::new(habitat.clone());
-        let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
+        let dispersal_sampler = InMemorySeparableAliasDispersalSampler::new(dispersal, &habitat)?;
 
-        Ok(ClassicalSimulation::simulate(
+        Ok(SkippingGillespieSimulation::simulate(
             habitat,
             dispersal_sampler,
             speciation_probability_per_generation,
