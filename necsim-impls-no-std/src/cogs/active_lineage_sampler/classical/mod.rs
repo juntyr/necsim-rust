@@ -33,7 +33,8 @@ impl<
 {
     #[must_use]
     pub fn new(habitat: &H, lineage_store: &S) -> Self {
-        let mut active_lineage_references = Vec::with_capacity(habitat.get_total_habitat());
+        let mut active_lineage_references =
+            Vec::with_capacity(lineage_store.get_number_total_lineages());
 
         let landscape_extent = habitat.get_extent();
 

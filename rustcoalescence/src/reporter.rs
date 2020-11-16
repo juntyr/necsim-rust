@@ -1,5 +1,3 @@
-use array2d::Array2D;
-
 use necsim_core::cogs::{Habitat, LineageReference};
 use necsim_impls_no_std::reporter::ReporterContext;
 
@@ -8,25 +6,12 @@ use necsim_impls_std::reporter::biodiversity::BiodiversityReporter;
 // use necsim_impls_std::reporter::execution_time::ExecutionTimeReporter;
 use necsim_impls_std::reporter::progress::ProgressReporter;
 
-use crate::args::CommandLineArguments;
-
 pub struct RustcoalescenceReporterContext {
     estimated_total_lineages: u64,
 }
 
 impl RustcoalescenceReporterContext {
-    pub fn new(args: &CommandLineArguments, habitat: &Array2D<u32>) -> Self {
-        let total_habitat = habitat
-            .elements_row_major_iter()
-            .map(|x| u64::from(*x))
-            .sum::<u64>();
-
-        #[allow(clippy::cast_possible_truncation)]
-        #[allow(clippy::cast_sign_loss)]
-        #[allow(clippy::cast_precision_loss)]
-        let estimated_total_lineages =
-            ((total_habitat as f64) * args.sample_percentage()).ceil() as u64;
-
+    pub fn new(estimated_total_lineages: u64) -> Self {
         Self {
             estimated_total_lineages,
         }

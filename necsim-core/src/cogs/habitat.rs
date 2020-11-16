@@ -10,17 +10,17 @@ pub trait Habitat: core::fmt::Debug {
     #[debug_ensures(ret == {
         let extent = self.get_extent();
 
-        let mut total_habitat: usize = 0;
+        let mut total_habitat: u64 = 0;
 
         for y in extent.y()..(extent.y() + extent.height()) {
             for x in extent.x()..(extent.x() + extent.width()) {
-                total_habitat += self.get_habitat_at_location(&Location::new(x, y)) as usize;
+                total_habitat += u64::from(self.get_habitat_at_location(&Location::new(x, y)));
             }
         }
 
         total_habitat
     }, "total habitat is the sum of all habitat in the extent of the habitat")]
-    fn get_total_habitat(&self) -> usize;
+    fn get_total_habitat(&self) -> u64;
 
     #[must_use]
     #[debug_requires(self.get_extent().contains(location), "location is inside habitat extent")]
