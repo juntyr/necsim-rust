@@ -1,8 +1,6 @@
 #![deny(clippy::pedantic)]
 #![feature(min_const_generics)]
 
-use std::ffi::CString;
-
 #[macro_use]
 extern crate contracts;
 
@@ -35,6 +33,71 @@ use cuda::with_cuda_kernel;
 use simulate::simulate;
 
 pub struct CudaSimulation;
+
+mod kernel {
+    use std::{ffi::CStr, os::raw::c_char};
+
+    // This function should do a switch on the strings and return the correct kernel
+    // LTO should be able to optimise the call away
+    extern "C" {
+        #[no_mangle]
+        fn get_ptx_cstr_for_specialisation(specialisation: *const c_char) -> *const c_char;
+    }
+
+    use necsim_core::cogs::{
+        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler,
+        HabitatToU64Injection, IncoherentLineageStore, LineageReference, PrimeableRng,
+    };
+    use rust_cuda::common::RustToCuda;
+    use rustacuda_core::DeviceCopy;
+
+    //#[inline(never)]
+    pub fn get_ptx_cstr<
+        H: HabitatToU64Injection + RustToCuda,
+        G: PrimeableRng<H> + RustToCuda,
+        D: DispersalSampler<H, G> + RustToCuda,
+        R: LineageReference<H> + DeviceCopy,
+        S: IncoherentLineageStore<H, R> + RustToCuda,
+        C: CoalescenceSampler<H, G, R, S> + RustToCuda,
+        E: EventSampler<H, G, D, R, S, C> + RustToCuda,
+        A: ActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
+        const REPORT_SPECIATION: bool,
+        const REPORT_DISPERSAL: bool,
+    >() -> &'static CStr {
+        fn type_name_of<T>(_: T) -> &'static str {
+            std::any::type_name::<T>()
+        }
+
+        let type_name = type_name_of(
+            get_ptx_cstr::<H, G, D, R, S, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
+        );
+
+        let ptx_c_chars = unsafe {
+            get_ptx_cstr_for_specialisation(
+                CStr::from_bytes_with_nul_unchecked(type_name.as_bytes()).as_ptr(),
+            )
+        };
+
+        unsafe {
+            CStr::from_bytes_with_nul_unchecked(std::slice::from_raw_parts(
+                ptx_c_chars as *const u8,
+                1,
+            ))
+        }
+
+        // TODO: (combine all in large Rust build-like file which will invoke
+        // cargo - maybe as a wrapper?)
+        // - Compile Rust to object code and display linker args
+        // - Search object code for specialisations using strings
+        // - Invoke the ptx-builder for every specialisation
+        // - Build a C source file with all specialisation keys and kernels
+        //   which provides the extern function
+        // - Compile the C source to an object file
+        // - Link the object files together using LTO
+
+        // unsafe { asm!("NOP") }
+    }
+}
 
 #[contract_trait]
 impl InMemorySimulation for CudaSimulation {
@@ -94,28 +157,45 @@ impl InMemorySimulation for CudaSimulation {
                 (total_individuals / task_size) + ((total_individuals % task_size > 0) as usize)
             } as u32;
 
-            let module_data = CString::new(include_str!(env!("KERNEL_PTX_PATH"))).unwrap();
-
-            let (time, steps) = with_cuda_kernel(&module_data, |stream, module, kernel| {
-                #[allow(clippy::type_complexity)]
-                let event_buffer: EventBufferHost<
+            let (time, steps) = with_cuda_kernel(
+                kernel::get_ptx_cstr::<
                     config::Habitat,
+                    config::Rng,
+                    config::DispersalSampler,
                     config::LineageReference,
-                    P::Reporter<config::Habitat, config::LineageReference>,
+                    config::LineageStore,
+                    config::CoalescenceSampler,
+                    config::EventSampler,
+                    config::ActiveLineageSampler,
                     { config::REPORT_SPECIATION },
                     { config::REPORT_DISPERSAL },
-                > = EventBufferHost::new(reporter, &block_size, &grid_size, SIMULATION_STEP_SLICE)?;
+                >(),
+                |stream, module, kernel| {
+                    #[allow(clippy::type_complexity)]
+                    let event_buffer: EventBufferHost<
+                        config::Habitat,
+                        config::LineageReference,
+                        P::Reporter<config::Habitat, config::LineageReference>,
+                        { config::REPORT_SPECIATION },
+                        { config::REPORT_DISPERSAL },
+                    > = EventBufferHost::new(
+                        reporter,
+                        &block_size,
+                        &grid_size,
+                        SIMULATION_STEP_SLICE,
+                    )?;
 
-                simulate(
-                    simulation,
-                    SIMULATION_STEP_SLICE as u64,
-                    event_buffer,
-                    &stream,
-                    &module,
-                    &kernel,
-                    (grid_amount, grid_size, block_size),
-                )
-            })?;
+                    simulate(
+                        simulation,
+                        SIMULATION_STEP_SLICE as u64,
+                        event_buffer,
+                        &stream,
+                        &module,
+                        &kernel,
+                        (grid_amount, grid_size, block_size),
+                    )
+                },
+            )?;
 
             Ok((time, steps))
         })

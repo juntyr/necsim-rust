@@ -8,6 +8,9 @@
 
 extern crate alloc;
 
+#[macro_use]
+extern crate specialiser;
+
 use rust_cuda::{
     device::{nvptx, utils},
     println,
@@ -76,15 +79,15 @@ extern "C" {
 
 #[no_mangle]
 /// # Safety
-/// This CUDA kernel is unsafe as it is called with raw pointers
+/// This CUDA kernel is unsafe as it is called with raw c_void pointers
 pub unsafe extern "ptx-kernel" fn simulate(
     simulation_c_ptr: *mut core::ffi::c_void,
     event_buffer_c_ptr: *mut core::ffi::c_void,
     max_steps: u64,
 ) {
-    simulate_generic(
-        simulation_c_ptr as *mut <config::Simulation as RustToCuda>::CudaRepresentation,
-        event_buffer_c_ptr as *mut config::EventBufferCudaRepresentation,
+    specialise!(simulate_generic)(
+        simulation_c_ptr as *mut _,
+        event_buffer_c_ptr as *mut _,
         max_steps,
     )
 }

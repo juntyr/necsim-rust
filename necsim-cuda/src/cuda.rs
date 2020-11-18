@@ -1,4 +1,4 @@
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 
 use anyhow::Result;
 
@@ -14,7 +14,7 @@ use crate::info;
 
 #[allow(clippy::module_name_repetitions)]
 pub fn with_cuda_kernel<O, F: FnOnce(&Stream, &Module, &Function) -> Result<O>>(
-    module_data: &CString,
+    module_data: &CStr,
     inner: F,
 ) -> Result<O> {
     // Initialize the CUDA API
