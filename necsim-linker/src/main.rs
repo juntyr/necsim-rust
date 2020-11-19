@@ -39,7 +39,7 @@ fn extract_specialisation(input: &str) -> Option<&str> {
 fn build_kernel_with_specialisation(specialisation: &str) -> Result<PathBuf> {
     env::set_var(SIMULATION_SPECIALISATION_ENV, specialisation);
 
-    match Builder::new("/workspace/necsim-rust/necsim-cuda/kernel")?.build()? {
+    match Builder::new("necsim-cuda/kernel")?.build()? {
         BuildStatus::Success(output) => Ok(output.get_assembly_path()),
         BuildStatus::NotNeeded => Err(Error::from(BuildErrorKind::BuildFailed(vec![format!(
             "Kernel build for specialisation `{}` was not needed.",
@@ -113,6 +113,11 @@ fn main() -> ! {
         let kernel_indices = (0..specialised_kernels.len()).map(syn::Index::from);
         let number_kernels = syn::Index::from(specialised_kernels.len());
 
+        let specialisations: Vec<String> = specialisations
+            .into_iter()
+            .map(|s| format!("{}{}", SIMULATION_SPECIALISATION_HINT, s))
+            .collect();
+
         let kernel_lookup_c_source = quote! {
             char const* SIMULATION_KERNEL_PTX_CSTRS[#number_kernels] = {#(#specialised_kernels),*};
 
@@ -143,6 +148,7 @@ fn main() -> ! {
 
         Command::new("cc")
             .arg("-c")
+            .arg("-xc")
             .arg("-o")
             .arg(kernel_lookup_c_obj_file.path())
             .arg(kernel_lookup_c_source_file.path())
