@@ -9,9 +9,8 @@ git clone https://github.com/OSGeo/PROJ.git
 cd PROJ
 make clean
 ./autogen.sh
-./configure --prefix=/my/install/prefix --disable-static
-make -j8
-make install
+./configure --prefix=/vol/bitbucket/ml5717/proj-install --disable-static
+make install -j8
 
 // https://trac.osgeo.org/gdal/wiki/BuildingOnUnix
 // https://github.com/OSGeo/gdal/issues/1352#issuecomment-501096951
@@ -19,8 +18,14 @@ make install
 git clone https://github.com/OSGeo/gdal.git
 cd gdal/gdal
 make clean
-./configure --prefix=/path/to/install/prefix --with-proj=/my/install/prefix --disable-static
+./configure --prefix=/vol/bitbucket/ml5717/gdal-install --with-proj=/vol/bitbucket/ml5717/proj-install --disable-static
 make install -j8
 
 // https://github.com/georust/gdal/tree/master/gdal-sys
 LIBRARY_PATH="$LD_LIBRARY_PATH" GDAL_HOME="/vol/bitbucket/ml5717/gdal-install/" cargo run --bin rustcoalescence maps/habitat.tif maps/dispersal.tif --sample 1.0 --seed 42 --speciation 0.1 --algorithm cuda
+
+// gpu03
+source /vol/cuda/10.0.130/setup.sh
+export LD_LIBRARY_PATH="/vol/bitbucket/ml5717/gdal-install/lib/:$LD_LIBRARY_PATH"
+
+LIBRARY_PATH="$LD_LIBRARY_PATH" GDAL_HOME="/vol/bitbucket/ml5717/gdal-install/" cargo rustc --manifest-path rustcoalescence/Cargo.toml --features necsim-cuda -- -Clinker=target/debug/necsim-linker

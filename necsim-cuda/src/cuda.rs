@@ -23,27 +23,32 @@ pub fn with_cuda_kernel<O, F: FnOnce(&Stream, &Module, &Function) -> Result<O>>(
     // Get the first device
     let device = Device::get_device(0)?;
 
-    // Create a context associated to this device
-    let context = CudaDropWrapper::from(Context::create_and_push(
-        ContextFlags::MAP_HOST | ContextFlags::SCHED_AUTO,
-        device,
-    )?);
-    // Load the module containing the kernel function
-    let module = CudaDropWrapper::from(Module::load_from_string(module_data)?);
-    // Load the kernel function from the module
-    let kernel = module.get_function(&CString::new("simulate").unwrap())?;
-    // Create a stream to submit work to
-    let stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
+    {
+        // Create a context associated to this device
+        let context = CudaDropWrapper::from(Context::create_and_push(
+            ContextFlags::MAP_HOST | ContextFlags::SCHED_AUTO,
+            device,
+        )?);
 
-    CurrentContext::set_resource_limit(ResourceLimit::StackSize, 4096)?;
+        let result = {
+            // Load the module containing the kernel function
+            let module = CudaDropWrapper::from(Module::load_from_string(module_data)?);
+            // Load the kernel function from the module
+            let kernel = module.get_function(&CString::new("simulate").unwrap())?;
+            // Create a stream to submit work to
+            let stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
 
-    info::print_context_resource_limits();
-    info::print_kernel_function_attributes(&kernel);
+            CurrentContext::set_resource_limit(ResourceLimit::StackSize, 4096)?;
 
-    let result = inner(&stream, &module, &kernel)?;
+            info::print_context_resource_limits();
+            info::print_kernel_function_attributes(&kernel);
 
-    // Explicit drop of the current CUDA context to explicitly end its scope
-    std::mem::drop(context);
+            inner(&stream, &module, &kernel)
+        };
 
-    Ok(result)
+        // Explicit drop of the current CUDA context to explicitly end its scope
+        std::mem::drop(context);
+
+        result
+    }
 }

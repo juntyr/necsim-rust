@@ -35,7 +35,10 @@ use simulate::simulate;
 pub struct CudaSimulation;
 
 mod kernel {
-    use std::{ffi::CStr, os::raw::c_char};
+    use std::{
+        ffi::{CStr, CString},
+        os::raw::c_char,
+    };
 
     // This function should do a switch on the strings and return the correct kernel
     // LTO should be able to optimise the call away
@@ -51,7 +54,6 @@ mod kernel {
     use rust_cuda::common::RustToCuda;
     use rustacuda_core::DeviceCopy;
 
-    //#[inline(never)]
     pub fn get_ptx_cstr<
         H: HabitatToU64Injection + RustToCuda,
         G: PrimeableRng<H> + RustToCuda,
@@ -64,38 +66,17 @@ mod kernel {
         const REPORT_SPECIATION: bool,
         const REPORT_DISPERSAL: bool,
     >() -> &'static CStr {
-        fn type_name_of<T>(_: T) -> &'static str {
-            std::any::type_name::<T>()
+        fn type_name_of<T>(_: T) -> CString {
+            CString::new(std::any::type_name::<T>()).unwrap()
         }
 
-        let type_name = type_name_of(
+        let type_name_cstring = type_name_of(
             get_ptx_cstr::<H, G, D, R, S, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
         );
 
-        let ptx_c_chars = unsafe {
-            get_ptx_cstr_for_specialisation(
-                CStr::from_bytes_with_nul_unchecked(type_name.as_bytes()).as_ptr(),
-            )
-        };
+        let ptx_c_chars = unsafe { get_ptx_cstr_for_specialisation(type_name_cstring.as_ptr()) };
 
-        unsafe {
-            CStr::from_bytes_with_nul_unchecked(std::slice::from_raw_parts(
-                ptx_c_chars as *const u8,
-                1,
-            ))
-        }
-
-        // TODO: (combine all in large Rust build-like file which will invoke
-        // cargo - maybe as a wrapper?)
-        // - Compile Rust to object code and display linker args
-        // - Search object code for specialisations using strings
-        // - Invoke the ptx-builder for every specialisation
-        // - Build a C source file with all specialisation keys and kernels
-        //   which provides the extern function
-        // - Compile the C source to an object file
-        // - Link the object files together using LTO
-
-        // unsafe { asm!("NOP") }
+        unsafe { CStr::from_ptr(ptx_c_chars as *const i8) }
     }
 }
 
