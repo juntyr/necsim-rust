@@ -4,6 +4,8 @@ use crate::reporter::ReporterContext;
 #[contract_trait]
 #[allow(clippy::module_name_repetitions)]
 pub trait NonSpatialSimulation {
+    type Error;
+
     #[debug_requires(
         (0.0_f64..=1.0_f64).contains(&speciation_probability_per_generation),
         "0.0 <= speciation_probability_per_generation <= 1.0"
@@ -19,5 +21,5 @@ pub trait NonSpatialSimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
-    ) -> (f64, u64);
+    ) -> Result<(f64, u64), Self::Error>;
 }

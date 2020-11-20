@@ -77,6 +77,8 @@ fn main() -> Result<()> {
             )?
         },
         Command::NonSpatial(non_spatial_args) => {
+            #[allow(clippy::cast_possible_truncation)]
+            #[allow(clippy::cast_sign_loss)]
             let estimated_total_lineages = (f64::from(non_spatial_args.area().0)
                 * f64::from(non_spatial_args.area().1)
                 * f64::from(*non_spatial_args.deme())

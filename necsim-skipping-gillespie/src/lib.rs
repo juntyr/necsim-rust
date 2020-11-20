@@ -1,4 +1,5 @@
 #![deny(clippy::pedantic)]
+#![feature(never_type)]
 
 #[macro_use]
 extern crate contracts;

@@ -1,4 +1,3 @@
-use anyhow::Result;
 use array2d::Array2D;
 
 use necsim_impls_no_std::cogs::{
@@ -7,13 +6,14 @@ use necsim_impls_no_std::cogs::{
 };
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
-use necsim_impls_no_std::reporter::ReporterContext;
-use necsim_impls_std::simulation::in_memory::InMemorySimulation;
+use necsim_impls_no_std::{reporter::ReporterContext, simulation::in_memory::InMemorySimulation};
 
 use super::ClassicalSimulation;
 
 #[contract_trait]
 impl InMemorySimulation for ClassicalSimulation {
+    type Error = anyhow::Error;
+
     /// Simulates the classical coalescence algorithm on an in memory
     /// `habitat` with precalculated `dispersal`.
     ///
@@ -29,7 +29,7 @@ impl InMemorySimulation for ClassicalSimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
-    ) -> Result<(f64, u64)> {
+    ) -> Result<(f64, u64), Self::Error> {
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
 

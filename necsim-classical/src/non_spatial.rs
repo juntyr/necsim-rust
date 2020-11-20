@@ -11,6 +11,8 @@ use super::ClassicalSimulation;
 
 #[contract_trait]
 impl NonSpatialSimulation for ClassicalSimulation {
+    type Error = !;
+
     /// Simulates the classical coalescence algorithm on a non-spatial
     /// `habitat` with non-spatial `dispersal`.
     fn simulate<P: ReporterContext>(
@@ -20,17 +22,17 @@ impl NonSpatialSimulation for ClassicalSimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
-    ) -> (f64, u64) {
+    ) -> Result<(f64, u64), Self::Error> {
         let habitat = NonSpatialHabitat::new(area, deme);
         let dispersal_sampler = NonSpatialDispersalSampler::new(&habitat);
 
-        ClassicalSimulation::simulate(
+        Ok(ClassicalSimulation::simulate(
             habitat,
             dispersal_sampler,
             speciation_probability_per_generation,
             sample_percentage,
             seed,
             reporter_context,
-        )
+        ))
     }
 }

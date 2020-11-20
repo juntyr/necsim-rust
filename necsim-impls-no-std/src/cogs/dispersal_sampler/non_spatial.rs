@@ -7,6 +7,7 @@ use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
+#[cfg_attr(feature = "cuda", derive(RustToCuda))]
 pub struct NonSpatialDispersalSampler {
     habitat_extent: LandscapeExtent,
 }

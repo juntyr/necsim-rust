@@ -15,7 +15,7 @@ use necsim_skipping_gillespie::SkippingGillespieSimulation;
 
 use necsim_impls_no_std::reporter::ReporterContext;
 #[allow(unused_imports)]
-use necsim_impls_std::simulation::in_memory::InMemorySimulation;
+use necsim_impls_no_std::simulation::in_memory::InMemorySimulation;
 
 #[allow(unused_imports)]
 use crate::args::{Algorithm, CommonArgs, InMemoryArgs};

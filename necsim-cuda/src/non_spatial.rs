@@ -7,14 +7,14 @@ use necsim_impls_no_std::{
     reporter::ReporterContext, simulation::non_spatial::NonSpatialSimulation,
 };
 
-use super::SkippingGillespieSimulation;
+use super::CudaSimulation;
 
 #[contract_trait]
-impl NonSpatialSimulation for SkippingGillespieSimulation {
-    type Error = !;
+impl NonSpatialSimulation for CudaSimulation {
+    type Error = anyhow::Error;
 
-    /// Simulates the Gillespie coalescence algorithm with self-dispersal event
-    /// skipping on a non-spatial `habitat` with non-spatial `dispersal`.
+    /// Simulates the coalescence algorithm on a CUDA-capable GPU on a
+    /// non-spatial `habitat` with non-spatial `dispersal`.
     fn simulate<P: ReporterContext>(
         area: (u32, u32),
         deme: u32,
@@ -26,13 +26,13 @@ impl NonSpatialSimulation for SkippingGillespieSimulation {
         let habitat = NonSpatialHabitat::new(area, deme);
         let dispersal_sampler = NonSpatialDispersalSampler::new(&habitat);
 
-        Ok(SkippingGillespieSimulation::simulate(
+        CudaSimulation::simulate(
             habitat,
             dispersal_sampler,
             speciation_probability_per_generation,
             sample_percentage,
             seed,
             reporter_context,
-        ))
+        )
     }
 }

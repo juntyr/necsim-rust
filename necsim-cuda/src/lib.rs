@@ -4,117 +4,81 @@
 #[macro_use]
 extern crate contracts;
 
-#[macro_use]
-extern crate rustacuda;
-
 use anyhow::Result;
-use array2d::Array2D;
 
-use rustacuda::function::{BlockSize, GridSize};
+use rustacuda::{
+    function::{BlockSize, GridSize},
+    stream::{Stream, StreamFlags},
+};
 
 use necsim_core::{
-    cogs::{LineageStore, RngCore},
+    cogs::{DispersalSampler, HabitatToU64Injection, LineageStore as _, RngCore},
     simulation::Simulation,
 };
 
 use necsim_impls_cuda::event_buffer::host::EventBufferHost;
 use necsim_impls_no_std::reporter::ReporterContext;
-use necsim_impls_std::{
-    cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler,
-    simulation::in_memory::InMemorySimulation,
+
+use necsim_impls_no_std::cogs::{
+    active_lineage_sampler::independent::IndependentActiveLineageSampler as ActiveLineageSampler,
+    coalescence_sampler::independent::IndependentCoalescenceSampler as CoalescenceSampler,
+    event_sampler::independent::IndependentEventSampler as EventSampler,
+    lineage_reference::in_memory::InMemoryLineageReference as LineageReference,
+    lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore as LineageStore,
+    rng::wyhash::WyHash as Rng,
 };
+
+use necsim_impls_cuda::cogs::rng::CudaRng;
+
+use rust_cuda::{common::RustToCuda, host::CudaDropWrapper};
 
 mod cuda;
 mod info;
-mod launch;
+mod kernel;
 mod simulate;
 
-use cuda::with_cuda_kernel;
+mod in_memory;
+mod non_spatial;
+
+use cuda::with_initialised_cuda;
+use kernel::SimulationKernel;
 use simulate::simulate;
 
 pub struct CudaSimulation;
 
-mod kernel {
-    use std::{
-        ffi::{CStr, CString},
-        os::raw::c_char,
-    };
-
-    // This function should do a switch on the strings and return the correct kernel
-    // LTO should be able to optimise the call away
-    extern "C" {
-        #[no_mangle]
-        fn get_ptx_cstr_for_specialisation(specialisation: *const c_char) -> *const c_char;
-    }
-
-    use necsim_core::cogs::{
-        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler,
-        HabitatToU64Injection, IncoherentLineageStore, LineageReference, PrimeableRng,
-    };
-    use rust_cuda::common::RustToCuda;
-    use rustacuda_core::DeviceCopy;
-
-    pub fn get_ptx_cstr<
+impl CudaSimulation {
+    /// Simulates the coalescence algorithm on a CUDA-capable GPU on
+    /// `habitat` with `dispersal`.
+    fn simulate<
         H: HabitatToU64Injection + RustToCuda,
-        G: PrimeableRng<H> + RustToCuda,
-        D: DispersalSampler<H, G> + RustToCuda,
-        R: LineageReference<H> + DeviceCopy,
-        S: IncoherentLineageStore<H, R> + RustToCuda,
-        C: CoalescenceSampler<H, G, R, S> + RustToCuda,
-        E: EventSampler<H, G, D, R, S, C> + RustToCuda,
-        A: ActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
-        const REPORT_SPECIATION: bool,
-        const REPORT_DISPERSAL: bool,
-    >() -> &'static CStr {
-        fn type_name_of<T>(_: T) -> CString {
-            CString::new(std::any::type_name::<T>()).unwrap()
-        }
-
-        let type_name_cstring = type_name_of(
-            get_ptx_cstr::<H, G, D, R, S, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
-        );
-
-        let ptx_c_chars = unsafe { get_ptx_cstr_for_specialisation(type_name_cstring.as_ptr()) };
-
-        unsafe { CStr::from_ptr(ptx_c_chars as *const i8) }
-    }
-}
-
-#[contract_trait]
-impl InMemorySimulation for CudaSimulation {
-    /// Simulates the coalescence algorithm on a CUDA-capable GPU on an in
-    /// memory `habitat` with precalculated `dispersal`.
-    ///
-    /// # Errors
-    ///
-    /// `Err(InconsistentDispersalMapSize)` is returned iff the dimensions of
-    /// `dispersal` are not `ExE` given `E=RxC` where `habitat` has dimension
-    /// `RxC`.
-    fn simulate<P: ReporterContext>(
-        habitat: &Array2D<u32>,
-        dispersal: &Array2D<f64>,
+        D: DispersalSampler<H, CudaRng<Rng>> + RustToCuda,
+        P: ReporterContext,
+    >(
+        habitat: H,
+        dispersal_sampler: D,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
     ) -> Result<(f64, u64)> {
+        const REPORT_SPECIATION: bool = true;
+        const REPORT_DISPERSAL: bool = false;
+
         const SIMULATION_STEP_SLICE: usize = 100_usize;
 
         reporter_context.with_reporter(|reporter| {
-            let habitat = config::Habitat::new(habitat.clone());
-            let rng = config::Rng::seed_from_u64(seed);
-            let dispersal_sampler = config::DispersalSampler::new(dispersal, &habitat)?;
-            let lineage_store = config::LineageStore::new(sample_percentage, &habitat);
-            let coalescence_sampler = config::CoalescenceSampler::default();
-            let event_sampler = config::EventSampler::default();
-            let active_lineage_sampler = config::ActiveLineageSampler::default();
+            let rng = CudaRng::<Rng>::seed_from_u64(seed);
+            let lineage_store = LineageStore::new(sample_percentage, &habitat);
+            let coalescence_sampler = CoalescenceSampler::default();
+            let event_sampler = EventSampler::default();
+            let active_lineage_sampler = ActiveLineageSampler::default();
 
             let simulation = Simulation::builder()
                 .speciation_probability_per_generation(speciation_probability_per_generation)
                 .habitat(habitat)
                 .rng(rng)
                 .dispersal_sampler(dispersal_sampler)
-                .lineage_reference(std::marker::PhantomData::<config::LineageReference>)
+                .lineage_reference(std::marker::PhantomData::<LineageReference>)
                 .lineage_store(lineage_store)
                 .coalescence_sampler(coalescence_sampler)
                 .event_sampler(event_sampler)
@@ -138,27 +102,17 @@ impl InMemorySimulation for CudaSimulation {
                 (total_individuals / task_size) + ((total_individuals % task_size > 0) as usize)
             } as u32;
 
-            let (time, steps) = with_cuda_kernel(
-                kernel::get_ptx_cstr::<
-                    config::Habitat,
-                    config::Rng,
-                    config::DispersalSampler,
-                    config::LineageReference,
-                    config::LineageStore,
-                    config::CoalescenceSampler,
-                    config::EventSampler,
-                    config::ActiveLineageSampler,
-                    { config::REPORT_SPECIATION },
-                    { config::REPORT_DISPERSAL },
-                >(),
-                |stream, module, kernel| {
+            let (time, steps) = with_initialised_cuda(|| {
+                let stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
+
+                SimulationKernel::with_kernel(|kernel| {
                     #[allow(clippy::type_complexity)]
                     let event_buffer: EventBufferHost<
-                        config::Habitat,
-                        config::LineageReference,
-                        P::Reporter<config::Habitat, config::LineageReference>,
-                        { config::REPORT_SPECIATION },
-                        { config::REPORT_DISPERSAL },
+                        H,
+                        LineageReference,
+                        P::Reporter<H, LineageReference>,
+                        { REPORT_SPECIATION },
+                        { REPORT_DISPERSAL },
                     > = EventBufferHost::new(
                         reporter,
                         &block_size,
@@ -167,16 +121,15 @@ impl InMemorySimulation for CudaSimulation {
                     )?;
 
                     simulate(
-                        simulation,
-                        SIMULATION_STEP_SLICE as u64,
-                        event_buffer,
                         &stream,
-                        &module,
                         &kernel,
                         (grid_amount, grid_size, block_size),
+                        simulation,
+                        event_buffer,
+                        SIMULATION_STEP_SLICE as u64,
                     )
-                },
-            )?;
+                })
+            })?;
 
             Ok((time, steps))
         })
