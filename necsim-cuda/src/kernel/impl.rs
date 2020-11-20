@@ -51,6 +51,7 @@ impl<
             REPORT_SPECIATION,
             REPORT_DISPERSAL,
         >())?);
+
         // Load the kernel function from the module
         let entry_point = module.get_function(&CString::new("simulate").unwrap())?;
 
