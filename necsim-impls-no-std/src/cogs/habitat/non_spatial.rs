@@ -38,8 +38,12 @@ impl Habitat for NonSpatialHabitat {
     }
 
     #[must_use]
-    fn get_habitat_at_location(&self, _location: &Location) -> u32 {
-        self.deme
+    fn get_habitat_at_location(&self, location: &Location) -> u32 {
+        if self.extent.contains(location) {
+            self.deme
+        } else {
+            0_u32
+        }
     }
 }
 

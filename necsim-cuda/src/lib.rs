@@ -40,8 +40,8 @@ mod simulate;
 mod in_memory;
 mod non_spatial;
 
+use crate::kernel::SimulationKernel;
 use cuda::with_initialised_cuda;
-use kernel::SimulationKernel;
 use simulate::simulate;
 
 pub struct CudaSimulation;

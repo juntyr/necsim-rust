@@ -69,17 +69,14 @@ use necsim_impls_cuda::event_buffer::{
 use core::sync::atomic::{AtomicU64, Ordering};
 
 extern "C" {
-    #[no_mangle]
     static global_lineages_remaining: AtomicU64;
-    #[no_mangle]
     static global_time_max: AtomicU64;
-    #[no_mangle]
     static global_steps_sum: AtomicU64;
 }
 
-#[no_mangle]
 /// # Safety
 /// This CUDA kernel is unsafe as it is called with raw c_void pointers
+#[no_mangle]
 pub unsafe extern "ptx-kernel" fn simulate(
     simulation_c_ptr: *mut core::ffi::c_void,
     event_buffer_c_ptr: *mut core::ffi::c_void,

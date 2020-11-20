@@ -95,7 +95,9 @@ fn main() -> ! {
                         "Failed to open kernel file at {:?}.",
                         &kernel_path
                     ));
+
                     let mut kernel_ptx = String::new();
+
                     file.read_to_string(&mut kernel_ptx).expect(&format!(
                         "Failed to read kernel file at {:?}.",
                         &kernel_path

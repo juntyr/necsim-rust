@@ -1,6 +1,7 @@
-use proc_macro::TokenStream;
-
 use std::env;
+
+use proc_macro::TokenStream;
+use quote::quote;
 
 #[macro_use]
 extern crate proc_macro_error;
@@ -21,4 +22,17 @@ pub fn specialise(item: TokenStream) -> TokenStream {
             error
         ),
     }
+}
+
+#[proc_macro]
+pub fn rerun_if_specialisation_changed(_item: TokenStream) -> TokenStream {
+    let rerun_string = format!(
+        "cargo:rerun-if-env-changed={}",
+        SIMULATION_SPECIALISATION_ENV
+    );
+
+    (quote! {
+        println!(#rerun_string);
+    })
+    .into()
 }
