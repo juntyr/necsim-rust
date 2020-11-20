@@ -1,12 +1,13 @@
-use anyhow::Result;
 use array2d::Array2D;
 
-use necsim_impls_no_std::reporter::ReporterContext;
+use crate::reporter::ReporterContext;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 #[allow(clippy::module_name_repetitions)]
 pub trait InMemorySimulation {
+    type Error;
+
     #[debug_requires(
         (0.0_f64..=1.0_f64).contains(&speciation_probability_per_generation),
         "0.0 <= speciation_probability_per_generation <= 1.0"
@@ -22,5 +23,5 @@ pub trait InMemorySimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
-    ) -> Result<(f64, u64)>;
+    ) -> Result<(f64, u64), Self::Error>;
 }

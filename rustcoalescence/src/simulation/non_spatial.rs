@@ -33,44 +33,47 @@ pub fn simulate<P: ReporterContext>(
     );
 
     #[allow(clippy::match_single_binding)]
+    #[allow(clippy::map_err_ignore)]
     let result: Result<(f64, u64)> = match common_args.algorithm() {
         #[cfg(feature = "necsim-classical")]
-        Algorithm::Classical => Ok(ClassicalSimulation::simulate(
+        Algorithm::Classical => ClassicalSimulation::simulate(
             *non_spatial_args.area(),
             *non_spatial_args.deme(),
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
-        )),
+        )
+        .map_err(|_| unreachable!("Non-Spatial ClassicalSimulation can never fail.")),
         #[cfg(feature = "necsim-gillespie")]
-        Algorithm::Gillespie => Ok(GillespieSimulation::simulate(
+        Algorithm::Gillespie => GillespieSimulation::simulate(
             *non_spatial_args.area(),
             *non_spatial_args.deme(),
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
-        )),
+        )
+        .map_err(|_| unreachable!("Non-Spatial GillespieSimulation can never fail.")),
         #[cfg(feature = "necsim-skipping-gillespie")]
-        Algorithm::SkippingGillespie => Ok(SkippingGillespieSimulation::simulate(
+        Algorithm::SkippingGillespie => SkippingGillespieSimulation::simulate(
             *non_spatial_args.area(),
             *non_spatial_args.deme(),
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
-        )),
-        // TODO: How can we automatically compile all requested specialised kernel versions?
-        // #[cfg(feature = "necsim-cuda")]
-        // Algorithm::CUDA => Ok(CudaSimulation::simulate(
-        //     *non_spatial_args.area(),
-        //     *non_spatial_args.deme(),
-        //     *common_args.speciation_probability_per_generation(),
-        //     *common_args.sample_percentage(),
-        //     *common_args.seed(),
-        //     reporter_context,
-        // )),
+        )
+        .map_err(|_| unreachable!("Non-Spatial SkppingGillespieSimulation can never fail.")),
+        #[cfg(feature = "necsim-cuda")]
+        Algorithm::CUDA => CudaSimulation::simulate(
+            *non_spatial_args.area(),
+            *non_spatial_args.deme(),
+            *common_args.speciation_probability_per_generation(),
+            *common_args.sample_percentage(),
+            *common_args.seed(),
+            reporter_context,
+        ),
         #[allow(unreachable_patterns)]
         _ => anyhow::bail!("rustcoalescence does not support the selected algorithm"),
     };

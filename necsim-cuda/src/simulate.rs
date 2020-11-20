@@ -3,51 +3,65 @@ use std::ffi::CString;
 use anyhow::Result;
 
 use rustacuda::{
-    function::{BlockSize, Function, GridSize},
+    function::{BlockSize, GridSize},
+    memory::CopyDestination,
     module::Symbol,
-    prelude::*,
+    stream::Stream,
 };
 
-use rust_cuda::host::LendToCuda;
+use rust_cuda::{common::RustToCuda, host::LendToCuda};
+use rustacuda_core::DeviceCopy;
 
-use necsim_core::{cogs::LineageStore, reporter::Reporter};
+use necsim_core::{
+    cogs::{
+        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler,
+        HabitatToU64Injection, IncoherentLineageStore, LineageReference, PrimeableRng,
+    },
+    reporter::Reporter,
+    simulation::Simulation,
+};
 
 use necsim_impls_cuda::event_buffer::host::EventBufferHost;
 
-use crate::type_checked_launch;
+use crate::{kernel::SimulationKernel, launch};
 
-pub fn simulate<P: Reporter<config::Habitat, config::LineageReference>>(
-    mut simulation: config::Simulation,
-    max_steps: u64,
-    mut event_buffer: EventBufferHost<
-        config::Habitat,
-        config::LineageReference,
-        P,
-        { config::REPORT_SPECIATION },
-        { config::REPORT_DISPERSAL },
-    >,
+pub fn simulate<
+    H: HabitatToU64Injection + RustToCuda,
+    G: PrimeableRng<H> + RustToCuda,
+    D: DispersalSampler<H, G> + RustToCuda,
+    R: LineageReference<H> + DeviceCopy,
+    P: Reporter<H, R>,
+    S: IncoherentLineageStore<H, R> + RustToCuda,
+    C: CoalescenceSampler<H, G, R, S> + RustToCuda,
+    E: EventSampler<H, G, D, R, S, C> + RustToCuda,
+    A: ActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
+    const REPORT_SPECIATION: bool,
+    const REPORT_DISPERSAL: bool,
+>(
     stream: &Stream,
-    module: &Module,
-    simulate: &Function,
+    kernel: &SimulationKernel<H, G, D, R, S, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
     task: (u32, GridSize, BlockSize),
+    mut simulation: Simulation<H, G, D, R, S, C, E, A>,
+    mut event_buffer: EventBufferHost<H, R, P, REPORT_SPECIATION, REPORT_DISPERSAL>,
+    max_steps: u64,
 ) -> Result<(f64, u64)> {
-    // Load and initialise the grid_id symbol from the module
-    let mut grid_id_symbol: Symbol<u32> = module.get_global(&CString::new("grid_id").unwrap())?;
+    // Load and initialise the grid_id symbol from the kernel
+    let mut grid_id_symbol: Symbol<u32> = kernel.get_global(&CString::new("grid_id").unwrap())?;
     grid_id_symbol.copy_from(&0_u32)?;
 
     // Load and initialise the global_lineages_remaining symbol
     let mut global_lineages_remaining =
         simulation.lineage_store().get_number_total_lineages() as u64;
     let mut global_lineages_remaining_symbol: Symbol<u64> =
-        module.get_global(&CString::new("global_lineages_remaining").unwrap())?;
+        kernel.get_global(&CString::new("global_lineages_remaining").unwrap())?;
     global_lineages_remaining_symbol.copy_from(&global_lineages_remaining)?;
 
     // Load and initialise the global_time_max and global_steps_sum symbols
     let mut global_time_max_symbol: Symbol<f64> =
-        module.get_global(&CString::new("global_time_max").unwrap())?;
+        kernel.get_global(&CString::new("global_time_max").unwrap())?;
     global_time_max_symbol.copy_from(&0.0_f64)?;
     let mut global_steps_sum_symbol: Symbol<u64> =
-        module.get_global(&CString::new("global_steps_sum").unwrap())?;
+        kernel.get_global(&CString::new("global_steps_sum").unwrap())?;
     global_steps_sum_symbol.copy_from(&0_u64)?;
 
     let (grid_amount, grid_size, block_size) = task;
@@ -74,16 +88,10 @@ pub fn simulate<P: Reporter<config::Habitat, config::LineageReference>>(
                 // Launching kernels is unsafe since Rust cannot enforce safety across
                 // the foreign function CUDA-C language barrier
                 unsafe {
-                    type_checked_launch!(
-                        simulate<<<grid_size, block_size, 0, stream>>>(
-                            simulation_mut_ptr: rustacuda_core::DevicePointer<
-                                <config::Simulation as rust_cuda::common::RustToCuda>
-                                    ::CudaRepresentation
-                            > = simulation_mut_ptr,
-                        event_buffer_ptr: rustacuda_core::DevicePointer<
-                            config::EventBufferCudaRepresentation
-                        > = event_buffer.get_mut_cuda_ptr(),
-                        max_steps: u64 = max_steps
+                    launch!(kernel<<<grid_size, block_size, 0, stream>>>(
+                        simulation_mut_ptr,
+                        event_buffer.get_mut_cuda_ptr(),
+                        max_steps
                     ))?;
                 }
 

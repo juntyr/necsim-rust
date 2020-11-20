@@ -1,21 +1,21 @@
 use array2d::Array2D;
 
 use necsim_impls_no_std::cogs::{
-    dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
+    dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
     habitat::in_memory::InMemoryHabitat,
 };
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
 use necsim_impls_no_std::{reporter::ReporterContext, simulation::in_memory::InMemorySimulation};
 
-use super::GillespieSimulation;
+use super::CudaSimulation;
 
 #[contract_trait]
-impl InMemorySimulation for GillespieSimulation {
+impl InMemorySimulation for CudaSimulation {
     type Error = anyhow::Error;
 
-    /// Simulates the Gillespie coalescence algorithm on an in memory
-    /// `habitat` with precalculated `dispersal`.
+    /// Simulates the coalescence algorithm on a CUDA-capable GPU on an in
+    /// memory `habitat` with precalculated `dispersal`.
     ///
     /// # Errors
     ///
@@ -31,15 +31,15 @@ impl InMemorySimulation for GillespieSimulation {
         reporter_context: P,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = InMemoryHabitat::new(habitat.clone());
-        let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
+        let dispersal_sampler = InMemoryPackedAliasDispersalSampler::new(dispersal, &habitat)?;
 
-        Ok(GillespieSimulation::simulate(
+        CudaSimulation::simulate(
             habitat,
             dispersal_sampler,
             speciation_probability_per_generation,
             sample_percentage,
             seed,
             reporter_context,
-        ))
+        )
     }
 }
