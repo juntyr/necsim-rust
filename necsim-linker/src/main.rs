@@ -15,7 +15,8 @@ use tempfile::NamedTempFile;
 
 use quote::quote;
 
-const SIMULATION_SPECIALISATION_HINT: &'static str = "necsim_cuda::kernel::get_ptx_cstr";
+const SIMULATION_SPECIALISATION_HINT: &'static str =
+    "necsim_cuda::kernel::specialiser::get_ptx_cstr";
 const SIMULATION_SPECIALISATION_ENV: &'static str = "NECSIM_CUDA_KERNEL_SPECIALISATION";
 
 fn extract_specialisation(input: &str) -> Option<&str> {
@@ -68,18 +69,17 @@ fn main() -> ! {
         let stdout =
             std::str::from_utf8(&output.stdout).expect("Invalid output from `strings` command.");
 
-        specialisations.extend(
-            stdout
-                .lines()
-                .filter_map(|line| {
-                    line.find(SIMULATION_SPECIALISATION_HINT).and_then(|pos| {
-                        extract_specialisation(
-                            &line[(pos + SIMULATION_SPECIALISATION_HINT.len())..],
-                        )
-                    })
-                })
-                .map(str::to_owned),
-        );
+        for mut line in stdout.lines() {
+            while let Some(pos) = line.find(SIMULATION_SPECIALISATION_HINT) {
+                line = &line[(pos + SIMULATION_SPECIALISATION_HINT.len())..];
+
+                if let Some(specialisation) = extract_specialisation(line) {
+                    line = &line[specialisation.len()..];
+
+                    specialisations.push(specialisation.to_owned());
+                }
+            }
+        }
     }
 
     let optional_temp_obj_file = if !specialisations.is_empty() {
