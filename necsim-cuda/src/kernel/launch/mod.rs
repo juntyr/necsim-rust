@@ -1,12 +1,15 @@
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler,
-        HabitatToU64Injection, IncoherentLineageStore, LineageReference, PrimeableRng,
+        CoalescenceSampler, DispersalSampler, EventSampler, HabitatToU64Injection,
+        IncoherentLineageStore, LineageReference, PrimeableRng, SingularActiveLineageSampler,
     },
     simulation::Simulation,
 };
 
-use necsim_impls_cuda::event_buffer::common::EventBufferCudaRepresentation;
+use necsim_impls_cuda::{
+    event_buffer::common::EventBufferCudaRepresentation,
+    task_list::common::TaskListCudaRepresentation,
+};
 
 use rustacuda::error::CudaResult;
 use rustacuda_core::{DeviceCopy, DevicePointer};
@@ -31,7 +34,7 @@ impl<
         S: IncoherentLineageStore<H, R> + RustToCuda,
         C: CoalescenceSampler<H, G, R, S> + RustToCuda,
         E: EventSampler<H, G, D, R, S, C> + RustToCuda,
-        A: ActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
+        A: SingularActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
         const REPORT_SPECIATION: bool,
         const REPORT_DISPERSAL: bool,
     >
@@ -56,6 +59,7 @@ impl<
         simulation_ptr: DevicePointer<
             <Simulation<H, G, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
         >,
+        task_list_ptr: DevicePointer<TaskListCudaRepresentation<H, R>>,
         event_buffer_ptr: DevicePointer<
             EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
         >,
@@ -70,7 +74,7 @@ impl<
                 self.block_size.clone(),
                 self.shared_mem_bytes,
                 stream
-            >>>(simulation_ptr, event_buffer_ptr, max_steps)
+            >>>(simulation_ptr, task_list_ptr, event_buffer_ptr, max_steps)
         )
     }
 }

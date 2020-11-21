@@ -1,4 +1,7 @@
-use core::hash::Hash;
+use core::{
+    hash::Hash,
+    iter::{ExactSizeIterator, Iterator},
+};
 
 use necsim_core::cogs::{Habitat, LineageReference};
 
@@ -21,11 +24,34 @@ impl Into<usize> for InMemoryLineageReference {
     }
 }
 
-#[cfg(feature = "cuda")]
-impl rust_cuda::common::FromCudaThreadIdx for InMemoryLineageReference {
-    #[cfg(target_os = "cuda")]
-    fn from_cuda_thread_idx() -> Self {
-        #[allow(clippy::cast_sign_loss)]
-        Self::from(rust_cuda::device::utils::index())
+#[allow(clippy::module_name_repetitions)]
+pub struct InMemoryLineageReferenceIterator {
+    from: usize,
+    len: usize,
+}
+
+impl From<usize> for InMemoryLineageReferenceIterator {
+    fn from(len: usize) -> Self {
+        Self { from: 0_usize, len }
     }
 }
+
+impl Iterator for InMemoryLineageReferenceIterator {
+    type Item = InMemoryLineageReference;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.from < self.len {
+            self.from += 1;
+
+            Some(InMemoryLineageReference::from(self.from - 1))
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len - self.from, Some(self.len - self.from))
+    }
+}
+
+impl ExactSizeIterator for InMemoryLineageReferenceIterator {}

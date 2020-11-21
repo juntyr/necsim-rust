@@ -73,3 +73,18 @@ pub trait ActiveLineageSampler<
         rng: &mut G,
     );
 }
+
+#[allow(clippy::module_name_repetitions)]
+pub trait SingularActiveLineageSampler<
+    H: Habitat,
+    G: RngCore,
+    D: DispersalSampler<H, G>,
+    R: LineageReference<H>,
+    S: LineageStore<H, R>,
+    C: CoalescenceSampler<H, G, R, S>,
+    E: EventSampler<H, G, D, R, S, C>,
+>: ActiveLineageSampler<H, G, D, R, S, C, E>
+{
+    #[must_use]
+    fn replace_active_lineage(&mut self, active_lineage_reference: Option<R>) -> Option<R>;
+}

@@ -16,7 +16,7 @@ use necsim_core::{
     simulation::Simulation,
 };
 
-use necsim_impls_cuda::event_buffer::host::EventBufferHost;
+use necsim_impls_cuda::{event_buffer::host::EventBufferHost, task_list::host::TaskListHost};
 use necsim_impls_no_std::reporter::ReporterContext;
 
 use necsim_impls_no_std::cogs::{
@@ -106,6 +106,8 @@ impl CudaSimulation {
                 let stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
 
                 SimulationKernel::with_kernel(|kernel| {
+                    let task_list = TaskListHost::new(&block_size, &grid_size)?;
+
                     #[allow(clippy::type_complexity)]
                     let event_buffer: EventBufferHost<
                         H,
@@ -125,6 +127,7 @@ impl CudaSimulation {
                         &kernel,
                         (grid_amount, grid_size, block_size),
                         simulation,
+                        task_list,
                         event_buffer,
                         SIMULATION_STEP_SLICE as u64,
                     )

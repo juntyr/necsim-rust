@@ -13,3 +13,4 @@ extern crate rust_cuda_derive;
 
 pub mod cogs;
 pub mod event_buffer;
+pub mod task_list;

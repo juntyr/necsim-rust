@@ -3,8 +3,8 @@ use std::{ffi::CString, marker::PhantomData, ops::Deref};
 use anyhow::Result;
 
 use necsim_core::cogs::{
-    ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler,
-    HabitatToU64Injection, IncoherentLineageStore, LineageReference, PrimeableRng,
+    CoalescenceSampler, DispersalSampler, EventSampler, HabitatToU64Injection,
+    IncoherentLineageStore, LineageReference, PrimeableRng, SingularActiveLineageSampler,
 };
 
 use rustacuda::module::Module;
@@ -25,7 +25,7 @@ impl<
         S: IncoherentLineageStore<H, R> + RustToCuda,
         C: CoalescenceSampler<H, G, R, S> + RustToCuda,
         E: EventSampler<H, G, D, R, S, C> + RustToCuda,
-        A: ActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
+        A: SingularActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
         const REPORT_SPECIATION: bool,
         const REPORT_DISPERSAL: bool,
     > SimulationKernel<'k, H, G, D, R, S, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>
@@ -76,7 +76,7 @@ impl<
         S: IncoherentLineageStore<H, R> + RustToCuda,
         C: CoalescenceSampler<H, G, R, S> + RustToCuda,
         E: EventSampler<H, G, D, R, S, C> + RustToCuda,
-        A: ActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
+        A: SingularActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
         const REPORT_SPECIATION: bool,
         const REPORT_DISPERSAL: bool,
     > Deref for SimulationKernel<'k, H, G, D, R, S, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>

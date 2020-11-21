@@ -1,4 +1,4 @@
-use core::ops::Index;
+use core::{iter::ExactSizeIterator, ops::Index};
 
 use super::{Habitat, LineageReference};
 use crate::{
@@ -13,6 +13,8 @@ mod contract;
 pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
     Sized + Index<R, Output = Lineage> + core::fmt::Debug
 {
+    type Iterator: ExactSizeIterator<Item = R>;
+
     #[must_use]
     #[allow(clippy::float_cmp)]
     #[debug_ensures(if sample_percentage == 0.0_f64 {
@@ -25,7 +27,14 @@ pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
     fn new(sample_percentage: f64, habitat: &H) -> Self;
 
     #[must_use]
+    #[debug_ensures(
+        ret > self.iter_local_lineage_references().len(),
+        "total number of lineages is at least local number of lineages"
+    )]
     fn get_number_total_lineages(&self) -> usize;
+
+    #[must_use]
+    fn iter_local_lineage_references(&self) -> Self::Iterator;
 
     #[must_use]
     #[allow(clippy::double_parens)]
