@@ -14,6 +14,8 @@ mod r#impl;
 mod launch;
 mod specialiser;
 
+#[allow(clippy::module_name_repetitions)]
+#[allow(clippy::type_complexity)]
 pub struct SimulationKernel<
     'k,
     H: HabitatToU64Injection + RustToCuda,

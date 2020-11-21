@@ -15,9 +15,8 @@ use tempfile::NamedTempFile;
 
 use quote::quote;
 
-const SIMULATION_SPECIALISATION_HINT: &'static str =
-    "necsim_cuda::kernel::specialiser::get_ptx_cstr";
-const SIMULATION_SPECIALISATION_ENV: &'static str = "NECSIM_CUDA_KERNEL_SPECIALISATION";
+const SIMULATION_SPECIALISATION_HINT: &str = "necsim_cuda::kernel::specialiser::get_ptx_cstr";
+const SIMULATION_SPECIALISATION_ENV: &str = "NECSIM_CUDA_KERNEL_SPECIALISATION";
 
 fn extract_specialisation(input: &str) -> Option<&str> {
     let mut depth = 0_i32;
@@ -55,7 +54,7 @@ fn main() -> ! {
     let object_file_paths: Vec<&Path> = args
         .iter()
         .map(Path::new)
-        .filter(|path| path.is_file() && path.extension().unwrap_or("".as_ref()) == "o")
+        .filter(|path| path.is_file() && path.extension().unwrap_or_else(|| "".as_ref()) == "o")
         .collect();
 
     let mut specialisations: Vec<String> = Vec::new();
@@ -91,17 +90,15 @@ fn main() -> ! {
         for specialisation in &specialisations {
             match build_kernel_with_specialisation(specialisation) {
                 Ok(kernel_path) => {
-                    let mut file = fs::File::open(&kernel_path).expect(&format!(
-                        "Failed to open kernel file at {:?}.",
-                        &kernel_path
-                    ));
+                    let mut file = fs::File::open(&kernel_path).unwrap_or_else(|_| {
+                        panic!("Failed to open kernel file at {:?}.", &kernel_path)
+                    });
 
                     let mut kernel_ptx = String::new();
 
-                    file.read_to_string(&mut kernel_ptx).expect(&format!(
-                        "Failed to read kernel file at {:?}.",
-                        &kernel_path
-                    ));
+                    file.read_to_string(&mut kernel_ptx).unwrap_or_else(|_| {
+                        panic!("Failed to read kernel file at {:?}.", &kernel_path)
+                    });
 
                     specialised_kernels.push(kernel_ptx);
                 },
@@ -140,10 +137,12 @@ fn main() -> ! {
             "#include<string.h>\n{}",
             kernel_lookup_c_source
         )
-        .expect(&format!(
-            "Failed to write to kernel lookup source file at {:?}.",
-            kernel_lookup_c_source_file.path()
-        ));
+        .unwrap_or_else(|_| {
+            panic!(
+                "Failed to write to kernel lookup source file at {:?}.",
+                kernel_lookup_c_source_file.path()
+            )
+        });
 
         let kernel_lookup_c_obj_file =
             NamedTempFile::new().expect("Failed to create a NamedTempFile.");

@@ -32,7 +32,7 @@ impl Habitat for InMemoryHabitat {
     fn get_total_habitat(&self) -> u64 {
         self.habitat
             .elements_row_major_iter()
-            .map(|x| *x as u64)
+            .map(|x| u64::from(*x))
             .sum()
     }
 

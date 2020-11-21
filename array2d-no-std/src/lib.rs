@@ -120,35 +120,62 @@
 //! }
 //! ```
 //!
-//! [`Array2D`]: struct.Array2D.html
-//! [`from_rows`]: struct.Array2D.html#method.from_rows
-//! [`from_columns`]: struct.Array2D.html#method.from_columns
-//! [`from_row_major`]: struct.Array2D.html#method.from_row_major
-//! [`from_column_major`]: struct.Array2D.html#method.from_column_major
-//! [`filled_with`]: struct.Array2D.html#method.filled_with
-//! [`filled_by_row_major`]: struct.Array2D.html#method.filled_by_row_major
+//! [`Array2D`]:
+//! struct.Array2D.html
+//! [`from_rows`]:
+//! struct.Array2D.html#method.from_rows
+//! [`from_columns`]:
+//! struct.Array2D.html#method.from_columns
+//! [`from_row_major`]:
+//! struct.Array2D.html#method.from_row_major
+//! [`from_column_major`]:
+//! struct.Array2D.html#method.from_column_major
+//! [`filled_with`]:
+//! struct.Array2D.html#method.filled_with
+//! [`filled_by_row_major`]:
+//! struct.Array2D.html#method.filled_by_row_major
 //! [`filled_by_column_major`]:
-//! struct.Array2D.html#method.filled_by_column_major [`from_iter_row_major`]:
-//! struct.Array2D.html#method.from_iter_row_major [`from_iter_column_major`]:
-//! struct.Array2D.html#method.from_iter_column_major [`get`]: struct.Array2D.
-//! html#method.get [`get_mut`]: struct.Array2D.html#method.get_mut
-//! [`set`]: struct.Array2D.html#method.set
+//! struct.Array2D.html#method.filled_by_column_major
+//! [`from_iter_row_major`]:
+//! struct.Array2D.html#method.from_iter_row_major
+//! [`from_iter_column_major`]:
+//! struct.Array2D.html#method.from_iter_column_major
+//! [`get`]:
+//! struct.Array2D.html#method.get
+//! [`get_mut`]:
+//! struct.Array2D.html#method.get_mut
+//! [`set`]:
+//! struct.Array2D.html#method.set
 //! [`elements_row_major_iter`]:
 //! struct.Array2D.html#method.elements_row_major_iter
 //! [`elements_column_major_iter`]:
-//! struct.Array2D.html#method.elements_column_major_iter [`row_iter`]:
-//! struct.Array2D.html#method.row_iter [`column_iter`]:
-//! struct.Array2D.html#method.column_iter [`rows_iter`]:
-//! struct.Array2D.html#method.rows_iter [`columns_iter`]:
-//! struct.Array2D.html#method.columns_iter [`as_rows`]:
-//! struct.Array2D.html#method.as_rows [`as_columns`]:
-//! struct.Array2D.html#method.as_columns [`as_row_major`]:
-//! struct.Array2D.html#method.as_row_major [`as_column_major`]:
-//! struct.Array2D.html#method.as_column_major [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
-//! [`Option`]: https://doc.rust-lang.org/std/option/
-//! [`Result`]: https://doc.rust-lang.org/std/result/
-//! [`(usize, usize)`]: https://doc.rust-lang.org/std/primitive.usize.html
-//! [row major or column major order]: https://en.wikipedia.org/wiki/Row-_and_column-major_order
+//! struct.Array2D.html#method.elements_column_major_iter
+//! [`row_iter`]:
+//! struct.Array2D.html#method.row_iter
+//! [`column_iter`]:
+//! struct.Array2D.html#method.column_iter
+//! [`rows_iter`]:
+//! struct.Array2D.html#method.rows_iter
+//! [`columns_iter`]:
+//! struct.Array2D.html#method.columns_iter
+//! [`as_rows`]:
+//! struct.Array2D.html#method.as_rows
+//! [`as_columns`]:
+//! struct.Array2D.html#method.as_columns
+//! [`as_row_major`]:
+//! struct.Array2D.html#method.as_row_major
+//! [`as_column_major`]:
+//! struct.Array2D.html#method.as_column_major
+//! [`Vec`]:
+//! https://doc.rust-lang.org/std/vec/struct.Vec.html
+//! [`Option`]:
+//! https://doc.rust-lang.org/std/option/
+//! [`Result`]:
+//! https://doc.rust-lang.org/std/result/
+//! [`(usize, usize)`]:
+//! https://doc.rust-lang.org/std/primitive.usize.html
+//! [row major or column major order]:
+//! https://en.wikipedia.org/wiki/Row-_and_column-major_order
 
 #![deny(missing_docs)]
 #![deny(clippy::pedantic)]

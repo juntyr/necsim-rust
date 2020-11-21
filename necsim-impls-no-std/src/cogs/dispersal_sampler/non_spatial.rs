@@ -13,6 +13,7 @@ pub struct NonSpatialDispersalSampler {
 }
 
 impl NonSpatialDispersalSampler {
+    #[must_use]
     pub fn new(habitat: &NonSpatialHabitat) -> Self {
         Self {
             habitat_extent: habitat.get_extent(),

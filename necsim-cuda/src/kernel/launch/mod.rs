@@ -8,19 +8,22 @@ use necsim_core::{
 
 use necsim_impls_cuda::event_buffer::common::EventBufferCudaRepresentation;
 
-use rustacuda::{
-    error::CudaResult,
-    function::{BlockSize, GridSize},
-    stream::Stream,
-};
+use rustacuda::error::CudaResult;
 use rustacuda_core::{DeviceCopy, DevicePointer};
 
 use rust_cuda::common::RustToCuda;
 
 use super::SimulationKernel;
 
+mod with_dimensions;
+mod with_stream;
+
+use with_dimensions::SimulationKernelWithDimensions;
+use with_stream::SimulationKernelWithDimensionsStream;
+
 impl<
         'k,
+        's,
         H: HabitatToU64Injection + RustToCuda,
         G: PrimeableRng<H> + RustToCuda,
         D: DispersalSampler<H, G> + RustToCuda,
@@ -31,18 +34,25 @@ impl<
         A: ActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
         const REPORT_SPECIATION: bool,
         const REPORT_DISPERSAL: bool,
-    > SimulationKernel<'k, H, G, D, R, S, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>
+    >
+    SimulationKernelWithDimensionsStream<
+        'k,
+        's,
+        H,
+        G,
+        D,
+        R,
+        S,
+        C,
+        E,
+        A,
+        REPORT_SPECIATION,
+        REPORT_DISPERSAL,
+    >
 {
-    pub unsafe fn launch<I: Into<GridSize>, B: Into<BlockSize>>(
+    #[allow(clippy::type_complexity)]
+    pub unsafe fn launch(
         &self,
-        stream: &Stream,
-
-        // Launch parameters
-        grid_size: I,
-        block_size: B,
-        shared_mem_bytes: u32,
-
-        // Kernel parameters
         simulation_ptr: DevicePointer<
             <Simulation<H, G, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
         >,
@@ -52,14 +62,15 @@ impl<
         max_steps: u64,
     ) -> CudaResult<()> {
         let kernel = self.entry_point;
+        let stream = self.stream;
 
-        rustacuda::launch!(kernel<<<grid_size, block_size, shared_mem_bytes, stream>>>(simulation_ptr, event_buffer_ptr, max_steps))
+        rustacuda::launch!(
+            kernel<<<
+                self.grid_size.clone(),
+                self.block_size.clone(),
+                self.shared_mem_bytes,
+                stream
+            >>>(simulation_ptr, event_buffer_ptr, max_steps)
+        )
     }
-}
-
-#[macro_export]
-macro_rules! launch {
-    ($kernel:ident <<<$grid:expr, $block:expr, $shared:expr, $stream:ident>>>($($param:expr),*)) => {
-        $kernel.launch($stream, $grid, $block, $shared, $($param),*)
-    };
 }
