@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use derive_getters::Getters;
 use structopt::StructOpt;
 
@@ -42,9 +44,24 @@ pub enum Command {
 #[allow(clippy::module_name_repetitions)]
 pub struct InMemoryArgs {
     #[structopt(parse(from_os_str))]
-    habitat_map: std::path::PathBuf,
+    habitat_map: PathBuf,
     #[structopt(parse(from_os_str))]
-    dispersal_map: std::path::PathBuf,
+    dispersal_map: PathBuf,
+}
+
+impl NonSpatialArgs {
+    pub fn as_in_memory(&self) -> InMemoryArgs {
+        InMemoryArgs {
+            habitat_map: PathBuf::from(format!(
+                "NonSpatial/{}/{}/{}/Habitat",
+                self.area.0, self.area.1, self.deme
+            )),
+            dispersal_map: PathBuf::from(format!(
+                "NonSpatial/{}/{}/{}/Dispersal",
+                self.area.0, self.area.1, self.deme
+            )),
+        }
+    }
 }
 
 #[derive(Debug, StructOpt, Getters)]
@@ -53,4 +70,6 @@ pub struct NonSpatialArgs {
     #[structopt(parse(try_from_str = try_parse_area))]
     area: (u32, u32),
     deme: u32,
+    #[structopt(long)]
+    spatial: bool,
 }
