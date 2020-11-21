@@ -23,7 +23,7 @@ use necsim_core::{
 
 use necsim_impls_cuda::event_buffer::host::EventBufferHost;
 
-use crate::{kernel::SimulationKernel, launch};
+use crate::kernel::SimulationKernel;
 
 pub fn simulate<
     H: HabitatToU64Injection + RustToCuda,
@@ -66,6 +66,10 @@ pub fn simulate<
 
     let (grid_amount, grid_size, block_size) = task;
 
+    let kernel = kernel
+        .with_dimensions(grid_size, block_size, 0_u32)
+        .with_stream(stream);
+
     // TODO: We should use async launches and callbacks to rotate between
     // simulation, event analysis etc.
     if let Err(err) = simulation.lend_to_cuda_mut(|simulation_mut_ptr| {
@@ -82,17 +86,14 @@ pub fn simulate<
             for grid_id in 0..grid_amount {
                 grid_id_symbol.copy_from(&grid_id)?;
 
-                let grid_size = grid_size.clone();
-                let block_size = block_size.clone();
-
                 // Launching kernels is unsafe since Rust cannot enforce safety across
                 // the foreign function CUDA-C language barrier
                 unsafe {
-                    launch!(kernel<<<grid_size, block_size, 0, stream>>>(
+                    kernel.launch(
                         simulation_mut_ptr,
                         event_buffer.get_mut_cuda_ptr(),
-                        max_steps
-                    ))?;
+                        max_steps,
+                    )?;
                 }
 
                 stream.synchronize()?;

@@ -34,7 +34,8 @@
 //! ```
 //!
 //! Now, on the host-side, the PTX assembly can be loaded and used with your
-//! favorite CUDA driver crate: ```ignore
+//! favorite CUDA driver crate:
+//! ```ignore
 //! use std::ffi::CString;
 //!
 //! let ptx = CString::new(include_str!(env!("KERNEL_PTX_PATH")))?;
