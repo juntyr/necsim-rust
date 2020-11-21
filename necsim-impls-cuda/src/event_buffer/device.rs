@@ -64,7 +64,7 @@ impl<
     /// # Safety
     /// This function is only safe to call iff `cuda_repr_ptr` is the
     /// `DevicePointer` borrowed on the CPU using the corresponding
-    /// `LendToCuda::lend_to_cuda`.
+    /// `EventBufferHost::get_mut_cuda_ptr`.
     pub unsafe fn with_borrow_from_rust_mut<O, F: FnOnce(&mut Self) -> O>(
         cuda_repr_ptr: *mut super::common::EventBufferCudaRepresentation<
             H,

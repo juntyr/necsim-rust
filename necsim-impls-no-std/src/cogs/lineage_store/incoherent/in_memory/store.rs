@@ -4,12 +4,16 @@ use necsim_core::{
     lineage::Lineage,
 };
 
-use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
+use crate::cogs::lineage_reference::in_memory::{
+    InMemoryLineageReference, InMemoryLineageReferenceIterator,
+};
 
 use super::IncoherentInMemoryLineageStore;
 
 #[contract_trait]
 impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for IncoherentInMemoryLineageStore<H> {
+    type Iterator = InMemoryLineageReferenceIterator;
+
     #[must_use]
     fn new(sample_percentage: f64, habitat: &H) -> Self {
         Self::new_impl(sample_percentage, habitat)
@@ -18,6 +22,12 @@ impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for IncoherentInMemor
     #[must_use]
     fn get_number_total_lineages(&self) -> usize {
         self.lineages_store.len()
+    }
+
+    #[must_use]
+    #[must_use]
+    fn iter_local_lineage_references(&self) -> Self::Iterator {
+        InMemoryLineageReferenceIterator::from(self.lineages_store.len())
     }
 
     #[must_use]

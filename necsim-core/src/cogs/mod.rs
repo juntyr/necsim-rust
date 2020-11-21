@@ -20,4 +20,4 @@ mod event_sampler;
 pub use event_sampler::EventSampler;
 
 mod active_lineage_sampler;
-pub use active_lineage_sampler::ActiveLineageSampler;
+pub use active_lineage_sampler::{ActiveLineageSampler, SingularActiveLineageSampler};

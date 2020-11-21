@@ -14,14 +14,14 @@ use rustacuda_core::DeviceCopy;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler,
-        HabitatToU64Injection, IncoherentLineageStore, LineageReference, PrimeableRng,
+        CoalescenceSampler, DispersalSampler, EventSampler, HabitatToU64Injection,
+        IncoherentLineageStore, LineageReference, PrimeableRng, SingularActiveLineageSampler,
     },
     reporter::Reporter,
     simulation::Simulation,
 };
 
-use necsim_impls_cuda::event_buffer::host::EventBufferHost;
+use necsim_impls_cuda::{event_buffer::host::EventBufferHost, task_list::host::TaskListHost};
 
 use crate::kernel::SimulationKernel;
 
@@ -34,7 +34,7 @@ pub fn simulate<
     S: IncoherentLineageStore<H, R> + RustToCuda,
     C: CoalescenceSampler<H, G, R, S> + RustToCuda,
     E: EventSampler<H, G, D, R, S, C> + RustToCuda,
-    A: ActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
+    A: SingularActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
     const REPORT_SPECIATION: bool,
     const REPORT_DISPERSAL: bool,
 >(
@@ -42,19 +42,13 @@ pub fn simulate<
     kernel: &SimulationKernel<H, G, D, R, S, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
     task: (u32, GridSize, BlockSize),
     mut simulation: Simulation<H, G, D, R, S, C, E, A>,
+    mut task_list: TaskListHost<H, R>,
     mut event_buffer: EventBufferHost<H, R, P, REPORT_SPECIATION, REPORT_DISPERSAL>,
     max_steps: u64,
 ) -> Result<(f64, u64)> {
     // Load and initialise the grid_id symbol from the kernel
     let mut grid_id_symbol: Symbol<u32> = kernel.get_global(&CString::new("grid_id").unwrap())?;
     grid_id_symbol.copy_from(&0_u32)?;
-
-    // Load and initialise the global_lineages_remaining symbol
-    let mut global_lineages_remaining =
-        simulation.lineage_store().get_number_total_lineages() as u64;
-    let mut global_lineages_remaining_symbol: Symbol<u64> =
-        kernel.get_global(&CString::new("global_lineages_remaining").unwrap())?;
-    global_lineages_remaining_symbol.copy_from(&global_lineages_remaining)?;
 
     // Load and initialise the global_time_max and global_steps_sum symbols
     let mut global_time_max_symbol: Symbol<f64> =
@@ -65,10 +59,23 @@ pub fn simulate<
     global_steps_sum_symbol.copy_from(&0_u64)?;
 
     let (grid_amount, grid_size, block_size) = task;
+    let grid_len = (block_size.x as usize)
+        * (block_size.y as usize)
+        * (block_size.z as usize)
+        * (grid_size.x as usize)
+        * (grid_size.y as usize)
+        * (grid_size.z as usize);
 
     let kernel = kernel
         .with_dimensions(grid_size, block_size, 0_u32)
         .with_stream(stream);
+
+    let mut tasks: Vec<Option<R>> = simulation
+        .lineage_store()
+        .iter_local_lineage_references()
+        .map(Option::Some)
+        .collect();
+    let mut global_lineages_remaining = tasks.len() as u64;
 
     // TODO: We should use async launches and callbacks to rotate between
     // simulation, event analysis etc.
@@ -83,22 +90,44 @@ pub fn simulate<
                 grid_amount
             );
 
-            for grid_id in 0..grid_amount {
-                grid_id_symbol.copy_from(&grid_id)?;
+            for grid_id in 0..(grid_amount as usize) {
+                let mut tasks_in_grid = 0_u64;
 
-                // Launching kernels is unsafe since Rust cannot enforce safety across
-                // the foreign function CUDA-C language barrier
-                unsafe {
-                    kernel.launch(
-                        simulation_mut_ptr,
-                        event_buffer.get_mut_cuda_ptr(),
-                        max_steps,
-                    )?;
-                }
+                task_list.with_upload_and_fetch_tasks(
+                    |new_tasks| {
+                        let task_slice = &mut tasks[(grid_id * grid_len)..];
 
-                stream.synchronize()?;
+                        // Upload the new tasks
+                        new_tasks.iter_mut().enumerate().for_each(|(i, task)| {
+                            *task = match task_slice.get_mut(i) {
+                                Some(task) => task.take(),
+                                None => None,
+                            }
+                        });
+                    },
+                    |task_list_mut_ptr| {
+                        // Launching kernels is unsafe since Rust cannot enforce safety across
+                        // the foreign function CUDA-C language barrier
+                        unsafe {
+                            kernel.launch(
+                                simulation_mut_ptr,
+                                task_list_mut_ptr,
+                                event_buffer.get_mut_cuda_ptr(),
+                                max_steps,
+                            )?;
+                        }
 
-                global_lineages_remaining_symbol.copy_to(&mut global_lineages_remaining)?;
+                        stream.synchronize()
+                    },
+                    |completed_tasks| {
+                        // Download the completion of the tasks
+                        for task in completed_tasks {
+                            tasks_in_grid -= u64::from(task.is_some());
+                        }
+
+                        global_lineages_remaining -= tasks_in_grid;
+                    },
+                )?;
 
                 event_buffer.fetch_and_report_events()?
             }
