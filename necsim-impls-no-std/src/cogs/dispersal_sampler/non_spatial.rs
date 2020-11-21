@@ -1,3 +1,5 @@
+use core::marker::PhantomData;
+
 use necsim_core::{
     cogs::{DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
     landscape::{LandscapeExtent, Location},
@@ -8,20 +10,22 @@ use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
-pub struct NonSpatialDispersalSampler {
+pub struct NonSpatialDispersalSampler<G: RngCore> {
     habitat_extent: LandscapeExtent,
+    marker: PhantomData<G>,
 }
 
-impl NonSpatialDispersalSampler {
+impl<G: RngCore> NonSpatialDispersalSampler<G> {
     #[must_use]
     pub fn new(habitat: &NonSpatialHabitat) -> Self {
         Self {
             habitat_extent: habitat.get_extent(),
+            marker: PhantomData::<G>,
         }
     }
 }
 
-impl<G: RngCore> DispersalSampler<NonSpatialHabitat, G> for NonSpatialDispersalSampler {
+impl<G: RngCore> DispersalSampler<NonSpatialHabitat, G> for NonSpatialDispersalSampler<G> {
     #[must_use]
     #[debug_requires(self.habitat_extent.contains(location), "location is inside habitat extent")]
     #[debug_ensures(self.habitat_extent.contains(&ret), "target is inside habitat extent")]
@@ -44,7 +48,7 @@ impl<G: RngCore> DispersalSampler<NonSpatialHabitat, G> for NonSpatialDispersalS
 }
 
 #[contract_trait]
-impl<G: RngCore> SeparableDispersalSampler<NonSpatialHabitat, G> for NonSpatialDispersalSampler {
+impl<G: RngCore> SeparableDispersalSampler<NonSpatialHabitat, G> for NonSpatialDispersalSampler<G> {
     #[must_use]
     #[debug_requires(self.habitat_extent.contains(location), "location is inside habitat extent")]
     #[debug_requires(
@@ -62,7 +66,7 @@ impl<G: RngCore> SeparableDispersalSampler<NonSpatialHabitat, G> for NonSpatialD
         let habitat_index_max =
             (self.habitat_extent.width() as usize) * (self.habitat_extent.height() as usize);
         let current_location_index = (location.y() as usize)
-            * (self.habitat_extent.height() as usize)
+            * (self.habitat_extent.width() as usize)
             + (location.x() as usize);
 
         let dispersal_target_index = {

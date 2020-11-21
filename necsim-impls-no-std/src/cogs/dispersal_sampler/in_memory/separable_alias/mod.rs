@@ -40,8 +40,11 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G>
 
         let mut event_weights: Vec<(usize, f64)> = Vec::with_capacity(dispersal.row_len());
 
-        let mut self_dispersal =
-            Array2D::filled_with(0.0_f64, dispersal.num_rows(), dispersal.num_columns());
+        let mut self_dispersal = Array2D::filled_with(
+            0.0_f64,
+            habitat_extent.height() as usize,
+            habitat_extent.width() as usize,
+        );
 
         let alias_dispersal = Array2D::from_iter_row_major(
             dispersal.rows_iter().enumerate().map(|(row_index, row)| {
