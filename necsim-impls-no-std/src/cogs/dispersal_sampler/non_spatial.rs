@@ -72,7 +72,7 @@ impl<G: RngCore> SeparableDispersalSampler<NonSpatialHabitat, G> for NonSpatialD
         let dispersal_target_index = {
             let dispersal_target_index = rng.sample_index(habitat_index_max - 1);
 
-            if dispersal_target_index == current_location_index {
+            if dispersal_target_index >= current_location_index {
                 dispersal_target_index + 1
             } else {
                 dispersal_target_index
