@@ -38,6 +38,7 @@ pub struct CommonArgs {
 pub enum Command {
     InMemory(InMemoryArgs),
     NonSpatial(NonSpatialArgs),
+    AlmostInfinite(AlmostInfiniteArgs),
 }
 
 #[derive(Debug, StructOpt, Getters)]
@@ -72,4 +73,11 @@ pub struct NonSpatialArgs {
     deme: u32,
     #[structopt(long)]
     spatial: bool,
+}
+
+#[derive(Debug, StructOpt, Getters)]
+#[allow(clippy::module_name_repetitions)]
+pub struct AlmostInfiniteArgs {
+    radius: u32,
+    sigma: f64,
 }
