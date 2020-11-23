@@ -110,11 +110,11 @@ pub trait RngSampler: RngCore {
 
     #[must_use]
     #[inline]
-    #[debug_requires(std > 0.0_f64, "standard deviation must be positive")]
-    fn sample_2d_normal(&mut self, mean: f64, std: f64) -> (f64, f64) {
+    #[debug_requires(sigma > 0.0_f64, "standard deviation sigma must be positive")]
+    fn sample_2d_normal(&mut self, mu: f64, sigma: f64) -> (f64, f64) {
         let (z0, z1) = self.sample_2d_standard_normal();
 
-        (z0 * std + mean, z1 * std + mean)
+        (z0 * sigma + mu, z1 * sigma + mu)
     }
 }
 
