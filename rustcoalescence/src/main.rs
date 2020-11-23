@@ -17,6 +17,7 @@ mod simulation;
 
 use args::{Command, CommandLineArguments};
 
+#[allow(clippy::too_many_lines)] // TODO: Refactor
 fn main() -> Result<()> {
     // Parse and validate all command line arguments
     let args = CommandLineArguments::from_args();
@@ -121,6 +122,27 @@ fn main() -> Result<()> {
                 reporter::RustcoalescenceReporterContext::new(estimated_total_lineages),
             )?
         },
+        Command::AlmostInfinite(almost_infinite_args) => {
+            anyhow::ensure!(
+                *almost_infinite_args.sigma() >= 0.0_f64,
+                "The dispersal standard deviation must be non-negative."
+            );
+
+            #[allow(clippy::cast_possible_truncation)]
+            #[allow(clippy::cast_sign_loss)]
+            let estimated_total_lineages = (f64::from(*almost_infinite_args.radius())
+                * f64::from(*almost_infinite_args.radius())
+                * std::f64::consts::PI
+                * args.common_args().sample_percentage())
+            .ceil() as u64;
+
+            // Run the simulation
+            simulation::almost_infinite::simulate(
+                args.common_args(),
+                &almost_infinite_args,
+                reporter::RustcoalescenceReporterContext::new(estimated_total_lineages),
+            )?
+        }
     };
 
     println!("Simulation finished after {} ({} steps).", time, steps);

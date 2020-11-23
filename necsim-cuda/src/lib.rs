@@ -37,6 +37,7 @@ mod info;
 mod kernel;
 mod simulate;
 
+mod almost_infinite;
 mod in_memory;
 mod non_spatial;
 
