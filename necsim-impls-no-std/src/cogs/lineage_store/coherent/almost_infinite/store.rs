@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use hashbrown::hash_map::Keys;
 
 use necsim_core::{
@@ -53,8 +52,7 @@ impl LineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
 impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
     for CoherentAlmostInfiniteLineageStore
 {
-    type LocationIterator<'a> =
-        core::iter::Cloned<Keys<'a, Location, Vec<InMemoryLineageReference>>>;
+    type LocationIterator<'a> = core::iter::Cloned<Keys<'a, Location, InMemoryLineageReference>>;
 
     #[must_use]
     fn iter_active_locations(&self) -> Self::LocationIterator<'_> {
@@ -67,7 +65,7 @@ impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
         "location is inside landscape extent"
     )]
     fn get_active_lineages_at_location(&self, location: &Location) -> &[InMemoryLineageReference] {
-        &self.location_to_lineage_references[location]
+        core::slice::from_ref(&self.location_to_lineage_references[location])
     }
 
     #[debug_requires(
@@ -79,16 +77,10 @@ impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
         reference: InMemoryLineageReference,
         location: Location,
     ) {
-        let lineages_at_location = self
-            .location_to_lineage_references
-            .get_mut(&location)
-            .unwrap();
+        self.location_to_lineage_references
+            .insert(location.clone(), reference);
 
-        lineages_at_location.push(reference);
-
-        #[allow(clippy::cast_possible_truncation)]
-        let new_indexed_location =
-            IndexedLocation::new(location, (lineages_at_location.len() - 1) as u32);
+        let new_indexed_location = IndexedLocation::new(location, 0_u32);
 
         unsafe {
             self.lineages_store[Into::<usize>::into(reference)]
@@ -110,26 +102,15 @@ impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
         let lineage_indexed_location = lineage.indexed_location().unwrap();
 
         let lineage_location = lineage_indexed_location.location();
-        let lineage_index_at_location = lineage_indexed_location.index();
 
-        let lineages_at_location = self
+        let lineage_reference_at_location = self
             .location_to_lineage_references
-            .get_mut(lineage_location)
+            .remove(lineage_location)
             .unwrap();
 
-        if let Some(last_lineage_at_location) = lineages_at_location.pop() {
-            if (lineage_index_at_location as usize) < lineages_at_location.len() {
-                lineages_at_location[lineage_index_at_location as usize] = last_lineage_at_location;
-
-                unsafe {
-                    self.lineages_store[Into::<usize>::into(last_lineage_at_location)]
-                        .update_index_at_location(lineage_index_at_location)
-                };
-            }
-
-            unsafe { self.lineages_store[Into::<usize>::into(reference)].remove_from_location() }
-        } else {
-            unreachable!()
+        unsafe {
+            self.lineages_store[Into::<usize>::into(lineage_reference_at_location)]
+                .remove_from_location()
         }
     }
 }
