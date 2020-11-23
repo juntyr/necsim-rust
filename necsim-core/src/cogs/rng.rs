@@ -1,6 +1,6 @@
 use crate::{
     cogs::HabitatToU64Injection,
-    intrinsics::{floor, ln},
+    intrinsics::{cos, floor, ln, sin, sqrt},
     landscape::IndexedLocation,
 };
 
@@ -93,6 +93,28 @@ pub trait RngSampler: RngCore {
     )]
     fn sample_event(&mut self, probability: f64) -> bool {
         self.sample_uniform() < probability
+    }
+
+    #[must_use]
+    #[inline]
+    fn sample_2d_standard_normal(&mut self) -> (f64, f64) {
+        // Basic Box-Muller transform
+        let u0 = self.sample_uniform();
+        let u1 = self.sample_uniform();
+
+        let r = sqrt(-2.0_f64 * ln(u0));
+        let theta = -core::f64::consts::TAU * u1;
+
+        (r * sin(theta), r * cos(theta))
+    }
+
+    #[must_use]
+    #[inline]
+    #[debug_requires(std > 0.0_f64, "standard deviation must be positive")]
+    fn sample_2d_normal(&mut self, mean: f64, std: f64) -> (f64, f64) {
+        let (z0, z1) = self.sample_2d_standard_normal();
+
+        (z0 * std + mean, z1 * std + mean)
     }
 }
 

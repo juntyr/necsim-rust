@@ -29,3 +29,42 @@ pub fn exp(val: f64) -> f64 {
         rust_cuda::device::nvptx::_exp(val)
     }
 }
+
+#[must_use]
+#[inline]
+pub fn sqrt(val: f64) -> f64 {
+    #[cfg(not(target_os = "cuda"))]
+    unsafe {
+        core::intrinsics::sqrtf64(val)
+    }
+    #[cfg(target_os = "cuda")]
+    unsafe {
+        rust_cuda::device::nvptx::_sqrt(val)
+    }
+}
+
+#[must_use]
+#[inline]
+pub fn sin(val: f64) -> f64 {
+    #[cfg(not(target_os = "cuda"))]
+    unsafe {
+        core::intrinsics::sinf64(val)
+    }
+    #[cfg(target_os = "cuda")]
+    unsafe {
+        rust_cuda::device::nvptx::_sin(val)
+    }
+}
+
+#[must_use]
+#[inline]
+pub fn cos(val: f64) -> f64 {
+    #[cfg(not(target_os = "cuda"))]
+    unsafe {
+        core::intrinsics::cosf64(val)
+    }
+    #[cfg(target_os = "cuda")]
+    unsafe {
+        rust_cuda::device::nvptx::_cos(val)
+    }
+}

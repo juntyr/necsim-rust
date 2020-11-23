@@ -28,7 +28,7 @@ pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
 
     #[must_use]
     #[debug_ensures(
-        ret > self.iter_local_lineage_references().len(),
+        ret >= self.iter_local_lineage_references().len(),
         "total number of lineages is at least local number of lineages"
     )]
     fn get_number_total_lineages(&self) -> usize;
