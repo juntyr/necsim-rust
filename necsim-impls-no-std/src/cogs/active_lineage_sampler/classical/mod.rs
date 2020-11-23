@@ -2,9 +2,8 @@ use core::marker::PhantomData;
 
 use alloc::vec::Vec;
 
-use necsim_core::{
-    cogs::{CoherentLineageStore, DispersalSampler, Habitat, LineageReference, RngCore},
-    landscape::Location,
+use necsim_core::cogs::{
+    CoherentLineageStore, DispersalSampler, Habitat, LineageReference, RngCore,
 };
 
 mod sampler;
@@ -32,19 +31,14 @@ impl<
     > ClassicalActiveLineageSampler<H, G, D, R, S>
 {
     #[must_use]
-    pub fn new(habitat: &H, lineage_store: &S) -> Self {
+    pub fn new(lineage_store: &S) -> Self {
         let mut active_lineage_references =
             Vec::with_capacity(lineage_store.get_number_total_lineages());
 
-        let landscape_extent = habitat.get_extent();
-
-        for y in landscape_extent.y()..(landscape_extent.y() + landscape_extent.height()) {
-            for x in landscape_extent.x()..(landscape_extent.x() + landscape_extent.width()) {
-                active_lineage_references.extend_from_slice(
-                    lineage_store.get_active_lineages_at_location(&Location::new(x, y)),
-                );
-            }
-        }
+        lineage_store.iter_active_locations().for_each(|location| {
+            active_lineage_references
+                .extend_from_slice(lineage_store.get_active_lineages_at_location(&location))
+        });
 
         active_lineage_references.shrink_to_fit();
 

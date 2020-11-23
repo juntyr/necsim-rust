@@ -52,4 +52,42 @@ impl LandscapeExtent {
             && location.y() >= self.y
             && location.y() < (self.y + self.height)
     }
+
+    #[must_use]
+    pub fn iter(&self) -> LocationIterator {
+        LocationIterator {
+            x: self.x,
+            y: self.y,
+            width: self.width,
+            height: self.height,
+        }
+    }
+}
+
+pub struct LocationIterator {
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+}
+
+impl Iterator for LocationIterator {
+    type Item = Location;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.y < self.height {
+            let next = Some(Location::new(self.x, self.y));
+
+            self.x = if (self.x + 1) >= self.width {
+                self.y += 1;
+                0
+            } else {
+                self.x + 1
+            };
+
+            next
+        } else {
+            None
+        }
+    }
 }

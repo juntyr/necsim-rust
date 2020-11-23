@@ -2,6 +2,8 @@
 #![no_std]
 #![feature(core_intrinsics)]
 #![feature(stmt_expr_attributes)]
+#![allow(incomplete_features)]
+#![feature(generic_associated_types)]
 
 extern crate alloc;
 

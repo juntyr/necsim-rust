@@ -1,4 +1,4 @@
-use core::{iter::ExactSizeIterator, ops::Index};
+use core::ops::Index;
 
 use super::{Habitat, LineageReference};
 use crate::{
@@ -13,18 +13,7 @@ mod contract;
 pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
     Sized + Index<R, Output = Lineage> + core::fmt::Debug
 {
-    type Iterator: ExactSizeIterator<Item = R>;
-
-    #[must_use]
-    #[allow(clippy::float_cmp)]
-    #[debug_ensures(if sample_percentage == 0.0_f64 {
-        ret.get_number_total_lineages() == 0
-    } else if sample_percentage == 1.0_f64 {
-        ret.get_number_total_lineages() as u64 == habitat.get_total_habitat()
-    } else {
-        true
-    }, "samples active lineages according to settings.sample_percentage()")]
-    fn new(sample_percentage: f64, habitat: &H) -> Self;
+    type LineageReferenceIterator<'a>: ExactSizeIterator<Item = R>;
 
     #[must_use]
     #[debug_ensures(
@@ -34,7 +23,7 @@ pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
     fn get_number_total_lineages(&self) -> usize;
 
     #[must_use]
-    fn iter_local_lineage_references(&self) -> Self::Iterator;
+    fn iter_local_lineage_references(&self) -> Self::LineageReferenceIterator<'_>;
 
     #[must_use]
     #[allow(clippy::double_parens)]
@@ -56,6 +45,11 @@ pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
 pub trait CoherentLineageStore<H: Habitat, R: LineageReference<H>>: LineageStore<H, R> {
+    type LocationIterator<'a>: Iterator<Item = Location>;
+
+    #[must_use]
+    fn iter_active_locations(&self) -> Self::LocationIterator<'_>;
+
     #[must_use]
     fn get_active_lineages_at_location(&self, location: &Location) -> &[R];
 

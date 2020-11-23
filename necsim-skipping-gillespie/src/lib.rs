@@ -5,7 +5,7 @@
 extern crate contracts;
 
 use necsim_core::{
-    cogs::{Habitat, LineageStore, RngCore, SeparableDispersalSampler},
+    cogs::{Habitat, RngCore, SeparableDispersalSampler},
     simulation::Simulation,
 };
 
