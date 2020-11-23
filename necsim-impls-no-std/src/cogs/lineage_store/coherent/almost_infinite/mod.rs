@@ -6,7 +6,8 @@ use hashbrown::hash_map::HashMap;
 
 use necsim_core::{
     cogs::{Habitat, LineageStore},
-    landscape::{LandscapeExtent, Location},
+    intrinsics::floor,
+    landscape::{IndexedLocation, LandscapeExtent, Location},
     lineage::Lineage,
 };
 
@@ -22,7 +23,7 @@ mod store;
 pub struct CoherentAlmostInfiniteLineageStore {
     landscape_extent: LandscapeExtent,
     lineages_store: Vec<Lineage>,
-    location_to_lineage_references: HashMap<Location, Vec<InMemoryLineageReference>>,
+    location_to_lineage_references: HashMap<Location, InMemoryLineageReference>,
 }
 
 impl Index<InMemoryLineageReference> for CoherentAlmostInfiniteLineageStore {
@@ -58,13 +59,22 @@ impl CoherentAlmostInfiniteLineageStore {
 
         let radius_squared = u64::from(radius) * u64::from(radius);
 
+        #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+        let total_area = (radius_squared as f64) * core::f64::consts::PI;
         #[allow(
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss,
             clippy::cast_precision_loss
         )]
-        let mut locations_with_distance =
-            Vec::with_capacity(((radius_squared as f64) * core::f64::consts::PI) as usize);
+        let sampled_area = floor(total_area * sample_percentage) as usize;
+
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let skips = (total_area as usize) / sampled_area;
+
+        let mut lineages_store = Vec::with_capacity(sampled_area);
+        let mut location_to_lineage_references = HashMap::with_capacity(sampled_area);
+
+        let mut location_id = 0_usize;
 
         for y in (centre - radius)..=(centre + radius) {
             for x in (centre - radius)..=(centre + radius) {
@@ -75,17 +85,29 @@ impl CoherentAlmostInfiniteLineageStore {
                 let distance_squared = (dx * dx) as u64 + (dy * dy) as u64;
 
                 if distance_squared <= radius_squared {
-                    locations_with_distance.push((Location::new(x, y), distance_squared));
+                    if location_id % skips == 0 {
+                        let location = Location::new(x, y);
+
+                        lineages_store
+                            .push(Lineage::new(IndexedLocation::new(location.clone(), 0_u32)));
+
+                        location_to_lineage_references.insert(
+                            location,
+                            InMemoryLineageReference::from(lineages_store.len() - 1),
+                        );
+                    }
+
+                    location_id += 1;
                 }
             }
         }
 
-        locations_with_distance.sort_by_key(|(_, k)| *k);
+        lineages_store.shrink_to_fit();
 
-        // TODO: Need to shrink size of locations down - drop remainder
-        // TODO: Problem samples are not uniformly distributed here ... should we just
-        // get the RNG in here?
-
-        unimplemented!()
+        Self {
+            landscape_extent: habitat.get_extent(),
+            lineages_store,
+            location_to_lineage_references,
+        }
     }
 }

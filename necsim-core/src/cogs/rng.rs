@@ -110,7 +110,7 @@ pub trait RngSampler: RngCore {
 
     #[must_use]
     #[inline]
-    #[debug_requires(sigma > 0.0_f64, "standard deviation sigma must be positive")]
+    #[debug_requires(sigma >= 0.0_f64, "standard deviation sigma must be non-negative")]
     fn sample_2d_normal(&mut self, mu: f64, sigma: f64) -> (f64, f64) {
         let (z0, z1) = self.sample_2d_standard_normal();
 
