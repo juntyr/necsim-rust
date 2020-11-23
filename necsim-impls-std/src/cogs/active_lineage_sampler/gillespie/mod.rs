@@ -75,30 +75,23 @@ impl<
 
         let mut number_active_lineages: usize = 0;
 
-        for y in landscape_extent.y()..(landscape_extent.y() + landscape_extent.height()) {
-            for x in landscape_extent.x()..(landscape_extent.x() + landscape_extent.width()) {
-                let location = Location::new(x, y);
+        lineage_store.iter_active_locations().for_each(|location| {
+            let number_active_lineages_at_location = lineage_store
+                .get_active_lineages_at_location(&location)
+                .len();
 
-                let number_active_lineages_at_location = lineage_store
-                    .get_active_lineages_at_location(&location)
-                    .len();
+            if number_active_lineages_at_location > 0 {
+                let event_rate_at_location =
+                    event_sampler.get_event_rate_at_location(&location, &partial_simulation, true);
 
-                if number_active_lineages_at_location > 0 {
-                    let event_rate_at_location = event_sampler.get_event_rate_at_location(
-                        &location,
-                        &partial_simulation,
-                        true,
-                    );
+                active_locations.push((
+                    location,
+                    EventTime::from(rng.sample_exponential(event_rate_at_location)),
+                ));
 
-                    active_locations.push((
-                        location,
-                        EventTime::from(rng.sample_exponential(event_rate_at_location)),
-                    ));
-
-                    number_active_lineages += number_active_lineages_at_location;
-                }
+                number_active_lineages += number_active_lineages_at_location;
             }
-        }
+        });
 
         active_locations.shrink_to_fit();
 

@@ -5,7 +5,7 @@
 extern crate contracts;
 
 use necsim_core::{
-    cogs::{DispersalSampler, Habitat, LineageStore, RngCore},
+    cogs::{DispersalSampler, Habitat, RngCore},
     simulation::Simulation,
 };
 
@@ -41,8 +41,7 @@ impl ClassicalSimulation {
             let lineage_store = CoherentInMemoryLineageStore::new(sample_percentage, &habitat);
             let coalescence_sampler = UnconditionalCoalescenceSampler::default();
             let event_sampler = UnconditionalEventSampler::default();
-            let active_lineage_sampler =
-                ClassicalActiveLineageSampler::new(&habitat, &lineage_store);
+            let active_lineage_sampler = ClassicalActiveLineageSampler::new(&lineage_store);
 
             let simulation = Simulation::builder()
                 .speciation_probability_per_generation(speciation_probability_per_generation)

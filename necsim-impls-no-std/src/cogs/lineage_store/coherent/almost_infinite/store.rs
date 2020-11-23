@@ -1,6 +1,9 @@
+use alloc::vec::Vec;
+use hashbrown::hash_map::Keys;
+
 use necsim_core::{
-    cogs::{CoherentLineageStore, Habitat, LineageStore},
-    landscape::{IndexedLocation, Location, LocationIterator},
+    cogs::{CoherentLineageStore, LineageStore},
+    landscape::{IndexedLocation, Location},
     lineage::Lineage,
 };
 
@@ -8,10 +11,14 @@ use crate::cogs::lineage_reference::in_memory::{
     InMemoryLineageReference, InMemoryLineageReferenceIterator,
 };
 
-use super::CoherentInMemoryLineageStore;
+use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
+
+use super::CoherentAlmostInfiniteLineageStore;
 
 #[contract_trait]
-impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for CoherentInMemoryLineageStore<H> {
+impl LineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
+    for CoherentAlmostInfiniteLineageStore
+{
     type LineageReferenceIterator<'a> = InMemoryLineageReferenceIterator;
 
     #[must_use]
@@ -43,14 +50,15 @@ impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for CoherentInMemoryL
 }
 
 #[contract_trait]
-impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
-    for CoherentInMemoryLineageStore<H>
+impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
+    for CoherentAlmostInfiniteLineageStore
 {
-    type LocationIterator<'a> = LocationIterator;
+    type LocationIterator<'a> =
+        core::iter::Cloned<Keys<'a, Location, Vec<InMemoryLineageReference>>>;
 
     #[must_use]
     fn iter_active_locations(&self) -> Self::LocationIterator<'_> {
-        self.landscape_extent.iter()
+        self.location_to_lineage_references.keys().cloned()
     }
 
     #[must_use]
@@ -59,10 +67,7 @@ impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
         "location is inside landscape extent"
     )]
     fn get_active_lineages_at_location(&self, location: &Location) -> &[InMemoryLineageReference] {
-        &self.location_to_lineage_references[(
-            (location.y() - self.landscape_extent.y()) as usize,
-            (location.x() - self.landscape_extent.x()) as usize,
-        )]
+        &self.location_to_lineage_references[location]
     }
 
     #[debug_requires(
@@ -74,10 +79,10 @@ impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
         reference: InMemoryLineageReference,
         location: Location,
     ) {
-        let lineages_at_location = &mut self.location_to_lineage_references[(
-            (location.y() - self.landscape_extent.y()) as usize,
-            (location.x() - self.landscape_extent.x()) as usize,
-        )];
+        let lineages_at_location = self
+            .location_to_lineage_references
+            .get_mut(&location)
+            .unwrap();
 
         lineages_at_location.push(reference);
 
@@ -107,10 +112,10 @@ impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
         let lineage_location = lineage_indexed_location.location();
         let lineage_index_at_location = lineage_indexed_location.index();
 
-        let lineages_at_location = &mut self.location_to_lineage_references[(
-            (lineage_location.y() - self.landscape_extent.y()) as usize,
-            (lineage_location.x() - self.landscape_extent.x()) as usize,
-        )];
+        let lineages_at_location = self
+            .location_to_lineage_references
+            .get_mut(lineage_location)
+            .unwrap();
 
         if let Some(last_lineage_at_location) = lineages_at_location.pop() {
             if (lineage_index_at_location as usize) < lineages_at_location.len() {

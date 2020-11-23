@@ -3,7 +3,7 @@ use core::{marker::PhantomData, ops::Index};
 use alloc::{boxed::Box, vec::Vec};
 
 use necsim_core::{
-    cogs::Habitat,
+    cogs::{Habitat, LineageStore},
     intrinsics::floor,
     landscape::{IndexedLocation, LandscapeExtent, Location},
     lineage::Lineage,
@@ -38,11 +38,19 @@ impl<H: Habitat> Index<InMemoryLineageReference> for IncoherentInMemoryLineageSt
 
 impl<H: Habitat> IncoherentInMemoryLineageStore<H> {
     #[must_use]
+    #[allow(clippy::float_cmp)]
+    #[debug_ensures(if sample_percentage == 0.0_f64 {
+        ret.get_number_total_lineages() == 0
+    } else if sample_percentage == 1.0_f64 {
+        ret.get_number_total_lineages() as u64 == habitat.get_total_habitat()
+    } else {
+        true
+    }, "samples active lineages according to settings.sample_percentage()")]
     #[debug_ensures(
         ret.landscape_extent == habitat.get_extent(),
         "stores landscape_extent"
     )]
-    fn new_impl(sample_percentage: f64, habitat: &H) -> Self {
+    pub fn new(sample_percentage: f64, habitat: &H) -> Self {
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
         #[allow(clippy::cast_precision_loss)]
