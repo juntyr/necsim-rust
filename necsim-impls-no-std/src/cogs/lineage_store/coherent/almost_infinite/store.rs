@@ -1,5 +1,3 @@
-use hashbrown::hash_map::Keys;
-
 use necsim_core::{
     cogs::{CoherentLineageStore, LineageStore},
     landscape::{IndexedLocation, Location},
@@ -52,11 +50,23 @@ impl LineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
 impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
     for CoherentAlmostInfiniteLineageStore
 {
-    type LocationIterator<'a> = core::iter::Cloned<Keys<'a, Location, InMemoryLineageReference>>;
+    #[allow(clippy::type_complexity)]
+    type LocationIterator<'a> = core::iter::Cloned<
+        core::iter::FilterMap<
+            core::slice::Iter<'a, Lineage>,
+            for<'l> fn(&'l Lineage) -> Option<&'l necsim_core::landscape::Location>,
+        >,
+    >;
 
     #[must_use]
     fn iter_active_locations(&self) -> Self::LocationIterator<'_> {
-        self.location_to_lineage_references.keys().cloned()
+        self.lineages_store
+            .iter()
+            .filter_map(
+                (|lineage| lineage.indexed_location().map(IndexedLocation::location))
+                    as for<'l> fn(&'l Lineage) -> Option<&'l Location>,
+            )
+            .cloned()
     }
 
     #[must_use]
@@ -65,7 +75,10 @@ impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
         "location is inside landscape extent"
     )]
     fn get_active_lineages_at_location(&self, location: &Location) -> &[InMemoryLineageReference] {
-        core::slice::from_ref(&self.location_to_lineage_references[location])
+        match self.location_to_lineage_references.get(location) {
+            Some(lineage_reference) => core::slice::from_ref(lineage_reference),
+            None => &[],
+        }
     }
 
     #[debug_requires(

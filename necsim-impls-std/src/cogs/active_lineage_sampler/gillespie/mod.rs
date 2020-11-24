@@ -56,12 +56,6 @@ impl<
     ) -> Self {
         use necsim_core::cogs::RngSampler;
 
-        let landscape_extent = habitat.get_extent();
-
-        let mut active_locations: Vec<(Location, EventTime)> = Vec::with_capacity(
-            landscape_extent.width() as usize * landscape_extent.height() as usize,
-        );
-
         let lineage_reference = std::marker::PhantomData::<R>;
         let partial_simulation = PartialSimulation {
             speciation_probability_per_generation: &speciation_probability_per_generation,
@@ -72,6 +66,8 @@ impl<
             lineage_store,
             coalescence_sampler,
         };
+
+        let mut active_locations: Vec<(Location, EventTime)> = Vec::new();
 
         let mut number_active_lineages: usize = 0;
 

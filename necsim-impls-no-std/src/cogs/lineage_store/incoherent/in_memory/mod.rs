@@ -45,7 +45,7 @@ impl<H: Habitat> IncoherentInMemoryLineageStore<H> {
         ret.get_number_total_lineages() as u64 == habitat.get_total_habitat()
     } else {
         true
-    }, "samples active lineages according to settings.sample_percentage()")]
+    }, "samples active lineages according to sample_percentage")]
     #[debug_ensures(
         ret.landscape_extent == habitat.get_extent(),
         "stores landscape_extent"
