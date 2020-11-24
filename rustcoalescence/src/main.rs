@@ -6,7 +6,6 @@
 extern crate necsim_core;
 
 use anyhow::Result;
-use array2d::Array2D;
 use structopt::StructOpt;
 
 mod args;
@@ -17,7 +16,6 @@ mod simulation;
 
 use args::{Command, CommandLineArguments};
 
-#[allow(clippy::too_many_lines)] // TODO: Refactor
 fn main() -> Result<()> {
     // Parse and validate all command line arguments
     let args = CommandLineArguments::from_args();
@@ -38,111 +36,14 @@ fn main() -> Result<()> {
 
     let (time, steps) = match args.command() {
         Command::InMemory(in_memory_args) => {
-            let dispersal: Array2D<f64> = maps::load_dispersal_map(in_memory_args.dispersal_map())?;
-
-            println!(
-                "Successfully loaded the dispersal map {:?} with dimensions {}x{} [cols x rows].",
-                in_memory_args.dispersal_map(),
-                dispersal.num_columns(),
-                dispersal.num_rows()
-            );
-
-            let habitat: Array2D<u32> =
-                maps::load_habitat_map(in_memory_args.habitat_map(), &dispersal)?;
-
-            println!(
-                "Successfully loaded the habitat map {:?} with dimensions {}x{} [cols x rows].",
-                in_memory_args.habitat_map(),
-                habitat.num_columns(),
-                habitat.num_rows()
-            );
-
-            let total_habitat = habitat
-                .elements_row_major_iter()
-                .map(|x| u64::from(*x))
-                .sum::<u64>();
-
-            #[allow(clippy::cast_possible_truncation)]
-            #[allow(clippy::cast_sign_loss)]
-            #[allow(clippy::cast_precision_loss)]
-            let estimated_total_lineages =
-                ((total_habitat as f64) * args.common_args().sample_percentage()).ceil() as u64;
-
-            // Run the simulation
-            simulation::in_memory::simulate(
-                args.common_args(),
-                &in_memory_args,
-                &habitat,
-                &dispersal,
-                reporter::RustcoalescenceReporterContext::new(estimated_total_lineages),
-            )?
+            simulation::setup_in_memory_simulation(args.common_args(), in_memory_args)?
         },
-        Command::NonSpatial(non_spatial_args) if *non_spatial_args.spatial() => {
-            let habitat = Array2D::filled_with(
-                *non_spatial_args.deme(),
-                non_spatial_args.area().1 as usize,
-                non_spatial_args.area().0 as usize
-            );
-
-            let total_area =
-                (non_spatial_args.area().0 as usize) * (non_spatial_args.area().1 as usize);
-
-            let dispersal = Array2D::filled_with(1.0_f64, total_area, total_area);
-
-            #[allow(clippy::cast_possible_truncation)]
-            #[allow(clippy::cast_sign_loss)]
-            let estimated_total_lineages = (f64::from(non_spatial_args.area().0)
-                * f64::from(non_spatial_args.area().1)
-                * f64::from(*non_spatial_args.deme())
-                * args.common_args().sample_percentage())
-            .ceil() as u64;
-
-            // Run the simulation
-            simulation::in_memory::simulate(
-                args.common_args(),
-                &non_spatial_args.as_in_memory(),
-                &habitat,
-                &dispersal,
-                reporter::RustcoalescenceReporterContext::new(estimated_total_lineages),
-            )?
-        },
-        Command::NonSpatial(non_spatial_args) /* if !*non_spatial_args.spatial() */ => {
-            #[allow(clippy::cast_possible_truncation)]
-            #[allow(clippy::cast_sign_loss)]
-            let estimated_total_lineages = (f64::from(non_spatial_args.area().0)
-                * f64::from(non_spatial_args.area().1)
-                * f64::from(*non_spatial_args.deme())
-                * args.common_args().sample_percentage())
-            .ceil() as u64;
-
-            // Run the simulation
-            simulation::non_spatial::simulate(
-                args.common_args(),
-                &non_spatial_args,
-                reporter::RustcoalescenceReporterContext::new(estimated_total_lineages),
-            )?
+        Command::NonSpatial(non_spatial_args) => {
+            simulation::setup_non_spatial_simulation(args.common_args(), non_spatial_args)?
         },
         Command::AlmostInfinite(almost_infinite_args) => {
-            anyhow::ensure!(
-                *almost_infinite_args.sigma() >= 0.0_f64,
-                "The dispersal standard deviation must be non-negative."
-            );
-
-            #[allow(clippy::cast_possible_truncation)]
-            #[allow(clippy::cast_sign_loss)]
-            let estimated_total_lineages = (f64::from(*almost_infinite_args.radius())
-                * f64::from(*almost_infinite_args.radius())
-                * std::f64::consts::PI
-                * args.common_args().sample_percentage())
-            .ceil() as u64;
-
-            // Run the simulation
-            simulation::almost_infinite::simulate(
-                args.common_args(),
-                &almost_infinite_args,
-                reporter::RustcoalescenceReporterContext::new(estimated_total_lineages),
-            )?
-        }
+            simulation::setup_almost_infinite_simulation(args.common_args(), almost_infinite_args)?
+        },
     };
 
     println!("Simulation finished after {} ({} steps).", time, steps);
