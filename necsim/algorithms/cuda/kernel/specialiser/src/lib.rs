@@ -6,7 +6,7 @@ use quote::quote;
 #[macro_use]
 extern crate proc_macro_error;
 
-const SIMULATION_SPECIALISATION_ENV: &'static str = "NECSIM_CUDA_KERNEL_SPECIALISATION";
+const SIMULATION_SPECIALISATION_ENV: &str = "NECSIM_CUDA_KERNEL_SPECIALISATION";
 
 #[proc_macro_error]
 #[proc_macro]
