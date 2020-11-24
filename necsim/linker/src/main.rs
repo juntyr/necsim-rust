@@ -39,7 +39,7 @@ fn extract_specialisation(input: &str) -> Option<&str> {
 fn build_kernel_with_specialisation(specialisation: &str) -> Result<PathBuf> {
     env::set_var(SIMULATION_SPECIALISATION_ENV, specialisation);
 
-    match Builder::new("necsim-cuda/kernel")?.build()? {
+    match Builder::new("necsim/algorithms/cuda/kernel")?.build()? {
         BuildStatus::Success(output) => Ok(output.get_assembly_path()),
         BuildStatus::NotNeeded => Err(Error::from(BuildErrorKind::BuildFailed(vec![format!(
             "Kernel build for specialisation `{}` was not needed.",
