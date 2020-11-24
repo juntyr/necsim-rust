@@ -20,7 +20,11 @@ pub struct AlmostInfiniteNormalDispersalSampler<G: RngCore> {
 impl<G: RngCore> AlmostInfiniteNormalDispersalSampler<G> {
     #[must_use]
     pub fn new(sigma: f64, habitat: &AlmostInfiniteHabitat) -> Self {
-        let self_dispersal_1d = libm::erf(0.5) / (sigma * core::f64::consts::SQRT_2);
+        let self_dispersal_1d = if sigma > 0.0_f64 {
+            libm::erf(0.5) / (sigma * core::f64::consts::SQRT_2)
+        } else {
+            1.0_f64
+        };
 
         Self {
             habitat_extent: habitat.get_extent(),
@@ -46,28 +50,20 @@ impl<G: RngCore> DispersalSampler<AlmostInfiniteHabitat, G>
         // i.e. dispersal >= 0.5 changes the cell
         // (dx and dy round towards 0 implicitly in the conversion)
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let (dx, dy): (u32, u32) = (
-            ((dx as u64) % u64::from(self.habitat_extent.width())) as u32,
-            ((dy as u64) % u64::from(self.habitat_extent.height())) as u32,
+        let (dx, dy): (i64, i64) = (
+            (dx as i64) % i64::from(self.habitat_extent.width()),
+            (dy as i64) % i64::from(self.habitat_extent.height()),
         );
 
-        // On the AlmostInfiniteLandscape, locations are wrapped around
-        let (mut new_x, x_overflow) = location.x().overflowing_add(dx);
-        let (mut new_y, y_overflow) = location.y().overflowing_add(dy);
+        let new_x = (i64::from(location.x()) + dx) % i64::from(self.habitat_extent.width());
+        let new_y = (i64::from(location.y()) + dy) % i64::from(self.habitat_extent.height());
 
-        if x_overflow {
-            // Correct new_x by the wrapping discrepancy between u32 and the habitat width
-            new_x += (u32::MAX - self.habitat_extent.width()) + 1;
-        }
-
-        if y_overflow {
-            // Correct new_y by the wrapping discrepancy between u32 and the habitat height
-            new_y += (u32::MAX - self.habitat_extent.height()) + 1;
-        }
-
+        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         Location::new(
-            new_x % self.habitat_extent.width(),
-            new_y % self.habitat_extent.height(),
+            ((new_x + i64::from(self.habitat_extent.width()))
+                % i64::from(self.habitat_extent.width())) as u32,
+            ((new_y + i64::from(self.habitat_extent.height()))
+                % i64::from(self.habitat_extent.height())) as u32,
         )
     }
 }
