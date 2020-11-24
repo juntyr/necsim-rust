@@ -18,8 +18,10 @@ mod store;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
+#[cfg_attr(feature = "cuda", derive(RustToCuda))]
 pub struct IncoherentAlmostInfiniteLineageStore {
     landscape_extent: LandscapeExtent,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     lineages_store: Box<[Lineage]>,
 }
 

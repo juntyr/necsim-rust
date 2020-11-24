@@ -35,45 +35,45 @@ pub fn simulate<P: ReporterContext>(
     #[allow(clippy::match_single_binding)]
     #[allow(clippy::map_err_ignore)]
     let result: Result<(f64, u64)> = match common_args.algorithm() {
-        // #[cfg(feature = "necsim-classical")]
-        // Algorithm::Classical => ClassicalSimulation::simulate(
-        //     *almost_infinite_args.radius(),
-        //     *almost_infinite_args.sigma(),
-        //     *common_args.speciation_probability_per_generation(),
-        //     *common_args.sample_percentage(),
-        //     *common_args.seed(),
-        //     reporter_context,
-        // )
-        // .map_err(|_| unreachable!("Almost-Infinite ClassicalSimulation can never fail.")),
-        // #[cfg(feature = "necsim-gillespie")]
-        // Algorithm::Gillespie => GillespieSimulation::simulate(
-        //     *almost_infinite_args.radius(),
-        //     *almost_infinite_args.sigma(),
-        //     *common_args.speciation_probability_per_generation(),
-        //     *common_args.sample_percentage(),
-        //     *common_args.seed(),
-        //     reporter_context,
-        // )
-        // .map_err(|_| unreachable!("Almost-Infinite GillespieSimulation can never fail.")),
-        // #[cfg(feature = "necsim-skipping-gillespie")]
-        // Algorithm::SkippingGillespie => SkippingGillespieSimulation::simulate(
-        //     *almost_infinite_args.radius(),
-        //     *almost_infinite_args.sigma(),
-        //     *common_args.speciation_probability_per_generation(),
-        //     *common_args.sample_percentage(),
-        //     *common_args.seed(),
-        //     reporter_context,
-        // )
-        // .map_err(|_| unreachable!("Almost-Infinite SkppingGillespieSimulation can never fail.")),
-        // #[cfg(feature = "necsim-cuda")]
-        // Algorithm::CUDA => CudaSimulation::simulate(
-        //     *almost_infinite_args.radius(),
-        //     *almost_infinite_args.sigma(),
-        //     *common_args.speciation_probability_per_generation(),
-        //     *common_args.sample_percentage(),
-        //     *common_args.seed(),
-        //     reporter_context,
-        // ),
+        #[cfg(feature = "necsim-classical")]
+        Algorithm::Classical => ClassicalSimulation::simulate(
+            *almost_infinite_args.radius(),
+            *almost_infinite_args.sigma(),
+            *common_args.speciation_probability_per_generation(),
+            *common_args.sample_percentage(),
+            *common_args.seed(),
+            reporter_context,
+        )
+        .map_err(|_| unreachable!("Almost-Infinite ClassicalSimulation can never fail.")),
+        #[cfg(feature = "necsim-gillespie")]
+        Algorithm::Gillespie => GillespieSimulation::simulate(
+            *almost_infinite_args.radius(),
+            *almost_infinite_args.sigma(),
+            *common_args.speciation_probability_per_generation(),
+            *common_args.sample_percentage(),
+            *common_args.seed(),
+            reporter_context,
+        )
+        .map_err(|_| unreachable!("Almost-Infinite GillespieSimulation can never fail.")),
+        #[cfg(feature = "necsim-skipping-gillespie")]
+        Algorithm::SkippingGillespie => SkippingGillespieSimulation::simulate(
+            *almost_infinite_args.radius(),
+            *almost_infinite_args.sigma(),
+            *common_args.speciation_probability_per_generation(),
+            *common_args.sample_percentage(),
+            *common_args.seed(),
+            reporter_context,
+        )
+        .map_err(|_| unreachable!("Almost-Infinite SkppingGillespieSimulation can never fail.")),
+        #[cfg(feature = "necsim-cuda")]
+        Algorithm::CUDA => CudaSimulation::simulate(
+            *almost_infinite_args.radius(),
+            *almost_infinite_args.sigma(),
+            *common_args.speciation_probability_per_generation(),
+            *common_args.sample_percentage(),
+            *common_args.seed(),
+            reporter_context,
+        ),
         #[allow(unreachable_patterns)]
         _ => anyhow::bail!("rustcoalescence does not support the selected algorithm"),
     };

@@ -12,7 +12,9 @@ use rustacuda::{
 };
 
 use necsim_core::{
-    cogs::{DispersalSampler, HabitatToU64Injection, LineageStore as _, RngCore},
+    cogs::{
+        DispersalSampler, HabitatToU64Injection, IncoherentLineageStore, LineageReference, RngCore,
+    },
     simulation::Simulation,
 };
 
@@ -23,8 +25,6 @@ use necsim_impls_no_std::cogs::{
     active_lineage_sampler::independent::IndependentActiveLineageSampler as ActiveLineageSampler,
     coalescence_sampler::independent::IndependentCoalescenceSampler as CoalescenceSampler,
     event_sampler::independent::IndependentEventSampler as EventSampler,
-    lineage_reference::in_memory::InMemoryLineageReference as LineageReference,
-    lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore as LineageStore,
     rng::wyhash::WyHash as Rng,
 };
 
@@ -49,16 +49,18 @@ pub struct CudaSimulation;
 
 impl CudaSimulation {
     /// Simulates the coalescence algorithm on a CUDA-capable GPU on
-    /// `habitat` with `dispersal`.
+    /// `habitat` with `dispersal` and lineages from `lineage_store`.
     fn simulate<
         H: HabitatToU64Injection + RustToCuda,
         D: DispersalSampler<H, CudaRng<Rng>> + RustToCuda,
+        R: LineageReference<H> + rustacuda_core::DeviceCopy,
+        S: IncoherentLineageStore<H, R> + RustToCuda,
         P: ReporterContext,
     >(
         habitat: H,
         dispersal_sampler: D,
+        lineage_store: S,
         speciation_probability_per_generation: f64,
-        sample_percentage: f64,
         seed: u64,
         reporter_context: P,
     ) -> Result<(f64, u64)> {
@@ -69,7 +71,6 @@ impl CudaSimulation {
 
         reporter_context.with_reporter(|reporter| {
             let rng = CudaRng::<Rng>::seed_from_u64(seed);
-            let lineage_store = LineageStore::new(sample_percentage, &habitat);
             let coalescence_sampler = CoalescenceSampler::default();
             let event_sampler = EventSampler::default();
             let active_lineage_sampler = ActiveLineageSampler::default();
@@ -79,7 +80,7 @@ impl CudaSimulation {
                 .habitat(habitat)
                 .rng(rng)
                 .dispersal_sampler(dispersal_sampler)
-                .lineage_reference(std::marker::PhantomData::<LineageReference>)
+                .lineage_reference(std::marker::PhantomData::<R>)
                 .lineage_store(lineage_store)
                 .coalescence_sampler(coalescence_sampler)
                 .event_sampler(event_sampler)
@@ -112,8 +113,8 @@ impl CudaSimulation {
                     #[allow(clippy::type_complexity)]
                     let event_buffer: EventBufferHost<
                         H,
-                        LineageReference,
-                        P::Reporter<H, LineageReference>,
+                        R,
+                        P::Reporter<H, R>,
                         { REPORT_SPECIATION },
                         { REPORT_DISPERSAL },
                     > = EventBufferHost::new(

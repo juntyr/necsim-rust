@@ -1,22 +1,22 @@
 use necsim_impls_no_std::cogs::{
     dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
     habitat::almost_infinite::AlmostInfiniteHabitat,
-    lineage_store::incoherent::almost_infinite::IncoherentAlmostInfiniteLineageStore,
+    lineage_store::coherent::almost_infinite::CoherentAlmostInfiniteLineageStore,
 };
 
 use necsim_impls_no_std::{
     reporter::ReporterContext, simulation::almost_infinite::AlmostInfiniteSimulation,
 };
 
-use super::CudaSimulation;
+use super::GillespieSimulation;
 
 #[contract_trait]
-impl AlmostInfiniteSimulation for CudaSimulation {
-    type Error = anyhow::Error;
+impl AlmostInfiniteSimulation for GillespieSimulation {
+    type Error = !;
 
-    /// Simulates the coalescence algorithm on a CUDA-capable GPU on an
-    /// almost-infinite `habitat` with N(0, sigma) `dispersal`. Only a
-    /// circular region with `radius` is sampled.
+    /// Simulates the Gillespie coalescence algorithm on on an almost-infinite
+    /// `habitat` with N(0, sigma) `dispersal`. Only a circular region with
+    /// `radius` is sampled.
     fn simulate<P: ReporterContext>(
         radius: u32,
         sigma: f64,
@@ -28,15 +28,15 @@ impl AlmostInfiniteSimulation for CudaSimulation {
         let habitat = AlmostInfiniteHabitat::default();
         let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(sigma, &habitat);
         let lineage_store =
-            IncoherentAlmostInfiniteLineageStore::new(radius, sample_percentage, &habitat);
+            CoherentAlmostInfiniteLineageStore::new(radius, sample_percentage, &habitat);
 
-        CudaSimulation::simulate(
+        Ok(GillespieSimulation::simulate(
             habitat,
             dispersal_sampler,
             lineage_store,
             speciation_probability_per_generation,
             seed,
             reporter_context,
-        )
+        ))
     }
 }

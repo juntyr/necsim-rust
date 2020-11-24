@@ -3,6 +3,7 @@ use array2d::Array2D;
 use necsim_impls_no_std::cogs::{
     dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
     habitat::in_memory::InMemoryHabitat,
+    lineage_store::incoherent::in_memory::IncoherentInMemoryLineageStore,
 };
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
@@ -32,12 +33,13 @@ impl InMemorySimulation for CudaSimulation {
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemoryPackedAliasDispersalSampler::new(dispersal, &habitat)?;
+        let lineage_store = IncoherentInMemoryLineageStore::new(sample_percentage, &habitat);
 
         CudaSimulation::simulate(
             habitat,
             dispersal_sampler,
+            lineage_store,
             speciation_probability_per_generation,
-            sample_percentage,
             seed,
             reporter_context,
         )
