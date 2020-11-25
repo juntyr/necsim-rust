@@ -40,31 +40,15 @@ impl<
                     active_lineage_sampler
                         .pop_active_lineage_indexed_location_event_time(time, simulation, rng)
                 {
-                    let event = if cfg!(not(target_os = "cuda"))
-                        && active_lineage_sampler.number_active_lineages() == 0
-                    {
-                        // Early stop iff only one active lineage is left
-                        //  -> jump immediately to its speciation
-                        simulation.with_split_event_sampler(|event_sampler, simulation| {
-                            event_sampler.sample_final_speciation_event_for_lineage_after_time(
-                                chosen_lineage,
-                                dispersal_origin,
-                                time,
-                                simulation,
-                                rng,
-                            )
-                        })
-                    } else {
-                        simulation.with_split_event_sampler(|event_sampler, simulation| {
-                            event_sampler.sample_event_for_lineage_at_indexed_location_time(
-                                chosen_lineage,
-                                dispersal_origin,
-                                event_time,
-                                simulation,
-                                rng,
-                            )
-                        })
-                    };
+                    let event = simulation.with_split_event_sampler(|event_sampler, simulation| {
+                        event_sampler.sample_event_for_lineage_at_indexed_location_time(
+                            chosen_lineage,
+                            dispersal_origin,
+                            event_time,
+                            simulation,
+                            rng,
+                        )
+                    });
 
                     // Advance the simulation time
                     time = event.time();
