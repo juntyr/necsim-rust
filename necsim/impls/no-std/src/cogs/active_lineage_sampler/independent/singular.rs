@@ -8,11 +8,12 @@ use crate::cogs::{
     event_sampler::independent::IndependentEventSampler,
 };
 
-use super::IndependentActiveLineageSampler;
+use super::{EventTimeSampler, IndependentActiveLineageSampler};
 
 impl<
         H: HabitatToU64Injection,
         G: PrimeableRng<H>,
+        T: EventTimeSampler<H, G>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
@@ -25,7 +26,7 @@ impl<
         S,
         IndependentCoalescenceSampler<H, G, R, S>,
         IndependentEventSampler<H, G, D, R, S>,
-    > for IndependentActiveLineageSampler<H, G, D, R, S>
+    > for IndependentActiveLineageSampler<H, G, T, D, R, S>
 {
     #[must_use]
     fn replace_active_lineage(&mut self, active_lineage_reference: Option<R>) -> Option<R> {

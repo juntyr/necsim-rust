@@ -32,6 +32,11 @@ impl<H: HabitatToU64Injection> necsim_core::cogs::PrimeableRng<H> for WyHash {
             .to_le_bytes();
         let time_index_bytes = time_index.to_le_bytes();
 
+        // TODO: Check if the byte ordering affects the quality of the RNG
+        //       priming -> in order would be closer to CPRNG
+        // wyhash swaps 64bit lower and upper half, i.e. to get wyhash to
+        // process bytes in order, we would need to supply the indices as
+        // 4, 5, 6, 7, 0, 1, 2, 3.
         self.state = wyhash::wyhash(
             &[
                 location_bytes[0],
