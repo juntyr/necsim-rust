@@ -22,7 +22,10 @@ use necsim_impls_cuda::{event_buffer::host::EventBufferHost, task_list::host::Ta
 use necsim_impls_no_std::reporter::ReporterContext;
 
 use necsim_impls_no_std::cogs::{
-    active_lineage_sampler::independent::IndependentActiveLineageSampler as ActiveLineageSampler,
+    active_lineage_sampler::independent::{
+        event_time_sampler::geometric::GeometricEventTimeSampler,
+        IndependentActiveLineageSampler as ActiveLineageSampler,
+    },
     coalescence_sampler::independent::IndependentCoalescenceSampler as CoalescenceSampler,
     event_sampler::independent::IndependentEventSampler as EventSampler,
     rng::wyhash::WyHash as Rng,
@@ -73,7 +76,8 @@ impl CudaSimulation {
             let rng = CudaRng::<Rng>::seed_from_u64(seed);
             let coalescence_sampler = CoalescenceSampler::default();
             let event_sampler = EventSampler::default();
-            let active_lineage_sampler = ActiveLineageSampler::default();
+            let active_lineage_sampler =
+                ActiveLineageSampler::empty(GeometricEventTimeSampler::new(0.1_f64));
 
             let simulation = Simulation::builder()
                 .speciation_probability_per_generation(speciation_probability_per_generation)
