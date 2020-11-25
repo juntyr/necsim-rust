@@ -45,7 +45,7 @@ impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> TaskListDevic
     }
 
     pub fn with_task_for_core<F: FnOnce(Option<R>) -> Option<R>>(&mut self, inner: F) {
-        let index = rust_cuda::device::utils::index_no_offset();
+        let index = rust_cuda::device::utils::index();
 
         let task = self.task_list[index].take();
 

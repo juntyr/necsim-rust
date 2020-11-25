@@ -50,7 +50,7 @@ impl ProgressReporter {
                 .template("    [{elapsed_precise}] {bar:50.cyan/blue} [{eta_precise}]    "),
         );
 
-        progress.set_draw_delta(total / 200);
+        progress.enable_steady_tick(100);
 
         Self { progress }
     }
