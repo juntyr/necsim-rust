@@ -23,7 +23,10 @@ use necsim_impls_no_std::reporter::ReporterContext;
 
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::independent::{
-        event_time_sampler::geometric::GeometricEventTimeSampler,
+        event_time_sampler::{
+            fixed::FixedEventTimeSampler, geometric::GeometricEventTimeSampler,
+            poisson::PoissonEventTimeSampler,
+        },
         IndependentActiveLineageSampler as ActiveLineageSampler,
     },
     coalescence_sampler::independent::IndependentCoalescenceSampler as CoalescenceSampler,
@@ -77,7 +80,7 @@ impl CudaSimulation {
             let coalescence_sampler = CoalescenceSampler::default();
             let event_sampler = EventSampler::default();
             let active_lineage_sampler =
-                ActiveLineageSampler::empty(GeometricEventTimeSampler::new(0.1_f64));
+                ActiveLineageSampler::empty(PoissonEventTimeSampler::new(1.0_f64));
 
             let simulation = Simulation::builder()
                 .speciation_probability_per_generation(speciation_probability_per_generation)
