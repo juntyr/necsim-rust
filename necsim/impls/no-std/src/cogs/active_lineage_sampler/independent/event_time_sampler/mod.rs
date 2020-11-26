@@ -7,6 +7,7 @@ use necsim_core::{
 
 pub mod fixed;
 pub mod geometric;
+pub mod poisson;
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
