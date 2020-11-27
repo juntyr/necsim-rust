@@ -34,50 +34,55 @@ impl<
             .get_time_of_last_event(&self.lineage_store);
         let mut steps = 0_u64;
 
-        self.with_mut_split_active_lineage_sampler_and_rng(
-            |active_lineage_sampler, simulation, rng| {
-                while let Some((chosen_lineage, dispersal_origin, event_time)) =
+        while let Some((chosen_lineage, dispersal_origin, event_time)) = self
+            .with_mut_split_active_lineage_sampler_and_rng(
+                |active_lineage_sampler, simulation, rng| {
                     active_lineage_sampler
                         .pop_active_lineage_indexed_location_event_time(time, simulation, rng)
-                {
-                    let event = simulation.with_split_event_sampler(|event_sampler, simulation| {
-                        event_sampler.sample_event_for_lineage_at_indexed_location_time(
-                            chosen_lineage,
-                            dispersal_origin,
-                            event_time,
-                            simulation,
-                            rng,
-                        )
-                    });
+                },
+            )
+        {
+            let event =
+                self.with_mut_split_event_sampler_and_rng(|event_sampler, simulation, rng| {
+                    event_sampler.sample_event_for_lineage_at_indexed_location_time(
+                        chosen_lineage,
+                        dispersal_origin,
+                        event_time,
+                        &simulation,
+                        rng,
+                    )
+                });
 
-                    // Advance the simulation time
-                    time = event.time();
-                    steps += 1;
+            // Advance the simulation time
+            time = event.time();
+            steps += 1;
 
-                    if let EventType::Dispersal {
-                        target: dispersal_target,
-                        coalescence: None,
-                        ..
-                    } = event.r#type()
-                    {
-                        // In the event of dispersal without coalescence, the lineage remains active
+            if let EventType::Dispersal {
+                target: dispersal_target,
+                coalescence: None,
+                ..
+            } = event.r#type()
+            {
+                // In the event of dispersal without coalescence, the lineage remains active
+                self.with_mut_split_active_lineage_sampler_and_rng(
+                    |active_lineage_sampler, simulation, rng| {
                         active_lineage_sampler.push_active_lineage_to_indexed_location(
                             event.lineage_reference().clone(),
                             dispersal_target.clone(),
                             time,
                             simulation,
                             rng,
-                        );
-                    }
+                        )
+                    },
+                );
+            }
 
-                    reporter.report_event(&event);
+            reporter.report_event(&event);
 
-                    if steps >= max_steps {
-                        break;
-                    }
-                }
-            },
-        );
+            if steps >= max_steps {
+                break;
+            }
+        }
 
         (time, steps)
     }

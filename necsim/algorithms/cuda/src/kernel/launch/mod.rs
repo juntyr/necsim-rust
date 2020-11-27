@@ -2,6 +2,7 @@ use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EventSampler, HabitatToU64Injection,
         IncoherentLineageStore, LineageReference, PrimeableRng, SingularActiveLineageSampler,
+        SpeciationSample,
     },
     simulation::Simulation,
 };
@@ -9,6 +10,7 @@ use necsim_core::{
 use necsim_impls_cuda::{
     event_buffer::common::EventBufferCudaRepresentation,
     task_list::common::TaskListCudaRepresentation,
+    value_buffer::common::ValueBufferCudaRepresentation,
 };
 
 use rustacuda::error::CudaResult;
@@ -63,6 +65,7 @@ impl<
         event_buffer_ptr: DevicePointer<
             EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
         >,
+        min_spec_sample_buffer_ptr: DevicePointer<ValueBufferCudaRepresentation<SpeciationSample>>,
         max_steps: u64,
     ) -> CudaResult<()> {
         let kernel = self.entry_point;
@@ -74,7 +77,7 @@ impl<
                 self.block_size.clone(),
                 self.shared_mem_bytes,
                 stream
-            >>>(simulation_ptr, task_list_ptr, event_buffer_ptr, max_steps)
+            >>>(simulation_ptr, task_list_ptr, event_buffer_ptr, min_spec_sample_buffer_ptr, max_steps)
         )
     }
 }

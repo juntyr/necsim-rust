@@ -87,6 +87,31 @@ impl<
         )
     }
 
+    pub fn with_mut_split_event_sampler_and_rng<
+        's,
+        Q,
+        F: FnOnce(
+            &'s mut E,
+            &super::partial::event_sampler::PartialSimulation<'s, H, G, D, R, S, C>,
+            &'s mut G,
+        ) -> Q,
+    >(
+        &'s mut self,
+        func: F,
+    ) -> Q {
+        let simulation = super::partial::event_sampler::PartialSimulation {
+            speciation_probability_per_generation: &self.speciation_probability_per_generation,
+            habitat: &self.habitat,
+            rng: PhantomData::<G>,
+            dispersal_sampler: &self.dispersal_sampler,
+            lineage_reference: &self.lineage_reference,
+            lineage_store: &self.lineage_store,
+            coalescence_sampler: &self.coalescence_sampler,
+        };
+
+        func(&mut self.event_sampler, &simulation, &mut self.rng)
+    }
+
     pub fn rng_mut(&mut self) -> &mut G {
         &mut self.rng
     }
@@ -109,6 +134,10 @@ impl<
 
     pub fn event_sampler(&self) -> &E {
         &self.event_sampler
+    }
+
+    pub fn event_sampler_mut(&mut self) -> &mut E {
+        &mut self.event_sampler
     }
 
     pub fn speciation_probability_per_generation(&self) -> f64 {

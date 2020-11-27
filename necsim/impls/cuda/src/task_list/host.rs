@@ -50,27 +50,30 @@ impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> TaskListHost<
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     pub fn with_upload_and_fetch_tasks<
-        T,
+        A,
         Q,
-        U: FnOnce(&mut T, &mut [Option<R>]),
-        I: FnOnce(DevicePointer<super::common::TaskListCudaRepresentation<H, R>>) -> CudaResult<Q>,
-        F: FnOnce(&mut T, &mut [Option<R>]),
+        U: FnOnce(&mut A, &mut [Option<R>]),
+        I: FnOnce(
+            &mut A,
+            DevicePointer<super::common::TaskListCudaRepresentation<H, R>>,
+        ) -> CudaResult<Q>,
+        F: FnOnce(&mut A, &mut [Option<R>]),
     >(
         &mut self,
-        task_list: &mut T,
+        auxiliary: &mut A,
         upload: U,
         inner: I,
         fetch: F,
     ) -> CudaResult<Q> {
-        upload(task_list, self.host_list.as_mut_slice());
+        upload(auxiliary, self.host_list.as_mut_slice());
 
         self.device_list.copy_from(self.host_list.deref_mut())?;
 
-        let result = inner(self.cuda_repr_box.as_device_ptr())?;
+        let result = inner(auxiliary, self.cuda_repr_box.as_device_ptr())?;
 
         self.device_list.copy_to(self.host_list.deref_mut())?;
 
-        fetch(task_list, self.host_list.as_mut_slice());
+        fetch(auxiliary, self.host_list.as_mut_slice());
 
         Ok(result)
     }

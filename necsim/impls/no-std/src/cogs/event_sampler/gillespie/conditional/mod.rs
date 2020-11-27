@@ -64,7 +64,7 @@ impl<
         } => ((ret.origin() == target) -> coalescence.is_some()),
     }, "always coalesces on self-dispersal")]
     fn sample_event_for_lineage_at_indexed_location_time(
-        &self,
+        &mut self,
         lineage_reference: R,
         indexed_location: IndexedLocation,
         event_time: f64,

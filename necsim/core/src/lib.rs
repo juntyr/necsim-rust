@@ -4,6 +4,7 @@
 #![feature(stmt_expr_attributes)]
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
+#![feature(total_cmp)]
 
 extern crate alloc;
 

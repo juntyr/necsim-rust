@@ -1,8 +1,12 @@
 #![deny(clippy::pedantic)]
 #![feature(min_const_generics)]
+#![feature(slice_fill)]
 
 #[macro_use]
 extern crate contracts;
+
+#[macro_use]
+extern crate bitvec;
 
 use anyhow::Result;
 
@@ -18,15 +22,15 @@ use necsim_core::{
     simulation::Simulation,
 };
 
-use necsim_impls_cuda::{event_buffer::host::EventBufferHost, task_list::host::TaskListHost};
+use necsim_impls_cuda::{
+    event_buffer::host::EventBufferHost, task_list::host::TaskListHost,
+    value_buffer::host::ValueBufferHost,
+};
 use necsim_impls_no_std::reporter::ReporterContext;
 
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::independent::{
-        event_time_sampler::{
-            fixed::FixedEventTimeSampler, geometric::GeometricEventTimeSampler,
-            poisson::PoissonEventTimeSampler,
-        },
+        event_time_sampler::poisson::PoissonEventTimeSampler,
         IndependentActiveLineageSampler as ActiveLineageSampler,
     },
     coalescence_sampler::independent::IndependentCoalescenceSampler as CoalescenceSampler,
@@ -116,6 +120,7 @@ impl CudaSimulation {
 
                 SimulationKernel::with_kernel(|kernel| {
                     let task_list = TaskListHost::new(&block_size, &grid_size)?;
+                    let min_spec_sample_buffer = ValueBufferHost::new(&block_size, &grid_size)?;
 
                     #[allow(clippy::type_complexity)]
                     let event_buffer: EventBufferHost<
@@ -138,6 +143,7 @@ impl CudaSimulation {
                         simulation,
                         task_list,
                         event_buffer,
+                        min_spec_sample_buffer,
                         SIMULATION_STEP_SLICE as u64,
                     )
                 })
