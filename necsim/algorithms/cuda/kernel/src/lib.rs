@@ -56,6 +56,7 @@ use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EventSampler, HabitatToU64Injection,
         IncoherentLineageStore, LineageReference, PrimeableRng, SingularActiveLineageSampler,
+        SpeciationSample,
     },
     simulation::Simulation,
 };
@@ -65,6 +66,7 @@ use rustacuda_core::DeviceCopy;
 use necsim_impls_cuda::{
     event_buffer::{common::EventBufferCudaRepresentation, device::EventBufferDevice},
     task_list::{common::TaskListCudaRepresentation, device::TaskListDevice},
+    value_buffer::{common::ValueBufferCudaRepresentation, device::ValueBufferDevice},
 };
 
 use core::sync::atomic::{AtomicU64, Ordering};
@@ -81,12 +83,14 @@ pub unsafe extern "ptx-kernel" fn simulate(
     simulation_c_ptr: *mut core::ffi::c_void,
     task_list_c_ptr: *mut core::ffi::c_void,
     event_buffer_c_ptr: *mut core::ffi::c_void,
+    min_spec_sample_buffer_ptr: *mut core::ffi::c_void,
     max_steps: u64,
 ) {
     specialise!(simulate_generic)(
         simulation_c_ptr as *mut _,
         task_list_c_ptr as *mut _,
         event_buffer_c_ptr as *mut _,
+        min_spec_sample_buffer_ptr as *mut _,
         max_steps,
     )
 }
@@ -106,6 +110,7 @@ unsafe fn simulate_generic<
     simulation_ptr: *mut <Simulation<H, G, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
     task_list_ptr: *mut TaskListCudaRepresentation<H, R>,
     event_buffer_ptr: *mut EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
+    min_spec_sample_buffer_ptr: *mut ValueBufferCudaRepresentation<SpeciationSample>,
     max_steps: u64,
 ) {
     Simulation::with_borrow_from_rust_mut(simulation_ptr, |simulation| {
@@ -118,13 +123,29 @@ unsafe fn simulate_generic<
                 EventBufferDevice::with_borrow_from_rust_mut(
                     event_buffer_ptr,
                     |event_buffer_reporter| {
-                        let (time, steps) =
-                            simulation.simulate_incremental(max_steps, event_buffer_reporter);
+                        ValueBufferDevice::with_borrow_from_rust_mut(
+                            min_spec_sample_buffer_ptr,
+                            |min_spec_sample_buffer| {
+                                min_spec_sample_buffer.with_value_for_core(|min_spec_sample| {
+                                    let old_min_spec_sample = simulation
+                                        .event_sampler_mut()
+                                        .replace_min_speciation(min_spec_sample);
 
-                        if steps > 0 {
-                            global_time_max.fetch_max(time.to_bits(), Ordering::Relaxed);
-                            global_steps_sum.fetch_add(steps, Ordering::Relaxed);
-                        }
+                                    let (time, steps) = simulation
+                                        .simulate_incremental(max_steps, event_buffer_reporter);
+
+                                    if steps > 0 {
+                                        global_time_max
+                                            .fetch_max(time.to_bits(), Ordering::Relaxed);
+                                        global_steps_sum.fetch_add(steps, Ordering::Relaxed);
+                                    }
+
+                                    simulation
+                                        .event_sampler_mut()
+                                        .replace_min_speciation(old_min_spec_sample)
+                                })
+                            },
+                        )
                     },
                 );
 

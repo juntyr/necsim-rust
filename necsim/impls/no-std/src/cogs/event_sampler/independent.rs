@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EventSampler, Habitat, IncoherentLineageStore,
-        LineageReference, RngCore,
+        LineageReference, MinSpeciationTrackingEventSampler, RngCore, SpeciationSample,
     },
     event::{Event, EventType},
     landscape::IndexedLocation,
@@ -26,7 +26,10 @@ pub struct IndependentEventSampler<
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: IncoherentLineageStore<H, R>,
->(PhantomData<(H, G, D, R, S)>);
+> {
+    min_spec_sample: Option<SpeciationSample>,
+    marker: PhantomData<(H, G, D, R, S)>,
+}
 
 impl<
         H: Habitat,
@@ -37,7 +40,10 @@ impl<
     > Default for IndependentEventSampler<H, G, D, R, S>
 {
     fn default() -> Self {
-        Self(PhantomData::<(H, G, D, R, S)>)
+        Self {
+            min_spec_sample: None,
+            marker: PhantomData::<(H, G, D, R, S)>,
+        }
     }
 }
 
@@ -54,7 +60,7 @@ impl<
     #[must_use]
     #[allow(clippy::type_complexity)]
     fn sample_event_for_lineage_at_indexed_location_time(
-        &self,
+        &mut self,
         lineage_reference: R,
         indexed_location: IndexedLocation,
         event_time: f64,
@@ -63,9 +69,19 @@ impl<
     ) -> Event<H, R> {
         use necsim_core::cogs::RngSampler;
 
+        let speciation_sample = rng.sample_uniform();
+
+        let min_speciation_sample =
+            SpeciationSample::new(indexed_location.clone(), event_time, speciation_sample);
+
+        match &self.min_spec_sample {
+            Some(spec_sample) if spec_sample <= &min_speciation_sample => (),
+            _ => self.min_spec_sample = Some(min_speciation_sample),
+        }
+
         let dispersal_origin = indexed_location;
 
-        let event_type = if rng.sample_event(*simulation.speciation_probability_per_generation) {
+        let event_type = if speciation_sample < *simulation.speciation_probability_per_generation {
             EventType::Speciation
         } else {
             let dispersal_target = simulation
@@ -89,5 +105,22 @@ impl<
         };
 
         Event::new(dispersal_origin, event_time, lineage_reference, event_type)
+    }
+}
+
+impl<
+        H: Habitat,
+        G: RngCore,
+        D: DispersalSampler<H, G>,
+        R: LineageReference<H>,
+        S: IncoherentLineageStore<H, R>,
+    > MinSpeciationTrackingEventSampler<H, G, D, R, S, IndependentCoalescenceSampler<H, G, R, S>>
+    for IndependentEventSampler<H, G, D, R, S>
+{
+    fn replace_min_speciation(
+        &mut self,
+        new: Option<SpeciationSample>,
+    ) -> Option<SpeciationSample> {
+        core::mem::replace(&mut self.min_spec_sample, new)
     }
 }

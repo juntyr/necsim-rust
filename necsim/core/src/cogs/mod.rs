@@ -17,7 +17,7 @@ mod coalescence_sampler;
 pub use coalescence_sampler::CoalescenceSampler;
 
 mod event_sampler;
-pub use event_sampler::EventSampler;
+pub use event_sampler::{EventSampler, MinSpeciationTrackingEventSampler, SpeciationSample};
 
 mod active_lineage_sampler;
 pub use active_lineage_sampler::{ActiveLineageSampler, SingularActiveLineageSampler};
