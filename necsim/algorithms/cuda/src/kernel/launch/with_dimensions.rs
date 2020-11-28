@@ -1,8 +1,9 @@
 use std::marker::PhantomData;
 
 use necsim_core::cogs::{
-    CoalescenceSampler, DispersalSampler, EventSampler, HabitatToU64Injection,
-    IncoherentLineageStore, LineageReference, PrimeableRng, SingularActiveLineageSampler,
+    CoalescenceSampler, DispersalSampler, HabitatToU64Injection, IncoherentLineageStore,
+    LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
+    SingularActiveLineageSampler,
 };
 
 use rustacuda::function::{BlockSize, GridSize};
@@ -24,7 +25,7 @@ pub struct SimulationKernelWithDimensions<
     R: LineageReference<H> + DeviceCopy,
     S: IncoherentLineageStore<H, R> + RustToCuda,
     C: CoalescenceSampler<H, G, R, S> + RustToCuda,
-    E: EventSampler<H, G, D, R, S, C> + RustToCuda,
+    E: MinSpeciationTrackingEventSampler<H, G, D, R, S, C> + RustToCuda,
     A: SingularActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
     const REPORT_SPECIATION: bool,
     const REPORT_DISPERSAL: bool,
@@ -44,7 +45,7 @@ impl<
         R: LineageReference<H> + DeviceCopy,
         S: IncoherentLineageStore<H, R> + RustToCuda,
         C: CoalescenceSampler<H, G, R, S> + RustToCuda,
-        E: EventSampler<H, G, D, R, S, C> + RustToCuda,
+        E: MinSpeciationTrackingEventSampler<H, G, D, R, S, C> + RustToCuda,
         A: SingularActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
         const REPORT_SPECIATION: bool,
         const REPORT_DISPERSAL: bool,
