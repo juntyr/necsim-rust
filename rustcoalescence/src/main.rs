@@ -13,6 +13,7 @@ mod gdal;
 mod maps;
 mod reporter;
 mod simulation;
+mod tiff;
 
 use args::{Command, CommandLineArguments};
 
