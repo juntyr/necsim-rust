@@ -77,12 +77,14 @@ impl CudaSimulation {
         const REPORT_SPECIATION: bool = true;
         const REPORT_DISPERSAL: bool = false;
 
-        const SIMULATION_STEP_SLICE: usize = 100_usize;
+        const SIMULATION_STEP_SLICE: usize = 250_usize;
 
         reporter_context.with_reporter(|reporter| {
             let rng = CudaRng::<Rng>::seed_from_u64(seed);
             let coalescence_sampler = CoalescenceSampler::default();
             let event_sampler = EventSampler::default();
+
+            // dt=1.0 seems to be an almost optimal value for the PoissonEventTimeSampler
             let active_lineage_sampler =
                 ActiveLineageSampler::empty(PoissonEventTimeSampler::new(1.0_f64));
 
