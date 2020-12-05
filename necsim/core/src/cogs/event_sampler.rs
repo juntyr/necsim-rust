@@ -44,7 +44,8 @@ pub trait EventSampler<
     ) -> Event<H, R>;
 }
 
-#[derive(Clone, Debug, DeviceCopy)]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub struct SpeciationSample {
     indexed_location: IndexedLocation,
     time: f64,

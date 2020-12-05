@@ -7,10 +7,16 @@ use cast::{Error, From as _From};
 use super::gdal::load_map_f64_from_gdal_raster;
 
 pub fn load_dispersal_map(path: &PathBuf) -> Result<Array2D<f64>> {
+    crate::tiff::load_map_from_tiff::<f32>(path)
+        .with_context(|| format!("Failed to load the dispersal map from {:?}.", path))?;
+
     load_map_f64_from_gdal_raster(path).context("Failed to load the dispersal map")
 }
 
 pub fn load_habitat_map(path: &PathBuf, dispersal: &Array2D<f64>) -> Result<Array2D<u32>> {
+    crate::tiff::load_map_from_tiff::<u32>(path)
+        .with_context(|| format!("Failed to load the habiat map from {:?}.", path))?;
+
     let habitat_f64 =
         load_map_f64_from_gdal_raster(path).context("Failed to load the habitat map")?;
 
