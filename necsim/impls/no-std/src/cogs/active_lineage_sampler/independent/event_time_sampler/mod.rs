@@ -5,6 +5,7 @@ use necsim_core::{
     landscape::IndexedLocation,
 };
 
+pub mod exp;
 pub mod fixed;
 pub mod geometric;
 pub mod poisson;

@@ -2,12 +2,12 @@ use necsim_core::cogs::HabitatToU64Injection;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
-pub struct WyHash {
+pub struct XxHash {
     seed: u64,
     state: u64,
 }
 
-impl necsim_core::cogs::RngCore for WyHash {
+impl necsim_core::cogs::RngCore for XxHash {
     type Seed = [u8; 8];
 
     #[must_use]
@@ -21,21 +21,18 @@ impl necsim_core::cogs::RngCore for WyHash {
     #[must_use]
     #[inline]
     fn sample_u64(&mut self) -> u64 {
-        wyhash::wyrng(&mut self.state)
+        self.state = xxhash_rust::xxh64::xxh64(&self.state.to_le_bytes(), self.seed);
+        self.state
     }
 }
 
-impl<H: HabitatToU64Injection> necsim_core::cogs::PrimeableRng<H> for WyHash {
+impl<H: HabitatToU64Injection> necsim_core::cogs::PrimeableRng<H> for XxHash {
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         let location_bytes = location_index.to_le_bytes();
+
         let time_index_bytes = time_index.to_le_bytes();
 
-        // TODO: Check if the byte ordering affects the quality of the RNG
-        //       priming -> in order would be closer to CPRNG
-        // wyhash swaps 64bit lower and upper half, i.e. to get wyhash to
-        // process bytes in order, we would need to supply the indices as
-        // 4, 5, 6, 7, 0, 1, 2, 3.
-        self.state = wyhash::wyhash(
+        self.state = xxhash_rust::xxh64::xxh64(
             &[
                 location_bytes[0],
                 location_bytes[1],

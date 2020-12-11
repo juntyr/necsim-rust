@@ -122,5 +122,17 @@ impl<R: RngCore> RngSampler for R {}
 
 #[allow(clippy::module_name_repetitions)]
 pub trait PrimeableRng<H: HabitatToU64Injection>: RngCore {
-    fn prime_with(&mut self, habitat: &H, indexed_location: &IndexedLocation, time_index: u64);
+    fn prime_with_habitat(
+        &mut self,
+        habitat: &H,
+        indexed_location: &IndexedLocation,
+        time_index: u64,
+    ) {
+        self.prime_with(
+            habitat.map_indexed_location_to_u64_injective(indexed_location),
+            time_index,
+        )
+    }
+
+    fn prime_with(&mut self, location_index: u64, time_index: u64);
 }
