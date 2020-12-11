@@ -34,7 +34,7 @@ impl<H: HabitatToU64Injection, G: PrimeableRng<H>> EventTimeSampler<H, G>
         #[allow(clippy::cast_sign_loss)]
         let time_step = floor(time * lambda) as u64 + 1;
 
-        rng.prime_with(habitat, indexed_location, time_step);
+        rng.prime_with_habitat(habitat, indexed_location, time_step);
 
         #[allow(clippy::cast_precision_loss)]
         (time_step as f64)

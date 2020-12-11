@@ -100,6 +100,11 @@ fn main() -> ! {
                         panic!("Failed to read kernel file at {:?}.", &kernel_path)
                     });
 
+                    // let kernel_index = kernel_ptx.find(".visible .entry").unwrap();
+                    // let body_index = kernel_ptx[kernel_index..].find("{").unwrap();
+
+                    // kernel_ptx.insert_str(kernel_index + body_index, ".maxnreg 128 ");
+
                     specialised_kernels.push(kernel_ptx);
                 },
                 Err(error) => {

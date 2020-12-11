@@ -42,7 +42,7 @@ impl<H: HabitatToU64Injection, G: PrimeableRng<H>> EventTimeSampler<H, G>
         let mut time_step = floor(time / self.delta_t) as u64;
 
         let (event_time, event_index) = loop {
-            rng.prime_with(habitat, indexed_location, time_step << 8);
+            rng.prime_with_habitat(habitat, indexed_location, time_step << 8);
 
             // https://en.wikipedia.org/wiki/Poisson_distribution#cite_ref-Devroye1986_54-0
             let mut x = 0_u8;
@@ -82,7 +82,7 @@ impl<H: HabitatToU64Injection, G: PrimeableRng<H>> EventTimeSampler<H, G>
             }
         };
 
-        rng.prime_with(
+        rng.prime_with_habitat(
             habitat,
             indexed_location,
             (time_step << 8) | u64::from(event_index + 1),
