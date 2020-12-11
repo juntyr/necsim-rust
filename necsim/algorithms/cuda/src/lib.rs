@@ -30,12 +30,12 @@ use necsim_impls_no_std::reporter::ReporterContext;
 
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::independent::{
-        event_time_sampler::poisson::PoissonEventTimeSampler,
+        event_time_sampler::exp::ExpEventTimeSampler,
         IndependentActiveLineageSampler as ActiveLineageSampler,
     },
     coalescence_sampler::independent::IndependentCoalescenceSampler as CoalescenceSampler,
     event_sampler::independent::IndependentEventSampler as EventSampler,
-    rng::wyhash::WyHash as Rng,
+    rng::fixedseahash::FixedSeaHash as Rng,
 };
 
 use necsim_impls_cuda::cogs::rng::CudaRng;
@@ -84,9 +84,9 @@ impl CudaSimulation {
             let coalescence_sampler = CoalescenceSampler::default();
             let event_sampler = EventSampler::default();
 
-            // dt=1.0 seems to be an almost optimal value for the PoissonEventTimeSampler
+            // TODO: Need to test dt on a variety of seeds to see which is optimal
             let active_lineage_sampler =
-                ActiveLineageSampler::empty(PoissonEventTimeSampler::new(1.0_f64));
+                ActiveLineageSampler::empty(ExpEventTimeSampler::new(1.0_f64)); // FixedEventTimeSampler::default());//PoissonEventTimeSampler::new(1.0_f64));
 
             let simulation = Simulation::builder()
                 .speciation_probability_per_generation(speciation_probability_per_generation)
