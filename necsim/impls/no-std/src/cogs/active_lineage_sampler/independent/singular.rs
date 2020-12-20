@@ -34,8 +34,7 @@ impl<
         active_lineage_reference: Option<R>,
         lineage_store: &mut S,
     ) -> Option<R> {
-        let old_lineage_reference =
-            core::mem::replace(&mut self.active_lineage_reference, active_lineage_reference);
+        let old_lineage_reference = self.active_lineage_reference.take();
 
         // Save the state of the old lineage reference back to the lineage store
         if let Some(lineage_reference) = &old_lineage_reference {
@@ -54,13 +53,14 @@ impl<
         }
 
         // Load the state of the new lineage reference from the lineage store
-        if let Some(lineage_reference) = &self.active_lineage_reference {
+        if let Some(lineage_reference) = active_lineage_reference {
             if let Some(lineage) = lineage_store.get(lineage_reference.clone()) {
                 if lineage.is_active() {
                     self.lineage_time_of_last_event = lineage.time_of_last_event();
                     self.lineage_indexed_location = Some(
                         lineage_store.extract_lineage_from_its_location(lineage_reference.clone()),
                     );
+                    self.active_lineage_reference = Some(lineage_reference);
                 }
             }
         }
