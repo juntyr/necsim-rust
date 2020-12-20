@@ -86,5 +86,9 @@ pub trait SingularActiveLineageSampler<
 >: ActiveLineageSampler<H, G, D, R, S, C, E>
 {
     #[must_use]
-    fn replace_active_lineage(&mut self, active_lineage_reference: Option<R>) -> Option<R>;
+    fn replace_active_lineage(
+        &mut self,
+        active_lineage_reference: Option<R>,
+        lineage_store: &mut S,
+    ) -> Option<R>;
 }

@@ -35,14 +35,11 @@ impl<
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
-        self.active_lineage_reference.is_some() as usize
+        self.lineage_indexed_location.is_some() as usize
     }
 
-    fn get_time_of_last_event(&self, lineage_store: &S) -> f64 {
-        self.active_lineage_reference
-            .as_ref()
-            .and_then(|lineage_reference| lineage_store.get(lineage_reference.clone()))
-            .map_or(0.0_f64, necsim_core::lineage::Lineage::time_of_last_event)
+    fn get_time_of_last_event(&self, _lineage_store: &S) -> f64 {
+        self.lineage_time_of_last_event
     }
 
     #[must_use]
@@ -61,23 +58,16 @@ impl<
         >,
         rng: &mut G,
     ) -> Option<(R, IndexedLocation, f64)> {
-        let chosen_lineage_reference = match self.active_lineage_reference.take() {
-            Some(chosen_active_lineage) => chosen_active_lineage,
+        let chosen_lineage_reference = match self.active_lineage_reference {
+            Some(ref chosen_active_lineage) => chosen_active_lineage.clone(),
             None => return None,
         };
 
-        // Check for extraneously simulated lineages
-        match simulation
-            .lineage_store
-            .get(chosen_lineage_reference.clone())
-        {
-            Some(lineage) if lineage.is_active() => (),
-            _ => return None,
-        }
-
-        let lineage_indexed_location = simulation
-            .lineage_store
-            .extract_lineage_from_its_location(chosen_lineage_reference.clone());
+        // Check for extraneously simulated (inactive) lineages
+        let lineage_indexed_location = match self.lineage_indexed_location.take() {
+            Some(lineage_indexed_location) => lineage_indexed_location,
+            None => return None,
+        };
 
         let next_event_time = self
             .event_time_sampler
@@ -88,9 +78,7 @@ impl<
                 rng,
             );
 
-        simulation
-            .lineage_store
-            .update_lineage_time_of_last_event(chosen_lineage_reference.clone(), next_event_time);
+        self.lineage_time_of_last_event = next_event_time;
 
         Some((
             chosen_lineage_reference,
@@ -103,13 +91,17 @@ impl<
         self.number_active_lineages() == 0,
         "does not overwrite the independent lineage"
     )]
+    #[debug_requires(
+        self.active_lineage_reference == Some(lineage_reference.clone()),
+        "does not introduce a new lineage reference"
+    )]
     #[allow(clippy::type_complexity)]
     fn push_active_lineage_to_indexed_location(
         &mut self,
         lineage_reference: R,
         indexed_location: IndexedLocation,
         _time: f64,
-        simulation: &mut PartialSimulation<
+        _simulation: &mut PartialSimulation<
             H,
             G,
             D,
@@ -120,9 +112,7 @@ impl<
         >,
         _rng: &mut G,
     ) {
-        simulation
-            .lineage_store
-            .insert_lineage_to_indexed_location(lineage_reference.clone(), indexed_location);
+        self.lineage_indexed_location = Some(indexed_location);
 
         self.active_lineage_reference = Some(lineage_reference);
     }

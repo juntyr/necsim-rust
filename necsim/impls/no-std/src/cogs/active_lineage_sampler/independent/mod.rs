@@ -1,7 +1,11 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{
-    DispersalSampler, HabitatToU64Injection, IncoherentLineageStore, LineageReference, PrimeableRng,
+use necsim_core::{
+    cogs::{
+        DispersalSampler, HabitatToU64Injection, IncoherentLineageStore, LineageReference,
+        PrimeableRng,
+    },
+    landscape::IndexedLocation,
 };
 
 mod sampler;
@@ -29,6 +33,8 @@ pub struct IndependentActiveLineageSampler<
     S: IncoherentLineageStore<H, R>,
 > {
     active_lineage_reference: Option<R>,
+    lineage_indexed_location: Option<IndexedLocation>,
+    lineage_time_of_last_event: f64,
     event_time_sampler: T,
     marker: PhantomData<(H, G, D, S)>,
 }
@@ -43,20 +49,35 @@ impl<
     > IndependentActiveLineageSampler<H, G, T, D, R, S>
 {
     #[must_use]
-    pub fn new_from(event_time_sampler: T, active_lineage_reference: R, lineage_store: &S) -> Self {
-        Self {
-            active_lineage_reference: lineage_store
-                .get(active_lineage_reference.clone())
-                .map(|_| active_lineage_reference),
-            event_time_sampler,
-            marker: PhantomData::<(H, G, D, S)>,
+    pub fn new_from(
+        event_time_sampler: T,
+        active_lineage_reference: R,
+        lineage_store: &mut S,
+    ) -> Self {
+        #[allow(clippy::option_if_let_else)]
+        if let Some(lineage) = lineage_store.get(active_lineage_reference.clone()) {
+            if lineage.is_active() {
+                return Self {
+                    active_lineage_reference: Some(active_lineage_reference.clone()),
+                    lineage_time_of_last_event: lineage.time_of_last_event(),
+                    lineage_indexed_location: Some(
+                        lineage_store.extract_lineage_from_its_location(active_lineage_reference),
+                    ),
+                    event_time_sampler,
+                    marker: PhantomData::<(H, G, D, S)>,
+                };
+            }
         }
+
+        Self::empty(event_time_sampler)
     }
 
     #[must_use]
     pub fn empty(event_time_sampler: T) -> Self {
         Self {
             active_lineage_reference: None,
+            lineage_indexed_location: None,
+            lineage_time_of_last_event: 0.0_f64,
             event_time_sampler,
             marker: PhantomData::<(H, G, D, S)>,
         }

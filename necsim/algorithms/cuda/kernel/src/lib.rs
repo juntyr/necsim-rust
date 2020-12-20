@@ -118,7 +118,7 @@ unsafe fn simulate_generic<
             task_list.with_task_for_core(|task| {
                 let saved_task = simulation
                     .active_lineage_sampler_mut()
-                    .replace_active_lineage(task);
+                    .replace_active_lineage(task, simulation.lineage_store_mut());
 
                 EventBufferDevice::with_borrow_from_rust_mut(
                     event_buffer_ptr,
@@ -151,7 +151,7 @@ unsafe fn simulate_generic<
 
                 simulation
                     .active_lineage_sampler_mut()
-                    .replace_active_lineage(saved_task)
+                    .replace_active_lineage(saved_task, simulation.lineage_store_mut())
             })
         })
     })
