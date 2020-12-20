@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use priority_queue::PriorityQueue;
 
 use necsim_core::{
@@ -46,48 +44,40 @@ impl<
 {
     #[must_use]
     pub fn new(
-        speciation_probability_per_generation: f64,
-        habitat: &H,
-        dispersal_sampler: &D,
-        lineage_store: &S,
-        coalescence_sampler: &C,
+        partial_simulation: &PartialSimulation<H, G, D, R, S, C>,
         event_sampler: &E,
         rng: &mut G,
     ) -> Self {
         use necsim_core::cogs::RngSampler;
 
-        let lineage_reference = std::marker::PhantomData::<R>;
-        let partial_simulation = PartialSimulation {
-            speciation_probability_per_generation: &speciation_probability_per_generation,
-            rng: PhantomData::<G>,
-            habitat,
-            dispersal_sampler,
-            lineage_reference: &lineage_reference,
-            lineage_store,
-            coalescence_sampler,
-        };
-
         let mut active_locations: Vec<(Location, EventTime)> = Vec::new();
 
         let mut number_active_lineages: usize = 0;
 
-        lineage_store.iter_active_locations().for_each(|location| {
-            let number_active_lineages_at_location = lineage_store
-                .get_active_lineages_at_location(&location)
-                .len();
+        partial_simulation
+            .lineage_store
+            .iter_active_locations()
+            .for_each(|location| {
+                let number_active_lineages_at_location = partial_simulation
+                    .lineage_store
+                    .get_active_lineages_at_location(&location)
+                    .len();
 
-            if number_active_lineages_at_location > 0 {
-                let event_rate_at_location =
-                    event_sampler.get_event_rate_at_location(&location, &partial_simulation, true);
+                if number_active_lineages_at_location > 0 {
+                    let event_rate_at_location = event_sampler.get_event_rate_at_location(
+                        &location,
+                        partial_simulation,
+                        true,
+                    );
 
-                active_locations.push((
-                    location,
-                    EventTime::from(rng.sample_exponential(event_rate_at_location)),
-                ));
+                    active_locations.push((
+                        location,
+                        EventTime::from(rng.sample_exponential(event_rate_at_location)),
+                    ));
 
-                number_active_lineages += number_active_lineages_at_location;
-            }
-        });
+                    number_active_lineages += number_active_lineages_at_location;
+                }
+            });
 
         active_locations.shrink_to_fit();
 

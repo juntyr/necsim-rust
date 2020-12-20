@@ -94,8 +94,8 @@ impl<
                 .coalescence_sampler
                 .sample_optional_coalescence_at_location(
                     dispersal_target,
-                    simulation.habitat,
-                    simulation.lineage_store,
+                    &simulation.habitat,
+                    &simulation.lineage_store,
                     rng,
                 );
 
@@ -108,7 +108,7 @@ impl<
             let (dispersal_target, coalescence) =
                 ConditionalCoalescenceSampler::sample_coalescence_at_location(
                     dispersal_origin.location().clone(),
-                    simulation.lineage_store,
+                    &simulation.lineage_store,
                     rng,
                 );
 

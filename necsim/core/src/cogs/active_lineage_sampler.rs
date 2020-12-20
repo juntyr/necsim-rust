@@ -49,7 +49,7 @@ pub trait ActiveLineageSampler<
     #[debug_ensures(match ret {
         None => true,
         Some((ref _reference, ref _location, event_time)) => {
-            self.get_time_of_last_event(simulation.lineage_store) == event_time
+            self.get_time_of_last_event(&simulation.lineage_store) == event_time
         },
     }, "updates the time of the last event")]
     fn pop_active_lineage_indexed_location_event_time(

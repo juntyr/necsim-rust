@@ -25,8 +25,8 @@ pub trait EventSampler<
     #[allow(clippy::float_cmp)]
     #[debug_requires(event_time >= 0.0_f64, "event time is non-negative")]
     #[debug_requires(
-        *simulation.speciation_probability_per_generation >= 0.0_f64 &&
-        *simulation.speciation_probability_per_generation <= 1.0_f64,
+        simulation.speciation_probability_per_generation >= 0.0_f64 &&
+        simulation.speciation_probability_per_generation <= 1.0_f64,
         "speciation_probability_per_generation is a probability"
     )]
     #[debug_ensures(

@@ -24,8 +24,8 @@ pub trait GillespieEventSampler<
 {
     #[must_use]
     #[debug_requires(
-        *simulation.speciation_probability_per_generation >= 0.0_f64 &&
-        *simulation.speciation_probability_per_generation <= 1.0_f64,
+        simulation.speciation_probability_per_generation >= 0.0_f64 &&
+        simulation.speciation_probability_per_generation <= 1.0_f64,
         "speciation_probability_per_generation is a probability"
     )]
     #[debug_ensures(ret >= 0.0_f64, "returns a rate")]

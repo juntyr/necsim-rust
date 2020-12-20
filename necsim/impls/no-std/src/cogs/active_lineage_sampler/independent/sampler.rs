@@ -84,7 +84,7 @@ impl<
             .next_event_time_at_indexed_location_after(
                 &lineage_indexed_location,
                 time,
-                simulation.habitat,
+                &simulation.habitat,
                 rng,
             );
 

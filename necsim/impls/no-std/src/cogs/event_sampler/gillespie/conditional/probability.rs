@@ -32,13 +32,13 @@ impl ProbabilityAtLocation {
         let coalescence_probability_at_location =
             ConditionalCoalescenceSampler::<H, G, R, S>::get_coalescence_probability_at_location(
                 location,
-                simulation.habitat,
-                simulation.lineage_store,
+                &simulation.habitat,
+                &simulation.lineage_store,
                 lineage_store_includes_self,
             );
 
         Self {
-            speciation: *simulation.speciation_probability_per_generation,
+            speciation: simulation.speciation_probability_per_generation,
             out_dispersal: (1.0_f64 - simulation.speciation_probability_per_generation)
                 * (1.0_f64 - self_dispersal_probability),
             self_coalescence: (1.0_f64 - simulation.speciation_probability_per_generation)
