@@ -4,9 +4,11 @@
 #[macro_use]
 extern crate contracts;
 
+use std::marker::PhantomData;
+
 use necsim_core::{
     cogs::{CoherentLineageStore, DispersalSampler, Habitat, LineageReference, RngCore},
-    simulation::Simulation,
+    simulation::{partial::event_sampler::PartialSimulation, Simulation},
 };
 
 use necsim_impls_no_std::cogs::{
@@ -52,22 +54,38 @@ impl GillespieSimulation {
             let mut rng = StdRng::seed_from_u64(seed);
             let coalescence_sampler = UnconditionalCoalescenceSampler::default();
             let event_sampler = UnconditionalGillespieEventSampler::default();
-            let active_lineage_sampler = GillespieActiveLineageSampler::new(
+
+            // Pack a PartialSimulation to initialise the GillespieActiveLineageSampler
+            let partial_simulation = PartialSimulation {
                 speciation_probability_per_generation,
-                &habitat,
-                &dispersal_sampler,
-                &lineage_store,
-                &coalescence_sampler,
-                &event_sampler,
-                &mut rng,
-            );
+                habitat,
+                dispersal_sampler,
+                lineage_reference: PhantomData::<R>,
+                lineage_store,
+                coalescence_sampler,
+                rng: PhantomData::<StdRng>,
+            };
+
+            let active_lineage_sampler =
+                GillespieActiveLineageSampler::new(&partial_simulation, &event_sampler, &mut rng);
+
+            // Unpack the PartialSimulation to create the full Simulation
+            let PartialSimulation {
+                speciation_probability_per_generation,
+                habitat,
+                dispersal_sampler,
+                lineage_reference,
+                lineage_store,
+                coalescence_sampler,
+                rng: _,
+            } = partial_simulation;
 
             let simulation = Simulation::builder()
                 .speciation_probability_per_generation(speciation_probability_per_generation)
                 .habitat(habitat)
                 .rng(rng)
                 .dispersal_sampler(dispersal_sampler)
-                .lineage_reference(std::marker::PhantomData::<R>)
+                .lineage_reference(lineage_reference)
                 .lineage_store(lineage_store)
                 .coalescence_sampler(coalescence_sampler)
                 .event_sampler(event_sampler)

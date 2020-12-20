@@ -58,7 +58,7 @@ impl<
 
         let dispersal_origin = indexed_location;
 
-        let event_type = if rng.sample_event(*simulation.speciation_probability_per_generation) {
+        let event_type = if rng.sample_event(simulation.speciation_probability_per_generation) {
             EventType::Speciation
         } else {
             let dispersal_target = simulation
@@ -69,8 +69,8 @@ impl<
                 .coalescence_sampler
                 .sample_optional_coalescence_at_location(
                     dispersal_target,
-                    simulation.habitat,
-                    simulation.lineage_store,
+                    &simulation.habitat,
+                    &simulation.lineage_store,
                     rng,
                 );
 

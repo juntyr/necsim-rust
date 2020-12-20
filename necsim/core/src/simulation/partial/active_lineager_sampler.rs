@@ -5,8 +5,8 @@ use crate::cogs::{
     RngCore,
 };
 
+#[repr(C)]
 pub struct PartialSimulation<
-    's,
     H: Habitat,
     G: RngCore,
     D: DispersalSampler<H, G>,
@@ -15,18 +15,17 @@ pub struct PartialSimulation<
     C: CoalescenceSampler<H, G, R, S>,
     E: EventSampler<H, G, D, R, S, C>,
 > {
-    pub speciation_probability_per_generation: &'s f64,
-    pub habitat: &'s H,
+    pub speciation_probability_per_generation: f64,
+    pub habitat: H,
+    pub dispersal_sampler: D,
+    pub lineage_reference: PhantomData<R>,
+    pub lineage_store: S,
+    pub coalescence_sampler: C,
+    pub event_sampler: E,
     pub rng: PhantomData<G>,
-    pub dispersal_sampler: &'s D,
-    pub lineage_reference: &'s PhantomData<R>,
-    pub lineage_store: &'s mut S,
-    pub coalescence_sampler: &'s C,
-    pub event_sampler: &'s E,
 }
 
 impl<
-        's,
         H: Habitat,
         G: RngCore,
         D: DispersalSampler<H, G>,
@@ -34,25 +33,23 @@ impl<
         S: LineageStore<H, R>,
         C: CoalescenceSampler<H, G, R, S>,
         E: EventSampler<H, G, D, R, S, C>,
-    > PartialSimulation<'s, H, G, D, R, S, C, E>
+    > PartialSimulation<H, G, D, R, S, C, E>
 {
     pub fn with_split_event_sampler<
         Q,
-        F: FnOnce(&'s E, &super::event_sampler::PartialSimulation<'s, H, G, D, R, S, C>) -> Q,
+        F: FnOnce(&E, &super::event_sampler::PartialSimulation<H, G, D, R, S, C>) -> Q,
     >(
-        &'s self,
+        &self,
         func: F,
     ) -> Q {
-        let simulation = super::event_sampler::PartialSimulation {
-            speciation_probability_per_generation: self.speciation_probability_per_generation,
-            habitat: self.habitat,
-            rng: self.rng,
-            dispersal_sampler: self.dispersal_sampler,
-            lineage_reference: self.lineage_reference,
-            lineage_store: self.lineage_store,
-            coalescence_sampler: self.coalescence_sampler,
+        // Cast &self to a &PartialSimulation without the event sampler
+        // This is only safe as both types have the same fields and layout except for
+        // event_sampler in Self at the end
+        let partial_simulation = unsafe {
+            &*(self as *const Self
+                as *const super::event_sampler::PartialSimulation<H, G, D, R, S, C>)
         };
 
-        func(self.event_sampler, &simulation)
+        func(&self.event_sampler, partial_simulation)
     }
 }
