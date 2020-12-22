@@ -14,6 +14,7 @@ use rustacuda_core::DeviceCopy;
 #[cfg(feature = "cuda")]
 use rust_cuda::common::RustToCuda;
 
+#[derive(TypeLayout)]
 pub struct Event<H: Habitat, R: LineageReference<H>> {
     origin: IndexedLocation,
     time: f64,

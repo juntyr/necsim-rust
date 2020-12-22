@@ -8,12 +8,10 @@ use necsim_core::cogs::{
     SingularActiveLineageSampler,
 };
 
-use rustacuda::module::Module;
+use rustacuda::{function::Function, module::Module};
 use rustacuda_core::DeviceCopy;
 
 use rust_cuda::{common::RustToCuda, host::CudaDropWrapper};
-
-use crate::info;
 
 use super::{specialiser, SimulationKernel};
 
@@ -56,8 +54,6 @@ impl<
         // Load the kernel function from the module
         let entry_point = module.get_function(&CString::new("simulate").unwrap())?;
 
-        info::print_kernel_function_attributes(&entry_point);
-
         let kernel = SimulationKernel {
             module: &module,
             entry_point: &entry_point,
@@ -65,6 +61,10 @@ impl<
         };
 
         inner(&kernel)
+    }
+
+    pub fn function(&self) -> &Function {
+        &self.entry_point
     }
 }
 

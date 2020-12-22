@@ -10,10 +10,6 @@ extern crate alloc;
 #[macro_use]
 extern crate rust_cuda_derive;
 
-#[cfg(feature = "cuda")]
-#[macro_use]
-extern crate rustacuda_derive;
-
 #[macro_use]
 extern crate contracts;
 

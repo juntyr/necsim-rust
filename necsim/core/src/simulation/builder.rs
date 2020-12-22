@@ -8,7 +8,7 @@ use crate::cogs::{
     LineageReference, LineageStore, RngCore,
 };
 
-#[derive(TypedBuilder, Debug)]
+#[derive(TypedBuilder, Debug, TypeLayout)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda, LendToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]

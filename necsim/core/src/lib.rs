@@ -22,6 +22,9 @@ extern crate rust_cuda_derive;
 #[macro_use]
 extern crate rustacuda_derive;
 
+#[macro_use]
+extern crate type_layout;
+
 pub mod cogs;
 pub mod event;
 pub mod intrinsics;
