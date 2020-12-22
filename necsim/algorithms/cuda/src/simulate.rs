@@ -55,6 +55,11 @@ pub fn simulate<
     mut min_spec_sample_buffer: ValueBufferHost<SpeciationSample>,
     max_steps: u64,
 ) -> Result<(f64, u64)> {
+    // TODO: Remove once debugging data structure layout is no longer necessary
+    use type_layout::TypeLayout;
+    println!("{}", Simulation::<H, G, D, R, S, C, E, A>::type_layout());
+    println!("{}", necsim_core::event::Event::<H, R>::type_layout());
+
     // Load and initialise the global_time_max and global_steps_sum symbols
     let mut global_time_max_symbol: Symbol<f64> =
         kernel.get_global(&CString::new("global_time_max").unwrap())?;

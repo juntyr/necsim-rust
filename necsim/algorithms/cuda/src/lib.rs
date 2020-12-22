@@ -11,7 +11,7 @@ extern crate bitvec;
 use anyhow::Result;
 
 use rustacuda::{
-    function::{BlockSize, GridSize},
+    function::{BlockSize, FunctionAttribute, GridSize},
     stream::{Stream, StreamFlags},
 };
 
@@ -100,27 +100,42 @@ impl CudaSimulation {
                 .active_lineage_sampler(active_lineage_sampler)
                 .build();
 
-            // TODO: Need a way to tune these based on the available CUDA device or cmd args
-            let block_size = BlockSize::xy(16, 16);
+            // TODO: Need a way to tune the grid size based on the CUDA device or via cmd
+            // parameters
             let grid_size = GridSize::xy(16, 16);
-
-            #[allow(clippy::cast_possible_truncation)]
-            let grid_amount = {
-                #[allow(clippy::cast_possible_truncation)]
-                let total_individuals = simulation.lineage_store().get_number_total_lineages();
-
-                let block_size = (block_size.x * block_size.y * block_size.z) as usize;
-                let grid_size = (grid_size.x * grid_size.y * grid_size.z) as usize;
-
-                let task_size = block_size * grid_size;
-
-                (total_individuals / task_size) + ((total_individuals % task_size > 0) as usize)
-            } as u32;
 
             let (time, steps) = with_initialised_cuda(|| {
                 let stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
 
                 SimulationKernel::with_kernel(|kernel| {
+                    info::print_kernel_function_attributes(kernel.function());
+
+                    // TODO: It seems to be more performant to spawn smaller tasks than to use
+                    //        the full parallelism - why?
+                    //       Does it have to do with detecting duplication slower (we could increase
+                    //        the step size bit by bit) or with bottlenecks on the GPU?
+                    #[allow(clippy::cast_sign_loss)]
+                    let _max_threads_per_block = kernel
+                        .function()
+                        .get_attribute(FunctionAttribute::MaxThreadsPerBlock)?
+                        as u32;
+                    let block_size = BlockSize::xy(32, 1); // max_threads_per_block / 32);
+
+                    #[allow(clippy::cast_possible_truncation)]
+                    let grid_amount = {
+                        #[allow(clippy::cast_possible_truncation)]
+                        let total_individuals =
+                            simulation.lineage_store().get_number_total_lineages();
+
+                        let block_size = (block_size.x * block_size.y * block_size.z) as usize;
+                        let grid_size = (grid_size.x * grid_size.y * grid_size.z) as usize;
+
+                        let task_size = block_size * grid_size;
+
+                        (total_individuals / task_size)
+                            + ((total_individuals % task_size > 0) as usize)
+                    } as u32;
+
                     let task_list = TaskListHost::new(&block_size, &grid_size)?;
                     let min_spec_sample_buffer = ValueBufferHost::new(&block_size, &grid_size)?;
 
