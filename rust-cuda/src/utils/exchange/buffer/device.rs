@@ -2,7 +2,7 @@ use core::ops::{Deref, DerefMut};
 
 use rustacuda_core::DeviceCopy;
 
-use rust_cuda::common::RustToCuda;
+use crate::common::RustToCuda;
 
 use super::CudaExchangeBufferCudaRepresentation;
 

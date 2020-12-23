@@ -63,11 +63,7 @@ use necsim_core::{
 use rust_cuda::{common::RustToCuda, device::BorrowFromRust};
 use rustacuda_core::DeviceCopy;
 
-use necsim_impls_cuda::{
-    event_buffer::{common::EventBufferCudaRepresentation, device::EventBufferDevice},
-    task_list::{common::TaskListCudaRepresentation, device::TaskListDevice},
-    value_buffer::{common::ValueBufferCudaRepresentation, device::ValueBufferDevice},
-};
+use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
 use core::sync::atomic::{AtomicU64, Ordering};
 
@@ -114,16 +110,18 @@ unsafe fn simulate_generic<
     simulation_cuda_repr: DeviceBoxMut<
         <Simulation<H, G, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
     >,
-    task_list_cuda_repr: DeviceBoxMut<TaskListCudaRepresentation<H, R>>,
+    task_list_cuda_repr: DeviceBoxMut<<ValueBuffer<R> as RustToCuda>::CudaRepresentation>,
     event_buffer_cuda_repr: DeviceBoxMut<
-        EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
+        <EventBuffer<H, R, REPORT_SPECIATION, REPORT_DISPERSAL> as RustToCuda>::CudaRepresentation,
     >,
-    min_spec_sample_buffer_cuda_repr: DeviceBoxMut<ValueBufferCudaRepresentation<SpeciationSample>>,
+    min_spec_sample_buffer_cuda_repr: DeviceBoxMut<
+        <ValueBuffer<SpeciationSample> as RustToCuda>::CudaRepresentation,
+    >,
     max_steps: u64,
 ) {
     Simulation::with_borrow_from_rust_mut(simulation_cuda_repr, |simulation| {
-        TaskListDevice::with_borrow_from_rust_mut(task_list_cuda_repr, |task_list| {
-            task_list.with_task_for_core(|task| {
+        ValueBuffer::with_borrow_from_rust_mut(task_list_cuda_repr, |task_list| {
+            task_list.with_value_for_core(|task| {
                 let saved_task = simulation.with_mut_split_active_lineage_sampler_and_rng(
                     |active_lineage_sampler, simulation, _rng| {
                         active_lineage_sampler
@@ -131,10 +129,10 @@ unsafe fn simulate_generic<
                     },
                 );
 
-                EventBufferDevice::with_borrow_from_rust_mut(
+                EventBuffer::with_borrow_from_rust_mut(
                     event_buffer_cuda_repr,
                     |event_buffer_reporter| {
-                        ValueBufferDevice::with_borrow_from_rust_mut(
+                        ValueBuffer::with_borrow_from_rust_mut(
                             min_spec_sample_buffer_cuda_repr,
                             |min_spec_sample_buffer| {
                                 min_spec_sample_buffer.with_value_for_core(|min_spec_sample| {

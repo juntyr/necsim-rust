@@ -12,7 +12,9 @@ use rustacuda::{
     stream::Stream,
 };
 
-use rust_cuda::{common::RustToCuda, host::LendToCuda};
+use rust_cuda::{
+    common::RustToCuda, host::LendToCuda, utils::exchange::wrapper::ExchangeWithCudaWrapper,
+};
 use rustacuda_core::DeviceCopy;
 
 use necsim_core::{
@@ -25,10 +27,7 @@ use necsim_core::{
     simulation::Simulation,
 };
 
-use necsim_impls_cuda::{
-    event_buffer::host::EventBufferHost, task_list::host::TaskListHost,
-    value_buffer::host::ValueBufferHost,
-};
+use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
 use crate::kernel::SimulationKernel;
 
@@ -50,9 +49,10 @@ pub fn simulate<
     kernel: &SimulationKernel<H, G, D, R, S, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
     task: (u32, GridSize, BlockSize),
     mut simulation: Simulation<H, G, D, R, S, C, E, A>,
-    mut task_list: TaskListHost<H, R>,
-    mut event_buffer: EventBufferHost<H, R, P, REPORT_SPECIATION, REPORT_DISPERSAL>,
-    mut min_spec_sample_buffer: ValueBufferHost<SpeciationSample>,
+    task_list: ValueBuffer<R>,
+    event_buffer: EventBuffer<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
+    min_spec_sample_buffer: ValueBuffer<SpeciationSample>,
+    reporter: &mut P,
     max_steps: u64,
 ) -> Result<(f64, u64)> {
     // TODO: Remove once debugging data structure layout is no longer necessary
@@ -82,71 +82,64 @@ pub fn simulate<
     let mut min_spec_samples: HashSet<SpeciationSample> = HashSet::new();
     let mut duplicate_individuals = bitbox![0; min_spec_sample_buffer.len()];
 
+    let mut task_list = ExchangeWithCudaWrapper::new(task_list)?;
+    let mut event_buffer = ExchangeWithCudaWrapper::new(event_buffer)?;
+    let mut min_spec_sample_buffer = ExchangeWithCudaWrapper::new(min_spec_sample_buffer)?;
+
     // TODO: We should use async launches and callbacks to rotate between
     // simulation, event analysis etc.
-    if let Err(err) = simulation.lend_to_cuda_mut(|simulation_mut_ptr| {
+    if let Err(err) = simulation.lend_to_cuda_mut(|simulation_cuda_repr| {
         while !individual_tasks.is_empty() {
             for _grid_id in 0..(grid_amount as usize) {
-                task_list.with_upload_and_fetch_tasks(
-                    &mut (
-                        &mut individual_tasks,
-                        &mut min_spec_samples,
-                        &mut duplicate_individuals,
-                    ),
-                    |(individual_tasks, ..), new_tasks| {
-                        // Upload the new tasks
-                        for task in new_tasks {
-                            *task = individual_tasks.pop_front();
-                        }
-                    },
-                    |(_, min_spec_samples, duplicate_individuals), task_list_mut_ptr| {
-                        min_spec_sample_buffer.with_upload_and_fetch_values(
-                            &mut (min_spec_samples, duplicate_individuals),
-                            |(_, duplicate_individuals), new_min_spec_samples| {
-                                new_min_spec_samples.fill(None);
-                                duplicate_individuals.set_all(false);
-                            },
-                            |min_spec_sample_buffer_ptr| {
-                                // Launching kernels is unsafe since Rust cannot
-                                // enforce safety across the foreign function
-                                // CUDA-C language barrier
-                                unsafe {
-                                    kernel.launch(
-                                        simulation_mut_ptr,
-                                        task_list_mut_ptr,
-                                        event_buffer.get_mut_cuda_ptr(),
-                                        min_spec_sample_buffer_ptr,
-                                        max_steps,
-                                    )?;
-                                }
+                // Upload the new tasks from the front of the task queue
+                for task in task_list.iter_mut() {
+                    *task = individual_tasks.pop_front();
+                }
 
-                                stream.synchronize()
-                            },
-                            |(min_spec_samples, duplicate_individuals), slice_min_spec_samples| {
-                                for (i, spec_sample) in
-                                    slice_min_spec_samples.iter_mut().enumerate()
-                                {
-                                    if let Some(spec_sample) = spec_sample.take() {
-                                        duplicate_individuals
-                                            .set(i, !min_spec_samples.insert(spec_sample));
-                                    }
-                                }
-                            },
-                        )
-                    },
-                    |(individual_tasks, _, duplicate_individuals), completed_tasks| {
-                        // Fetch the completion of the tasks
-                        for (i, task) in completed_tasks.iter_mut().enumerate() {
-                            if let Some(task) = task.take() {
-                                if !duplicate_individuals[i] {
-                                    individual_tasks.push_back(task);
-                                }
-                            }
-                        }
-                    },
-                )?;
+                // Reset the individual duplication check bitmask
+                duplicate_individuals.set_all(false);
 
-                event_buffer.fetch_and_report_events()?
+                // Move the task list, event buffer and min speciation sample buffer to CUDA
+                let mut event_buffer_cuda = event_buffer.move_to_cuda()?;
+                let mut min_spec_sample_buffer_cuda = min_spec_sample_buffer.move_to_cuda()?;
+                let mut task_list_cuda = task_list.move_to_cuda()?;
+
+                // Launching kernels is unsafe since Rust cannot
+                // enforce safety across the foreign function
+                // CUDA-C language barrier
+                unsafe {
+                    kernel.launch(
+                        simulation_cuda_repr,
+                        task_list_cuda.as_mut(),
+                        event_buffer_cuda.as_mut(),
+                        min_spec_sample_buffer_cuda.as_mut(),
+                        max_steps,
+                    )?;
+                }
+
+                stream.synchronize()?;
+
+                min_spec_sample_buffer = min_spec_sample_buffer_cuda.move_to_host()?;
+                task_list = task_list_cuda.move_to_host()?;
+                event_buffer = event_buffer_cuda.move_to_host()?;
+
+                // Fetch the completion of the tasks
+                for (i, spec_sample) in min_spec_sample_buffer.iter_mut().enumerate() {
+                    if let Some(spec_sample) = spec_sample.take() {
+                        duplicate_individuals.set(i, !min_spec_samples.insert(spec_sample));
+                    }
+                }
+
+                // Fetch the completion of the tasks
+                for (i, task) in task_list.iter_mut().enumerate() {
+                    if let Some(task) = task.take() {
+                        if !duplicate_individuals[i] {
+                            individual_tasks.push_back(task);
+                        }
+                    }
+                }
+
+                event_buffer.report_events(reporter);
             }
         }
 

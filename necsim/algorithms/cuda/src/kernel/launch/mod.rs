@@ -7,11 +7,7 @@ use necsim_core::{
     simulation::Simulation,
 };
 
-use necsim_impls_cuda::{
-    event_buffer::common::EventBufferCudaRepresentation,
-    task_list::common::TaskListCudaRepresentation,
-    value_buffer::common::ValueBufferCudaRepresentation,
-};
+use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
 use rustacuda::error::CudaResult;
 use rustacuda_core::DeviceCopy;
@@ -61,11 +57,13 @@ impl<
         simulation_ptr: DeviceBoxMut<
             <Simulation<H, G, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
         >,
-        task_list_ptr: DeviceBoxMut<TaskListCudaRepresentation<H, R>>,
+        task_list_ptr: DeviceBoxMut<<ValueBuffer<R> as RustToCuda>::CudaRepresentation>,
         event_buffer_ptr: DeviceBoxMut<
-            EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
+            <EventBuffer<H, R, REPORT_SPECIATION, REPORT_DISPERSAL> as RustToCuda>::CudaRepresentation,
         >,
-        min_spec_sample_buffer_ptr: DeviceBoxMut<ValueBufferCudaRepresentation<SpeciationSample>>,
+        min_spec_sample_buffer_ptr: DeviceBoxMut<
+            <ValueBuffer<SpeciationSample> as RustToCuda>::CudaRepresentation,
+        >,
         max_steps: u64,
     ) -> CudaResult<()> {
         let kernel = self.entry_point;

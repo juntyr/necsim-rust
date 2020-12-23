@@ -2,7 +2,6 @@
 #![no_std]
 #![feature(stmt_expr_attributes)]
 #![feature(min_const_generics)]
-#![feature(associated_type_bounds)]
 
 extern crate alloc;
 
@@ -14,6 +13,4 @@ extern crate rust_cuda_derive;
 
 pub mod cogs;
 pub mod event_buffer;
-pub mod exchange_buffer;
-pub mod task_list;
 pub mod value_buffer;
