@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 
 use rustacuda_core::DeviceCopy;
 
-use rust_cuda::common::RustToCuda;
+use rust_cuda::common::{DeviceBoxMut, RustToCuda};
 
 use necsim_core::cogs::{Habitat, LineageReference};
 
@@ -15,15 +15,14 @@ pub struct TaskListDevice<H: Habitat + RustToCuda, R: LineageReference<H> + Devi
 
 impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> TaskListDevice<H, R> {
     /// # Safety
-    /// This function is only safe to call iff `cuda_repr_ptr` is the
-    /// `DevicePointer` borrowed on the CPU using the corresponding
+    /// This function is only safe to call iff `cuda_repr_mut` is the
+    /// `DeviceBoxMut` borrowed on the CPU using the corresponding
     /// `TaskListHost::get_mut_cuda_ptr`.
     pub unsafe fn with_borrow_from_rust_mut<O, F: FnOnce(&mut Self) -> O>(
-        cuda_repr_ptr: *mut super::common::TaskListCudaRepresentation<H, R>,
+        mut cuda_repr_mut: DeviceBoxMut<super::common::TaskListCudaRepresentation<H, R>>,
         inner: F,
     ) -> O {
-        let cuda_repr_ref: &mut super::common::TaskListCudaRepresentation<H, R> =
-            &mut *cuda_repr_ptr;
+        let cuda_repr_ref = cuda_repr_mut.as_mut();
 
         let raw_slice: &mut [Option<R>] = core::slice::from_raw_parts_mut(
             cuda_repr_ref.task_list.0.as_raw_mut(),
