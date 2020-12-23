@@ -6,9 +6,9 @@ use rustacuda::{
     memory::{CopyDestination, DeviceBox, DeviceBuffer, LockedBuffer},
 };
 
-use rustacuda_core::{DeviceCopy, DevicePointer};
+use rustacuda_core::DeviceCopy;
 
-use rust_cuda::common::RustToCuda;
+use rust_cuda::common::{DeviceBoxMut, RustToCuda};
 
 use rust_cuda::host::CudaDropWrapper;
 
@@ -55,7 +55,7 @@ impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> TaskListHost<
         U: FnOnce(&mut A, &mut [Option<R>]),
         I: FnOnce(
             &mut A,
-            DevicePointer<super::common::TaskListCudaRepresentation<H, R>>,
+            DeviceBoxMut<super::common::TaskListCudaRepresentation<H, R>>,
         ) -> CudaResult<Q>,
         F: FnOnce(&mut A, &mut [Option<R>]),
     >(
@@ -69,7 +69,7 @@ impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> TaskListHost<
 
         self.device_list.copy_from(self.host_list.deref_mut())?;
 
-        let result = inner(auxiliary, self.cuda_repr_box.as_device_ptr())?;
+        let result = inner(auxiliary, DeviceBoxMut::from(&mut self.cuda_repr_box))?;
 
         self.device_list.copy_to(self.host_list.deref_mut())?;
 

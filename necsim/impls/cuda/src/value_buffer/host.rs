@@ -6,61 +6,9 @@ use rustacuda::{
     memory::{CopyDestination, DeviceBox, DeviceBuffer, LockedBuffer},
 };
 
-use rustacuda_core::{DeviceCopy, DevicePointer};
+use rustacuda_core::DeviceCopy;
 
-use rust_cuda::host::CudaDropWrapper;
-
-// Should be used as member for RustToCuda deriving struct
-use core::ops::Deref;
-struct CudaInterchangeBufferHost<T: Clone + DeviceCopy> {
-    host_buffer: CudaDropWrapper<LockedBuffer<T>>,
-    device_buffer: CudaDropWrapper<DeviceBuffer<T>>,
-}
-impl<T: Clone + DeviceCopy> Deref for CudaInterchangeBufferHost<T> {
-    type Target = [T];
-
-    fn deref(&self) -> &Self::Target {
-        self.host_buffer.as_slice()
-    }
-}
-impl<T: Clone + DeviceCopy> DerefMut for CudaInterchangeBufferHost<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.host_buffer.as_mut_slice()
-    }
-}
-
-// Should be constructed for RustToCuda Cuda representation
-struct CudaInterchangeBufferIntermediate<T: Clone + DeviceCopy>(DevicePointer<T>, usize);
-
-// Should be constructed automatically from Cuda representation -> to avoid
-// name changes we could simply perform some switcheroo of struct definitions
-// for different targets
-struct CudaInterchangeBufferDevice<T: Clone + DeviceCopy>(
-    core::mem::ManuallyDrop<alloc::boxed::Box<[T]>>,
-);
-impl<T: Clone + DeviceCopy> Deref for CudaInterchangeBufferDevice<T> {
-    type Target = [T];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl<T: Clone + DeviceCopy> DerefMut for CudaInterchangeBufferDevice<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-// Need CudaInterchange trait / wrapper that only allocates up front:
-// 1) full access to CPU structure + make changes
-// 2) transform into structural equivalent that can be used to send to CUDA ->
-// copy to device 3) transform back into CPU structure -> copy from device
-// There should also be the ability to chain multiple together (depending on if
-// I use closures or types)
-
-pub struct ValueBuffer<T: Clone + DeviceCopy> {
-    buffer: CudaInterchangeBufferHost<T>,
-}
+use rust_cuda::{common::DeviceBoxMut, host::CudaDropWrapper};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ValueBufferHost<T: Clone + DeviceCopy> {
@@ -110,7 +58,7 @@ impl<T: Clone + DeviceCopy> ValueBufferHost<T> {
         A,
         Q,
         U: FnOnce(&mut A, &mut [Option<T>]),
-        I: FnOnce(DevicePointer<super::common::ValueBufferCudaRepresentation<T>>) -> CudaResult<Q>,
+        I: FnOnce(DeviceBoxMut<super::common::ValueBufferCudaRepresentation<T>>) -> CudaResult<Q>,
         F: FnOnce(&mut A, &mut [Option<T>]),
     >(
         &mut self,
@@ -123,7 +71,7 @@ impl<T: Clone + DeviceCopy> ValueBufferHost<T> {
 
         self.device_buffer.copy_from(self.host_buffer.deref_mut())?;
 
-        let result = inner(self.cuda_repr_box.as_device_ptr())?;
+        let result = inner(DeviceBoxMut::from(&mut self.cuda_repr_box))?;
 
         self.device_buffer.copy_to(self.host_buffer.deref_mut())?;
 

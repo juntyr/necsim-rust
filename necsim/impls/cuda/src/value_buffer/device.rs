@@ -2,6 +2,8 @@ use alloc::boxed::Box;
 
 use rustacuda_core::DeviceCopy;
 
+use rust_cuda::common::DeviceBoxMut;
+
 #[allow(clippy::module_name_repetitions)]
 pub struct ValueBufferDevice<T: Clone + DeviceCopy> {
     value_buffer: Box<[Option<T>]>,
@@ -9,15 +11,14 @@ pub struct ValueBufferDevice<T: Clone + DeviceCopy> {
 
 impl<T: Clone + DeviceCopy> ValueBufferDevice<T> {
     /// # Safety
-    /// This function is only safe to call iff `cuda_repr_ptr` is the
-    /// `DevicePointer` borrowed on the CPU using the corresponding
+    /// This function is only safe to call iff `cuda_repr_mut` is the
+    /// `DeviceBoxMut` borrowed on the CPU using the corresponding
     /// `TaskListHost::get_mut_cuda_ptr`.
     pub unsafe fn with_borrow_from_rust_mut<O, F: FnOnce(&mut Self) -> O>(
-        cuda_repr_ptr: *mut super::common::ValueBufferCudaRepresentation<T>,
+        mut cuda_repr_mut: DeviceBoxMut<super::common::ValueBufferCudaRepresentation<T>>,
         inner: F,
     ) -> O {
-        let cuda_repr_ref: &mut super::common::ValueBufferCudaRepresentation<T> =
-            &mut *cuda_repr_ptr;
+        let cuda_repr_ref = cuda_repr_mut.as_mut();
 
         let raw_slice: &mut [Option<T>] = core::slice::from_raw_parts_mut(
             cuda_repr_ref.value_buffer.0.as_raw_mut(),

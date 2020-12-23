@@ -2,7 +2,7 @@ use alloc::boxed::Box;
 
 use rustacuda_core::DeviceCopy;
 
-use rust_cuda::common::RustToCuda;
+use rust_cuda::common::{DeviceBoxMut, RustToCuda};
 
 use necsim_core::{
     cogs::{Habitat, LineageReference},
@@ -62,24 +62,16 @@ impl<
     > EventBufferDevice<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>
 {
     /// # Safety
-    /// This function is only safe to call iff `cuda_repr_ptr` is the
-    /// `DevicePointer` borrowed on the CPU using the corresponding
+    /// This function is only safe to call iff `cuda_repr_mut` is the
+    /// `DeviceBoxMut` borrowed on the CPU using the corresponding
     /// `EventBufferHost::get_mut_cuda_ptr`.
     pub unsafe fn with_borrow_from_rust_mut<O, F: FnOnce(&mut Self) -> O>(
-        cuda_repr_ptr: *mut super::common::EventBufferCudaRepresentation<
-            H,
-            R,
-            REPORT_SPECIATION,
-            REPORT_DISPERSAL,
+        mut cuda_repr_mut: DeviceBoxMut<
+            super::common::EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
         >,
         inner: F,
     ) -> O {
-        let cuda_repr_ref: &mut super::common::EventBufferCudaRepresentation<
-            H,
-            R,
-            REPORT_SPECIATION,
-            REPORT_DISPERSAL,
-        > = &mut *cuda_repr_ptr;
+        let cuda_repr_ref = cuda_repr_mut.as_mut();
 
         let buffer_len =
             cuda_repr_ref.block_size * cuda_repr_ref.grid_size * cuda_repr_ref.max_events;

@@ -9,9 +9,9 @@ use rustacuda::{
     memory::{CopyDestination, DeviceBox, DeviceBuffer, LockedBuffer},
 };
 
-use rustacuda_core::{DeviceCopy, DevicePointer};
+use rustacuda_core::DeviceCopy;
 
-use rust_cuda::common::RustToCuda;
+use rust_cuda::common::{DeviceBoxMut, RustToCuda};
 
 use rust_cuda::host::CudaDropWrapper;
 
@@ -124,9 +124,9 @@ impl<
 
     pub fn get_mut_cuda_ptr(
         &mut self,
-    ) -> DevicePointer<
+    ) -> DeviceBoxMut<
         super::common::EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
     > {
-        self.cuda_repr_box.as_device_ptr()
+        DeviceBoxMut::from(&mut self.cuda_repr_box)
     }
 }

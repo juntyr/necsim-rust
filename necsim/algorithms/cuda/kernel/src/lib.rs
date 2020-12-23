@@ -76,24 +76,28 @@ extern "C" {
     static global_steps_sum: AtomicU64;
 }
 
+use rust_cuda::device::AnyDeviceBoxMut;
+
 /// # Safety
-/// This CUDA kernel is unsafe as it is called with raw c_void pointers
+/// This CUDA kernel is unsafe as it is called with untyped `AnyDeviceBox`.
 #[no_mangle]
 pub unsafe extern "ptx-kernel" fn simulate(
-    simulation_c_ptr: *mut core::ffi::c_void,
-    task_list_c_ptr: *mut core::ffi::c_void,
-    event_buffer_c_ptr: *mut core::ffi::c_void,
-    min_spec_sample_buffer_ptr: *mut core::ffi::c_void,
+    simulation_any: AnyDeviceBoxMut,
+    task_list_any: AnyDeviceBoxMut,
+    event_buffer_any: AnyDeviceBoxMut,
+    min_spec_sample_buffer_any: AnyDeviceBoxMut,
     max_steps: u64,
 ) {
     specialise!(simulate_generic)(
-        simulation_c_ptr as *mut _,
-        task_list_c_ptr as *mut _,
-        event_buffer_c_ptr as *mut _,
-        min_spec_sample_buffer_ptr as *mut _,
+        simulation_any.into(),
+        task_list_any.into(),
+        event_buffer_any.into(),
+        min_spec_sample_buffer_any.into(),
         max_steps,
     )
 }
+
+use rust_cuda::common::DeviceBoxMut;
 
 unsafe fn simulate_generic<
     H: HabitatToU64Injection + RustToCuda,
@@ -107,14 +111,18 @@ unsafe fn simulate_generic<
     const REPORT_SPECIATION: bool,
     const REPORT_DISPERSAL: bool,
 >(
-    simulation_ptr: *mut <Simulation<H, G, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
-    task_list_ptr: *mut TaskListCudaRepresentation<H, R>,
-    event_buffer_ptr: *mut EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
-    min_spec_sample_buffer_ptr: *mut ValueBufferCudaRepresentation<SpeciationSample>,
+    simulation_cuda_repr: DeviceBoxMut<
+        <Simulation<H, G, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
+    >,
+    task_list_cuda_repr: DeviceBoxMut<TaskListCudaRepresentation<H, R>>,
+    event_buffer_cuda_repr: DeviceBoxMut<
+        EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
+    >,
+    min_spec_sample_buffer_cuda_repr: DeviceBoxMut<ValueBufferCudaRepresentation<SpeciationSample>>,
     max_steps: u64,
 ) {
-    Simulation::with_borrow_from_rust_mut(simulation_ptr, |simulation| {
-        TaskListDevice::with_borrow_from_rust_mut(task_list_ptr, |task_list| {
+    Simulation::with_borrow_from_rust_mut(simulation_cuda_repr, |simulation| {
+        TaskListDevice::with_borrow_from_rust_mut(task_list_cuda_repr, |task_list| {
             task_list.with_task_for_core(|task| {
                 let saved_task = simulation.with_mut_split_active_lineage_sampler_and_rng(
                     |active_lineage_sampler, simulation, _rng| {
@@ -124,10 +132,10 @@ unsafe fn simulate_generic<
                 );
 
                 EventBufferDevice::with_borrow_from_rust_mut(
-                    event_buffer_ptr,
+                    event_buffer_cuda_repr,
                     |event_buffer_reporter| {
                         ValueBufferDevice::with_borrow_from_rust_mut(
-                            min_spec_sample_buffer_ptr,
+                            min_spec_sample_buffer_cuda_repr,
                             |min_spec_sample_buffer| {
                                 min_spec_sample_buffer.with_value_for_core(|min_spec_sample| {
                                     let old_min_spec_sample = simulation

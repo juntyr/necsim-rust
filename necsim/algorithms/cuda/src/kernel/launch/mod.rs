@@ -14,9 +14,9 @@ use necsim_impls_cuda::{
 };
 
 use rustacuda::error::CudaResult;
-use rustacuda_core::{DeviceCopy, DevicePointer};
+use rustacuda_core::DeviceCopy;
 
-use rust_cuda::common::RustToCuda;
+use rust_cuda::common::{DeviceBoxMut, RustToCuda};
 
 use super::SimulationKernel;
 
@@ -58,14 +58,14 @@ impl<
     #[allow(clippy::type_complexity)]
     pub unsafe fn launch(
         &self,
-        simulation_ptr: DevicePointer<
+        simulation_ptr: DeviceBoxMut<
             <Simulation<H, G, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
         >,
-        task_list_ptr: DevicePointer<TaskListCudaRepresentation<H, R>>,
-        event_buffer_ptr: DevicePointer<
+        task_list_ptr: DeviceBoxMut<TaskListCudaRepresentation<H, R>>,
+        event_buffer_ptr: DeviceBoxMut<
             EventBufferCudaRepresentation<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
         >,
-        min_spec_sample_buffer_ptr: DevicePointer<ValueBufferCudaRepresentation<SpeciationSample>>,
+        min_spec_sample_buffer_ptr: DeviceBoxMut<ValueBufferCudaRepresentation<SpeciationSample>>,
         max_steps: u64,
     ) -> CudaResult<()> {
         let kernel = self.entry_point;
