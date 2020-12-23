@@ -1,10 +1,11 @@
 use rustacuda_core::DeviceCopy;
 
-use rust_cuda::common::{CudaAsRust, DeviceOwnedSlice};
+use crate::common::{CudaAsRust, DeviceOwnedSlice};
 
 use super::CudaExchangeBuffer;
 
 #[allow(clippy::module_name_repetitions)]
+#[doc(hidden)]
 pub struct CudaExchangeBufferCudaRepresentation<T: Clone + DeviceCopy>(
     pub(super) DeviceOwnedSlice<T>,
 );

@@ -1,12 +1,12 @@
 mod common;
-#[cfg(target_os = "cuda")]
+#[cfg(not(feature = "host"))]
 mod device;
-#[cfg(not(target_os = "cuda"))]
+#[cfg(feature = "host")]
 mod host;
 
-#[cfg(target_os = "cuda")]
+#[cfg(not(feature = "host"))]
 pub use device::CudaExchangeBufferDevice as CudaExchangeBuffer;
-#[cfg(not(target_os = "cuda"))]
+#[cfg(feature = "host")]
 pub use host::CudaExchangeBufferHost as CudaExchangeBuffer;
 
 pub use common::CudaExchangeBufferCudaRepresentation;

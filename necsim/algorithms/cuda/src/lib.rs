@@ -1,6 +1,5 @@
 #![deny(clippy::pedantic)]
 #![feature(min_const_generics)]
-#![feature(slice_fill)]
 
 #[macro_use]
 extern crate contracts;
@@ -22,10 +21,7 @@ use necsim_core::{
     simulation::Simulation,
 };
 
-use necsim_impls_cuda::{
-    event_buffer::host::EventBufferHost, task_list::host::TaskListHost,
-    value_buffer::host::ValueBufferHost,
-};
+use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 use necsim_impls_no_std::reporter::ReporterContext;
 
 use necsim_impls_no_std::cogs::{
@@ -136,22 +132,16 @@ impl CudaSimulation {
                             + ((total_individuals % task_size > 0) as usize)
                     } as u32;
 
-                    let task_list = TaskListHost::new(&block_size, &grid_size)?;
-                    let min_spec_sample_buffer = ValueBufferHost::new(&block_size, &grid_size)?;
+                    let task_list = ValueBuffer::new(&block_size, &grid_size)?;
+                    let min_spec_sample_buffer = ValueBuffer::new(&block_size, &grid_size)?;
 
                     #[allow(clippy::type_complexity)]
-                    let event_buffer: EventBufferHost<
+                    let event_buffer: EventBuffer<
                         H,
                         R,
-                        P::Reporter<H, R>,
                         { REPORT_SPECIATION },
                         { REPORT_DISPERSAL },
-                    > = EventBufferHost::new(
-                        reporter,
-                        &block_size,
-                        &grid_size,
-                        SIMULATION_STEP_SLICE,
-                    )?;
+                    > = EventBuffer::new(&block_size, &grid_size, SIMULATION_STEP_SLICE)?;
 
                     simulate(
                         &stream,
@@ -161,6 +151,7 @@ impl CudaSimulation {
                         task_list,
                         event_buffer,
                         min_spec_sample_buffer,
+                        reporter,
                         SIMULATION_STEP_SLICE as u64,
                     )
                 })
