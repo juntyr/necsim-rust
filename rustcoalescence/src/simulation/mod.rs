@@ -16,7 +16,10 @@ pub fn setup_in_memory_simulation(
     common_args: &CommonArgs,
     in_memory_args: &InMemoryArgs,
 ) -> Result<(f64, u64)> {
-    let dispersal: Array2D<f64> = maps::load_dispersal_map(in_memory_args.dispersal_map())?;
+    let dispersal: Array2D<f64> = maps::load_dispersal_map(
+        in_memory_args.dispersal_map(),
+        *in_memory_args.strict_load(),
+    )?;
 
     println!(
         "Successfully loaded the dispersal map {:?} with dimensions {}x{} [cols x rows].",
@@ -25,7 +28,11 @@ pub fn setup_in_memory_simulation(
         dispersal.num_rows()
     );
 
-    let habitat: Array2D<u32> = maps::load_habitat_map(in_memory_args.habitat_map(), &dispersal)?;
+    let habitat: Array2D<u32> = maps::load_habitat_map(
+        in_memory_args.habitat_map(),
+        &dispersal,
+        *in_memory_args.strict_load(),
+    )?;
 
     println!(
         "Successfully loaded the habitat map {:?} with dimensions {}x{} [cols x rows].",

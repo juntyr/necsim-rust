@@ -33,6 +33,9 @@ pub fn explicit_in_memory_dispersal_check_contract<H: Habitat>(
                     } else {
                         any_dispersal = true;
                     }
+                } else if dispersal[(row_index, col_index)] < 0.0_f64 {
+                    // Dispersal probabilities must be non-negative
+                    return false;
                 }
             }
 
@@ -42,8 +45,10 @@ pub fn explicit_in_memory_dispersal_check_contract<H: Habitat>(
             }
         } else {
             for col_index in 0..dispersal.num_columns() {
-                if dispersal[(row_index, col_index)] > 0.0_f64 {
-                    // Dispersal from non-habitat
+                if dispersal[(row_index, col_index)] != 0.0_f64 {
+                    // Dispersal probability from non-habitat must be 0.0
+                    // - Dispersal from non-habitat (> 0.0)
+                    // - Dispersal probabilities must be non-negative (< 0.0)
                     return false;
                 }
             }

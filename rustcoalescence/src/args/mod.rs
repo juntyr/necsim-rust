@@ -48,6 +48,8 @@ pub struct InMemoryArgs {
     habitat_map: PathBuf,
     #[structopt(parse(from_os_str))]
     dispersal_map: PathBuf,
+    #[structopt(long)]
+    strict_load: bool,
 }
 
 impl NonSpatialArgs {
@@ -61,6 +63,7 @@ impl NonSpatialArgs {
                 "NonSpatial/{}/{}/{}/Dispersal",
                 self.area.0, self.area.1, self.deme
             )),
+            strict_load: true,
         }
     }
 }

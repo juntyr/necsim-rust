@@ -1,6 +1,7 @@
 #![deny(clippy::pedantic)]
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
+#![feature(associated_type_bounds)]
 
 #[macro_use]
 extern crate necsim_core;
@@ -9,7 +10,6 @@ use anyhow::Result;
 use structopt::StructOpt;
 
 mod args;
-mod gdal;
 mod maps;
 mod reporter;
 mod simulation;

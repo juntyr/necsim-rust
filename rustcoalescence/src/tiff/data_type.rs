@@ -1,6 +1,12 @@
 use tiff::{decoder::DecodingBuffer, tags::SampleFormat};
 
-pub trait TiffDataType: Clone + std::fmt::Debug + Default {
+pub trait TiffDataType:
+    Clone
+    + std::fmt::Debug
+    + Default
+    + std::str::FromStr<Err: std::error::Error + Send + Sync + 'static>
+    + std::cmp::PartialEq
+{
     const BIT_WIDTH: u8;
     const SAMPLE_FORMAT: SampleFormat;
 
