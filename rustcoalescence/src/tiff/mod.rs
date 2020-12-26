@@ -15,14 +15,17 @@ impl<T: private::TiffDataType> TiffDataType for T {}
 #[allow(clippy::module_name_repetitions)]
 /// Loads a 2D map from TIFF file at `path` with the data type `D`.
 ///
-/// This function assumes that normal TIFF files are read, i.e.
-/// * GDAL no-data-values have already been replaced by semantically sensible
-///   values
-/// * the TIFF file is not sparse
+/// This function assumes that normal, non-sparse TIFF files are read.
+///
+/// If `strict_load` is `false`, it checks for the GDAL no data tag and
+/// replaces no data values with `D::default()`.
 ///
 /// Furthermore, only the first image is read and any subsequent ones are
 /// currently ignored.
-pub fn load_map_from_tiff<D: TiffDataType>(path: &PathBuf) -> Result<Array2D<D>> {
+pub fn load_map_from_tiff<D: TiffDataType>(
+    path: &PathBuf,
+    strict_load: bool,
+) -> Result<Array2D<D>> {
     let file = File::open(path).context("Could not read file.")?;
 
     let mut decoder = Decoder::new(file).context("Could not decode TIFF file.")?;
@@ -97,6 +100,30 @@ pub fn load_map_from_tiff<D: TiffDataType>(path: &PathBuf) -> Result<Array2D<D>>
         decoder
             .read_strip_to_buffer(image_buffer)
             .with_context(|| format!("Could not read strip {}.", i))?;
+    }
+
+    if !strict_load {
+        // If strict loading is disabled, check for a GDAL no data value
+        //  and replace it with D::default() (i.e. 0)
+        if let Ok(no_data_string) = decoder.get_tag_ascii_string(Tag::GdalNodata) {
+            let no_data_value = no_data_string.parse::<D>().with_context(|| {
+                format!(
+                    "Could not interpret GDAL nodata value {:?} as {}.",
+                    no_data_string,
+                    std::any::type_name::<D>()
+                )
+            })?;
+
+            println!("INFO: Used GDAL no data value {:?} ...", no_data_value);
+
+            for elem in &mut image_data {
+                if *elem == no_data_value {
+                    *elem = D::default();
+                }
+            }
+        } else {
+            println!("INFO: No GDAL no data value was found ...");
+        }
     }
 
     Ok(Array2D::from_row_major(&image_data, height as usize, width as usize).unwrap())
