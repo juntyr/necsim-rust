@@ -18,6 +18,7 @@ pub trait EventTimeSampler<H: HabitatToU64Injection, G: PrimeableRng<H>>:
 {
     #[debug_requires(time >= 0.0_f64, "event times must be non-negative")]
     #[debug_ensures(ret > time, "the next event will happen after time")]
+    #[inline]
     fn next_event_time_at_indexed_location_after(
         &self,
         indexed_location: &IndexedLocation,

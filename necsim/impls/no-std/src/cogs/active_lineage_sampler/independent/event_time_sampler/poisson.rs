@@ -30,6 +30,7 @@ impl PoissonEventTimeSampler {
 impl<H: HabitatToU64Injection, G: PrimeableRng<H>> EventTimeSampler<H, G>
     for PoissonEventTimeSampler
 {
+    #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
         &self,
         indexed_location: &IndexedLocation,

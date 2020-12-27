@@ -11,16 +11,22 @@ extern crate alloc;
 #[macro_use]
 extern crate specialiser;
 
-use rust_cuda::{
-    device::{nvptx, utils},
-    println,
-};
+use rust_cuda::device::{nvptx, utils};
 
 #[global_allocator]
 static _GLOBAL_ALLOCATOR: utils::PTXAllocator = utils::PTXAllocator;
 
+#[cfg(not(debug_assertions))]
+#[panic_handler]
+fn panic(_panic_info: &::core::panic::PanicInfo) -> ! {
+    unsafe { nvptx::trap() }
+}
+
+#[cfg(debug_assertions)]
 #[panic_handler]
 fn panic(panic_info: &::core::panic::PanicInfo) -> ! {
+    use rust_cuda::println;
+
     println!(
         "Panic occurred at {:?}: {:?}!",
         panic_info.location(),
@@ -35,21 +41,6 @@ fn panic(panic_info: &::core::panic::PanicInfo) -> ! {
 #[alloc_error_handler]
 fn alloc_error_handler(_: core::alloc::Layout) -> ! {
     unsafe { nvptx::trap() }
-}
-
-struct F32(f32);
-struct F64(f64);
-
-impl core::fmt::Debug for F32 {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}", ryu::Buffer::new().format(self.0))
-    }
-}
-
-impl core::fmt::Debug for F64 {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}", ryu::Buffer::new().format(self.0))
-    }
 }
 
 use necsim_core::{
@@ -95,6 +86,7 @@ pub unsafe extern "ptx-kernel" fn simulate(
 
 use rust_cuda::common::DeviceBoxMut;
 
+#[inline]
 unsafe fn simulate_generic<
     H: HabitatToU64Injection + RustToCuda,
     G: PrimeableRng<H> + RustToCuda,

@@ -14,7 +14,7 @@ use rustacuda_core::DeviceCopy;
 #[cfg(feature = "cuda")]
 use rust_cuda::common::RustToCuda;
 
-#[derive(TypeLayout)]
+#[derive(Debug, TypeLayout)]
 pub struct Event<H: Habitat, R: LineageReference<H>> {
     origin: IndexedLocation,
     time: f64,
@@ -149,21 +149,6 @@ impl<H: Habitat, R: LineageReference<H>> Clone for EventType<H, R> {
                 marker: *marker,
             },
         }
-    }
-}
-
-impl<H: Habitat, R: LineageReference<H>> core::fmt::Debug for Event<H, R> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("Event")
-            .field("origin", &self.origin)
-            .field(
-                "time",
-                &format_args!("{}", ryu::Buffer::new().format(self.time)),
-            )
-            .field("lineage_reference", &self.lineage_reference)
-            .field("type", &self.r#type)
-            .field("marker", &format_args!("PhantomData"))
-            .finish()
     }
 }
 

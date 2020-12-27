@@ -38,12 +38,13 @@ impl<
         self.lineage_indexed_location.is_some() as usize
     }
 
-    fn get_time_of_last_event(&self, _lineage_store: &S) -> f64 {
+    fn get_time_of_last_event(&self) -> f64 {
         self.lineage_time_of_last_event
     }
 
     #[must_use]
     #[allow(clippy::type_complexity)]
+    #[inline]
     fn pop_active_lineage_indexed_location_event_time(
         &mut self,
         time: f64,
@@ -96,6 +97,7 @@ impl<
         "does not introduce a new lineage reference"
     )]
     #[allow(clippy::type_complexity)]
+    #[inline]
     fn push_active_lineage_to_indexed_location(
         &mut self,
         lineage_reference: R,

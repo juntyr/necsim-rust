@@ -74,7 +74,7 @@ impl Lineage {
     )]
     pub unsafe fn update_index_at_location(&mut self, index_at_location: u32) {
         if let Some(ref mut indexed_location) = self.indexed_location {
-            indexed_location.index = index_at_location;
+            indexed_location.index = core::num::NonZeroU32::new_unchecked(index_at_location + 1);
         }
     }
 

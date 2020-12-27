@@ -35,6 +35,7 @@ impl<
         E: EventSampler<H, G, D, R, S, C>,
     > PartialSimulation<H, G, D, R, S, C, E>
 {
+    #[inline]
     pub fn with_split_event_sampler<
         Q,
         F: FnOnce(&E, &super::event_sampler::PartialSimulation<H, G, D, R, S, C>) -> Q,
@@ -51,5 +52,25 @@ impl<
         };
 
         func(&self.event_sampler, partial_simulation)
+    }
+
+    #[inline]
+    pub fn with_mut_split_event_sampler<
+        Q,
+        F: FnOnce(&mut E, &mut super::event_sampler::PartialSimulation<H, G, D, R, S, C>) -> Q,
+    >(
+        &mut self,
+        func: F,
+    ) -> Q {
+        // Cast &mut self to a &mut PartialSimulation without the event sampler
+        // This is only safe as both types have the same fields and layout except for
+        // event_sampler in Self at the end
+        #[allow(clippy::cast_ref_to_mut)]
+        let partial_simulation = unsafe {
+            &mut *(self as *const Self
+                as *mut super::event_sampler::PartialSimulation<H, G, D, R, S, C>)
+        };
+
+        func(&mut self.event_sampler, partial_simulation)
     }
 }

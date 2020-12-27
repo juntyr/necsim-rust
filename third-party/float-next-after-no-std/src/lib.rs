@@ -65,6 +65,7 @@ pub trait NextAfter<T: Float> {
 // The f64 is converted to u64, incremented by one, then converted back to f64.
 // The f32 is converted to u32, incremented by one, then converted back to f32.
 impl NextAfter<f64> for f64 {
+    #[inline]
     fn next_after(self, y: f64) -> f64 {
         if let Some(out) = short_circuit_operands(self, y) {
             return out;
@@ -94,6 +95,7 @@ impl NextAfter<f64> for f64 {
 }
 
 impl NextAfter<f32> for f32 {
+    #[inline]
     fn next_after(self, y: f32) -> f32 {
         if let Some(out) = short_circuit_operands(self, y) {
             return out;

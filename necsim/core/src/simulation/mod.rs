@@ -24,67 +24,57 @@ impl<
 {
     #[debug_requires(max_steps > 0, "must run for at least one step")]
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
+    #[inline]
     pub fn simulate_incremental(
         &mut self,
         max_steps: u64,
         reporter: &mut impl Reporter<H, R>,
     ) -> (f64, u64) {
-        let mut time = self
-            .active_lineage_sampler
-            .get_time_of_last_event(&self.lineage_store);
         let mut steps = 0_u64;
 
-        while let Some((chosen_lineage, dispersal_origin, event_time)) = self
-            .with_mut_split_active_lineage_sampler_and_rng(
+        while steps < max_steps
+            && self.with_mut_split_active_lineage_sampler_and_rng(
                 |active_lineage_sampler, simulation, rng| {
-                    active_lineage_sampler
-                        .pop_active_lineage_indexed_location_event_time(time, simulation, rng)
+                    // Fetch the next `chosen_lineage` to be simulated with its
+                    // `dispersal_origin` and `event_time`
+                    active_lineage_sampler.with_next_active_lineage_indexed_location_event_time(
+                        simulation,
+                        rng,
+                        |simulation, rng, chosen_lineage, dispersal_origin, event_time| {
+                            // Sample the next `event` for the `chosen_lineage`
+                            let event = simulation.with_mut_split_event_sampler(
+                                |event_sampler, simulation| {
+                                    event_sampler.sample_event_for_lineage_at_indexed_location_time(
+                                        chosen_lineage,
+                                        dispersal_origin,
+                                        event_time,
+                                        &simulation,
+                                        rng,
+                                    )
+                                },
+                            );
+
+                            reporter.report_event(&event);
+
+                            // In the event of dispersal without coalescence, the lineage remains
+                            // active
+                            match event.r#type() {
+                                EventType::Dispersal {
+                                    target: dispersal_target,
+                                    coalescence: None,
+                                    ..
+                                } => Some(dispersal_target.clone()),
+                                _ => None,
+                            }
+                        },
+                    )
                 },
             )
         {
-            let event =
-                self.with_mut_split_event_sampler_and_rng(|event_sampler, simulation, rng| {
-                    event_sampler.sample_event_for_lineage_at_indexed_location_time(
-                        chosen_lineage,
-                        dispersal_origin,
-                        event_time,
-                        &simulation,
-                        rng,
-                    )
-                });
-
-            // Advance the simulation time
-            time = event.time();
             steps += 1;
-
-            if let EventType::Dispersal {
-                target: dispersal_target,
-                coalescence: None,
-                ..
-            } = event.r#type()
-            {
-                // In the event of dispersal without coalescence, the lineage remains active
-                self.with_mut_split_active_lineage_sampler_and_rng(
-                    |active_lineage_sampler, simulation, rng| {
-                        active_lineage_sampler.push_active_lineage_to_indexed_location(
-                            event.lineage_reference().clone(),
-                            dispersal_target.clone(),
-                            time,
-                            simulation,
-                            rng,
-                        )
-                    },
-                );
-            }
-
-            reporter.report_event(&event);
-
-            if steps >= max_steps {
-                break;
-            }
         }
 
-        (time, steps)
+        (self.active_lineage_sampler.get_time_of_last_event(), steps)
     }
 
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]

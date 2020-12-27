@@ -29,6 +29,7 @@ impl<
     > for IndependentActiveLineageSampler<H, G, T, D, R, S>
 {
     #[must_use]
+    #[inline]
     fn replace_active_lineage(
         &mut self,
         active_lineage_reference: Option<R>,

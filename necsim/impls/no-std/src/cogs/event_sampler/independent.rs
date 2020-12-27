@@ -59,6 +59,7 @@ impl<
 {
     #[must_use]
     #[allow(clippy::type_complexity)]
+    #[inline]
     fn sample_event_for_lineage_at_indexed_location_time(
         &mut self,
         lineage_reference: R,

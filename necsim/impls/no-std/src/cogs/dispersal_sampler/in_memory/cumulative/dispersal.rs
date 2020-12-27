@@ -26,7 +26,7 @@ impl<H: Habitat, G: RngCore> DispersalSampler<H, G> for InMemoryCumulativeDisper
 
         let dispersal_target_index = usize::min(
             match cumulative_dispersals_at_location
-                .binary_search_by(|v| crate::f64::total_cmp_f64(*v, cumulative_percentage_sample))
+                .binary_search_by(|v| v.total_cmp(&cumulative_percentage_sample))
             {
                 Ok(index) | Err(index) => index,
             },
