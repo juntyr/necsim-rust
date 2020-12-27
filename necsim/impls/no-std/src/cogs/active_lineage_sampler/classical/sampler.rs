@@ -39,7 +39,7 @@ impl<
         self.active_lineage_references.len()
     }
 
-    fn get_time_of_last_event(&self, _lineage_store: &S) -> f64 {
+    fn get_time_of_last_event(&self) -> f64 {
         self.last_event_time
     }
 

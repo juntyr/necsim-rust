@@ -3,6 +3,7 @@
 #![feature(stmt_expr_attributes)]
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
+#![feature(total_cmp)]
 
 extern crate alloc;
 
@@ -15,6 +16,5 @@ extern crate contracts;
 
 pub mod alias;
 pub mod cogs;
-pub mod r#f64;
 pub mod reporter;
 pub mod simulation;

@@ -199,9 +199,6 @@ impl Builder {
         args.push("--target");
         args.push(TARGET_NAME);
 
-        // https://github.com/rust-lang/cargo/pull/7820/files#diff-e35cef716988e9f7122a9c90479aa9204e61d1f41b094c0d183a44e0ca271eaa
-        args.push("-Zfeatures=all");
-
         match self.crate_type {
             Some(CrateType::Binary) => {
                 args.push("--bin");
@@ -219,7 +216,6 @@ impl Builder {
         args.push("--");
         args.push("--crate-type");
         args.push("cdylib");
-        args.push("-Zcrate-attr=no_main");
 
         let output_path = {
             self.source_crate

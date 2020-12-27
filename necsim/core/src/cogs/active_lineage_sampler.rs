@@ -24,7 +24,7 @@ pub trait ActiveLineageSampler<
 
     #[must_use]
     #[debug_ensures(ret >= 0.0_f64, "last event time is non-negative")]
-    fn get_time_of_last_event(&self, lineage_store: &S) -> f64;
+    fn get_time_of_last_event(&self) -> f64;
 
     #[must_use]
     #[allow(clippy::float_cmp)]
@@ -49,7 +49,7 @@ pub trait ActiveLineageSampler<
     #[debug_ensures(match ret {
         None => true,
         Some((ref _reference, ref _location, event_time)) => {
-            self.get_time_of_last_event(&simulation.lineage_store) == event_time
+            self.get_time_of_last_event() == event_time
         },
     }, "updates the time of the last event")]
     fn pop_active_lineage_indexed_location_event_time(
@@ -72,6 +72,50 @@ pub trait ActiveLineageSampler<
         simulation: &mut PartialSimulation<H, G, D, R, S, C, E>,
         rng: &mut G,
     );
+
+    #[inline]
+    fn with_next_active_lineage_indexed_location_event_time<
+        F: FnOnce(
+            &mut PartialSimulation<H, G, D, R, S, C, E>,
+            &mut G,
+            R,
+            IndexedLocation,
+            f64,
+        ) -> Option<IndexedLocation>,
+    >(
+        &mut self,
+        simulation: &mut PartialSimulation<H, G, D, R, S, C, E>,
+        rng: &mut G,
+        inner: F,
+    ) -> bool {
+        if let Some((chosen_lineage, dispersal_origin, event_time)) = self
+            .pop_active_lineage_indexed_location_event_time(
+                self.get_time_of_last_event(),
+                simulation,
+                rng,
+            )
+        {
+            if let Some(dispersal_target) = inner(
+                simulation,
+                rng,
+                chosen_lineage.clone(),
+                dispersal_origin,
+                event_time,
+            ) {
+                self.push_active_lineage_to_indexed_location(
+                    chosen_lineage,
+                    dispersal_target,
+                    event_time,
+                    simulation,
+                    rng,
+                );
+            }
+
+            true
+        } else {
+            false
+        }
+    }
 }
 
 #[allow(clippy::module_name_repetitions)]

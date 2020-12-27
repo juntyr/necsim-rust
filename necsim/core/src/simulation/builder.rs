@@ -58,6 +58,7 @@ impl<
         A: ActiveLineageSampler<H, G, D, R, S, C, E>,
     > Simulation<H, G, D, R, S, C, E, A>
 {
+    #[inline]
     pub fn with_mut_split_active_lineage_sampler_and_rng<
         Q,
         F: FnOnce(
@@ -93,6 +94,7 @@ impl<
         )
     }
 
+    #[inline]
     pub fn with_mut_split_event_sampler_and_rng<
         Q,
         F: FnOnce(

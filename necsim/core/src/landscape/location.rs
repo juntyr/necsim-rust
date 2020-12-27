@@ -1,3 +1,5 @@
+use core::num::NonZeroU32;
+
 #[derive(Eq, PartialEq, Clone, Hash, Debug)]
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub struct Location {
@@ -30,12 +32,15 @@ impl From<IndexedLocation> for Location {
     }
 }
 
+// IndexedLocation uses a NonZeroU32 index internally to enable same-size
+//  Option optimisation
+
 #[derive(Eq, PartialEq, Clone, Hash, Debug)]
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 #[allow(clippy::module_name_repetitions)]
 pub struct IndexedLocation {
     location: Location,
-    pub(crate) index: u32,
+    pub(crate) index: NonZeroU32,
 }
 
 impl IndexedLocation {
@@ -46,7 +51,10 @@ impl IndexedLocation {
     )]
     #[debug_ensures(ret.index() == index, "stores index")]
     pub fn new(location: Location, index: u32) -> Self {
-        Self { location, index }
+        Self {
+            location,
+            index: unsafe { NonZeroU32::new_unchecked(index + 1) },
+        }
     }
 
     #[must_use]
@@ -56,6 +64,6 @@ impl IndexedLocation {
 
     #[must_use]
     pub fn index(&self) -> u32 {
-        self.index
+        self.index.get() - 1
     }
 }
