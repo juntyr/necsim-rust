@@ -2,6 +2,7 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
+    intrinsics::round,
     landscape::{LandscapeExtent, Location},
 };
 
@@ -47,12 +48,12 @@ impl<G: RngCore> DispersalSampler<AlmostInfiniteHabitat, G>
         let (dx, dy): (f64, f64) = rng.sample_2d_normal(0.0_f64, self.sigma);
 
         // Discrete dispersal assumes lineage positions are centred on (0.5, 0.5),
-        // i.e. dispersal >= 0.5 changes the cell
-        // (dx and dy round towards 0 implicitly in the conversion)
+        // i.e. |dispersal| >= 0.5 changes the cell
+        // (dx and dy must be rounded to nearest int away from 0.0)
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let (dx, dy): (i64, i64) = (
-            (dx as i64) % i64::from(self.habitat_extent.width()),
-            (dy as i64) % i64::from(self.habitat_extent.height()),
+            (round(dx) as i64) % i64::from(self.habitat_extent.width()),
+            (round(dy) as i64) % i64::from(self.habitat_extent.height()),
         );
 
         let new_x = (i64::from(location.x()) + dx) % i64::from(self.habitat_extent.width());

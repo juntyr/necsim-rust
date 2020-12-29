@@ -67,3 +67,16 @@ pub fn cos(val: f64) -> f64 {
         rust_cuda::device::nvptx::_cos(val)
     }
 }
+
+#[must_use]
+#[inline]
+pub fn round(val: f64) -> f64 {
+    #[cfg(not(target_os = "cuda"))]
+    unsafe {
+        core::intrinsics::roundf64(val)
+    }
+    #[cfg(target_os = "cuda")]
+    unsafe {
+        rust_cuda::device::nvptx::_round(val)
+    }
+}
