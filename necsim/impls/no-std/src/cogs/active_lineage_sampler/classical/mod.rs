@@ -4,6 +4,7 @@ use alloc::vec::Vec;
 
 use necsim_core::cogs::{
     CoherentLineageStore, DispersalSampler, Habitat, LineageReference, RngCore,
+    SpeciationProbability,
 };
 
 mod sampler;
@@ -13,22 +14,24 @@ mod sampler;
 pub struct ClassicalActiveLineageSampler<
     H: Habitat,
     G: RngCore,
+    N: SpeciationProbability<H>,
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: CoherentLineageStore<H, R>,
 > {
     active_lineage_references: Vec<R>,
     last_event_time: f64,
-    _marker: PhantomData<(H, G, D, S)>,
+    _marker: PhantomData<(H, G, N, D, S)>,
 }
 
 impl<
         H: Habitat,
         G: RngCore,
+        N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-    > ClassicalActiveLineageSampler<H, G, D, R, S>
+    > ClassicalActiveLineageSampler<H, G, N, D, R, S>
 {
     #[must_use]
     pub fn new(lineage_store: &S) -> Self {
@@ -45,7 +48,7 @@ impl<
         Self {
             active_lineage_references,
             last_event_time: 0.0_f64,
-            _marker: PhantomData::<(H, G, D, S)>,
+            _marker: PhantomData::<(H, G, N, D, S)>,
         }
     }
 }

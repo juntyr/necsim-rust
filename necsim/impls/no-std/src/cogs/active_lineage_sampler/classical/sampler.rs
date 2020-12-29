@@ -3,7 +3,7 @@ use float_next_after::NextAfter;
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, CoherentLineageStore, DispersalSampler, Habitat, LineageReference,
-        RngCore,
+        RngCore, SpeciationProbability,
     },
     landscape::IndexedLocation,
     simulation::partial::active_lineager_sampler::PartialSimulation,
@@ -20,6 +20,7 @@ use super::ClassicalActiveLineageSampler;
 impl<
         H: Habitat,
         G: RngCore,
+        N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
@@ -27,12 +28,13 @@ impl<
     ActiveLineageSampler<
         H,
         G,
+        N,
         D,
         R,
         S,
         UnconditionalCoalescenceSampler<H, G, R, S>,
-        UnconditionalEventSampler<H, G, D, R, S, UnconditionalCoalescenceSampler<H, G, R, S>>,
-    > for ClassicalActiveLineageSampler<H, G, D, R, S>
+        UnconditionalEventSampler<H, G, N, D, R, S, UnconditionalCoalescenceSampler<H, G, R, S>>,
+    > for ClassicalActiveLineageSampler<H, G, N, D, R, S>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -51,11 +53,20 @@ impl<
         simulation: &mut PartialSimulation<
             H,
             G,
+            N,
             D,
             R,
             S,
             UnconditionalCoalescenceSampler<H, G, R, S>,
-            UnconditionalEventSampler<H, G, D, R, S, UnconditionalCoalescenceSampler<H, G, R, S>>,
+            UnconditionalEventSampler<
+                H,
+                G,
+                N,
+                D,
+                R,
+                S,
+                UnconditionalCoalescenceSampler<H, G, R, S>,
+            >,
         >,
         rng: &mut G,
     ) -> Option<(R, IndexedLocation, f64)> {
@@ -131,11 +142,20 @@ impl<
         simulation: &mut PartialSimulation<
             H,
             G,
+            N,
             D,
             R,
             S,
             UnconditionalCoalescenceSampler<H, G, R, S>,
-            UnconditionalEventSampler<H, G, D, R, S, UnconditionalCoalescenceSampler<H, G, R, S>>,
+            UnconditionalEventSampler<
+                H,
+                G,
+                N,
+                D,
+                R,
+                S,
+                UnconditionalCoalescenceSampler<H, G, R, S>,
+            >,
         >,
         _rng: &mut G,
     ) {

@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         CoalescenceSampler, CoherentLineageStore, EventSampler, Habitat, LineageReference, RngCore,
-        RngSampler, SeparableDispersalSampler,
+        RngSampler, SeparableDispersalSampler, SpeciationProbability,
     },
     event::{Event, EventType},
     landscape::{IndexedLocation, Location},
@@ -46,10 +46,11 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
+        N: SpeciationProbability<H>,
         D: SeparableDispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-    > EventSampler<H, G, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>
+    > EventSampler<H, G, N, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>
     for ConditionalGillespieEventSampler<H, G, D, R, S>
 {
     #[must_use]
@@ -68,7 +69,7 @@ impl<
         lineage_reference: R,
         indexed_location: IndexedLocation,
         event_time: f64,
-        simulation: &PartialSimulation<H, G, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>,
+        simulation: &PartialSimulation<H, G, N, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>,
         rng: &mut G,
     ) -> Event<H, R> {
         let dispersal_origin = indexed_location;
@@ -127,10 +128,11 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
+        N: SpeciationProbability<H>,
         D: SeparableDispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-    > GillespieEventSampler<H, G, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>
+    > GillespieEventSampler<H, G, N, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>
     for ConditionalGillespieEventSampler<H, G, D, R, S>
 {
     #[must_use]
@@ -138,7 +140,7 @@ impl<
     fn get_event_rate_at_location(
         &self,
         location: &Location,
-        simulation: &PartialSimulation<H, G, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>,
+        simulation: &PartialSimulation<H, G, N, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>,
         lineage_store_includes_self: bool,
     ) -> f64 {
         let probability_at_location =

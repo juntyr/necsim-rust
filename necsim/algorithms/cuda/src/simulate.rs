@@ -21,7 +21,7 @@ use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, HabitatToU64Injection, IncoherentLineageStore,
         LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
-        SingularActiveLineageSampler, SpeciationSample,
+        SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
     },
     reporter::Reporter,
     simulation::Simulation,
@@ -35,20 +35,21 @@ use crate::kernel::SimulationKernel;
 pub fn simulate<
     H: HabitatToU64Injection + RustToCuda,
     G: PrimeableRng<H> + RustToCuda,
+    N: SpeciationProbability<H> + RustToCuda,
     D: DispersalSampler<H, G> + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
     P: Reporter<H, R>,
     S: IncoherentLineageStore<H, R> + RustToCuda,
     C: CoalescenceSampler<H, G, R, S> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<H, G, D, R, S, C> + RustToCuda,
-    A: SingularActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
+    E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, C> + RustToCuda,
+    A: SingularActiveLineageSampler<H, G, N, D, R, S, C, E> + RustToCuda,
     const REPORT_SPECIATION: bool,
     const REPORT_DISPERSAL: bool,
 >(
     stream: &Stream,
-    kernel: &SimulationKernel<H, G, D, R, S, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
+    kernel: &SimulationKernel<H, G, N, D, R, S, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
     task: (u32, GridSize, BlockSize),
-    mut simulation: Simulation<H, G, D, R, S, C, E, A>,
+    mut simulation: Simulation<H, G, N, D, R, S, C, E, A>,
     task_list: ValueBuffer<R>,
     event_buffer: EventBuffer<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
     min_spec_sample_buffer: ValueBuffer<SpeciationSample>,
@@ -57,7 +58,7 @@ pub fn simulate<
 ) -> Result<(f64, u64)> {
     // TODO: Remove once debugging data structure layout is no longer necessary
     use type_layout::TypeLayout;
-    println!("{}", Simulation::<H, G, D, R, S, C, E, A>::type_layout());
+    println!("{}", Simulation::<H, G, N, D, R, S, C, E, A>::type_layout());
     println!("{}", necsim_core::event::Event::<H, R>::type_layout());
 
     // Load and initialise the global_time_max and global_steps_sum symbols

@@ -3,7 +3,8 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EventSampler, Habitat, IncoherentLineageStore,
-        LineageReference, MinSpeciationTrackingEventSampler, RngCore, SpeciationSample,
+        LineageReference, MinSpeciationTrackingEventSampler, RngCore, SpeciationProbability,
+        SpeciationSample,
     },
     event::{Event, EventType},
     landscape::IndexedLocation,
@@ -51,10 +52,11 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
+        N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
-    > EventSampler<H, G, D, R, S, IndependentCoalescenceSampler<H, G, R, S>>
+    > EventSampler<H, G, N, D, R, S, IndependentCoalescenceSampler<H, G, R, S>>
     for IndependentEventSampler<H, G, D, R, S>
 {
     #[must_use]
@@ -65,7 +67,7 @@ impl<
         lineage_reference: R,
         indexed_location: IndexedLocation,
         event_time: f64,
-        simulation: &PartialSimulation<H, G, D, R, S, IndependentCoalescenceSampler<H, G, R, S>>,
+        simulation: &PartialSimulation<H, G, N, D, R, S, IndependentCoalescenceSampler<H, G, R, S>>,
         rng: &mut G,
     ) -> Event<H, R> {
         use necsim_core::cogs::RngSampler;
@@ -82,7 +84,11 @@ impl<
 
         let dispersal_origin = indexed_location;
 
-        let event_type = if speciation_sample < simulation.speciation_probability_per_generation {
+        let event_type = if speciation_sample
+            < simulation
+                .speciation_probability
+                .get_speciation_probability_at_location(dispersal_origin.location())
+        {
             EventType::Speciation
         } else {
             let dispersal_target = simulation
@@ -112,10 +118,11 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
+        N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
-    > MinSpeciationTrackingEventSampler<H, G, D, R, S, IndependentCoalescenceSampler<H, G, R, S>>
+    > MinSpeciationTrackingEventSampler<H, G, N, D, R, S, IndependentCoalescenceSampler<H, G, R, S>>
     for IndependentEventSampler<H, G, D, R, S>
 {
     fn replace_min_speciation(

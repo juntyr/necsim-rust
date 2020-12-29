@@ -14,6 +14,7 @@ use necsim_core::{
 use necsim_impls_no_std::cogs::{
     coalescence_sampler::conditional::ConditionalCoalescenceSampler,
     event_sampler::gillespie::conditional::ConditionalGillespieEventSampler,
+    speciation_probability::uniform::UniformSpeciationProbability,
 };
 use necsim_impls_std::cogs::{
     active_lineage_sampler::gillespie::GillespieActiveLineageSampler, rng::std::StdRng,
@@ -47,13 +48,15 @@ impl SkippingGillespieSimulation {
     ) -> (f64, u64) {
         reporter_context.with_reporter(|reporter| {
             let mut rng = StdRng::seed_from_u64(seed);
+            let speciation_probability =
+                UniformSpeciationProbability::new(speciation_probability_per_generation);
             let coalescence_sampler = ConditionalCoalescenceSampler::default();
             let event_sampler = ConditionalGillespieEventSampler::default();
 
             // Pack a PartialSimulation to initialise the GillespieActiveLineageSampler
             let partial_simulation = PartialSimulation {
-                speciation_probability_per_generation,
                 habitat,
+                speciation_probability,
                 dispersal_sampler,
                 lineage_reference: PhantomData::<R>,
                 lineage_store,
@@ -66,8 +69,8 @@ impl SkippingGillespieSimulation {
 
             // Unpack the PartialSimulation to create the full Simulation
             let PartialSimulation {
-                speciation_probability_per_generation,
                 habitat,
+                speciation_probability,
                 dispersal_sampler,
                 lineage_reference,
                 lineage_store,
@@ -76,9 +79,9 @@ impl SkippingGillespieSimulation {
             } = partial_simulation;
 
             let simulation = Simulation::builder()
-                .speciation_probability_per_generation(speciation_probability_per_generation)
                 .habitat(habitat)
                 .rng(rng)
+                .speciation_probability(speciation_probability)
                 .dispersal_sampler(dispersal_sampler)
                 .lineage_reference(lineage_reference)
                 .lineage_store(lineage_store)

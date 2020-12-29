@@ -6,6 +6,7 @@ use core::{
 
 use super::{
     CoalescenceSampler, DispersalSampler, Habitat, LineageReference, LineageStore, RngCore,
+    SpeciationProbability,
 };
 use crate::{
     event::Event, landscape::IndexedLocation, simulation::partial::event_sampler::PartialSimulation,
@@ -16,6 +17,7 @@ use crate::{
 pub trait EventSampler<
     H: Habitat,
     G: RngCore,
+    N: SpeciationProbability<H>,
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
@@ -25,11 +27,6 @@ pub trait EventSampler<
     #[must_use]
     #[allow(clippy::float_cmp)]
     #[debug_requires(event_time >= 0.0_f64, "event time is non-negative")]
-    #[debug_requires(
-        simulation.speciation_probability_per_generation >= 0.0_f64 &&
-        simulation.speciation_probability_per_generation <= 1.0_f64,
-        "speciation_probability_per_generation is a probability"
-    )]
     #[debug_ensures(
         ret.lineage_reference() == &old(lineage_reference.clone()),
         "event occurs for lineage_reference"
@@ -40,7 +37,7 @@ pub trait EventSampler<
         lineage_reference: R,
         indexed_location: IndexedLocation,
         event_time: f64,
-        simulation: &PartialSimulation<H, G, D, R, S, C>,
+        simulation: &PartialSimulation<H, G, N, D, R, S, C>,
         rng: &mut G,
     ) -> Event<H, R>;
 }
@@ -113,11 +110,12 @@ impl Ord for SpeciationSample {
 pub trait MinSpeciationTrackingEventSampler<
     H: Habitat,
     G: RngCore,
+    N: SpeciationProbability<H>,
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
     C: CoalescenceSampler<H, G, R, S>,
->: EventSampler<H, G, D, R, S, C>
+>: EventSampler<H, G, N, D, R, S, C>
 {
     fn replace_min_speciation(&mut self, new: Option<SpeciationSample>)
         -> Option<SpeciationSample>;

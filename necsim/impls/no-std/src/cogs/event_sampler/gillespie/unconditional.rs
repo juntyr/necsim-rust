@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         CoalescenceSampler, CoherentLineageStore, DispersalSampler, EventSampler, Habitat,
-        LineageReference, RngCore,
+        LineageReference, RngCore, SpeciationProbability,
     },
     event::{Event, EventType},
     landscape::{IndexedLocation, Location},
@@ -41,11 +41,12 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
+        N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
         C: CoalescenceSampler<H, G, R, S>,
-    > EventSampler<H, G, D, R, S, C> for UnconditionalGillespieEventSampler<H, G, D, R, S, C>
+    > EventSampler<H, G, N, D, R, S, C> for UnconditionalGillespieEventSampler<H, G, D, R, S, C>
 {
     #[must_use]
     fn sample_event_for_lineage_at_indexed_location_time(
@@ -53,14 +54,18 @@ impl<
         lineage_reference: R,
         indexed_location: IndexedLocation,
         event_time: f64,
-        simulation: &PartialSimulation<H, G, D, R, S, C>,
+        simulation: &PartialSimulation<H, G, N, D, R, S, C>,
         rng: &mut G,
     ) -> Event<H, R> {
         use necsim_core::cogs::RngSampler;
 
         let dispersal_origin = indexed_location;
 
-        let event_type = if rng.sample_event(simulation.speciation_probability_per_generation) {
+        let event_type = if rng.sample_event(
+            simulation
+                .speciation_probability
+                .get_speciation_probability_at_location(dispersal_origin.location()),
+        ) {
             EventType::Speciation
         } else {
             let dispersal_target = simulation
@@ -91,18 +96,19 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
+        N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
         C: CoalescenceSampler<H, G, R, S>,
-    > GillespieEventSampler<H, G, D, R, S, C>
+    > GillespieEventSampler<H, G, N, D, R, S, C>
     for UnconditionalGillespieEventSampler<H, G, D, R, S, C>
 {
     #[must_use]
     fn get_event_rate_at_location(
         &self,
         location: &Location,
-        simulation: &PartialSimulation<H, G, D, R, S, C>,
+        simulation: &PartialSimulation<H, G, N, D, R, S, C>,
         lineage_store_includes_self: bool,
     ) -> f64 {
         #[allow(clippy::cast_precision_loss)]

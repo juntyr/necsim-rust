@@ -47,7 +47,7 @@ use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, HabitatToU64Injection, IncoherentLineageStore,
         LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
-        SingularActiveLineageSampler, SpeciationSample,
+        SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
     },
     simulation::Simulation,
 };
@@ -90,17 +90,18 @@ use rust_cuda::common::DeviceBoxMut;
 unsafe fn simulate_generic<
     H: HabitatToU64Injection + RustToCuda,
     G: PrimeableRng<H> + RustToCuda,
+    N: SpeciationProbability<H> + RustToCuda,
     D: DispersalSampler<H, G> + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
     S: IncoherentLineageStore<H, R> + RustToCuda,
     C: CoalescenceSampler<H, G, R, S> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<H, G, D, R, S, C> + RustToCuda,
-    A: SingularActiveLineageSampler<H, G, D, R, S, C, E> + RustToCuda,
+    E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, C> + RustToCuda,
+    A: SingularActiveLineageSampler<H, G, N, D, R, S, C, E> + RustToCuda,
     const REPORT_SPECIATION: bool,
     const REPORT_DISPERSAL: bool,
 >(
     simulation_cuda_repr: DeviceBoxMut<
-        <Simulation<H, G, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
+        <Simulation<H, G, N, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
     >,
     task_list_cuda_repr: DeviceBoxMut<<ValueBuffer<R> as RustToCuda>::CudaRepresentation>,
     event_buffer_cuda_repr: DeviceBoxMut<

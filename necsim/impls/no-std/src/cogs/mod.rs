@@ -6,3 +6,4 @@ pub mod habitat;
 pub mod lineage_reference;
 pub mod lineage_store;
 pub mod rng;
+pub mod speciation_probability;
