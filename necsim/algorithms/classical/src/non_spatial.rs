@@ -2,6 +2,7 @@ use necsim_impls_no_std::cogs::{
     dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
     habitat::non_spatial::NonSpatialHabitat,
     lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
+    speciation_probability::uniform::UniformSpeciationProbability,
 };
 
 use necsim_impls_no_std::{
@@ -25,14 +26,16 @@ impl NonSpatialSimulation for ClassicalSimulation {
         reporter_context: P,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = NonSpatialHabitat::new(area, deme);
+        let speciation_probability =
+            UniformSpeciationProbability::new(speciation_probability_per_generation);
         let dispersal_sampler = NonSpatialDispersalSampler::new(&habitat);
         let lineage_store = CoherentInMemoryLineageStore::new(sample_percentage, &habitat);
 
         Ok(ClassicalSimulation::simulate(
             habitat,
+            speciation_probability,
             dispersal_sampler,
             lineage_store,
-            speciation_probability_per_generation,
             seed,
             reporter_context,
         ))

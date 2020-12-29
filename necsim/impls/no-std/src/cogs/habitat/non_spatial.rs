@@ -47,8 +47,9 @@ impl Habitat for NonSpatialHabitat {
 impl HabitatToU64Injection for NonSpatialHabitat {
     #[must_use]
     fn map_indexed_location_to_u64_injective(&self, indexed_location: &IndexedLocation) -> u64 {
-        (u64::from(indexed_location.location().y()) * u64::from(self.extent.width())
-            + u64::from(indexed_location.location().x()))
+        (u64::from(indexed_location.location().y() - self.extent.y())
+            * u64::from(self.extent.width())
+            + u64::from(indexed_location.location().x() - self.extent.x()))
             * u64::from(self.deme)
             + u64::from(indexed_location.index())
     }

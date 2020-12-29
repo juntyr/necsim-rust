@@ -2,6 +2,7 @@ use necsim_impls_no_std::cogs::{
     dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
     habitat::almost_infinite::AlmostInfiniteHabitat,
     lineage_store::coherent::almost_infinite::CoherentAlmostInfiniteLineageStore,
+    speciation_probability::uniform::UniformSpeciationProbability,
 };
 
 use necsim_impls_no_std::{
@@ -26,15 +27,17 @@ impl AlmostInfiniteSimulation for ClassicalSimulation {
         reporter_context: P,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = AlmostInfiniteHabitat::default();
+        let speciation_probability =
+            UniformSpeciationProbability::new(speciation_probability_per_generation);
         let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(sigma, &habitat);
         let lineage_store =
             CoherentAlmostInfiniteLineageStore::new(radius, sample_percentage, &habitat);
 
         Ok(ClassicalSimulation::simulate(
             habitat,
+            speciation_probability,
             dispersal_sampler,
             lineage_store,
-            speciation_probability_per_generation,
             seed,
             reporter_context,
         ))

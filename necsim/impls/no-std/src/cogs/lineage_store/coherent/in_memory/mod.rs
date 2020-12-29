@@ -55,8 +55,13 @@ impl<H: Habitat> CoherentInMemoryLineageStore<H> {
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
         #[allow(clippy::cast_precision_loss)]
-        let mut lineages_store =
-            Vec::with_capacity(((habitat.get_total_habitat() as f64) * sample_percentage) as usize);
+        let total_number_of_lineages =
+            ((habitat.get_total_habitat() as f64) * sample_percentage) as usize;
+
+        #[allow(clippy::cast_possible_truncation)]
+        #[allow(clippy::cast_sign_loss)]
+        #[allow(clippy::cast_precision_loss)]
+        let mut lineages_store = Vec::with_capacity(total_number_of_lineages);
 
         let landscape_extent = habitat.get_extent();
 
@@ -65,6 +70,8 @@ impl<H: Habitat> CoherentInMemoryLineageStore<H> {
             landscape_extent.height() as usize,
             landscape_extent.width() as usize,
         );
+
+        let mut extra_indexed_locations: Vec<(f64, IndexedLocation)> = Vec::new();
 
         let x_from = landscape_extent.x();
         let y_from = landscape_extent.y();
@@ -76,11 +83,12 @@ impl<H: Habitat> CoherentInMemoryLineageStore<H> {
                 let lineages_at_location =
                     &mut location_to_lineage_references[(y_offset as usize, x_offset as usize)];
 
+                let sampled_habitat_at_location_max =
+                    f64::from(habitat.get_habitat_at_location(&location)) * sample_percentage;
+
                 #[allow(clippy::cast_possible_truncation)]
                 #[allow(clippy::cast_sign_loss)]
-                let sampled_habitat_at_location = floor(
-                    f64::from(habitat.get_habitat_at_location(&location)) * sample_percentage,
-                ) as u32;
+                let sampled_habitat_at_location = floor(sampled_habitat_at_location_max) as u32;
 
                 for index_at_location in 0..sampled_habitat_at_location {
                     let lineage_reference = InMemoryLineageReference::from(lineages_store.len());
@@ -91,7 +99,34 @@ impl<H: Habitat> CoherentInMemoryLineageStore<H> {
                         index_at_location,
                     )));
                 }
+
+                if sampled_habitat_at_location_max > f64::from(sampled_habitat_at_location) {
+                    // Remember the IndexedLocation for another Lineage
+                    extra_indexed_locations.push((
+                        sampled_habitat_at_location_max - f64::from(sampled_habitat_at_location),
+                        IndexedLocation::new(location.clone(), sampled_habitat_at_location),
+                    ));
+                }
             }
+        }
+
+        extra_indexed_locations.sort_by(|(rem_a, _), (rem_b, _)| rem_a.total_cmp(rem_b));
+
+        // Fill up the remaining Lineages prioritiesed by how 'off' the original
+        //  allocation was
+        while let Some((_, indexed_location)) = extra_indexed_locations.pop() {
+            if lineages_store.len() >= total_number_of_lineages {
+                break;
+            }
+
+            let lineages_at_location = &mut location_to_lineage_references[(
+                (indexed_location.location().y() - y_from) as usize,
+                (indexed_location.location().x() - x_from) as usize,
+            )];
+            let lineage_reference = InMemoryLineageReference::from(lineages_store.len());
+
+            lineages_at_location.push(lineage_reference);
+            lineages_store.push(Lineage::new(indexed_location));
         }
 
         lineages_store.shrink_to_fit();

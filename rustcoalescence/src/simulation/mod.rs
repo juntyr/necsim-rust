@@ -2,14 +2,15 @@ use anyhow::Result;
 use array2d::Array2D;
 
 use crate::{
-    args::{AlmostInfiniteArgs, CommonArgs, InMemoryArgs, NonSpatialArgs},
+    args::{AlmostInfiniteArgs, CommonArgs, InMemoryArgs, NonSpatialArgs, NonSpatialMigrationArgs},
     maps,
     reporter::RustcoalescenceReporterContext,
 };
 
-pub mod almost_infinite;
-pub mod in_memory;
-pub mod non_spatial;
+mod almost_infinite;
+mod in_memory;
+mod non_spatial;
+mod non_spatial_migration;
 
 #[allow(clippy::module_name_repetitions)]
 pub fn setup_in_memory_simulation(
@@ -115,6 +116,27 @@ fn setup_non_spatial_in_memory_simulation(
         &non_spatial_args.as_in_memory(),
         &habitat,
         &dispersal,
+        RustcoalescenceReporterContext::new(estimated_total_lineages),
+    )
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub fn setup_non_spatial_migration_simulation(
+    common_args: &CommonArgs,
+    non_spatial_migration_args: &NonSpatialMigrationArgs,
+) -> Result<(f64, u64)> {
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_sign_loss)]
+    let estimated_total_lineages = (f64::from(non_spatial_migration_args.local_area().0)
+        * f64::from(non_spatial_migration_args.local_area().1)
+        * f64::from(*non_spatial_migration_args.local_deme())
+        * common_args.sample_percentage())
+    .ceil() as u64;
+
+    // Run the simulation
+    non_spatial_migration::simulate(
+        common_args,
+        &non_spatial_migration_args,
         RustcoalescenceReporterContext::new(estimated_total_lineages),
     )
 }

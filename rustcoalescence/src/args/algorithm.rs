@@ -32,7 +32,7 @@ impl std::str::FromStr for Algorithm {
             #[cfg(feature = "necsim-gillespie")]
             "Gillespie" | _ if s.eq_ignore_ascii_case("Gillespie") => Ok(Algorithm::Gillespie),
             #[cfg(feature = "necsim-skipping-gillespie")]
-            "SkippingGillespie" | _ if s.eq_ignore_ascii_case("SkippingGillespie") => {
+            "Skipping-Gillespie" | _ if s.eq_ignore_ascii_case("Skipping-Gillespie") => {
                 Ok(Algorithm::SkippingGillespie)
             },
             #[cfg(feature = "necsim-cuda")]
@@ -44,7 +44,7 @@ impl std::str::FromStr for Algorithm {
                     #[cfg(feature = "necsim-gillespie")]
                     "Gillespie",
                     #[cfg(feature = "necsim-skipping-gillespie")]
-                    "SkippingGillespie",
+                    "Skipping-Gillespie",
                     #[cfg(feature = "necsim-cuda")]
                     "CUDA",
                 ];
@@ -62,7 +62,7 @@ impl Algorithm {
             #[cfg(feature = "necsim-gillespie")]
             "Gillespie",
             #[cfg(feature = "necsim-skipping-gillespie")]
-            "SkippingGillespie",
+            "Skipping-Gillespie",
             #[cfg(feature = "necsim-cuda")]
             "CUDA",
         ]
