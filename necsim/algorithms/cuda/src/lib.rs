@@ -32,6 +32,7 @@ use necsim_impls_no_std::cogs::{
     coalescence_sampler::independent::IndependentCoalescenceSampler as CoalescenceSampler,
     event_sampler::independent::IndependentEventSampler as EventSampler,
     rng::fixedseahash::FixedSeaHash as Rng,
+    speciation_probability::uniform::UniformSpeciationProbability,
 };
 
 use necsim_impls_cuda::cogs::rng::CudaRng;
@@ -77,6 +78,8 @@ impl CudaSimulation {
 
         reporter_context.with_reporter(|reporter| {
             let rng = CudaRng::<Rng>::seed_from_u64(seed);
+            let speciation_probability =
+                UniformSpeciationProbability::new(speciation_probability_per_generation);
             let coalescence_sampler = CoalescenceSampler::default();
             let event_sampler = EventSampler::default();
 
@@ -85,9 +88,9 @@ impl CudaSimulation {
                 ActiveLineageSampler::empty(ExpEventTimeSampler::new(1.0_f64)); // FixedEventTimeSampler::default());//PoissonEventTimeSampler::new(1.0_f64));
 
             let simulation = Simulation::builder()
-                .speciation_probability_per_generation(speciation_probability_per_generation)
                 .habitat(habitat)
                 .rng(rng)
+                .speciation_probability(speciation_probability)
                 .dispersal_sampler(dispersal_sampler)
                 .lineage_reference(std::marker::PhantomData::<R>)
                 .lineage_store(lineage_store)

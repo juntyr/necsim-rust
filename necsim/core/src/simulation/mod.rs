@@ -4,7 +4,7 @@ pub mod partial;
 
 use crate::cogs::{
     ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler, Habitat,
-    LineageReference, LineageStore, RngCore,
+    LineageReference, LineageStore, RngCore, SpeciationProbability,
 };
 
 pub use builder::Simulation;
@@ -14,13 +14,14 @@ use crate::{event::EventType, reporter::Reporter};
 impl<
         H: Habitat,
         G: RngCore,
+        N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
         C: CoalescenceSampler<H, G, R, S>,
-        E: EventSampler<H, G, D, R, S, C>,
-        A: ActiveLineageSampler<H, G, D, R, S, C, E>,
-    > Simulation<H, G, D, R, S, C, E, A>
+        E: EventSampler<H, G, N, D, R, S, C>,
+        A: ActiveLineageSampler<H, G, N, D, R, S, C, E>,
+    > Simulation<H, G, N, D, R, S, C, E, A>
 {
     #[debug_requires(max_steps > 0, "must run for at least one step")]
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]

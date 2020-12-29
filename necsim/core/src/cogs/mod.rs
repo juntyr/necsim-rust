@@ -1,6 +1,9 @@
 mod habitat;
 pub use habitat::{Habitat, HabitatToU64Injection};
 
+mod speciation_probability;
+pub use speciation_probability::SpeciationProbability;
+
 mod rng;
 pub use rng::{PrimeableRng, RngCore, RngSampler};
 

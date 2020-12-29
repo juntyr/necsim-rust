@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference,
-        LineageStore, RngCore,
+        LineageStore, RngCore, SpeciationProbability,
     },
     event::{Event, EventType},
     landscape::IndexedLocation,
@@ -15,23 +15,25 @@ use necsim_core::{
 pub struct UnconditionalEventSampler<
     H: Habitat,
     G: RngCore,
+    N: SpeciationProbability<H>,
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
     C: CoalescenceSampler<H, G, R, S>,
->(PhantomData<(H, G, D, R, S, C)>);
+>(PhantomData<(H, G, N, D, R, S, C)>);
 
 impl<
         H: Habitat,
         G: RngCore,
+        N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
         C: CoalescenceSampler<H, G, R, S>,
-    > Default for UnconditionalEventSampler<H, G, D, R, S, C>
+    > Default for UnconditionalEventSampler<H, G, N, D, R, S, C>
 {
     fn default() -> Self {
-        Self(PhantomData::<(H, G, D, R, S, C)>)
+        Self(PhantomData::<(H, G, N, D, R, S, C)>)
     }
 }
 
@@ -39,11 +41,12 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
+        N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
         C: CoalescenceSampler<H, G, R, S>,
-    > EventSampler<H, G, D, R, S, C> for UnconditionalEventSampler<H, G, D, R, S, C>
+    > EventSampler<H, G, N, D, R, S, C> for UnconditionalEventSampler<H, G, N, D, R, S, C>
 {
     #[must_use]
     fn sample_event_for_lineage_at_indexed_location_time(
@@ -51,14 +54,18 @@ impl<
         lineage_reference: R,
         indexed_location: IndexedLocation,
         event_time: f64,
-        simulation: &PartialSimulation<H, G, D, R, S, C>,
+        simulation: &PartialSimulation<H, G, N, D, R, S, C>,
         rng: &mut G,
     ) -> Event<H, R> {
         use necsim_core::cogs::RngSampler;
 
         let dispersal_origin = indexed_location;
 
-        let event_type = if rng.sample_event(simulation.speciation_probability_per_generation) {
+        let event_type = if rng.sample_event(
+            simulation
+                .speciation_probability
+                .get_speciation_probability_at_location(dispersal_origin.location()),
+        ) {
             EventType::Speciation
         } else {
             let dispersal_target = simulation

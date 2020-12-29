@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, DispersalSampler, HabitatToU64Injection, IncoherentLineageStore,
-        LineageReference, PrimeableRng,
+        LineageReference, PrimeableRng, SpeciationProbability,
     },
     landscape::IndexedLocation,
     simulation::partial::active_lineager_sampler::PartialSimulation,
@@ -18,6 +18,7 @@ use super::{EventTimeSampler, IndependentActiveLineageSampler};
 impl<
         H: HabitatToU64Injection,
         G: PrimeableRng<H>,
+        N: SpeciationProbability<H>,
         T: EventTimeSampler<H, G>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
@@ -26,12 +27,13 @@ impl<
     ActiveLineageSampler<
         H,
         G,
+        N,
         D,
         R,
         S,
         IndependentCoalescenceSampler<H, G, R, S>,
         IndependentEventSampler<H, G, D, R, S>,
-    > for IndependentActiveLineageSampler<H, G, T, D, R, S>
+    > for IndependentActiveLineageSampler<H, G, N, T, D, R, S>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -51,6 +53,7 @@ impl<
         simulation: &mut PartialSimulation<
             H,
             G,
+            N,
             D,
             R,
             S,
@@ -106,6 +109,7 @@ impl<
         _simulation: &mut PartialSimulation<
             H,
             G,
+            N,
             D,
             R,
             S,

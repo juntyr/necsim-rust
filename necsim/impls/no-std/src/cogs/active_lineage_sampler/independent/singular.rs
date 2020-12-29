@@ -1,6 +1,6 @@
 use necsim_core::cogs::{
     DispersalSampler, HabitatToU64Injection, IncoherentLineageStore, LineageReference,
-    PrimeableRng, SingularActiveLineageSampler,
+    PrimeableRng, SingularActiveLineageSampler, SpeciationProbability,
 };
 
 use crate::cogs::{
@@ -13,6 +13,7 @@ use super::{EventTimeSampler, IndependentActiveLineageSampler};
 impl<
         H: HabitatToU64Injection,
         G: PrimeableRng<H>,
+        N: SpeciationProbability<H>,
         T: EventTimeSampler<H, G>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
@@ -21,12 +22,13 @@ impl<
     SingularActiveLineageSampler<
         H,
         G,
+        N,
         D,
         R,
         S,
         IndependentCoalescenceSampler<H, G, R, S>,
         IndependentEventSampler<H, G, D, R, S>,
-    > for IndependentActiveLineageSampler<H, G, T, D, R, S>
+    > for IndependentActiveLineageSampler<H, G, N, T, D, R, S>
 {
     #[must_use]
     #[inline]

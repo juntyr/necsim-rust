@@ -1,5 +1,8 @@
 use necsim_core::{
-    cogs::{CoherentLineageStore, Habitat, LineageReference, RngCore, SeparableDispersalSampler},
+    cogs::{
+        CoherentLineageStore, Habitat, LineageReference, RngCore, SeparableDispersalSampler,
+        SpeciationProbability,
+    },
     landscape::Location,
     simulation::partial::event_sampler::PartialSimulation,
 };
@@ -18,14 +21,18 @@ impl ProbabilityAtLocation {
     pub fn new<
         H: Habitat,
         G: RngCore,
+        N: SpeciationProbability<H>,
         D: SeparableDispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
     >(
         location: &Location,
-        simulation: &PartialSimulation<H, G, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>,
+        simulation: &PartialSimulation<H, G, N, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>,
         lineage_store_includes_self: bool,
     ) -> Self {
+        let speciation_probability = simulation
+            .speciation_probability
+            .get_speciation_probability_at_location(location);
         let self_dispersal_probability = simulation
             .dispersal_sampler
             .get_self_dispersal_probability_at_location(location);
@@ -38,10 +45,10 @@ impl ProbabilityAtLocation {
             );
 
         Self {
-            speciation: simulation.speciation_probability_per_generation,
-            out_dispersal: (1.0_f64 - simulation.speciation_probability_per_generation)
+            speciation: speciation_probability,
+            out_dispersal: (1.0_f64 - speciation_probability)
                 * (1.0_f64 - self_dispersal_probability),
-            self_coalescence: (1.0_f64 - simulation.speciation_probability_per_generation)
+            self_coalescence: (1.0_f64 - speciation_probability)
                 * self_dispersal_probability
                 * coalescence_probability_at_location,
         }
