@@ -4,6 +4,7 @@ use necsim_impls_no_std::cogs::{
     dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
     habitat::in_memory::InMemoryHabitat,
     lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
+    speciation_probability::uniform::UniformSpeciationProbability,
 };
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
@@ -32,14 +33,16 @@ impl InMemorySimulation for ClassicalSimulation {
         reporter_context: P,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = InMemoryHabitat::new(habitat.clone());
+        let speciation_probability =
+            UniformSpeciationProbability::new(speciation_probability_per_generation);
         let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
         let lineage_store = CoherentInMemoryLineageStore::new(sample_percentage, &habitat);
 
         Ok(ClassicalSimulation::simulate(
             habitat,
+            speciation_probability,
             dispersal_sampler,
             lineage_store,
-            speciation_probability_per_generation,
             seed,
             reporter_context,
         ))

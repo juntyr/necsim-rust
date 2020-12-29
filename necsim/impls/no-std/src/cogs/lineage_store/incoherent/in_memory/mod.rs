@@ -54,8 +54,15 @@ impl<H: Habitat> IncoherentInMemoryLineageStore<H> {
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
         #[allow(clippy::cast_precision_loss)]
-        let mut lineages_store =
-            Vec::with_capacity(((habitat.get_total_habitat() as f64) * sample_percentage) as usize);
+        let total_number_of_lineages =
+            ((habitat.get_total_habitat() as f64) * sample_percentage) as usize;
+
+        #[allow(clippy::cast_possible_truncation)]
+        #[allow(clippy::cast_sign_loss)]
+        #[allow(clippy::cast_precision_loss)]
+        let mut lineages_store = Vec::with_capacity(total_number_of_lineages);
+
+        let mut extra_indexed_locations: Vec<(f64, IndexedLocation)> = Vec::new();
 
         let landscape_extent = habitat.get_extent();
 
@@ -66,11 +73,12 @@ impl<H: Habitat> IncoherentInMemoryLineageStore<H> {
             for x_offset in 0..landscape_extent.width() {
                 let location = Location::new(x_from + x_offset, y_from + y_offset);
 
+                let sampled_habitat_at_location_max =
+                    f64::from(habitat.get_habitat_at_location(&location)) * sample_percentage;
+
                 #[allow(clippy::cast_possible_truncation)]
                 #[allow(clippy::cast_sign_loss)]
-                let sampled_habitat_at_location = floor(
-                    f64::from(habitat.get_habitat_at_location(&location)) * sample_percentage,
-                ) as u32;
+                let sampled_habitat_at_location = floor(sampled_habitat_at_location_max) as u32;
 
                 for index_at_location in 0..sampled_habitat_at_location {
                     lineages_store.push(Lineage::new(IndexedLocation::new(
@@ -78,7 +86,27 @@ impl<H: Habitat> IncoherentInMemoryLineageStore<H> {
                         index_at_location,
                     )));
                 }
+
+                if sampled_habitat_at_location_max > f64::from(sampled_habitat_at_location) {
+                    // Remember the IndexedLocation for another Lineage
+                    extra_indexed_locations.push((
+                        sampled_habitat_at_location_max - f64::from(sampled_habitat_at_location),
+                        IndexedLocation::new(location.clone(), sampled_habitat_at_location),
+                    ));
+                }
             }
+        }
+
+        extra_indexed_locations.sort_by(|(rem_a, _), (rem_b, _)| rem_a.total_cmp(rem_b));
+
+        // Fill up the remaining Lineages prioritiesed by how 'off' the original
+        //  allocation was
+        while let Some((_, indexed_location)) = extra_indexed_locations.pop() {
+            if lineages_store.len() >= total_number_of_lineages {
+                break;
+            }
+
+            lineages_store.push(Lineage::new(indexed_location));
         }
 
         lineages_store.shrink_to_fit();
