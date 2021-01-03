@@ -24,26 +24,28 @@ use crate::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler
 pub struct IndependentEventSampler<
     H: Habitat,
     G: RngCore,
+    N: SpeciationProbability<H>,
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: IncoherentLineageStore<H, R>,
 > {
     min_spec_sample: Option<SpeciationSample>,
-    marker: PhantomData<(H, G, D, R, S)>,
+    marker: PhantomData<(H, G, N, D, R, S)>,
 }
 
 impl<
         H: Habitat,
         G: RngCore,
+        N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
-    > Default for IndependentEventSampler<H, G, D, R, S>
+    > Default for IndependentEventSampler<H, G, N, D, R, S>
 {
     fn default() -> Self {
         Self {
             min_spec_sample: None,
-            marker: PhantomData::<(H, G, D, R, S)>,
+            marker: PhantomData::<(H, G, N, D, R, S)>,
         }
     }
 }
@@ -57,7 +59,7 @@ impl<
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
     > EventSampler<H, G, N, D, R, S, IndependentCoalescenceSampler<H, G, R, S>>
-    for IndependentEventSampler<H, G, D, R, S>
+    for IndependentEventSampler<H, G, N, D, R, S>
 {
     #[must_use]
     #[allow(clippy::type_complexity)]
@@ -123,7 +125,7 @@ impl<
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
     > MinSpeciationTrackingEventSampler<H, G, N, D, R, S, IndependentCoalescenceSampler<H, G, R, S>>
-    for IndependentEventSampler<H, G, D, R, S>
+    for IndependentEventSampler<H, G, N, D, R, S>
 {
     fn replace_min_speciation(
         &mut self,

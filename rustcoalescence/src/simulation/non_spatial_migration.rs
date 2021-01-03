@@ -12,6 +12,9 @@ use necsim_classical::ClassicalSimulation;
 // #[cfg(feature = "necsim-skipping-gillespie")]
 // use necsim_skipping_gillespie::SkippingGillespieSimulation;
 
+// #[cfg(feature = "necsim-independent")]
+// use necsim_independent::IndependentSimulation;
+
 use necsim_impls_no_std::reporter::ReporterContext;
 #[allow(unused_imports)]
 use necsim_impls_no_std::simulation::non_spatial_migration::NonSpatialMigrationSimulation;
@@ -90,6 +93,19 @@ pub fn simulate<P: ReporterContext>(
         // common_args.seed(),
         // reporter_context,
         // ),
+        // #[cfg(feature = "necsim-independent")]
+        // Algorithm::Independent => IndependentSimulation::simulate(
+        // non_spatial_migration_args.local_area(),
+        // non_spatial_migration_args.local_deme(),
+        // non_spatial_migration_args.meta_area(),
+        // non_spatial_migration_args.meta_deme(),
+        // non_spatial_migration_args.migration_probability_per_generation(),
+        // common_args.speciation_probability_per_generation(),
+        // common_args.sample_percentage(),
+        // common_args.seed(),
+        // reporter_context,
+        // )
+        // .map_err(|_| unreachable!("Non-Spatial IndependentSimulation can never fail.")),
         #[allow(unreachable_patterns)]
         _ => anyhow::bail!("rustcoalescence does not support the selected algorithm"),
     };
