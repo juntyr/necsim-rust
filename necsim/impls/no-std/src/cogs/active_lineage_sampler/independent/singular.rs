@@ -27,7 +27,7 @@ impl<
         R,
         S,
         IndependentCoalescenceSampler<H, G, R, S>,
-        IndependentEventSampler<H, G, D, R, S>,
+        IndependentEventSampler<H, G, N, D, R, S>,
     > for IndependentActiveLineageSampler<H, G, N, T, D, R, S>
 {
     #[must_use]

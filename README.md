@@ -44,7 +44,8 @@ necsim-rust consists of the following crates:
         - classical/: `necsim-classical` instantiates the classical coalescence algorithm (approximation, fast for low speciation probabilities)
         - gillespie/: `necsim-gillespie` instantiates the coalescence simulation based on the Gillespie algorithm (most accurate, slowest)
         - skipping-gillespie/: `necsim-skipping-gillespie` instantiates the coalescence simulation based on the Gillespie algorithm and skips events which do not change the state of the simulation (most accurate, fastest)
-        - cuda/: `necsim-cuda` runs the coalescence algorithm on a CUDA 3.5 capable CPU as an embarrassingly parallel problem
+        - cuda/: `necsim-cuda` instantiates the coalescence algorithm on a CUDA 3.5 capable GPU as an embarrassingly parallel problem
+        - independent/: `necsim-independent` instantiates the coalescence algorithm on the CPU as an embarrassingly parallel problem
 - rust-cuda/: `rust-cuda` provides automatically derivable traits to add more (but not full) type safety to sharing data structures between the CPU and GPU
 - third-party/: this folder contains multiple third-party crates which had to be modified (mostly to enable `no-std` support)
 
@@ -52,7 +53,7 @@ necsim-rust consists of the following crates:
 
 To compile `rustcoalescence`, you need to decide which algorithms you want to compile with it. You can enable any of the four provided algorithms by enabling its corresponding feature of the same name. For instance, to compile all CPU-based algorithms, you can use
 ```shell
-> cargo rustc --release --manifest-path rustcoalescence/Cargo.toml --features necsim-classical --features necsim-gillespie --features necsim-skipping-gillespie
+> cargo rustc --release --manifest-path rustcoalescence/Cargo.toml --features necsim-classical --features necsim-gillespie --features necsim-skipping-gillespie --features necsim-independent
 ```
 To compile with CUDA support, you first need to compile the custom `necsim-linker`:
 ```shell
@@ -74,7 +75,7 @@ In either case, you can then run `rustcoalescence` using:
 > rustcoalescence --algorithm <algorithm> --sample <sample-percentage> --seed <seed> --speciation <speciation-probability-per-generation> <SUBCOMMAND>
 ```
 Here, the parameters have the following semantics:
-- `<algorithm>` is one of `classical`, `gillespie`, `skipping-gillespie` or `cuda`, depending on which algorithms it was compiled with to support.
+- `<algorithm>` is one of `classical`, `gillespie`, `skipping-gillespie`, `cuda` or `independent`, depending on which algorithms it was compiled with to support.
 - `<sample-percentage>` refers to the percentage of individuals who should be simulated and must be between `0.0` and `1.0`.
 - `<seed>` is the 64bit unsigned seed with which the simulation is initialised.
 - `<speciation-probability-per-generation>` refers to the probability with which an individual mutates into a new species at every generation.

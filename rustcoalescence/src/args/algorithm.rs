@@ -12,6 +12,8 @@ pub enum Algorithm {
     SkippingGillespie,
     #[cfg(feature = "necsim-cuda")]
     CUDA,
+    #[cfg(feature = "necsim-independent")]
+    Independent,
 }
 
 impl fmt::Display for Algorithm {
@@ -37,19 +39,14 @@ impl std::str::FromStr for Algorithm {
             },
             #[cfg(feature = "necsim-cuda")]
             "CUDA" | _ if s.eq_ignore_ascii_case("CUDA") => Ok(Algorithm::CUDA),
-            _ => Err({
-                let v: Vec<&'static str> = vec![
-                    #[cfg(feature = "necsim-classical")]
-                    "Classical",
-                    #[cfg(feature = "necsim-gillespie")]
-                    "Gillespie",
-                    #[cfg(feature = "necsim-skipping-gillespie")]
-                    "Skipping-Gillespie",
-                    #[cfg(feature = "necsim-cuda")]
-                    "CUDA",
-                ];
-                format!("valid values: {}", v.join(", "))
-            }),
+            #[cfg(feature = "necsim-independent")]
+            "Independent" | _ if s.eq_ignore_ascii_case("Independent") => {
+                Ok(Algorithm::Independent)
+            },
+            _ => Err(format!(
+                "valid values: {}",
+                Algorithm::variants().join(", ")
+            )),
         }
     }
 }
@@ -65,6 +62,8 @@ impl Algorithm {
             "Skipping-Gillespie",
             #[cfg(feature = "necsim-cuda")]
             "CUDA",
+            #[cfg(feature = "necsim-independent")]
+            "Independent",
         ]
     }
 }

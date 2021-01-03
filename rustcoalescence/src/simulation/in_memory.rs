@@ -13,6 +13,9 @@ use necsim_gillespie::GillespieSimulation;
 #[cfg(feature = "necsim-skipping-gillespie")]
 use necsim_skipping_gillespie::SkippingGillespieSimulation;
 
+#[cfg(feature = "necsim-independent")]
+use necsim_independent::IndependentSimulation;
+
 use necsim_impls_no_std::reporter::ReporterContext;
 #[allow(unused_imports)]
 use necsim_impls_no_std::simulation::in_memory::InMemorySimulation;
@@ -66,6 +69,15 @@ pub fn simulate<P: ReporterContext>(
         ),
         #[cfg(feature = "necsim-cuda")]
         Algorithm::CUDA => CudaSimulation::simulate(
+            habitat,
+            &dispersal,
+            *common_args.speciation_probability_per_generation(),
+            *common_args.sample_percentage(),
+            *common_args.seed(),
+            reporter_context,
+        ),
+        #[cfg(feature = "necsim-independent")]
+        Algorithm::Independent => IndependentSimulation::simulate(
             habitat,
             &dispersal,
             *common_args.speciation_probability_per_generation(),
