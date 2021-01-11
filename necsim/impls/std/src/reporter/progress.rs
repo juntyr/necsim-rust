@@ -1,5 +1,4 @@
 use necsim_core::{
-    cogs::{Habitat, LineageReference},
     event::{Event, EventType},
     reporter::{EventFilter, Reporter},
 };
@@ -16,7 +15,7 @@ impl EventFilter for ProgressReporter {
     const REPORT_SPECIATION: bool = true;
 }
 
-impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for ProgressReporter {
+impl Reporter for ProgressReporter {
     #[debug_ensures(match event.r#type() {
         EventType::Speciation | EventType::Dispersal {
             coalescence: Some(_),
@@ -26,7 +25,7 @@ impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for ProgressReporter {
         },
         _ => self.progress.position() == old(self.progress.position()),
     }, "only speciation and coalescence increment the progress")]
-    fn report_event(&mut self, event: &Event<H, R>) {
+    fn report_event(&mut self, event: &Event) {
         if self.progress.position() == 0 {
             self.progress.reset();
         }

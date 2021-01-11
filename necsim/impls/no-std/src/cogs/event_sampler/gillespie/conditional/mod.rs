@@ -71,7 +71,7 @@ impl<
         event_time: f64,
         simulation: &PartialSimulation<H, G, N, D, R, S, ConditionalCoalescenceSampler<H, G, R, S>>,
         rng: &mut G,
-    ) -> Event<H, R> {
+    ) -> Event {
         let dispersal_origin = indexed_location;
 
         let probability_at_location = ProbabilityAtLocation::new(
@@ -103,7 +103,6 @@ impl<
             EventType::Dispersal {
                 coalescence: optional_coalescence,
                 target: dispersal_target,
-                marker: PhantomData::<H>,
             }
         } else {
             let (dispersal_target, coalescence) =
@@ -116,11 +115,17 @@ impl<
             EventType::Dispersal {
                 coalescence: Some(coalescence),
                 target: dispersal_target,
-                marker: PhantomData::<H>,
             }
         };
 
-        Event::new(dispersal_origin, event_time, lineage_reference, event_type)
+        Event::new(
+            dispersal_origin,
+            event_time,
+            simulation.lineage_store[lineage_reference]
+                .global_reference()
+                .clone(),
+            event_type,
+        )
     }
 }
 
@@ -149,7 +154,7 @@ impl<
         #[allow(clippy::cast_precision_loss)]
         let population = (simulation
             .lineage_store
-            .get_active_lineages_at_location(location)
+            .get_active_local_lineage_references_at_location_unordered(location)
             .len()
             + usize::from(!lineage_store_includes_self)) as f64;
 

@@ -3,12 +3,13 @@ use core::{marker::PhantomData, ops::Index};
 use alloc::vec::Vec;
 
 use array2d::Array2D;
+use hashbrown::hash_map::HashMap;
 
 use necsim_core::{
     cogs::{Habitat, LineageStore},
     intrinsics::floor,
     landscape::{IndexedLocation, LandscapeExtent, Location},
-    lineage::Lineage,
+    lineage::{GlobalLineageReference, Lineage},
 };
 
 use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
@@ -21,6 +22,8 @@ pub struct CoherentInMemoryLineageStore<H: Habitat> {
     landscape_extent: LandscapeExtent,
     lineages_store: Vec<Lineage>,
     location_to_lineage_references: Array2D<Vec<InMemoryLineageReference>>,
+    indexed_location_to_lineage_reference:
+        HashMap<IndexedLocation, (GlobalLineageReference, usize)>,
     _marker: PhantomData<H>,
 }
 
@@ -71,6 +74,9 @@ impl<H: Habitat> CoherentInMemoryLineageStore<H> {
             landscape_extent.width() as usize,
         );
 
+        let mut indexed_location_to_lineage_reference =
+            HashMap::with_capacity(total_number_of_lineages);
+
         let mut extra_indexed_locations: Vec<(f64, IndexedLocation)> = Vec::new();
 
         let x_from = landscape_extent.x();
@@ -91,13 +97,22 @@ impl<H: Habitat> CoherentInMemoryLineageStore<H> {
                 let sampled_habitat_at_location = floor(sampled_habitat_at_location_max) as u32;
 
                 for index_at_location in 0..sampled_habitat_at_location {
-                    let lineage_reference = InMemoryLineageReference::from(lineages_store.len());
+                    let indexed_location =
+                        IndexedLocation::new(location.clone(), index_at_location);
 
-                    lineages_at_location.push(lineage_reference);
-                    lineages_store.push(Lineage::new(IndexedLocation::new(
-                        location.clone(),
-                        index_at_location,
-                    )));
+                    let lineage = Lineage::new(indexed_location.clone(), habitat);
+                    let local_reference = InMemoryLineageReference::from(lineages_store.len());
+
+                    indexed_location_to_lineage_reference.insert(
+                        indexed_location,
+                        (
+                            lineage.global_reference().clone(),
+                            lineages_at_location.len(),
+                        ),
+                    );
+                    lineages_at_location.push(local_reference);
+
+                    lineages_store.push(lineage);
                 }
 
                 if sampled_habitat_at_location_max > f64::from(sampled_habitat_at_location) {
@@ -123,10 +138,20 @@ impl<H: Habitat> CoherentInMemoryLineageStore<H> {
                 (indexed_location.location().y() - y_from) as usize,
                 (indexed_location.location().x() - x_from) as usize,
             )];
-            let lineage_reference = InMemoryLineageReference::from(lineages_store.len());
 
-            lineages_at_location.push(lineage_reference);
-            lineages_store.push(Lineage::new(indexed_location));
+            let lineage = Lineage::new(indexed_location.clone(), habitat);
+            let local_reference = InMemoryLineageReference::from(lineages_store.len());
+
+            indexed_location_to_lineage_reference.insert(
+                indexed_location,
+                (
+                    lineage.global_reference().clone(),
+                    lineages_at_location.len(),
+                ),
+            );
+            lineages_at_location.push(local_reference);
+
+            lineages_store.push(lineage);
         }
 
         lineages_store.shrink_to_fit();
@@ -135,6 +160,7 @@ impl<H: Habitat> CoherentInMemoryLineageStore<H> {
             landscape_extent,
             lineages_store,
             location_to_lineage_references,
+            indexed_location_to_lineage_reference,
             _marker: PhantomData::<H>,
         }
     }

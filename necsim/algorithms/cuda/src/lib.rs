@@ -15,9 +15,7 @@ use rustacuda::{
 };
 
 use necsim_core::{
-    cogs::{
-        DispersalSampler, HabitatToU64Injection, IncoherentLineageStore, LineageReference, RngCore,
-    },
+    cogs::{DispersalSampler, Habitat, IncoherentLineageStore, LineageReference, RngCore},
     simulation::Simulation,
 };
 
@@ -58,7 +56,7 @@ impl CudaSimulation {
     /// Simulates the coalescence algorithm on a CUDA-capable GPU on
     /// `habitat` with `dispersal` and lineages from `lineage_store`.
     fn simulate<
-        H: HabitatToU64Injection + RustToCuda,
+        H: Habitat + RustToCuda,
         D: DispersalSampler<H, CudaRng<Rng>> + RustToCuda,
         R: LineageReference<H> + rustacuda_core::DeviceCopy,
         S: IncoherentLineageStore<H, R> + RustToCuda,
@@ -140,8 +138,6 @@ impl CudaSimulation {
 
                     #[allow(clippy::type_complexity)]
                     let event_buffer: EventBuffer<
-                        H,
-                        R,
                         { REPORT_SPECIATION },
                         { REPORT_DISPERSAL },
                     > = EventBuffer::new(&block_size, &grid_size, SIMULATION_STEP_SLICE)?;

@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, HabitatToU64Injection, IncoherentLineageStore,
-        LineageReference, PrimeableRng, SpeciationProbability,
+        ActiveLineageSampler, DispersalSampler, Habitat, IncoherentLineageStore, LineageReference,
+        PrimeableRng, SpeciationProbability,
     },
     landscape::IndexedLocation,
     simulation::partial::active_lineager_sampler::PartialSimulation,
@@ -16,7 +16,7 @@ use super::{EventTimeSampler, IndependentActiveLineageSampler};
 
 #[contract_trait]
 impl<
-        H: HabitatToU64Injection,
+        H: Habitat,
         G: PrimeableRng<H>,
         N: SpeciationProbability<H>,
         T: EventTimeSampler<H, G>,

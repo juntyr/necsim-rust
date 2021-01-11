@@ -86,8 +86,10 @@ impl CoherentAlmostInfiniteLineageStore {
                         {
                             let location = Location::new(x, y);
 
-                            lineages_store
-                                .push(Lineage::new(IndexedLocation::new(location.clone(), 0_u32)));
+                            lineages_store.push(Lineage::new(
+                                IndexedLocation::new(location.clone(), 0_u32),
+                                habitat,
+                            ));
 
                             location_to_lineage_references.insert(
                                 location,

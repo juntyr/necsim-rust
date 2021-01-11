@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
 use necsim_core::cogs::{
-    CoalescenceSampler, DispersalSampler, HabitatToU64Injection, IncoherentLineageStore,
-    LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
-    SingularActiveLineageSampler, SpeciationProbability,
+    CoalescenceSampler, DispersalSampler, Habitat, IncoherentLineageStore, LineageReference,
+    MinSpeciationTrackingEventSampler, PrimeableRng, SingularActiveLineageSampler,
+    SpeciationProbability,
 };
 
 use rustacuda::{
@@ -22,7 +22,7 @@ use rustacuda::function::Function;
 pub struct SimulationKernelWithDimensionsStream<
     'k,
     's,
-    H: HabitatToU64Injection + RustToCuda,
+    H: Habitat + RustToCuda,
     G: PrimeableRng<H> + RustToCuda,
     N: SpeciationProbability<H> + RustToCuda,
     D: DispersalSampler<H, G> + RustToCuda,
@@ -44,7 +44,7 @@ pub struct SimulationKernelWithDimensionsStream<
 
 impl<
         'k,
-        H: HabitatToU64Injection + RustToCuda,
+        H: Habitat + RustToCuda,
         G: PrimeableRng<H> + RustToCuda,
         N: SpeciationProbability<H> + RustToCuda,
         D: DispersalSampler<H, G> + RustToCuda,

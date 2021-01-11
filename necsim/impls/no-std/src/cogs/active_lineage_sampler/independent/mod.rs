@@ -2,8 +2,8 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        DispersalSampler, HabitatToU64Injection, IncoherentLineageStore, LineageReference,
-        PrimeableRng, SpeciationProbability,
+        DispersalSampler, Habitat, IncoherentLineageStore, LineageReference, PrimeableRng,
+        SpeciationProbability,
     },
     landscape::IndexedLocation,
 };
@@ -26,7 +26,7 @@ use event_time_sampler::EventTimeSampler;
 #[cfg_attr(feature = "cuda", r2cBound(S: rust_cuda::common::RustToCuda))]
 #[derive(Debug)]
 pub struct IndependentActiveLineageSampler<
-    H: HabitatToU64Injection,
+    H: Habitat,
     G: PrimeableRng<H>,
     N: SpeciationProbability<H>,
     T: EventTimeSampler<H, G>,
@@ -42,7 +42,7 @@ pub struct IndependentActiveLineageSampler<
 }
 
 impl<
-        H: HabitatToU64Injection,
+        H: Habitat,
         G: PrimeableRng<H>,
         N: SpeciationProbability<H>,
         T: EventTimeSampler<H, G>,

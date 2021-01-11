@@ -1,7 +1,7 @@
 use float_next_after::NextAfter;
 
 use necsim_core::{
-    cogs::{HabitatToU64Injection, PrimeableRng, RngSampler},
+    cogs::{Habitat, PrimeableRng, RngSampler},
     intrinsics::floor,
     landscape::IndexedLocation,
 };
@@ -25,7 +25,7 @@ impl ExpEventTimeSampler {
 }
 
 #[contract_trait]
-impl<H: HabitatToU64Injection, G: PrimeableRng<H>> EventTimeSampler<H, G> for ExpEventTimeSampler {
+impl<H: Habitat, G: PrimeableRng<H>> EventTimeSampler<H, G> for ExpEventTimeSampler {
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
         &self,

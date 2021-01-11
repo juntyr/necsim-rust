@@ -3,9 +3,9 @@ use std::{ffi::CString, marker::PhantomData, ops::Deref};
 use anyhow::Result;
 
 use necsim_core::cogs::{
-    CoalescenceSampler, DispersalSampler, HabitatToU64Injection, IncoherentLineageStore,
-    LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
-    SingularActiveLineageSampler, SpeciationProbability,
+    CoalescenceSampler, DispersalSampler, Habitat, IncoherentLineageStore, LineageReference,
+    MinSpeciationTrackingEventSampler, PrimeableRng, SingularActiveLineageSampler,
+    SpeciationProbability,
 };
 
 use rustacuda::{function::Function, module::Module};
@@ -17,7 +17,7 @@ use super::{specialiser, SimulationKernel};
 
 impl<
         'k,
-        H: HabitatToU64Injection + RustToCuda,
+        H: Habitat + RustToCuda,
         G: PrimeableRng<H> + RustToCuda,
         N: SpeciationProbability<H> + RustToCuda,
         D: DispersalSampler<H, G> + RustToCuda,
@@ -72,7 +72,7 @@ impl<
 
 impl<
         'k,
-        H: HabitatToU64Injection + RustToCuda,
+        H: Habitat + RustToCuda,
         G: PrimeableRng<H> + RustToCuda,
         N: SpeciationProbability<H> + RustToCuda,
         D: DispersalSampler<H, G> + RustToCuda,

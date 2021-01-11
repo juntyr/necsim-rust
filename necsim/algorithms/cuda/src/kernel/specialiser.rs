@@ -4,9 +4,9 @@ use std::{
 };
 
 use necsim_core::cogs::{
-    CoalescenceSampler, DispersalSampler, HabitatToU64Injection, IncoherentLineageStore,
-    LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
-    SingularActiveLineageSampler, SpeciationProbability,
+    CoalescenceSampler, DispersalSampler, Habitat, IncoherentLineageStore, LineageReference,
+    MinSpeciationTrackingEventSampler, PrimeableRng, SingularActiveLineageSampler,
+    SpeciationProbability,
 };
 use rustacuda_core::DeviceCopy;
 
@@ -17,7 +17,7 @@ extern "C" {
 }
 
 pub fn get_ptx_cstr<
-    H: HabitatToU64Injection + RustToCuda,
+    H: Habitat + RustToCuda,
     G: PrimeableRng<H> + RustToCuda,
     N: SpeciationProbability<H> + RustToCuda,
     D: DispersalSampler<H, G> + RustToCuda,

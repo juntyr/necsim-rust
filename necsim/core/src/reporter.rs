@@ -1,17 +1,12 @@
-use core::marker::PhantomData;
-
-use crate::{
-    cogs::{Habitat, LineageReference},
-    event::Event,
-};
+use crate::event::Event;
 
 pub trait EventFilter {
     const REPORT_SPECIATION: bool;
     const REPORT_DISPERSAL: bool;
 }
 
-pub trait Reporter<H: Habitat, R: LineageReference<H>>: EventFilter {
-    fn report_event(&mut self, event: &Event<H, R>);
+pub trait Reporter: EventFilter {
+    fn report_event(&mut self, event: &Event);
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -22,54 +17,38 @@ impl EventFilter for NullReporter {
     const REPORT_SPECIATION: bool = false;
 }
 
-impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for NullReporter {
-    fn report_event(&mut self, _event: &Event<H, R>) {
+impl Reporter for NullReporter {
+    fn report_event(&mut self, _event: &Event) {
         // no-op
     }
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct ReporterCombinator<
-    H: Habitat,
-    R: LineageReference<H>,
-    F: Reporter<H, R>,
-    T: Reporter<H, R>,
-> {
+pub struct ReporterCombinator<F: Reporter, T: Reporter> {
     front: F,
     tail: T, // R = ReporterCombinator<...>
-    _marker: PhantomData<(H, R)>,
 }
 
-impl<H: Habitat, R: LineageReference<H>, F: Reporter<H, R>, T: Reporter<H, R>> EventFilter
-    for ReporterCombinator<H, R, F, T>
-{
+impl<F: Reporter, T: Reporter> EventFilter for ReporterCombinator<F, T> {
     const REPORT_DISPERSAL: bool = F::REPORT_DISPERSAL || T::REPORT_DISPERSAL;
     const REPORT_SPECIATION: bool = F::REPORT_SPECIATION || T::REPORT_SPECIATION;
 }
 
-impl<H: Habitat, R: LineageReference<H>, F: Reporter<H, R>, T: Reporter<H, R>> Reporter<H, R>
-    for ReporterCombinator<H, R, F, T>
-{
+impl<F: Reporter, T: Reporter> Reporter for ReporterCombinator<F, T> {
     #[inline]
-    fn report_event(&mut self, event: &Event<H, R>) {
+    fn report_event(&mut self, event: &Event) {
         self.front.report_event(event);
         self.tail.report_event(event);
     }
 }
 
-impl<H: Habitat, R: LineageReference<H>, F: Reporter<H, R>, T: Reporter<H, R>>
-    ReporterCombinator<H, R, F, T>
-{
+impl<F: Reporter, T: Reporter> ReporterCombinator<F, T> {
     #[must_use]
     /// # Safety
     /// This constructor should not be used directly to combinate reporters.
     /// Use the `ReporterGroup![...]` macro instead.
     pub unsafe fn new(front: F, tail: T) -> Self {
-        Self {
-            front,
-            tail,
-            _marker: PhantomData::<(H, R)>,
-        }
+        Self { front, tail }
     }
 
     #[must_use]
@@ -114,15 +93,13 @@ macro_rules! ReporterUnGroup {
 
 #[macro_export]
 macro_rules! ReporterGroupType {
-    (<$Habitat:ty, $LineageReference:ty>[]) => {
+    () => {
         necsim_core::reporter::NullReporter
     };
-    (<$Habitat:ty, $LineageReference:ty>[$first_reporter:ty $(,$reporter_tail:ty)*]) => {
+    ($first_reporter:ty $(,$reporter_tail:ty)*) => {
         necsim_core::reporter::ReporterCombinator<
-            $Habitat,
-            $LineageReference,
             $first_reporter,
-            $crate::ReporterGroupType!{<$Habitat, $LineageReference>[$($reporter_tail),*]},
+            $crate::ReporterGroupType![$($reporter_tail),*],
         >
     }
 }

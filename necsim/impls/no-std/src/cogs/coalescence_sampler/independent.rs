@@ -3,6 +3,7 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{CoalescenceSampler, Habitat, IncoherentLineageStore, LineageReference, RngCore},
     landscape::{IndexedLocation, Location},
+    lineage::GlobalLineageReference,
 };
 
 #[allow(clippy::module_name_repetitions)]
@@ -39,14 +40,13 @@ impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: IncoherentLineageStore<H
         habitat: &H,
         _lineage_store: &S,
         rng: &mut G,
-    ) -> (IndexedLocation, Option<R>) {
+    ) -> (IndexedLocation, Option<GlobalLineageReference>) {
         use necsim_core::cogs::RngSampler;
 
         let chosen_coalescence_index =
-            rng.sample_index(habitat.get_habitat_at_location(&location) as usize);
+            rng.sample_index_u32(habitat.get_habitat_at_location(&location));
 
-        #[allow(clippy::cast_possible_truncation)]
-        let indexed_location = IndexedLocation::new(location, chosen_coalescence_index as u32);
+        let indexed_location = IndexedLocation::new(location, chosen_coalescence_index);
 
         (indexed_location, None)
     }

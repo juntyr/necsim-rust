@@ -13,7 +13,7 @@ use necsim_impls_no_std::{
 
 use necsim_impls_std::{cogs::rng::std::StdRng, reporter::biodiversity::BiodiversityReporter};
 
-use necsim_core::cogs::{RngCore, RngSampler};
+use necsim_core::cogs::{Habitat, RngCore, RngSampler};
 
 use super::ClassicalSimulation;
 
@@ -93,8 +93,6 @@ impl NonSpatialMigrationSimulation for ClassicalSimulation {
     }
 }
 
-use necsim_core::cogs::{Habitat, LineageReference};
-
 struct MigrationReporterContext<'r> {
     migration_reporter: &'r mut BiodiversityReporter,
 }
@@ -106,17 +104,9 @@ impl<'r> MigrationReporterContext<'r> {
 }
 
 impl<'r> ReporterContext for MigrationReporterContext<'r> {
-    type Reporter<H: Habitat, R: LineageReference<H>> = BiodiversityReporter;
+    type Reporter = BiodiversityReporter;
 
-    fn with_reporter<
-        O,
-        H: Habitat,
-        R: LineageReference<H>,
-        F: FnOnce(&mut Self::Reporter<H, R>) -> O,
-    >(
-        self,
-        inner: F,
-    ) -> O {
+    fn with_reporter<O, F: FnOnce(&mut Self::Reporter) -> O>(self, inner: F) -> O {
         inner(self.migration_reporter)
     }
 }

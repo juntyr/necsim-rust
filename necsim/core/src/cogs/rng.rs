@@ -1,5 +1,5 @@
 use crate::{
-    cogs::HabitatToU64Injection,
+    cogs::Habitat,
     intrinsics::{cos, floor, ln, sin, sqrt},
     landscape::IndexedLocation,
 };
@@ -79,6 +79,21 @@ pub trait RngSampler: RngCore {
 
     #[must_use]
     #[inline]
+    #[debug_ensures(ret < length, "samples U(0, length - 1)")]
+    fn sample_index_u32(&mut self, length: u32) -> u32 {
+        // attributes on expressions are experimental
+        // see https://github.com/rust-lang/rust/issues/15701
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
+        let index = floor(self.sample_uniform() * f64::from(length)) as u32;
+        index
+    }
+
+    #[must_use]
+    #[inline]
     #[debug_requires(lambda > 0.0, "lambda > 0.0")]
     #[debug_ensures(ret >= 0.0, "samples Exp(lambda)")]
     fn sample_exponential(&mut self, lambda: f64) -> f64 {
@@ -121,7 +136,7 @@ pub trait RngSampler: RngCore {
 impl<R: RngCore> RngSampler for R {}
 
 #[allow(clippy::module_name_repetitions)]
-pub trait PrimeableRng<H: HabitatToU64Injection>: RngCore {
+pub trait PrimeableRng<H: Habitat>: RngCore {
     fn prime_with_habitat(
         &mut self,
         habitat: &H,

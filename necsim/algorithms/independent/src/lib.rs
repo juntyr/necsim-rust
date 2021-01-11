@@ -6,16 +6,14 @@
 #[macro_use]
 extern crate contracts;
 
-use hashbrown::{hash_map::RawEntryMut, HashMap, HashSet};
+use hashbrown::HashSet;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, Habitat, HabitatToU64Injection,
-        IncoherentLineageStore, LineageReference, MinSpeciationTrackingEventSampler, RngCore,
-        SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
+        ActiveLineageSampler, DispersalSampler, Habitat, IncoherentLineageStore, LineageReference,
+        MinSpeciationTrackingEventSampler, RngCore, SingularActiveLineageSampler,
+        SpeciationProbability, SpeciationSample,
     },
-    event::Event,
-    reporter::{EventFilter, Reporter},
     simulation::Simulation,
 };
 
@@ -34,48 +32,16 @@ mod almost_infinite;
 mod in_memory;
 mod non_spatial;
 
+mod reporter;
+use reporter::DeduplicatingReporterProxy;
+
 pub struct IndependentSimulation;
-
-struct DeduplicatingReporterProxy<'r, H: Habitat, R: LineageReference<H>, P: Reporter<H, R>> {
-    reporter: &'r mut P,
-    event_deduplicator: HashMap<Event<H, R>, ()>,
-}
-
-impl<'r, H: Habitat, R: LineageReference<H>, P: Reporter<H, R>> EventFilter
-    for DeduplicatingReporterProxy<'r, H, R, P>
-{
-    const REPORT_DISPERSAL: bool = P::REPORT_DISPERSAL;
-    const REPORT_SPECIATION: bool = P::REPORT_SPECIATION;
-}
-
-impl<'r, H: Habitat, R: LineageReference<H>, P: Reporter<H, R>> Reporter<H, R>
-    for DeduplicatingReporterProxy<'r, H, R, P>
-{
-    fn report_event(&mut self, event: &Event<H, R>) {
-        if let RawEntryMut::Vacant(entry) = self.event_deduplicator.raw_entry_mut().from_key(event)
-        {
-            self.reporter
-                .report_event(entry.insert(event.clone(), ()).0)
-        }
-    }
-}
-
-impl<'r, H: Habitat, R: LineageReference<H>, P: Reporter<H, R>>
-    DeduplicatingReporterProxy<'r, H, R, P>
-{
-    fn from(reporter: &'r mut P) -> Self {
-        Self {
-            reporter,
-            event_deduplicator: HashMap::new(),
-        }
-    }
-}
 
 impl IndependentSimulation {
     /// Simulates the independent coalescence algorithm on the `habitat` with
     /// `dispersal` and lineages from `lineage_store`.
     fn simulate<
-        H: HabitatToU64Injection,
+        H: Habitat,
         N: SpeciationProbability<H>,
         D: DispersalSampler<H, FixedSeaHash>,
         R: LineageReference<H>,
@@ -97,8 +63,9 @@ impl IndependentSimulation {
             let rng = FixedSeaHash::seed_from_u64(seed);
             let coalescence_sampler = IndependentCoalescenceSampler::default();
             let event_sampler = IndependentEventSampler::default();
-            let active_lineage_sampler =
-                IndependentActiveLineageSampler::empty(ExpEventTimeSampler::new(1.0_f64));
+            let active_lineage_sampler = IndependentActiveLineageSampler::empty(
+                ExpEventTimeSampler::new(1.0_f64), // FixedEventTimeSampler::default()
+            );
 
             let mut simulation = Simulation::builder()
                 .habitat(habitat)

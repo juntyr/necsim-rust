@@ -19,9 +19,9 @@ use rustacuda_core::DeviceCopy;
 
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, DispersalSampler, HabitatToU64Injection, IncoherentLineageStore,
-        LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
-        SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
+        CoalescenceSampler, DispersalSampler, Habitat, IncoherentLineageStore, LineageReference,
+        MinSpeciationTrackingEventSampler, PrimeableRng, SingularActiveLineageSampler,
+        SpeciationProbability, SpeciationSample,
     },
     reporter::Reporter,
     simulation::Simulation,
@@ -33,12 +33,12 @@ use crate::kernel::SimulationKernel;
 
 #[allow(clippy::too_many_arguments)]
 pub fn simulate<
-    H: HabitatToU64Injection + RustToCuda,
+    H: Habitat + RustToCuda,
     G: PrimeableRng<H> + RustToCuda,
     N: SpeciationProbability<H> + RustToCuda,
     D: DispersalSampler<H, G> + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
-    P: Reporter<H, R>,
+    P: Reporter,
     S: IncoherentLineageStore<H, R> + RustToCuda,
     C: CoalescenceSampler<H, G, R, S> + RustToCuda,
     E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, C> + RustToCuda,
@@ -51,7 +51,7 @@ pub fn simulate<
     task: (u32, GridSize, BlockSize),
     mut simulation: Simulation<H, G, N, D, R, S, C, E, A>,
     task_list: ValueBuffer<R>,
-    event_buffer: EventBuffer<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>,
+    event_buffer: EventBuffer<REPORT_SPECIATION, REPORT_DISPERSAL>,
     min_spec_sample_buffer: ValueBuffer<SpeciationSample>,
     reporter: &mut P,
     max_steps: u64,
@@ -59,7 +59,7 @@ pub fn simulate<
     // TODO: Remove once debugging data structure layout is no longer necessary
     use type_layout::TypeLayout;
     println!("{}", Simulation::<H, G, N, D, R, S, C, E, A>::type_layout());
-    println!("{}", necsim_core::event::Event::<H, R>::type_layout());
+    println!("{}", necsim_core::event::Event::type_layout());
 
     // Load and initialise the global_time_max and global_steps_sum symbols
     let mut global_time_max_symbol: Symbol<f64> =

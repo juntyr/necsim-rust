@@ -26,10 +26,10 @@ impl<
     #[debug_requires(max_steps > 0, "must run for at least one step")]
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
     #[inline]
-    pub fn simulate_incremental(
+    pub fn simulate_incremental<P: Reporter>(
         &mut self,
         max_steps: u64,
-        reporter: &mut impl Reporter<H, R>,
+        reporter: &mut P,
     ) -> (f64, u64) {
         let mut steps = 0_u64;
 
@@ -79,7 +79,7 @@ impl<
     }
 
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
-    pub fn simulate(mut self, reporter: &mut impl Reporter<H, R>) -> (f64, u64) {
+    pub fn simulate<P: Reporter>(mut self, reporter: &mut P) -> (f64, u64) {
         let mut total_steps = 0_u64;
 
         let (mut final_time, mut new_steps) = self.simulate_incremental(u64::MAX, reporter);
