@@ -3,10 +3,8 @@ use core::ops::Index;
 use super::{Habitat, LineageReference};
 use crate::{
     landscape::{IndexedLocation, Location},
-    lineage::Lineage,
+    lineage::{GlobalLineageReference, Lineage},
 };
-
-mod contract;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
@@ -51,62 +49,70 @@ pub trait CoherentLineageStore<H: Habitat, R: LineageReference<H>>: LineageStore
     fn iter_active_locations(&self) -> Self::LocationIterator<'_>;
 
     #[must_use]
-    fn get_active_lineages_at_location(&self, location: &Location) -> &[R];
+    fn get_active_local_lineage_references_at_location_unordered(
+        &self,
+        location: &Location,
+    ) -> &[R];
+
+    #[must_use]
+    fn get_active_global_lineage_reference_at_indexed_location(
+        &self,
+        indexed_location: &IndexedLocation,
+    ) -> Option<&GlobalLineageReference>;
 
     #[debug_requires(self.get(reference.clone()).is_some(), "lineage reference is valid")]
     #[debug_requires(!self[reference.clone()].is_active(), "lineage is inactive")]
-    #[debug_requires(
-        !contract::explicit_lineage_store_lineage_at_location_contract(self, reference.clone()),
-        "lineage is not at the location and index it references"
-    )]
-    #[debug_requires(
-        contract::explicit_lineage_store_invariant_contract(self, &location),
-        "invariant of lineage-location bijection holds"
-    )]
     #[debug_ensures(self[old(reference.clone())].is_active(), "lineage was activated")]
     #[debug_ensures(
-        self[old(reference.clone())].indexed_location().map(IndexedLocation::location) == Some(&old(location.clone())),
-        "lineage was added to location"
+        self[old(reference.clone())].indexed_location() == Some(&old(indexed_location.clone())),
+        "lineage was added to indexed_location"
     )]
     #[debug_ensures(
-        contract::explicit_lineage_store_lineage_at_location_contract(
-            self, old(reference.clone())
-        ), "lineage is at the location and index it references"
+        self.get_active_global_lineage_reference_at_indexed_location(
+            &old(indexed_location.clone())
+        ) == Some(self[old(reference.clone())].global_reference()),
+        "lineage is now indexed at indexed_location"
     )]
     #[debug_ensures(
-        contract::explicit_lineage_store_invariant_contract(self, &old(location.clone())),
-        "maintains invariant of lineage-location bijection"
+        self.get_active_local_lineage_references_at_location_unordered(
+            &old(indexed_location.location().clone())
+        ).last() == Some(&old(reference.clone())),
+        "lineage is now indexed unordered at indexed_location.location()"
     )]
-    fn append_lineage_to_location(&mut self, reference: R, location: Location);
+    #[debug_ensures(
+        old(self.get_active_local_lineage_references_at_location_unordered(
+            indexed_location.location()
+        ).len() + 1) == self.get_active_local_lineage_references_at_location_unordered(
+            &old(indexed_location.location().clone())
+        ).len(),
+        "unordered active lineage index at returned location has grown by 1"
+    )]
+    fn insert_lineage_to_indexed_location_coherent(
+        &mut self,
+        reference: R,
+        indexed_location: IndexedLocation,
+    );
 
     #[must_use]
     #[debug_requires(self.get(reference.clone()).is_some(), "lineage reference is valid")]
     #[debug_requires(self[reference.clone()].is_active(), "lineage is active")]
-    #[debug_requires(
-        contract::explicit_lineage_store_lineage_at_location_contract(self, reference.clone()),
-        "lineage is at the location and index it references"
-    )]
-    #[debug_requires(
-        contract::explicit_lineage_store_invariant_contract(
-            self, self[reference.clone()].indexed_location().unwrap().location()
-        ), "invariant of lineage-location bijection holds"
-    )]
     #[debug_ensures(!self[old(reference.clone())].is_active(), "lineage was deactivated")]
     #[debug_ensures(
-        !contract::explicit_lineage_store_lineage_at_location_contract(
-            self, old(reference.clone())
-        ), "lineage was removed from the location and index it references"
-    )]
-    #[debug_ensures(
-        contract::explicit_lineage_store_invariant_contract(
-            self, &old(self[reference.clone()].indexed_location().unwrap().location().clone())
-        ), "maintains invariant of lineage-location bijection"
-    )]
-    #[debug_ensures(
         ret == old(self[reference.clone()].indexed_location().unwrap().clone()),
-        "returns the individual's prior indexed_location"
+        "returns the individual's prior IndexedLocation"
     )]
-    fn pop_lineage_from_its_location(&mut self, reference: R) -> IndexedLocation;
+    #[debug_ensures(
+        self.get_active_global_lineage_reference_at_indexed_location(&ret).is_none(),
+        "lineage is no longer indexed at its prior IndexedLocation"
+    )]
+    #[debug_ensures(
+        self.get_active_local_lineage_references_at_location_unordered(&ret.location()).len() + 1
+            == old(self.get_active_local_lineage_references_at_location_unordered(
+                self[reference.clone()].indexed_location().unwrap().location()
+            ).len()),
+        "unordered active lineage index at returned location has shrunk by 1"
+    )]
+    fn extract_lineage_from_its_location_coherent(&mut self, reference: R) -> IndexedLocation;
 }
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]

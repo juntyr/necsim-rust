@@ -1,8 +1,15 @@
-use crate::landscape::IndexedLocation;
+use core::num::NonZeroU64;
+
+use crate::{cogs::Habitat, landscape::IndexedLocation};
+
+#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub struct GlobalLineageReference(NonZeroU64);
 
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 #[derive(Debug)]
 pub struct Lineage {
+    global_reference: GlobalLineageReference,
     indexed_location: Option<IndexedLocation>,
     time_of_last_event: f64,
 }
@@ -14,8 +21,13 @@ impl Lineage {
         "stores the indexed_location"
     )]
     #[debug_ensures(ret.time_of_last_event() == 0.0_f64, "starts at t_0 = 0.0")]
-    pub fn new(indexed_location: IndexedLocation) -> Self {
+    pub fn new<H: Habitat>(indexed_location: IndexedLocation, habitat: &H) -> Self {
         Self {
+            global_reference: GlobalLineageReference(unsafe {
+                NonZeroU64::new_unchecked(
+                    habitat.map_indexed_location_to_u64_injective(&indexed_location) + 1,
+                )
+            }),
             indexed_location: Some(indexed_location),
             time_of_last_event: 0.0_f64,
         }
@@ -34,6 +46,11 @@ impl Lineage {
     #[must_use]
     pub fn time_of_last_event(&self) -> f64 {
         self.time_of_last_event
+    }
+
+    #[must_use]
+    pub fn global_reference(&self) -> &GlobalLineageReference {
+        &self.global_reference
     }
 
     /// # Safety
@@ -62,20 +79,6 @@ impl Lineage {
     )]
     pub unsafe fn move_to_indexed_location(&mut self, indexed_location: IndexedLocation) {
         self.indexed_location = Some(indexed_location);
-    }
-
-    /// # Safety
-    /// This method should only be called by internal `LineageStore` code to
-    /// update the state of the lineages being simulated.
-    #[debug_requires(self.is_active())]
-    #[debug_ensures(
-        self.indexed_location.as_ref().unwrap().index() == index_at_location,
-        "updates the index_at_location"
-    )]
-    pub unsafe fn update_index_at_location(&mut self, index_at_location: u32) {
-        if let Some(ref mut indexed_location) = self.indexed_location {
-            indexed_location.index = core::num::NonZeroU32::new_unchecked(index_at_location + 1);
-        }
     }
 
     /// # Safety

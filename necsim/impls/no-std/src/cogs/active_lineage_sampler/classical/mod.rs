@@ -35,18 +35,11 @@ impl<
 {
     #[must_use]
     pub fn new(lineage_store: &S) -> Self {
-        let mut active_lineage_references =
-            Vec::with_capacity(lineage_store.get_number_total_lineages());
-
-        lineage_store.iter_active_locations().for_each(|location| {
-            active_lineage_references
-                .extend_from_slice(lineage_store.get_active_lineages_at_location(&location))
-        });
-
-        active_lineage_references.shrink_to_fit();
-
         Self {
-            active_lineage_references,
+            active_lineage_references: lineage_store
+                .iter_local_lineage_references()
+                .filter(|local_reference| lineage_store.get(local_reference.clone()).is_some())
+                .collect(),
             last_event_time: 0.0_f64,
             _marker: PhantomData::<(H, G, N, D, S)>,
         }

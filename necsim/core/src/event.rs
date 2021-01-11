@@ -1,37 +1,29 @@
-use core::{
-    hash::{Hash, Hasher},
-    marker::PhantomData,
-};
+use core::hash::{Hash, Hasher};
 
-use crate::{
-    cogs::{Habitat, LineageReference},
-    landscape::IndexedLocation,
-};
+use crate::{landscape::IndexedLocation, lineage::GlobalLineageReference};
 
-#[cfg(feature = "cuda")]
-use rustacuda_core::DeviceCopy;
-
-#[cfg(feature = "cuda")]
-use rust_cuda::common::RustToCuda;
-
-#[derive(Debug, TypeLayout)]
-pub struct Event<H: Habitat, R: LineageReference<H>> {
+#[derive(Debug, TypeLayout, Clone)]
+#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
+pub struct Event {
     origin: IndexedLocation,
     time: f64,
-    lineage_reference: R,
-    r#type: EventType<H, R>,
-    marker: PhantomData<H>,
+    global_lineage_reference: GlobalLineageReference,
+    r#type: EventType,
 }
 
-impl<H: Habitat, R: LineageReference<H>> Eq for Event<H, R> {}
+impl Eq for Event {}
 
-impl<H: Habitat, R: LineageReference<H>> PartialEq for Event<H, R> {
+impl PartialEq for Event {
+    // `Event`s are equal when they have the same `origin`, `time` and `r#type`
+    // (`global_lineage_reference` is ignored)
     fn eq(&self, other: &Self) -> bool {
         self.origin == other.origin && self.time == other.time && self.r#type == other.r#type
     }
 }
 
-impl<H: Habitat, R: LineageReference<H>> Hash for Event<H, R> {
+impl Hash for Event {
+    // `Event`s are equal when they have the same `origin`, `time` and `r#type`
+    // (`global_lineage_reference` is ignored)
     fn hash<S: Hasher>(&self, state: &mut S) {
         self.origin.hash(state);
         self.time.to_bits().hash(state);
@@ -39,7 +31,7 @@ impl<H: Habitat, R: LineageReference<H>> Hash for Event<H, R> {
     }
 }
 
-impl<H: Habitat, R: LineageReference<H>> Event<H, R> {
+impl Event {
     #[must_use]
     #[allow(clippy::float_cmp)]
     //#[debug_ensures(ret.r#type() == &r#type, "stores r#type")]
@@ -48,15 +40,14 @@ impl<H: Habitat, R: LineageReference<H>> Event<H, R> {
     pub fn new(
         origin: IndexedLocation,
         time: f64,
-        lineage_reference: R,
-        r#type: EventType<H, R>,
+        global_lineage_reference: GlobalLineageReference,
+        r#type: EventType,
     ) -> Self {
         Self {
             origin,
             time,
-            lineage_reference,
+            global_lineage_reference,
             r#type,
-            marker: PhantomData::<H>,
         }
     }
 
@@ -71,30 +62,32 @@ impl<H: Habitat, R: LineageReference<H>> Event<H, R> {
     }
 
     #[must_use]
-    pub fn lineage_reference(&self) -> &R {
-        &self.lineage_reference
+    pub fn global_lineage_reference(&self) -> &GlobalLineageReference {
+        &self.global_lineage_reference
     }
 
     #[must_use]
-    pub fn r#type(&self) -> &EventType<H, R> {
+    pub fn r#type(&self) -> &EventType {
         &self.r#type
     }
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
-pub enum EventType<H: Habitat, R: LineageReference<H>> {
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
+pub enum EventType {
     Speciation,
     Dispersal {
         target: IndexedLocation,
-        coalescence: Option<R>,
-        marker: PhantomData<H>,
+        coalescence: Option<GlobalLineageReference>,
     },
 }
 
-impl<H: Habitat, R: LineageReference<H>> Eq for EventType<H, R> {}
+impl Eq for EventType {}
 
-impl<H: Habitat, R: LineageReference<H>> PartialEq for EventType<H, R> {
+impl PartialEq for EventType {
+    // `EventType`s are equal when they have the same type and `target`
+    // (`coalescence` is ignored)
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (EventType::Speciation, EventType::Speciation) => true,
@@ -113,7 +106,9 @@ impl<H: Habitat, R: LineageReference<H>> PartialEq for EventType<H, R> {
     }
 }
 
-impl<H: Habitat, R: LineageReference<H>> Hash for EventType<H, R> {
+impl Hash for EventType {
+    // `EventType`s are equal when they have the same type and `target`
+    // (`coalescence` is ignored)
     fn hash<S: Hasher>(&self, state: &mut S) {
         core::mem::discriminant(self).hash(state);
 
@@ -121,45 +116,4 @@ impl<H: Habitat, R: LineageReference<H>> Hash for EventType<H, R> {
             target.hash(state);
         }
     }
-}
-
-impl<H: Habitat, R: LineageReference<H>> Clone for Event<H, R> {
-    fn clone(&self) -> Self {
-        Self {
-            origin: self.origin.clone(),
-            time: self.time,
-            lineage_reference: self.lineage_reference.clone(),
-            r#type: self.r#type.clone(),
-            marker: self.marker,
-        }
-    }
-}
-
-impl<H: Habitat, R: LineageReference<H>> Clone for EventType<H, R> {
-    fn clone(&self) -> Self {
-        match self {
-            EventType::Speciation => EventType::Speciation,
-            EventType::Dispersal {
-                target,
-                coalescence,
-                marker,
-            } => EventType::Dispersal {
-                target: target.clone(),
-                coalescence: coalescence.clone(),
-                marker: *marker,
-            },
-        }
-    }
-}
-
-#[cfg(feature = "cuda")]
-unsafe impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> DeviceCopy
-    for Event<H, R>
-{
-}
-
-#[cfg(feature = "cuda")]
-unsafe impl<H: Habitat + RustToCuda, R: LineageReference<H> + DeviceCopy> DeviceCopy
-    for EventType<H, R>
-{
 }

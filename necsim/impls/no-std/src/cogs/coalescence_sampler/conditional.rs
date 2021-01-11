@@ -3,6 +3,7 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{CoalescenceSampler, CoherentLineageStore, Habitat, LineageReference, RngCore},
     landscape::{IndexedLocation, Location},
+    lineage::GlobalLineageReference,
 };
 
 use super::optional_coalescence;
@@ -35,7 +36,7 @@ impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: CoherentLineageStore<H, 
         habitat: &H,
         lineage_store: &S,
         rng: &mut G,
-    ) -> (IndexedLocation, Option<R>) {
+    ) -> (IndexedLocation, Option<GlobalLineageReference>) {
         optional_coalescence::sample_optional_coalescence_at_location(
             location,
             habitat,
@@ -53,19 +54,25 @@ impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: CoherentLineageStore<H, 
         location: Location,
         lineage_store: &S,
         rng: &mut G,
-    ) -> (IndexedLocation, R) {
+    ) -> (IndexedLocation, GlobalLineageReference) {
         use necsim_core::cogs::RngSampler;
 
-        let lineages_at_location = lineage_store.get_active_lineages_at_location(&location);
-        let population = lineages_at_location.len();
-
-        let chosen_coalescence_index = rng.sample_index(population);
+        let lineages_at_location =
+            lineage_store.get_active_local_lineage_references_at_location_unordered(&location);
 
         #[allow(clippy::cast_possible_truncation)]
-        let indexed_location = IndexedLocation::new(location, chosen_coalescence_index as u32);
-        let chosen_coalescence = lineages_at_location[chosen_coalescence_index].clone();
+        let population = lineages_at_location.len() as u32;
 
-        (indexed_location, chosen_coalescence)
+        let chosen_coalescence_index = rng.sample_index_u32(population);
+
+        let indexed_location = IndexedLocation::new(location, chosen_coalescence_index);
+
+        let chosen_coalescence = lineages_at_location[chosen_coalescence_index as usize].clone();
+
+        (
+            indexed_location,
+            lineage_store[chosen_coalescence].global_reference().clone(),
+        )
     }
 
     #[must_use]
@@ -82,7 +89,7 @@ impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: CoherentLineageStore<H, 
 
         #[allow(clippy::cast_precision_loss)]
         let population = (lineage_store
-            .get_active_lineages_at_location(location)
+            .get_active_local_lineage_references_at_location_unordered(location)
             .len()
             - usize::from(lineage_store_includes_self)) as f64;
         let habitat = f64::from(habitat.get_habitat_at_location(location));

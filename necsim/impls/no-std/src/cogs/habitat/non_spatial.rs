@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Habitat, HabitatToU64Injection},
+    cogs::Habitat,
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -41,10 +41,7 @@ impl Habitat for NonSpatialHabitat {
     fn get_habitat_at_location(&self, _location: &Location) -> u32 {
         self.deme
     }
-}
 
-#[contract_trait]
-impl HabitatToU64Injection for NonSpatialHabitat {
     #[must_use]
     fn map_indexed_location_to_u64_injective(&self, indexed_location: &IndexedLocation) -> u64 {
         (u64::from(indexed_location.location().y() - self.extent.y())

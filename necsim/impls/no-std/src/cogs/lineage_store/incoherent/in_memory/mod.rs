@@ -81,10 +81,10 @@ impl<H: Habitat> IncoherentInMemoryLineageStore<H> {
                 let sampled_habitat_at_location = floor(sampled_habitat_at_location_max) as u32;
 
                 for index_at_location in 0..sampled_habitat_at_location {
-                    lineages_store.push(Lineage::new(IndexedLocation::new(
-                        location.clone(),
-                        index_at_location,
-                    )));
+                    lineages_store.push(Lineage::new(
+                        IndexedLocation::new(location.clone(), index_at_location),
+                        habitat,
+                    ));
                 }
 
                 if sampled_habitat_at_location_max > f64::from(sampled_habitat_at_location) {
@@ -106,7 +106,7 @@ impl<H: Habitat> IncoherentInMemoryLineageStore<H> {
                 break;
             }
 
-            lineages_store.push(Lineage::new(indexed_location));
+            lineages_store.push(Lineage::new(indexed_location, habitat));
         }
 
         lineages_store.shrink_to_fit();

@@ -1,5 +1,4 @@
 use necsim_core::{
-    cogs::{Habitat, LineageReference},
     event::{Event, EventType},
     reporter::{EventFilter, Reporter},
 };
@@ -14,12 +13,12 @@ impl EventFilter for BiodiversityReporter {
     const REPORT_SPECIATION: bool = true;
 }
 
-impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for BiodiversityReporter {
+impl Reporter for BiodiversityReporter {
     #[debug_ensures(match event.r#type() {
         EventType::Speciation => self.biodiversity == old(self.biodiversity) + 1,
         _ => self.biodiversity == old(self.biodiversity),
     }, "EventType::Speciation increments self.biodiversity")]
-    fn report_event(&mut self, event: &Event<H, R>) {
+    fn report_event(&mut self, event: &Event) {
         if let EventType::Speciation = event.r#type() {
             self.biodiversity += 1;
         }

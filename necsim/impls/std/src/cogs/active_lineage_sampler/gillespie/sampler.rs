@@ -53,7 +53,7 @@ impl<
 
         let lineages_at_location = simulation
             .lineage_store
-            .get_active_lineages_at_location(&chosen_active_location);
+            .get_active_local_lineage_references_at_location_unordered(&chosen_active_location);
         let number_lineages_left_at_location = lineages_at_location.len() - 1;
 
         let chosen_lineage_index_at_location = rng.sample_index(lineages_at_location.len());
@@ -62,7 +62,7 @@ impl<
 
         let lineage_indexed_location = simulation
             .lineage_store
-            .pop_lineage_from_its_location(chosen_lineage_reference.clone());
+            .extract_lineage_from_its_location_coherent(chosen_lineage_reference.clone());
         self.number_active_lineages -= 1;
 
         let unique_event_time: f64 = if chosen_event_time > time {
@@ -101,16 +101,11 @@ impl<
     }
 
     #[debug_requires(
-        indexed_location.index() as usize ==
-            simulation.lineage_store.get_active_lineages_at_location(
-                indexed_location.location()
-            ).len(),
-        "location index equals the append index at the location"
-    )]
-    #[debug_requires(
-        simulation.lineage_store.get_active_lineages_at_location(indexed_location.location()).len() <
-            (simulation.habitat.get_habitat_at_location(indexed_location.location()) as usize),
-        "location has habitat capacity for the lineage"
+        simulation.lineage_store.get_active_local_lineage_references_at_location_unordered(
+            indexed_location.location()
+        ).len() < (
+            simulation.habitat.get_habitat_at_location(indexed_location.location()) as usize
+        ), "location has habitat capacity for the lineage"
     )]
     fn push_active_lineage_to_indexed_location(
         &mut self,
@@ -122,21 +117,22 @@ impl<
     ) {
         use necsim_core::cogs::RngSampler;
 
+        let location = indexed_location.location().clone();
+
         simulation
             .lineage_store
-            .append_lineage_to_location(lineage_reference, indexed_location.location().clone());
+            .insert_lineage_to_indexed_location_coherent(lineage_reference, indexed_location);
 
         let event_rate_at_location =
             simulation.with_split_event_sampler(|event_sampler, simulation| {
                 event_sampler.get_event_rate_at_location(
-                    indexed_location.location(),
-                    simulation,
+                    &location, simulation,
                     true, // all lineages including lineage_reference are (back) in the store
                 )
             });
 
         self.active_locations.push(
-            indexed_location.into(),
+            location,
             EventTime::from(time + rng.sample_exponential(event_rate_at_location)),
         );
 

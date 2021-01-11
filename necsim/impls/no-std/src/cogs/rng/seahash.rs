@@ -1,4 +1,4 @@
-use necsim_core::cogs::HabitatToU64Injection;
+use necsim_core::cogs::Habitat;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
@@ -34,7 +34,7 @@ impl necsim_core::cogs::RngCore for SeaHash {
     }
 }
 
-impl<H: HabitatToU64Injection> necsim_core::cogs::PrimeableRng<H> for SeaHash {
+impl<H: Habitat> necsim_core::cogs::PrimeableRng<H> for SeaHash {
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         self.location = location_index;
         self.time = time_index;

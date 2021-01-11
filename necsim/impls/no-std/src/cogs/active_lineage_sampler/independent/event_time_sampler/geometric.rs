@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{HabitatToU64Injection, PrimeableRng, RngSampler},
+    cogs::{Habitat, PrimeableRng, RngSampler},
     intrinsics::{exp, floor},
     landscape::IndexedLocation,
 };
@@ -27,9 +27,7 @@ impl GeometricEventTimeSampler {
 }
 
 #[contract_trait]
-impl<H: HabitatToU64Injection, G: PrimeableRng<H>> EventTimeSampler<H, G>
-    for GeometricEventTimeSampler
-{
+impl<H: Habitat, G: PrimeableRng<H>> EventTimeSampler<H, G> for GeometricEventTimeSampler {
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
         &self,

@@ -1,5 +1,5 @@
 mod habitat;
-pub use habitat::{Habitat, HabitatToU64Injection};
+pub use habitat::Habitat;
 
 mod speciation_probability;
 pub use speciation_probability::SpeciationProbability;

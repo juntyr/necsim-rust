@@ -1,5 +1,4 @@
 use necsim_core::{
-    cogs::{Habitat, LineageReference},
     event::{Event, EventType},
     reporter::{EventFilter, Reporter},
 };
@@ -20,14 +19,14 @@ impl EventFilter for EventReporter {
     const REPORT_SPECIATION: bool = true;
 }
 
-impl<H: Habitat, R: LineageReference<H>> Reporter<H, R> for EventReporter {
+impl Reporter for EventReporter {
     #[debug_ensures(contract::explicit_event_reporter_report_event_contract(
         event.origin(), event.r#type(), old(self.speciation), old(self.out_dispersal),
         old(self.self_dispersal), old(self.out_coalescence), old(self.self_coalescence),
         self.speciation, self.out_dispersal, self.self_dispersal, self.out_coalescence,
         self.self_coalescence
     ), "counts all distinct event types without changing unaffected counts")]
-    fn report_event(&mut self, event: &Event<H, R>) {
+    fn report_event(&mut self, event: &Event) {
         match event.r#type() {
             EventType::Speciation => {
                 self.speciation += 1;

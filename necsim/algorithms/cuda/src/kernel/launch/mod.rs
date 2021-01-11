@@ -1,8 +1,8 @@
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, DispersalSampler, HabitatToU64Injection, IncoherentLineageStore,
-        LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
-        SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
+        CoalescenceSampler, DispersalSampler, Habitat, IncoherentLineageStore, LineageReference,
+        MinSpeciationTrackingEventSampler, PrimeableRng, SingularActiveLineageSampler,
+        SpeciationProbability, SpeciationSample,
     },
     simulation::Simulation,
 };
@@ -25,7 +25,7 @@ use with_stream::SimulationKernelWithDimensionsStream;
 impl<
         'k,
         's,
-        H: HabitatToU64Injection + RustToCuda,
+        H: Habitat + RustToCuda,
         G: PrimeableRng<H> + RustToCuda,
         N: SpeciationProbability<H> + RustToCuda,
         D: DispersalSampler<H, G> + RustToCuda,
@@ -61,7 +61,7 @@ impl<
         >,
         task_list_ptr: DeviceBoxMut<<ValueBuffer<R> as RustToCuda>::CudaRepresentation>,
         event_buffer_ptr: DeviceBoxMut<
-            <EventBuffer<H, R, REPORT_SPECIATION, REPORT_DISPERSAL> as RustToCuda>::CudaRepresentation,
+            <EventBuffer<REPORT_SPECIATION, REPORT_DISPERSAL> as RustToCuda>::CudaRepresentation,
         >,
         min_spec_sample_buffer_ptr: DeviceBoxMut<
             <ValueBuffer<SpeciationSample> as RustToCuda>::CudaRepresentation,

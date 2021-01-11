@@ -1,14 +1,10 @@
-use necsim_core::{
-    cogs::{Habitat, LineageReference},
-    event::EventType,
-    landscape::IndexedLocation,
-};
+use necsim_core::{event::EventType, landscape::IndexedLocation};
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::too_many_arguments)]
-pub fn explicit_event_reporter_report_event_contract<H: Habitat, R: LineageReference<H>>(
+pub fn explicit_event_reporter_report_event_contract(
     dispersal_origin: &IndexedLocation,
-    event_type: &EventType<H, R>,
+    event_type: &EventType,
     old_speciation: usize,
     old_out_dispersal: usize,
     old_self_dispersal: usize,

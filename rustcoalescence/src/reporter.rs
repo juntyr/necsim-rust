@@ -1,4 +1,3 @@
-use necsim_core::cogs::{Habitat, LineageReference};
 use necsim_impls_no_std::reporter::ReporterContext;
 
 use necsim_impls_std::reporter::biodiversity::BiodiversityReporter;
@@ -19,20 +18,9 @@ impl RustcoalescenceReporterContext {
 }
 
 impl ReporterContext for RustcoalescenceReporterContext {
-    type Reporter<H: Habitat, R: LineageReference<H>> = ReporterGroupType! {<H, R>[
-        BiodiversityReporter,
-        ProgressReporter
-    ]};
+    type Reporter = ReporterGroupType![BiodiversityReporter, ProgressReporter];
 
-    fn with_reporter<
-        O,
-        H: Habitat,
-        R: LineageReference<H>,
-        F: FnOnce(&mut Self::Reporter<H, R>) -> O,
-    >(
-        self,
-        inner: F,
-    ) -> O {
+    fn with_reporter<O, F: FnOnce(&mut Self::Reporter) -> O>(self, inner: F) -> O {
         // I. Initialise the reporters
 
         let mut biodiversity_reporter = BiodiversityReporter::default();

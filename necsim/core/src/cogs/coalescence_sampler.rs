@@ -1,6 +1,7 @@
 use crate::{
     cogs::RngCore,
     landscape::{IndexedLocation, Location},
+    lineage::GlobalLineageReference,
 };
 
 use super::{Habitat, LineageReference, LineageStore};
@@ -18,5 +19,5 @@ pub trait CoalescenceSampler<H: Habitat, G: RngCore, R: LineageReference<H>, S: 
         habitat: &H,
         lineage_store: &S,
         rng: &mut G,
-    ) -> (IndexedLocation, Option<R>);
+    ) -> (IndexedLocation, Option<GlobalLineageReference>);
 }

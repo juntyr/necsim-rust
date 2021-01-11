@@ -71,7 +71,7 @@ impl<
         event_time: f64,
         simulation: &PartialSimulation<H, G, N, D, R, S, IndependentCoalescenceSampler<H, G, R, S>>,
         rng: &mut G,
-    ) -> Event<H, R> {
+    ) -> Event {
         use necsim_core::cogs::RngSampler;
 
         let speciation_sample = rng.sample_uniform();
@@ -109,11 +109,17 @@ impl<
             EventType::Dispersal {
                 coalescence: optional_coalescence,
                 target: dispersal_target,
-                marker: PhantomData::<H>,
             }
         };
 
-        Event::new(dispersal_origin, event_time, lineage_reference, event_type)
+        Event::new(
+            dispersal_origin,
+            event_time,
+            simulation.lineage_store[lineage_reference]
+                .global_reference()
+                .clone(),
+            event_type,
+        )
     }
 }
 

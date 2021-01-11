@@ -1,7 +1,7 @@
 use array2d::Array2D;
 
 use necsim_core::{
-    cogs::{Habitat, HabitatToU64Injection},
+    cogs::Habitat,
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -40,10 +40,7 @@ impl Habitat for InMemoryHabitat {
     fn get_habitat_at_location(&self, location: &Location) -> u32 {
         self.habitat[(location.y() as usize, location.x() as usize)]
     }
-}
 
-#[contract_trait]
-impl HabitatToU64Injection for InMemoryHabitat {
     #[must_use]
     fn map_indexed_location_to_u64_injective(&self, indexed_location: &IndexedLocation) -> u64 {
         self.u64_injection[(

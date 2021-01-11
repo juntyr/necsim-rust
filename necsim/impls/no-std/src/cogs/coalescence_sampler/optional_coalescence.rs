@@ -1,6 +1,7 @@
 use necsim_core::{
     cogs::{CoherentLineageStore, Habitat, LineageReference, RngCore},
     landscape::{IndexedLocation, Location},
+    lineage::GlobalLineageReference,
 };
 
 #[must_use]
@@ -14,25 +15,16 @@ pub fn sample_optional_coalescence_at_location<
     habitat: &H,
     lineage_store: &S,
     rng: &mut G,
-) -> (IndexedLocation, Option<R>) {
+) -> (IndexedLocation, Option<GlobalLineageReference>) {
     use necsim_core::cogs::RngSampler;
 
-    let lineages_at_location = lineage_store.get_active_lineages_at_location(&location);
+    let chosen_coalescence_index = rng.sample_index_u32(habitat.get_habitat_at_location(&location));
 
-    let chosen_coalescence_index =
-        rng.sample_index(habitat.get_habitat_at_location(&location) as usize);
+    let indexed_location = IndexedLocation::new(location, chosen_coalescence_index);
 
-    #[allow(clippy::cast_possible_truncation)]
-    // As lineages are stored in a continuous slice, there are two cases:
-    //  a) coalescence:    the dispersal target location index equals the index of the parent
-    //  b) no coalescence: the dispersal target location index is clamped to |lineages_at_location|
-    //                     as the lineage will be appended to the continuous slice of lineages at
-    //                     the location, lineages_at_location
-    let indexed_location = IndexedLocation::new(
-        location,
-        (chosen_coalescence_index as u32).min(lineages_at_location.len() as u32),
-    );
-    let optional_coalescence = lineages_at_location.get(chosen_coalescence_index).cloned();
+    let optional_coalescence = lineage_store
+        .get_active_global_lineage_reference_at_indexed_location(&indexed_location)
+        .cloned();
 
     (indexed_location, optional_coalescence)
 }

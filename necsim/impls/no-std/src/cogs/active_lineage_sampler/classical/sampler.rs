@@ -95,7 +95,7 @@ impl<
 
         let lineage_indexed_location = simulation
             .lineage_store
-            .pop_lineage_from_its_location(chosen_lineage_reference.clone());
+            .extract_lineage_from_its_location_coherent(chosen_lineage_reference.clone());
 
         #[allow(clippy::cast_precision_loss)]
         let lambda = 0.5_f64 * ((self.number_active_lineages() + 1) as f64);
@@ -121,18 +121,13 @@ impl<
         ))
     }
 
-    #[allow(clippy::type_complexity)]
+    #[allow(clippy::type_complexity, clippy::cast_possible_truncation)]
     #[debug_requires(
-        indexed_location.index() as usize ==
-            simulation.lineage_store.get_active_lineages_at_location(
-                indexed_location.location()
-            ).len(),
-        "location index equals the append index at the location"
-    )]
-    #[debug_requires(
-        simulation.lineage_store.get_active_lineages_at_location(indexed_location.location()).len() <
-            (simulation.habitat.get_habitat_at_location(indexed_location.location()) as usize),
-        "location has habitat capacity for the lineage"
+        simulation.lineage_store.get_active_local_lineage_references_at_location_unordered(
+            indexed_location.location()
+        ).len() < (
+            simulation.habitat.get_habitat_at_location(indexed_location.location()) as usize
+        ), "location has habitat capacity for the lineage"
     )]
     fn push_active_lineage_to_indexed_location(
         &mut self,
@@ -161,7 +156,10 @@ impl<
     ) {
         simulation
             .lineage_store
-            .append_lineage_to_location(lineage_reference.clone(), indexed_location.into());
+            .insert_lineage_to_indexed_location_coherent(
+                lineage_reference.clone(),
+                indexed_location,
+            );
 
         self.active_lineage_references.push(lineage_reference);
     }

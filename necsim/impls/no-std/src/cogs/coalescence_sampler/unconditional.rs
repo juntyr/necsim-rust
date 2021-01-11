@@ -3,6 +3,7 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{CoalescenceSampler, CoherentLineageStore, Habitat, LineageReference, RngCore},
     landscape::{IndexedLocation, Location},
+    lineage::GlobalLineageReference,
 };
 
 use super::optional_coalescence;
@@ -35,7 +36,7 @@ impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: CoherentLineageStore<H, 
         habitat: &H,
         lineage_store: &S,
         rng: &mut G,
-    ) -> (IndexedLocation, Option<R>) {
+    ) -> (IndexedLocation, Option<GlobalLineageReference>) {
         optional_coalescence::sample_optional_coalescence_at_location(
             location,
             habitat,

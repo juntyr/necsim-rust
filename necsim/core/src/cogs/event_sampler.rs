@@ -28,8 +28,9 @@ pub trait EventSampler<
     #[allow(clippy::float_cmp)]
     #[debug_requires(event_time >= 0.0_f64, "event time is non-negative")]
     #[debug_ensures(
-        ret.lineage_reference() == &old(lineage_reference.clone()),
-        "event occurs for lineage_reference"
+        ret.global_lineage_reference() == old(
+            simulation.lineage_store[lineage_reference.clone()].global_reference()
+        ), "event occurs for lineage_reference"
     )]
     #[debug_ensures(ret.time() == event_time, "event occurs at event_time")]
     fn sample_event_for_lineage_at_indexed_location_time(
@@ -39,7 +40,7 @@ pub trait EventSampler<
         event_time: f64,
         simulation: &PartialSimulation<H, G, N, D, R, S, C>,
         rng: &mut G,
-    ) -> Event<H, R>;
+    ) -> Event;
 }
 
 // The time of a speciation sample can be stored as a NonZeroU64 as:

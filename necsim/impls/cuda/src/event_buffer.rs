@@ -12,15 +12,9 @@ use rustacuda::{
     function::{BlockSize, GridSize},
 };
 
-use rustacuda_core::DeviceCopy;
+use rust_cuda::utils::exchange::buffer::CudaExchangeBuffer;
 
-use rust_cuda::{common::RustToCuda, utils::exchange::buffer::CudaExchangeBuffer};
-
-use necsim_core::{
-    cogs::{Habitat, LineageReference},
-    event::Event,
-    reporter::Reporter,
-};
+use necsim_core::{event::Event, reporter::Reporter};
 
 #[cfg(target_os = "cuda")]
 use necsim_core::event::EventType;
@@ -29,27 +23,18 @@ use necsim_core::reporter::EventFilter;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(RustToCuda, LendToCuda)]
-pub struct EventBuffer<
-    H: Habitat + RustToCuda,
-    R: LineageReference<H> + DeviceCopy,
-    const REPORT_SPECIATION: bool,
-    const REPORT_DISPERSAL: bool,
-> {
+pub struct EventBuffer<const REPORT_SPECIATION: bool, const REPORT_DISPERSAL: bool> {
     #[r2cEmbed]
-    buffer: CudaExchangeBuffer<Option<Event<H, R>>>,
-    #[r2cPhantom(Event<H, R>)]
-    event_deduplicator: HashSet<Event<H, R>>,
+    buffer: CudaExchangeBuffer<Option<Event>>,
+    #[r2cPhantom(Event)]
+    event_deduplicator: HashSet<Event>,
     max_events: usize,
     event_counter: usize,
 }
 
 #[cfg(not(target_os = "cuda"))]
-impl<
-        H: Habitat + RustToCuda,
-        R: LineageReference<H> + DeviceCopy,
-        const REPORT_SPECIATION: bool,
-        const REPORT_DISPERSAL: bool,
-    > EventBuffer<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>
+impl<const REPORT_SPECIATION: bool, const REPORT_DISPERSAL: bool>
+    EventBuffer<REPORT_SPECIATION, REPORT_DISPERSAL>
 {
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
@@ -78,7 +63,7 @@ impl<
         })
     }
 
-    pub fn report_events<P: Reporter<H, R>>(&mut self, reporter: &mut P) {
+    pub fn report_events<P: Reporter>(&mut self, reporter: &mut P) {
         // TODO: Enforce Reporter has the same EventFilter once Rust allows
         //       enforcing associated const bounds at compile time
 
@@ -93,30 +78,22 @@ impl<
 }
 
 #[cfg(target_os = "cuda")]
-impl<
-        H: Habitat + RustToCuda,
-        R: LineageReference<H> + DeviceCopy,
-        const REPORT_SPECIATION: bool,
-        const REPORT_DISPERSAL: bool,
-    > EventFilter for EventBuffer<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>
+impl<const REPORT_SPECIATION: bool, const REPORT_DISPERSAL: bool> EventFilter
+    for EventBuffer<REPORT_SPECIATION, REPORT_DISPERSAL>
 {
     const REPORT_DISPERSAL: bool = REPORT_DISPERSAL;
     const REPORT_SPECIATION: bool = REPORT_SPECIATION;
 }
 
 #[cfg(target_os = "cuda")]
-impl<
-        H: Habitat + RustToCuda,
-        R: LineageReference<H> + DeviceCopy,
-        const REPORT_SPECIATION: bool,
-        const REPORT_DISPERSAL: bool,
-    > Reporter<H, R> for EventBuffer<H, R, REPORT_SPECIATION, REPORT_DISPERSAL>
+impl<const REPORT_SPECIATION: bool, const REPORT_DISPERSAL: bool> Reporter
+    for EventBuffer<REPORT_SPECIATION, REPORT_DISPERSAL>
 {
     #[debug_requires(
         self.event_counter < self.buffer.len(),
         "does not report extraneous events"
     )]
-    fn report_event(&mut self, event: &Event<H, R>) {
+    fn report_event(&mut self, event: &Event) {
         if (REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
             || (REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal {..}))
         {
