@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use alloc::vec::Vec;
 
 use necsim_core::cogs::{
-    CoherentLineageStore, DispersalSampler, Habitat, LineageReference, RngCore,
+    CoherentLineageStore, DispersalSampler, EmigrationExit, Habitat, LineageReference, RngCore,
     SpeciationProbability,
 };
 
@@ -18,10 +18,11 @@ pub struct ClassicalActiveLineageSampler<
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: CoherentLineageStore<H, R>,
+    X: EmigrationExit<H, G, N, D, R, S>,
 > {
     active_lineage_references: Vec<R>,
     last_event_time: f64,
-    _marker: PhantomData<(H, G, N, D, S)>,
+    _marker: PhantomData<(H, G, N, D, S, X)>,
 }
 
 impl<
@@ -31,7 +32,8 @@ impl<
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-    > ClassicalActiveLineageSampler<H, G, N, D, R, S>
+        X: EmigrationExit<H, G, N, D, R, S>,
+    > ClassicalActiveLineageSampler<H, G, N, D, R, S, X>
 {
     #[must_use]
     pub fn new(lineage_store: &S) -> Self {
@@ -41,7 +43,7 @@ impl<
                 .filter(|local_reference| lineage_store.get(local_reference.clone()).is_some())
                 .collect(),
             last_event_time: 0.0_f64,
-            _marker: PhantomData::<(H, G, N, D, S)>,
+            _marker: PhantomData::<(H, G, N, D, S, X)>,
         }
     }
 }

@@ -1,6 +1,6 @@
 use super::{
-    CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference, LineageStore,
-    RngCore, SpeciationProbability,
+    CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, LineageReference,
+    LineageStore, RngCore, SpeciationProbability,
 };
 
 use crate::{
@@ -16,8 +16,9 @@ pub trait ActiveLineageSampler<
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
+    X: EmigrationExit<H, G, N, D, R, S>,
     C: CoalescenceSampler<H, G, R, S>,
-    E: EventSampler<H, G, N, D, R, S, C>,
+    E: EventSampler<H, G, N, D, R, S, X, C>,
 >: core::fmt::Debug
 {
     #[must_use]
@@ -57,7 +58,7 @@ pub trait ActiveLineageSampler<
     fn pop_active_lineage_indexed_location_event_time(
         &mut self,
         time: f64,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S, C, E>,
+        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
         rng: &mut G,
     ) -> Option<(R, IndexedLocation, f64)>;
 
@@ -71,14 +72,14 @@ pub trait ActiveLineageSampler<
         lineage_reference: R,
         indexed_location: IndexedLocation,
         time: f64,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S, C, E>,
+        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
         rng: &mut G,
     );
 
     #[inline]
     fn with_next_active_lineage_indexed_location_event_time<
         F: FnOnce(
-            &mut PartialSimulation<H, G, N, D, R, S, C, E>,
+            &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
             &mut G,
             R,
             IndexedLocation,
@@ -86,7 +87,7 @@ pub trait ActiveLineageSampler<
         ) -> Option<IndexedLocation>,
     >(
         &mut self,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S, C, E>,
+        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
         rng: &mut G,
         inner: F,
     ) -> bool {
@@ -128,9 +129,10 @@ pub trait SingularActiveLineageSampler<
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
+    X: EmigrationExit<H, G, N, D, R, S>,
     C: CoalescenceSampler<H, G, R, S>,
-    E: EventSampler<H, G, N, D, R, S, C>,
->: ActiveLineageSampler<H, G, N, D, R, S, C, E>
+    E: EventSampler<H, G, N, D, R, S, X, C>,
+>: ActiveLineageSampler<H, G, N, D, R, S, X, C, E>
 {
     #[must_use]
     fn replace_active_lineage(

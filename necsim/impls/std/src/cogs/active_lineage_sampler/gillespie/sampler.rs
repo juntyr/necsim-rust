@@ -2,8 +2,8 @@ use float_next_after::NextAfter;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoalescenceSampler, CoherentLineageStore, DispersalSampler, Habitat,
-        LineageReference, RngCore, SpeciationProbability,
+        ActiveLineageSampler, CoalescenceSampler, CoherentLineageStore, DispersalSampler,
+        EmigrationExit, Habitat, LineageReference, RngCore, SpeciationProbability,
     },
     landscape::IndexedLocation,
     simulation::partial::active_lineager_sampler::PartialSimulation,
@@ -21,10 +21,11 @@ impl<
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
+        X: EmigrationExit<H, G, N, D, R, S>,
         C: CoalescenceSampler<H, G, R, S>,
-        E: GillespieEventSampler<H, G, N, D, R, S, C>,
-    > ActiveLineageSampler<H, G, N, D, R, S, C, E>
-    for GillespieActiveLineageSampler<H, G, N, D, R, S, C, E>
+        E: GillespieEventSampler<H, G, N, D, R, S, X, C>,
+    > ActiveLineageSampler<H, G, N, D, R, S, X, C, E>
+    for GillespieActiveLineageSampler<H, G, N, D, R, S, X, C, E>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -39,7 +40,7 @@ impl<
     fn pop_active_lineage_indexed_location_event_time(
         &mut self,
         time: f64,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S, C, E>,
+        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
         rng: &mut G,
     ) -> Option<(R, IndexedLocation, f64)> {
         use necsim_core::cogs::RngSampler;
@@ -112,7 +113,7 @@ impl<
         lineage_reference: R,
         indexed_location: IndexedLocation,
         time: f64,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S, C, E>,
+        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
         rng: &mut G,
     ) {
         use necsim_core::cogs::RngSampler;

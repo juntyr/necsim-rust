@@ -2,8 +2,8 @@ use priority_queue::PriorityQueue;
 
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, CoherentLineageStore, DispersalSampler, Habitat, LineageReference,
-        RngCore, SpeciationProbability,
+        CoalescenceSampler, CoherentLineageStore, DispersalSampler, EmigrationExit, Habitat,
+        LineageReference, RngCore, SpeciationProbability,
     },
     landscape::Location,
     simulation::partial::event_sampler::PartialSimulation,
@@ -25,13 +25,14 @@ pub struct GillespieActiveLineageSampler<
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: CoherentLineageStore<H, R>,
+    X: EmigrationExit<H, G, N, D, R, S>,
     C: CoalescenceSampler<H, G, R, S>,
-    E: GillespieEventSampler<H, G, N, D, R, S, C>,
+    E: GillespieEventSampler<H, G, N, D, R, S, X, C>,
 > {
     active_locations: PriorityQueue<Location, EventTime>,
     number_active_lineages: usize,
     last_event_time: f64,
-    marker: std::marker::PhantomData<(H, G, N, D, R, S, C, E)>,
+    marker: std::marker::PhantomData<(H, G, N, D, R, S, X, C, E)>,
 }
 
 impl<
@@ -41,13 +42,14 @@ impl<
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
+        X: EmigrationExit<H, G, N, D, R, S>,
         C: CoalescenceSampler<H, G, R, S>,
-        E: GillespieEventSampler<H, G, N, D, R, S, C>,
-    > GillespieActiveLineageSampler<H, G, N, D, R, S, C, E>
+        E: GillespieEventSampler<H, G, N, D, R, S, X, C>,
+    > GillespieActiveLineageSampler<H, G, N, D, R, S, X, C, E>
 {
     #[must_use]
     pub fn new(
-        partial_simulation: &PartialSimulation<H, G, N, D, R, S, C>,
+        partial_simulation: &PartialSimulation<H, G, N, D, R, S, X, C>,
         event_sampler: &E,
         rng: &mut G,
     ) -> Self {
@@ -88,7 +90,7 @@ impl<
             active_locations: PriorityQueue::from(active_locations),
             number_active_lineages,
             last_event_time: 0.0_f64,
-            marker: std::marker::PhantomData::<(H, G, N, D, R, S, C, E)>,
+            marker: std::marker::PhantomData::<(H, G, N, D, R, S, X, C, E)>,
         }
     }
 }
@@ -100,9 +102,10 @@ impl<
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
+        X: EmigrationExit<H, G, N, D, R, S>,
         C: CoalescenceSampler<H, G, R, S>,
-        E: GillespieEventSampler<H, G, N, D, R, S, C>,
-    > core::fmt::Debug for GillespieActiveLineageSampler<H, G, N, D, R, S, C, E>
+        E: GillespieEventSampler<H, G, N, D, R, S, X, C>,
+    > core::fmt::Debug for GillespieActiveLineageSampler<H, G, N, D, R, S, X, C, E>
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("GillespieActiveLineageSampler")

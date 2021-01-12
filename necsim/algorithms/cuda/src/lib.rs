@@ -28,6 +28,7 @@ use necsim_impls_no_std::cogs::{
         IndependentActiveLineageSampler as ActiveLineageSampler,
     },
     coalescence_sampler::independent::IndependentCoalescenceSampler as CoalescenceSampler,
+    emigration_exit::monolithic::MonolithicEmigrationExit,
     event_sampler::independent::IndependentEventSampler as EventSampler,
     rng::fixedseahash::FixedSeaHash as Rng,
     speciation_probability::uniform::UniformSpeciationProbability,
@@ -78,6 +79,7 @@ impl CudaSimulation {
             let rng = CudaRng::<Rng>::seed_from_u64(seed);
             let speciation_probability =
                 UniformSpeciationProbability::new(speciation_probability_per_generation);
+            let emigration_exit = MonolithicEmigrationExit::default();
             let coalescence_sampler = CoalescenceSampler::default();
             let event_sampler = EventSampler::default();
 
@@ -92,6 +94,7 @@ impl CudaSimulation {
                 .dispersal_sampler(dispersal_sampler)
                 .lineage_reference(std::marker::PhantomData::<R>)
                 .lineage_store(lineage_store)
+                .emigration_exit(emigration_exit)
                 .coalescence_sampler(coalescence_sampler)
                 .event_sampler(event_sampler)
                 .active_lineage_sampler(active_lineage_sampler)

@@ -6,6 +6,10 @@ use crate::{
     simulation::partial::migration::PartialSimulation,
 };
 
+// TODO: Should the emigration exit handle the removal from the store,
+//       or should that be up to the active lineage sampler when no event is
+// returned?
+
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait EmigrationExit<
@@ -38,6 +42,7 @@ pub trait EmigrationExit<
     // the lineage store TODO: Ensures that lineage only emigrates iff dispersal
     // target outside local chunk
     fn optionally_emigrate(
+        &mut self,
         lineage_reference: R,
         dispersal_origin: IndexedLocation,
         dispersal_target: Location,

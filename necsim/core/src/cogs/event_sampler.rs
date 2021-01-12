@@ -5,8 +5,8 @@ use core::{
 };
 
 use super::{
-    CoalescenceSampler, DispersalSampler, Habitat, LineageReference, LineageStore, RngCore,
-    SpeciationProbability,
+    CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, LineageReference, LineageStore,
+    RngCore, SpeciationProbability,
 };
 use crate::{
     event::Event, landscape::IndexedLocation, simulation::partial::event_sampler::PartialSimulation,
@@ -21,26 +21,33 @@ pub trait EventSampler<
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
+    X: EmigrationExit<H, G, N, D, R, S>,
     C: CoalescenceSampler<H, G, R, S>,
 >: core::fmt::Debug
 {
     #[must_use]
     #[allow(clippy::float_cmp)]
     #[debug_requires(event_time >= 0.0_f64, "event time is non-negative")]
-    #[debug_ensures(
-        ret.global_lineage_reference() == old(
-            simulation.lineage_store[lineage_reference.clone()].global_reference()
-        ), "event occurs for lineage_reference"
-    )]
-    #[debug_ensures(ret.time() == event_time, "event occurs at event_time")]
-    fn sample_event_for_lineage_at_indexed_location_time(
+    // TODO: If lineage removal is done by emigration exit, we should
+    //       also assert that lineage has been removed here iff None
+    #[debug_ensures(match &ret {
+        Some(event) => event.global_lineage_reference() == &old(
+            simulation.lineage_store[lineage_reference.clone()].global_reference().clone()
+        ),
+        None => true,
+    } , "event occurs for lineage_reference")]
+    #[debug_ensures(match &ret {
+        Some(event) => event.time() == event_time,
+        None => true,
+    }, "event occurs at event_time")]
+    fn sample_event_for_lineage_at_indexed_location_time_or_emigrate(
         &mut self,
         lineage_reference: R,
         indexed_location: IndexedLocation,
         event_time: f64,
-        simulation: &PartialSimulation<H, G, N, D, R, S, C>,
+        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C>,
         rng: &mut G,
-    ) -> Event;
+    ) -> Option<Event>;
 }
 
 // The time of a speciation sample can be stored as a NonZeroU64 as:
@@ -115,8 +122,9 @@ pub trait MinSpeciationTrackingEventSampler<
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
+    X: EmigrationExit<H, G, N, D, R, S>,
     C: CoalescenceSampler<H, G, R, S>,
->: EventSampler<H, G, N, D, R, S, C>
+>: EventSampler<H, G, N, D, R, S, X, C>
 {
     fn replace_min_speciation(&mut self, new: Option<SpeciationSample>)
         -> Option<SpeciationSample>;

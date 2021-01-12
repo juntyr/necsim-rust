@@ -2,9 +2,9 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, DispersalSampler, EventSampler, Habitat, IncoherentLineageStore,
-        LineageReference, MinSpeciationTrackingEventSampler, RngCore, SpeciationProbability,
-        SpeciationSample,
+        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat,
+        IncoherentLineageStore, LineageReference, MinSpeciationTrackingEventSampler, RngCore,
+        SpeciationProbability, SpeciationSample,
     },
     event::{Event, EventType},
     landscape::IndexedLocation,
@@ -20,6 +20,7 @@ use crate::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler
 #[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(R: rustacuda_core::DeviceCopy))]
 #[cfg_attr(feature = "cuda", r2cBound(S: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(X: rust_cuda::common::RustToCuda))]
 #[derive(Debug)]
 pub struct IndependentEventSampler<
     H: Habitat,
@@ -28,9 +29,10 @@ pub struct IndependentEventSampler<
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: IncoherentLineageStore<H, R>,
+    X: EmigrationExit<H, G, N, D, R, S>,
 > {
     min_spec_sample: Option<SpeciationSample>,
-    marker: PhantomData<(H, G, N, D, R, S)>,
+    marker: PhantomData<(H, G, N, D, R, S, X)>,
 }
 
 impl<
@@ -40,12 +42,13 @@ impl<
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
-    > Default for IndependentEventSampler<H, G, N, D, R, S>
+        X: EmigrationExit<H, G, N, D, R, S>,
+    > Default for IndependentEventSampler<H, G, N, D, R, S, X>
 {
     fn default() -> Self {
         Self {
             min_spec_sample: None,
-            marker: PhantomData::<(H, G, N, D, R, S)>,
+            marker: PhantomData::<(H, G, N, D, R, S, X)>,
         }
     }
 }
@@ -58,20 +61,31 @@ impl<
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
-    > EventSampler<H, G, N, D, R, S, IndependentCoalescenceSampler<H, G, R, S>>
-    for IndependentEventSampler<H, G, N, D, R, S>
+        X: EmigrationExit<H, G, N, D, R, S>,
+    > EventSampler<H, G, N, D, R, S, X, IndependentCoalescenceSampler<H, G, R, S>>
+    for IndependentEventSampler<H, G, N, D, R, S, X>
 {
     #[must_use]
     #[allow(clippy::type_complexity)]
+    #[allow(clippy::shadow_unrelated)] // https://github.com/rust-lang/rust-clippy/issues/5455
     #[inline]
-    fn sample_event_for_lineage_at_indexed_location_time(
+    fn sample_event_for_lineage_at_indexed_location_time_or_emigrate(
         &mut self,
         lineage_reference: R,
         indexed_location: IndexedLocation,
         event_time: f64,
-        simulation: &PartialSimulation<H, G, N, D, R, S, IndependentCoalescenceSampler<H, G, R, S>>,
+        simulation: &mut PartialSimulation<
+            H,
+            G,
+            N,
+            D,
+            R,
+            S,
+            X,
+            IndependentCoalescenceSampler<H, G, R, S>,
+        >,
         rng: &mut G,
-    ) -> Event {
+    ) -> Option<Event> {
         use necsim_core::cogs::RngSampler;
 
         let speciation_sample = rng.sample_uniform();
@@ -86,16 +100,34 @@ impl<
 
         let dispersal_origin = indexed_location;
 
-        let event_type = if speciation_sample
+        let (event_type, lineage_reference, dispersal_origin, event_time) = if speciation_sample
             < simulation
                 .speciation_probability
                 .get_speciation_probability_at_location(dispersal_origin.location())
         {
-            EventType::Speciation
+            (
+                EventType::Speciation,
+                lineage_reference,
+                dispersal_origin,
+                event_time,
+            )
         } else {
             let dispersal_target = simulation
                 .dispersal_sampler
                 .sample_dispersal_from_location(dispersal_origin.location(), rng);
+
+            // Check for emigration and return None iff lineage emigrated
+            let (lineage_reference, dispersal_origin, dispersal_target, event_time) = simulation
+                .with_mut_split_emigration_exit(|emigration_exit, simulation| {
+                    emigration_exit.optionally_emigrate(
+                        lineage_reference,
+                        dispersal_origin,
+                        dispersal_target,
+                        event_time,
+                        simulation,
+                        rng,
+                    )
+                })?;
 
             let (dispersal_target, optional_coalescence) = simulation
                 .coalescence_sampler
@@ -106,20 +138,25 @@ impl<
                     rng,
                 );
 
-            EventType::Dispersal {
-                coalescence: optional_coalescence,
-                target: dispersal_target,
-            }
+            (
+                EventType::Dispersal {
+                    coalescence: optional_coalescence,
+                    target: dispersal_target,
+                },
+                lineage_reference,
+                dispersal_origin,
+                event_time,
+            )
         };
 
-        Event::new(
+        Some(Event::new(
             dispersal_origin,
             event_time,
             simulation.lineage_store[lineage_reference]
                 .global_reference()
                 .clone(),
             event_type,
-        )
+        ))
     }
 }
 
@@ -130,8 +167,18 @@ impl<
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
-    > MinSpeciationTrackingEventSampler<H, G, N, D, R, S, IndependentCoalescenceSampler<H, G, R, S>>
-    for IndependentEventSampler<H, G, N, D, R, S>
+        X: EmigrationExit<H, G, N, D, R, S>,
+    >
+    MinSpeciationTrackingEventSampler<
+        H,
+        G,
+        N,
+        D,
+        R,
+        S,
+        X,
+        IndependentCoalescenceSampler<H, G, R, S>,
+    > for IndependentEventSampler<H, G, N, D, R, S, X>
 {
     fn replace_min_speciation(
         &mut self,

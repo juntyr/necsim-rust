@@ -4,8 +4,8 @@
 use core::marker::PhantomData;
 
 use crate::cogs::{
-    ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler, Habitat,
-    LineageReference, LineageStore, RngCore, SpeciationProbability,
+    ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
+    Habitat, LineageReference, LineageStore, RngCore, SpeciationProbability,
 };
 
 #[derive(TypedBuilder, Debug, TypeLayout)]
@@ -16,6 +16,7 @@ use crate::cogs::{
 #[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(R: rustacuda_core::DeviceCopy))]
 #[cfg_attr(feature = "cuda", r2cBound(S: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(X: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(C: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(E: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(A: rust_cuda::common::RustToCuda))]
@@ -27,9 +28,10 @@ pub struct Simulation<
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
+    X: EmigrationExit<H, G, N, D, R, S>,
     C: CoalescenceSampler<H, G, R, S>,
-    E: EventSampler<H, G, N, D, R, S, C>,
-    A: ActiveLineageSampler<H, G, N, D, R, S, C, E>,
+    E: EventSampler<H, G, N, D, R, S, X, C>,
+    A: ActiveLineageSampler<H, G, N, D, R, S, X, C, E>,
 > {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) habitat: H,
@@ -40,6 +42,8 @@ pub struct Simulation<
     pub(super) lineage_reference: PhantomData<R>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) lineage_store: S,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    pub(super) emigration_exit: X,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) coalescence_sampler: C,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
@@ -57,17 +61,28 @@ impl<
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
+        X: EmigrationExit<H, G, N, D, R, S>,
         C: CoalescenceSampler<H, G, R, S>,
-        E: EventSampler<H, G, N, D, R, S, C>,
-        A: ActiveLineageSampler<H, G, N, D, R, S, C, E>,
-    > Simulation<H, G, N, D, R, S, C, E, A>
+        E: EventSampler<H, G, N, D, R, S, X, C>,
+        A: ActiveLineageSampler<H, G, N, D, R, S, X, C, E>,
+    > Simulation<H, G, N, D, R, S, X, C, E, A>
 {
     #[inline]
     pub fn with_mut_split_active_lineage_sampler_and_rng<
         Q,
         F: FnOnce(
             &mut A,
-            &mut super::partial::active_lineager_sampler::PartialSimulation<H, G, N, D, R, S, C, E>,
+            &mut super::partial::active_lineager_sampler::PartialSimulation<
+                H,
+                G,
+                N,
+                D,
+                R,
+                S,
+                X,
+                C,
+                E,
+            >,
             &mut G,
         ) -> Q,
     >(
@@ -87,6 +102,7 @@ impl<
                     D,
                     R,
                     S,
+                    X,
                     C,
                     E,
                 >)
@@ -104,7 +120,7 @@ impl<
         Q,
         F: FnOnce(
             &mut E,
-            &super::partial::event_sampler::PartialSimulation<H, G, N, D, R, S, C>,
+            &super::partial::event_sampler::PartialSimulation<H, G, N, D, R, S, X, C>,
             &mut G,
         ) -> Q,
     >(
@@ -117,7 +133,7 @@ impl<
         // Self at the end (PartialSimulation has a zero-sized PhantomData rng)
         let partial_simulation = unsafe {
             &*(self as *const Self
-                as *const super::partial::event_sampler::PartialSimulation<H, G, N, D, R, S, C>)
+                as *const super::partial::event_sampler::PartialSimulation<H, G, N, D, R, S, X, C>)
         };
 
         func(&mut self.event_sampler, partial_simulation, &mut self.rng)
@@ -165,5 +181,9 @@ impl<
 
     pub fn coalescence_sampler(&self) -> &C {
         &self.coalescence_sampler
+    }
+
+    pub fn emigration_exit_mut(&mut self) -> &mut X {
+        &mut self.emigration_exit
     }
 }

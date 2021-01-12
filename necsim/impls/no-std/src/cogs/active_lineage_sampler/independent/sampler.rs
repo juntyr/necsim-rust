@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, Habitat, IncoherentLineageStore, LineageReference,
-        PrimeableRng, SpeciationProbability,
+        ActiveLineageSampler, DispersalSampler, EmigrationExit, Habitat, IncoherentLineageStore,
+        LineageReference, PrimeableRng, SpeciationProbability,
     },
     landscape::IndexedLocation,
     simulation::partial::active_lineager_sampler::PartialSimulation,
@@ -23,6 +23,7 @@ impl<
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
+        X: EmigrationExit<H, G, N, D, R, S>,
     >
     ActiveLineageSampler<
         H,
@@ -31,9 +32,10 @@ impl<
         D,
         R,
         S,
+        X,
         IndependentCoalescenceSampler<H, G, R, S>,
-        IndependentEventSampler<H, G, N, D, R, S>,
-    > for IndependentActiveLineageSampler<H, G, N, T, D, R, S>
+        IndependentEventSampler<H, G, N, D, R, S, X>,
+    > for IndependentActiveLineageSampler<H, G, N, T, D, R, S, X>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -57,8 +59,9 @@ impl<
             D,
             R,
             S,
+            X,
             IndependentCoalescenceSampler<H, G, R, S>,
-            IndependentEventSampler<H, G, N, D, R, S>,
+            IndependentEventSampler<H, G, N, D, R, S, X>,
         >,
         rng: &mut G,
     ) -> Option<(R, IndexedLocation, f64)> {
@@ -113,8 +116,9 @@ impl<
             D,
             R,
             S,
+            X,
             IndependentCoalescenceSampler<H, G, R, S>,
-            IndependentEventSampler<H, G, N, D, R, S>,
+            IndependentEventSampler<H, G, N, D, R, S, X>,
         >,
         _rng: &mut G,
     ) {
