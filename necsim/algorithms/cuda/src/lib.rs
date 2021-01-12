@@ -28,8 +28,9 @@ use necsim_impls_no_std::cogs::{
         IndependentActiveLineageSampler as ActiveLineageSampler,
     },
     coalescence_sampler::independent::IndependentCoalescenceSampler as CoalescenceSampler,
-    emigration_exit::monolithic::MonolithicEmigrationExit,
+    emigration_exit::never::NeverEmigrationExit,
     event_sampler::independent::IndependentEventSampler as EventSampler,
+    immigration_entry::never::NeverImmigrationEntry,
     rng::fixedseahash::FixedSeaHash as Rng,
     speciation_probability::uniform::UniformSpeciationProbability,
 };
@@ -79,13 +80,14 @@ impl CudaSimulation {
             let rng = CudaRng::<Rng>::seed_from_u64(seed);
             let speciation_probability =
                 UniformSpeciationProbability::new(speciation_probability_per_generation);
-            let emigration_exit = MonolithicEmigrationExit::default();
+            let emigration_exit = NeverEmigrationExit::default();
             let coalescence_sampler = CoalescenceSampler::default();
             let event_sampler = EventSampler::default();
+            let immigration_entry = NeverImmigrationEntry::default();
 
             // TODO: Need to test dt on a variety of seeds to see which is optimal
             let active_lineage_sampler =
-                ActiveLineageSampler::empty(ExpEventTimeSampler::new(1.0_f64)); // FixedEventTimeSampler::default());//PoissonEventTimeSampler::new(1.0_f64));
+                ActiveLineageSampler::empty(ExpEventTimeSampler::new(1.0_f64));
 
             let simulation = Simulation::builder()
                 .habitat(habitat)
@@ -97,6 +99,7 @@ impl CudaSimulation {
                 .emigration_exit(emigration_exit)
                 .coalescence_sampler(coalescence_sampler)
                 .event_sampler(event_sampler)
+                .immigration_entry(immigration_entry)
                 .active_lineage_sampler(active_lineage_sampler)
                 .build();
 

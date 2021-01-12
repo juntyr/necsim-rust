@@ -1,7 +1,9 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{CoalescenceSampler, CoherentLineageStore, Habitat, LineageReference, RngCore},
+    cogs::{
+        CoalescenceRngSample, CoalescenceSampler, CoherentLineageStore, Habitat, LineageReference,
+    },
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
 };
@@ -12,22 +14,21 @@ use super::optional_coalescence;
 #[derive(Debug)]
 pub struct ConditionalCoalescenceSampler<
     H: Habitat,
-    G: RngCore,
     R: LineageReference<H>,
     S: CoherentLineageStore<H, R>,
->(PhantomData<(H, G, R, S)>);
+>(PhantomData<(H, R, S)>);
 
-impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: CoherentLineageStore<H, R>> Default
-    for ConditionalCoalescenceSampler<H, G, R, S>
+impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> Default
+    for ConditionalCoalescenceSampler<H, R, S>
 {
     fn default() -> Self {
-        Self(PhantomData::<(H, G, R, S)>)
+        Self(PhantomData::<(H, R, S)>)
     }
 }
 
 #[contract_trait]
-impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: CoherentLineageStore<H, R>>
-    CoalescenceSampler<H, G, R, S> for ConditionalCoalescenceSampler<H, G, R, S>
+impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> CoalescenceSampler<H, R, S>
+    for ConditionalCoalescenceSampler<H, R, S>
 {
     #[must_use]
     fn sample_optional_coalescence_at_location(
@@ -35,35 +36,33 @@ impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: CoherentLineageStore<H, 
         location: Location,
         habitat: &H,
         lineage_store: &S,
-        rng: &mut G,
+        coalescence_rng_sample: CoalescenceRngSample,
     ) -> (IndexedLocation, Option<GlobalLineageReference>) {
         optional_coalescence::sample_optional_coalescence_at_location(
             location,
             habitat,
             lineage_store,
-            rng,
+            coalescence_rng_sample,
         )
     }
 }
 
-impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: CoherentLineageStore<H, R>>
-    ConditionalCoalescenceSampler<H, G, R, S>
+impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>>
+    ConditionalCoalescenceSampler<H, R, S>
 {
     #[must_use]
     pub fn sample_coalescence_at_location(
         location: Location,
         lineage_store: &S,
-        rng: &mut G,
+        coalescence_rng_sample: CoalescenceRngSample,
     ) -> (IndexedLocation, GlobalLineageReference) {
-        use necsim_core::cogs::RngSampler;
-
         let lineages_at_location =
             lineage_store.get_active_local_lineage_references_at_location_unordered(&location);
 
         #[allow(clippy::cast_possible_truncation)]
         let population = lineages_at_location.len() as u32;
 
-        let chosen_coalescence_index = rng.sample_index_u32(population);
+        let chosen_coalescence_index = coalescence_rng_sample.sample_coalescence_index(population);
 
         let indexed_location = IndexedLocation::new(location, chosen_coalescence_index);
 

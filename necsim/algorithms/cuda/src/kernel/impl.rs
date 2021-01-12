@@ -3,8 +3,8 @@ use std::{ffi::CString, marker::PhantomData, ops::Deref};
 use anyhow::Result;
 
 use necsim_core::cogs::{
-    CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, IncoherentLineageStore,
-    LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
+    CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+    IncoherentLineageStore, LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
     SingularActiveLineageSampler, SpeciationProbability,
 };
 
@@ -24,17 +24,18 @@ impl<
         R: LineageReference<H> + DeviceCopy,
         S: IncoherentLineageStore<H, R> + RustToCuda,
         X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
-        C: CoalescenceSampler<H, G, R, S> + RustToCuda,
+        C: CoalescenceSampler<H, R, S> + RustToCuda,
         E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
-        A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E> + RustToCuda,
+        I: ImmigrationEntry + RustToCuda,
+        A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E, I> + RustToCuda,
         const REPORT_SPECIATION: bool,
         const REPORT_DISPERSAL: bool,
-    > SimulationKernel<'k, H, G, N, D, R, S, X, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>
+    > SimulationKernel<'k, H, G, N, D, R, S, X, C, E, I, A, REPORT_SPECIATION, REPORT_DISPERSAL>
 {
     pub fn with_kernel<
         Q,
         F: FnOnce(
-            &SimulationKernel<H, G, N, D, R, S, X, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
+            &SimulationKernel<H, G, N, D, R, S, X, C, E, I, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
         ) -> Result<Q>,
     >(
         inner: F,
@@ -50,6 +51,7 @@ impl<
             X,
             C,
             E,
+            I,
             A,
             REPORT_SPECIATION,
             REPORT_DISPERSAL,
@@ -61,7 +63,7 @@ impl<
         let kernel = SimulationKernel {
             module: &module,
             entry_point: &entry_point,
-            marker: PhantomData::<(H, G, N, D, R, S, X, C, E, A)>,
+            marker: PhantomData::<(H, G, N, D, R, S, X, C, E, I, A)>,
         };
 
         inner(&kernel)
@@ -81,13 +83,14 @@ impl<
         R: LineageReference<H> + DeviceCopy,
         S: IncoherentLineageStore<H, R> + RustToCuda,
         X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
-        C: CoalescenceSampler<H, G, R, S> + RustToCuda,
+        C: CoalescenceSampler<H, R, S> + RustToCuda,
         E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
-        A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E> + RustToCuda,
+        I: ImmigrationEntry + RustToCuda,
+        A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E, I> + RustToCuda,
         const REPORT_SPECIATION: bool,
         const REPORT_DISPERSAL: bool,
     > Deref
-    for SimulationKernel<'k, H, G, N, D, R, S, X, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>
+    for SimulationKernel<'k, H, G, N, D, R, S, X, C, E, I, A, REPORT_SPECIATION, REPORT_DISPERSAL>
 {
     type Target = Module;
 

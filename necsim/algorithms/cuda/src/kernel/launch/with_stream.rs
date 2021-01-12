@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 use necsim_core::cogs::{
-    CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, IncoherentLineageStore,
-    LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
+    CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+    IncoherentLineageStore, LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
     SingularActiveLineageSampler, SpeciationProbability,
 };
 
@@ -29,14 +29,15 @@ pub struct SimulationKernelWithDimensionsStream<
     R: LineageReference<H> + DeviceCopy,
     S: IncoherentLineageStore<H, R> + RustToCuda,
     X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
-    C: CoalescenceSampler<H, G, R, S> + RustToCuda,
+    C: CoalescenceSampler<H, R, S> + RustToCuda,
     E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
-    A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E> + RustToCuda,
+    I: ImmigrationEntry + RustToCuda,
+    A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E, I> + RustToCuda,
     const REPORT_SPECIATION: bool,
     const REPORT_DISPERSAL: bool,
 > {
     pub(super) entry_point: &'k Function<'k>,
-    pub(super) marker: PhantomData<(H, G, N, D, R, S, X, C, E, A)>,
+    pub(super) marker: PhantomData<(H, G, N, D, R, S, X, C, E, I, A)>,
     pub(super) grid_size: GridSize,
     pub(super) block_size: BlockSize,
     pub(super) shared_mem_bytes: u32,
@@ -52,9 +53,10 @@ impl<
         R: LineageReference<H> + DeviceCopy,
         S: IncoherentLineageStore<H, R> + RustToCuda,
         X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
-        C: CoalescenceSampler<H, G, R, S> + RustToCuda,
+        C: CoalescenceSampler<H, R, S> + RustToCuda,
         E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
-        A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E> + RustToCuda,
+        I: ImmigrationEntry + RustToCuda,
+        A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E, I> + RustToCuda,
         const REPORT_SPECIATION: bool,
         const REPORT_DISPERSAL: bool,
     >
@@ -69,6 +71,7 @@ impl<
         X,
         C,
         E,
+        I,
         A,
         REPORT_SPECIATION,
         REPORT_DISPERSAL,
@@ -90,6 +93,7 @@ impl<
         X,
         C,
         E,
+        I,
         A,
         REPORT_SPECIATION,
         REPORT_DISPERSAL,

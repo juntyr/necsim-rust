@@ -3,9 +3,10 @@ use float_next_after::NextAfter;
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, CoherentLineageStore, DispersalSampler, EmigrationExit, Habitat,
-        LineageReference, RngCore, SpeciationProbability,
+        ImmigrationEntry, LineageReference, RngCore, SpeciationProbability,
     },
     landscape::IndexedLocation,
+    lineage::GlobalLineageReference,
     simulation::partial::active_lineager_sampler::PartialSimulation,
 };
 
@@ -25,6 +26,7 @@ impl<
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, N, D, R, S>,
+        I: ImmigrationEntry,
     >
     ActiveLineageSampler<
         H,
@@ -34,9 +36,10 @@ impl<
         R,
         S,
         X,
-        UnconditionalCoalescenceSampler<H, G, R, S>,
-        UnconditionalEventSampler<H, G, N, D, R, S, X, UnconditionalCoalescenceSampler<H, G, R, S>>,
-    > for ClassicalActiveLineageSampler<H, G, N, D, R, S, X>
+        UnconditionalCoalescenceSampler<H, R, S>,
+        UnconditionalEventSampler<H, G, N, D, R, S, X, UnconditionalCoalescenceSampler<H, R, S>>,
+        I,
+    > for ClassicalActiveLineageSampler<H, G, N, D, R, S, X, I>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -47,11 +50,32 @@ impl<
         self.last_event_time
     }
 
+    fn peek_time_of_next_event(&mut self, rng: &mut G) -> Option<f64> {
+        use necsim_core::cogs::RngSampler;
+
+        if self.next_event_time.is_none() && !self.active_lineage_references.is_empty() {
+            // Assumption: This method is called before the next active lineage is popped
+            #[allow(clippy::cast_precision_loss)]
+            let lambda = 0.5_f64 * (self.number_active_lineages() as f64);
+
+            let event_time = self.last_event_time + rng.sample_exponential(lambda);
+
+            let unique_event_time: f64 = if event_time > self.last_event_time {
+                event_time
+            } else {
+                self.last_event_time.next_after(f64::INFINITY)
+            };
+
+            self.next_event_time = Some(unique_event_time);
+        }
+
+        self.next_event_time
+    }
+
     #[must_use]
     #[allow(clippy::type_complexity)]
     fn pop_active_lineage_indexed_location_event_time(
         &mut self,
-        time: f64,
         simulation: &mut PartialSimulation<
             H,
             G,
@@ -60,7 +84,7 @@ impl<
             R,
             S,
             X,
-            UnconditionalCoalescenceSampler<H, G, R, S>,
+            UnconditionalCoalescenceSampler<H, R, S>,
             UnconditionalEventSampler<
                 H,
                 G,
@@ -69,16 +93,23 @@ impl<
                 R,
                 S,
                 X,
-                UnconditionalCoalescenceSampler<H, G, R, S>,
+                UnconditionalCoalescenceSampler<H, R, S>,
             >,
         >,
         rng: &mut G,
     ) -> Option<(R, IndexedLocation, f64)> {
         use necsim_core::cogs::RngSampler;
 
-        let last_active_lineage_reference = match self.active_lineage_references.pop() {
-            Some(reference) => reference,
-            None => return None,
+        // The next event time must be calculated before the next active lineage is
+        // popped
+        let optional_next_event_time = self.peek_time_of_next_event(rng);
+
+        let (next_event_time, last_active_lineage_reference) = match (
+            optional_next_event_time,
+            self.active_lineage_references.pop(),
+        ) {
+            (Some(next_event_time), Some(reference)) => (next_event_time, reference),
+            _ => return None, // In practice, this must match (None, None)
         };
 
         let chosen_active_lineage_index =
@@ -101,27 +132,19 @@ impl<
             .lineage_store
             .extract_lineage_from_its_location_coherent(chosen_lineage_reference.clone());
 
-        #[allow(clippy::cast_precision_loss)]
-        let lambda = 0.5_f64 * ((self.number_active_lineages() + 1) as f64);
-
-        let event_time = time + rng.sample_exponential(lambda);
-
-        let unique_event_time: f64 = if event_time > time {
-            event_time
-        } else {
-            time.next_after(f64::INFINITY)
-        };
-
         simulation
             .lineage_store
-            .update_lineage_time_of_last_event(chosen_lineage_reference.clone(), unique_event_time);
+            .update_lineage_time_of_last_event(chosen_lineage_reference.clone(), next_event_time);
 
-        self.last_event_time = unique_event_time;
+        self.last_event_time = next_event_time;
+
+        // Reset the next event time because the internal state has changed
+        self.next_event_time = None;
 
         Some((
             chosen_lineage_reference,
             lineage_indexed_location,
-            unique_event_time,
+            next_event_time,
         ))
     }
 
@@ -146,7 +169,7 @@ impl<
             R,
             S,
             X,
-            UnconditionalCoalescenceSampler<H, G, R, S>,
+            UnconditionalCoalescenceSampler<H, R, S>,
             UnconditionalEventSampler<
                 H,
                 G,
@@ -155,7 +178,7 @@ impl<
                 R,
                 S,
                 X,
-                UnconditionalCoalescenceSampler<H, G, R, S>,
+                UnconditionalCoalescenceSampler<H, R, S>,
             >,
         >,
         _rng: &mut G,
@@ -168,5 +191,42 @@ impl<
             );
 
         self.active_lineage_references.push(lineage_reference);
+
+        // Reset the next event time because the internal state has changed
+        self.next_event_time = None;
+    }
+
+    #[allow(clippy::type_complexity)]
+    fn insert_new_lineage_to_indexed_location(
+        &mut self,
+        _global_reference: GlobalLineageReference,
+        _indexed_location: IndexedLocation,
+        _time: f64,
+        _simulation: &mut PartialSimulation<
+            H,
+            G,
+            N,
+            D,
+            R,
+            S,
+            X,
+            UnconditionalCoalescenceSampler<H, R, S>,
+            UnconditionalEventSampler<
+                H,
+                G,
+                N,
+                D,
+                R,
+                S,
+                X,
+                UnconditionalCoalescenceSampler<H, R, S>,
+            >,
+        >,
+        _rng: &mut G,
+    ) {
+        // Reset the next event time because the internal state has changed
+        self.next_event_time = None;
+
+        unimplemented!("TODO: insert not yet implemented")
     }
 }

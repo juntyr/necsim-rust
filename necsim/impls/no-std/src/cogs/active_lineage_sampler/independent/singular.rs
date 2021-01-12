@@ -6,6 +6,7 @@ use necsim_core::cogs::{
 use crate::cogs::{
     coalescence_sampler::independent::IndependentCoalescenceSampler,
     event_sampler::independent::IndependentEventSampler,
+    immigration_entry::never::NeverImmigrationEntry,
 };
 
 use super::{EventTimeSampler, IndependentActiveLineageSampler};
@@ -28,8 +29,9 @@ impl<
         R,
         S,
         X,
-        IndependentCoalescenceSampler<H, G, R, S>,
+        IndependentCoalescenceSampler<H, R, S>,
         IndependentEventSampler<H, G, N, D, R, S, X>,
+        NeverImmigrationEntry,
     > for IndependentActiveLineageSampler<H, G, N, T, D, R, S, X>
 {
     #[must_use]

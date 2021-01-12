@@ -2,9 +2,9 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat,
-        IncoherentLineageStore, LineageReference, MinSpeciationTrackingEventSampler, RngCore,
-        SpeciationProbability, SpeciationSample,
+        CoalescenceRngSample, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
+        Habitat, IncoherentLineageStore, LineageReference, MinSpeciationTrackingEventSampler,
+        RngCore, SpeciationProbability, SpeciationSample,
     },
     event::{Event, EventType},
     landscape::IndexedLocation,
@@ -62,7 +62,7 @@ impl<
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, N, D, R, S>,
-    > EventSampler<H, G, N, D, R, S, X, IndependentCoalescenceSampler<H, G, R, S>>
+    > EventSampler<H, G, N, D, R, S, X, IndependentCoalescenceSampler<H, R, S>>
     for IndependentEventSampler<H, G, N, D, R, S, X>
 {
     #[must_use]
@@ -82,7 +82,7 @@ impl<
             R,
             S,
             X,
-            IndependentCoalescenceSampler<H, G, R, S>,
+            IndependentCoalescenceSampler<H, R, S>,
         >,
         rng: &mut G,
     ) -> Option<Event> {
@@ -135,7 +135,7 @@ impl<
                     dispersal_target,
                     &simulation.habitat,
                     &simulation.lineage_store,
-                    rng,
+                    CoalescenceRngSample::new(rng),
                 );
 
             (
@@ -168,17 +168,8 @@ impl<
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, N, D, R, S>,
-    >
-    MinSpeciationTrackingEventSampler<
-        H,
-        G,
-        N,
-        D,
-        R,
-        S,
-        X,
-        IndependentCoalescenceSampler<H, G, R, S>,
-    > for IndependentEventSampler<H, G, N, D, R, S, X>
+    > MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, IndependentCoalescenceSampler<H, R, S>>
+    for IndependentEventSampler<H, G, N, D, R, S, X>
 {
     fn replace_min_speciation(
         &mut self,

@@ -22,8 +22,9 @@ use necsim_impls_no_std::cogs::{
         event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
     },
     coalescence_sampler::independent::IndependentCoalescenceSampler,
-    emigration_exit::monolithic::MonolithicEmigrationExit,
+    emigration_exit::never::NeverEmigrationExit,
     event_sampler::independent::IndependentEventSampler,
+    immigration_entry::never::NeverImmigrationEntry,
     rng::fixedseahash::FixedSeaHash,
 };
 
@@ -62,9 +63,10 @@ impl IndependentSimulation {
             let mut reporter = DeduplicatingReporterProxy::from(reporter);
 
             let rng = FixedSeaHash::seed_from_u64(seed);
-            let emigration_exit = MonolithicEmigrationExit::default();
+            let emigration_exit = NeverEmigrationExit::default();
             let coalescence_sampler = IndependentCoalescenceSampler::default();
             let event_sampler = IndependentEventSampler::default();
+            let immigration_entry = NeverImmigrationEntry::default();
             let active_lineage_sampler = IndependentActiveLineageSampler::empty(
                 ExpEventTimeSampler::new(1.0_f64), // FixedEventTimeSampler::default()
             );
@@ -79,6 +81,7 @@ impl IndependentSimulation {
                 .emigration_exit(emigration_exit)
                 .coalescence_sampler(coalescence_sampler)
                 .event_sampler(event_sampler)
+                .immigration_entry(immigration_entry)
                 .active_lineage_sampler(active_lineage_sampler)
                 .build();
 

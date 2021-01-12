@@ -22,7 +22,7 @@ pub trait EventSampler<
     R: LineageReference<H>,
     S: LineageStore<H, R>,
     X: EmigrationExit<H, G, N, D, R, S>,
-    C: CoalescenceSampler<H, G, R, S>,
+    C: CoalescenceSampler<H, R, S>,
 >: core::fmt::Debug
 {
     #[must_use]
@@ -123,7 +123,7 @@ pub trait MinSpeciationTrackingEventSampler<
     R: LineageReference<H>,
     S: LineageStore<H, R>,
     X: EmigrationExit<H, G, N, D, R, S>,
-    C: CoalescenceSampler<H, G, R, S>,
+    C: CoalescenceSampler<H, R, S>,
 >: EventSampler<H, G, N, D, R, S, X, C>
 {
     fn replace_min_speciation(&mut self, new: Option<SpeciationSample>)

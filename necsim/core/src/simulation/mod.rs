@@ -1,15 +1,17 @@
 mod builder;
+mod process;
 
 pub mod partial;
 
-use crate::cogs::{
-    ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-    Habitat, LineageReference, LineageStore, RngCore, SpeciationProbability,
+use crate::{
+    cogs::{
+        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
+        Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
+    },
+    reporter::Reporter,
 };
 
 pub use builder::Simulation;
-
-use crate::{event::EventType, reporter::Reporter};
 
 impl<
         H: Habitat,
@@ -19,10 +21,11 @@ impl<
         R: LineageReference<H>,
         S: LineageStore<H, R>,
         X: EmigrationExit<H, G, N, D, R, S>,
-        C: CoalescenceSampler<H, G, R, S>,
+        C: CoalescenceSampler<H, R, S>,
         E: EventSampler<H, G, N, D, R, S, X, C>,
-        A: ActiveLineageSampler<H, G, N, D, R, S, X, C, E>,
-    > Simulation<H, G, N, D, R, S, X, C, E, A>
+        I: ImmigrationEntry,
+        A: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>,
+    > Simulation<H, G, N, D, R, S, X, C, E, I, A>
 {
     #[debug_requires(max_steps > 0, "must run for at least one step")]
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
@@ -34,45 +37,38 @@ impl<
     ) -> (f64, u64) {
         let mut steps = 0_u64;
 
-        while steps < max_steps
-            && self.with_mut_split_active_lineage_sampler_and_rng(
-                |active_lineage_sampler, simulation, rng| {
-                    // Fetch the next `chosen_lineage` to be simulated with its
-                    // `dispersal_origin` and `event_time`
-                    active_lineage_sampler.with_next_active_lineage_indexed_location_event_time(
-                        simulation,
-                        rng,
-                        |simulation, rng, chosen_lineage, dispersal_origin, event_time| {
-                            // Sample the next `event` for the `chosen_lineage`
-                            //  or emigrate the `chosen_lineage`
-                            simulation.with_mut_split_event_sampler(
-                                |event_sampler, simulation| {
-                                    event_sampler.sample_event_for_lineage_at_indexed_location_time_or_emigrate(
-                                        chosen_lineage,
-                                        dispersal_origin,
-                                        event_time,
-                                        simulation,
-                                        rng,
-                                    )
-                                },
-                            ).and_then(|event| {
-                                reporter.report_event(&event);
-
-                                // In the event of dispersal without coalescence, the lineage remains
-                                // active
-                                if let EventType::Dispersal {
-                                    target: dispersal_target,
-                                    coalescence: None,
-                                    ..
-                                } = event.r#type() {
-                                    Some(dispersal_target.clone())
-                                } else { None }
-                            })
-                        },
-                    )
+        while steps < max_steps {
+            // Peek the time of the next local event
+            let optional_next_event_time = self.with_mut_split_active_lineage_sampler_and_rng(
+                |active_lineage_sampler, _simulation, rng| {
+                    active_lineage_sampler.peek_time_of_next_event(rng)
                 },
-            )
-        {
+            );
+
+            // Check if an immigration event has to be processed before the next local event
+            if let Some((
+                global_reference,
+                dispersal_origin,
+                dispersal_target,
+                migration_event_time,
+                coalescence_rng_sample,
+            )) = self
+                .immigration_entry_mut()
+                .next_optional_immigration(optional_next_event_time)
+            {
+                process::immigration::simulate_and_report_immigration_step(
+                    self,
+                    reporter,
+                    global_reference,
+                    dispersal_origin,
+                    dispersal_target,
+                    migration_event_time,
+                    coalescence_rng_sample,
+                );
+            } else if !process::local::simulate_and_report_local_step_or_finish(self, reporter) {
+                break;
+            }
+
             steps += 1;
         }
 

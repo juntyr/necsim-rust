@@ -19,8 +19,8 @@ use rustacuda_core::DeviceCopy;
 
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, IncoherentLineageStore,
-        LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
+        CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+        IncoherentLineageStore, LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
         SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
     },
     reporter::Reporter,
@@ -41,16 +41,17 @@ pub fn simulate<
     P: Reporter,
     S: IncoherentLineageStore<H, R> + RustToCuda,
     X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
-    C: CoalescenceSampler<H, G, R, S> + RustToCuda,
+    C: CoalescenceSampler<H, R, S> + RustToCuda,
     E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
-    A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E> + RustToCuda,
+    I: ImmigrationEntry + RustToCuda,
+    A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E, I> + RustToCuda,
     const REPORT_SPECIATION: bool,
     const REPORT_DISPERSAL: bool,
 >(
     stream: &Stream,
-    kernel: &SimulationKernel<H, G, N, D, R, S, X, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
+    kernel: &SimulationKernel<H, G, N, D, R, S, X, C, E, I, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
     task: (u32, GridSize, BlockSize),
-    mut simulation: Simulation<H, G, N, D, R, S, X, C, E, A>,
+    mut simulation: Simulation<H, G, N, D, R, S, X, C, E, I, A>,
     task_list: ValueBuffer<R>,
     event_buffer: EventBuffer<REPORT_SPECIATION, REPORT_DISPERSAL>,
     min_spec_sample_buffer: ValueBuffer<SpeciationSample>,
@@ -61,7 +62,7 @@ pub fn simulate<
     use type_layout::TypeLayout;
     println!(
         "{}",
-        Simulation::<H, G, N, D, R, S, X, C, E, A>::type_layout()
+        Simulation::<H, G, N, D, R, S, X, C, E, I, A>::type_layout()
     );
     println!("{}", necsim_core::event::Event::type_layout());
 
