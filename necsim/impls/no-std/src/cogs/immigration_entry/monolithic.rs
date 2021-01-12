@@ -11,6 +11,12 @@ use necsim_core::{
 #[derive(Debug)]
 pub struct MonolithicImmigrationEntry(());
 
+impl Default for MonolithicImmigrationEntry {
+    fn default() -> Self {
+        Self(())
+    }
+}
+
 #[contract_trait]
 impl<
         H: Habitat,
@@ -24,6 +30,7 @@ impl<
     #[must_use]
     #[inline]
     fn next_optional_immigration(
+        &mut self,
         _next_event_time: f64,
         _simulation: &mut PartialSimulation<H, G, N, D, R, S>,
         _rng: &mut G,

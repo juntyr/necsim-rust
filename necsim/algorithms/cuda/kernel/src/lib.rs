@@ -45,9 +45,9 @@ fn alloc_error_handler(_: core::alloc::Layout) -> ! {
 
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, DispersalSampler, Habitat, IncoherentLineageStore, LineageReference,
-        MinSpeciationTrackingEventSampler, PrimeableRng, SingularActiveLineageSampler,
-        SpeciationProbability, SpeciationSample,
+        CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, IncoherentLineageStore,
+        LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
+        SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
     },
     simulation::Simulation,
 };
@@ -94,14 +94,15 @@ unsafe fn simulate_generic<
     D: DispersalSampler<H, G> + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
     S: IncoherentLineageStore<H, R> + RustToCuda,
+    X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
     C: CoalescenceSampler<H, G, R, S> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, C> + RustToCuda,
-    A: SingularActiveLineageSampler<H, G, N, D, R, S, C, E> + RustToCuda,
+    E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
+    A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E> + RustToCuda,
     const REPORT_SPECIATION: bool,
     const REPORT_DISPERSAL: bool,
 >(
     simulation_cuda_repr: DeviceBoxMut<
-        <Simulation<H, G, N, D, R, S, C, E, A> as RustToCuda>::CudaRepresentation,
+        <Simulation<H, G, N, D, R, S, X, C, E, A> as RustToCuda>::CudaRepresentation,
     >,
     task_list_cuda_repr: DeviceBoxMut<<ValueBuffer<R> as RustToCuda>::CudaRepresentation>,
     event_buffer_cuda_repr: DeviceBoxMut<

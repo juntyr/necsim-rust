@@ -12,6 +12,12 @@ use necsim_core::{
 #[derive(Debug)]
 pub struct MonolithicEmigrationExit(());
 
+impl Default for MonolithicEmigrationExit {
+    fn default() -> Self {
+        Self(())
+    }
+}
+
 #[contract_trait]
 impl<
         // TODO: Can we assert that the habitat must be monolithic here?
@@ -27,6 +33,7 @@ impl<
     #[inline]
     #[debug_ensures(ret.is_some(), "lineage never emigrates")]
     fn optionally_emigrate(
+        &mut self,
         lineage_reference: R,
         dispersal_origin: IndexedLocation,
         dispersal_target: Location,

@@ -2,8 +2,8 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        DispersalSampler, Habitat, IncoherentLineageStore, LineageReference, PrimeableRng,
-        SpeciationProbability,
+        DispersalSampler, EmigrationExit, Habitat, IncoherentLineageStore, LineageReference,
+        PrimeableRng, SpeciationProbability,
     },
     landscape::IndexedLocation,
 };
@@ -24,6 +24,7 @@ use event_time_sampler::EventTimeSampler;
 #[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(R: rustacuda_core::DeviceCopy))]
 #[cfg_attr(feature = "cuda", r2cBound(S: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(X: rust_cuda::common::RustToCuda))]
 #[derive(Debug)]
 pub struct IndependentActiveLineageSampler<
     H: Habitat,
@@ -33,12 +34,13 @@ pub struct IndependentActiveLineageSampler<
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: IncoherentLineageStore<H, R>,
+    X: EmigrationExit<H, G, N, D, R, S>,
 > {
     active_lineage_reference: Option<R>,
     lineage_indexed_location: Option<IndexedLocation>,
     lineage_time_of_last_event: f64,
     event_time_sampler: T,
-    marker: PhantomData<(H, G, N, D, S)>,
+    marker: PhantomData<(H, G, N, D, S, X)>,
 }
 
 impl<
@@ -49,7 +51,8 @@ impl<
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
-    > IndependentActiveLineageSampler<H, G, N, T, D, R, S>
+        X: EmigrationExit<H, G, N, D, R, S>,
+    > IndependentActiveLineageSampler<H, G, N, T, D, R, S, X>
 {
     #[must_use]
     pub fn new_from(
@@ -67,7 +70,7 @@ impl<
                         lineage_store.extract_lineage_from_its_location(active_lineage_reference),
                     ),
                     event_time_sampler,
-                    marker: PhantomData::<(H, G, N, D, S)>,
+                    marker: PhantomData::<(H, G, N, D, S, X)>,
                 };
             }
         }
@@ -82,7 +85,7 @@ impl<
             lineage_indexed_location: None,
             lineage_time_of_last_event: 0.0_f64,
             event_time_sampler,
-            marker: PhantomData::<(H, G, N, D, S)>,
+            marker: PhantomData::<(H, G, N, D, S, X)>,
         }
     }
 }

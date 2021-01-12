@@ -2,8 +2,8 @@ use float_next_after::NextAfter;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoherentLineageStore, DispersalSampler, Habitat, LineageReference,
-        RngCore, SpeciationProbability,
+        ActiveLineageSampler, CoherentLineageStore, DispersalSampler, EmigrationExit, Habitat,
+        LineageReference, RngCore, SpeciationProbability,
     },
     landscape::IndexedLocation,
     simulation::partial::active_lineager_sampler::PartialSimulation,
@@ -24,6 +24,7 @@ impl<
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
+        X: EmigrationExit<H, G, N, D, R, S>,
     >
     ActiveLineageSampler<
         H,
@@ -32,9 +33,10 @@ impl<
         D,
         R,
         S,
+        X,
         UnconditionalCoalescenceSampler<H, G, R, S>,
-        UnconditionalEventSampler<H, G, N, D, R, S, UnconditionalCoalescenceSampler<H, G, R, S>>,
-    > for ClassicalActiveLineageSampler<H, G, N, D, R, S>
+        UnconditionalEventSampler<H, G, N, D, R, S, X, UnconditionalCoalescenceSampler<H, G, R, S>>,
+    > for ClassicalActiveLineageSampler<H, G, N, D, R, S, X>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -57,6 +59,7 @@ impl<
             D,
             R,
             S,
+            X,
             UnconditionalCoalescenceSampler<H, G, R, S>,
             UnconditionalEventSampler<
                 H,
@@ -65,6 +68,7 @@ impl<
                 D,
                 R,
                 S,
+                X,
                 UnconditionalCoalescenceSampler<H, G, R, S>,
             >,
         >,
@@ -141,6 +145,7 @@ impl<
             D,
             R,
             S,
+            X,
             UnconditionalCoalescenceSampler<H, G, R, S>,
             UnconditionalEventSampler<
                 H,
@@ -149,6 +154,7 @@ impl<
                 D,
                 R,
                 S,
+                X,
                 UnconditionalCoalescenceSampler<H, G, R, S>,
             >,
         >,

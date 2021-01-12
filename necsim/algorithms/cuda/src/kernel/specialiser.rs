@@ -4,9 +4,9 @@ use std::{
 };
 
 use necsim_core::cogs::{
-    CoalescenceSampler, DispersalSampler, Habitat, IncoherentLineageStore, LineageReference,
-    MinSpeciationTrackingEventSampler, PrimeableRng, SingularActiveLineageSampler,
-    SpeciationProbability,
+    CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, IncoherentLineageStore,
+    LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
+    SingularActiveLineageSampler, SpeciationProbability,
 };
 use rustacuda_core::DeviceCopy;
 
@@ -23,14 +23,15 @@ pub fn get_ptx_cstr<
     D: DispersalSampler<H, G> + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
     S: IncoherentLineageStore<H, R> + RustToCuda,
+    X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
     C: CoalescenceSampler<H, G, R, S> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, C> + RustToCuda,
-    A: SingularActiveLineageSampler<H, G, N, D, R, S, C, E> + RustToCuda,
+    E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
+    A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E> + RustToCuda,
     const REPORT_SPECIATION: bool,
     const REPORT_DISPERSAL: bool,
 >() -> &'static CStr {
     let type_name_cstring = type_name_of(
-        get_ptx_cstr::<H, G, N, D, R, S, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
+        get_ptx_cstr::<H, G, N, D, R, S, X, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
     );
 
     let ptx_c_chars = unsafe { get_ptx_cstr_for_specialisation(type_name_cstring.as_ptr()) };

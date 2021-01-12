@@ -20,6 +20,7 @@ pub trait ImmigrationEntry<
     // TODO: Ensures that if Some, R has been added to the lineage store
     // TODO: Ensures that if Some, R's last event time is <= next_event_time
     fn next_optional_immigration(
+        &mut self,
         next_event_time: f64,
         simulation: &mut PartialSimulation<H, G, N, D, R, S>,
         rng: &mut G,

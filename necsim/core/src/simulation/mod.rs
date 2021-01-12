@@ -3,8 +3,8 @@ mod builder;
 pub mod partial;
 
 use crate::cogs::{
-    ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler, Habitat,
-    LineageReference, LineageStore, RngCore, SpeciationProbability,
+    ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
+    Habitat, LineageReference, LineageStore, RngCore, SpeciationProbability,
 };
 
 pub use builder::Simulation;
@@ -18,10 +18,11 @@ impl<
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
+        X: EmigrationExit<H, G, N, D, R, S>,
         C: CoalescenceSampler<H, G, R, S>,
-        E: EventSampler<H, G, N, D, R, S, C>,
-        A: ActiveLineageSampler<H, G, N, D, R, S, C, E>,
-    > Simulation<H, G, N, D, R, S, C, E, A>
+        E: EventSampler<H, G, N, D, R, S, X, C>,
+        A: ActiveLineageSampler<H, G, N, D, R, S, X, C, E>,
+    > Simulation<H, G, N, D, R, S, X, C, E, A>
 {
     #[debug_requires(max_steps > 0, "must run for at least one step")]
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
@@ -43,30 +44,30 @@ impl<
                         rng,
                         |simulation, rng, chosen_lineage, dispersal_origin, event_time| {
                             // Sample the next `event` for the `chosen_lineage`
-                            let event = simulation.with_mut_split_event_sampler(
+                            //  or emigrate the `chosen_lineage`
+                            simulation.with_mut_split_event_sampler(
                                 |event_sampler, simulation| {
-                                    event_sampler.sample_event_for_lineage_at_indexed_location_time(
+                                    event_sampler.sample_event_for_lineage_at_indexed_location_time_or_emigrate(
                                         chosen_lineage,
                                         dispersal_origin,
                                         event_time,
-                                        &simulation,
+                                        simulation,
                                         rng,
                                     )
                                 },
-                            );
+                            ).and_then(|event| {
+                                reporter.report_event(&event);
 
-                            reporter.report_event(&event);
-
-                            // In the event of dispersal without coalescence, the lineage remains
-                            // active
-                            match event.r#type() {
-                                EventType::Dispersal {
+                                // In the event of dispersal without coalescence, the lineage remains
+                                // active
+                                if let EventType::Dispersal {
                                     target: dispersal_target,
                                     coalescence: None,
                                     ..
-                                } => Some(dispersal_target.clone()),
-                                _ => None,
-                            }
+                                } = event.r#type() {
+                                    Some(dispersal_target.clone())
+                                } else { None }
+                            })
                         },
                     )
                 },

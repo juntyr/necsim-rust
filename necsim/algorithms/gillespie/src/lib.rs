@@ -13,6 +13,7 @@ use necsim_core::{
 
 use necsim_impls_no_std::cogs::{
     coalescence_sampler::unconditional::UnconditionalCoalescenceSampler,
+    emigration_exit::monolithic::MonolithicEmigrationExit,
     event_sampler::gillespie::unconditional::UnconditionalGillespieEventSampler,
     speciation_probability::uniform::UniformSpeciationProbability,
 };
@@ -55,6 +56,7 @@ impl GillespieSimulation {
             let mut rng = StdRng::seed_from_u64(seed);
             let speciation_probability =
                 UniformSpeciationProbability::new(speciation_probability_per_generation);
+            let emigration_exit = MonolithicEmigrationExit::default();
             let coalescence_sampler = UnconditionalCoalescenceSampler::default();
             let event_sampler = UnconditionalGillespieEventSampler::default();
 
@@ -65,6 +67,7 @@ impl GillespieSimulation {
                 dispersal_sampler,
                 lineage_reference: PhantomData::<R>,
                 lineage_store,
+                emigration_exit,
                 coalescence_sampler,
                 rng: PhantomData::<StdRng>,
             };
@@ -79,6 +82,7 @@ impl GillespieSimulation {
                 dispersal_sampler,
                 lineage_reference,
                 lineage_store,
+                emigration_exit,
                 coalescence_sampler,
                 rng: _,
             } = partial_simulation;
@@ -90,6 +94,7 @@ impl GillespieSimulation {
                 .dispersal_sampler(dispersal_sampler)
                 .lineage_reference(lineage_reference)
                 .lineage_store(lineage_store)
+                .emigration_exit(emigration_exit)
                 .coalescence_sampler(coalescence_sampler)
                 .event_sampler(event_sampler)
                 .active_lineage_sampler(active_lineage_sampler)

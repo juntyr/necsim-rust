@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
 use necsim_core::cogs::{
-    CoalescenceSampler, DispersalSampler, Habitat, IncoherentLineageStore, LineageReference,
-    MinSpeciationTrackingEventSampler, PrimeableRng, SingularActiveLineageSampler,
-    SpeciationProbability,
+    CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, IncoherentLineageStore,
+    LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
+    SingularActiveLineageSampler, SpeciationProbability,
 };
 
 use rustacuda::function::{BlockSize, GridSize};
@@ -25,14 +25,15 @@ pub struct SimulationKernelWithDimensions<
     D: DispersalSampler<H, G> + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
     S: IncoherentLineageStore<H, R> + RustToCuda,
+    X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
     C: CoalescenceSampler<H, G, R, S> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, C> + RustToCuda,
-    A: SingularActiveLineageSampler<H, G, N, D, R, S, C, E> + RustToCuda,
+    E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
+    A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E> + RustToCuda,
     const REPORT_SPECIATION: bool,
     const REPORT_DISPERSAL: bool,
 > {
     pub(super) entry_point: &'k Function<'k>,
-    pub(super) marker: PhantomData<(H, G, N, D, R, S, C, E, A)>,
+    pub(super) marker: PhantomData<(H, G, N, D, R, S, X, C, E, A)>,
     pub(super) grid_size: GridSize,
     pub(super) block_size: BlockSize,
     pub(super) shared_mem_bytes: u32,
@@ -46,12 +47,13 @@ impl<
         D: DispersalSampler<H, G> + RustToCuda,
         R: LineageReference<H> + DeviceCopy,
         S: IncoherentLineageStore<H, R> + RustToCuda,
+        X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
         C: CoalescenceSampler<H, G, R, S> + RustToCuda,
-        E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, C> + RustToCuda,
-        A: SingularActiveLineageSampler<H, G, N, D, R, S, C, E> + RustToCuda,
+        E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
+        A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E> + RustToCuda,
         const REPORT_SPECIATION: bool,
         const REPORT_DISPERSAL: bool,
-    > SimulationKernel<'k, H, G, N, D, R, S, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>
+    > SimulationKernel<'k, H, G, N, D, R, S, X, C, E, A, REPORT_SPECIATION, REPORT_DISPERSAL>
 {
     #[allow(clippy::type_complexity)]
     pub fn with_dimensions<I: Into<GridSize>, B: Into<BlockSize>>(
@@ -67,6 +69,7 @@ impl<
         D,
         R,
         S,
+        X,
         C,
         E,
         A,
