@@ -14,7 +14,7 @@ pub struct PartialSimulation<
     R: LineageReference<H>,
     S: LineageStore<H, R>,
     X: EmigrationExit<H, G, N, D, R, S>,
-    C: CoalescenceSampler<H, G, R, S>,
+    C: CoalescenceSampler<H, R, S>,
 > {
     pub habitat: H,
     pub speciation_probability: N,
@@ -34,13 +34,13 @@ impl<
         R: LineageReference<H>,
         S: LineageStore<H, R>,
         X: EmigrationExit<H, G, N, D, R, S>,
-        C: CoalescenceSampler<H, G, R, S>,
+        C: CoalescenceSampler<H, R, S>,
     > PartialSimulation<H, G, N, D, R, S, X, C>
 {
     #[inline]
     pub fn with_mut_split_emigration_exit<
         Q,
-        F: FnOnce(&mut X, &mut super::migration::PartialSimulation<H, G, N, D, R, S>) -> Q,
+        F: FnOnce(&mut X, &mut super::emigration_exit::PartialSimulation<H, G, N, D, R, S>) -> Q,
     >(
         &mut self,
         func: F,
@@ -51,7 +51,7 @@ impl<
         #[allow(clippy::cast_ref_to_mut)]
         let partial_simulation = unsafe {
             &mut *(self as *const Self
-                as *mut super::migration::PartialSimulation<H, G, N, D, R, S>)
+                as *mut super::emigration_exit::PartialSimulation<H, G, N, D, R, S>)
         };
 
         func(&mut self.emigration_exit, partial_simulation)

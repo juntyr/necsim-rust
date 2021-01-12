@@ -3,9 +3,11 @@ use float_next_after::NextAfter;
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, CoherentLineageStore, DispersalSampler,
-        EmigrationExit, Habitat, LineageReference, RngCore, SpeciationProbability,
+        EmigrationExit, Habitat, ImmigrationEntry, LineageReference, RngCore,
+        SpeciationProbability,
     },
     landscape::IndexedLocation,
+    lineage::GlobalLineageReference,
     simulation::partial::active_lineager_sampler::PartialSimulation,
 };
 
@@ -22,24 +24,32 @@ impl<
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, N, D, R, S>,
-        C: CoalescenceSampler<H, G, R, S>,
+        C: CoalescenceSampler<H, R, S>,
         E: GillespieEventSampler<H, G, N, D, R, S, X, C>,
-    > ActiveLineageSampler<H, G, N, D, R, S, X, C, E>
-    for GillespieActiveLineageSampler<H, G, N, D, R, S, X, C, E>
+        I: ImmigrationEntry,
+    > ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
+    for GillespieActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
         self.number_active_lineages
     }
 
+    #[must_use]
     fn get_time_of_last_event(&self) -> f64 {
         self.last_event_time
     }
 
     #[must_use]
+    fn peek_time_of_next_event(&mut self, _rng: &mut G) -> Option<f64> {
+        self.active_locations
+            .peek()
+            .map(|(_, next_event_time)| next_event_time.clone().into())
+    }
+
+    #[must_use]
     fn pop_active_lineage_indexed_location_event_time(
         &mut self,
-        time: f64,
         simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
         rng: &mut G,
     ) -> Option<(R, IndexedLocation, f64)> {
@@ -66,10 +76,10 @@ impl<
             .extract_lineage_from_its_location_coherent(chosen_lineage_reference.clone());
         self.number_active_lineages -= 1;
 
-        let unique_event_time: f64 = if chosen_event_time > time {
+        let unique_event_time: f64 = if chosen_event_time > self.last_event_time {
             chosen_event_time
         } else {
-            time.next_after(f64::INFINITY)
+            self.last_event_time.next_after(f64::INFINITY)
         };
 
         if number_lineages_left_at_location > 0 {
@@ -138,5 +148,16 @@ impl<
         );
 
         self.number_active_lineages += 1;
+    }
+
+    fn insert_new_lineage_to_indexed_location(
+        &mut self,
+        _global_reference: GlobalLineageReference,
+        _indexed_location: IndexedLocation,
+        _time: f64,
+        _simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
+        _rng: &mut G,
+    ) {
+        unimplemented!("TODO: insert not yet implemented")
     }
 }

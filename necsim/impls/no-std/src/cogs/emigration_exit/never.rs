@@ -4,15 +4,15 @@ use necsim_core::{
         SpeciationProbability,
     },
     landscape::{IndexedLocation, Location},
-    simulation::partial::migration::PartialSimulation,
+    simulation::partial::emigration_exit::PartialSimulation,
 };
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 #[derive(Debug)]
-pub struct MonolithicEmigrationExit(());
+pub struct NeverEmigrationExit(());
 
-impl Default for MonolithicEmigrationExit {
+impl Default for NeverEmigrationExit {
     fn default() -> Self {
         Self(())
     }
@@ -27,7 +27,7 @@ impl<
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
-    > EmigrationExit<H, G, N, D, R, S> for MonolithicEmigrationExit
+    > EmigrationExit<H, G, N, D, R, S> for NeverEmigrationExit
 {
     #[must_use]
     #[inline]

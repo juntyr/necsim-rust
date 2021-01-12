@@ -5,7 +5,7 @@ use core::marker::PhantomData;
 
 use crate::cogs::{
     ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-    Habitat, LineageReference, LineageStore, RngCore, SpeciationProbability,
+    Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
 };
 
 #[derive(TypedBuilder, Debug, TypeLayout)]
@@ -19,6 +19,7 @@ use crate::cogs::{
 #[cfg_attr(feature = "cuda", r2cBound(X: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(C: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(E: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(I: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(A: rust_cuda::common::RustToCuda))]
 #[repr(C)]
 pub struct Simulation<
@@ -29,9 +30,10 @@ pub struct Simulation<
     R: LineageReference<H>,
     S: LineageStore<H, R>,
     X: EmigrationExit<H, G, N, D, R, S>,
-    C: CoalescenceSampler<H, G, R, S>,
+    C: CoalescenceSampler<H, R, S>,
     E: EventSampler<H, G, N, D, R, S, X, C>,
-    A: ActiveLineageSampler<H, G, N, D, R, S, X, C, E>,
+    I: ImmigrationEntry,
+    A: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>,
 > {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) habitat: H,
@@ -52,6 +54,8 @@ pub struct Simulation<
     pub(super) rng: G,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) active_lineage_sampler: A,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    pub(super) immigration_entry: I,
 }
 
 impl<
@@ -62,10 +66,11 @@ impl<
         R: LineageReference<H>,
         S: LineageStore<H, R>,
         X: EmigrationExit<H, G, N, D, R, S>,
-        C: CoalescenceSampler<H, G, R, S>,
+        C: CoalescenceSampler<H, R, S>,
         E: EventSampler<H, G, N, D, R, S, X, C>,
-        A: ActiveLineageSampler<H, G, N, D, R, S, X, C, E>,
-    > Simulation<H, G, N, D, R, S, X, C, E, A>
+        I: ImmigrationEntry,
+        A: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>,
+    > Simulation<H, G, N, D, R, S, X, C, E, I, A>
 {
     #[inline]
     pub fn with_mut_split_active_lineage_sampler_and_rng<
@@ -185,5 +190,9 @@ impl<
 
     pub fn emigration_exit_mut(&mut self) -> &mut X {
         &mut self.emigration_exit
+    }
+
+    pub fn immigration_entry_mut(&mut self) -> &mut I {
+        &mut self.immigration_entry
     }
 }

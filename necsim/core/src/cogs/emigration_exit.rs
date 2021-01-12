@@ -3,7 +3,7 @@ use crate::{
         DispersalSampler, Habitat, LineageReference, LineageStore, RngCore, SpeciationProbability,
     },
     landscape::{IndexedLocation, Location},
-    simulation::partial::migration::PartialSimulation,
+    simulation::partial::emigration_exit::PartialSimulation,
 };
 
 // TODO: Should the emigration exit handle the removal from the store,

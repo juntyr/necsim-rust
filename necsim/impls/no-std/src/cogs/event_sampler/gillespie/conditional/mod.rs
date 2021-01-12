@@ -2,8 +2,9 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, CoherentLineageStore, EmigrationExit, EventSampler, Habitat,
-        LineageReference, RngCore, RngSampler, SeparableDispersalSampler, SpeciationProbability,
+        CoalescenceRngSample, CoalescenceSampler, CoherentLineageStore, EmigrationExit,
+        EventSampler, Habitat, LineageReference, RngCore, RngSampler, SeparableDispersalSampler,
+        SpeciationProbability,
     },
     event::{Event, EventType},
     landscape::{IndexedLocation, Location},
@@ -55,7 +56,7 @@ impl<
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, N, D, R, S>,
-    > EventSampler<H, G, N, D, R, S, X, ConditionalCoalescenceSampler<H, G, R, S>>
+    > EventSampler<H, G, N, D, R, S, X, ConditionalCoalescenceSampler<H, R, S>>
     for ConditionalGillespieEventSampler<H, G, N, D, R, S, X>
 {
     #[must_use]
@@ -85,7 +86,7 @@ impl<
             R,
             S,
             X,
-            ConditionalCoalescenceSampler<H, G, R, S>,
+            ConditionalCoalescenceSampler<H, R, S>,
         >,
         rng: &mut G,
     ) -> Option<Event> {
@@ -101,6 +102,7 @@ impl<
 
         let (event_type, lineage_reference, dispersal_origin, event_time) =
             if event_sample < probability_at_location.speciation() {
+                // Speciation Event
                 (
                     EventType::Speciation,
                     lineage_reference,
@@ -110,6 +112,7 @@ impl<
             } else if event_sample
                 < (probability_at_location.speciation() + probability_at_location.out_dispersal())
             {
+                // Out-Dispersal Event
                 let dispersal_target = simulation
                     .dispersal_sampler
                     .sample_non_self_dispersal_from_location(dispersal_origin.location(), rng);
@@ -133,7 +136,7 @@ impl<
                         dispersal_target,
                         &simulation.habitat,
                         &simulation.lineage_store,
-                        rng,
+                        CoalescenceRngSample::new(rng),
                     );
 
                 (
@@ -146,11 +149,12 @@ impl<
                     event_time,
                 )
             } else {
+                // In-Coalescence Event
                 let (dispersal_target, coalescence) =
                     ConditionalCoalescenceSampler::sample_coalescence_at_location(
                         dispersal_origin.location().clone(),
                         &simulation.lineage_store,
-                        rng,
+                        CoalescenceRngSample::new(rng),
                     );
 
                 (
@@ -184,7 +188,7 @@ impl<
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, N, D, R, S>,
-    > GillespieEventSampler<H, G, N, D, R, S, X, ConditionalCoalescenceSampler<H, G, R, S>>
+    > GillespieEventSampler<H, G, N, D, R, S, X, ConditionalCoalescenceSampler<H, R, S>>
     for ConditionalGillespieEventSampler<H, G, N, D, R, S, X>
 {
     #[must_use]
@@ -192,16 +196,7 @@ impl<
     fn get_event_rate_at_location(
         &self,
         location: &Location,
-        simulation: &PartialSimulation<
-            H,
-            G,
-            N,
-            D,
-            R,
-            S,
-            X,
-            ConditionalCoalescenceSampler<H, G, R, S>,
-        >,
+        simulation: &PartialSimulation<H, G, N, D, R, S, X, ConditionalCoalescenceSampler<H, R, S>>,
         lineage_store_includes_self: bool,
     ) -> f64 {
         let probability_at_location =

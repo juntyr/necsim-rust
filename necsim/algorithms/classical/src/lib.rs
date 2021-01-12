@@ -17,8 +17,9 @@ use necsim_core::{
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::classical::ClassicalActiveLineageSampler,
     coalescence_sampler::unconditional::UnconditionalCoalescenceSampler,
-    emigration_exit::monolithic::MonolithicEmigrationExit,
+    emigration_exit::never::NeverEmigrationExit,
     event_sampler::unconditional::UnconditionalEventSampler,
+    immigration_entry::never::NeverImmigrationEntry,
 };
 use necsim_impls_std::cogs::rng::std::StdRng;
 
@@ -52,8 +53,9 @@ impl ClassicalSimulation {
         reporter_context.with_reporter(|reporter| {
             let rng = StdRng::seed_from_u64(seed);
             let coalescence_sampler = UnconditionalCoalescenceSampler::default();
-            let emigration_exit = MonolithicEmigrationExit::default();
+            let emigration_exit = NeverEmigrationExit::default();
             let event_sampler = UnconditionalEventSampler::default();
+            let immigration_entry = NeverImmigrationEntry::default();
             let active_lineage_sampler = ClassicalActiveLineageSampler::new(&lineage_store);
 
             let simulation = Simulation::builder()
@@ -66,6 +68,7 @@ impl ClassicalSimulation {
                 .emigration_exit(emigration_exit)
                 .coalescence_sampler(coalescence_sampler)
                 .event_sampler(event_sampler)
+                .immigration_entry(immigration_entry)
                 .active_lineage_sampler(active_lineage_sampler)
                 .build();
 

@@ -20,7 +20,7 @@ mod emigration_exit;
 pub use emigration_exit::EmigrationExit;
 
 mod coalescence_sampler;
-pub use coalescence_sampler::CoalescenceSampler;
+pub use coalescence_sampler::{CoalescenceRngSample, CoalescenceSampler};
 
 mod event_sampler;
 pub use event_sampler::{EventSampler, MinSpeciationTrackingEventSampler, SpeciationSample};

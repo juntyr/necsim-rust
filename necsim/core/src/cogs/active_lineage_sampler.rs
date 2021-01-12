@@ -1,10 +1,11 @@
 use super::{
-    CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, LineageReference,
-    LineageStore, RngCore, SpeciationProbability,
+    CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, ImmigrationEntry,
+    LineageReference, LineageStore, RngCore, SpeciationProbability,
 };
 
 use crate::{
-    landscape::IndexedLocation, simulation::partial::active_lineager_sampler::PartialSimulation,
+    landscape::IndexedLocation, lineage::GlobalLineageReference,
+    simulation::partial::active_lineager_sampler::PartialSimulation,
 };
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
@@ -17,8 +18,9 @@ pub trait ActiveLineageSampler<
     R: LineageReference<H>,
     S: LineageStore<H, R>,
     X: EmigrationExit<H, G, N, D, R, S>,
-    C: CoalescenceSampler<H, G, R, S>,
+    C: CoalescenceSampler<H, R, S>,
     E: EventSampler<H, G, N, D, R, S, X, C>,
+    I: ImmigrationEntry,
 >: core::fmt::Debug
 {
     #[must_use]
@@ -29,8 +31,14 @@ pub trait ActiveLineageSampler<
     fn get_time_of_last_event(&self) -> f64;
 
     #[must_use]
+    #[debug_ensures(match ret {
+        Some(event_time) => event_time >= 0.0_f64,
+        None => true,
+    }, "next event time is non-negative")]
+    fn peek_time_of_next_event(&mut self, rng: &mut G) -> Option<f64>;
+
+    #[must_use]
     #[allow(clippy::float_cmp)]
-    #[debug_requires(time >= 0.0_f64, "time is non-negative")]
     #[debug_ensures(match ret {
         Some(_) => {
             self.number_active_lineages() ==
@@ -39,8 +47,8 @@ pub trait ActiveLineageSampler<
         None => old(self.number_active_lineages()) == 0,
     }, "removes an active lineage if some left")]
     #[debug_ensures(
-        ret.is_some() -> ret.as_ref().unwrap().2 > time,
-        "event occurs later than time"
+        ret.is_some() -> ret.as_ref().unwrap().2 > old(self.get_time_of_last_event()),
+        "event occurs later than last event time"
     )]
     // TODO: This property is not satisfied by the independent sampler which caches the lineage
     // #[debug_ensures(match ret {
@@ -57,7 +65,6 @@ pub trait ActiveLineageSampler<
     }, "updates the time of the last event")]
     fn pop_active_lineage_indexed_location_event_time(
         &mut self,
-        time: f64,
         simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
         rng: &mut G,
     ) -> Option<(R, IndexedLocation, f64)>;
@@ -70,6 +77,20 @@ pub trait ActiveLineageSampler<
     fn push_active_lineage_to_indexed_location(
         &mut self,
         lineage_reference: R,
+        indexed_location: IndexedLocation,
+        time: f64,
+        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
+        rng: &mut G,
+    );
+
+    #[debug_requires(time >= 0.0_f64, "time is non-negative")]
+    #[debug_ensures(
+        self.number_active_lineages() == old(self.number_active_lineages()) + 1,
+        "adds an active lineage"
+    )]
+    fn insert_new_lineage_to_indexed_location(
+        &mut self,
+        global_reference: GlobalLineageReference,
         indexed_location: IndexedLocation,
         time: f64,
         simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
@@ -91,12 +112,8 @@ pub trait ActiveLineageSampler<
         rng: &mut G,
         inner: F,
     ) -> bool {
-        if let Some((chosen_lineage, dispersal_origin, event_time)) = self
-            .pop_active_lineage_indexed_location_event_time(
-                self.get_time_of_last_event(),
-                simulation,
-                rng,
-            )
+        if let Some((chosen_lineage, dispersal_origin, event_time)) =
+            self.pop_active_lineage_indexed_location_event_time(simulation, rng)
         {
             if let Some(dispersal_target) = inner(
                 simulation,
@@ -130,9 +147,10 @@ pub trait SingularActiveLineageSampler<
     R: LineageReference<H>,
     S: LineageStore<H, R>,
     X: EmigrationExit<H, G, N, D, R, S>,
-    C: CoalescenceSampler<H, G, R, S>,
+    C: CoalescenceSampler<H, R, S>,
     E: EventSampler<H, G, N, D, R, S, X, C>,
->: ActiveLineageSampler<H, G, N, D, R, S, X, C, E>
+    I: ImmigrationEntry,
+>: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
 {
     #[must_use]
     fn replace_active_lineage(

@@ -13,8 +13,9 @@ use necsim_core::{
 
 use necsim_impls_no_std::cogs::{
     coalescence_sampler::conditional::ConditionalCoalescenceSampler,
-    emigration_exit::monolithic::MonolithicEmigrationExit,
+    emigration_exit::never::NeverEmigrationExit,
     event_sampler::gillespie::conditional::ConditionalGillespieEventSampler,
+    immigration_entry::never::NeverImmigrationEntry,
     speciation_probability::uniform::UniformSpeciationProbability,
 };
 use necsim_impls_std::cogs::{
@@ -51,7 +52,7 @@ impl SkippingGillespieSimulation {
             let mut rng = StdRng::seed_from_u64(seed);
             let speciation_probability =
                 UniformSpeciationProbability::new(speciation_probability_per_generation);
-            let emigration_exit = MonolithicEmigrationExit::default();
+            let emigration_exit = NeverEmigrationExit::default();
             let coalescence_sampler = ConditionalCoalescenceSampler::default();
             let event_sampler = ConditionalGillespieEventSampler::default();
 
@@ -82,6 +83,8 @@ impl SkippingGillespieSimulation {
                 rng: _,
             } = partial_simulation;
 
+            let immigration_entry = NeverImmigrationEntry::default();
+
             let simulation = Simulation::builder()
                 .habitat(habitat)
                 .rng(rng)
@@ -92,6 +95,7 @@ impl SkippingGillespieSimulation {
                 .emigration_exit(emigration_exit)
                 .coalescence_sampler(coalescence_sampler)
                 .event_sampler(event_sampler)
+                .immigration_entry(immigration_entry)
                 .active_lineage_sampler(active_lineage_sampler)
                 .build();
 

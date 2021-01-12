@@ -14,7 +14,7 @@ pub struct PartialSimulation<
     R: LineageReference<H>,
     S: LineageStore<H, R>,
     X: EmigrationExit<H, G, N, D, R, S>,
-    C: CoalescenceSampler<H, G, R, S>,
+    C: CoalescenceSampler<H, R, S>,
     E: EventSampler<H, G, N, D, R, S, X, C>,
 > {
     pub habitat: H,
@@ -36,7 +36,7 @@ impl<
         R: LineageReference<H>,
         S: LineageStore<H, R>,
         X: EmigrationExit<H, G, N, D, R, S>,
-        C: CoalescenceSampler<H, G, R, S>,
+        C: CoalescenceSampler<H, R, S>,
         E: EventSampler<H, G, N, D, R, S, X, C>,
     > PartialSimulation<H, G, N, D, R, S, X, C, E>
 {

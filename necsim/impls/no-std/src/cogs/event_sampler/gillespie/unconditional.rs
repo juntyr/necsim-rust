@@ -2,8 +2,8 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, CoherentLineageStore, DispersalSampler, EmigrationExit, EventSampler,
-        Habitat, LineageReference, RngCore, SpeciationProbability,
+        CoalescenceRngSample, CoalescenceSampler, CoherentLineageStore, DispersalSampler,
+        EmigrationExit, EventSampler, Habitat, LineageReference, RngCore, SpeciationProbability,
     },
     event::{Event, EventType},
     landscape::{IndexedLocation, Location},
@@ -22,7 +22,7 @@ pub struct UnconditionalGillespieEventSampler<
     R: LineageReference<H>,
     S: CoherentLineageStore<H, R>,
     X: EmigrationExit<H, G, N, D, R, S>,
-    C: CoalescenceSampler<H, G, R, S>,
+    C: CoalescenceSampler<H, R, S>,
 >(PhantomData<(H, G, N, D, R, S, X, C)>);
 
 impl<
@@ -33,7 +33,7 @@ impl<
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, N, D, R, S>,
-        C: CoalescenceSampler<H, G, R, S>,
+        C: CoalescenceSampler<H, R, S>,
     > Default for UnconditionalGillespieEventSampler<H, G, N, D, R, S, X, C>
 {
     fn default() -> Self {
@@ -50,7 +50,7 @@ impl<
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, N, D, R, S>,
-        C: CoalescenceSampler<H, G, R, S>,
+        C: CoalescenceSampler<H, R, S>,
     > EventSampler<H, G, N, D, R, S, X, C>
     for UnconditionalGillespieEventSampler<H, G, N, D, R, S, X, C>
 {
@@ -103,7 +103,7 @@ impl<
                     dispersal_target,
                     &simulation.habitat,
                     &simulation.lineage_store,
-                    rng,
+                    CoalescenceRngSample::new(rng),
                 );
 
             (
@@ -137,7 +137,7 @@ impl<
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, N, D, R, S>,
-        C: CoalescenceSampler<H, G, R, S>,
+        C: CoalescenceSampler<H, R, S>,
     > GillespieEventSampler<H, G, N, D, R, S, X, C>
     for UnconditionalGillespieEventSampler<H, G, N, D, R, S, X, C>
 {

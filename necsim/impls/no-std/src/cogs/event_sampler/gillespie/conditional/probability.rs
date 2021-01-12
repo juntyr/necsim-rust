@@ -28,16 +28,7 @@ impl ProbabilityAtLocation {
         X: EmigrationExit<H, G, N, D, R, S>,
     >(
         location: &Location,
-        simulation: &PartialSimulation<
-            H,
-            G,
-            N,
-            D,
-            R,
-            S,
-            X,
-            ConditionalCoalescenceSampler<H, G, R, S>,
-        >,
+        simulation: &PartialSimulation<H, G, N, D, R, S, X, ConditionalCoalescenceSampler<H, R, S>>,
         lineage_store_includes_self: bool,
     ) -> Self {
         let speciation_probability = simulation
@@ -47,7 +38,7 @@ impl ProbabilityAtLocation {
             .dispersal_sampler
             .get_self_dispersal_probability_at_location(location);
         let coalescence_probability_at_location =
-            ConditionalCoalescenceSampler::<H, G, R, S>::get_coalescence_probability_at_location(
+            ConditionalCoalescenceSampler::get_coalescence_probability_at_location(
                 location,
                 &simulation.habitat,
                 &simulation.lineage_store,

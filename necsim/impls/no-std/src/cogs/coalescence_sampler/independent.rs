@@ -1,7 +1,9 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{CoalescenceSampler, Habitat, IncoherentLineageStore, LineageReference, RngCore},
+    cogs::{
+        CoalescenceRngSample, CoalescenceSampler, Habitat, IncoherentLineageStore, LineageReference,
+    },
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
 };
@@ -9,28 +11,26 @@ use necsim_core::{
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(R: rustacuda_core::DeviceCopy))]
 #[cfg_attr(feature = "cuda", r2cBound(S: rust_cuda::common::RustToCuda))]
 #[derive(Debug)]
 pub struct IndependentCoalescenceSampler<
     H: Habitat,
-    G: RngCore,
     R: LineageReference<H>,
     S: IncoherentLineageStore<H, R>,
->(PhantomData<(H, G, R, S)>);
+>(PhantomData<(H, R, S)>);
 
-impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: IncoherentLineageStore<H, R>> Default
-    for IndependentCoalescenceSampler<H, G, R, S>
+impl<H: Habitat, R: LineageReference<H>, S: IncoherentLineageStore<H, R>> Default
+    for IndependentCoalescenceSampler<H, R, S>
 {
     fn default() -> Self {
-        Self(PhantomData::<(H, G, R, S)>)
+        Self(PhantomData::<(H, R, S)>)
     }
 }
 
 #[contract_trait]
-impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: IncoherentLineageStore<H, R>>
-    CoalescenceSampler<H, G, R, S> for IndependentCoalescenceSampler<H, G, R, S>
+impl<H: Habitat, R: LineageReference<H>, S: IncoherentLineageStore<H, R>>
+    CoalescenceSampler<H, R, S> for IndependentCoalescenceSampler<H, R, S>
 {
     #[must_use]
     #[debug_ensures(ret.1.is_none(), "never finds coalescence")]
@@ -39,12 +39,10 @@ impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: IncoherentLineageStore<H
         location: Location,
         habitat: &H,
         _lineage_store: &S,
-        rng: &mut G,
+        coalescence_rng_sample: CoalescenceRngSample,
     ) -> (IndexedLocation, Option<GlobalLineageReference>) {
-        use necsim_core::cogs::RngSampler;
-
-        let chosen_coalescence_index =
-            rng.sample_index_u32(habitat.get_habitat_at_location(&location));
+        let chosen_coalescence_index = coalescence_rng_sample
+            .sample_coalescence_index(habitat.get_habitat_at_location(&location));
 
         let indexed_location = IndexedLocation::new(location, chosen_coalescence_index);
 

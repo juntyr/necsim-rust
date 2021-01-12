@@ -4,12 +4,14 @@ use necsim_core::{
         LineageReference, PrimeableRng, SpeciationProbability,
     },
     landscape::IndexedLocation,
+    lineage::GlobalLineageReference,
     simulation::partial::active_lineager_sampler::PartialSimulation,
 };
 
 use crate::cogs::{
     coalescence_sampler::independent::IndependentCoalescenceSampler,
     event_sampler::independent::IndependentEventSampler,
+    immigration_entry::never::NeverImmigrationEntry,
 };
 
 use super::{EventTimeSampler, IndependentActiveLineageSampler};
@@ -33,8 +35,9 @@ impl<
         R,
         S,
         X,
-        IndependentCoalescenceSampler<H, G, R, S>,
+        IndependentCoalescenceSampler<H, R, S>,
         IndependentEventSampler<H, G, N, D, R, S, X>,
+        NeverImmigrationEntry,
     > for IndependentActiveLineageSampler<H, G, N, T, D, R, S, X>
 {
     #[must_use]
@@ -46,12 +49,18 @@ impl<
         self.lineage_time_of_last_event
     }
 
+    fn peek_time_of_next_event(&mut self, _rng: &mut G) -> Option<f64> {
+        // This is only valid because there will never be any dynamic
+        //  immigration in the independent algorithm
+
+        None
+    }
+
     #[must_use]
     #[allow(clippy::type_complexity)]
     #[inline]
     fn pop_active_lineage_indexed_location_event_time(
         &mut self,
-        time: f64,
         simulation: &mut PartialSimulation<
             H,
             G,
@@ -60,7 +69,7 @@ impl<
             R,
             S,
             X,
-            IndependentCoalescenceSampler<H, G, R, S>,
+            IndependentCoalescenceSampler<H, R, S>,
             IndependentEventSampler<H, G, N, D, R, S, X>,
         >,
         rng: &mut G,
@@ -80,7 +89,7 @@ impl<
             .event_time_sampler
             .next_event_time_at_indexed_location_after(
                 &lineage_indexed_location,
-                time,
+                self.lineage_time_of_last_event,
                 &simulation.habitat,
                 rng,
             );
@@ -117,7 +126,7 @@ impl<
             R,
             S,
             X,
-            IndependentCoalescenceSampler<H, G, R, S>,
+            IndependentCoalescenceSampler<H, R, S>,
             IndependentEventSampler<H, G, N, D, R, S, X>,
         >,
         _rng: &mut G,
@@ -125,5 +134,30 @@ impl<
         self.lineage_indexed_location = Some(indexed_location);
 
         self.active_lineage_reference = Some(lineage_reference);
+    }
+
+    #[allow(clippy::type_complexity)]
+    fn insert_new_lineage_to_indexed_location(
+        &mut self,
+        _global_reference: GlobalLineageReference,
+        _indexed_location: IndexedLocation,
+        _time: f64,
+        _simulation: &mut PartialSimulation<
+            H,
+            G,
+            N,
+            D,
+            R,
+            S,
+            X,
+            IndependentCoalescenceSampler<H, R, S>,
+            IndependentEventSampler<H, G, N, D, R, S, X>,
+        >,
+        _rng: &mut G,
+    ) {
+        // Note: This will only be used for bulk immigration in between
+        //       individual simulations (no dynamic immigration)
+
+        unimplemented!("TODO: insert not yet implemented")
     }
 }
