@@ -1,9 +1,10 @@
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        IncoherentLineageStore, LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
+        LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
         SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
     },
+    lineage::Lineage,
     simulation::Simulation,
 };
 
@@ -30,7 +31,7 @@ impl<
         N: SpeciationProbability<H> + RustToCuda,
         D: DispersalSampler<H, G> + RustToCuda,
         R: LineageReference<H> + DeviceCopy,
-        S: IncoherentLineageStore<H, R> + RustToCuda,
+        S: LineageStore<H, R> + RustToCuda,
         X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
         C: CoalescenceSampler<H, R, S> + RustToCuda,
         E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
@@ -63,7 +64,7 @@ impl<
         simulation_ptr: DeviceBoxMut<
             <Simulation<H, G, N, D, R, S, X, C, E, I, A> as RustToCuda>::CudaRepresentation,
         >,
-        task_list_ptr: DeviceBoxMut<<ValueBuffer<R> as RustToCuda>::CudaRepresentation>,
+        task_list_ptr: DeviceBoxMut<<ValueBuffer<Lineage> as RustToCuda>::CudaRepresentation>,
         event_buffer_ptr: DeviceBoxMut<
             <EventBuffer<REPORT_SPECIATION, REPORT_DISPERSAL> as RustToCuda>::CudaRepresentation,
         >,

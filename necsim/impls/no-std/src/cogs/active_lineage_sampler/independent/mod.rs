@@ -2,19 +2,17 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{DispersalSampler, EmigrationExit, Habitat, PrimeableRng, SpeciationProbability},
-    lineage::Lineage,
+    lineage::{GlobalLineageReference, Lineage},
 };
 
-use crate::cogs::lineage_store::incoherent::independent::IndependentLineageStore;
+use crate::cogs::lineage_store::independent::IndependentLineageStore;
 
 mod sampler;
 mod singular;
 
 pub mod event_time_sampler;
-pub mod lineage_reference;
 
 use event_time_sampler::EventTimeSampler;
-use lineage_reference::IndependentLineageReference;
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
@@ -31,7 +29,7 @@ pub struct IndependentActiveLineageSampler<
     N: SpeciationProbability<H>,
     T: EventTimeSampler<H, G>,
     D: DispersalSampler<H, G>,
-    X: EmigrationExit<H, G, N, D, IndependentLineageReference, IndependentLineageStore<H>>,
+    X: EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>,
 > {
     active_lineage: Option<Lineage>,
     event_time_sampler: T,
@@ -44,7 +42,7 @@ impl<
         N: SpeciationProbability<H>,
         T: EventTimeSampler<H, G>,
         D: DispersalSampler<H, G>,
-        X: EmigrationExit<H, G, N, D, IndependentLineageReference, IndependentLineageStore<H>>,
+        X: EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>,
     > IndependentActiveLineageSampler<H, G, N, T, D, X>
 {
     #[must_use]

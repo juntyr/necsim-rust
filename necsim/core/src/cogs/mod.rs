@@ -14,7 +14,7 @@ mod lineage_reference;
 pub use lineage_reference::LineageReference;
 
 mod lineage_store;
-pub use lineage_store::{CoherentLineageStore, IncoherentLineageStore, LineageStore};
+pub use lineage_store::{CoherentLineageStore, LineageStore};
 
 mod emigration_exit;
 pub use emigration_exit::EmigrationExit;

@@ -31,8 +31,10 @@ pub trait EventSampler<
     // TODO: If lineage removal is done by emigration exit, we should
     //       also assert that lineage has been removed here iff None
     #[debug_ensures(match &ret {
-        Some(event) => event.global_lineage_reference() == &old(
-            simulation.lineage_store[lineage_reference.clone()].global_reference().clone()
+        Some(event) => Some(event.global_lineage_reference().clone()) == old(
+            simulation.lineage_store.get(lineage_reference.clone()).map(
+                |lineage| lineage.global_reference().clone()
+            )
         ),
         None => true,
     } , "event occurs for lineage_reference")]

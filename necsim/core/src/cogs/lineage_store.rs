@@ -1,5 +1,7 @@
 use core::ops::Index;
 
+use alloc::vec::Vec;
+
 use super::{Habitat, LineageReference};
 use crate::{
     landscape::{IndexedLocation, Location},
@@ -8,9 +10,7 @@ use crate::{
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
-    Sized + Index<R, Output = Lineage> + core::fmt::Debug
-{
+pub trait LineageStore<H: Habitat, R: LineageReference<H>>: Sized + core::fmt::Debug {
     type LineageReferenceIterator<'a>: ExactSizeIterator<Item = R>;
 
     #[must_use]
@@ -24,25 +24,22 @@ pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
     fn iter_local_lineage_references(&self) -> Self::LineageReferenceIterator<'_>;
 
     #[must_use]
-    #[allow(clippy::double_parens)]
-    #[debug_ensures(ret.is_some() -> (
-        core::ptr::eq(&self[old(reference.clone())], ret.unwrap())
-    ), "provides the checked version of the Index<R, Output = Lineage> trait")]
     fn get(&self, reference: R) -> Option<&Lineage>;
 
-    #[allow(clippy::float_cmp)]
-    #[debug_requires(self.get(reference.clone()).is_some(), "lineage reference is valid")]
+    #[must_use]
     #[debug_ensures(
-        self[old(reference.clone())].time_of_last_event() == old(event_time),
-        "updates the time of the last event of the lineage reference"
+        ret.len() == old(self.get_number_total_lineages()),
+        "returns all lineages which made up the store"
     )]
-    fn update_lineage_time_of_last_event(&mut self, reference: R, event_time: f64);
+    fn into_lineages(self) -> Vec<Lineage>;
 }
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
-pub trait CoherentLineageStore<H: Habitat, R: LineageReference<H>>: LineageStore<H, R> {
+pub trait CoherentLineageStore<H: Habitat, R: LineageReference<H>>:
+    LineageStore<H, R> + Index<R, Output = Lineage>
+{
     type LocationIterator<'a>: Iterator<Item = Location>;
 
     #[must_use]
@@ -131,38 +128,12 @@ pub trait CoherentLineageStore<H: Habitat, R: LineageReference<H>>: LineageStore
         reference: R,
         habitat: &H,
     ) -> IndexedLocation;
-}
 
-#[allow(clippy::inline_always, clippy::inline_fn_without_body)]
-#[allow(clippy::module_name_repetitions)]
-#[contract_trait]
-pub trait IncoherentLineageStore<H: Habitat, R: LineageReference<H>>: LineageStore<H, R> {
-    #[debug_requires(
-        habitat.contains(indexed_location.location()),
-        "indexed location is inside habitat"
-    )]
+    #[allow(clippy::float_cmp)]
     #[debug_requires(self.get(reference.clone()).is_some(), "lineage reference is valid")]
-    #[debug_requires(!self[reference.clone()].is_active(), "lineage is inactive")]
-    #[debug_ensures(self[old(reference.clone())].is_active(), "lineage was activated")]
     #[debug_ensures(
-        self[old(reference.clone())].indexed_location() == Some(&old(indexed_location.clone())),
-        "lineage was added to indexed_location"
+        self[old(reference.clone())].time_of_last_event() == old(event_time),
+        "updates the time of the last event of the lineage reference"
     )]
-    fn insert_lineage_to_indexed_location(
-        &mut self,
-        reference: R,
-        indexed_location: IndexedLocation,
-        habitat: &H,
-    );
-
-    #[must_use]
-    #[debug_requires(self.get(reference.clone()).is_some(), "lineage reference is valid")]
-    #[debug_requires(self[reference.clone()].is_active(), "lineage is active")]
-    #[debug_ensures(old(habitat).contains(ret.location()), "prior location is inside habitat")]
-    #[debug_ensures(!self[old(reference.clone())].is_active(), "lineage was deactivated")]
-    #[debug_ensures(
-        ret == old(self[reference.clone()].indexed_location().unwrap().clone()),
-        "returns the individual's prior location"
-    )]
-    fn extract_lineage_from_its_location(&mut self, reference: R, habitat: &H) -> IndexedLocation;
+    fn update_lineage_time_of_last_event(&mut self, reference: R, event_time: f64);
 }

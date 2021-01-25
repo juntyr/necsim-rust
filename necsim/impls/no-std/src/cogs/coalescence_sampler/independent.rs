@@ -1,36 +1,28 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{
-        CoalescenceRngSample, CoalescenceSampler, Habitat, IncoherentLineageStore, LineageReference,
-    },
+    cogs::{CoalescenceRngSample, CoalescenceSampler, Habitat},
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
 };
 
+use crate::cogs::lineage_store::independent::IndependentLineageStore;
+
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(R: rustacuda_core::DeviceCopy))]
-#[cfg_attr(feature = "cuda", r2cBound(S: rust_cuda::common::RustToCuda))]
 #[derive(Debug)]
-pub struct IndependentCoalescenceSampler<
-    H: Habitat,
-    R: LineageReference<H>,
-    S: IncoherentLineageStore<H, R>,
->(PhantomData<(H, R, S)>);
+pub struct IndependentCoalescenceSampler<H: Habitat>(PhantomData<H>);
 
-impl<H: Habitat, R: LineageReference<H>, S: IncoherentLineageStore<H, R>> Default
-    for IndependentCoalescenceSampler<H, R, S>
-{
+impl<H: Habitat> Default for IndependentCoalescenceSampler<H> {
     fn default() -> Self {
-        Self(PhantomData::<(H, R, S)>)
+        Self(PhantomData::<H>)
     }
 }
 
 #[contract_trait]
-impl<H: Habitat, R: LineageReference<H>, S: IncoherentLineageStore<H, R>>
-    CoalescenceSampler<H, R, S> for IndependentCoalescenceSampler<H, R, S>
+impl<H: Habitat> CoalescenceSampler<H, GlobalLineageReference, IndependentLineageStore<H>>
+    for IndependentCoalescenceSampler<H>
 {
     #[must_use]
     #[debug_ensures(ret.1.is_none(), "never finds coalescence")]
@@ -38,7 +30,7 @@ impl<H: Habitat, R: LineageReference<H>, S: IncoherentLineageStore<H, R>>
         &self,
         location: Location,
         habitat: &H,
-        _lineage_store: &S,
+        _lineage_store: &IndependentLineageStore<H>,
         coalescence_rng_sample: CoalescenceRngSample,
     ) -> (IndexedLocation, Option<GlobalLineageReference>) {
         let chosen_coalescence_index = coalescence_rng_sample

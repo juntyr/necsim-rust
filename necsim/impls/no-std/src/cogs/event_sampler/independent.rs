@@ -3,23 +3,25 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         CoalescenceRngSample, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        Habitat, IncoherentLineageStore, LineageReference, MinSpeciationTrackingEventSampler,
-        RngCore, SpeciationProbability, SpeciationSample,
+        Habitat, MinSpeciationTrackingEventSampler, RngCore, SpeciationProbability,
+        SpeciationSample,
     },
     event::{Event, EventType},
     landscape::IndexedLocation,
+    lineage::GlobalLineageReference,
     simulation::partial::event_sampler::PartialSimulation,
 };
 
-use crate::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler;
+use crate::cogs::{
+    coalescence_sampler::independent::IndependentCoalescenceSampler,
+    lineage_store::independent::IndependentLineageStore,
+};
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(R: rustacuda_core::DeviceCopy))]
-#[cfg_attr(feature = "cuda", r2cBound(S: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(X: rust_cuda::common::RustToCuda))]
 #[derive(Debug)]
 pub struct IndependentEventSampler<
@@ -27,12 +29,10 @@ pub struct IndependentEventSampler<
     G: RngCore,
     N: SpeciationProbability<H>,
     D: DispersalSampler<H, G>,
-    R: LineageReference<H>,
-    S: IncoherentLineageStore<H, R>,
-    X: EmigrationExit<H, G, N, D, R, S>,
+    X: EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>,
 > {
     min_spec_sample: Option<SpeciationSample>,
-    marker: PhantomData<(H, G, N, D, R, S, X)>,
+    marker: PhantomData<(H, G, N, D, X)>,
 }
 
 impl<
@@ -40,15 +40,13 @@ impl<
         G: RngCore,
         N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
-        R: LineageReference<H>,
-        S: IncoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
-    > Default for IndependentEventSampler<H, G, N, D, R, S, X>
+        X: EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>,
+    > Default for IndependentEventSampler<H, G, N, D, X>
 {
     fn default() -> Self {
         Self {
             min_spec_sample: None,
-            marker: PhantomData::<(H, G, N, D, R, S, X)>,
+            marker: PhantomData::<(H, G, N, D, X)>,
         }
     }
 }
@@ -59,11 +57,18 @@ impl<
         G: RngCore,
         N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
-        R: LineageReference<H>,
-        S: IncoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
-    > EventSampler<H, G, N, D, R, S, X, IndependentCoalescenceSampler<H, R, S>>
-    for IndependentEventSampler<H, G, N, D, R, S, X>
+        X: EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>,
+    >
+    EventSampler<
+        H,
+        G,
+        N,
+        D,
+        GlobalLineageReference,
+        IndependentLineageStore<H>,
+        X,
+        IndependentCoalescenceSampler<H>,
+    > for IndependentEventSampler<H, G, N, D, X>
 {
     #[must_use]
     #[allow(clippy::type_complexity)]
@@ -71,7 +76,7 @@ impl<
     #[inline]
     fn sample_event_for_lineage_at_indexed_location_time_or_emigrate(
         &mut self,
-        lineage_reference: R,
+        lineage_reference: GlobalLineageReference,
         indexed_location: IndexedLocation,
         event_time: f64,
         simulation: &mut PartialSimulation<
@@ -79,10 +84,10 @@ impl<
             G,
             N,
             D,
-            R,
-            S,
+            GlobalLineageReference,
+            IndependentLineageStore<H>,
             X,
-            IndependentCoalescenceSampler<H, R, S>,
+            IndependentCoalescenceSampler<H>,
         >,
         rng: &mut G,
     ) -> Option<Event> {
@@ -154,9 +159,7 @@ impl<
         Some(Event::new(
             dispersal_origin,
             event_time,
-            simulation.lineage_store[lineage_reference]
-                .global_reference()
-                .clone(),
+            lineage_reference,
             event_type,
         ))
     }
@@ -167,11 +170,18 @@ impl<
         G: RngCore,
         N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
-        R: LineageReference<H>,
-        S: IncoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
-    > MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, IndependentCoalescenceSampler<H, R, S>>
-    for IndependentEventSampler<H, G, N, D, R, S, X>
+        X: EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>,
+    >
+    MinSpeciationTrackingEventSampler<
+        H,
+        G,
+        N,
+        D,
+        GlobalLineageReference,
+        IndependentLineageStore<H>,
+        X,
+        IndependentCoalescenceSampler<H>,
+    > for IndependentEventSampler<H, G, N, D, X>
 {
     fn replace_min_speciation(
         &mut self,

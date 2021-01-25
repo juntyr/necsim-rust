@@ -15,7 +15,8 @@ use rustacuda::{
 };
 
 use necsim_core::{
-    cogs::{DispersalSampler, Habitat, IncoherentLineageStore, LineageReference, RngCore},
+    cogs::{DispersalSampler, Habitat, LineageStore, RngCore},
+    lineage::{GlobalLineageReference, Lineage},
     simulation::Simulation,
 };
 
@@ -31,6 +32,7 @@ use necsim_impls_no_std::cogs::{
     emigration_exit::never::NeverEmigrationExit,
     event_sampler::independent::IndependentEventSampler as EventSampler,
     immigration_entry::never::NeverImmigrationEntry,
+    lineage_store::independent::IndependentLineageStore,
     rng::fixedseahash::FixedSeaHash as Rng,
     speciation_probability::uniform::UniformSpeciationProbability,
 };
@@ -60,13 +62,11 @@ impl CudaSimulation {
     fn simulate<
         H: Habitat + RustToCuda,
         D: DispersalSampler<H, CudaRng<Rng>> + RustToCuda,
-        R: LineageReference<H> + rustacuda_core::DeviceCopy,
-        S: IncoherentLineageStore<H, R> + RustToCuda,
         P: ReporterContext,
     >(
         habitat: H,
         dispersal_sampler: D,
-        lineage_store: S,
+        lineages: Vec<Lineage>,
         speciation_probability_per_generation: f64,
         seed: u64,
         reporter_context: P,
@@ -80,6 +80,7 @@ impl CudaSimulation {
             let rng = CudaRng::<Rng>::seed_from_u64(seed);
             let speciation_probability =
                 UniformSpeciationProbability::new(speciation_probability_per_generation);
+            let lineage_store = IndependentLineageStore::default();
             let emigration_exit = NeverEmigrationExit::default();
             let coalescence_sampler = CoalescenceSampler::default();
             let event_sampler = EventSampler::default();
@@ -94,7 +95,7 @@ impl CudaSimulation {
                 .rng(rng)
                 .speciation_probability(speciation_probability)
                 .dispersal_sampler(dispersal_sampler)
-                .lineage_reference(std::marker::PhantomData::<R>)
+                .lineage_reference(std::marker::PhantomData::<GlobalLineageReference>)
                 .lineage_store(lineage_store)
                 .emigration_exit(emigration_exit)
                 .coalescence_sampler(coalescence_sampler)
@@ -153,6 +154,7 @@ impl CudaSimulation {
                         &kernel,
                         (grid_amount, grid_size, block_size),
                         simulation,
+                        lineages.into(),
                         task_list,
                         event_buffer,
                         min_spec_sample_buffer,

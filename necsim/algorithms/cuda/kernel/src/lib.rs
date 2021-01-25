@@ -46,9 +46,10 @@ fn alloc_error_handler(_: core::alloc::Layout) -> ! {
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        IncoherentLineageStore, LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
+        LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
         SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
     },
+    lineage::Lineage,
     simulation::Simulation,
 };
 use rust_cuda::{common::RustToCuda, device::BorrowFromRust};
@@ -93,7 +94,7 @@ unsafe fn simulate_generic<
     N: SpeciationProbability<H> + RustToCuda,
     D: DispersalSampler<H, G> + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
-    S: IncoherentLineageStore<H, R> + RustToCuda,
+    S: LineageStore<H, R> + RustToCuda,
     X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
     C: CoalescenceSampler<H, R, S> + RustToCuda,
     E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
@@ -105,7 +106,7 @@ unsafe fn simulate_generic<
     simulation_cuda_repr: DeviceBoxMut<
         <Simulation<H, G, N, D, R, S, X, C, E, I, A> as RustToCuda>::CudaRepresentation,
     >,
-    task_list_cuda_repr: DeviceBoxMut<<ValueBuffer<R> as RustToCuda>::CudaRepresentation>,
+    task_list_cuda_repr: DeviceBoxMut<<ValueBuffer<Lineage> as RustToCuda>::CudaRepresentation>,
     event_buffer_cuda_repr: DeviceBoxMut<
         <EventBuffer<REPORT_SPECIATION, REPORT_DISPERSAL> as RustToCuda>::CudaRepresentation,
     >,
@@ -118,15 +119,9 @@ unsafe fn simulate_generic<
         ValueBuffer::with_borrow_from_rust_mut(task_list_cuda_repr, |task_list| {
             task_list.with_value_for_core(|task| {
                 // Discard the prior task (the simulation is just a temporary local copy)
-                simulation.with_mut_split_active_lineage_sampler_and_rng(
-                    |active_lineage_sampler, simulation, _rng| {
-                        active_lineage_sampler.replace_active_lineage(
-                            task,
-                            &simulation.habitat,
-                            &mut simulation.lineage_store,
-                        )
-                    },
-                );
+                simulation
+                    .active_lineage_sampler_mut()
+                    .replace_active_lineage(task);
 
                 EventBuffer::with_borrow_from_rust_mut(
                     event_buffer_cuda_repr,
@@ -156,15 +151,9 @@ unsafe fn simulate_generic<
                     },
                 );
 
-                simulation.with_mut_split_active_lineage_sampler_and_rng(
-                    |active_lineage_sampler, simulation, _rng| {
-                        active_lineage_sampler.replace_active_lineage(
-                            None,
-                            &simulation.habitat,
-                            &mut simulation.lineage_store,
-                        )
-                    },
-                )
+                simulation
+                    .active_lineage_sampler_mut()
+                    .replace_active_lineage(None)
             })
         })
     })

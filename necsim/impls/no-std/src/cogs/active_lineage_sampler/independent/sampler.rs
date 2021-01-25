@@ -12,10 +12,10 @@ use crate::cogs::{
     coalescence_sampler::independent::IndependentCoalescenceSampler,
     event_sampler::independent::IndependentEventSampler,
     immigration_entry::never::NeverImmigrationEntry,
-    lineage_store::incoherent::independent::IndependentLineageStore,
+    lineage_store::independent::IndependentLineageStore,
 };
 
-use super::{EventTimeSampler, IndependentActiveLineageSampler, IndependentLineageReference};
+use super::{EventTimeSampler, IndependentActiveLineageSampler};
 
 #[contract_trait]
 impl<
@@ -24,26 +24,18 @@ impl<
         N: SpeciationProbability<H>,
         T: EventTimeSampler<H, G>,
         D: DispersalSampler<H, G>,
-        X: EmigrationExit<H, G, N, D, IndependentLineageReference, IndependentLineageStore<H>>,
+        X: EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>,
     >
     ActiveLineageSampler<
         H,
         G,
         N,
         D,
-        IndependentLineageReference,
+        GlobalLineageReference,
         IndependentLineageStore<H>,
         X,
-        IndependentCoalescenceSampler<H, IndependentLineageReference, IndependentLineageStore<H>>,
-        IndependentEventSampler<
-            H,
-            G,
-            N,
-            D,
-            IndependentLineageReference,
-            IndependentLineageStore<H>,
-            X,
-        >,
+        IndependentCoalescenceSampler<H>,
+        IndependentEventSampler<H, G, N, D, X>,
         NeverImmigrationEntry,
     > for IndependentActiveLineageSampler<H, G, N, T, D, X>
 {
@@ -77,26 +69,14 @@ impl<
             G,
             N,
             D,
-            IndependentLineageReference,
+            GlobalLineageReference,
             IndependentLineageStore<H>,
             X,
-            IndependentCoalescenceSampler<
-                H,
-                IndependentLineageReference,
-                IndependentLineageStore<H>,
-            >,
-            IndependentEventSampler<
-                H,
-                G,
-                N,
-                D,
-                IndependentLineageReference,
-                IndependentLineageStore<H>,
-                X,
-            >,
+            IndependentCoalescenceSampler<H>,
+            IndependentEventSampler<H, G, N, D, X>,
         >,
         rng: &mut G,
-    ) -> Option<(IndependentLineageReference, IndexedLocation, f64)> {
+    ) -> Option<(GlobalLineageReference, IndexedLocation, f64)> {
         let chosen_lineage = match self.active_lineage {
             Some(ref mut chosen_lineage) => chosen_lineage,
             None => return None,
@@ -120,7 +100,7 @@ impl<
         unsafe { chosen_lineage.update_time_of_last_event(next_event_time) };
 
         Some((
-            IndependentLineageReference::new(),
+            chosen_lineage.global_reference().clone(),
             lineage_indexed_location,
             next_event_time,
         ))
@@ -134,7 +114,7 @@ impl<
     #[inline]
     fn push_active_lineage_to_indexed_location(
         &mut self,
-        _lineage_reference: IndependentLineageReference,
+        _lineage_reference: GlobalLineageReference,
         indexed_location: IndexedLocation,
         _time: f64,
         _simulation: &mut PartialSimulation<
@@ -142,23 +122,11 @@ impl<
             G,
             N,
             D,
-            IndependentLineageReference,
+            GlobalLineageReference,
             IndependentLineageStore<H>,
             X,
-            IndependentCoalescenceSampler<
-                H,
-                IndependentLineageReference,
-                IndependentLineageStore<H>,
-            >,
-            IndependentEventSampler<
-                H,
-                G,
-                N,
-                D,
-                IndependentLineageReference,
-                IndependentLineageStore<H>,
-                X,
-            >,
+            IndependentCoalescenceSampler<H>,
+            IndependentEventSampler<H, G, N, D, X>,
         >,
         _rng: &mut G,
     ) {
@@ -178,23 +146,11 @@ impl<
             G,
             N,
             D,
-            IndependentLineageReference,
+            GlobalLineageReference,
             IndependentLineageStore<H>,
             X,
-            IndependentCoalescenceSampler<
-                H,
-                IndependentLineageReference,
-                IndependentLineageStore<H>,
-            >,
-            IndependentEventSampler<
-                H,
-                G,
-                N,
-                D,
-                IndependentLineageReference,
-                IndependentLineageStore<H>,
-                X,
-            >,
+            IndependentCoalescenceSampler<H>,
+            IndependentEventSampler<H, G, N, D, X>,
         >,
         _rng: &mut G,
     ) {
