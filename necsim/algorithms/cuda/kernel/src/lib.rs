@@ -117,7 +117,8 @@ unsafe fn simulate_generic<
     Simulation::with_borrow_from_rust_mut(simulation_cuda_repr, |simulation| {
         ValueBuffer::with_borrow_from_rust_mut(task_list_cuda_repr, |task_list| {
             task_list.with_value_for_core(|task| {
-                let saved_task = simulation.with_mut_split_active_lineage_sampler_and_rng(
+                // Discard the prior task (the simulation is just a temporary local copy)
+                simulation.with_mut_split_active_lineage_sampler_and_rng(
                     |active_lineage_sampler, simulation, _rng| {
                         active_lineage_sampler.replace_active_lineage(
                             task,
@@ -134,7 +135,8 @@ unsafe fn simulate_generic<
                             min_spec_sample_buffer_cuda_repr,
                             |min_spec_sample_buffer| {
                                 min_spec_sample_buffer.with_value_for_core(|min_spec_sample| {
-                                    let old_min_spec_sample = simulation
+                                    // Discard the prior sample (same reason as above)
+                                    simulation
                                         .event_sampler_mut()
                                         .replace_min_speciation(min_spec_sample);
 
@@ -147,9 +149,7 @@ unsafe fn simulate_generic<
                                         global_steps_sum.fetch_add(steps, Ordering::Relaxed);
                                     }
 
-                                    simulation
-                                        .event_sampler_mut()
-                                        .replace_min_speciation(old_min_spec_sample)
+                                    simulation.event_sampler_mut().replace_min_speciation(None)
                                 })
                             },
                         )
@@ -159,7 +159,7 @@ unsafe fn simulate_generic<
                 simulation.with_mut_split_active_lineage_sampler_and_rng(
                     |active_lineage_sampler, simulation, _rng| {
                         active_lineage_sampler.replace_active_lineage(
-                            saved_task,
+                            None,
                             &simulation.habitat,
                             &mut simulation.lineage_store,
                         )

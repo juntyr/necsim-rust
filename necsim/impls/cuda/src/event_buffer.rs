@@ -89,13 +89,14 @@ impl<const REPORT_SPECIATION: bool, const REPORT_DISPERSAL: bool> EventFilter
 impl<const REPORT_SPECIATION: bool, const REPORT_DISPERSAL: bool> Reporter
     for EventBuffer<REPORT_SPECIATION, REPORT_DISPERSAL>
 {
+    #[inline]
     #[debug_requires(
-        self.event_counter < self.buffer.len(),
+        self.event_counter < self.max_events,
         "does not report extraneous events"
     )]
     fn report_event(&mut self, event: &Event) {
         if (REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
-            || (REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal {..}))
+            || (REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
         {
             self.buffer[rust_cuda::device::utils::index() * self.max_events + self.event_counter]
                 .replace(event.clone());
