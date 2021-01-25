@@ -6,15 +6,15 @@ use necsim_core::{
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 #[derive(Debug)]
-pub struct AlmostInfiniteHabitat(());
-
-impl AlmostInfiniteHabitat {
-    const EXTENT: LandscapeExtent = LandscapeExtent::new(0_u32, 0_u32, u32::MAX, u32::MAX);
+pub struct AlmostInfiniteHabitat {
+    extent: LandscapeExtent,
 }
 
 impl Default for AlmostInfiniteHabitat {
     fn default() -> Self {
-        Self(())
+        Self {
+            extent: LandscapeExtent::new(0_u32, 0_u32, u32::MAX, u32::MAX),
+        }
     }
 }
 
@@ -22,7 +22,7 @@ impl Default for AlmostInfiniteHabitat {
 impl Habitat for AlmostInfiniteHabitat {
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
-        &Self::EXTENT
+        &self.extent
     }
 
     #[must_use]
