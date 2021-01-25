@@ -1,10 +1,15 @@
 use core::num::NonZeroU64;
 
-use crate::{cogs::Habitat, landscape::IndexedLocation};
+use crate::{
+    cogs::{Habitat, LineageReference},
+    landscape::IndexedLocation,
+};
 
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct GlobalLineageReference(NonZeroU64);
+
+impl<H: Habitat> LineageReference<H> for GlobalLineageReference {}
 
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 #[derive(Debug, Clone)]

@@ -20,9 +20,10 @@ use rustacuda_core::DeviceCopy;
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        IncoherentLineageStore, LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
+        LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
         SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
     },
+    lineage::Lineage,
     reporter::Reporter,
     simulation::Simulation,
 };
@@ -39,7 +40,7 @@ pub fn simulate<
     D: DispersalSampler<H, G> + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
     P: Reporter,
-    S: IncoherentLineageStore<H, R> + RustToCuda,
+    S: LineageStore<H, R> + RustToCuda,
     X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
     C: CoalescenceSampler<H, R, S> + RustToCuda,
     E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
@@ -52,7 +53,8 @@ pub fn simulate<
     kernel: &SimulationKernel<H, G, N, D, R, S, X, C, E, I, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
     task: (u32, GridSize, BlockSize),
     mut simulation: Simulation<H, G, N, D, R, S, X, C, E, I, A>,
-    task_list: ValueBuffer<R>,
+    mut individual_tasks: VecDeque<Lineage>,
+    task_list: ValueBuffer<Lineage>,
     event_buffer: EventBuffer<REPORT_SPECIATION, REPORT_DISPERSAL>,
     min_spec_sample_buffer: ValueBuffer<SpeciationSample>,
     reporter: &mut P,
@@ -79,11 +81,6 @@ pub fn simulate<
     let kernel = kernel
         .with_dimensions(grid_size, block_size, 0_u32)
         .with_stream(stream);
-
-    let mut individual_tasks: VecDeque<R> = simulation
-        .lineage_store()
-        .iter_local_lineage_references()
-        .collect();
 
     let mut min_spec_samples: HashSet<SpeciationSample> = HashSet::new();
     let mut duplicate_individuals = bitbox![0; min_spec_sample_buffer.len()];
@@ -139,7 +136,7 @@ pub fn simulate<
                 // Fetch the completion of the tasks
                 for (i, task) in task_list.iter_mut().enumerate() {
                     if let Some(task) = task.take() {
-                        if !duplicate_individuals[i] {
+                        if task.is_active() && !duplicate_individuals[i] {
                             individual_tasks.push_back(task);
                         }
                     }

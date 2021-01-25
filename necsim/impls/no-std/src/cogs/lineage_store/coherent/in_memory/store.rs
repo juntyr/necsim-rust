@@ -1,3 +1,5 @@
+use alloc::vec::Vec;
+
 use necsim_core::{
     cogs::{CoherentLineageStore, Habitat, LineageStore},
     landscape::{IndexedLocation, Location, LocationIterator},
@@ -30,15 +32,9 @@ impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for CoherentInMemoryL
         self.lineages_store.get(Into::<usize>::into(reference))
     }
 
-    fn update_lineage_time_of_last_event(
-        &mut self,
-        reference: InMemoryLineageReference,
-        event_time: f64,
-    ) {
-        unsafe {
-            self.lineages_store[Into::<usize>::into(reference)]
-                .update_time_of_last_event(event_time)
-        }
+    #[must_use]
+    fn into_lineages(self) -> Vec<Lineage> {
+        self.lineages_store
     }
 }
 
@@ -144,5 +140,16 @@ impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
         }
 
         lineage_indexed_location
+    }
+
+    fn update_lineage_time_of_last_event(
+        &mut self,
+        reference: InMemoryLineageReference,
+        event_time: f64,
+    ) {
+        unsafe {
+            self.lineages_store[Into::<usize>::into(reference)]
+                .update_time_of_last_event(event_time)
+        }
     }
 }

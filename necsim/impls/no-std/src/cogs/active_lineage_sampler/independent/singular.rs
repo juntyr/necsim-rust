@@ -3,16 +3,16 @@ use necsim_core::cogs::{
     SpeciationProbability,
 };
 
-use necsim_core::lineage::Lineage;
+use necsim_core::lineage::{GlobalLineageReference, Lineage};
 
 use crate::cogs::{
     coalescence_sampler::independent::IndependentCoalescenceSampler,
     event_sampler::independent::IndependentEventSampler,
     immigration_entry::never::NeverImmigrationEntry,
-    lineage_store::incoherent::independent::IndependentLineageStore,
+    lineage_store::independent::IndependentLineageStore,
 };
 
-use super::{EventTimeSampler, IndependentActiveLineageSampler, IndependentLineageReference};
+use super::{EventTimeSampler, IndependentActiveLineageSampler};
 
 impl<
         H: Habitat,
@@ -20,26 +20,18 @@ impl<
         N: SpeciationProbability<H>,
         T: EventTimeSampler<H, G>,
         D: DispersalSampler<H, G>,
-        X: EmigrationExit<H, G, N, D, IndependentLineageReference, IndependentLineageStore<H>>,
+        X: EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>,
     >
     SingularActiveLineageSampler<
         H,
         G,
         N,
         D,
-        IndependentLineageReference,
+        GlobalLineageReference,
         IndependentLineageStore<H>,
         X,
-        IndependentCoalescenceSampler<H, IndependentLineageReference, IndependentLineageStore<H>>,
-        IndependentEventSampler<
-            H,
-            G,
-            N,
-            D,
-            IndependentLineageReference,
-            IndependentLineageStore<H>,
-            X,
-        >,
+        IndependentCoalescenceSampler<H>,
+        IndependentEventSampler<H, G, N, D, X>,
         NeverImmigrationEntry,
     > for IndependentActiveLineageSampler<H, G, N, T, D, X>
 {

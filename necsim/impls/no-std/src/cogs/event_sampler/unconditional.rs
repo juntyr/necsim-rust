@@ -2,8 +2,8 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        CoalescenceRngSample, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        Habitat, LineageReference, LineageStore, RngCore, SpeciationProbability,
+        CoalescenceRngSample, CoalescenceSampler, CoherentLineageStore, DispersalSampler,
+        EmigrationExit, EventSampler, Habitat, LineageReference, RngCore, SpeciationProbability,
     },
     event::{Event, EventType},
     landscape::IndexedLocation,
@@ -18,7 +18,7 @@ pub struct UnconditionalEventSampler<
     N: SpeciationProbability<H>,
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
-    S: LineageStore<H, R>,
+    S: CoherentLineageStore<H, R>,
     X: EmigrationExit<H, G, N, D, R, S>,
     C: CoalescenceSampler<H, R, S>,
 >(PhantomData<(H, G, N, D, R, S, X, C)>);
@@ -29,7 +29,7 @@ impl<
         N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
-        S: LineageStore<H, R>,
+        S: CoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, N, D, R, S>,
         C: CoalescenceSampler<H, R, S>,
     > Default for UnconditionalEventSampler<H, G, N, D, R, S, X, C>
@@ -46,7 +46,7 @@ impl<
         N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
-        S: LineageStore<H, R>,
+        S: CoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, N, D, R, S>,
         C: CoalescenceSampler<H, R, S>,
     > EventSampler<H, G, N, D, R, S, X, C> for UnconditionalEventSampler<H, G, N, D, R, S, X, C>

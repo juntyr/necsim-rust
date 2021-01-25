@@ -1,7 +1,9 @@
+use necsim_core::cogs::LineageStore;
+
 use necsim_impls_no_std::cogs::{
     dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
     habitat::almost_infinite::AlmostInfiniteHabitat,
-    lineage_store::incoherent::almost_infinite::IncoherentAlmostInfiniteLineageStore,
+    lineage_store::coherent::almost_infinite::CoherentAlmostInfiniteLineageStore,
 };
 
 use necsim_impls_no_std::{
@@ -27,13 +29,14 @@ impl AlmostInfiniteSimulation for CudaSimulation {
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = AlmostInfiniteHabitat::default();
         let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(sigma);
-        let lineage_store =
-            IncoherentAlmostInfiniteLineageStore::new(radius, sample_percentage, &habitat);
+
+        let lineages = CoherentAlmostInfiniteLineageStore::new(radius, sample_percentage, &habitat)
+            .into_lineages();
 
         CudaSimulation::simulate(
             habitat,
             dispersal_sampler,
-            lineage_store,
+            lineages,
             speciation_probability_per_generation,
             seed,
             reporter_context,

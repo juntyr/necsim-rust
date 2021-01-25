@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use necsim_core::cogs::{
     CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-    IncoherentLineageStore, LineageReference, MinSpeciationTrackingEventSampler, PrimeableRng,
+    LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
     SingularActiveLineageSampler, SpeciationProbability,
 };
 
@@ -24,7 +24,7 @@ pub struct SimulationKernel<
     N: SpeciationProbability<H> + RustToCuda,
     D: DispersalSampler<H, G> + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
-    S: IncoherentLineageStore<H, R> + RustToCuda,
+    S: LineageStore<H, R> + RustToCuda,
     X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
     C: CoalescenceSampler<H, R, S> + RustToCuda,
     E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
