@@ -46,20 +46,31 @@ pub trait CoherentLineageStore<H: Habitat, R: LineageReference<H>>: LineageStore
     type LocationIterator<'a>: Iterator<Item = Location>;
 
     #[must_use]
-    fn iter_active_locations(&self) -> Self::LocationIterator<'_>;
+    fn iter_active_locations(&self, habitat: &H) -> Self::LocationIterator<'_>;
 
     #[must_use]
+    #[debug_requires(habitat.contains(location), "location is inside habitat")]
     fn get_active_local_lineage_references_at_location_unordered(
         &self,
         location: &Location,
+        habitat: &H,
     ) -> &[R];
 
     #[must_use]
+    #[debug_requires(
+        habitat.contains(indexed_location.location()),
+        "indexed location is inside habitat"
+    )]
     fn get_active_global_lineage_reference_at_indexed_location(
         &self,
         indexed_location: &IndexedLocation,
+        habitat: &H,
     ) -> Option<&GlobalLineageReference>;
 
+    #[debug_requires(
+        habitat.contains(indexed_location.location()),
+        "indexed location is inside habitat"
+    )]
     #[debug_requires(self.get(reference.clone()).is_some(), "lineage reference is valid")]
     #[debug_requires(!self[reference.clone()].is_active(), "lineage is inactive")]
     #[debug_ensures(self[old(reference.clone())].is_active(), "lineage was activated")]
@@ -69,21 +80,21 @@ pub trait CoherentLineageStore<H: Habitat, R: LineageReference<H>>: LineageStore
     )]
     #[debug_ensures(
         self.get_active_global_lineage_reference_at_indexed_location(
-            &old(indexed_location.clone())
+            &old(indexed_location.clone()), old(habitat)
         ) == Some(self[old(reference.clone())].global_reference()),
         "lineage is now indexed at indexed_location"
     )]
     #[debug_ensures(
         self.get_active_local_lineage_references_at_location_unordered(
-            &old(indexed_location.location().clone())
+            &old(indexed_location.location().clone()), old(habitat)
         ).last() == Some(&old(reference.clone())),
         "lineage is now indexed unordered at indexed_location.location()"
     )]
     #[debug_ensures(
         old(self.get_active_local_lineage_references_at_location_unordered(
-            indexed_location.location()
+            indexed_location.location(), old(habitat)
         ).len() + 1) == self.get_active_local_lineage_references_at_location_unordered(
-            &old(indexed_location.location().clone())
+            &old(indexed_location.location().clone()), old(habitat)
         ).len(),
         "unordered active lineage index at returned location has grown by 1"
     )]
@@ -91,34 +102,45 @@ pub trait CoherentLineageStore<H: Habitat, R: LineageReference<H>>: LineageStore
         &mut self,
         reference: R,
         indexed_location: IndexedLocation,
+        habitat: &H,
     );
 
     #[must_use]
     #[debug_requires(self.get(reference.clone()).is_some(), "lineage reference is valid")]
     #[debug_requires(self[reference.clone()].is_active(), "lineage is active")]
+    #[debug_ensures(old(habitat).contains(ret.location()), "prior location is inside habitat")]
     #[debug_ensures(!self[old(reference.clone())].is_active(), "lineage was deactivated")]
     #[debug_ensures(
         ret == old(self[reference.clone()].indexed_location().unwrap().clone()),
         "returns the individual's prior IndexedLocation"
     )]
     #[debug_ensures(
-        self.get_active_global_lineage_reference_at_indexed_location(&ret).is_none(),
+        self.get_active_global_lineage_reference_at_indexed_location(&ret, old(habitat)).is_none(),
         "lineage is no longer indexed at its prior IndexedLocation"
     )]
     #[debug_ensures(
-        self.get_active_local_lineage_references_at_location_unordered(&ret.location()).len() + 1
-            == old(self.get_active_local_lineage_references_at_location_unordered(
-                self[reference.clone()].indexed_location().unwrap().location()
-            ).len()),
-        "unordered active lineage index at returned location has shrunk by 1"
-    )]
-    fn extract_lineage_from_its_location_coherent(&mut self, reference: R) -> IndexedLocation;
+        self.get_active_local_lineage_references_at_location_unordered(
+            &ret.location(),
+            old(habitat),
+        ).len() + 1 == old(self.get_active_local_lineage_references_at_location_unordered(
+            self[reference.clone()].indexed_location().unwrap().location(),
+            old(habitat),
+        ).len()), "unordered active lineage index at returned location has shrunk by 1")]
+    fn extract_lineage_from_its_location_coherent(
+        &mut self,
+        reference: R,
+        habitat: &H,
+    ) -> IndexedLocation;
 }
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
 pub trait IncoherentLineageStore<H: Habitat, R: LineageReference<H>>: LineageStore<H, R> {
+    #[debug_requires(
+        habitat.contains(indexed_location.location()),
+        "indexed location is inside habitat"
+    )]
     #[debug_requires(self.get(reference.clone()).is_some(), "lineage reference is valid")]
     #[debug_requires(!self[reference.clone()].is_active(), "lineage is inactive")]
     #[debug_ensures(self[old(reference.clone())].is_active(), "lineage was activated")]
@@ -130,15 +152,17 @@ pub trait IncoherentLineageStore<H: Habitat, R: LineageReference<H>>: LineageSto
         &mut self,
         reference: R,
         indexed_location: IndexedLocation,
+        habitat: &H,
     );
 
     #[must_use]
     #[debug_requires(self.get(reference.clone()).is_some(), "lineage reference is valid")]
     #[debug_requires(self[reference.clone()].is_active(), "lineage is active")]
+    #[debug_ensures(old(habitat).contains(ret.location()), "prior location is inside habitat")]
     #[debug_ensures(!self[old(reference.clone())].is_active(), "lineage was deactivated")]
     #[debug_ensures(
         ret == old(self[reference.clone()].indexed_location().unwrap().clone()),
         "returns the individual's prior location"
     )]
-    fn extract_lineage_from_its_location(&mut self, reference: R) -> IndexedLocation;
+    fn extract_lineage_from_its_location(&mut self, reference: R, habitat: &H) -> IndexedLocation;
 }

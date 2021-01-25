@@ -3,9 +3,9 @@ use core::ops::Index;
 use alloc::{boxed::Box, vec::Vec};
 
 use necsim_core::{
-    cogs::{Habitat, LineageStore},
+    cogs::LineageStore,
     intrinsics::floor,
-    landscape::{IndexedLocation, LandscapeExtent, Location},
+    landscape::{IndexedLocation, Location},
     lineage::Lineage,
 };
 
@@ -20,7 +20,6 @@ mod store;
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 pub struct IncoherentAlmostInfiniteLineageStore {
-    landscape_extent: LandscapeExtent,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     lineages_store: Box<[Lineage]>,
 }
@@ -45,10 +44,6 @@ impl IncoherentAlmostInfiniteLineageStore {
     #[debug_ensures(
         sample_percentage == 0.0_f64 -> ret.get_number_total_lineages() == 0,
         "samples active lineages according to sample_percentage()"
-    )]
-    #[debug_ensures(
-        ret.landscape_extent == habitat.get_extent(),
-        "stores landscape_extent"
     )]
     pub fn new(radius: u32, sample_percentage: f64, habitat: &AlmostInfiniteHabitat) -> Self {
         let centre = u32::MAX / 2;
@@ -99,7 +94,6 @@ impl IncoherentAlmostInfiniteLineageStore {
         lineages_store.shrink_to_fit();
 
         Self {
-            landscape_extent: habitat.get_extent(),
             lineages_store: lineages_store.into_boxed_slice(),
         }
     }

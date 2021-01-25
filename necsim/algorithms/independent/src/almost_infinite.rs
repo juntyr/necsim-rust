@@ -29,7 +29,7 @@ impl AlmostInfiniteSimulation for IndependentSimulation {
         let habitat = AlmostInfiniteHabitat::default();
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation);
-        let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(sigma, &habitat);
+        let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(sigma);
         let lineage_store =
             IncoherentAlmostInfiniteLineageStore::new(radius, sample_percentage, &habitat);
 

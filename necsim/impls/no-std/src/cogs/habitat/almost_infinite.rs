@@ -8,6 +8,10 @@ use necsim_core::{
 #[derive(Debug)]
 pub struct AlmostInfiniteHabitat(());
 
+impl AlmostInfiniteHabitat {
+    const EXTENT: LandscapeExtent = LandscapeExtent::new(0_u32, 0_u32, u32::MAX, u32::MAX);
+}
+
 impl Default for AlmostInfiniteHabitat {
     fn default() -> Self {
         Self(())
@@ -17,8 +21,8 @@ impl Default for AlmostInfiniteHabitat {
 #[contract_trait]
 impl Habitat for AlmostInfiniteHabitat {
     #[must_use]
-    fn get_extent(&self) -> LandscapeExtent {
-        LandscapeExtent::new(0_u32, 0_u32, u32::MAX, u32::MAX)
+    fn get_extent(&self) -> &LandscapeExtent {
+        &Self::EXTENT
     }
 
     #[must_use]

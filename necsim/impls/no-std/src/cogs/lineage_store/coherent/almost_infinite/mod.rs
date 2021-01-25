@@ -5,9 +5,9 @@ use alloc::vec::Vec;
 use hashbrown::hash_map::HashMap;
 
 use necsim_core::{
-    cogs::{Habitat, LineageStore},
+    cogs::LineageStore,
     intrinsics::floor,
-    landscape::{IndexedLocation, LandscapeExtent, Location},
+    landscape::{IndexedLocation, Location},
     lineage::Lineage,
 };
 
@@ -21,7 +21,6 @@ mod store;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct CoherentAlmostInfiniteLineageStore {
-    landscape_extent: LandscapeExtent,
     lineages_store: Vec<Lineage>,
     location_to_lineage_references: HashMap<Location, InMemoryLineageReference>,
 }
@@ -46,10 +45,6 @@ impl CoherentAlmostInfiniteLineageStore {
     #[debug_ensures(
         sample_percentage == 0.0_f64 -> ret.get_number_total_lineages() == 0,
         "samples active lineages according to sample_percentage()"
-    )]
-    #[debug_ensures(
-        ret.landscape_extent == habitat.get_extent(),
-        "stores landscape_extent"
     )]
     pub fn new(radius: u32, sample_percentage: f64, habitat: &AlmostInfiniteHabitat) -> Self {
         let centre = u32::MAX / 2;
@@ -106,7 +101,6 @@ impl CoherentAlmostInfiniteLineageStore {
         lineages_store.shrink_to_fit();
 
         Self {
-            landscape_extent: habitat.get_extent(),
             lineages_store,
             location_to_lineage_references,
         }

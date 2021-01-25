@@ -4,7 +4,12 @@ use crate::landscape::{IndexedLocation, LandscapeExtent, Location};
 #[contract_trait]
 pub trait Habitat: core::fmt::Debug {
     #[must_use]
-    fn get_extent(&self) -> LandscapeExtent;
+    fn get_extent(&self) -> &LandscapeExtent;
+
+    #[must_use]
+    fn contains(&self, location: &Location) -> bool {
+        self.get_extent().contains(location)
+    }
 
     #[must_use]
     #[debug_ensures(ret == {

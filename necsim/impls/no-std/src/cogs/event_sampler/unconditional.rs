@@ -77,9 +77,11 @@ impl<
                 event_time,
             )
         } else {
-            let dispersal_target = simulation
-                .dispersal_sampler
-                .sample_dispersal_from_location(dispersal_origin.location(), rng);
+            let dispersal_target = simulation.dispersal_sampler.sample_dispersal_from_location(
+                dispersal_origin.location(),
+                &simulation.habitat,
+                rng,
+            );
 
             // Check for emigration and return None iff lineage emigrated
             let (lineage_reference, dispersal_origin, dispersal_target, event_time) = simulation

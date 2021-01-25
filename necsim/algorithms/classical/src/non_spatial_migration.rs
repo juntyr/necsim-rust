@@ -37,7 +37,7 @@ impl NonSpatialMigrationSimulation for ClassicalSimulation {
         let local_habitat = NonSpatialHabitat::new(local_area_deme.0, local_area_deme.1);
         let local_speciation_probability =
             UniformSpeciationProbability::new(local_migration_probability_per_generation);
-        let local_dispersal_sampler = NonSpatialDispersalSampler::new(&local_habitat);
+        let local_dispersal_sampler = NonSpatialDispersalSampler::default();
         let local_lineage_store =
             CoherentInMemoryLineageStore::new(sample_percentage, &local_habitat);
 
@@ -73,7 +73,7 @@ impl NonSpatialMigrationSimulation for ClassicalSimulation {
 
         let meta_speciation_probability =
             UniformSpeciationProbability::new(meta_speciation_probability_per_generation);
-        let meta_dispersal_sampler = NonSpatialDispersalSampler::new(&meta_habitat);
+        let meta_dispersal_sampler = NonSpatialDispersalSampler::default();
         #[allow(clippy::cast_precision_loss)]
         let meta_lineage_store = CoherentInMemoryLineageStore::new(
             (unique_migration_targets.len() as f64) / (max_unique_location_index as f64),

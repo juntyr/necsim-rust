@@ -46,14 +46,11 @@ impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for IncoherentInMemor
 impl<H: Habitat> IncoherentLineageStore<H, InMemoryLineageReference>
     for IncoherentInMemoryLineageStore<H>
 {
-    #[debug_requires(
-        self.landscape_extent.contains(indexed_location.location()),
-        "location is inside landscape extent"
-    )]
     fn insert_lineage_to_indexed_location(
         &mut self,
         reference: InMemoryLineageReference,
         indexed_location: IndexedLocation,
+        _habitat: &H,
     ) {
         unsafe {
             self.lineages_store[Into::<usize>::into(reference)]
@@ -62,13 +59,10 @@ impl<H: Habitat> IncoherentLineageStore<H, InMemoryLineageReference>
     }
 
     #[must_use]
-    #[debug_requires(
-        self.landscape_extent.contains(self[reference].indexed_location().unwrap().location()),
-        "lineage's location is inside landscape extent"
-    )]
     fn extract_lineage_from_its_location(
         &mut self,
         reference: InMemoryLineageReference,
+        _habitat: &H,
     ) -> IndexedLocation {
         unsafe { self.lineages_store[Into::<usize>::into(reference)].remove_from_location() }
     }

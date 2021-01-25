@@ -156,6 +156,7 @@ pub trait SingularActiveLineageSampler<
     fn replace_active_lineage(
         &mut self,
         active_lineage_reference: Option<R>,
+        habitat: &H,
         lineage_store: &mut S,
     ) -> Option<R>;
 }

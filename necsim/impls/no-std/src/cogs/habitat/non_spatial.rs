@@ -28,8 +28,8 @@ impl NonSpatialHabitat {
 #[contract_trait]
 impl Habitat for NonSpatialHabitat {
     #[must_use]
-    fn get_extent(&self) -> LandscapeExtent {
-        self.extent.clone()
+    fn get_extent(&self) -> &LandscapeExtent {
+        &self.extent
     }
 
     #[must_use]

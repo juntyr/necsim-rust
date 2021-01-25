@@ -64,7 +64,10 @@ impl<
 
         let lineages_at_location = simulation
             .lineage_store
-            .get_active_local_lineage_references_at_location_unordered(&chosen_active_location);
+            .get_active_local_lineage_references_at_location_unordered(
+                &chosen_active_location,
+                &simulation.habitat,
+            );
         let number_lineages_left_at_location = lineages_at_location.len() - 1;
 
         let chosen_lineage_index_at_location = rng.sample_index(lineages_at_location.len());
@@ -73,7 +76,10 @@ impl<
 
         let lineage_indexed_location = simulation
             .lineage_store
-            .extract_lineage_from_its_location_coherent(chosen_lineage_reference.clone());
+            .extract_lineage_from_its_location_coherent(
+                chosen_lineage_reference.clone(),
+                &simulation.habitat,
+            );
         self.number_active_lineages -= 1;
 
         let unique_event_time: f64 = if chosen_event_time > self.last_event_time {
@@ -113,7 +119,7 @@ impl<
 
     #[debug_requires(
         simulation.lineage_store.get_active_local_lineage_references_at_location_unordered(
-            indexed_location.location()
+            indexed_location.location(), &simulation.habitat
         ).len() < (
             simulation.habitat.get_habitat_at_location(indexed_location.location()) as usize
         ), "location has habitat capacity for the lineage"
@@ -132,7 +138,11 @@ impl<
 
         simulation
             .lineage_store
-            .insert_lineage_to_indexed_location_coherent(lineage_reference, indexed_location);
+            .insert_lineage_to_indexed_location_coherent(
+                lineage_reference,
+                indexed_location,
+                &simulation.habitat,
+            );
 
         let event_rate_at_location =
             simulation.with_split_event_sampler(|event_sampler, simulation| {

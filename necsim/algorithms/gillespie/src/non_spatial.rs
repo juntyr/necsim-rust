@@ -25,7 +25,7 @@ impl NonSpatialSimulation for GillespieSimulation {
         reporter_context: P,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = NonSpatialHabitat::new(area, deme);
-        let dispersal_sampler = NonSpatialDispersalSampler::new(&habitat);
+        let dispersal_sampler = NonSpatialDispersalSampler::default();
         let lineage_store = CoherentInMemoryLineageStore::new(sample_percentage, &habitat);
 
         Ok(GillespieSimulation::simulate(

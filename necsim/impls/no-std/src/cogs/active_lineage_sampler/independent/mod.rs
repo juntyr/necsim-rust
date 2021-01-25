@@ -58,6 +58,7 @@ impl<
     pub fn new_from(
         event_time_sampler: T,
         active_lineage_reference: R,
+        habitat: &H,
         lineage_store: &mut S,
     ) -> Self {
         #[allow(clippy::option_if_let_else)]
@@ -67,7 +68,8 @@ impl<
                     active_lineage_reference: Some(active_lineage_reference.clone()),
                     lineage_time_of_last_event: lineage.time_of_last_event(),
                     lineage_indexed_location: Some(
-                        lineage_store.extract_lineage_from_its_location(active_lineage_reference),
+                        lineage_store
+                            .extract_lineage_from_its_location(active_lineage_reference, habitat),
                     ),
                     event_time_sampler,
                     marker: PhantomData::<(H, G, N, D, S, X)>,

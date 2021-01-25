@@ -5,19 +5,23 @@ use necsim_core::{
 
 use super::InMemoryCumulativeDispersalSampler;
 
+#[contract_trait]
 impl<H: Habitat, G: RngCore> DispersalSampler<H, G> for InMemoryCumulativeDispersalSampler {
     #[must_use]
-    #[debug_requires(self.habitat_extent.contains(location), "location is inside habitat extent")]
-    #[debug_ensures(self.habitat_extent.contains(&ret), "target is inside habitat extent")]
-    fn sample_dispersal_from_location(&self, location: &Location, rng: &mut G) -> Location {
+    fn sample_dispersal_from_location(
+        &self,
+        location: &Location,
+        habitat: &H,
+        rng: &mut G,
+    ) -> Location {
         use necsim_core::cogs::RngSampler;
 
-        let location_index = ((location.y() - self.habitat_extent.y()) as usize)
-            * (self.habitat_extent.width() as usize)
-            + ((location.x() - self.habitat_extent.x()) as usize);
+        let location_index = ((location.y() - habitat.get_extent().y()) as usize)
+            * (habitat.get_extent().width() as usize)
+            + ((location.x() - habitat.get_extent().x()) as usize);
 
         let habitat_area =
-            (self.habitat_extent.width() as usize) * (self.habitat_extent.height() as usize);
+            (habitat.get_extent().width() as usize) * (habitat.get_extent().height() as usize);
 
         let cumulative_dispersals_at_location = &self.cumulative_dispersal
             [location_index * habitat_area..(location_index + 1) * habitat_area];
@@ -46,10 +50,10 @@ impl<H: Habitat, G: RngCore> DispersalSampler<H, G> for InMemoryCumulativeDisper
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
-            (valid_dispersal_target_index % (self.habitat_extent.width() as usize)) as u32
-                + self.habitat_extent.x(),
-            (valid_dispersal_target_index / (self.habitat_extent.width() as usize)) as u32
-                + self.habitat_extent.y(),
+            (valid_dispersal_target_index % (habitat.get_extent().width() as usize)) as u32
+                + habitat.get_extent().x(),
+            (valid_dispersal_target_index / (habitat.get_extent().width() as usize)) as u32
+                + habitat.get_extent().y(),
         )
     }
 }

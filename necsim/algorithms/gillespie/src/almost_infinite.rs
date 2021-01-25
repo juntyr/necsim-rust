@@ -26,7 +26,7 @@ impl AlmostInfiniteSimulation for GillespieSimulation {
         reporter_context: P,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = AlmostInfiniteHabitat::default();
-        let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(sigma, &habitat);
+        let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(sigma);
         let lineage_store =
             CoherentAlmostInfiniteLineageStore::new(radius, sample_percentage, &habitat);
 

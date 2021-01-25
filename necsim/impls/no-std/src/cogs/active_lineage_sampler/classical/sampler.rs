@@ -130,7 +130,10 @@ impl<
 
         let lineage_indexed_location = simulation
             .lineage_store
-            .extract_lineage_from_its_location_coherent(chosen_lineage_reference.clone());
+            .extract_lineage_from_its_location_coherent(
+                chosen_lineage_reference.clone(),
+                &simulation.habitat,
+            );
 
         simulation
             .lineage_store
@@ -151,7 +154,7 @@ impl<
     #[allow(clippy::type_complexity, clippy::cast_possible_truncation)]
     #[debug_requires(
         simulation.lineage_store.get_active_local_lineage_references_at_location_unordered(
-            indexed_location.location()
+            indexed_location.location(), &simulation.habitat
         ).len() < (
             simulation.habitat.get_habitat_at_location(indexed_location.location()) as usize
         ), "location has habitat capacity for the lineage"
@@ -188,6 +191,7 @@ impl<
             .insert_lineage_to_indexed_location_coherent(
                 lineage_reference.clone(),
                 indexed_location,
+                &simulation.habitat,
             );
 
         self.active_lineage_references.push(lineage_reference);

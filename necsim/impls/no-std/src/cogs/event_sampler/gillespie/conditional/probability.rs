@@ -36,7 +36,7 @@ impl ProbabilityAtLocation {
             .get_speciation_probability_at_location(location);
         let self_dispersal_probability = simulation
             .dispersal_sampler
-            .get_self_dispersal_probability_at_location(location);
+            .get_self_dispersal_probability_at_location(location, &simulation.habitat);
         let coalescence_probability_at_location =
             ConditionalCoalescenceSampler::get_coalescence_probability_at_location(
                 location,

@@ -119,8 +119,11 @@ unsafe fn simulate_generic<
             task_list.with_value_for_core(|task| {
                 let saved_task = simulation.with_mut_split_active_lineage_sampler_and_rng(
                     |active_lineage_sampler, simulation, _rng| {
-                        active_lineage_sampler
-                            .replace_active_lineage(task, &mut simulation.lineage_store)
+                        active_lineage_sampler.replace_active_lineage(
+                            task,
+                            &simulation.habitat,
+                            &mut simulation.lineage_store,
+                        )
                     },
                 );
 
@@ -155,8 +158,11 @@ unsafe fn simulate_generic<
 
                 simulation.with_mut_split_active_lineage_sampler_and_rng(
                     |active_lineage_sampler, simulation, _rng| {
-                        active_lineage_sampler
-                            .replace_active_lineage(saved_task, &mut simulation.lineage_store)
+                        active_lineage_sampler.replace_active_lineage(
+                            saved_task,
+                            &simulation.habitat,
+                            &mut simulation.lineage_store,
+                        )
                     },
                 )
             })
