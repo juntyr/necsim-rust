@@ -15,7 +15,7 @@ use rustacuda::{
 };
 
 use necsim_core::{
-    cogs::{DispersalSampler, Habitat, LineageStore, RngCore},
+    cogs::{DispersalSampler, Habitat, RngCore},
     lineage::{GlobalLineageReference, Lineage},
     simulation::Simulation,
 };
@@ -125,21 +125,6 @@ impl CudaSimulation {
                         as u32;
                     let block_size = BlockSize::xy(32, 1); // max_threads_per_block / 32);
 
-                    #[allow(clippy::cast_possible_truncation)]
-                    let grid_amount = {
-                        #[allow(clippy::cast_possible_truncation)]
-                        let total_individuals =
-                            simulation.lineage_store().get_number_total_lineages();
-
-                        let block_size = (block_size.x * block_size.y * block_size.z) as usize;
-                        let grid_size = (grid_size.x * grid_size.y * grid_size.z) as usize;
-
-                        let task_size = block_size * grid_size;
-
-                        (total_individuals / task_size)
-                            + ((total_individuals % task_size > 0) as usize)
-                    } as u32;
-
                     let task_list = ValueBuffer::new(&block_size, &grid_size)?;
                     let min_spec_sample_buffer = ValueBuffer::new(&block_size, &grid_size)?;
 
@@ -152,7 +137,7 @@ impl CudaSimulation {
                     simulate(
                         &stream,
                         &kernel,
-                        (grid_amount, grid_size, block_size),
+                        (grid_size, block_size),
                         simulation,
                         lineages.into(),
                         task_list,
