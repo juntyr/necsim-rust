@@ -25,7 +25,7 @@ use necsim_impls_no_std::cogs::{
     emigration_exit::never::NeverEmigrationExit,
     event_sampler::independent::IndependentEventSampler,
     immigration_entry::never::NeverImmigrationEntry,
-    rng::fixedseahash::FixedSeaHash,
+    rng::seahash::SeaHash,
 };
 
 use necsim_impls_no_std::reporter::ReporterContext;
@@ -45,7 +45,7 @@ impl IndependentSimulation {
     fn simulate<
         H: Habitat,
         N: SpeciationProbability<H>,
-        D: DispersalSampler<H, FixedSeaHash>,
+        D: DispersalSampler<H, SeaHash>,
         R: LineageReference<H>,
         S: IncoherentLineageStore<H, R>,
         P: ReporterContext,
@@ -62,7 +62,7 @@ impl IndependentSimulation {
         reporter_context.with_reporter(|reporter| {
             let mut reporter = DeduplicatingReporterProxy::from(reporter);
 
-            let rng = FixedSeaHash::seed_from_u64(seed);
+            let rng = SeaHash::seed_from_u64(seed);
             let emigration_exit = NeverEmigrationExit::default();
             let coalescence_sampler = IndependentCoalescenceSampler::default();
             let event_sampler = IndependentEventSampler::default();
@@ -100,6 +100,7 @@ impl IndependentSimulation {
                     |active_lineage_sampler, simulation, _rng| {
                         active_lineage_sampler.replace_active_lineage(
                             Some(active_lineage),
+                            &simulation.habitat,
                             &mut simulation.lineage_store,
                         )
                     },
@@ -128,8 +129,11 @@ impl IndependentSimulation {
 
                 simulation.with_mut_split_active_lineage_sampler_and_rng(
                     |active_lineage_sampler, simulation, _rng| {
-                        active_lineage_sampler
-                            .replace_active_lineage(prev_task, &mut simulation.lineage_store)
+                        active_lineage_sampler.replace_active_lineage(
+                            prev_task,
+                            &simulation.habitat,
+                            &mut simulation.lineage_store,
+                        )
                     },
                 );
             }

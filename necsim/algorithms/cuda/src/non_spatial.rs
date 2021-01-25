@@ -25,7 +25,7 @@ impl NonSpatialSimulation for CudaSimulation {
         reporter_context: P,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = NonSpatialHabitat::new(area, deme);
-        let dispersal_sampler = NonSpatialDispersalSampler::new(&habitat);
+        let dispersal_sampler = NonSpatialDispersalSampler::default();
         let lineage_store = IncoherentInMemoryLineageStore::new(sample_percentage, &habitat);
 
         CudaSimulation::simulate(

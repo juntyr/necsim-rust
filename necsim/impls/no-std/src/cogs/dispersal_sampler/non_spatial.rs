@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
-    landscape::{LandscapeExtent, Location},
+    landscape::Location,
 };
 
 use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
@@ -11,38 +11,40 @@ use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 pub struct NonSpatialDispersalSampler<G: RngCore> {
-    habitat_extent: LandscapeExtent,
     marker: PhantomData<G>,
 }
 
-impl<G: RngCore> NonSpatialDispersalSampler<G> {
+impl<G: RngCore> Default for NonSpatialDispersalSampler<G> {
     #[must_use]
-    pub fn new(habitat: &NonSpatialHabitat) -> Self {
+    fn default() -> Self {
         Self {
-            habitat_extent: habitat.get_extent(),
             marker: PhantomData::<G>,
         }
     }
 }
 
+#[contract_trait]
 impl<G: RngCore> DispersalSampler<NonSpatialHabitat, G> for NonSpatialDispersalSampler<G> {
     #[must_use]
-    #[debug_requires(self.habitat_extent.contains(location), "location is inside habitat extent")]
-    #[debug_ensures(self.habitat_extent.contains(&ret), "target is inside habitat extent")]
-    fn sample_dispersal_from_location(&self, location: &Location, rng: &mut G) -> Location {
+    fn sample_dispersal_from_location(
+        &self,
+        _location: &Location,
+        habitat: &NonSpatialHabitat,
+        rng: &mut G,
+    ) -> Location {
         use necsim_core::cogs::RngSampler;
 
         let habitat_index_max =
-            (self.habitat_extent.width() as usize) * (self.habitat_extent.height() as usize);
+            (habitat.get_extent().width() as usize) * (habitat.get_extent().height() as usize);
 
         let dispersal_target_index = rng.sample_index(habitat_index_max);
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
-            (dispersal_target_index % (self.habitat_extent.width() as usize)) as u32
-                + self.habitat_extent.x(),
-            (dispersal_target_index / (self.habitat_extent.width() as usize)) as u32
-                + self.habitat_extent.y(),
+            (dispersal_target_index % (habitat.get_extent().width() as usize)) as u32
+                + habitat.get_extent().x(),
+            (dispersal_target_index / (habitat.get_extent().width() as usize)) as u32
+                + habitat.get_extent().y(),
         )
     }
 }
@@ -50,23 +52,21 @@ impl<G: RngCore> DispersalSampler<NonSpatialHabitat, G> for NonSpatialDispersalS
 #[contract_trait]
 impl<G: RngCore> SeparableDispersalSampler<NonSpatialHabitat, G> for NonSpatialDispersalSampler<G> {
     #[must_use]
-    #[debug_requires(self.habitat_extent.contains(location), "location is inside habitat extent")]
-    #[debug_requires(
-        (u64::from(self.habitat_extent.width()) * u64::from(self.habitat_extent.height())) > 1_u64,
-        "a different, non-self dispersal, target location exists"
-    )]
-    #[debug_ensures(self.habitat_extent.contains(&ret), "target is inside habitat extent")]
+    #[debug_requires((
+        u64::from(habitat.get_extent().width()) * u64::from(habitat.get_extent().height())
+    ) > 1_u64, "a different, non-self dispersal, target location exists")]
     fn sample_non_self_dispersal_from_location(
         &self,
         location: &Location,
+        habitat: &NonSpatialHabitat,
         rng: &mut G,
     ) -> Location {
         use necsim_core::cogs::RngSampler;
 
         let habitat_index_max =
-            (self.habitat_extent.width() as usize) * (self.habitat_extent.height() as usize);
+            (habitat.get_extent().width() as usize) * (habitat.get_extent().height() as usize);
         let current_location_index = (location.y() as usize)
-            * (self.habitat_extent.width() as usize)
+            * (habitat.get_extent().width() as usize)
             + (location.x() as usize);
 
         let dispersal_target_index = {
@@ -81,16 +81,20 @@ impl<G: RngCore> SeparableDispersalSampler<NonSpatialHabitat, G> for NonSpatialD
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
-            (dispersal_target_index % (self.habitat_extent.width() as usize)) as u32
-                + self.habitat_extent.x(),
-            (dispersal_target_index / (self.habitat_extent.width() as usize)) as u32
-                + self.habitat_extent.y(),
+            (dispersal_target_index % (habitat.get_extent().width() as usize)) as u32
+                + habitat.get_extent().x(),
+            (dispersal_target_index / (habitat.get_extent().width() as usize)) as u32
+                + habitat.get_extent().y(),
         )
     }
 
     #[must_use]
-    #[debug_requires(self.habitat_extent.contains(location), "location is inside habitat extent")]
-    fn get_self_dispersal_probability_at_location(&self, location: &Location) -> f64 {
-        1.0_f64 / (f64::from(self.habitat_extent.width()) * f64::from(self.habitat_extent.height()))
+    fn get_self_dispersal_probability_at_location(
+        &self,
+        _location: &Location,
+        habitat: &NonSpatialHabitat,
+    ) -> f64 {
+        1.0_f64
+            / (f64::from(habitat.get_extent().width()) * f64::from(habitat.get_extent().height()))
     }
 }

@@ -63,11 +63,14 @@ impl<
 
         partial_simulation
             .lineage_store
-            .iter_active_locations()
+            .iter_active_locations(&partial_simulation.habitat)
             .for_each(|location| {
                 let number_active_lineages_at_location = partial_simulation
                     .lineage_store
-                    .get_active_local_lineage_references_at_location_unordered(&location)
+                    .get_active_local_lineage_references_at_location_unordered(
+                        &location,
+                        &partial_simulation.habitat,
+                    )
                     .len();
 
                 if number_active_lineages_at_location > 0 {

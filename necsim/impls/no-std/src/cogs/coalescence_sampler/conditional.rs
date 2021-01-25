@@ -53,11 +53,12 @@ impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>>
     #[must_use]
     pub fn sample_coalescence_at_location(
         location: Location,
+        habitat: &H,
         lineage_store: &S,
         coalescence_rng_sample: CoalescenceRngSample,
     ) -> (IndexedLocation, GlobalLineageReference) {
-        let lineages_at_location =
-            lineage_store.get_active_local_lineage_references_at_location_unordered(&location);
+        let lineages_at_location = lineage_store
+            .get_active_local_lineage_references_at_location_unordered(&location, habitat);
 
         #[allow(clippy::cast_possible_truncation)]
         let population = lineages_at_location.len() as u32;
@@ -88,7 +89,7 @@ impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>>
 
         #[allow(clippy::cast_precision_loss)]
         let population = (lineage_store
-            .get_active_local_lineage_references_at_location_unordered(location)
+            .get_active_local_lineage_references_at_location_unordered(location, habitat)
             .len()
             - usize::from(lineage_store_includes_self)) as f64;
         let habitat = f64::from(habitat.get_habitat_at_location(location));

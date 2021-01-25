@@ -80,9 +80,11 @@ impl<
                 event_time,
             )
         } else {
-            let dispersal_target = simulation
-                .dispersal_sampler
-                .sample_dispersal_from_location(dispersal_origin.location(), rng);
+            let dispersal_target = simulation.dispersal_sampler.sample_dispersal_from_location(
+                dispersal_origin.location(),
+                &simulation.habitat,
+                rng,
+            );
 
             // Check for emigration and return None iff lineage emigrated
             let (lineage_reference, dispersal_origin, dispersal_target, event_time) = simulation
@@ -151,7 +153,10 @@ impl<
         #[allow(clippy::cast_precision_loss)]
         let population = (simulation
             .lineage_store
-            .get_active_local_lineage_references_at_location_unordered(location)
+            .get_active_local_lineage_references_at_location_unordered(
+                location,
+                &simulation.habitat,
+            )
             .len()
             + usize::from(!lineage_store_includes_self)) as f64;
 

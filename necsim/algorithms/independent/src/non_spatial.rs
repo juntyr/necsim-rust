@@ -28,7 +28,7 @@ impl NonSpatialSimulation for IndependentSimulation {
         let habitat = NonSpatialHabitat::new(area, deme);
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation);
-        let dispersal_sampler = NonSpatialDispersalSampler::new(&habitat);
+        let dispersal_sampler = NonSpatialDispersalSampler::default();
         let lineage_store = IncoherentInMemoryLineageStore::new(sample_percentage, &habitat);
 
         Ok(IndependentSimulation::simulate(

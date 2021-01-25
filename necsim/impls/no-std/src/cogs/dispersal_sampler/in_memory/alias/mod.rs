@@ -6,7 +6,7 @@ use array2d::{Array2D, Error};
 
 use necsim_core::{
     cogs::{Habitat, RngCore},
-    landscape::{LandscapeExtent, Location},
+    landscape::Location,
 };
 
 use crate::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
@@ -19,7 +19,6 @@ use crate::alias::AliasMethodSampler;
 #[derive(Debug)]
 pub struct InMemoryAliasDispersalSampler<H: Habitat, G: RngCore> {
     alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
-    habitat_extent: LandscapeExtent,
     marker: PhantomData<(H, G)>,
 }
 
@@ -71,7 +70,6 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G>
 
         Ok(Self {
             alias_dispersal,
-            habitat_extent,
             marker: PhantomData::<(H, G)>,
         })
     }

@@ -39,6 +39,7 @@ impl<
     fn replace_active_lineage(
         &mut self,
         active_lineage_reference: Option<R>,
+        habitat: &H,
         lineage_store: &mut S,
     ) -> Option<R> {
         let old_lineage_reference = self.active_lineage_reference.take();
@@ -55,6 +56,7 @@ impl<
                 lineage_store.insert_lineage_to_indexed_location(
                     lineage_reference.clone(),
                     indexed_location,
+                    habitat,
                 );
             }
         }
@@ -65,7 +67,8 @@ impl<
                 if lineage.is_active() {
                     self.lineage_time_of_last_event = lineage.time_of_last_event();
                     self.lineage_indexed_location = Some(
-                        lineage_store.extract_lineage_from_its_location(lineage_reference.clone()),
+                        lineage_store
+                            .extract_lineage_from_its_location(lineage_reference.clone(), habitat),
                     );
                     self.active_lineage_reference = Some(lineage_reference);
                 }

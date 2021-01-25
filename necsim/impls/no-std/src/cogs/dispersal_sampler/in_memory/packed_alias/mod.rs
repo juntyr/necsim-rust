@@ -5,7 +5,7 @@ use array2d::{Array2D, Error};
 
 use necsim_core::{
     cogs::{Habitat, RngCore},
-    landscape::{LandscapeExtent, Location},
+    landscape::Location,
 };
 
 mod dispersal;
@@ -43,7 +43,6 @@ pub struct InMemoryPackedAliasDispersalSampler<H: Habitat, G: RngCore> {
     alias_dispersal_ranges: Array2D<AliasSamplerRange>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     alias_dispersal_buffer: Box<[AliasMethodSamplerAtom<usize>]>,
-    habitat_extent: LandscapeExtent,
     marker: PhantomData<(H, G)>,
 }
 
@@ -103,7 +102,6 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G>
         Ok(Self {
             alias_dispersal_ranges,
             alias_dispersal_buffer: alias_dispersal_buffer.into_boxed_slice(),
-            habitat_extent,
             marker: PhantomData::<(H, G)>,
         })
     }
@@ -121,7 +119,6 @@ impl<H: Habitat, G: RngCore> core::fmt::Debug for InMemoryPackedAliasDispersalSa
                     self.alias_dispersal_buffer.len()
                 ),
             )
-            .field("habitat_extent", &self.habitat_extent)
             .finish()
     }
 }

@@ -59,7 +59,10 @@ impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
     >;
 
     #[must_use]
-    fn iter_active_locations(&self) -> Self::LocationIterator<'_> {
+    fn iter_active_locations(
+        &self,
+        _habitat: &AlmostInfiniteHabitat,
+    ) -> Self::LocationIterator<'_> {
         self.lineages_store
             .iter()
             .filter_map(
@@ -70,13 +73,10 @@ impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
     }
 
     #[must_use]
-    #[debug_requires(
-        self.landscape_extent.contains(location),
-        "location is inside landscape extent"
-    )]
     fn get_active_local_lineage_references_at_location_unordered(
         &self,
         location: &Location,
+        _habitat: &AlmostInfiniteHabitat,
     ) -> &[InMemoryLineageReference] {
         match self.location_to_lineage_references.get(location) {
             Some(local_reference) => core::slice::from_ref(local_reference),
@@ -85,29 +85,23 @@ impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
     }
 
     #[must_use]
-    #[debug_requires(
-        self.landscape_extent.contains(indexed_location.location()),
-        "indexed_location is inside landscape extent"
-    )]
     #[debug_requires(indexed_location.index() == 0, "only one lineage per location")]
     fn get_active_global_lineage_reference_at_indexed_location(
         &self,
         indexed_location: &IndexedLocation,
+        _habitat: &AlmostInfiniteHabitat,
     ) -> Option<&GlobalLineageReference> {
         self.location_to_lineage_references
             .get(indexed_location.location())
             .map(|local_reference| self[*local_reference].global_reference())
     }
 
-    #[debug_requires(
-        self.landscape_extent.contains(&indexed_location.location()),
-        "indexed_location is inside landscape extent"
-    )]
     #[debug_requires(indexed_location.index() == 0, "only one lineage per location")]
     fn insert_lineage_to_indexed_location_coherent(
         &mut self,
         reference: InMemoryLineageReference,
         indexed_location: IndexedLocation,
+        _habitat: &AlmostInfiniteHabitat,
     ) {
         self.location_to_lineage_references
             .insert(indexed_location.location().clone(), reference);
@@ -120,16 +114,13 @@ impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
 
     #[must_use]
     #[debug_requires(
-        self.landscape_extent.contains(self[reference].indexed_location().unwrap().location()),
-        "lineage's location is inside landscape extent"
-    )]
-    #[debug_requires(
         self[reference].indexed_location().unwrap().index() == 0,
         "only one lineage per location"
     )]
     fn extract_lineage_from_its_location_coherent(
         &mut self,
         reference: InMemoryLineageReference,
+        _habitat: &AlmostInfiniteHabitat,
     ) -> IndexedLocation {
         let lineage: &Lineage = &self.lineages_store[Into::<usize>::into(reference)];
 

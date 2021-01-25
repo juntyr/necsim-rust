@@ -12,11 +12,11 @@ pub struct LandscapeExtent {
 
 impl LandscapeExtent {
     #[must_use]
-    #[debug_ensures(ret.x() == x, "stores x")]
-    #[debug_ensures(ret.y() == y, "stores y")]
-    #[debug_ensures(ret.width() == width, "stores width")]
-    #[debug_ensures(ret.height() == height, "stores height")]
-    pub fn new(x: u32, y: u32, width: u32, height: u32) -> Self {
+    // #[debug_ensures(ret.x() == x, "stores x")]
+    // #[debug_ensures(ret.y() == y, "stores y")]
+    // #[debug_ensures(ret.width() == width, "stores width")]
+    // #[debug_ensures(ret.height() == height, "stores height")]
+    pub const fn new(x: u32, y: u32, width: u32, height: u32) -> Self {
         Self {
             x,
             y,

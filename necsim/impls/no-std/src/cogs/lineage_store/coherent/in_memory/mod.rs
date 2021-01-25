@@ -8,7 +8,7 @@ use hashbrown::hash_map::HashMap;
 use necsim_core::{
     cogs::{Habitat, LineageStore},
     intrinsics::floor,
-    landscape::{IndexedLocation, LandscapeExtent, Location},
+    landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},
 };
 
@@ -19,7 +19,6 @@ mod store;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct CoherentInMemoryLineageStore<H: Habitat> {
-    landscape_extent: LandscapeExtent,
     lineages_store: Vec<Lineage>,
     location_to_lineage_references: Array2D<Vec<InMemoryLineageReference>>,
     indexed_location_to_lineage_reference:
@@ -50,10 +49,6 @@ impl<H: Habitat> CoherentInMemoryLineageStore<H> {
     } else {
         true
     }, "samples active lineages according to sample_percentage")]
-    #[debug_ensures(
-        ret.landscape_extent == habitat.get_extent(),
-        "stores landscape_extent"
-    )]
     pub fn new(sample_percentage: f64, habitat: &H) -> Self {
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
@@ -157,7 +152,6 @@ impl<H: Habitat> CoherentInMemoryLineageStore<H> {
         lineages_store.shrink_to_fit();
 
         Self {
-            landscape_extent,
             lineages_store,
             location_to_lineage_references,
             indexed_location_to_lineage_reference,

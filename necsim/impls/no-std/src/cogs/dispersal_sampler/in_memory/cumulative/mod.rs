@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 
 use necsim_core::{
     cogs::{Habitat, RngCore},
-    landscape::{LandscapeExtent, Location},
+    landscape::Location,
 };
 
 use crate::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
@@ -17,7 +17,6 @@ mod dispersal;
 pub struct InMemoryCumulativeDispersalSampler {
     cumulative_dispersal: Vec<f64>,
     valid_dispersal_targets: Vec<Option<usize>>,
-    habitat_extent: LandscapeExtent,
 }
 
 #[contract_trait]
@@ -33,8 +32,10 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G> for InMemoryCumulati
         .explicit_only_valid_targets_dispersal_contract(old(habitat)),
         "valid_dispersal_targets only allows dispersal to habitat"
     )]
-    //#[debug_ensures(..., "cumulative_dispersal stores the cumulative distribution
-    //#[debug_ensures(..., function")]
+    //#[debug_ensures(
+    //    ...,
+    //    "cumulative_dispersal stores the cumulative distribution function"
+    //)]
     fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Result<Self, Error> {
         let habitat_extent = habitat.get_extent();
 
@@ -89,7 +90,6 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G> for InMemoryCumulati
         Ok(InMemoryCumulativeDispersalSampler {
             cumulative_dispersal,
             valid_dispersal_targets,
-            habitat_extent,
         })
     }
 }

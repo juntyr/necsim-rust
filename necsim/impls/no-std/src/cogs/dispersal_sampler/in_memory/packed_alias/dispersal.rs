@@ -9,14 +9,18 @@ use crate::alias::packed::AliasMethodSamplerAtom;
 
 use super::InMemoryPackedAliasDispersalSampler;
 
+#[contract_trait]
 impl<H: Habitat, G: RngCore> DispersalSampler<H, G> for InMemoryPackedAliasDispersalSampler<H, G> {
     #[must_use]
-    #[debug_requires(self.habitat_extent.contains(location), "location is inside habitat extent")]
-    #[debug_ensures(self.habitat_extent.contains(&ret), "target is inside habitat extent")]
-    fn sample_dispersal_from_location(&self, location: &Location, rng: &mut G) -> Location {
+    fn sample_dispersal_from_location(
+        &self,
+        location: &Location,
+        habitat: &H,
+        rng: &mut G,
+    ) -> Location {
         let location_index = (
-            (location.y() - self.habitat_extent.y()) as usize,
-            (location.x() - self.habitat_extent.x()) as usize,
+            (location.y() - habitat.get_extent().y()) as usize,
+            (location.x() - habitat.get_extent().x()) as usize,
         );
 
         let alias_dispersals_at_location = &self.alias_dispersal_buffer
@@ -27,10 +31,10 @@ impl<H: Habitat, G: RngCore> DispersalSampler<H, G> for InMemoryPackedAliasDispe
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
-            (dispersal_target_index % (self.habitat_extent.width() as usize)) as u32
-                + self.habitat_extent.x(),
-            (dispersal_target_index / (self.habitat_extent.width() as usize)) as u32
-                + self.habitat_extent.y(),
+            (dispersal_target_index % (habitat.get_extent().width() as usize)) as u32
+                + habitat.get_extent().x(),
+            (dispersal_target_index / (habitat.get_extent().width() as usize)) as u32
+                + habitat.get_extent().y(),
         )
     }
 }

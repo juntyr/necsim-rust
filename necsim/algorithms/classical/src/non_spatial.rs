@@ -28,7 +28,7 @@ impl NonSpatialSimulation for ClassicalSimulation {
         let habitat = NonSpatialHabitat::new(area, deme);
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation);
-        let dispersal_sampler = NonSpatialDispersalSampler::new(&habitat);
+        let dispersal_sampler = NonSpatialDispersalSampler::default();
         let lineage_store = CoherentInMemoryLineageStore::new(sample_percentage, &habitat);
 
         Ok(ClassicalSimulation::simulate(

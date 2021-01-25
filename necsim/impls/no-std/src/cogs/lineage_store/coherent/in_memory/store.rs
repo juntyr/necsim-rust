@@ -49,53 +49,44 @@ impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
     type LocationIterator<'a> = LocationIterator;
 
     #[must_use]
-    fn iter_active_locations(&self) -> Self::LocationIterator<'_> {
-        self.landscape_extent.iter()
+    fn iter_active_locations(&self, habitat: &H) -> Self::LocationIterator<'_> {
+        habitat.get_extent().iter()
     }
 
     #[must_use]
-    #[debug_requires(
-        self.landscape_extent.contains(location),
-        "location is inside landscape extent"
-    )]
     fn get_active_local_lineage_references_at_location_unordered(
         &self,
         location: &Location,
+        habitat: &H,
     ) -> &[InMemoryLineageReference] {
         &self.location_to_lineage_references[(
-            (location.y() - self.landscape_extent.y()) as usize,
-            (location.x() - self.landscape_extent.x()) as usize,
+            (location.y() - habitat.get_extent().y()) as usize,
+            (location.x() - habitat.get_extent().x()) as usize,
         )]
     }
 
     #[must_use]
-    #[debug_requires(
-        self.landscape_extent.contains(indexed_location.location()),
-        "indexed_location is inside landscape extent"
-    )]
     fn get_active_global_lineage_reference_at_indexed_location(
         &self,
         indexed_location: &IndexedLocation,
+        _habitat: &H,
     ) -> Option<&GlobalLineageReference> {
         self.indexed_location_to_lineage_reference
             .get(indexed_location)
             .map(|(global_reference, _index)| global_reference)
     }
 
-    #[debug_requires(
-        self.landscape_extent.contains(indexed_location.location()),
-        "indexed_location is inside landscape extent"
-    )]
     fn insert_lineage_to_indexed_location_coherent(
         &mut self,
         reference: InMemoryLineageReference,
         indexed_location: IndexedLocation,
+        habitat: &H,
     ) {
         let lineage: &Lineage = &self.lineages_store[Into::<usize>::into(reference)];
 
         let lineages_at_location = &mut self.location_to_lineage_references[(
-            (indexed_location.location().y() - self.landscape_extent.y()) as usize,
-            (indexed_location.location().x() - self.landscape_extent.x()) as usize,
+            (indexed_location.location().y() - habitat.get_extent().y()) as usize,
+            (indexed_location.location().x() - habitat.get_extent().x()) as usize,
         )];
 
         self.indexed_location_to_lineage_reference.insert(
@@ -114,13 +105,10 @@ impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
     }
 
     #[must_use]
-    #[debug_requires(
-        self.landscape_extent.contains(self[reference].indexed_location().unwrap().location()),
-        "lineage's location is inside landscape extent"
-    )]
     fn extract_lineage_from_its_location_coherent(
         &mut self,
         reference: InMemoryLineageReference,
+        habitat: &H,
     ) -> IndexedLocation {
         let lineage_indexed_location =
             unsafe { self.lineages_store[Into::<usize>::into(reference)].remove_from_location() };
@@ -132,8 +120,8 @@ impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
             .unwrap();
 
         let lineages_at_location = &mut self.location_to_lineage_references[(
-            (lineage_indexed_location.location().y() - self.landscape_extent.y()) as usize,
-            (lineage_indexed_location.location().x() - self.landscape_extent.x()) as usize,
+            (lineage_indexed_location.location().y() - habitat.get_extent().y()) as usize,
+            (lineage_indexed_location.location().x() - habitat.get_extent().x()) as usize,
         )];
 
         lineages_at_location.swap_remove(local_index);

@@ -1140,6 +1140,29 @@ impl<T> Array2D<T> {
         self.elements_row_major_iter().cloned().collect()
     }
 
+    /// Converts the [`Array2D`] into a [`Vec`] of elements in [row major
+    /// order].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use array2d::{Array2D, Error};
+    /// # fn main() -> Result<(), Error> {
+    /// let rows = vec![vec![1, 2, 3], vec![4, 5, 6]];
+    /// let array = Array2D::from_rows(&rows)?;
+    /// assert_eq!(array.into_row_major(), vec![1, 2, 3, 4, 5, 6]);
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Array2D`]: struct.Array2D.html
+    /// [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
+    /// [row major order]: https://en.wikipedia.org/wiki/Row-_and_column-major_order
+    #[must_use]
+    pub fn into_row_major(self) -> Vec<T> {
+        self.array.into()
+    }
+
     /// Collects the [`Array2D`] into a [`Vec`] of elements in [column major
     /// order].
     ///
