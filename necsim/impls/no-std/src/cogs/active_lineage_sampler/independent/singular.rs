@@ -1,15 +1,18 @@
 use necsim_core::cogs::{
-    DispersalSampler, EmigrationExit, Habitat, IncoherentLineageStore, LineageReference,
-    PrimeableRng, SingularActiveLineageSampler, SpeciationProbability,
+    DispersalSampler, EmigrationExit, Habitat, PrimeableRng, SingularActiveLineageSampler,
+    SpeciationProbability,
 };
+
+use necsim_core::lineage::Lineage;
 
 use crate::cogs::{
     coalescence_sampler::independent::IndependentCoalescenceSampler,
     event_sampler::independent::IndependentEventSampler,
     immigration_entry::never::NeverImmigrationEntry,
+    lineage_store::incoherent::independent::IndependentLineageStore,
 };
 
-use super::{EventTimeSampler, IndependentActiveLineageSampler};
+use super::{EventTimeSampler, IndependentActiveLineageSampler, IndependentLineageReference};
 
 impl<
         H: Habitat,
@@ -17,64 +20,37 @@ impl<
         N: SpeciationProbability<H>,
         T: EventTimeSampler<H, G>,
         D: DispersalSampler<H, G>,
-        R: LineageReference<H>,
-        S: IncoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, N, D, IndependentLineageReference, IndependentLineageStore<H>>,
     >
     SingularActiveLineageSampler<
         H,
         G,
         N,
         D,
-        R,
-        S,
+        IndependentLineageReference,
+        IndependentLineageStore<H>,
         X,
-        IndependentCoalescenceSampler<H, R, S>,
-        IndependentEventSampler<H, G, N, D, R, S, X>,
+        IndependentCoalescenceSampler<H, IndependentLineageReference, IndependentLineageStore<H>>,
+        IndependentEventSampler<
+            H,
+            G,
+            N,
+            D,
+            IndependentLineageReference,
+            IndependentLineageStore<H>,
+            X,
+        >,
         NeverImmigrationEntry,
-    > for IndependentActiveLineageSampler<H, G, N, T, D, R, S, X>
+    > for IndependentActiveLineageSampler<H, G, N, T, D, X>
 {
     #[must_use]
     #[inline]
-    fn replace_active_lineage(
-        &mut self,
-        active_lineage_reference: Option<R>,
-        habitat: &H,
-        lineage_store: &mut S,
-    ) -> Option<R> {
-        let old_lineage_reference = self.active_lineage_reference.take();
-
-        // Save the state of the old lineage reference back to the lineage store
-        if let Some(lineage_reference) = &old_lineage_reference {
-            lineage_store.update_lineage_time_of_last_event(
-                lineage_reference.clone(),
-                self.lineage_time_of_last_event,
-            );
-            self.lineage_time_of_last_event = 0.0_f64;
-
-            if let Some(indexed_location) = self.lineage_indexed_location.take() {
-                lineage_store.insert_lineage_to_indexed_location(
-                    lineage_reference.clone(),
-                    indexed_location,
-                    habitat,
-                );
-            }
+    fn replace_active_lineage(&mut self, active_lineage: Option<Lineage>) -> Option<Lineage> {
+        #[allow(clippy::option_if_let_else)]
+        if let Some(active_lineage) = active_lineage {
+            self.active_lineage.replace(active_lineage)
+        } else {
+            self.active_lineage.take()
         }
-
-        // Load the state of the new lineage reference from the lineage store
-        if let Some(lineage_reference) = active_lineage_reference {
-            if let Some(lineage) = lineage_store.get(lineage_reference.clone()) {
-                if lineage.is_active() {
-                    self.lineage_time_of_last_event = lineage.time_of_last_event();
-                    self.lineage_indexed_location = Some(
-                        lineage_store
-                            .extract_lineage_from_its_location(lineage_reference.clone(), habitat),
-                    );
-                    self.active_lineage_reference = Some(lineage_reference);
-                }
-            }
-        }
-
-        old_lineage_reference
     }
 }
