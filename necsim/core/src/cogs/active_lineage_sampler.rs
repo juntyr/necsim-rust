@@ -4,7 +4,8 @@ use super::{
 };
 
 use crate::{
-    landscape::IndexedLocation, lineage::GlobalLineageReference,
+    landscape::IndexedLocation,
+    lineage::{GlobalLineageReference, Lineage},
     simulation::partial::active_lineager_sampler::PartialSimulation,
 };
 
@@ -153,10 +154,5 @@ pub trait SingularActiveLineageSampler<
 >: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
 {
     #[must_use]
-    fn replace_active_lineage(
-        &mut self,
-        active_lineage_reference: Option<R>,
-        habitat: &H,
-        lineage_store: &mut S,
-    ) -> Option<R>;
+    fn replace_active_lineage(&mut self, active_lineage: Option<Lineage>) -> Option<Lineage>;
 }

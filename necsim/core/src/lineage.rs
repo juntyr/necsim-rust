@@ -7,7 +7,7 @@ use crate::{cogs::Habitat, landscape::IndexedLocation};
 pub struct GlobalLineageReference(NonZeroU64);
 
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Lineage {
     global_reference: GlobalLineageReference,
     indexed_location: Option<IndexedLocation>,
@@ -67,6 +67,22 @@ impl Lineage {
             Some(indexed_location) => indexed_location,
             None => unreachable!(),
         }
+    }
+
+    /// # Safety
+    /// This method should only be called by internal `LineageStore` code to
+    /// update the state of the lineages being simulated.
+    #[debug_ensures(!self.is_active(), "lineages has been deactivated")]
+    #[debug_ensures(
+        ret.is_some() == old(self.is_active()),
+        "returns None iff inactive"
+    )]
+    #[debug_ensures(
+        ret == old(self.indexed_location.clone()),
+        "if active, returns the individual's prior indexed_location"
+    )]
+    pub unsafe fn try_remove_from_location(&mut self) -> Option<IndexedLocation> {
+        self.indexed_location.take()
     }
 
     /// # Safety
