@@ -38,11 +38,12 @@ impl<
     #[must_use]
     #[inline]
     fn replace_active_lineage(&mut self, active_lineage: Option<Lineage>) -> Option<Lineage> {
-        #[allow(clippy::option_if_let_else)]
-        if let Some(active_lineage) = active_lineage {
-            self.active_lineage.replace(active_lineage)
-        } else {
-            self.active_lineage.take()
-        }
+        // `core::mem::replace()` would be semantically better
+        //  - but `clone()` does not spill to local memory
+        let old_active_lineage = self.active_lineage.clone();
+
+        self.active_lineage = active_lineage;
+
+        old_active_lineage
     }
 }
