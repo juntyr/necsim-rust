@@ -50,8 +50,10 @@ impl<T: Clone + DeviceCopy> ValueBuffer<T> {
     pub fn with_value_for_core<F: FnOnce(Option<T>) -> Option<T>>(&mut self, inner: F) {
         let index = rust_cuda::device::utils::index();
 
-        let task = self.buffer[index].take();
+        // `take()` would be semantically better - but `clone()` does not spill to local
+        // memory
+        let value = self.buffer[index].clone();
 
-        self.buffer[index] = inner(task);
+        self.buffer[index] = inner(value);
     }
 }

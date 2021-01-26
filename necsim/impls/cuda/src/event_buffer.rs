@@ -98,8 +98,8 @@ impl<const REPORT_SPECIATION: bool, const REPORT_DISPERSAL: bool> Reporter
         if (REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
             || (REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
         {
-            self.buffer[rust_cuda::device::utils::index() * self.max_events + self.event_counter]
-                .replace(event.clone());
+            self.buffer[rust_cuda::device::utils::index() * self.max_events + self.event_counter] =
+                Some(event.clone());
 
             self.event_counter += 1;
         }

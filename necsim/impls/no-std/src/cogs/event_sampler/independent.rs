@@ -187,6 +187,12 @@ impl<
         &mut self,
         new: Option<SpeciationSample>,
     ) -> Option<SpeciationSample> {
-        core::mem::replace(&mut self.min_spec_sample, new)
+        // `core::mem::replace()` would be semantically better
+        //  - but `clone()` does not spill to local memory
+        let old_value = self.min_spec_sample.clone();
+
+        self.min_spec_sample = new;
+
+        old_value
     }
 }
