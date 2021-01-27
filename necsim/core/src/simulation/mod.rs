@@ -69,6 +69,8 @@ impl<
                 break;
             }
 
+            reporter.report_progress(self.active_lineage_sampler().number_active_lineages() as u64);
+
             steps += 1;
         }
 
