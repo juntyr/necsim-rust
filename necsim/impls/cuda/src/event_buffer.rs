@@ -104,4 +104,9 @@ impl<const REPORT_SPECIATION: bool, const REPORT_DISPERSAL: bool> Reporter
             self.event_counter += 1;
         }
     }
+
+    #[inline]
+    fn report_progress(&mut self, _remaining: u64) {
+        // Ignore the progress from the individual simulations
+    }
 }

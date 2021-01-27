@@ -2,8 +2,9 @@ use necsim_impls_no_std::reporter::ReporterContext;
 
 use necsim_impls_std::reporter::biodiversity::BiodiversityReporter;
 // use necsim_impls_std::reporter::events::EventReporter;
-// use necsim_impls_std::reporter::execution_time::ExecutionTimeReporter;
-use necsim_impls_std::reporter::progress::ProgressReporter;
+use necsim_impls_std::reporter::{
+    execution_time::ExecutionTimeReporter, progress::ProgressReporter,
+};
 
 pub struct RustcoalescenceReporterContext {
     estimated_total_lineages: u64,
@@ -18,14 +19,18 @@ impl RustcoalescenceReporterContext {
 }
 
 impl ReporterContext for RustcoalescenceReporterContext {
-    type Reporter = ReporterGroupType![BiodiversityReporter, ProgressReporter];
+    type Reporter = ReporterGroupType![
+        BiodiversityReporter,
+        ExecutionTimeReporter,
+        ProgressReporter
+    ];
 
     fn with_reporter<O, F: FnOnce(&mut Self::Reporter) -> O>(self, inner: F) -> O {
         // I. Initialise the reporters
 
         let mut biodiversity_reporter = BiodiversityReporter::default();
         // let mut event_reporter = EventReporter::default();
-        // let mut execution_time_reporter = ExecutionTimeReporter::default();
+        let mut execution_time_reporter = ExecutionTimeReporter::default();
         let mut progress_reporter = ProgressReporter::new(self.estimated_total_lineages);
 
         // II. Group the reporters into one static group type
@@ -33,7 +38,7 @@ impl ReporterContext for RustcoalescenceReporterContext {
         let mut reporter_group = ReporterGroup![
             biodiversity_reporter,
             // event_reporter,
-            // execution_time_reporter,
+            execution_time_reporter,
             progress_reporter
         ];
 
@@ -46,21 +51,31 @@ impl ReporterContext for RustcoalescenceReporterContext {
         ReporterUnGroup! {reporter_group => [
             biodiversity_reporter,
             // event_reporter,
-            // execution_time_reporter,
+            execution_time_reporter,
             progress_reporter
         ]};
 
         // V. Output the simulation result and report summaries
 
-        // let execution_time = execution_time_reporter.execution_time();
+        let execution_time = execution_time_reporter.execution_time();
         progress_reporter.finish();
+
         // event_reporter.report();
-        // println!(
-        // "The simulation took {}s to execute.",
-        // execution_time.as_secs_f32()
-        // );
+
+        if let Some(execution_time) = execution_time {
+            println!("The simulation took:");
+            println!(
+                " - initialisation: {}s",
+                execution_time.initialisation.as_secs_f32()
+            );
+            println!(" - execution: {}s", execution_time.execution.as_secs_f32());
+            println!(" - cleanup: {}s", execution_time.cleanup.as_secs_f32());
+        } else {
+            println!("The simulation was not executed.");
+        }
+
         println!(
-            "Simulation resulted with biodiversity of {} unique species.",
+            "The simulation resulted in a biodiversity of {} unique species.",
             biodiversity_reporter.biodiversity()
         );
 

@@ -1,43 +1,38 @@
-use necsim_core::{
-    event::{Event, EventType},
-    reporter::{EventFilter, Reporter},
-};
+use std::cmp::Ordering;
 
 use indicatif::{ProgressBar, ProgressStyle};
+
+use necsim_core::reporter::{EventFilter, Reporter};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ProgressReporter {
     progress: ProgressBar,
+    last_remaining: u64,
+    total: u64,
 }
 
 impl EventFilter for ProgressReporter {
     const REPORT_DISPERSAL: bool = false;
-    const REPORT_SPECIATION: bool = true;
+    const REPORT_SPECIATION: bool = false;
 }
 
 impl Reporter for ProgressReporter {
-    #[debug_ensures(match event.r#type() {
-        EventType::Speciation | EventType::Dispersal {
-            coalescence: Some(_),
-            ..
-        } => {
-            self.progress.position() == old(self.progress.position()) + 1
-        },
-        _ => self.progress.position() == old(self.progress.position()),
-    }, "only speciation and coalescence increment the progress")]
-    fn report_event(&mut self, event: &Event) {
-        if self.progress.position() == 0 {
-            self.progress.reset();
+    #[inline]
+    fn report_progress(&mut self, remaining: u64) {
+        match remaining.cmp(&self.last_remaining) {
+            Ordering::Greater => {
+                self.total += remaining - self.last_remaining;
+
+                self.progress.set_length(self.total);
+                self.progress.set_position(self.total - remaining);
+            },
+            Ordering::Less => {
+                self.progress.inc(self.last_remaining - remaining);
+            },
+            Ordering::Equal => (),
         }
 
-        match event.r#type() {
-            EventType::Speciation
-            | EventType::Dispersal {
-                coalescence: Some(_),
-                ..
-            } => self.progress.inc(1),
-            _ => (),
-        }
+        self.last_remaining = remaining;
     }
 }
 
@@ -51,7 +46,12 @@ impl ProgressReporter {
 
         progress.enable_steady_tick(100);
 
-        Self { progress }
+        Self {
+            progress,
+
+            last_remaining: 0_u64,
+            total: 0_u64,
+        }
     }
 
     pub fn finish(self) {

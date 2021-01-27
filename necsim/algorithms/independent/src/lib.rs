@@ -6,12 +6,14 @@
 #[macro_use]
 extern crate contracts;
 
-use hashbrown::HashSet;
+use std::collections::VecDeque;
+
+use lru::LruCache;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, Habitat, MinSpeciationTrackingEventSampler,
-        RngCore, SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
+        DispersalSampler, Habitat, MinSpeciationTrackingEventSampler, RngCore,
+        SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
     },
     lineage::{GlobalLineageReference, Lineage},
     simulation::Simulation,
@@ -52,7 +54,7 @@ impl IndependentSimulation {
         habitat: H,
         speciation_probability: N,
         dispersal_sampler: D,
-        mut lineages: Vec<Lineage>,
+        lineages: Vec<Lineage>,
         seed: u64,
         reporter_context: P,
     ) -> (f64, u64) {
@@ -85,38 +87,42 @@ impl IndependentSimulation {
                 .active_lineage_sampler(active_lineage_sampler)
                 .build();
 
-            let mut min_spec_samples: HashSet<SpeciationSample> = HashSet::new();
+            let mut min_spec_samples: LruCache<SpeciationSample, ()> =
+                LruCache::new(lineages.len() * 5);
 
             let mut total_steps = 0_u64;
             let mut max_time = 0.0_f64;
 
-            while let Some(active_lineage) = lineages.pop() {
-                // As the inner while loop runs until completion, prior tasks in the simulation
-                //  will have already been completed and can be discarded
-                let _completed_task = simulation
+            let mut lineages: VecDeque<Lineage> = lineages.into();
+
+            while let Some(active_lineage) = lineages.pop_front() {
+                reporter.report_total_progress(lineages.len() as u64);
+
+                let previous_task = simulation
                     .active_lineage_sampler_mut()
                     .replace_active_lineage(Some(active_lineage));
 
-                while simulation.active_lineage_sampler().number_active_lineages() > 0 {
-                    let old_min_spec_sample =
-                        simulation.event_sampler_mut().replace_min_speciation(None);
+                let previous_speciation_sample =
+                    simulation.event_sampler_mut().replace_min_speciation(None);
 
-                    let (new_time, new_steps) =
-                        simulation.simulate_incremental(SIMULATION_STEP_SLICE, &mut reporter);
-
-                    let new_min_spec_sample = simulation
-                        .event_sampler_mut()
-                        .replace_min_speciation(old_min_spec_sample);
-
-                    total_steps += new_steps;
-                    max_time = max_time.max(new_time);
-
-                    if let Some(new_min_spec_sample) = new_min_spec_sample {
-                        if !min_spec_samples.insert(new_min_spec_sample) {
-                            break;
+                if let Some(previous_speciation_sample) = previous_speciation_sample {
+                    if min_spec_samples
+                        .put(previous_speciation_sample, ())
+                        .is_none()
+                    {
+                        if let Some(previous_task) = previous_task {
+                            if previous_task.is_active() {
+                                lineages.push_back(previous_task);
+                            }
                         }
                     }
                 }
+
+                let (new_time, new_steps) =
+                    simulation.simulate_incremental(SIMULATION_STEP_SLICE, &mut reporter);
+
+                total_steps += new_steps;
+                max_time = max_time.max(new_time);
             }
 
             (max_time, total_steps)

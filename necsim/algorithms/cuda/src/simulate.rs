@@ -1,9 +1,8 @@
-use std::{
-    collections::{HashSet, VecDeque},
-    ffi::CString,
-};
+use std::{collections::VecDeque, ffi::CString};
 
 use anyhow::Result;
+
+use lru::LruCache;
 
 use rustacuda::{
     function::{BlockSize, GridSize},
@@ -82,7 +81,8 @@ pub fn simulate<
         .with_dimensions(grid_size, block_size, 0_u32)
         .with_stream(stream);
 
-    let mut min_spec_samples: HashSet<SpeciationSample> = HashSet::new();
+    let mut min_spec_samples: LruCache<SpeciationSample, ()> =
+        LruCache::new(individual_tasks.len() * 5);
     let mut duplicate_individuals = bitbox![0; min_spec_sample_buffer.len()];
 
     let mut task_list = ExchangeWithCudaWrapper::new(task_list)?;
@@ -128,7 +128,7 @@ pub fn simulate<
             // Fetch the completion of the tasks
             for (i, spec_sample) in min_spec_sample_buffer.iter_mut().enumerate() {
                 if let Some(spec_sample) = spec_sample.take() {
-                    duplicate_individuals.set(i, !min_spec_samples.insert(spec_sample));
+                    duplicate_individuals.set(i, min_spec_samples.put(spec_sample, ()).is_some());
                 }
             }
 
@@ -142,6 +142,7 @@ pub fn simulate<
             }
 
             event_buffer.report_events(reporter);
+            reporter.report_progress(individual_tasks.len() as u64);
         }
 
         Ok(())

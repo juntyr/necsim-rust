@@ -6,7 +6,15 @@ pub trait EventFilter {
 }
 
 pub trait Reporter: EventFilter {
-    fn report_event(&mut self, event: &Event);
+    #[inline]
+    fn report_event(&mut self, _event: &Event) {
+        // no-op
+    }
+
+    #[inline]
+    fn report_progress(&mut self, _remaining: u64) {
+        // no-op
+    }
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -18,7 +26,13 @@ impl EventFilter for NullReporter {
 }
 
 impl Reporter for NullReporter {
+    #[inline]
     fn report_event(&mut self, _event: &Event) {
+        // no-op
+    }
+
+    #[inline]
+    fn report_progress(&mut self, _remaining: u64) {
         // no-op
     }
 }
@@ -39,6 +53,12 @@ impl<F: Reporter, T: Reporter> Reporter for ReporterCombinator<F, T> {
     fn report_event(&mut self, event: &Event) {
         self.front.report_event(event);
         self.tail.report_event(event);
+    }
+
+    #[inline]
+    fn report_progress(&mut self, remaining: u64) {
+        self.front.report_progress(remaining);
+        self.tail.report_progress(remaining);
     }
 }
 
