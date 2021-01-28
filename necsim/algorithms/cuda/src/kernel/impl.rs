@@ -40,8 +40,8 @@ impl<
     >(
         inner: F,
     ) -> Result<Q> {
-        // Load the module containing the kernel function
-        let module = CudaDropWrapper::from(Module::load_from_string(specialiser::get_ptx_cstr::<
+        // Load the module PTX &CStr containing the kernel function
+        let ptx_cstr = specialiser::get_ptx_cstr::<
             H,
             G,
             N,
@@ -55,7 +55,20 @@ impl<
             A,
             REPORT_SPECIATION,
             REPORT_DISPERSAL,
-        >())?);
+        >();
+
+        let mut jit = ptx_jit::PtxJIT::new(ptx_cstr);
+
+        println!("{:?}", jit.with_arguments(None));
+        println!(
+            "{:?}",
+            jit.with_arguments(Some(
+                vec![vec![0x1, 0x2, 0x3, 0x4].into_boxed_slice()].into_boxed_slice()
+            ))
+        );
+
+        // JIT compile the module
+        let module = CudaDropWrapper::from(Module::load_from_string(ptx_cstr)?);
 
         // Load the kernel function from the module
         let entry_point = module.get_function(&CString::new("simulate").unwrap())?;
