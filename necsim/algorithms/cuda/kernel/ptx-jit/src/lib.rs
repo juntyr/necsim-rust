@@ -5,18 +5,21 @@ use std::{
 
 use regex::bytes::Regex;
 
+#[derive(Debug)]
 pub struct PtxJIT {
     ptx_slices: Box<[PtxElement]>,
     last_arguments: Option<Box<[Box<[u8]>]>>,
     last_ptx: CString,
 }
 
+#[derive(Debug)]
 enum PtxLoadWidth {
     B2,
     B4,
     B8,
 }
 
+#[derive(Debug)]
 enum PtxElement {
     Source {
         ptx: Box<[u8]>,
@@ -40,9 +43,8 @@ impl PtxJIT {
         )
         .unwrap();
         let const_load_regex = Regex::new(
-            r"(?x-u)(?P<instruction>ld\.global\.[suf](?P<loadwidth>16|32|64)\s*
-            (?P<constreg>%[rf][sd]?\d+),\s*\[(?P<basereg>%r[ds]?\d+)
-            (?:\+(?P<loadoffset>\d+))?\])\s*;",
+            r"(?x-u)(?P<instruction>ld\.global\.[suf](?P<loadwidth>16|32|64)\s*(?P<constreg>
+            %[rf][sd]?\d+),\s*\[(?P<basereg>%r[ds]?\d+)(?:\+(?P<loadoffset>\d+))?\]\s*;)",
         )
         .unwrap();
 
@@ -93,7 +95,7 @@ impl PtxJIT {
                         .map(|s| s.as_bytes())
                     {
                         Some(&[0x31, 0x36]) => Some(PtxLoadWidth::B2),
-                        Some(&[0x32, 0x32]) => Some(PtxLoadWidth::B4),
+                        Some(&[0x33, 0x32]) => Some(PtxLoadWidth::B4),
                         Some(&[0x36, 0x34]) => Some(PtxLoadWidth::B8),
                         _ => None,
                     } {

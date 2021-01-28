@@ -59,12 +59,13 @@ impl<
 
         let mut jit = ptx_jit::PtxJIT::new(ptx_cstr);
 
-        println!("{:?}", jit.with_arguments(None));
         println!(
-            "{:?}",
+            "\n\n{}\n\n",
             jit.with_arguments(Some(
-                vec![vec![0x1, 0x2, 0x3, 0x4].into_boxed_slice()].into_boxed_slice()
+                vec![(1..=136).collect::<Vec<u8>>().into_boxed_slice()].into_boxed_slice()
             ))
+            .to_str()
+            .unwrap()
         );
 
         // JIT compile the module
