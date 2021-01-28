@@ -5,6 +5,7 @@
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
 #![feature(min_const_generics)]
+#![feature(asm)]
 
 extern crate alloc;
 
@@ -115,6 +116,13 @@ unsafe fn simulate_generic<
     >,
     max_steps: u64,
 ) {
+    // TODO: make into a macro, right now we will trust the user to give the correct
+    // param name TODO: move to rust-cuda and remove #![feature(asm)] from
+    // kernel
+    unsafe {
+        asm!("// <rust-cuda-const-marker-{}-0> //", in(reg32) *(simulation_cuda_repr.as_ref() as *const _ as *const u32))
+    }
+
     Simulation::with_borrow_from_rust_mut(simulation_cuda_repr, |simulation| {
         ValueBuffer::with_borrow_from_rust_mut(task_list_cuda_repr, |task_list| {
             task_list.with_value_for_core(|task| {
