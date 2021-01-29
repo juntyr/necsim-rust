@@ -11,6 +11,7 @@ use necsim_core::cogs::{
 use rustacuda::{function::Function, module::Module};
 use rustacuda_core::DeviceCopy;
 
+use ptx_jit::host::compiler::PtxJITCompiler;
 use rust_cuda::{common::RustToCuda, host::CudaDropWrapper};
 
 use super::{specialiser, SimulationKernel};
@@ -35,7 +36,7 @@ impl<
     pub fn with_kernel<
         Q,
         F: FnOnce(
-            &SimulationKernel<H, G, N, D, R, S, X, C, E, I, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
+            SimulationKernel<H, G, N, D, R, S, X, C, E, I, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
         ) -> Result<Q>,
     >(
         inner: F,
@@ -57,30 +58,30 @@ impl<
             REPORT_DISPERSAL,
         >();
 
-        let mut jit = ptx_jit::PtxJIT::new(ptx_cstr);
+        // Initialise the PTX JIT compiler with the original PTX source string
+        let mut compiler = PtxJITCompiler::new(ptx_cstr);
 
-        println!(
-            "\n\n{}\n\n",
-            jit.with_arguments(Some(
-                vec![(1..=136).collect::<Vec<u8>>().into_boxed_slice()].into_boxed_slice()
-            ))
-            .to_str()
-            .unwrap()
-        );
-
-        // JIT compile the module
-        let module = CudaDropWrapper::from(Module::load_from_string(ptx_cstr)?);
+        // Compile the CUDA module
+        let mut module = CudaDropWrapper::from(Module::load_from_string(ptx_cstr)?);
 
         // Load the kernel function from the module
-        let entry_point = module.get_function(&CString::new("simulate").unwrap())?;
+        let mut entry_point = module.get_function(&CString::new("simulate").unwrap())?;
 
-        let kernel = SimulationKernel {
-            module: &module,
-            entry_point: &entry_point,
+        // Safety: the mut `module` is only safe because:
+        //  - `entry_point` is always dropped before `module` replaced
+        //  - neither are mutably changed internally, only replaced
+        let result = inner(SimulationKernel {
+            compiler: &mut compiler,
+            module: unsafe { &mut *(&module as *const _ as *mut _) },
+            entry_point: &mut entry_point,
             marker: PhantomData::<(H, G, N, D, R, S, X, C, E, I, A)>,
-        };
+        });
 
-        inner(&kernel)
+        // TODO: we also need to register which global variables we're using, so that
+        // prior values can be copied over       or it might be better to
+        // entirely remove global variables - makes the simulation more robust
+
+        result
     }
 
     pub fn function(&self) -> &Function {

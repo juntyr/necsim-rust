@@ -11,6 +11,8 @@ use rustacuda_core::DeviceCopy;
 
 use rust_cuda::common::RustToCuda;
 
+use ptx_jit::host::compiler::PtxJITCompiler;
+
 mod r#impl;
 mod launch;
 mod specialiser;
@@ -33,7 +35,8 @@ pub struct SimulationKernel<
     const REPORT_SPECIATION: bool,
     const REPORT_DISPERSAL: bool,
 > {
-    module: &'k Module,
-    entry_point: &'k Function<'k>,
+    compiler: &'k mut PtxJITCompiler,
+    module: &'k mut Module,
+    entry_point: &'k mut Function<'k>,
     marker: PhantomData<(H, G, N, D, R, S, X, C, E, I, A)>,
 }

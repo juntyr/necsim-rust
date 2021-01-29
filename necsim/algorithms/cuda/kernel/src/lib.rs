@@ -6,6 +6,7 @@
 #![feature(panic_info_message)]
 #![feature(min_const_generics)]
 #![feature(asm)]
+#![feature(core_intrinsics)]
 
 extern crate alloc;
 
@@ -58,13 +59,6 @@ use rustacuda_core::DeviceCopy;
 
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
-use core::sync::atomic::{AtomicU64, Ordering};
-
-extern "C" {
-    static global_time_max: AtomicU64;
-    static global_steps_sum: AtomicU64;
-}
-
 use rust_cuda::device::AnyDeviceBoxMut;
 
 /// # Safety
@@ -75,6 +69,8 @@ pub unsafe extern "ptx-kernel" fn simulate(
     task_list_any: AnyDeviceBoxMut,
     event_buffer_any: AnyDeviceBoxMut,
     min_spec_sample_buffer_any: AnyDeviceBoxMut,
+    global_time_max: AnyDeviceBoxMut,
+    global_steps_sum: AnyDeviceBoxMut,
     max_steps: u64,
 ) {
     specialise!(simulate_generic)(
@@ -86,6 +82,7 @@ pub unsafe extern "ptx-kernel" fn simulate(
     )
 }
 
+use ptx_jit::PtxJITConstLoad;
 use rust_cuda::common::DeviceBoxMut;
 
 #[inline]
@@ -114,14 +111,14 @@ unsafe fn simulate_generic<
     min_spec_sample_buffer_cuda_repr: DeviceBoxMut<
         <ValueBuffer<SpeciationSample> as RustToCuda>::CudaRepresentation,
     >,
+    global_time_max: DeviceBoxMut<u64>,
+    global_steps_sum: DeviceBoxMut<u64>,
     max_steps: u64,
 ) {
-    // TODO: make into a macro, right now we will trust the user to give the correct
-    // param name TODO: move to rust-cuda and remove #![feature(asm)] from
-    // kernel
-    unsafe {
-        asm!("// <rust-cuda-const-marker-{}-0> //", in(reg32) *(simulation_cuda_repr.as_ref() as *const _ as *const u32))
-    }
+    PtxJITConstLoad!([0] => simulation_cuda_repr.as_ref());
+    PtxJITConstLoad!([1] => task_list_cuda_repr.as_ref());
+    PtxJITConstLoad!([2] => event_buffer_cuda_repr.as_ref());
+    PtxJITConstLoad!([3] => min_spec_sample_buffer_cuda_repr.as_ref());
 
     Simulation::with_borrow_from_rust_mut(simulation_cuda_repr, |simulation| {
         ValueBuffer::with_borrow_from_rust_mut(task_list_cuda_repr, |task_list| {
@@ -147,9 +144,14 @@ unsafe fn simulate_generic<
                                         .simulate_incremental(max_steps, event_buffer_reporter);
 
                                     if steps > 0 {
-                                        global_time_max
-                                            .fetch_max(time.to_bits(), Ordering::Relaxed);
-                                        global_steps_sum.fetch_add(steps, Ordering::Relaxed);
+                                        core::intrinsics::atomic_umax_relaxed(
+                                            global_time_max.as_mut(),
+                                            time.to_bits(),
+                                        );
+                                        core::intrinsics::atomic_xadd_relaxed(
+                                            global_steps_sum.as_mut(),
+                                            steps,
+                                        );
                                     }
 
                                     simulation.event_sampler_mut().replace_min_speciation(None)
