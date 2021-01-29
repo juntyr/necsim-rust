@@ -59,8 +59,8 @@ impl<
     >
 {
     #[allow(clippy::type_complexity)]
-    pub unsafe fn launch(
-        &self,
+    pub unsafe fn launch_and_synchronise(
+        &mut self,
         simulation_ptr: DeviceBoxMut<
             <Simulation<H, G, N, D, R, S, X, C, E, I, A> as RustToCuda>::CudaRepresentation,
         >,
@@ -73,7 +73,7 @@ impl<
         >,
         max_steps: u64,
     ) -> CudaResult<()> {
-        let kernel = self.entry_point;
+        let kernel = &self.entry_point;
         let stream = self.stream;
 
         rustacuda::launch!(
@@ -83,6 +83,8 @@ impl<
                 self.shared_mem_bytes,
                 stream
             >>>(simulation_ptr, task_list_ptr, event_buffer_ptr, min_spec_sample_buffer_ptr, max_steps)
-        )
+        )?;
+
+        stream.synchronize()
     }
 }

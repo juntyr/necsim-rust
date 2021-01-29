@@ -136,7 +136,7 @@ impl CudaSimulation {
 
                     simulate(
                         &stream,
-                        &kernel,
+                        kernel,
                         (grid_size, block_size),
                         simulation,
                         lineages.into(),
