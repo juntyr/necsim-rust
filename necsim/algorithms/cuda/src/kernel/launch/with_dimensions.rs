@@ -6,14 +6,16 @@ use necsim_core::cogs::{
     SingularActiveLineageSampler, SpeciationProbability,
 };
 
-use rustacuda::function::{BlockSize, GridSize};
+use rustacuda::{
+    function::{BlockSize, Function, GridSize},
+    module::Module,
+};
 use rustacuda_core::DeviceCopy;
 
+use ptx_jit::host::compiler::PtxJITCompiler;
 use rust_cuda::common::RustToCuda;
 
 use super::SimulationKernel;
-
-use rustacuda::function::Function;
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::type_complexity)]
@@ -33,7 +35,9 @@ pub struct SimulationKernelWithDimensions<
     const REPORT_SPECIATION: bool,
     const REPORT_DISPERSAL: bool,
 > {
-    pub(super) entry_point: &'k Function<'k>,
+    pub(super) compiler: &'k mut PtxJITCompiler,
+    pub(super) module: &'k mut Module,
+    pub(super) entry_point: &'k mut Function<'k>,
     pub(super) marker: PhantomData<(H, G, N, D, R, S, X, C, E, I, A)>,
     pub(super) grid_size: GridSize,
     pub(super) block_size: BlockSize,
@@ -59,7 +63,7 @@ impl<
 {
     #[allow(clippy::type_complexity)]
     pub fn with_dimensions<GS: Into<GridSize>, BS: Into<BlockSize>>(
-        &self,
+        self,
         grid_size: GS,
         block_size: BS,
         shared_mem_bytes: u32,
@@ -80,6 +84,8 @@ impl<
         REPORT_DISPERSAL,
     > {
         SimulationKernelWithDimensions {
+            compiler: self.compiler,
+            module: self.module,
             entry_point: self.entry_point,
             marker: self.marker,
             grid_size: grid_size.into(),

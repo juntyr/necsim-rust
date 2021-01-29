@@ -49,7 +49,7 @@ pub fn simulate<
     const REPORT_DISPERSAL: bool,
 >(
     stream: &Stream,
-    kernel: &SimulationKernel<H, G, N, D, R, S, X, C, E, I, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
+    kernel: SimulationKernel<H, G, N, D, R, S, X, C, E, I, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
     config: (GridSize, BlockSize),
     mut simulation: Simulation<H, G, N, D, R, S, X, C, E, I, A>,
     mut individual_tasks: VecDeque<Lineage>,
@@ -77,7 +77,7 @@ pub fn simulate<
 
     let (grid_size, block_size) = config;
 
-    let kernel = kernel
+    let mut kernel = kernel
         .with_dimensions(grid_size, block_size, 0_u32)
         .with_stream(stream);
 
@@ -110,7 +110,7 @@ pub fn simulate<
             // enforce safety across the foreign function
             // CUDA-C language barrier
             unsafe {
-                kernel.launch(
+                kernel.launch_and_synchronise(
                     simulation_cuda_repr,
                     task_list_cuda.as_mut(),
                     event_buffer_cuda.as_mut(),
@@ -118,8 +118,6 @@ pub fn simulate<
                     max_steps,
                 )?;
             }
-
-            stream.synchronize()?;
 
             min_spec_sample_buffer = min_spec_sample_buffer_cuda.move_to_host()?;
             task_list = task_list_cuda.move_to_host()?;

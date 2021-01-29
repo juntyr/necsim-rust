@@ -7,16 +7,16 @@ use necsim_core::cogs::{
 };
 
 use rustacuda::{
-    function::{BlockSize, GridSize},
+    function::{BlockSize, Function, GridSize},
+    module::Module,
     stream::Stream,
 };
 use rustacuda_core::DeviceCopy;
 
+use ptx_jit::host::compiler::PtxJITCompiler;
 use rust_cuda::common::RustToCuda;
 
 use super::SimulationKernelWithDimensions;
-
-use rustacuda::function::Function;
 
 #[allow(clippy::type_complexity)]
 pub struct SimulationKernelWithDimensionsStream<
@@ -36,7 +36,9 @@ pub struct SimulationKernelWithDimensionsStream<
     const REPORT_SPECIATION: bool,
     const REPORT_DISPERSAL: bool,
 > {
-    pub(super) entry_point: &'k Function<'k>,
+    pub(super) compiler: &'k mut PtxJITCompiler,
+    pub(super) module: &'k mut Module,
+    pub(super) entry_point: &'k mut Function<'k>,
     pub(super) marker: PhantomData<(H, G, N, D, R, S, X, C, E, I, A)>,
     pub(super) grid_size: GridSize,
     pub(super) block_size: BlockSize,
@@ -79,7 +81,7 @@ impl<
 {
     #[allow(clippy::type_complexity)]
     pub fn with_stream<'s>(
-        &self,
+        self,
         stream: &'s Stream,
     ) -> SimulationKernelWithDimensionsStream<
         'k,
@@ -99,6 +101,8 @@ impl<
         REPORT_DISPERSAL,
     > {
         SimulationKernelWithDimensionsStream {
+            compiler: self.compiler,
+            module: self.module,
             entry_point: self.entry_point,
             marker: self.marker,
             grid_size: self.grid_size.clone(),
