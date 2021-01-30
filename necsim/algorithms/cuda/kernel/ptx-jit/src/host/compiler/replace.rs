@@ -11,18 +11,18 @@ impl PtxJITCompiler {
         // Check if the arguments, cast as byte slices, are the same as the last cached
         //  ones
         let needs_recomputation = match (arguments, &self.last_arguments) {
-            (None, None) => true,
+            (None, None) => false,
             (Some(arguments), Some(last_arguments)) if arguments.len() == last_arguments.len() => {
                 arguments
                     .iter()
                     .zip(last_arguments.iter())
                     .all(|(a, b)| match (a, b) {
-                        (None, None) => true,
-                        (Some(a), Some(b)) => *a == b.deref(),
-                        _ => false,
+                        (None, None) => false,
+                        (Some(a), Some(b)) => *a != b.deref(),
+                        _ => true,
                     })
             },
-            _ => false,
+            _ => true,
         };
 
         // Recompute the PTX string, optionally with constant loads, with the new
@@ -96,7 +96,7 @@ impl PtxJITCompiler {
                                     output_ptx.extend_from_slice(", 0x".as_bytes());
                                     for byte in bytes.iter().rev() {
                                         output_ptx
-                                            .extend_from_slice(format!("{:X}", byte).as_bytes());
+                                            .extend_from_slice(format!("{:02X}", byte).as_bytes());
                                     }
 
                                     output_ptx.extend_from_slice(";".as_bytes());

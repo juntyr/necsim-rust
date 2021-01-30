@@ -102,6 +102,8 @@ impl<
             // Load the kernel function from the module
             let entry_point = module.get_function(&CString::new("simulate").unwrap())?;
 
+            crate::info::print_kernel_function_attributes(&entry_point);
+
             // Safety: The swap and drop of the old module is only safe because
             //  - `self.entry_point`, which has the lifetime requirement, is swapped and
             //    dropped first (no stale references)
