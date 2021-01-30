@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, ffi::CString};
+use std::collections::VecDeque;
 
 use anyhow::Result;
 
@@ -6,8 +6,7 @@ use lru::LruCache;
 
 use rustacuda::{
     function::{BlockSize, GridSize},
-    memory::CopyDestination,
-    module::Symbol,
+    memory::{CopyDestination, DeviceBox},
     stream::Stream,
 };
 
@@ -33,6 +32,7 @@ use crate::kernel::SimulationKernel;
 
 #[allow(clippy::too_many_arguments)]
 pub fn simulate<
+    'k,
     H: Habitat + RustToCuda,
     G: PrimeableRng<H> + RustToCuda,
     N: SpeciationProbability<H> + RustToCuda,
@@ -49,7 +49,22 @@ pub fn simulate<
     const REPORT_DISPERSAL: bool,
 >(
     stream: &Stream,
-    kernel: SimulationKernel<H, G, N, D, R, S, X, C, E, I, A, REPORT_SPECIATION, REPORT_DISPERSAL>,
+    kernel: &'k mut SimulationKernel<
+        'k,
+        H,
+        G,
+        N,
+        D,
+        R,
+        S,
+        X,
+        C,
+        E,
+        I,
+        A,
+        REPORT_SPECIATION,
+        REPORT_DISPERSAL,
+    >,
     config: (GridSize, BlockSize),
     mut simulation: Simulation<H, G, N, D, R, S, X, C, E, I, A>,
     mut individual_tasks: VecDeque<Lineage>,
@@ -59,21 +74,9 @@ pub fn simulate<
     reporter: &mut P,
     max_steps: u64,
 ) -> Result<(f64, u64)> {
-    // TODO: Remove once debugging data structure layout is no longer necessary
-    use type_layout::TypeLayout;
-    println!(
-        "{}",
-        Simulation::<H, G, N, D, R, S, X, C, E, I, A>::type_layout()
-    );
-    println!("{}", necsim_core::event::Event::type_layout());
-
-    // Load and initialise the global_time_max and global_steps_sum symbols
-    let mut global_time_max_symbol: Symbol<f64> =
-        kernel.get_global(&CString::new("global_time_max").unwrap())?;
-    global_time_max_symbol.copy_from(&0.0_f64)?;
-    let mut global_steps_sum_symbol: Symbol<u64> =
-        kernel.get_global(&CString::new("global_steps_sum").unwrap())?;
-    global_steps_sum_symbol.copy_from(&0_u64)?;
+    // Allocate and initialise the total_time_max and total_steps_sum atomics
+    let mut total_time_max = DeviceBox::new(&0.0_f64.to_bits())?;
+    let mut total_steps_sum = DeviceBox::new(&0_u64)?;
 
     let (grid_size, block_size) = config;
 
@@ -91,7 +94,7 @@ pub fn simulate<
 
     // TODO: We should use async launches and callbacks to rotate between
     // simulation, event analysis etc.
-    if let Err(err) = simulation.lend_to_cuda_mut(|simulation_cuda_repr| {
+    if let Err(err) = simulation.lend_to_cuda_mut(|mut simulation_cuda_repr| {
         while !individual_tasks.is_empty() {
             // Upload the new tasks from the front of the task queue
             for task in task_list.iter_mut() {
@@ -111,10 +114,12 @@ pub fn simulate<
             // CUDA-C language barrier
             unsafe {
                 kernel.launch_and_synchronise(
-                    simulation_cuda_repr,
-                    task_list_cuda.as_mut(),
-                    event_buffer_cuda.as_mut(),
-                    min_spec_sample_buffer_cuda.as_mut(),
+                    &mut simulation_cuda_repr,
+                    &mut task_list_cuda.as_mut(),
+                    &mut event_buffer_cuda.as_mut(),
+                    &mut min_spec_sample_buffer_cuda.as_mut(),
+                    &mut total_time_max,
+                    &mut total_steps_sum,
                     max_steps,
                 )?;
             }
@@ -148,11 +153,18 @@ pub fn simulate<
         eprintln!("\nRunning kernel failed with {:#?}!\n", err);
     }
 
-    let mut global_time_max = 0.0_f64;
-    let mut global_steps_sum = 0_u64;
+    let (total_time_max, total_steps_sum) = {
+        let mut total_time_max_result = 0_u64;
+        let mut total_steps_sum_result = 0_u64;
 
-    global_time_max_symbol.copy_to(&mut global_time_max)?;
-    global_steps_sum_symbol.copy_to(&mut global_steps_sum)?;
+        total_time_max.copy_to(&mut total_time_max_result)?;
+        total_steps_sum.copy_to(&mut total_steps_sum_result)?;
 
-    Ok((global_time_max, global_steps_sum))
+        (
+            f64::from_bits(total_time_max_result),
+            total_steps_sum_result,
+        )
+    };
+
+    Ok((total_time_max, total_steps_sum))
 }
