@@ -5,15 +5,36 @@
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
 #![feature(min_const_generics)]
+#![feature(atomic_from_mut)]
 #![feature(asm)]
-#![feature(core_intrinsics)]
 
 extern crate alloc;
 
 #[macro_use]
 extern crate specialiser;
 
-use rust_cuda::device::{nvptx, utils};
+use core::sync::atomic::{AtomicU64, Ordering};
+
+use necsim_core::{
+    cogs::{
+        CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+        LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
+        SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
+    },
+    lineage::Lineage,
+    simulation::Simulation,
+};
+
+use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
+
+use rustacuda_core::DeviceCopy;
+
+use ptx_jit::PtxJITConstLoad;
+
+use rust_cuda::{
+    common::{DeviceBoxMut, RustToCuda},
+    device::{nvptx, utils, AnyDeviceBoxMut, BorrowFromRust},
+};
 
 #[global_allocator]
 static _GLOBAL_ALLOCATOR: utils::PTXAllocator = utils::PTXAllocator;
@@ -45,22 +66,6 @@ fn alloc_error_handler(_: core::alloc::Layout) -> ! {
     unsafe { nvptx::trap() }
 }
 
-use necsim_core::{
-    cogs::{
-        CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
-        SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
-    },
-    lineage::Lineage,
-    simulation::Simulation,
-};
-use rust_cuda::{common::RustToCuda, device::BorrowFromRust};
-use rustacuda_core::DeviceCopy;
-
-use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
-
-use rust_cuda::device::AnyDeviceBoxMut;
-
 /// # Safety
 /// This CUDA kernel is unsafe as it is called with untyped `AnyDeviceBox`.
 #[no_mangle]
@@ -69,8 +74,8 @@ pub unsafe extern "ptx-kernel" fn simulate(
     task_list_any: AnyDeviceBoxMut,
     event_buffer_any: AnyDeviceBoxMut,
     min_spec_sample_buffer_any: AnyDeviceBoxMut,
-    global_time_max: AnyDeviceBoxMut,
-    global_steps_sum: AnyDeviceBoxMut,
+    total_time_max: AnyDeviceBoxMut,
+    total_steps_sum: AnyDeviceBoxMut,
     max_steps: u64,
 ) {
     specialise!(simulate_generic)(
@@ -78,12 +83,11 @@ pub unsafe extern "ptx-kernel" fn simulate(
         task_list_any.into(),
         event_buffer_any.into(),
         min_spec_sample_buffer_any.into(),
+        total_time_max.into(),
+        total_steps_sum.into(),
         max_steps,
     )
 }
-
-use ptx_jit::PtxJITConstLoad;
-use rust_cuda::common::DeviceBoxMut;
 
 #[inline]
 unsafe fn simulate_generic<
@@ -111,14 +115,17 @@ unsafe fn simulate_generic<
     min_spec_sample_buffer_cuda_repr: DeviceBoxMut<
         <ValueBuffer<SpeciationSample> as RustToCuda>::CudaRepresentation,
     >,
-    global_time_max: DeviceBoxMut<u64>,
-    global_steps_sum: DeviceBoxMut<u64>,
+    mut total_time_max: DeviceBoxMut<u64>,
+    mut total_steps_sum: DeviceBoxMut<u64>,
     max_steps: u64,
 ) {
     PtxJITConstLoad!([0] => simulation_cuda_repr.as_ref());
     PtxJITConstLoad!([1] => task_list_cuda_repr.as_ref());
     PtxJITConstLoad!([2] => event_buffer_cuda_repr.as_ref());
     PtxJITConstLoad!([3] => min_spec_sample_buffer_cuda_repr.as_ref());
+
+    let total_time_max = AtomicU64::from_mut(total_time_max.as_mut());
+    let total_steps_sum = AtomicU64::from_mut(total_steps_sum.as_mut());
 
     Simulation::with_borrow_from_rust_mut(simulation_cuda_repr, |simulation| {
         ValueBuffer::with_borrow_from_rust_mut(task_list_cuda_repr, |task_list| {
@@ -144,14 +151,8 @@ unsafe fn simulate_generic<
                                         .simulate_incremental(max_steps, event_buffer_reporter);
 
                                     if steps > 0 {
-                                        core::intrinsics::atomic_umax_relaxed(
-                                            global_time_max.as_mut(),
-                                            time.to_bits(),
-                                        );
-                                        core::intrinsics::atomic_xadd_relaxed(
-                                            global_steps_sum.as_mut(),
-                                            steps,
-                                        );
+                                        total_time_max.fetch_max(time.to_bits(), Ordering::Relaxed);
+                                        total_steps_sum.fetch_add(steps, Ordering::Relaxed);
                                     }
 
                                     simulation.event_sampler_mut().replace_min_speciation(None)

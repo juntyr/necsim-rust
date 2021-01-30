@@ -63,7 +63,7 @@ impl<
 {
     #[allow(clippy::type_complexity)]
     pub fn with_dimensions<GS: Into<GridSize>, BS: Into<BlockSize>>(
-        self,
+        &'k mut self,
         grid_size: GS,
         block_size: BS,
         shared_mem_bytes: u32,
