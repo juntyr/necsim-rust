@@ -11,10 +11,11 @@ use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampl
 
 use necsim_impls_no_std::{reporter::ReporterContext, simulation::in_memory::InMemorySimulation};
 
-use super::CudaSimulation;
+use super::{CudaArguments, CudaSimulation};
 
 #[contract_trait]
 impl InMemorySimulation for CudaSimulation {
+    type AuxiliaryArguments = CudaArguments;
     type Error = anyhow::Error;
 
     /// Simulates the coalescence algorithm on a CUDA-capable GPU on an in
@@ -32,6 +33,7 @@ impl InMemorySimulation for CudaSimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
+        auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemoryPackedAliasDispersalSampler::new(dispersal, &habitat)?;
@@ -46,6 +48,7 @@ impl InMemorySimulation for CudaSimulation {
             speciation_probability_per_generation,
             seed,
             reporter_context,
+            &auxiliary,
         )
     }
 }

@@ -46,6 +46,7 @@ pub fn simulate<P: ReporterContext>(
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
+            (),
         )
         .map_err(|_| unreachable!("Almost-Infinite ClassicalSimulation can never fail.")),
         #[cfg(feature = "necsim-gillespie")]
@@ -56,6 +57,7 @@ pub fn simulate<P: ReporterContext>(
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
+            (),
         )
         .map_err(|_| unreachable!("Almost-Infinite GillespieSimulation can never fail.")),
         #[cfg(feature = "necsim-skipping-gillespie")]
@@ -66,16 +68,18 @@ pub fn simulate<P: ReporterContext>(
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
+            (),
         )
-        .map_err(|_| unreachable!("Almost-Infinite SkppingGillespieSimulation can never fail.")),
+        .map_err(|_| unreachable!("Almost-Infinite SkippingGillespieSimulation can never fail.")),
         #[cfg(feature = "necsim-cuda")]
-        Algorithm::CUDA => CudaSimulation::simulate(
+        Algorithm::Cuda(auxiliary) => CudaSimulation::simulate(
             *almost_infinite_args.radius(),
             *almost_infinite_args.sigma(),
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
+            (*auxiliary).into(),
         ),
         #[cfg(feature = "necsim-independent")]
         Algorithm::Independent => IndependentSimulation::simulate(
@@ -85,6 +89,7 @@ pub fn simulate<P: ReporterContext>(
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
+            (),
         )
         .map_err(|_| unreachable!("Almost-Infinite IndependentSimulation can never fail.")),
         #[allow(unreachable_patterns)]

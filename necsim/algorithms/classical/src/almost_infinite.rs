@@ -13,6 +13,7 @@ use super::ClassicalSimulation;
 
 #[contract_trait]
 impl AlmostInfiniteSimulation for ClassicalSimulation {
+    type AuxiliaryArguments = ();
     type Error = !;
 
     /// Simulates the classical coalescence algorithm on an almost-infinite
@@ -25,6 +26,7 @@ impl AlmostInfiniteSimulation for ClassicalSimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
+        _auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = AlmostInfiniteHabitat::default();
         let speciation_probability =
