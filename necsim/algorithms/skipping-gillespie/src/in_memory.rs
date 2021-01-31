@@ -13,6 +13,7 @@ use super::SkippingGillespieSimulation;
 
 #[contract_trait]
 impl InMemorySimulation for SkippingGillespieSimulation {
+    type AuxiliaryArguments = ();
     type Error = anyhow::Error;
 
     /// Simulates the Gillespie coalescence algorithm with self-dispersal event
@@ -30,6 +31,7 @@ impl InMemorySimulation for SkippingGillespieSimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
+        _auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemorySeparableAliasDispersalSampler::new(dispersal, &habitat)?;

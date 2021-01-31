@@ -12,6 +12,7 @@ use super::SkippingGillespieSimulation;
 
 #[contract_trait]
 impl AlmostInfiniteSimulation for SkippingGillespieSimulation {
+    type AuxiliaryArguments = ();
     type Error = !;
 
     /// Simulates the Gillespie coalescence algorithm with self-dispersal event
@@ -24,6 +25,7 @@ impl AlmostInfiniteSimulation for SkippingGillespieSimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
+        _auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = AlmostInfiniteHabitat::default();
         let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(sigma);

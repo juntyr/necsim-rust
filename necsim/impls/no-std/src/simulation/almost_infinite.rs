@@ -5,6 +5,7 @@ use crate::reporter::ReporterContext;
 #[allow(clippy::module_name_repetitions)]
 pub trait AlmostInfiniteSimulation {
     type Error;
+    type AuxiliaryArguments;
 
     #[debug_requires(sigma >= 0.0_f64, "standard deviation sigma must be non-negative")]
     #[debug_requires(
@@ -22,5 +23,6 @@ pub trait AlmostInfiniteSimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
+        auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error>;
 }

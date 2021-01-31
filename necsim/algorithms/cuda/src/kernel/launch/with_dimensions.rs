@@ -36,6 +36,7 @@ pub struct SimulationKernelWithDimensions<
     const REPORT_DISPERSAL: bool,
 > {
     pub(super) compiler: &'k mut PtxJITCompiler,
+    pub(super) ptx_jit: bool,
     pub(super) module: &'k mut Module,
     pub(super) entry_point: &'k mut Function<'k>,
     pub(super) marker: PhantomData<(H, G, N, D, R, S, X, C, E, I, A)>,
@@ -85,6 +86,7 @@ impl<
     > {
         SimulationKernelWithDimensions {
             compiler: self.compiler,
+            ptx_jit: self.ptx_jit,
             module: self.module,
             entry_point: self.entry_point,
             marker: self.marker,

@@ -10,10 +10,11 @@ use necsim_impls_no_std::{
     reporter::ReporterContext, simulation::non_spatial::NonSpatialSimulation,
 };
 
-use super::CudaSimulation;
+use super::{CudaArguments, CudaSimulation};
 
 #[contract_trait]
 impl NonSpatialSimulation for CudaSimulation {
+    type AuxiliaryArguments = CudaArguments;
     type Error = anyhow::Error;
 
     /// Simulates the coalescence algorithm on a CUDA-capable GPU on a
@@ -25,6 +26,7 @@ impl NonSpatialSimulation for CudaSimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
+        auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = NonSpatialHabitat::new(area, deme);
         let dispersal_sampler = NonSpatialDispersalSampler::default();
@@ -39,6 +41,7 @@ impl NonSpatialSimulation for CudaSimulation {
             speciation_probability_per_generation,
             seed,
             reporter_context,
+            &auxiliary,
         )
     }
 }

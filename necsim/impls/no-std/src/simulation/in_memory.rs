@@ -7,6 +7,7 @@ use crate::reporter::ReporterContext;
 #[allow(clippy::module_name_repetitions)]
 pub trait InMemorySimulation {
     type Error;
+    type AuxiliaryArguments;
 
     #[debug_requires(
         (0.0_f64..=1.0_f64).contains(&speciation_probability_per_generation),
@@ -23,5 +24,6 @@ pub trait InMemorySimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
+        auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error>;
 }

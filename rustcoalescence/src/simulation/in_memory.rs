@@ -48,6 +48,7 @@ pub fn simulate<P: ReporterContext>(
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
+            (),
         ),
         #[cfg(feature = "necsim-gillespie")]
         Algorithm::Gillespie => GillespieSimulation::simulate(
@@ -57,6 +58,7 @@ pub fn simulate<P: ReporterContext>(
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
+            (),
         ),
         #[cfg(feature = "necsim-skipping-gillespie")]
         Algorithm::SkippingGillespie => SkippingGillespieSimulation::simulate(
@@ -66,15 +68,17 @@ pub fn simulate<P: ReporterContext>(
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
+            (),
         ),
         #[cfg(feature = "necsim-cuda")]
-        Algorithm::CUDA => CudaSimulation::simulate(
+        Algorithm::Cuda(auxiliary) => CudaSimulation::simulate(
             habitat,
             &dispersal,
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
+            (*auxiliary).into(),
         ),
         #[cfg(feature = "necsim-independent")]
         Algorithm::Independent => IndependentSimulation::simulate(
@@ -84,6 +88,7 @@ pub fn simulate<P: ReporterContext>(
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
+            (),
         ),
         #[allow(unreachable_patterns)]
         _ => anyhow::bail!("rustcoalescence does not support the selected algorithm"),

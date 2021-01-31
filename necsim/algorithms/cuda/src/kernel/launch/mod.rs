@@ -83,39 +83,41 @@ impl<
         total_steps_sum: &mut DeviceBox<u64>,
         max_steps: u64,
     ) -> CudaResult<()> {
-        let compiler = &mut *self.compiler;
+        if self.ptx_jit {
+            let compiler = &mut *self.compiler;
 
-        if let PtxJITResult::Recomputed(ptx_cstr) = compilePtxJITwithArguments! {
-            compiler(
-                ConstLoad[simulation_ptr.for_host()],
-                ConstLoad[task_list_ptr.for_host()],
-                ConstLoad[event_buffer_ptr.for_host()],
-                ConstLoad[min_spec_sample_buffer_ptr.for_host()],
-                Ignore[total_time_max],
-                Ignore[total_steps_sum],
-                Ignore[max_steps]
-            )
-        } {
-            // JIT compile the CUDA module with the updated PTX string
-            let module = Module::load_from_string(ptx_cstr)?;
+            if let PtxJITResult::Recomputed(ptx_cstr) = compilePtxJITwithArguments! {
+                compiler(
+                    ConstLoad[simulation_ptr.for_host()],
+                    ConstLoad[task_list_ptr.for_host()],
+                    ConstLoad[event_buffer_ptr.for_host()],
+                    ConstLoad[min_spec_sample_buffer_ptr.for_host()],
+                    Ignore[total_time_max],
+                    Ignore[total_steps_sum],
+                    Ignore[max_steps]
+                )
+            } {
+                // JIT compile the CUDA module with the updated PTX string
+                let module = Module::load_from_string(ptx_cstr)?;
 
-            // Load the kernel function from the module
-            let entry_point = module.get_function(&CString::new("simulate").unwrap())?;
+                // Load the kernel function from the module
+                let entry_point = module.get_function(&CString::new("simulate").unwrap())?;
 
-            crate::info::print_kernel_function_attributes(&entry_point);
+                crate::info::print_kernel_function_attributes(&entry_point);
 
-            // Safety: The swap and drop of the old module is only safe because
-            //  - `self.entry_point`, which has the lifetime requirement, is swapped and
-            //    dropped first (no stale references)
-            //  - `self.module` is swapped into the correct lifetime afterwards
-            std::mem::drop(std::mem::replace(
-                self.entry_point,
-                std::mem::transmute::<_, Function<'k>>(entry_point),
-            ));
-            std::mem::drop(CudaDropWrapper::from(std::mem::replace(
-                self.module,
-                module,
-            )));
+                // Safety: The swap and drop of the old module is only safe because
+                //  - `self.entry_point`, which has the lifetime requirement, is swapped and
+                //    dropped first (no stale references)
+                //  - `self.module` is swapped into the correct lifetime afterwards
+                std::mem::drop(std::mem::replace(
+                    self.entry_point,
+                    std::mem::transmute::<_, Function<'k>>(entry_point),
+                ));
+                std::mem::drop(CudaDropWrapper::from(std::mem::replace(
+                    self.module,
+                    module,
+                )));
+            }
         }
 
         let kernel = &self.entry_point;

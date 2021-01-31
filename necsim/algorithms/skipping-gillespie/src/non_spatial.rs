@@ -12,6 +12,7 @@ use super::SkippingGillespieSimulation;
 
 #[contract_trait]
 impl NonSpatialSimulation for SkippingGillespieSimulation {
+    type AuxiliaryArguments = ();
     type Error = !;
 
     /// Simulates the Gillespie coalescence algorithm with self-dispersal event
@@ -23,6 +24,7 @@ impl NonSpatialSimulation for SkippingGillespieSimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
+        _auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = NonSpatialHabitat::new(area, deme);
         let dispersal_sampler = NonSpatialDispersalSampler::default();

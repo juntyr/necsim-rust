@@ -33,7 +33,7 @@ impl<
         const REPORT_DISPERSAL: bool,
     > SimulationKernel<'k, H, G, N, D, R, S, X, C, E, I, A, REPORT_SPECIATION, REPORT_DISPERSAL>
 {
-    pub fn with_kernel<Q, F>(inner: F) -> Result<Q>
+    pub fn with_kernel<Q, F>(ptx_jit: bool, inner: F) -> Result<Q>
     where
         for<'s> F: FnOnce(
             &'s mut SimulationKernel<
@@ -88,6 +88,7 @@ impl<
         //  - neither are mutably changed internally, only replaced
         let mut kernel = SimulationKernel {
             compiler: &mut compiler,
+            ptx_jit,
             module: unsafe { &mut *module.get() },
             entry_point: &mut entry_point,
             marker: PhantomData::<(H, G, N, D, R, S, X, C, E, I, A)>,

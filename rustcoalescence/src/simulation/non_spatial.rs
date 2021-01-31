@@ -46,6 +46,7 @@ pub fn simulate<P: ReporterContext>(
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
+            (),
         )
         .map_err(|_| unreachable!("Non-Spatial ClassicalSimulation can never fail.")),
         #[cfg(feature = "necsim-gillespie")]
@@ -56,6 +57,7 @@ pub fn simulate<P: ReporterContext>(
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
+            (),
         )
         .map_err(|_| unreachable!("Non-Spatial GillespieSimulation can never fail.")),
         #[cfg(feature = "necsim-skipping-gillespie")]
@@ -66,16 +68,18 @@ pub fn simulate<P: ReporterContext>(
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
+            (),
         )
-        .map_err(|_| unreachable!("Non-Spatial SkppingGillespieSimulation can never fail.")),
+        .map_err(|_| unreachable!("Non-Spatial SkippingGillespieSimulation can never fail.")),
         #[cfg(feature = "necsim-cuda")]
-        Algorithm::CUDA => CudaSimulation::simulate(
+        Algorithm::Cuda(auxiliary) => CudaSimulation::simulate(
             *non_spatial_args.area(),
             *non_spatial_args.deme(),
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
+            (*auxiliary).into(),
         ),
         #[cfg(feature = "necsim-independent")]
         Algorithm::Independent => IndependentSimulation::simulate(
@@ -85,6 +89,7 @@ pub fn simulate<P: ReporterContext>(
             *common_args.sample_percentage(),
             *common_args.seed(),
             reporter_context,
+            (),
         )
         .map_err(|_| unreachable!("Non-Spatial IndependentSimulation can never fail.")),
         #[allow(unreachable_patterns)]

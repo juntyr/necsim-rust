@@ -12,6 +12,7 @@ use super::GillespieSimulation;
 
 #[contract_trait]
 impl AlmostInfiniteSimulation for GillespieSimulation {
+    type AuxiliaryArguments = ();
     type Error = !;
 
     /// Simulates the Gillespie coalescence algorithm on on an almost-infinite
@@ -24,6 +25,7 @@ impl AlmostInfiniteSimulation for GillespieSimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
+        _auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = AlmostInfiniteHabitat::default();
         let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(sigma);
