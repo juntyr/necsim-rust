@@ -19,6 +19,7 @@ use super::ClassicalSimulation;
 
 #[contract_trait]
 impl NonSpatialMigrationSimulation for ClassicalSimulation {
+    type AuxiliaryArguments = ();
     type Error = !;
 
     /// Simulates the classical coalescence algorithm on non-spatial
@@ -33,6 +34,7 @@ impl NonSpatialMigrationSimulation for ClassicalSimulation {
         sample_percentage: f64,
         seed: u64,
         reporter_context: P,
+        _auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let local_habitat = NonSpatialHabitat::new(local_area_deme.0, local_area_deme.1);
         let local_speciation_probability =

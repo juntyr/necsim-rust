@@ -26,11 +26,7 @@ pub struct CommonArgs {
     sample_percentage: f64,
     #[structopt(long)]
     seed: u64,
-    #[structopt(
-        possible_values = &Algorithm::variants(),
-        case_insensitive = true,
-        long = "algorithm"
-    )]
+    #[structopt(case_insensitive = true, long = "algorithm")]
     algorithm: Algorithm,
 }
 

@@ -36,6 +36,7 @@ pub struct SimulationKernel<
     const REPORT_DISPERSAL: bool,
 > {
     compiler: &'k mut PtxJITCompiler,
+    ptx_jit: bool,
     module: &'k mut Module,
     entry_point: &'k mut Function<'k>,
     marker: PhantomData<(H, G, N, D, R, S, X, C, E, I, A)>,

@@ -1,5 +1,11 @@
 use std::fmt;
 
+#[cfg(feature = "necsim-cuda")]
+pub mod cuda;
+
+#[cfg(feature = "necsim-cuda")]
+use cuda::CudaArguments;
+
 #[derive(Debug)]
 #[non_exhaustive]
 #[allow(clippy::empty_enum)]
@@ -11,7 +17,7 @@ pub enum Algorithm {
     #[cfg(feature = "necsim-skipping-gillespie")]
     SkippingGillespie,
     #[cfg(feature = "necsim-cuda")]
-    CUDA,
+    Cuda(CudaArguments),
     #[cfg(feature = "necsim-independent")]
     Independent,
 }
@@ -38,7 +44,25 @@ impl std::str::FromStr for Algorithm {
                 Ok(Algorithm::SkippingGillespie)
             },
             #[cfg(feature = "necsim-cuda")]
-            "CUDA" | _ if s.eq_ignore_ascii_case("CUDA") => Ok(Algorithm::CUDA),
+            "Cuda" | _ if s.to_ascii_lowercase().starts_with("cuda") => {
+                match s
+                    .to_ascii_lowercase()
+                    .strip_prefix("cuda")
+                    .and_then(|s| s.strip_prefix("["))
+                    .and_then(|s| s.strip_suffix("]"))
+                {
+                    Some(suffix) if !suffix.is_empty() => {
+                        match ron::from_str(&format!("({})", suffix)) {
+                            Ok(args) => Ok(Algorithm::Cuda(args)),
+                            Err(err) => Err(format!(
+                                "Invalid CUDA algorithm arguments [{}]: {}",
+                                suffix, err
+                            )),
+                        }
+                    },
+                    _ => Ok(Algorithm::Cuda(CudaArguments::default())),
+                }
+            },
             #[cfg(feature = "necsim-independent")]
             "Independent" | _ if s.eq_ignore_ascii_case("Independent") => {
                 Ok(Algorithm::Independent)

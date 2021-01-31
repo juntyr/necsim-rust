@@ -54,6 +54,14 @@ use crate::kernel::SimulationKernel;
 use cuda::with_initialised_cuda;
 use simulate::simulate;
 
+pub struct CudaArguments {
+    pub ptx_jit: bool,
+    pub delta_t: f64,
+    pub block_size: u32,
+    pub grid_size: u32,
+    pub step_slice: usize,
+}
+
 pub struct CudaSimulation;
 
 impl CudaSimulation {
@@ -70,11 +78,15 @@ impl CudaSimulation {
         speciation_probability_per_generation: f64,
         seed: u64,
         reporter_context: P,
+        auxiliary: &CudaArguments,
     ) -> Result<(f64, u64)> {
         const REPORT_SPECIATION: bool = true;
         const REPORT_DISPERSAL: bool = false;
 
-        const SIMULATION_STEP_SLICE: usize = 250_usize;
+        anyhow::ensure!(
+            auxiliary.delta_t > 0.0_f64,
+            "CUDA algorithm delta_t must be positive."
+        );
 
         reporter_context.with_reporter(|reporter| {
             let rng = CudaRng::<Rng>::seed_from_u64(seed);
@@ -88,7 +100,7 @@ impl CudaSimulation {
 
             // TODO: Need to test dt on a variety of seeds to see which is optimal
             let active_lineage_sampler =
-                ActiveLineageSampler::empty(ExpEventTimeSampler::new(1.0_f64));
+                ActiveLineageSampler::empty(ExpEventTimeSampler::new(auxiliary.delta_t));
 
             let simulation = Simulation::builder()
                 .habitat(habitat)
@@ -104,14 +116,13 @@ impl CudaSimulation {
                 .active_lineage_sampler(active_lineage_sampler)
                 .build();
 
-            // TODO: Need a way to tune the grid size based on the CUDA device or via cmd
-            // parameters
-            let grid_size = GridSize::xy(16, 16);
+            let block_size = BlockSize::x(auxiliary.block_size);
+            let grid_size = GridSize::x(auxiliary.grid_size);
 
             let (time, steps) = with_initialised_cuda(|| {
                 let stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
 
-                SimulationKernel::with_kernel(|kernel| {
+                SimulationKernel::with_kernel(auxiliary.ptx_jit, |kernel| {
                     info::print_kernel_function_attributes(kernel.function());
 
                     // TODO: It seems to be more performant to spawn smaller tasks than to use
@@ -123,7 +134,6 @@ impl CudaSimulation {
                         .function()
                         .get_attribute(FunctionAttribute::MaxThreadsPerBlock)?
                         as u32;
-                    let block_size = BlockSize::xy(32, 1); // max_threads_per_block / 32);
 
                     let task_list = ValueBuffer::new(&block_size, &grid_size)?;
                     let min_spec_sample_buffer = ValueBuffer::new(&block_size, &grid_size)?;
@@ -132,7 +142,7 @@ impl CudaSimulation {
                     let event_buffer: EventBuffer<
                         { REPORT_SPECIATION },
                         { REPORT_DISPERSAL },
-                    > = EventBuffer::new(&block_size, &grid_size, SIMULATION_STEP_SLICE)?;
+                    > = EventBuffer::new(&block_size, &grid_size, auxiliary.step_slice)?;
 
                     simulate(
                         &stream,
@@ -144,7 +154,7 @@ impl CudaSimulation {
                         event_buffer,
                         min_spec_sample_buffer,
                         reporter,
-                        SIMULATION_STEP_SLICE as u64,
+                        auxiliary.step_slice as u64,
                     )
                 })
             })?;
