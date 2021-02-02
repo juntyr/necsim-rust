@@ -3,7 +3,7 @@ use crate::reporter::ReporterContext;
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 #[allow(clippy::module_name_repetitions, clippy::too_many_arguments)]
-pub trait NonSpatialMigrationSimulation {
+pub trait SpatiallyImplicitSimulation {
     type Error;
     type AuxiliaryArguments;
 

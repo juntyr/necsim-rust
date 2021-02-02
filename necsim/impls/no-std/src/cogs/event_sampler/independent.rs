@@ -108,8 +108,10 @@ impl<
         let (event_type, lineage_reference, dispersal_origin, event_time) = if speciation_sample
             < simulation
                 .speciation_probability
-                .get_speciation_probability_at_location(dispersal_origin.location())
-        {
+                .get_speciation_probability_at_location(
+                    dispersal_origin.location(),
+                    &simulation.habitat,
+                ) {
             (
                 EventType::Speciation,
                 lineage_reference,

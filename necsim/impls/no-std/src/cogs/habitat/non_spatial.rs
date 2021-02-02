@@ -26,6 +26,14 @@ impl NonSpatialHabitat {
         }
     }
 
+    // TODO: Remove
+    pub(super) fn new_with_offset(width: u32, height: u32, area: (u32, u32), deme: u32) -> Self {
+        Self {
+            extent: LandscapeExtent::new(width, height, area.0, area.1),
+            deme,
+        }
+    }
+
     #[must_use]
     pub fn get_deme(&self) -> u32 {
         self.deme

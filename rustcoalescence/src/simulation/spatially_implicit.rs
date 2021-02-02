@@ -17,21 +17,21 @@ use necsim_classical::ClassicalSimulation;
 
 use necsim_impls_no_std::reporter::ReporterContext;
 #[allow(unused_imports)]
-use necsim_impls_no_std::simulation::non_spatial_migration::NonSpatialMigrationSimulation;
+use necsim_impls_no_std::simulation::spatially_implicit::SpatiallyImplicitSimulation;
 
 #[allow(unused_imports)]
-use crate::args::{Algorithm, CommonArgs, NonSpatialMigrationArgs};
+use crate::args::{Algorithm, CommonArgs, SpatiallyImplicitArgs};
 
 #[allow(unreachable_code)]
 #[allow(unused_variables)]
 #[allow(clippy::needless_pass_by_value)]
 pub fn simulate<P: ReporterContext>(
     common_args: &CommonArgs,
-    non_spatial_migration_args: &NonSpatialMigrationArgs,
+    spatially_implicit_args: &SpatiallyImplicitArgs,
     reporter_context: P,
 ) -> Result<(f64, u64)> {
     println!(
-        "Setting up the non-spatial-migration {:?} coalescence algorithm ...",
+        "Setting up the spatially-implicit {:?} coalescence algorithm ...",
         common_args.algorithm()
     );
 
@@ -41,14 +41,14 @@ pub fn simulate<P: ReporterContext>(
         #[cfg(feature = "necsim-classical")]
         Algorithm::Classical => ClassicalSimulation::simulate(
             (
-                *non_spatial_migration_args.local_area(),
-                *non_spatial_migration_args.local_deme(),
+                *spatially_implicit_args.local_area(),
+                *spatially_implicit_args.local_deme(),
             ),
             (
-                *non_spatial_migration_args.meta_area(),
-                *non_spatial_migration_args.meta_deme(),
+                *spatially_implicit_args.meta_area(),
+                *spatially_implicit_args.meta_deme(),
             ),
-            *non_spatial_migration_args.migration_probability_per_generation(),
+            *spatially_implicit_args.migration_probability_per_generation(),
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
@@ -58,11 +58,11 @@ pub fn simulate<P: ReporterContext>(
         .map_err(|_| unreachable!("Non-Spatial ClassicalSimulation can never fail.")),
         // #[cfg(feature = "necsim-gillespie")]
         // Algorithm::Gillespie => GillespieSimulation::simulate(
-        // non_spatial_migration_args.local_area(),
-        // non_spatial_migration_args.local_deme(),
-        // non_spatial_migration_args.meta_area(),
-        // non_spatial_migration_args.meta_deme(),
-        // non_spatial_migration_args.migration_probability_per_generation(),
+        // spatially_implicit_args.local_area(),
+        // spatially_implicit_args.local_deme(),
+        // spatially_implicit_args.meta_area(),
+        // spatially_implicit_args.meta_deme(),
+        // spatially_implicit_args.migration_probability_per_generation(),
         // common_args.speciation_probability_per_generation(),
         // common_args.sample_percentage(),
         // common_args.seed(),
@@ -72,11 +72,11 @@ pub fn simulate<P: ReporterContext>(
         // .map_err(|_| unreachable!("Non-Spatial GillespieSimulation can never fail.")),
         // #[cfg(feature = "necsim-skipping-gillespie")]
         // Algorithm::SkippingGillespie => SkippingGillespieSimulation::simulate(
-        // non_spatial_migration_args.local_area(),
-        // non_spatial_migration_args.local_deme(),
-        // non_spatial_migration_args.meta_area(),
-        // non_spatial_migration_args.meta_deme(),
-        // non_spatial_migration_args.migration_probability_per_generation(),
+        // spatially_implicit_args.local_area(),
+        // spatially_implicit_args.local_deme(),
+        // spatially_implicit_args.meta_area(),
+        // spatially_implicit_args.meta_deme(),
+        // spatially_implicit_args.migration_probability_per_generation(),
         // common_args.speciation_probability_per_generation(),
         // common_args.sample_percentage(),
         // common_args.seed(),
@@ -86,11 +86,11 @@ pub fn simulate<P: ReporterContext>(
         // .map_err(|_| unreachable!("Non-Spatial SkippingGillespieSimulation can never fail.")),
         // #[cfg(feature = "necsim-cuda")]
         // Algorithm::CUDA => CudaSimulation::simulate(
-        // non_spatial_migration_args.local_area(),
-        // non_spatial_migration_args.local_deme(),
-        // non_spatial_migration_args.meta_area(),
-        // non_spatial_migration_args.meta_deme(),
-        // non_spatial_migration_args.migration_probability_per_generation(),
+        // spatially_implicit_args.local_area(),
+        // spatially_implicit_args.local_deme(),
+        // spatially_implicit_args.meta_area(),
+        // spatially_implicit_args.meta_deme(),
+        // spatially_implicit_args.migration_probability_per_generation(),
         // common_args.speciation_probability_per_generation(),
         // common_args.sample_percentage(),
         // common_args.seed(),
@@ -99,11 +99,11 @@ pub fn simulate<P: ReporterContext>(
         // ),
         // #[cfg(feature = "necsim-independent")]
         // Algorithm::Independent => IndependentSimulation::simulate(
-        // non_spatial_migration_args.local_area(),
-        // non_spatial_migration_args.local_deme(),
-        // non_spatial_migration_args.meta_area(),
-        // non_spatial_migration_args.meta_deme(),
-        // non_spatial_migration_args.migration_probability_per_generation(),
+        // spatially_implicit_args.local_area(),
+        // spatially_implicit_args.local_deme(),
+        // spatially_implicit_args.meta_area(),
+        // spatially_implicit_args.meta_deme(),
+        // spatially_implicit_args.migration_probability_per_generation(),
         // common_args.speciation_probability_per_generation(),
         // common_args.sample_percentage(),
         // common_args.seed(),
@@ -117,14 +117,14 @@ pub fn simulate<P: ReporterContext>(
 
     result.with_context(|| {
         format!(
-            "Failed to run the non-spatial-migration simulation with local area {:?} and deme \
-             {:?}, meta area {:?} and deme {:?}, local migration probability {:?} and meta \
-             speciation probability {:?}.",
-            non_spatial_migration_args.local_area(),
-            non_spatial_migration_args.local_deme(),
-            non_spatial_migration_args.meta_area(),
-            non_spatial_migration_args.meta_deme(),
-            non_spatial_migration_args.migration_probability_per_generation(),
+            "Failed to run the spatially-implicit simulation with local area {:?} and deme {:?}, \
+             meta area {:?} and deme {:?}, local migration probability {:?} and meta speciation \
+             probability {:?}.",
+            spatially_implicit_args.local_area(),
+            spatially_implicit_args.local_deme(),
+            spatially_implicit_args.meta_area(),
+            spatially_implicit_args.meta_deme(),
+            spatially_implicit_args.migration_probability_per_generation(),
             common_args.speciation_probability_per_generation()
         )
     })
