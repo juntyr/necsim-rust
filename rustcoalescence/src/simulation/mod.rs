@@ -2,7 +2,7 @@ use anyhow::Result;
 use array2d::Array2D;
 
 use crate::{
-    args::{AlmostInfiniteArgs, CommonArgs, InMemoryArgs, NonSpatialArgs, NonSpatialMigrationArgs},
+    args::{AlmostInfiniteArgs, CommonArgs, InMemoryArgs, NonSpatialArgs, SpatiallyImplicitArgs},
     maps,
     reporter::RustcoalescenceReporterContext,
 };
@@ -10,7 +10,7 @@ use crate::{
 mod almost_infinite;
 mod in_memory;
 mod non_spatial;
-mod non_spatial_migration;
+mod spatially_implicit;
 
 #[allow(clippy::module_name_repetitions)]
 pub fn setup_in_memory_simulation(
@@ -121,22 +121,22 @@ fn setup_non_spatial_in_memory_simulation(
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub fn setup_non_spatial_migration_simulation(
+pub fn setup_spatially_implicit_simulation(
     common_args: &CommonArgs,
-    non_spatial_migration_args: &NonSpatialMigrationArgs,
+    spatially_implicit_args: &SpatiallyImplicitArgs,
 ) -> Result<(f64, u64)> {
     #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::cast_sign_loss)]
-    let estimated_total_lineages = (f64::from(non_spatial_migration_args.local_area().0)
-        * f64::from(non_spatial_migration_args.local_area().1)
-        * f64::from(*non_spatial_migration_args.local_deme())
+    let estimated_total_lineages = (f64::from(spatially_implicit_args.local_area().0)
+        * f64::from(spatially_implicit_args.local_area().1)
+        * f64::from(*spatially_implicit_args.local_deme())
         * common_args.sample_percentage())
     .ceil() as u64;
 
     // Run the simulation
-    non_spatial_migration::simulate(
+    spatially_implicit::simulate(
         common_args,
-        &non_spatial_migration_args,
+        &spatially_implicit_args,
         RustcoalescenceReporterContext::new(estimated_total_lineages),
     )
 }

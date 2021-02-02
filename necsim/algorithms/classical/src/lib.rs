@@ -28,7 +28,7 @@ use necsim_impls_no_std::reporter::ReporterContext;
 mod almost_infinite;
 mod in_memory;
 mod non_spatial;
-mod non_spatial_migration;
+mod spatially_implicit;
 
 pub struct ClassicalSimulation;
 

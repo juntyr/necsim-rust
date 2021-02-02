@@ -26,7 +26,7 @@ impl UniformSpeciationProbability {
 impl<H: Habitat> SpeciationProbability<H> for UniformSpeciationProbability {
     #[must_use]
     #[inline]
-    fn get_speciation_probability_at_location(&self, _location: &Location) -> f64 {
+    fn get_speciation_probability_at_location(&self, _location: &Location, _habitat: &H) -> f64 {
         self.speciation_probability
     }
 }
