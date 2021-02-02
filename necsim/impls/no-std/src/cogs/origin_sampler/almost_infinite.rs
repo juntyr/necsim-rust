@@ -2,6 +2,7 @@ use core::iter::Iterator;
 
 use necsim_core::{
     cogs::OriginSampler,
+    intrinsics::ceil,
     landscape::{IndexedLocation, LandscapeExtent, LocationIterator},
 };
 
@@ -31,7 +32,7 @@ impl<'h> AlmostInfiniteOriginSampler<'h> {
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let upper_bound_size_hint =
-            (f64::from(radius) * f64::from(radius) * core::f64::consts::PI).ceil() as u64;
+            ceil(f64::from(radius) * f64::from(radius) * core::f64::consts::PI) as u64;
 
         Self {
             location_iterator: sample_extent.iter(),

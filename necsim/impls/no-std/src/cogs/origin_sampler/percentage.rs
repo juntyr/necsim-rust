@@ -2,6 +2,7 @@ use core::{iter::Iterator, marker::PhantomData};
 
 use necsim_core::{
     cogs::{Habitat, OriginSampler},
+    intrinsics::{ceil, fract, sqrt},
     landscape::IndexedLocation,
 };
 
@@ -26,7 +27,7 @@ impl<'h, H: Habitat> PercentageOriginSampler<'h, H> {
             base_sampler,
             sample_percentage,
             counter: 0,
-            inv_phi: ((1.0_f64 + 5.0_f64.sqrt()) * 0.5_f64).recip(),
+            inv_phi: ((1.0_f64 + sqrt(5.0_f64)) * 0.5_f64).recip(),
             _marker: PhantomData::<&'h H>,
         }
     }
@@ -44,9 +45,9 @@ impl<'h, H: Habitat> OriginSampler<'h, H> for PercentageOriginSampler<'h, H> {
             clippy::cast_sign_loss,
             clippy::cast_precision_loss
         )]
-        let upper_bound_size_hint = ((self.base_sampler.full_upper_bound_size_hint() as f64)
-            * self.sample_percentage)
-            .ceil() as u64;
+        let upper_bound_size_hint =
+            ceil((self.base_sampler.full_upper_bound_size_hint() as f64) * self.sample_percentage)
+                as u64;
 
         upper_bound_size_hint
     }
@@ -60,7 +61,7 @@ impl<'h, H: Habitat> Iterator for PercentageOriginSampler<'h, H> {
             self.counter += 1;
 
             #[allow(clippy::cast_precision_loss)]
-            let quasi_random_uniform = (0.5_f64 + (self.counter as f64) * self.inv_phi).fract();
+            let quasi_random_uniform = fract(0.5_f64 + (self.counter as f64) * self.inv_phi);
 
             if quasi_random_uniform < self.sample_percentage {
                 return Some(next);
