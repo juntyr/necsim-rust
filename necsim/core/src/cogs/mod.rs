@@ -1,6 +1,9 @@
 mod habitat;
 pub use habitat::Habitat;
 
+mod origin_sampler;
+pub use origin_sampler::OriginSampler;
+
 mod speciation_probability;
 pub use speciation_probability::SpeciationProbability;
 

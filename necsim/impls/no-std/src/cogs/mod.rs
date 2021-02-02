@@ -7,5 +7,6 @@ pub mod habitat;
 pub mod immigration_entry;
 pub mod lineage_reference;
 pub mod lineage_store;
+pub mod origin_sampler;
 pub mod rng;
 pub mod speciation_probability;

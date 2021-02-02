@@ -1,5 +1,3 @@
-use alloc::vec::Vec;
-
 use necsim_core::{
     cogs::{CoherentLineageStore, Habitat, LineageStore},
     landscape::{IndexedLocation, Location, LocationIterator},
@@ -30,11 +28,6 @@ impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for CoherentInMemoryL
     #[must_use]
     fn get(&self, reference: InMemoryLineageReference) -> Option<&Lineage> {
         self.lineages_store.get(Into::<usize>::into(reference))
-    }
-
-    #[must_use]
-    fn into_lineages(self) -> Vec<Lineage> {
-        self.lineages_store
     }
 }
 

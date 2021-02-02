@@ -4,6 +4,7 @@ use necsim_impls_no_std::cogs::{
     dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
     habitat::non_spatial::NonSpatialHabitat,
     lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
+    origin_sampler::{non_spatial::NonSpatialOriginSampler, percentage::PercentageOriginSampler},
     speciation_probability::uniform::UniformSpeciationProbability,
 };
 
@@ -40,8 +41,10 @@ impl NonSpatialMigrationSimulation for ClassicalSimulation {
         let local_speciation_probability =
             UniformSpeciationProbability::new(local_migration_probability_per_generation);
         let local_dispersal_sampler = NonSpatialDispersalSampler::default();
-        let local_lineage_store =
-            CoherentInMemoryLineageStore::new(sample_percentage, &local_habitat);
+        let local_lineage_store = CoherentInMemoryLineageStore::new(PercentageOriginSampler::new(
+            NonSpatialOriginSampler::new(&local_habitat),
+            sample_percentage,
+        ));
 
         let mut migration_reporter = BiodiversityReporter::default();
 
@@ -77,10 +80,10 @@ impl NonSpatialMigrationSimulation for ClassicalSimulation {
             UniformSpeciationProbability::new(meta_speciation_probability_per_generation);
         let meta_dispersal_sampler = NonSpatialDispersalSampler::default();
         #[allow(clippy::cast_precision_loss)]
-        let meta_lineage_store = CoherentInMemoryLineageStore::new(
+        let meta_lineage_store = CoherentInMemoryLineageStore::new(PercentageOriginSampler::new(
+            NonSpatialOriginSampler::new(&meta_habitat),
             (unique_migration_targets.len() as f64) / (max_unique_location_index as f64),
-            &meta_habitat,
-        );
+        ));
 
         let (meta_time, meta_steps) = ClassicalSimulation::simulate(
             meta_habitat,
