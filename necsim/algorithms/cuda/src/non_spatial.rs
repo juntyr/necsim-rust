@@ -1,9 +1,9 @@
-use necsim_core::cogs::LineageStore;
+use necsim_core::lineage::Lineage;
 
 use necsim_impls_no_std::cogs::{
     dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
     habitat::non_spatial::NonSpatialHabitat,
-    lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
+    origin_sampler::{non_spatial::NonSpatialOriginSampler, percentage::PercentageOriginSampler},
 };
 
 use necsim_impls_no_std::{
@@ -31,8 +31,12 @@ impl NonSpatialSimulation for CudaSimulation {
         let habitat = NonSpatialHabitat::new(area, deme);
         let dispersal_sampler = NonSpatialDispersalSampler::default();
 
-        let lineages =
-            CoherentInMemoryLineageStore::new(sample_percentage, &habitat).into_lineages();
+        let lineages = PercentageOriginSampler::<NonSpatialHabitat>::new(
+            NonSpatialOriginSampler::new(&habitat),
+            sample_percentage,
+        )
+        .map(|indexed_location| Lineage::new(indexed_location, &habitat))
+        .collect();
 
         CudaSimulation::simulate(
             habitat,

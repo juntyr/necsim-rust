@@ -1,8 +1,13 @@
-use crate::landscape::{IndexedLocation, LandscapeExtent, Location};
+use crate::{
+    cogs::OriginSampler,
+    landscape::{IndexedLocation, LandscapeExtent, Location},
+};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait Habitat: core::fmt::Debug {
+pub trait Habitat: core::fmt::Debug + Sized {
+    type OriginSampler<'h>: OriginSampler<'h, Self>;
+
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent;
 
