@@ -19,7 +19,7 @@ pub struct PercentageOriginSampler<'h, H: Habitat> {
 impl<'h, H: Habitat> PercentageOriginSampler<'h, H> {
     #[must_use]
     #[debug_requires(
-        (0.0_f64..1.0_f64).contains(&sample_percentage),
+        (0.0_f64..=1.0_f64).contains(&sample_percentage),
         "sample_percentage is a percentage"
     )]
     pub fn new(base_sampler: H::OriginSampler<'h>, sample_percentage: f64) -> Self {

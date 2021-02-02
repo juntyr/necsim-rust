@@ -24,8 +24,9 @@ impl SpatiallyImplicitHabitat {
     #[debug_ensures(
         ret.get_total_habitat() == old(
             u64::from(local_area.0) * u64::from(local_area.1) * u64::from(local_deme)
+            + u64::from(meta_area.0) * u64::from(meta_area.1) * u64::from(meta_deme)
         ),
-        "creates a habitat with community size area.0 * area.1 * deme"
+        "creates a habitat with a combined local and meta community size "
     )]
     pub fn new(
         local_area: (u32, u32),
@@ -75,8 +76,7 @@ impl Habitat for SpatiallyImplicitHabitat {
 
     #[must_use]
     fn get_total_habitat(&self) -> u64 {
-        // Only the local community is officially habitat to start from
-        self.local.get_total_habitat()
+        self.local.get_total_habitat() + self.meta().get_total_habitat()
     }
 
     #[must_use]
