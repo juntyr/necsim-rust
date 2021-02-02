@@ -9,6 +9,17 @@ use crate::{
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct GlobalLineageReference(NonZeroU64);
 
+#[cfg(feature = "mpi")]
+unsafe impl mpi::traits::Equivalence for GlobalLineageReference {
+    type Out = mpi::datatype::SystemDatatype;
+
+    fn equivalent_datatype() -> Self::Out {
+        use mpi::raw::FromRaw;
+
+        unsafe { mpi::datatype::DatatypeRef::from_raw(mpi::ffi::RSMPI_UINT64_T) }
+    }
+}
+
 impl<H: Habitat> LineageReference<H> for GlobalLineageReference {}
 
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]

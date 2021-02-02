@@ -22,6 +22,7 @@ pub trait CoalescenceSampler<H: Habitat, R: LineageReference<H>, S: LineageStore
     ) -> (IndexedLocation, Option<GlobalLineageReference>);
 }
 
+#[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 pub struct CoalescenceRngSample(f64);
 
 impl CoalescenceRngSample {

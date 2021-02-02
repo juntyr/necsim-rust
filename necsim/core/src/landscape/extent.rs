@@ -64,6 +64,7 @@ impl LandscapeExtent {
     }
 }
 
+#[derive(Debug)]
 pub struct LocationIterator {
     x: u32,
     y: u32,

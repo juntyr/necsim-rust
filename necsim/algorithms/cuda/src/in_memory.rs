@@ -1,11 +1,11 @@
 use array2d::Array2D;
 
-use necsim_core::cogs::LineageStore;
+use necsim_core::lineage::Lineage;
 
 use necsim_impls_no_std::cogs::{
     dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
     habitat::in_memory::InMemoryHabitat,
-    lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
+    origin_sampler::{in_memory::InMemoryOriginSampler, percentage::PercentageOriginSampler},
 };
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
@@ -38,8 +38,12 @@ impl InMemorySimulation for CudaSimulation {
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemoryPackedAliasDispersalSampler::new(dispersal, &habitat)?;
 
-        let lineages =
-            CoherentInMemoryLineageStore::new(sample_percentage, &habitat).into_lineages();
+        let lineages = PercentageOriginSampler::<InMemoryHabitat>::new(
+            InMemoryOriginSampler::new(&habitat),
+            sample_percentage,
+        )
+        .map(|indexed_location| Lineage::new(indexed_location, &habitat))
+        .collect();
 
         CudaSimulation::simulate(
             habitat,

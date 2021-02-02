@@ -1,7 +1,5 @@
 use core::ops::Index;
 
-use alloc::vec::Vec;
-
 use super::{Habitat, LineageReference};
 use crate::{
     landscape::{IndexedLocation, Location},
@@ -25,13 +23,6 @@ pub trait LineageStore<H: Habitat, R: LineageReference<H>>: Sized + core::fmt::D
 
     #[must_use]
     fn get(&self, reference: R) -> Option<&Lineage>;
-
-    #[must_use]
-    #[debug_ensures(
-        ret.len() == old(self.get_number_total_lineages()),
-        "returns all lineages which made up the store"
-    )]
-    fn into_lineages(self) -> Vec<Lineage>;
 }
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]

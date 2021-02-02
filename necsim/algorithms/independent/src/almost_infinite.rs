@@ -1,9 +1,11 @@
-use necsim_core::cogs::LineageStore;
+use necsim_core::lineage::Lineage;
 
 use necsim_impls_no_std::cogs::{
     dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
     habitat::almost_infinite::AlmostInfiniteHabitat,
-    lineage_store::coherent::almost_infinite::CoherentAlmostInfiniteLineageStore,
+    origin_sampler::{
+        almost_infinite::AlmostInfiniteOriginSampler, percentage::PercentageOriginSampler,
+    },
     speciation_probability::uniform::UniformSpeciationProbability,
 };
 
@@ -35,8 +37,12 @@ impl AlmostInfiniteSimulation for IndependentSimulation {
             UniformSpeciationProbability::new(speciation_probability_per_generation);
         let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(sigma);
 
-        let lineages = CoherentAlmostInfiniteLineageStore::new(radius, sample_percentage, &habitat)
-            .into_lineages();
+        let lineages = PercentageOriginSampler::<AlmostInfiniteHabitat>::new(
+            AlmostInfiniteOriginSampler::new(&habitat, radius),
+            sample_percentage,
+        )
+        .map(|indexed_location| Lineage::new(indexed_location, &habitat))
+        .collect();
 
         Ok(IndependentSimulation::simulate(
             habitat,

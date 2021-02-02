@@ -1,7 +1,5 @@
 use core::marker::PhantomData;
 
-use alloc::vec::Vec;
-
 use necsim_core::{
     cogs::{Habitat, LineageStore},
     lineage::{GlobalLineageReference, Lineage},
@@ -41,10 +39,5 @@ impl<H: Habitat> LineageStore<H, GlobalLineageReference> for IndependentLineageS
     #[must_use]
     fn get(&self, _reference: GlobalLineageReference) -> Option<&Lineage> {
         None
-    }
-
-    #[must_use]
-    fn into_lineages(self) -> Vec<Lineage> {
-        Vec::new()
     }
 }
