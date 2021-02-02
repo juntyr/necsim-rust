@@ -80,3 +80,20 @@ pub fn round(val: f64) -> f64 {
         rust_cuda::device::nvptx::_round(val)
     }
 }
+
+#[must_use]
+#[inline]
+pub fn fract(val: f64) -> f64 {
+    #[cfg(not(target_os = "cuda"))]
+    unsafe {
+        val - core::intrinsics::truncf64(val)
+    }
+    #[cfg(target_os = "cuda")]
+    unsafe {
+        if val >= 0.0_f64 {
+            val - core::intrinsics::floorf64(val)
+        } else {
+            core::intrinsics::ceilf64(val) - val
+        }
+    }
+}

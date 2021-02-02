@@ -2,6 +2,7 @@ use core::{iter::Iterator, marker::PhantomData};
 
 use necsim_core::{
     cogs::{Habitat, OriginSampler},
+    intrinsics::ceil,
     landscape::IndexedLocation,
 };
 
@@ -43,9 +44,9 @@ impl<'h, H: Habitat> OriginSampler<'h, H> for UniformPartitionOriginSampler<'h, 
             clippy::cast_sign_loss,
             clippy::cast_precision_loss
         )]
-        let upper_bound_size_hint = ((self.base_sampler.full_upper_bound_size_hint() as f64)
-            / (self.group_size as f64))
-            .ceil() as u64;
+        let upper_bound_size_hint = ceil(
+            (self.base_sampler.full_upper_bound_size_hint() as f64) / (self.group_size as f64),
+        ) as u64;
 
         upper_bound_size_hint
     }
