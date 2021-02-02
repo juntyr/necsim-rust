@@ -42,10 +42,10 @@ fn main() -> Result<()> {
         Command::NonSpatial(non_spatial_args) => {
             simulation::setup_non_spatial_simulation(args.common_args(), non_spatial_args)?
         },
-        Command::NonSpatialMigration(non_spatial_migration_args) => {
-            simulation::setup_non_spatial_migration_simulation(
+        Command::SpatiallyImplicit(spatially_implicit_args) => {
+            simulation::setup_spatially_implicit_simulation(
                 args.common_args(),
-                non_spatial_migration_args,
+                spatially_implicit_args,
             )?
         },
         Command::AlmostInfinite(almost_infinite_args) => {

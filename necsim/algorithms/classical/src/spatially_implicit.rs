@@ -9,7 +9,7 @@ use necsim_impls_no_std::cogs::{
 };
 
 use necsim_impls_no_std::{
-    reporter::ReporterContext, simulation::non_spatial_migration::NonSpatialMigrationSimulation,
+    reporter::ReporterContext, simulation::spatially_implicit::SpatiallyImplicitSimulation,
 };
 
 use necsim_impls_std::{cogs::rng::std::StdRng, reporter::biodiversity::BiodiversityReporter};
@@ -19,7 +19,7 @@ use necsim_core::cogs::{Habitat, RngCore, RngSampler};
 use super::ClassicalSimulation;
 
 #[contract_trait]
-impl NonSpatialMigrationSimulation for ClassicalSimulation {
+impl SpatiallyImplicitSimulation for ClassicalSimulation {
     type AuxiliaryArguments = ();
     type Error = !;
 

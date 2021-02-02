@@ -33,7 +33,7 @@ impl ProbabilityAtLocation {
     ) -> Self {
         let speciation_probability = simulation
             .speciation_probability
-            .get_speciation_probability_at_location(location);
+            .get_speciation_probability_at_location(location, &simulation.habitat);
         let self_dispersal_probability = simulation
             .dispersal_sampler
             .get_self_dispersal_probability_at_location(location, &simulation.habitat);

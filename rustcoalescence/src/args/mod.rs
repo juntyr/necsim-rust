@@ -34,7 +34,7 @@ pub struct CommonArgs {
 pub enum Command {
     InMemory(InMemoryArgs),
     NonSpatial(NonSpatialArgs),
-    NonSpatialMigration(NonSpatialMigrationArgs),
+    SpatiallyImplicit(SpatiallyImplicitArgs),
     AlmostInfinite(AlmostInfiniteArgs),
 }
 
@@ -77,7 +77,7 @@ pub struct NonSpatialArgs {
 
 #[derive(Debug, StructOpt, Getters)]
 #[allow(clippy::module_name_repetitions)]
-pub struct NonSpatialMigrationArgs {
+pub struct SpatiallyImplicitArgs {
     #[structopt(long = "local-area")]
     #[structopt(parse(try_from_str = try_parse_area))]
     local_area: (u32, u32),

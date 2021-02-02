@@ -9,7 +9,7 @@ necsim-rust aims to provide a smaller, more concise subset of the functionality 
 necsim-rust is built in a modular way to reduce code duplication and allow the user (and other programmers) to plug together different components to customise the simulated scenario, the algorithm it is simulated with as well as finer implementation details. Currently, necsim-rust supports four built-in scenarios:
 - spatially-explicit simulation
 - non-spatial simulation
-- non-spatial simulation with migration from a non-spatial metacommunity
+- spatially-implicit simulation with migration from a non-spatial metacommunity to a non-spatial local community
 - (almost) infinite simulation with normal dispersal [Work In Progress]
 
 ## Installation
@@ -95,14 +95,14 @@ Here, the parameters have the following semantics:
 ```shell
 > rustcoalescence ... non-spatial <area> <deme> [--spatial]
 ```
-- non-spatial with migration: the individuals live uniformly with equal probability to disperse anywhere else. The parameters shown below have the following semantics:
+- spatially-implicit: the individuals live uniformly with equal probability to disperse anywhere else. The parameters shown below have the following semantics:
     - `<local-area>` specifies the non-spatial area that the individuals in the local community will inhabit. It can be either one-dimensional `A` or two-dimensional `AxB`. Note that individuals in the local community will not be able to speciate. Also note that the `<sample-percentage>` parameter will only apply to the local community.
     - `<local-deme>` specifies the number of individuals that will be able to cohabit each space in the local community area. It is functionally equivalent to double the deme or to double the area (though it might impact the performance, and the result of one execution when using the Gillespie algorithm).
     - `<meta-area>` specifies the non-spatial area that the individuals in the meta-community will inhabit. It can be either one-dimensional `A` or two-dimensional `AxB`. Note that the `<speciation-probability-per-generation>` parameter only applies to individuals in the meta-community.
     - `<meta-deme>` specifies the number of individuals that will be able to cohabit each space in the meta-community area. It is functionally equivalent to double the deme or to double the area (though it might impact the performance, and the result of one execution when using the Gillespie algorithm).
     - `<migration-probability-per-generation>` refers to the probability with which an individual in the local community migrates to the metacommunity at every generation.
 ```shell
-> rustcoalescence ... non-spatial-migration --local-area <local-area> --local-deme <local-deme> --meta-area <meta-area> --meta-deme <meta-deme> --migration <migration-probability-per-generation>
+> rustcoalescence ... spatially-implicit --local-area <local-area> --local-deme <local-deme> --meta-area <meta-area> --meta-deme <meta-deme> --migration <migration-probability-per-generation>
 ```
 - (almost) infinite: all individuals start in a perfect circle and can disperse anywhere in the (almost) infinite landscape (each 32bit coordinate wraps around). The parameters shown below have the following semantics:
     - `<radius>` specifies the radius of the circle from which the individuals will be sampled. Note that the number of individuals, and therefore the runtime, scales quadratically with the radius.
