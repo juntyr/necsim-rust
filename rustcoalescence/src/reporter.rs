@@ -63,18 +63,17 @@ impl ReporterContext for RustcoalescenceReporterContext {
         // event_reporter.report();
 
         if let Some(execution_time) = execution_time {
-            println!("The simulation took:");
-            println!(
-                " - initialisation: {}s",
-                execution_time.initialisation.as_secs_f32()
+            info!(
+                "The simulation took:\n - initialisation: {}s\n - execution: {}s\n - cleanup: {}s",
+                execution_time.initialisation.as_secs_f32(),
+                execution_time.execution.as_secs_f32(),
+                execution_time.cleanup.as_secs_f32()
             );
-            println!(" - execution: {}s", execution_time.execution.as_secs_f32());
-            println!(" - cleanup: {}s", execution_time.cleanup.as_secs_f32());
         } else {
-            println!("The simulation was not executed.");
+            info!("The simulation was not executed.");
         }
 
-        println!(
+        info!(
             "The simulation resulted in a biodiversity of {} unique species.",
             biodiversity_reporter.biodiversity()
         );

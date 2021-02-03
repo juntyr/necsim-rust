@@ -19,18 +19,21 @@ use necsim_impls_no_std::reporter::ReporterContext;
 #[allow(unused_imports)]
 use necsim_impls_no_std::simulation::almost_infinite::AlmostInfiniteSimulation;
 
+use necsim_impls_no_std::partitioning::Partitioning;
+
 #[allow(unused_imports)]
 use crate::args::{Algorithm, AlmostInfiniteArgs, CommonArgs};
 
 #[allow(unreachable_code)]
 #[allow(unused_variables)]
 #[allow(clippy::needless_pass_by_value)]
-pub fn simulate<P: ReporterContext>(
+pub fn simulate<P: Partitioning, R: ReporterContext>(
     common_args: &CommonArgs,
     almost_infinite_args: &AlmostInfiniteArgs,
-    reporter_context: P,
+    partitioning: &mut P,
+    reporter_context: R,
 ) -> Result<(f64, u64)> {
-    println!(
+    info!(
         "Setting up the almost-infinite {:?} coalescence algorithm ...",
         common_args.algorithm()
     );
@@ -45,6 +48,7 @@ pub fn simulate<P: ReporterContext>(
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
+            partitioning,
             reporter_context,
             (),
         )
@@ -56,6 +60,7 @@ pub fn simulate<P: ReporterContext>(
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
+            partitioning,
             reporter_context,
             (),
         )
@@ -67,6 +72,7 @@ pub fn simulate<P: ReporterContext>(
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
+            partitioning,
             reporter_context,
             (),
         )
@@ -78,6 +84,7 @@ pub fn simulate<P: ReporterContext>(
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
+            partitioning,
             reporter_context,
             (*auxiliary).into(),
         ),
@@ -88,6 +95,7 @@ pub fn simulate<P: ReporterContext>(
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
+            partitioning,
             reporter_context,
             (),
         )
