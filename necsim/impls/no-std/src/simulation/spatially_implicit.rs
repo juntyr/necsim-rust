@@ -20,6 +20,7 @@ pub trait SpatiallyImplicitSimulation {
         "0.0 <= sample_percentage <= 1.0"
     )]
     fn simulate<P: ReporterContext>(
+        dynamic_meta: bool,
         local_area_deme: ((u32, u32), u32),
         meta_area_deme: ((u32, u32), u32),
         local_migration_probability_per_generation: f64,

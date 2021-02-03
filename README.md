@@ -101,8 +101,9 @@ Here, the parameters have the following semantics:
     - `<meta-area>` specifies the non-spatial area that the individuals in the meta-community will inhabit. It can be either one-dimensional `A` or two-dimensional `AxB`. Note that the `<speciation-probability-per-generation>` parameter only applies to individuals in the meta-community.
     - `<meta-deme>` specifies the number of individuals that will be able to cohabit each space in the meta-community area. It is functionally equivalent to double the deme or to double the area (though it might impact the performance, and the result of one execution when using the Gillespie algorithm).
     - `<migration-probability-per-generation>` refers to the probability with which an individual in the local community migrates to the metacommunity at every generation.
+    - `[--dynamic-meta]` is an optional flag to use a dynamic metacommunity instead of a static one. Specifically, this means that different species can have lived at the same location of the metacommunity at different points in time. The spatially-implicit model usually assumes that the metacommunity is static but of infinite size, instead.
 ```shell
-> rustcoalescence ... spatially-implicit --local-area <local-area> --local-deme <local-deme> --meta-area <meta-area> --meta-deme <meta-deme> --migration <migration-probability-per-generation>
+> rustcoalescence ... spatially-implicit --local-area <local-area> --local-deme <local-deme> --meta-area <meta-area> --meta-deme <meta-deme> --migration <migration-probability-per-generation> [--dynamic-meta]
 ```
 - (almost) infinite: all individuals start in a perfect circle and can disperse anywhere in the (almost) infinite landscape (each 32bit coordinate wraps around). The parameters shown below have the following semantics:
     - `<radius>` specifies the radius of the circle from which the individuals will be sampled. Note that the number of individuals, and therefore the runtime, scales quadratically with the radius.
