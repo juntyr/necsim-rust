@@ -35,9 +35,8 @@ pub fn load_habitat_map(
                     if h_fixed != h_before {
                         habitat[(y, x)] = h_fixed;
 
-                        println!(
-                            "INFO: Corrected habitat value {} to {} at ({},{}) to fit dispersal \
-                             ...",
+                        warn!(
+                            "Corrected habitat value {} to {} at ({},{}) to fit dispersal ...",
                             h_before, h_fixed, x, y
                         );
                     }

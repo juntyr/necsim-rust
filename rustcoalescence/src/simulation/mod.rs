@@ -1,6 +1,8 @@
 use anyhow::Result;
 use array2d::Array2D;
 
+use necsim_impls_no_std::partitioning::Partitioning;
+
 use crate::{
     args::{AlmostInfiniteArgs, CommonArgs, InMemoryArgs, NonSpatialArgs, SpatiallyImplicitArgs},
     maps,
@@ -13,16 +15,17 @@ mod non_spatial;
 mod spatially_implicit;
 
 #[allow(clippy::module_name_repetitions)]
-pub fn setup_in_memory_simulation(
+pub fn setup_in_memory_simulation<P: Partitioning>(
     common_args: &CommonArgs,
     in_memory_args: &InMemoryArgs,
+    partitioning: &mut P,
 ) -> Result<(f64, u64)> {
     let dispersal: Array2D<f64> = maps::load_dispersal_map(
         in_memory_args.dispersal_map(),
         *in_memory_args.strict_load(),
     )?;
 
-    println!(
+    info!(
         "Successfully loaded the dispersal map {:?} with dimensions {}x{} [cols x rows].",
         in_memory_args.dispersal_map(),
         dispersal.num_columns(),
@@ -35,7 +38,7 @@ pub fn setup_in_memory_simulation(
         *in_memory_args.strict_load(),
     )?;
 
-    println!(
+    info!(
         "Successfully loaded the habitat map {:?} with dimensions {}x{} [cols x rows].",
         in_memory_args.habitat_map(),
         habitat.num_columns(),
@@ -59,17 +62,19 @@ pub fn setup_in_memory_simulation(
         &in_memory_args,
         &habitat,
         &dispersal,
+        partitioning,
         RustcoalescenceReporterContext::new(estimated_total_lineages),
     )
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub fn setup_non_spatial_simulation(
+pub fn setup_non_spatial_simulation<P: Partitioning>(
     common_args: &CommonArgs,
     non_spatial_args: &NonSpatialArgs,
+    partitioning: &mut P,
 ) -> Result<(f64, u64)> {
     if *non_spatial_args.spatial() {
-        return setup_non_spatial_in_memory_simulation(common_args, non_spatial_args);
+        return setup_non_spatial_in_memory_simulation(common_args, non_spatial_args, partitioning);
     }
 
     #[allow(clippy::cast_possible_truncation)]
@@ -84,13 +89,15 @@ pub fn setup_non_spatial_simulation(
     non_spatial::simulate(
         common_args,
         &non_spatial_args,
+        partitioning,
         RustcoalescenceReporterContext::new(estimated_total_lineages),
     )
 }
 
-fn setup_non_spatial_in_memory_simulation(
+fn setup_non_spatial_in_memory_simulation<P: Partitioning>(
     common_args: &CommonArgs,
     non_spatial_args: &NonSpatialArgs,
+    partitioning: &mut P,
 ) -> Result<(f64, u64)> {
     let habitat = Array2D::filled_with(
         *non_spatial_args.deme(),
@@ -116,14 +123,16 @@ fn setup_non_spatial_in_memory_simulation(
         &non_spatial_args.as_in_memory(),
         &habitat,
         &dispersal,
+        partitioning,
         RustcoalescenceReporterContext::new(estimated_total_lineages),
     )
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub fn setup_spatially_implicit_simulation(
+pub fn setup_spatially_implicit_simulation<P: Partitioning>(
     common_args: &CommonArgs,
     spatially_implicit_args: &SpatiallyImplicitArgs,
+    partitioning: &mut P,
 ) -> Result<(f64, u64)> {
     #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::cast_sign_loss)]
@@ -137,14 +146,16 @@ pub fn setup_spatially_implicit_simulation(
     spatially_implicit::simulate(
         common_args,
         &spatially_implicit_args,
+        partitioning,
         RustcoalescenceReporterContext::new(estimated_total_lineages),
     )
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub fn setup_almost_infinite_simulation(
+pub fn setup_almost_infinite_simulation<P: Partitioning>(
     common_args: &CommonArgs,
     almost_infinite_args: &AlmostInfiniteArgs,
+    partitioning: &mut P,
 ) -> Result<(f64, u64)> {
     anyhow::ensure!(
         *almost_infinite_args.sigma() >= 0.0_f64,
@@ -163,6 +174,7 @@ pub fn setup_almost_infinite_simulation(
     almost_infinite::simulate(
         common_args,
         &almost_infinite_args,
+        partitioning,
         RustcoalescenceReporterContext::new(estimated_total_lineages),
     )
 }

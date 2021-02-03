@@ -114,7 +114,7 @@ pub fn load_map_from_tiff<D: TiffDataType>(
                 )
             })?;
 
-            println!("INFO: Used GDAL no data value {:?} ...", no_data_value);
+            info!("Used GDAL no data value {:?} ...", no_data_value);
 
             for elem in &mut image_data {
                 if *elem == no_data_value {
@@ -122,7 +122,7 @@ pub fn load_map_from_tiff<D: TiffDataType>(
                 }
             }
         } else {
-            println!("INFO: No GDAL no data value was found ...");
+            warn!("No GDAL no data value was found ...");
         }
     }
 
