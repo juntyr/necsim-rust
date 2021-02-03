@@ -1,3 +1,5 @@
+#![deny(clippy::pedantic)]
+
 use std::env;
 
 use proc_macro::TokenStream;

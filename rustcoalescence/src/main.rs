@@ -9,6 +9,9 @@ extern crate necsim_core;
 use anyhow::Result;
 use structopt::StructOpt;
 
+// use necsim_impls_no_std::partitioning::{MonolithicPartitioning,
+// Partitioning};
+
 mod args;
 mod maps;
 mod reporter;
@@ -34,6 +37,17 @@ fn main() -> Result<()> {
             && *args.common_args().sample_percentage() <= 1.0_f64,
         "The sampling percentage must be in range 0 <= s <= 1."
     );
+
+    // let partitioning = MonolithicPartitioning::default();
+    //
+    // if partitioning.is_monolithic() {
+    // println!("The simulation will be run in monolithic mode.");
+    // } else {
+    // println!(
+    // "The simulation will be run distributed across {} partitions.",
+    // partitioning.get_number_of_partitions().get()
+    // );
+    // }
 
     let (time, steps) = match args.command() {
         Command::InMemory(in_memory_args) => {
