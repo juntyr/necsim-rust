@@ -90,6 +90,8 @@ pub struct SpatiallyImplicitArgs {
     meta_deme: u32,
     #[structopt(long = "migration")]
     migration_probability_per_generation: f64,
+    #[structopt(long)]
+    dynamic_meta: bool,
 }
 
 #[derive(Debug, StructOpt, Getters)]
