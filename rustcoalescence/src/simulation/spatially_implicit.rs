@@ -40,6 +40,7 @@ pub fn simulate<P: ReporterContext>(
     let result: Result<(f64, u64)> = match common_args.algorithm() {
         #[cfg(feature = "necsim-classical")]
         Algorithm::Classical => ClassicalSimulation::simulate(
+            *spatially_implicit_args.dynamic_meta(),
             (
                 *spatially_implicit_args.local_area(),
                 *spatially_implicit_args.local_deme(),
@@ -58,6 +59,7 @@ pub fn simulate<P: ReporterContext>(
         .map_err(|_| unreachable!("Non-Spatial ClassicalSimulation can never fail.")),
         // #[cfg(feature = "necsim-gillespie")]
         // Algorithm::Gillespie => GillespieSimulation::simulate(
+        // *spatially_implicit_args.dynamic_meta(),
         // spatially_implicit_args.local_area(),
         // spatially_implicit_args.local_deme(),
         // spatially_implicit_args.meta_area(),
@@ -72,6 +74,7 @@ pub fn simulate<P: ReporterContext>(
         // .map_err(|_| unreachable!("Non-Spatial GillespieSimulation can never fail.")),
         // #[cfg(feature = "necsim-skipping-gillespie")]
         // Algorithm::SkippingGillespie => SkippingGillespieSimulation::simulate(
+        // *spatially_implicit_args.dynamic_meta(),
         // spatially_implicit_args.local_area(),
         // spatially_implicit_args.local_deme(),
         // spatially_implicit_args.meta_area(),
@@ -86,6 +89,7 @@ pub fn simulate<P: ReporterContext>(
         // .map_err(|_| unreachable!("Non-Spatial SkippingGillespieSimulation can never fail.")),
         // #[cfg(feature = "necsim-cuda")]
         // Algorithm::CUDA => CudaSimulation::simulate(
+        // *spatially_implicit_args.dynamic_meta(),
         // spatially_implicit_args.local_area(),
         // spatially_implicit_args.local_deme(),
         // spatially_implicit_args.meta_area(),
@@ -99,6 +103,7 @@ pub fn simulate<P: ReporterContext>(
         // ),
         // #[cfg(feature = "necsim-independent")]
         // Algorithm::Independent => IndependentSimulation::simulate(
+        // *spatially_implicit_args.dynamic_meta(),
         // spatially_implicit_args.local_area(),
         // spatially_implicit_args.local_deme(),
         // spatially_implicit_args.meta_area(),
