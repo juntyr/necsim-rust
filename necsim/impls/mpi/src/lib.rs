@@ -1,4 +1,6 @@
 #![deny(clippy::pedantic)]
+#![allow(incomplete_features)]
+#![feature(generic_associated_types)]
 
 #[macro_use]
 extern crate contracts;
@@ -11,27 +13,37 @@ use mpi::{
     topology::{Communicator, SystemCommunicator},
 };
 
-use necsim_core::reporter::Reporter;
+use thiserror::Error;
+
+use necsim_core::{
+    event::Event,
+    reporter::{EventFilter, Reporter},
+};
 
 use necsim_impls_no_std::{
     partitioning::{MonolithicPartition, ParallelPartition, Partition, Partitioning},
     reporter::ReporterContext,
 };
 
-pub struct MpiPartitioning<R: Reporter> {
+#[derive(Error, Debug)]
+#[error("MPI has already been initialised.")]
+pub struct MpiAlreadyInitialisedError;
+
+pub struct MpiPartitioning {
     universe: Universe,
     world: SystemCommunicator,
-    _marker: PhantomData<R>,
 }
 
-impl<R: Reporter> MpiPartitioning<R> {
-    #[must_use]
-    pub fn initialise() -> Option<Self> {
-        mpi::initialize().map(|universe| Self {
-            world: universe.world(),
-            universe,
-            _marker: PhantomData::<R>,
-        })
+impl MpiPartitioning {
+    /// # Errors
+    /// Returns `MpiAlreadyInitialisedError` if MPI was already initialised.
+    pub fn initialise() -> Result<Self, MpiAlreadyInitialisedError> {
+        mpi::initialize()
+            .map(|universe| Self {
+                world: universe.world(),
+                universe,
+            })
+            .ok_or(MpiAlreadyInitialisedError)
     }
 
     pub fn update_message_buffer_size(&mut self, size: usize) {
@@ -42,11 +54,15 @@ impl<R: Reporter> MpiPartitioning<R> {
 }
 
 #[contract_trait]
-impl<R: Reporter> Partitioning<R> for MpiPartitioning<R> {
-    type ParallelPartition = MpiParallelPartition<R>;
+impl Partitioning for MpiPartitioning {
+    type ParallelPartition<R: Reporter> = MpiParallelPartition<R>;
 
     fn is_monolithic(&self) -> bool {
-        self.world.size() <= 0
+        self.world.size() <= 1
+    }
+
+    fn is_root(&self) -> bool {
+        self.world.rank() == 0
     }
 
     fn get_number_of_partitions(&self) -> NonZeroU32 {
@@ -55,10 +71,13 @@ impl<R: Reporter> Partitioning<R> for MpiPartitioning<R> {
     }
 
     fn with_local_partition<
-        P: ReporterContext<Reporter = R>,
+        P: ReporterContext,
         Q,
         F: for<'r> FnOnce(
-            Result<&mut MonolithicPartition<'r, P::Reporter>, &mut Self::ParallelPartition>,
+            Result<
+                &mut MonolithicPartition<'r, P::Reporter>,
+                &mut Self::ParallelPartition<P::Reporter>,
+            >,
         ) -> Q,
     >(
         &mut self,
@@ -72,7 +91,7 @@ impl<R: Reporter> Partitioning<R> for MpiPartitioning<R> {
         } else {
             inner(Err(&mut MpiParallelPartition {
                 world: self.world,
-                _marker: PhantomData::<R>,
+                _marker: PhantomData::<P::Reporter>,
             }))
         }
     }
@@ -85,7 +104,7 @@ pub struct MpiParallelPartition<R: Reporter> {
 
 #[contract_trait]
 impl<R: Reporter> ParallelPartition<R> for MpiParallelPartition<R> {
-    type Partitioning = MpiPartitioning<R>;
+    type Partitioning = MpiPartitioning;
 
     fn get_partition_rank(&self) -> u32 {
         #[allow(clippy::cast_sign_loss)]
@@ -101,7 +120,27 @@ impl<R: Reporter> ParallelPartition<R> for MpiParallelPartition<R> {
 }
 
 impl<R: Reporter> Partition<R> for MpiParallelPartition<R> {
-    fn get_reporter(&mut self) -> &mut R {
-        unimplemented!("Progress should be reported live, but events should be dumped to disk")
+    type Reporter = Self;
+
+    fn get_reporter(&mut self) -> &mut Self::Reporter {
+        self
     }
+}
+
+impl<R: Reporter> Reporter for MpiParallelPartition<R> {
+    #[inline]
+    fn report_event(&mut self, _event: &Event) {
+        // TODO: Dump events to disk
+    }
+
+    #[inline]
+    fn report_progress(&mut self, _remaining: u64) {
+        // TODO: Report progress with some max frequency to the root, which can
+        // pass it on
+    }
+}
+
+impl<R: Reporter> EventFilter for MpiParallelPartition<R> {
+    const REPORT_DISPERSAL: bool = R::REPORT_DISPERSAL;
+    const REPORT_SPECIATION: bool = R::REPORT_SPECIATION;
 }

@@ -1,4 +1,4 @@
-use crate::reporter::ReporterContext;
+use crate::{partitioning::Partitioning, reporter::ReporterContext};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
@@ -19,7 +19,7 @@ pub trait SpatiallyImplicitSimulation {
         (0.0_f64..=1.0_f64).contains(&sample_percentage),
         "0.0 <= sample_percentage <= 1.0"
     )]
-    fn simulate<P: ReporterContext>(
+    fn simulate<P: Partitioning, R: ReporterContext>(
         dynamic_meta: bool,
         local_area_deme: ((u32, u32), u32),
         meta_area_deme: ((u32, u32), u32),
@@ -27,7 +27,8 @@ pub trait SpatiallyImplicitSimulation {
         meta_speciation_probability_per_generation: f64,
         sample_percentage: f64,
         seed: u64,
-        reporter_context: P,
+        partitioning: &mut P,
+        reporter_context: R,
         auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error>;
 }

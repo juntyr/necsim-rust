@@ -9,7 +9,10 @@ use necsim_impls_no_std::cogs::{
 };
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
-use necsim_impls_no_std::{reporter::ReporterContext, simulation::in_memory::InMemorySimulation};
+use necsim_impls_no_std::{
+    partitioning::Partitioning, reporter::ReporterContext,
+    simulation::in_memory::InMemorySimulation,
+};
 
 use super::{CudaArguments, CudaSimulation};
 
@@ -26,13 +29,14 @@ impl InMemorySimulation for CudaSimulation {
     /// `Err(InconsistentDispersalMapSize)` is returned iff the dimensions of
     /// `dispersal` are not `ExE` given `E=RxC` where `habitat` has dimension
     /// `RxC`.
-    fn simulate<P: ReporterContext>(
+    fn simulate<P: Partitioning, R: ReporterContext>(
         habitat: &Array2D<u32>,
         dispersal: &Array2D<f64>,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
         seed: u64,
-        reporter_context: P,
+        _partitioning: &mut P,
+        reporter_context: R,
         auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = InMemoryHabitat::new(habitat.clone());

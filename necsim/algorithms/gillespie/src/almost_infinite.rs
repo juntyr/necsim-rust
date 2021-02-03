@@ -8,7 +8,8 @@ use necsim_impls_no_std::cogs::{
 };
 
 use necsim_impls_no_std::{
-    reporter::ReporterContext, simulation::almost_infinite::AlmostInfiniteSimulation,
+    partitioning::Partitioning, reporter::ReporterContext,
+    simulation::almost_infinite::AlmostInfiniteSimulation,
 };
 
 use super::GillespieSimulation;
@@ -21,13 +22,14 @@ impl AlmostInfiniteSimulation for GillespieSimulation {
     /// Simulates the Gillespie coalescence algorithm on on an almost-infinite
     /// `habitat` with N(0, sigma) `dispersal`. Only a circular region with
     /// `radius` is sampled.
-    fn simulate<P: ReporterContext>(
+    fn simulate<P: Partitioning, R: ReporterContext>(
         radius: u32,
         sigma: f64,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
         seed: u64,
-        reporter_context: P,
+        _partitioning: &mut P,
+        reporter_context: R,
         _auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = AlmostInfiniteHabitat::default();

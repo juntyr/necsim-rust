@@ -8,20 +8,16 @@ use necsim_core::{
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct UniformPartitionOriginSampler<'h, H: Habitat> {
-    base_sampler: H::OriginSampler<'h>,
+pub struct UniformPartitionOriginSampler<'h, H: Habitat, O: OriginSampler<'h, H>> {
+    base_sampler: O,
     group_size: usize,
     _marker: PhantomData<&'h H>,
 }
 
-impl<'h, H: Habitat> UniformPartitionOriginSampler<'h, H> {
+impl<'h, H: Habitat, O: OriginSampler<'h, H>> UniformPartitionOriginSampler<'h, H, O> {
     #[must_use]
     #[debug_requires(group_rank < group_size, "group_rank is in [0, group_size)")]
-    pub fn new(
-        mut base_sampler: H::OriginSampler<'h>,
-        group_rank: usize,
-        group_size: usize,
-    ) -> Self {
+    pub fn new(mut base_sampler: O, group_rank: usize, group_size: usize) -> Self {
         let _ = base_sampler.advance_by(group_rank);
 
         Self {
@@ -33,7 +29,9 @@ impl<'h, H: Habitat> UniformPartitionOriginSampler<'h, H> {
 }
 
 #[contract_trait]
-impl<'h, H: Habitat> OriginSampler<'h, H> for UniformPartitionOriginSampler<'h, H> {
+impl<'h, H: Habitat, O: OriginSampler<'h, H>> OriginSampler<'h, H>
+    for UniformPartitionOriginSampler<'h, H, O>
+{
     fn habitat(&self) -> &'h H {
         self.base_sampler.habitat()
     }
@@ -52,7 +50,7 @@ impl<'h, H: Habitat> OriginSampler<'h, H> for UniformPartitionOriginSampler<'h, 
     }
 }
 
-impl<'h, H: Habitat> Iterator for UniformPartitionOriginSampler<'h, H> {
+impl<'h, H: Habitat, O: OriginSampler<'h, H>> Iterator for UniformPartitionOriginSampler<'h, H, O> {
     type Item = IndexedLocation;
 
     fn next(&mut self) -> Option<Self::Item> {
