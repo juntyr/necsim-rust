@@ -15,6 +15,7 @@ const B64_ASCII_BYTES: &[u8] = &[0x36, 0x34];
 const ZERO_ASCII_BYTES: &[u8] = &[0x30];
 
 impl PtxJITCompiler {
+    #[must_use]
     pub fn new(ptx: &CStr) -> Self {
         let ptx = ptx.to_bytes();
 
@@ -76,8 +77,7 @@ impl PtxJITCompiler {
                             if let Some(loadoffset) = std::str::from_utf8(
                                 const_load_instruction
                                     .name("loadoffset")
-                                    .map(|s| s.as_bytes())
-                                    .unwrap_or(ZERO_ASCII_BYTES),
+                                    .map_or(ZERO_ASCII_BYTES, |s| s.as_bytes()),
                             )
                             .ok()
                             .and_then(|s| s.parse().ok())

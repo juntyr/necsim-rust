@@ -10,6 +10,7 @@ impl PtxJITCompiler {
     pub fn with_arguments(&mut self, arguments: Option<&[Option<&[u8]>]>) -> PtxJITResult<'_> {
         // Check if the arguments, cast as byte slices, are the same as the last cached
         //  ones
+        #[allow(clippy::explicit_deref_methods)]
         let needs_recomputation = match (arguments, &self.last_arguments) {
             (None, None) => false,
             (Some(arguments), Some(last_arguments)) if arguments.len() == last_arguments.len() => {
@@ -29,17 +30,13 @@ impl PtxJITCompiler {
         //  arguments
         if needs_recomputation {
             // Cache the new arguments
-            self.last_arguments = if let Some(arguments) = arguments {
-                Some(
-                    arguments
-                        .iter()
-                        .map(|arg| arg.map(|bytes| bytes.to_owned().into_boxed_slice()))
-                        .collect::<Vec<Option<Box<[u8]>>>>()
-                        .into_boxed_slice(),
-                )
-            } else {
-                None
-            };
+            self.last_arguments = arguments.map(|arguments| {
+                arguments
+                    .iter()
+                    .map(|arg| arg.map(|bytes| bytes.to_owned().into_boxed_slice()))
+                    .collect::<Vec<Option<Box<[u8]>>>>()
+                    .into_boxed_slice()
+            });
 
             let mut output_ptx = Vec::new();
 
