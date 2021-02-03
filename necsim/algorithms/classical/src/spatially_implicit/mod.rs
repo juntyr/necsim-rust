@@ -1,5 +1,6 @@
 use necsim_impls_no_std::{
-    reporter::ReporterContext, simulation::spatially_implicit::SpatiallyImplicitSimulation,
+    partitioning::Partitioning, reporter::ReporterContext,
+    simulation::spatially_implicit::SpatiallyImplicitSimulation,
 };
 
 mod dynamic;
@@ -17,7 +18,7 @@ impl SpatiallyImplicitSimulation for ClassicalSimulation {
     /// migration from the meta- to the local community.
     /// If `dynamic_meta` is true, the metacommunity will be dynamic.
     #[allow(clippy::too_many_arguments)]
-    fn simulate<P: ReporterContext>(
+    fn simulate<P: Partitioning, R: ReporterContext>(
         dynamic_meta: bool,
         local_area_deme: ((u32, u32), u32),
         meta_area_deme: ((u32, u32), u32),
@@ -25,7 +26,8 @@ impl SpatiallyImplicitSimulation for ClassicalSimulation {
         meta_speciation_probability_per_generation: f64,
         sample_percentage: f64,
         seed: u64,
-        reporter_context: P,
+        _partitioning: &mut P,
+        reporter_context: R,
         _auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let (time, steps) = if dynamic_meta {

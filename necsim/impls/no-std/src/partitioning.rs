@@ -6,10 +6,16 @@ use crate::reporter::ReporterContext;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait Partitioning<R: Reporter>: Sized {
-    type ParallelPartition: ParallelPartition<R, Partitioning = Self>;
+pub trait Partitioning: Sized {
+    type ParallelPartition<R: Reporter>: ParallelPartition<R, Partitioning = Self>;
 
     fn is_monolithic(&self) -> bool;
+
+    #[debug_ensures(
+        self.is_monolithic() -> ret,
+        "monolithic partition is always root"
+    )]
+    fn is_root(&self) -> bool;
 
     #[debug_ensures(
         self.is_monolithic() == (ret.get() == 1),
@@ -18,10 +24,13 @@ pub trait Partitioning<R: Reporter>: Sized {
     fn get_number_of_partitions(&self) -> NonZeroU32;
 
     fn with_local_partition<
-        P: ReporterContext<Reporter = R>,
+        P: ReporterContext,
         Q,
         F: for<'r> FnOnce(
-            Result<&mut MonolithicPartition<'r, P::Reporter>, &mut Self::ParallelPartition>,
+            Result<
+                &mut MonolithicPartition<'r, P::Reporter>,
+                &mut Self::ParallelPartition<P::Reporter>,
+            >,
         ) -> Q,
     >(
         &mut self,
@@ -31,13 +40,17 @@ pub trait Partitioning<R: Reporter>: Sized {
 }
 
 pub trait Partition<R: Reporter> {
-    fn get_reporter(&mut self) -> &mut R;
+    type Reporter: Reporter;
+
+    fn get_reporter(&mut self) -> &mut Self::Reporter;
 }
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait ParallelPartition<R: Reporter>: Partition<R> {
-    type Partitioning: Partitioning<R, ParallelPartition = Self>;
+    // Should be Partitioning<ParallelPartition<R> = Self>
+    //  after https://github.com/rust-lang/rust/pull/79554
+    type Partitioning: Partitioning;
 
     #[debug_ensures(
         ret < self.get_number_of_partitions().get(),
@@ -57,7 +70,9 @@ pub struct MonolithicPartition<'r, R: Reporter> {
 }
 
 impl<'r, R: Reporter> Partition<R> for MonolithicPartition<'r, R> {
-    fn get_reporter(&mut self) -> &mut R {
+    type Reporter = R;
+
+    fn get_reporter(&mut self) -> &mut Self::Reporter {
         self.reporter
     }
 }
@@ -78,10 +93,14 @@ impl Default for MonolithicPartitioning {
 }
 
 #[contract_trait]
-impl<R: Reporter> Partitioning<R> for MonolithicPartitioning {
-    type ParallelPartition = !;
+impl Partitioning for MonolithicPartitioning {
+    type ParallelPartition<R: Reporter> = !;
 
     fn is_monolithic(&self) -> bool {
+        true
+    }
+
+    fn is_root(&self) -> bool {
         true
     }
 
@@ -90,10 +109,13 @@ impl<R: Reporter> Partitioning<R> for MonolithicPartitioning {
     }
 
     fn with_local_partition<
-        P: ReporterContext<Reporter = R>,
+        P: ReporterContext,
         Q,
         F: for<'r> FnOnce(
-            Result<&mut MonolithicPartition<'r, P::Reporter>, &mut Self::ParallelPartition>,
+            Result<
+                &mut MonolithicPartition<'r, P::Reporter>,
+                &mut Self::ParallelPartition<P::Reporter>,
+            >,
         ) -> Q,
     >(
         &mut self,
@@ -119,7 +141,9 @@ impl<R: Reporter> ParallelPartition<R> for ! {
 }
 
 impl<R: Reporter> Partition<R> for ! {
-    fn get_reporter(&mut self) -> &mut R {
+    type Reporter = R;
+
+    fn get_reporter(&mut self) -> &mut Self::Reporter {
         unreachable!("! cannot be constructed")
     }
 }

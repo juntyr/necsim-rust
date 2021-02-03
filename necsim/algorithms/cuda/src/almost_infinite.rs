@@ -9,7 +9,8 @@ use necsim_impls_no_std::cogs::{
 };
 
 use necsim_impls_no_std::{
-    reporter::ReporterContext, simulation::almost_infinite::AlmostInfiniteSimulation,
+    partitioning::Partitioning, reporter::ReporterContext,
+    simulation::almost_infinite::AlmostInfiniteSimulation,
 };
 
 use super::{CudaArguments, CudaSimulation};
@@ -22,13 +23,14 @@ impl AlmostInfiniteSimulation for CudaSimulation {
     /// Simulates the coalescence algorithm on a CUDA-capable GPU on an
     /// almost-infinite `habitat` with N(0, sigma) `dispersal`. Only a
     /// circular region with `radius` is sampled.
-    fn simulate<P: ReporterContext>(
+    fn simulate<P: Partitioning, R: ReporterContext>(
         radius: u32,
         sigma: f64,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
         seed: u64,
-        reporter_context: P,
+        _partitioning: &mut P,
+        reporter_context: R,
         auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = AlmostInfiniteHabitat::default();

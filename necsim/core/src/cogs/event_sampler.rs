@@ -30,14 +30,15 @@ pub trait EventSampler<
     #[debug_requires(event_time >= 0.0_f64, "event time is non-negative")]
     // TODO: If lineage removal is done by emigration exit, we should
     //       also assert that lineage has been removed here iff None
-    #[debug_ensures(match &ret {
-        Some(event) => Some(event.global_lineage_reference().clone()) == old(
-            simulation.lineage_store.get(lineage_reference.clone()).map(
-                |lineage| lineage.global_reference().clone()
-            )
-        ),
-        None => true,
-    } , "event occurs for lineage_reference")]
+    // TODO: IndependentLineageStore cannot satisfy this condition
+    // #[debug_ensures(match &ret {
+    //     Some(event) => Some(event.global_lineage_reference().clone()) == old(
+    //         simulation.lineage_store.get(lineage_reference.clone()).map(
+    //             |lineage| lineage.global_reference().clone()
+    //         )
+    //     ),
+    //     None => true,
+    // } , "event occurs for lineage_reference")]
     #[debug_ensures(match &ret {
         Some(event) => event.time() == event_time,
         None => true,
