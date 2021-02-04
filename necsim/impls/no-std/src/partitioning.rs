@@ -52,6 +52,8 @@ pub trait ParallelPartition<R: Reporter>: Partition<R> {
     //  after https://github.com/rust-lang/rust/pull/79554
     type Partitioning: Partitioning;
 
+    fn is_root(&self) -> bool;
+
     #[debug_ensures(
         ret < self.get_number_of_partitions().get(),
         "partition rank is in range [0, self.get_number_of_partitions())"
@@ -63,6 +65,8 @@ pub trait ParallelPartition<R: Reporter>: Partition<R> {
         "there are more than one parallel partitions"
     )]
     fn get_number_of_partitions(&self) -> NonZeroU32;
+
+    fn reduce_global_time_steps(&self, local_time: f64, local_steps: u64) -> (f64, u64);
 }
 
 pub struct MonolithicPartition<'r, R: Reporter> {
@@ -131,11 +135,19 @@ impl Partitioning for MonolithicPartitioning {
 impl<R: Reporter> ParallelPartition<R> for ! {
     type Partitioning = MonolithicPartitioning;
 
+    fn is_root(&self) -> bool {
+        unreachable!("! cannot be constructed")
+    }
+
     fn get_partition_rank(&self) -> u32 {
         unreachable!("! cannot be constructed")
     }
 
     fn get_number_of_partitions(&self) -> NonZeroU32 {
+        unreachable!("! cannot be constructed")
+    }
+
+    fn reduce_global_time_steps(&self, _local_time: f64, _local_steps: u64) -> (f64, u64) {
         unreachable!("! cannot be constructed")
     }
 }
