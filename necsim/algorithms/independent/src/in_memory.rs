@@ -54,7 +54,7 @@ impl InMemorySimulation for IndependentSimulation {
                 InMemoryOriginSampler::new(&habitat),
                 sample_percentage,
             );
-            let lineages = match &partition {
+            let lineages: Vec<Lineage> = match &partition {
                 Ok(_monolithic) => lineage_origins
                     .map(|indexed_location| Lineage::new(indexed_location, &habitat))
                     .collect(),
@@ -76,14 +76,18 @@ impl InMemorySimulation for IndependentSimulation {
                     seed,
                     monolithic.get_reporter(),
                 ),
-                Err(parallel) => IndependentSimulation::simulate(
-                    habitat,
-                    speciation_probability,
-                    dispersal_sampler,
-                    lineages,
-                    seed,
-                    parallel.get_reporter(),
-                ),
+                Err(parallel) => {
+                    let (partition_time, partition_steps) = IndependentSimulation::simulate(
+                        habitat,
+                        speciation_probability,
+                        dispersal_sampler,
+                        lineages,
+                        seed,
+                        parallel.get_reporter(),
+                    );
+
+                    parallel.reduce_global_time_steps(partition_time, partition_steps)
+                },
             })
         })
     }

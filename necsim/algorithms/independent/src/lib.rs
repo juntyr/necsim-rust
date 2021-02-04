@@ -12,8 +12,8 @@ use lru::LruCache;
 
 use necsim_core::{
     cogs::{
-        DispersalSampler, Habitat, MinSpeciationTrackingEventSampler, RngCore,
-        SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
+        ActiveLineageSampler, DispersalSampler, Habitat, MinSpeciationTrackingEventSampler,
+        RngCore, SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
     },
     lineage::{GlobalLineageReference, Lineage},
     reporter::Reporter,
@@ -93,12 +93,14 @@ impl IndependentSimulation {
 
         let mut lineages: VecDeque<Lineage> = lineages.into();
 
-        while let Some(active_lineage) = lineages.pop_front() {
+        while !lineages.is_empty()
+            || simulation.active_lineage_sampler().number_active_lineages() > 0
+        {
             reporter.report_total_progress(lineages.len() as u64);
 
             let previous_task = simulation
                 .active_lineage_sampler_mut()
-                .replace_active_lineage(Some(active_lineage));
+                .replace_active_lineage(lineages.pop_front());
 
             let previous_speciation_sample =
                 simulation.event_sampler_mut().replace_min_speciation(None);
