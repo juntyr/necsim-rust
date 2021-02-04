@@ -9,8 +9,9 @@ use core::num::NonZeroU32;
 use std::marker::PhantomData;
 
 use mpi::{
+    collective::{Root, SystemOperation},
     environment::Universe,
-    topology::{Communicator, SystemCommunicator},
+    topology::{Communicator, Rank, SystemCommunicator},
 };
 
 use thiserror::Error;
@@ -35,6 +36,8 @@ pub struct MpiPartitioning {
 }
 
 impl MpiPartitioning {
+    const ROOT_RANK: Rank = 0;
+
     /// # Errors
     /// Returns `MpiAlreadyInitialisedError` if MPI was already initialised.
     pub fn initialise() -> Result<Self, MpiAlreadyInitialisedError> {
@@ -62,7 +65,7 @@ impl Partitioning for MpiPartitioning {
     }
 
     fn is_root(&self) -> bool {
-        self.world.rank() == 0
+        self.world.rank() == MpiPartitioning::ROOT_RANK
     }
 
     fn get_number_of_partitions(&self) -> NonZeroU32 {
@@ -106,6 +109,10 @@ pub struct MpiParallelPartition<R: Reporter> {
 impl<R: Reporter> ParallelPartition<R> for MpiParallelPartition<R> {
     type Partitioning = MpiPartitioning;
 
+    fn is_root(&self) -> bool {
+        self.world.rank() == MpiPartitioning::ROOT_RANK
+    }
+
     fn get_partition_rank(&self) -> u32 {
         #[allow(clippy::cast_sign_loss)]
         {
@@ -116,6 +123,36 @@ impl<R: Reporter> ParallelPartition<R> for MpiParallelPartition<R> {
     fn get_number_of_partitions(&self) -> NonZeroU32 {
         #[allow(clippy::cast_sign_loss)]
         NonZeroU32::new(self.world.size() as u32).unwrap()
+    }
+
+    fn reduce_global_time_steps(&self, local_time: f64, local_steps: u64) -> (f64, u64) {
+        let root_process = self.world.process_at_rank(MpiPartitioning::ROOT_RANK);
+
+        let mut global_time_max: f64 = 0.0_f64;
+        let mut global_steps_sum: u64 = 0_u64;
+
+        if self.is_root() {
+            root_process.reduce_into_root(
+                &local_time,
+                &mut global_time_max,
+                SystemOperation::max(),
+            );
+
+            root_process.reduce_into_root(
+                &local_steps,
+                &mut global_steps_sum,
+                SystemOperation::sum(),
+            );
+        } else {
+            root_process.reduce_into(&local_time, SystemOperation::max());
+
+            root_process.reduce_into(&local_steps, SystemOperation::sum());
+        }
+
+        root_process.broadcast_into(&mut global_time_max);
+        root_process.broadcast_into(&mut global_steps_sum);
+
+        (global_time_max, global_steps_sum)
     }
 }
 
