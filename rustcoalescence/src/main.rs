@@ -73,7 +73,7 @@ fn main_with_logger<P: Partitioning>(partitioning: &mut P) -> Result<()> {
         info!("The simulation will be run in monolithic mode.");
     } else {
         info!(
-            "The simulation will be run distributed across {} partitions.",
+            "The simulation will be distributed across {} partitions.",
             partitioning.get_number_of_partitions().get()
         );
     }

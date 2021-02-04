@@ -67,14 +67,18 @@ impl NonSpatialSimulation for IndependentSimulation {
                     seed,
                     monolithic.get_reporter(),
                 ),
-                Err(parallel) => IndependentSimulation::simulate(
-                    habitat,
-                    speciation_probability,
-                    dispersal_sampler,
-                    lineages,
-                    seed,
-                    parallel.get_reporter(),
-                ),
+                Err(parallel) => {
+                    let (partition_time, partition_steps) = IndependentSimulation::simulate(
+                        habitat,
+                        speciation_probability,
+                        dispersal_sampler,
+                        lineages,
+                        seed,
+                        parallel.get_reporter(),
+                    );
+
+                    parallel.reduce_global_time_steps(partition_time, partition_steps)
+                },
             })
         })
     }
