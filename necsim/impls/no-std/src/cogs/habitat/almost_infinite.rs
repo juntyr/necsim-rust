@@ -3,8 +3,6 @@ use necsim_core::{
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
-use crate::cogs::origin_sampler::almost_infinite::AlmostInfiniteOriginSampler;
-
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 #[derive(Debug)]
@@ -22,8 +20,6 @@ impl Default for AlmostInfiniteHabitat {
 
 #[contract_trait]
 impl Habitat for AlmostInfiniteHabitat {
-    type OriginSampler<'h> = AlmostInfiniteOriginSampler<'h>;
-
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
         &self.extent

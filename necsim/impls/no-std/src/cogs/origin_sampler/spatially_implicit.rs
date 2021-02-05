@@ -1,34 +1,45 @@
-use core::iter::{Iterator, Peekable};
+use core::{fmt, iter::Iterator};
 
 use necsim_core::{
     cogs::{Habitat, OriginSampler},
-    landscape::{IndexedLocation, LocationIterator},
+    landscape::IndexedLocation,
 };
 
-use crate::cogs::habitat::spatially_implicit::SpatiallyImplicitHabitat;
+use crate::cogs::{
+    habitat::spatially_implicit::SpatiallyImplicitHabitat,
+    origin_sampler::{non_spatial::NonSpatialOriginSampler, pre_sampler::OriginPreSampler},
+};
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
-pub struct SpatiallyImplicitOriginSampler<'h> {
-    location_iterator: Peekable<LocationIterator>,
-    next_index: u32,
+pub struct SpatiallyImplicitOriginSampler<'h, I: Iterator<Item = u64>> {
+    local_iterator: NonSpatialOriginSampler<'h, I>,
     habitat: &'h SpatiallyImplicitHabitat,
 }
 
-impl<'h> SpatiallyImplicitOriginSampler<'h> {
+impl<'h, I: Iterator<Item = u64>> fmt::Debug for SpatiallyImplicitOriginSampler<'h, I> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SpatiallyImplicitOriginSampler")
+            .field("local_iterator", &self.local_iterator)
+            .field("habitat", &self.habitat)
+            .finish()
+    }
+}
+
+impl<'h, I: Iterator<Item = u64>> SpatiallyImplicitOriginSampler<'h, I> {
     #[must_use]
-    pub fn new(habitat: &'h SpatiallyImplicitHabitat) -> Self {
+    pub fn new(pre_sampler: OriginPreSampler<I>, habitat: &'h SpatiallyImplicitHabitat) -> Self {
         Self {
-            location_iterator: habitat.local().get_extent().iter().peekable(),
-            next_index: 0_u32,
+            local_iterator: NonSpatialOriginSampler::new(pre_sampler, habitat.local()),
             habitat,
         }
     }
 }
 
 #[contract_trait]
-impl<'h> OriginSampler<'h, SpatiallyImplicitHabitat> for SpatiallyImplicitOriginSampler<'h> {
-    fn habitat(&self) -> &'h SpatiallyImplicitHabitat {
+impl<'h, I: Iterator<Item = u64>> OriginSampler<'h> for SpatiallyImplicitOriginSampler<'h, I> {
+    type Habitat = SpatiallyImplicitHabitat;
+
+    fn habitat(&self) -> &'h Self::Habitat {
         self.habitat
     }
 
@@ -37,24 +48,10 @@ impl<'h> OriginSampler<'h, SpatiallyImplicitHabitat> for SpatiallyImplicitOrigin
     }
 }
 
-impl<'h> Iterator for SpatiallyImplicitOriginSampler<'h> {
+impl<'h, I: Iterator<Item = u64>> Iterator for SpatiallyImplicitOriginSampler<'h, I> {
     type Item = IndexedLocation;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.habitat.local().get_deme() == 0 {
-            return None;
-        }
-
-        if self.next_index >= self.habitat.local().get_deme() {
-            self.next_index = 0;
-            self.location_iterator.next();
-        }
-
-        let next_location = self.location_iterator.peek()?;
-        let next_index = self.next_index;
-
-        self.next_index += 1;
-
-        Some(IndexedLocation::new(next_location.clone(), next_index))
+        self.local_iterator.next()
     }
 }

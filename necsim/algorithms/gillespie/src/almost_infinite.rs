@@ -2,9 +2,7 @@ use necsim_impls_no_std::cogs::{
     dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
     habitat::almost_infinite::AlmostInfiniteHabitat,
     lineage_store::coherent::almost_infinite::CoherentAlmostInfiniteLineageStore,
-    origin_sampler::{
-        almost_infinite::AlmostInfiniteOriginSampler, percentage::PercentageOriginSampler,
-    },
+    origin_sampler::{almost_infinite::AlmostInfiniteOriginSampler, pre_sampler::OriginPreSampler},
 };
 
 use necsim_impls_no_std::{
@@ -34,10 +32,13 @@ impl AlmostInfiniteSimulation for GillespieSimulation {
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = AlmostInfiniteHabitat::default();
         let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(sigma);
-        let lineage_store = CoherentAlmostInfiniteLineageStore::new(PercentageOriginSampler::new(
-            AlmostInfiniteOriginSampler::new(&habitat, radius),
-            sample_percentage,
-        ));
+
+        let lineage_store =
+            CoherentAlmostInfiniteLineageStore::new(AlmostInfiniteOriginSampler::new(
+                OriginPreSampler::all().percentage(sample_percentage),
+                &habitat,
+                radius,
+            ));
 
         Ok(GillespieSimulation::simulate(
             habitat,
