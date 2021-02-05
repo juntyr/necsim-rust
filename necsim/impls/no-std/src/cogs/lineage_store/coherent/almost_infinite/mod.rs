@@ -35,7 +35,9 @@ impl Index<InMemoryLineageReference> for CoherentAlmostInfiniteLineageStore {
 
 impl CoherentAlmostInfiniteLineageStore {
     #[must_use]
-    pub fn new<'h, O: OriginSampler<'h, AlmostInfiniteHabitat>>(mut origin_sampler: O) -> Self {
+    pub fn new<'h, O: OriginSampler<'h, Habitat = AlmostInfiniteHabitat>>(
+        mut origin_sampler: O,
+    ) -> Self {
         #[allow(clippy::cast_possible_truncation)]
         let lineages_amount_hint = origin_sampler.full_upper_bound_size_hint() as usize;
 

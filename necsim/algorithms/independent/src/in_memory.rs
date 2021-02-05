@@ -5,10 +5,7 @@ use necsim_core::lineage::Lineage;
 use necsim_impls_no_std::cogs::{
     dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
     habitat::in_memory::InMemoryHabitat,
-    origin_sampler::{
-        in_memory::InMemoryOriginSampler, percentage::PercentageOriginSampler,
-        uniform_partition::UniformPartitionOriginSampler,
-    },
+    origin_sampler::{in_memory::InMemoryOriginSampler, pre_sampler::OriginPreSampler},
     speciation_probability::uniform::UniformSpeciationProbability,
 };
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
@@ -50,22 +47,20 @@ impl InMemorySimulation for IndependentSimulation {
                 UniformSpeciationProbability::new(speciation_probability_per_generation);
             let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
 
-            let lineage_origins = PercentageOriginSampler::<InMemoryHabitat>::new(
-                InMemoryOriginSampler::new(&habitat),
-                sample_percentage,
-            );
-            let lineages: Vec<Lineage> = match &partition {
-                Ok(_monolithic) => lineage_origins
-                    .map(|indexed_location| Lineage::new(indexed_location, &habitat))
-                    .collect(),
-                Err(parallel) => UniformPartitionOriginSampler::new(
-                    lineage_origins,
-                    parallel.get_partition_rank() as usize,
-                    parallel.get_number_of_partitions().get() as usize,
-                )
-                .map(|indexed_location| Lineage::new(indexed_location, &habitat))
-                .collect(),
-            };
+            let lineage_origins = OriginPreSampler::all().percentage(sample_percentage);
+
+            let lineages: Vec<Lineage> = InMemoryOriginSampler::new(
+                match &partition {
+                    Ok(_monolithic) => lineage_origins.partition(0, 1),
+                    Err(parallel) => lineage_origins.partition(
+                        parallel.get_partition_rank(),
+                        parallel.get_number_of_partitions().get(),
+                    ),
+                },
+                &habitat,
+            )
+            .map(|indexed_location| Lineage::new(indexed_location, &habitat))
+            .collect();
 
             Ok(match partition {
                 Ok(monolithic) => IndependentSimulation::simulate(

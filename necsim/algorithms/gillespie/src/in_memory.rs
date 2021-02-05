@@ -4,7 +4,7 @@ use necsim_impls_no_std::cogs::{
     dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
     habitat::in_memory::InMemoryHabitat,
     lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
-    origin_sampler::{in_memory::InMemoryOriginSampler, percentage::PercentageOriginSampler},
+    origin_sampler::{in_memory::InMemoryOriginSampler, pre_sampler::OriginPreSampler},
 };
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
@@ -40,9 +40,10 @@ impl InMemorySimulation for GillespieSimulation {
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
-        let lineage_store = CoherentInMemoryLineageStore::new(PercentageOriginSampler::new(
-            InMemoryOriginSampler::new(&habitat),
-            sample_percentage,
+
+        let lineage_store = CoherentInMemoryLineageStore::new(InMemoryOriginSampler::new(
+            OriginPreSampler::all().percentage(sample_percentage),
+            &habitat,
         ));
 
         Ok(GillespieSimulation::simulate(
