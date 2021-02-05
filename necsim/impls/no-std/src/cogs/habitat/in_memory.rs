@@ -7,8 +7,6 @@ use necsim_core::{
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
-use crate::cogs::origin_sampler::in_memory::InMemoryOriginSampler;
-
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 #[derive(Debug)]
@@ -22,8 +20,6 @@ pub struct InMemoryHabitat {
 
 #[contract_trait]
 impl Habitat for InMemoryHabitat {
-    type OriginSampler<'h> = InMemoryOriginSampler<'h>;
-
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
         &self.extent

@@ -1,34 +1,57 @@
-use core::iter::{Iterator, Peekable};
+use core::{
+    convert::TryFrom,
+    fmt,
+    iter::{Iterator, Peekable},
+};
 
 use necsim_core::{
     cogs::{Habitat, OriginSampler},
     landscape::{IndexedLocation, LocationIterator},
 };
 
-use crate::cogs::habitat::in_memory::InMemoryHabitat;
+use crate::cogs::{
+    habitat::in_memory::InMemoryHabitat, origin_sampler::pre_sampler::OriginPreSampler,
+};
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
-pub struct InMemoryOriginSampler<'h> {
+pub struct InMemoryOriginSampler<'h, I: Iterator<Item = u64>> {
+    pre_sampler: OriginPreSampler<I>,
+    last_index: u64,
     location_iterator: Peekable<LocationIterator>,
-    next_index: u32,
+    next_location_index: u32,
     habitat: &'h InMemoryHabitat,
 }
 
-impl<'h> InMemoryOriginSampler<'h> {
+impl<'h, I: Iterator<Item = u64>> fmt::Debug for InMemoryOriginSampler<'h, I> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("InMemoryOriginSampler")
+            .field("pre_sampler", &self.pre_sampler)
+            .field("last_index", &self.last_index)
+            .field("location_iterator", &self.location_iterator)
+            .field("next_location_index", &self.next_location_index)
+            .field("habitat", &self.habitat)
+            .finish()
+    }
+}
+
+impl<'h, I: Iterator<Item = u64>> InMemoryOriginSampler<'h, I> {
     #[must_use]
-    pub fn new(habitat: &'h InMemoryHabitat) -> Self {
+    pub fn new(pre_sampler: OriginPreSampler<I>, habitat: &'h InMemoryHabitat) -> Self {
         Self {
+            pre_sampler,
+            last_index: 0_u64,
             location_iterator: habitat.get_extent().iter().peekable(),
-            next_index: 0_u32,
+            next_location_index: 0_u32,
             habitat,
         }
     }
 }
 
 #[contract_trait]
-impl<'h> OriginSampler<'h, InMemoryHabitat> for InMemoryOriginSampler<'h> {
-    fn habitat(&self) -> &'h InMemoryHabitat {
+impl<'h, I: Iterator<Item = u64>> OriginSampler<'h> for InMemoryOriginSampler<'h, I> {
+    type Habitat = InMemoryHabitat;
+
+    fn habitat(&self) -> &'h Self::Habitat {
         self.habitat
     }
 
@@ -37,25 +60,38 @@ impl<'h> OriginSampler<'h, InMemoryHabitat> for InMemoryOriginSampler<'h> {
     }
 }
 
-impl<'h> Iterator for InMemoryOriginSampler<'h> {
+impl<'h, I: Iterator<Item = u64>> Iterator for InMemoryOriginSampler<'h, I> {
     type Item = IndexedLocation;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while self.next_index
-            >= self
-                .habitat
-                .get_habitat_at_location(self.location_iterator.peek()?)
+        let next_index = self.pre_sampler.next()?;
+        let mut index_difference = next_index - self.last_index;
+        self.last_index = next_index;
+
+        while u64::from(self.next_location_index) + index_difference
+            >= u64::from(
+                self.habitat
+                    .get_habitat_at_location(self.location_iterator.peek()?),
+            )
         {
-            self.next_index = 0;
+            index_difference -= u64::from(
+                self.habitat
+                    .get_habitat_at_location(self.location_iterator.peek()?)
+                    - self.next_location_index,
+            );
+
+            self.next_location_index = 0;
 
             self.location_iterator.next();
         }
 
         let next_location = self.location_iterator.peek()?;
-        let next_index = self.next_index;
 
-        self.next_index += 1;
+        self.next_location_index += u32::try_from(index_difference).unwrap();
 
-        Some(IndexedLocation::new(next_location.clone(), next_index))
+        Some(IndexedLocation::new(
+            next_location.clone(),
+            self.next_location_index,
+        ))
     }
 }
