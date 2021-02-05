@@ -5,7 +5,7 @@ use necsim_core::lineage::Lineage;
 use necsim_impls_no_std::cogs::{
     dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
     habitat::in_memory::InMemoryHabitat,
-    origin_sampler::{in_memory::InMemoryOriginSampler, percentage::PercentageOriginSampler},
+    origin_sampler::{in_memory::InMemoryOriginSampler, pre_sampler::OriginPreSampler},
 };
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
@@ -42,9 +42,9 @@ impl InMemorySimulation for CudaSimulation {
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemoryPackedAliasDispersalSampler::new(dispersal, &habitat)?;
 
-        let lineages = PercentageOriginSampler::<InMemoryHabitat>::new(
-            InMemoryOriginSampler::new(&habitat),
-            sample_percentage,
+        let lineages = InMemoryOriginSampler::new(
+            OriginPreSampler::all().percentage(sample_percentage),
+            &habitat,
         )
         .map(|indexed_location| Lineage::new(indexed_location, &habitat))
         .collect();

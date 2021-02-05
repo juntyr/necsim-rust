@@ -3,10 +3,7 @@ use necsim_core::{
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
-use crate::cogs::{
-    habitat::non_spatial::NonSpatialHabitat,
-    origin_sampler::spatially_implicit::SpatiallyImplicitOriginSampler,
-};
+use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
@@ -67,8 +64,6 @@ impl SpatiallyImplicitHabitat {
 
 #[contract_trait]
 impl Habitat for SpatiallyImplicitHabitat {
-    type OriginSampler<'h> = SpatiallyImplicitOriginSampler<'h>;
-
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
         &self.extent

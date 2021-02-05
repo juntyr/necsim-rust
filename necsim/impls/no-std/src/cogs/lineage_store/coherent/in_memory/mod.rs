@@ -40,7 +40,7 @@ impl<H: Habitat> Index<InMemoryLineageReference> for CoherentInMemoryLineageStor
 
 impl<'h, H: 'h + Habitat> CoherentInMemoryLineageStore<H> {
     #[must_use]
-    pub fn new<O: OriginSampler<'h, H>>(mut origin_sampler: O) -> Self {
+    pub fn new<O: OriginSampler<'h, Habitat = H>>(mut origin_sampler: O) -> Self {
         #[allow(clippy::cast_possible_truncation)]
         let lineages_amount_hint = origin_sampler.full_upper_bound_size_hint() as usize;
 

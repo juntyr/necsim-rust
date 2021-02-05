@@ -3,7 +3,7 @@ use necsim_impls_no_std::cogs::{
     habitat::spatially_implicit::SpatiallyImplicitHabitat,
     lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
     origin_sampler::{
-        percentage::PercentageOriginSampler, spatially_implicit::SpatiallyImplicitOriginSampler,
+        pre_sampler::OriginPreSampler, spatially_implicit::SpatiallyImplicitOriginSampler,
     },
     speciation_probability::spatially_implicit::SpatiallyImplicitSpeciationProbability,
 };
@@ -36,9 +36,10 @@ pub fn simulate_dynamic<P: ReporterContext>(
         SpatiallyImplicitSpeciationProbability::new(meta_speciation_probability_per_generation);
     let dispersal_sampler =
         SpatiallyImplicitDispersalSampler::new(local_migration_probability_per_generation);
-    let lineage_store = CoherentInMemoryLineageStore::new(PercentageOriginSampler::new(
-        SpatiallyImplicitOriginSampler::new(&habitat),
-        sample_percentage,
+
+    let lineage_store = CoherentInMemoryLineageStore::new(SpatiallyImplicitOriginSampler::new(
+        OriginPreSampler::all().percentage(sample_percentage),
+        &habitat,
     ));
 
     ClassicalSimulation::simulate(

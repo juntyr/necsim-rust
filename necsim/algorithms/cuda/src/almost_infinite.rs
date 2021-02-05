@@ -3,9 +3,7 @@ use necsim_core::lineage::Lineage;
 use necsim_impls_no_std::cogs::{
     dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
     habitat::almost_infinite::AlmostInfiniteHabitat,
-    origin_sampler::{
-        almost_infinite::AlmostInfiniteOriginSampler, percentage::PercentageOriginSampler,
-    },
+    origin_sampler::{almost_infinite::AlmostInfiniteOriginSampler, pre_sampler::OriginPreSampler},
 };
 
 use necsim_impls_no_std::{
@@ -36,9 +34,10 @@ impl AlmostInfiniteSimulation for CudaSimulation {
         let habitat = AlmostInfiniteHabitat::default();
         let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(sigma);
 
-        let lineages = PercentageOriginSampler::<AlmostInfiniteHabitat>::new(
-            AlmostInfiniteOriginSampler::new(&habitat, radius),
-            sample_percentage,
+        let lineages = AlmostInfiniteOriginSampler::new(
+            OriginPreSampler::all().percentage(sample_percentage),
+            &habitat,
+            radius,
         )
         .map(|indexed_location| Lineage::new(indexed_location, &habitat))
         .collect();
