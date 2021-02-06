@@ -14,7 +14,10 @@ use anyhow::{Context, Result};
 use log::LevelFilter;
 use structopt::StructOpt;
 
-use necsim_impls_no_std::partitioning::Partitioning;
+use necsim_impls_no_std::{
+    partitioning::{LocalPartition, Partitioning},
+    reporter::ReporterContext,
+};
 
 mod args;
 mod maps;
@@ -29,7 +32,7 @@ use minimal_logger::MinimalLogger;
 static MINIMAL_LOGGER: MinimalLogger = MinimalLogger;
 
 fn main() -> Result<()> {
-    let mut partitioning = {
+    let partitioning = {
         #[cfg(feature = "necsim-mpi")]
         {
             necsim_impls_mpi::MpiPartitioning::initialise()
@@ -48,10 +51,29 @@ fn main() -> Result<()> {
         LevelFilter::Off
     });
 
-    main_with_logger(&mut partitioning)
+    #[cfg(feature = "necsim-mpi")]
+    {
+        use necsim_impls_mpi::MpiLocalPartition;
+
+        match partitioning.into_local_partition(reporter::RustcoalescenceReporterContext::default())
+        {
+            MpiLocalPartition::Monolithic(ref mut partition) => main_with_logger(partition),
+            MpiLocalPartition::Root(ref mut partition) => main_with_logger(partition),
+            MpiLocalPartition::Parallel(ref mut partition) => main_with_logger(partition),
+        }
+    }
+    #[cfg(not(feature = "necsim-mpi"))]
+    {
+        main_with_logger(
+            &mut partitioning
+                .into_local_partition(reporter::RustcoalescenceReporterContext::default()),
+        )
+    }
 }
 
-fn main_with_logger<P: Partitioning>(partitioning: &mut P) -> Result<()> {
+fn main_with_logger<R: ReporterContext, P: LocalPartition<R>>(
+    local_partition: &mut P,
+) -> Result<()> {
     // Parse and validate all command line arguments
     let args = CommandLineArguments::from_args();
 
@@ -69,12 +91,12 @@ fn main_with_logger<P: Partitioning>(partitioning: &mut P) -> Result<()> {
         "The sampling percentage must be in range 0 <= s <= 1."
     );
 
-    if partitioning.is_monolithic() {
+    if local_partition.get_number_of_partitions().get() <= 1 {
         info!("The simulation will be run in monolithic mode.");
     } else {
         info!(
             "The simulation will be distributed across {} partitions.",
-            partitioning.get_number_of_partitions().get()
+            local_partition.get_number_of_partitions().get()
         );
     }
 
@@ -82,25 +104,25 @@ fn main_with_logger<P: Partitioning>(partitioning: &mut P) -> Result<()> {
         Command::InMemory(in_memory_args) => simulation::setup_in_memory_simulation(
             args.common_args(),
             in_memory_args,
-            partitioning,
+            local_partition,
         )?,
         Command::NonSpatial(non_spatial_args) => simulation::setup_non_spatial_simulation(
             args.common_args(),
             non_spatial_args,
-            partitioning,
+            local_partition,
         )?,
         Command::SpatiallyImplicit(spatially_implicit_args) => {
             simulation::setup_spatially_implicit_simulation(
                 args.common_args(),
                 spatially_implicit_args,
-                partitioning,
+                local_partition,
             )?
         },
         Command::AlmostInfinite(almost_infinite_args) => {
             simulation::setup_almost_infinite_simulation(
                 args.common_args(),
                 almost_infinite_args,
-                partitioning,
+                local_partition,
             )?
         },
     };

@@ -1,4 +1,4 @@
-use necsim_impls_no_std::reporter::ReporterContext;
+use necsim_impls_no_std::reporter::{GuardedReporter, ReporterContext};
 
 use necsim_impls_std::reporter::biodiversity::BiodiversityReporter;
 // use necsim_impls_std::reporter::events::EventReporter;
@@ -6,48 +6,21 @@ use necsim_impls_std::reporter::{
     execution_time::ExecutionTimeReporter, progress::ProgressReporter,
 };
 
-pub struct RustcoalescenceReporterContext {
-    estimated_total_lineages: u64,
-}
+pub struct RustcoalescenceReporterContext(());
 
-impl RustcoalescenceReporterContext {
-    pub fn new(estimated_total_lineages: u64) -> Self {
-        Self {
-            estimated_total_lineages,
-        }
+impl Default for RustcoalescenceReporterContext {
+    fn default() -> Self {
+        Self(())
     }
 }
 
-impl ReporterContext for RustcoalescenceReporterContext {
-    type Reporter = ReporterGroupType![
-        BiodiversityReporter,
-        ExecutionTimeReporter,
-        ProgressReporter
-    ];
-
-    fn with_reporter<O, F: FnOnce(&mut Self::Reporter) -> O>(self, inner: F) -> O {
-        // I. Initialise the reporters
-
-        let mut biodiversity_reporter = BiodiversityReporter::default();
-        // let mut event_reporter = EventReporter::default();
-        let mut execution_time_reporter = ExecutionTimeReporter::default();
-        let mut progress_reporter = ProgressReporter::new(self.estimated_total_lineages);
-
-        // II. Group the reporters into one static group type
-
-        let mut reporter_group = ReporterGroup![
-            biodiversity_reporter,
-            // event_reporter,
-            execution_time_reporter,
-            progress_reporter
-        ];
-
-        // III. Lend the reporter to the inner simulation closure
-
-        let result = inner(&mut reporter_group);
+impl RustcoalescenceReporterContext {
+    pub fn finalise(reporter_group: <Self as ReporterContext>::Reporter) {
+        let biodiversity_reporter;
+        let execution_time_reporter;
+        let progress_reporter;
 
         // IV. Ungroup the reporters
-
         ReporterUnGroup! {reporter_group => [
             biodiversity_reporter,
             // event_reporter,
@@ -77,9 +50,35 @@ impl ReporterContext for RustcoalescenceReporterContext {
             "The simulation resulted in a biodiversity of {} unique species.",
             biodiversity_reporter.biodiversity()
         );
+    }
+}
 
-        // VI. Return the result of the inner simulation closure
+impl ReporterContext for RustcoalescenceReporterContext {
+    type Finaliser = fn(Self::Reporter);
+    type Reporter = ReporterGroupType![
+        BiodiversityReporter,
+        ExecutionTimeReporter,
+        ProgressReporter
+    ];
 
-        result
+    fn build_guarded(self) -> GuardedReporter<Self::Reporter, Self::Finaliser> {
+        // I. Initialise the reporters
+
+        let biodiversity_reporter = BiodiversityReporter::default();
+        // let mut event_reporter = EventReporter::default();
+        let execution_time_reporter = ExecutionTimeReporter::default();
+        let progress_reporter = ProgressReporter::default();
+
+        // II. Group the reporters into one static group type
+
+        let reporter_group = ReporterGroup![
+            biodiversity_reporter,
+            // event_reporter,
+            execution_time_reporter,
+            progress_reporter
+        ];
+
+        // III. Return the guarded reporter group
+        GuardedReporter::from(reporter_group, Self::finalise)
     }
 }

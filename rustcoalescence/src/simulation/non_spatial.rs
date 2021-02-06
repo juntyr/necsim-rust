@@ -19,7 +19,7 @@ use necsim_impls_no_std::reporter::ReporterContext;
 #[allow(unused_imports)]
 use necsim_impls_no_std::simulation::non_spatial::NonSpatialSimulation;
 
-use necsim_impls_no_std::partitioning::Partitioning;
+use necsim_impls_no_std::partitioning::LocalPartition;
 
 #[allow(unused_imports)]
 use crate::args::{Algorithm, CommonArgs, NonSpatialArgs};
@@ -27,11 +27,10 @@ use crate::args::{Algorithm, CommonArgs, NonSpatialArgs};
 #[allow(unreachable_code)]
 #[allow(unused_variables)]
 #[allow(clippy::needless_pass_by_value)]
-pub fn simulate<P: Partitioning, R: ReporterContext>(
+pub fn simulate<R: ReporterContext, P: LocalPartition<R>>(
     common_args: &CommonArgs,
     non_spatial_args: &NonSpatialArgs,
-    partitioning: &mut P,
-    reporter_context: R,
+    local_partition: &mut P,
 ) -> Result<(f64, u64)> {
     info!(
         "Setting up the non-spatial {:?} coalescence algorithm ...",
@@ -48,8 +47,7 @@ pub fn simulate<P: Partitioning, R: ReporterContext>(
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
-            partitioning,
-            reporter_context,
+            local_partition,
             (),
         )
         .map_err(|_| unreachable!("Non-Spatial ClassicalSimulation can never fail.")),
@@ -60,8 +58,7 @@ pub fn simulate<P: Partitioning, R: ReporterContext>(
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
-            partitioning,
-            reporter_context,
+            local_partition,
             (),
         )
         .map_err(|_| unreachable!("Non-Spatial GillespieSimulation can never fail.")),
@@ -72,8 +69,7 @@ pub fn simulate<P: Partitioning, R: ReporterContext>(
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
-            partitioning,
-            reporter_context,
+            local_partition,
             (),
         )
         .map_err(|_| unreachable!("Non-Spatial SkippingGillespieSimulation can never fail.")),
@@ -84,8 +80,7 @@ pub fn simulate<P: Partitioning, R: ReporterContext>(
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
-            partitioning,
-            reporter_context,
+            local_partition,
             (*auxiliary).into(),
         ),
         #[cfg(feature = "necsim-independent")]
@@ -95,8 +90,7 @@ pub fn simulate<P: Partitioning, R: ReporterContext>(
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
-            partitioning,
-            reporter_context,
+            local_partition,
             (),
         )
         .map_err(|_| unreachable!("Non-Spatial IndependentSimulation can never fail.")),

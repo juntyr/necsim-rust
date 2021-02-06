@@ -5,12 +5,16 @@ use necsim_core::cogs::{Habitat, RngCore, RngSampler};
 use necsim_impls_no_std::cogs::{
     dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
     habitat::non_spatial::NonSpatialHabitat,
+    lineage_reference::in_memory::InMemoryLineageReference,
     lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
     origin_sampler::{non_spatial::NonSpatialOriginSampler, pre_sampler::OriginPreSampler},
     speciation_probability::uniform::UniformSpeciationProbability,
 };
 
-use necsim_impls_no_std::reporter::ReporterContext;
+use necsim_impls_no_std::{
+    partitioning::{LocalPartition, MonolithicLocalPartition},
+    reporter::{GuardedReporter, ReporterContext},
+};
 
 use necsim_impls_std::{cogs::rng::std::StdRng, reporter::biodiversity::BiodiversityReporter};
 
@@ -21,14 +25,14 @@ use super::ClassicalSimulation;
 /// migration from the meta- to the local community.
 /// The metacommunity is assumed to be static.
 #[allow(clippy::too_many_arguments, clippy::module_name_repetitions)]
-pub fn simulate_static<P: ReporterContext>(
+pub fn simulate_static<R: ReporterContext, P: LocalPartition<R>>(
     local_area_deme: ((u32, u32), u32),
     meta_area_deme: ((u32, u32), u32),
     local_migration_probability_per_generation: f64,
     meta_speciation_probability_per_generation: f64,
     sample_percentage: f64,
     seed: u64,
-    reporter_context: P,
+    local_partition: &mut P,
 ) -> (f64, u64) {
     let local_habitat = NonSpatialHabitat::new(local_area_deme.0, local_area_deme.1);
     let local_speciation_probability =
@@ -40,19 +44,31 @@ pub fn simulate_static<P: ReporterContext>(
         &local_habitat,
     ));
 
-    let mut migration_reporter = BiodiversityReporter::default();
+    let mut number_of_migrations = 0_usize;
 
     // TODO: How can we still report the local events (without risking of confusion)
-    let (local_time, local_steps) = ClassicalSimulation::simulate(
+    // TODO: Two stage migration should also be distributed
+    let (local_time, local_steps) = ClassicalSimulation::simulate::<
+        NonSpatialHabitat,
+        UniformSpeciationProbability,
+        NonSpatialDispersalSampler<_>,
+        InMemoryLineageReference,
+        CoherentInMemoryLineageStore<_>,
+        MigrationReporterContext<_>,
+        MonolithicLocalPartition<_>,
+    >(
         local_habitat,
         local_speciation_probability,
         local_dispersal_sampler,
         local_lineage_store,
         seed,
-        MigrationReporterContext::new(&mut migration_reporter),
+        &mut MonolithicLocalPartition::from_reporter(
+            MigrationReporterContext::new(|migration_reporter| {
+                number_of_migrations = migration_reporter.biodiversity()
+            })
+            .build_guarded(),
+        ),
     );
-
-    let number_of_migrations = migration_reporter.biodiversity();
 
     let meta_habitat = NonSpatialHabitat::new(meta_area_deme.0, meta_area_deme.1);
 
@@ -88,26 +104,27 @@ pub fn simulate_static<P: ReporterContext>(
         meta_dispersal_sampler,
         meta_lineage_store,
         rng.sample_u64(),
-        reporter_context,
+        local_partition,
     );
 
     (local_time + meta_time, local_steps + meta_steps)
 }
 
-struct MigrationReporterContext<'r> {
-    migration_reporter: &'r mut BiodiversityReporter,
+struct MigrationReporterContext<F: FnOnce(BiodiversityReporter)> {
+    finaliser: F,
 }
 
-impl<'r> MigrationReporterContext<'r> {
-    pub fn new(migration_reporter: &'r mut BiodiversityReporter) -> Self {
-        Self { migration_reporter }
+impl<F: FnOnce(BiodiversityReporter)> MigrationReporterContext<F> {
+    pub fn new(finaliser: F) -> Self {
+        Self { finaliser }
     }
 }
 
-impl<'r> ReporterContext for MigrationReporterContext<'r> {
+impl<F: FnOnce(BiodiversityReporter)> ReporterContext for MigrationReporterContext<F> {
+    type Finaliser = F;
     type Reporter = BiodiversityReporter;
 
-    fn with_reporter<O, F: FnOnce(&mut Self::Reporter) -> O>(self, inner: F) -> O {
-        inner(self.migration_reporter)
+    fn build_guarded(self) -> GuardedReporter<Self::Reporter, Self::Finaliser> {
+        GuardedReporter::from(BiodiversityReporter::default(), self.finaliser)
     }
 }
