@@ -1,30 +1,28 @@
 #![deny(clippy::pedantic)]
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
+#![feature(stmt_expr_attributes)]
 
 #[macro_use]
 extern crate contracts;
 
-use core::num::NonZeroU32;
-use std::marker::PhantomData;
+use std::num::NonZeroU32;
 
 use mpi::{
-    collective::{Root, SystemOperation},
     environment::Universe,
     topology::{Communicator, Rank, SystemCommunicator},
 };
 
 use thiserror::Error;
 
-use necsim_core::{
-    event::Event,
-    reporter::{EventFilter, Reporter},
-};
-
 use necsim_impls_no_std::{
-    partitioning::{MonolithicPartition, ParallelPartition, Partition, Partitioning},
+    partitioning::{MonolithicLocalPartition, Partitioning},
     reporter::ReporterContext,
 };
+
+mod partition;
+
+pub use partition::{MpiLocalPartition, MpiParallelPartition, MpiRootPartition};
 
 #[derive(Error, Debug)]
 #[error("MPI has already been initialised.")]
@@ -58,7 +56,7 @@ impl MpiPartitioning {
 
 #[contract_trait]
 impl Partitioning for MpiPartitioning {
-    type ParallelPartition<R: Reporter> = MpiParallelPartition<R>;
+    type LocalPartition<P: ReporterContext> = MpiLocalPartition<P>;
 
     fn is_monolithic(&self) -> bool {
         self.world.size() <= 1
@@ -73,111 +71,25 @@ impl Partitioning for MpiPartitioning {
         NonZeroU32::new(self.world.size() as u32).unwrap()
     }
 
-    fn with_local_partition<
-        P: ReporterContext,
-        Q,
-        F: for<'r> FnOnce(
-            Result<
-                &mut MonolithicPartition<'r, P::Reporter>,
-                &mut Self::ParallelPartition<P::Reporter>,
-            >,
-        ) -> Q,
-    >(
-        &mut self,
+    fn into_local_partition<P: ReporterContext>(
+        self,
         reporter_context: P,
-        inner: F,
-    ) -> Q {
+    ) -> Self::LocalPartition<P> {
         if self.is_monolithic() {
-            reporter_context.with_reporter(|reporter| {
-                inner(Ok(&mut MonolithicPartition::from_reporter(reporter)))
-            })
+            MpiLocalPartition::Monolithic(MonolithicLocalPartition::from_reporter(
+                reporter_context.build_guarded(),
+            ))
+        } else if self.is_root() {
+            MpiLocalPartition::Root(MpiRootPartition::from_universe_world_and_reporter(
+                self.universe,
+                self.world,
+                reporter_context.build_guarded(),
+            ))
         } else {
-            inner(Err(&mut MpiParallelPartition {
-                world: self.world,
-                _marker: PhantomData::<P::Reporter>,
-            }))
+            MpiLocalPartition::Parallel(MpiParallelPartition::from_universe_and_world(
+                self.universe,
+                self.world,
+            ))
         }
     }
-}
-
-pub struct MpiParallelPartition<R: Reporter> {
-    world: SystemCommunicator,
-    _marker: PhantomData<R>,
-}
-
-#[contract_trait]
-impl<R: Reporter> ParallelPartition<R> for MpiParallelPartition<R> {
-    type Partitioning = MpiPartitioning;
-
-    fn is_root(&self) -> bool {
-        self.world.rank() == MpiPartitioning::ROOT_RANK
-    }
-
-    fn get_partition_rank(&self) -> u32 {
-        #[allow(clippy::cast_sign_loss)]
-        {
-            self.world.rank() as u32
-        }
-    }
-
-    fn get_number_of_partitions(&self) -> NonZeroU32 {
-        #[allow(clippy::cast_sign_loss)]
-        NonZeroU32::new(self.world.size() as u32).unwrap()
-    }
-
-    fn reduce_global_time_steps(&self, local_time: f64, local_steps: u64) -> (f64, u64) {
-        let root_process = self.world.process_at_rank(MpiPartitioning::ROOT_RANK);
-
-        let mut global_time_max: f64 = 0.0_f64;
-        let mut global_steps_sum: u64 = 0_u64;
-
-        if self.is_root() {
-            root_process.reduce_into_root(
-                &local_time,
-                &mut global_time_max,
-                SystemOperation::max(),
-            );
-
-            root_process.reduce_into_root(
-                &local_steps,
-                &mut global_steps_sum,
-                SystemOperation::sum(),
-            );
-        } else {
-            root_process.reduce_into(&local_time, SystemOperation::max());
-
-            root_process.reduce_into(&local_steps, SystemOperation::sum());
-        }
-
-        root_process.broadcast_into(&mut global_time_max);
-        root_process.broadcast_into(&mut global_steps_sum);
-
-        (global_time_max, global_steps_sum)
-    }
-}
-
-impl<R: Reporter> Partition<R> for MpiParallelPartition<R> {
-    type Reporter = Self;
-
-    fn get_reporter(&mut self) -> &mut Self::Reporter {
-        self
-    }
-}
-
-impl<R: Reporter> Reporter for MpiParallelPartition<R> {
-    #[inline]
-    fn report_event(&mut self, _event: &Event) {
-        // TODO: Dump events to disk
-    }
-
-    #[inline]
-    fn report_progress(&mut self, _remaining: u64) {
-        // TODO: Report progress with some max frequency to the root, which can
-        // pass it on
-    }
-}
-
-impl<R: Reporter> EventFilter for MpiParallelPartition<R> {
-    const REPORT_DISPERSAL: bool = R::REPORT_DISPERSAL;
-    const REPORT_SPECIATION: bool = R::REPORT_SPECIATION;
 }

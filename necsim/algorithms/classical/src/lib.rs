@@ -23,7 +23,7 @@ use necsim_impls_no_std::cogs::{
 };
 use necsim_impls_std::cogs::rng::std::StdRng;
 
-use necsim_impls_no_std::reporter::ReporterContext;
+use necsim_impls_no_std::{partitioning::LocalPartition, reporter::ReporterContext};
 
 mod almost_infinite;
 mod in_memory;
@@ -42,39 +42,36 @@ impl ClassicalSimulation {
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
         P: ReporterContext,
+        L: LocalPartition<P>,
     >(
         habitat: H,
         speciation_probability: N,
         dispersal_sampler: D,
         lineage_store: S,
         seed: u64,
-        reporter_context: P,
+        local_partition: &mut L,
     ) -> (f64, u64) {
-        reporter_context.with_reporter(|reporter| {
-            let rng = StdRng::seed_from_u64(seed);
-            let coalescence_sampler = UnconditionalCoalescenceSampler::default();
-            let emigration_exit = NeverEmigrationExit::default();
-            let event_sampler = UnconditionalEventSampler::default();
-            let immigration_entry = NeverImmigrationEntry::default();
-            let active_lineage_sampler = ClassicalActiveLineageSampler::new(&lineage_store);
+        let rng = StdRng::seed_from_u64(seed);
+        let coalescence_sampler = UnconditionalCoalescenceSampler::default();
+        let emigration_exit = NeverEmigrationExit::default();
+        let event_sampler = UnconditionalEventSampler::default();
+        let immigration_entry = NeverImmigrationEntry::default();
+        let active_lineage_sampler = ClassicalActiveLineageSampler::new(&lineage_store);
 
-            let simulation = Simulation::builder()
-                .habitat(habitat)
-                .rng(rng)
-                .speciation_probability(speciation_probability)
-                .dispersal_sampler(dispersal_sampler)
-                .lineage_reference(std::marker::PhantomData::<R>)
-                .lineage_store(lineage_store)
-                .emigration_exit(emigration_exit)
-                .coalescence_sampler(coalescence_sampler)
-                .event_sampler(event_sampler)
-                .immigration_entry(immigration_entry)
-                .active_lineage_sampler(active_lineage_sampler)
-                .build();
+        let simulation = Simulation::builder()
+            .habitat(habitat)
+            .rng(rng)
+            .speciation_probability(speciation_probability)
+            .dispersal_sampler(dispersal_sampler)
+            .lineage_reference(std::marker::PhantomData::<R>)
+            .lineage_store(lineage_store)
+            .emigration_exit(emigration_exit)
+            .coalescence_sampler(coalescence_sampler)
+            .event_sampler(event_sampler)
+            .immigration_entry(immigration_entry)
+            .active_lineage_sampler(active_lineage_sampler)
+            .build();
 
-            let (time, steps) = simulation.simulate(reporter);
-
-            (time, steps)
-        })
+        simulation.simulate(local_partition.get_reporter())
     }
 }

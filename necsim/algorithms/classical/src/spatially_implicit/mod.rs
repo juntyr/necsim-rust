@@ -1,5 +1,5 @@
 use necsim_impls_no_std::{
-    partitioning::Partitioning, reporter::ReporterContext,
+    partitioning::LocalPartition, reporter::ReporterContext,
     simulation::spatially_implicit::SpatiallyImplicitSimulation,
 };
 
@@ -18,7 +18,7 @@ impl SpatiallyImplicitSimulation for ClassicalSimulation {
     /// migration from the meta- to the local community.
     /// If `dynamic_meta` is true, the metacommunity will be dynamic.
     #[allow(clippy::too_many_arguments)]
-    fn simulate<P: Partitioning, R: ReporterContext>(
+    fn simulate<R: ReporterContext, P: LocalPartition<R>>(
         dynamic_meta: bool,
         local_area_deme: ((u32, u32), u32),
         meta_area_deme: ((u32, u32), u32),
@@ -26,8 +26,7 @@ impl SpatiallyImplicitSimulation for ClassicalSimulation {
         meta_speciation_probability_per_generation: f64,
         sample_percentage: f64,
         seed: u64,
-        _partitioning: &mut P,
-        reporter_context: R,
+        local_partition: &mut P,
         _auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let (time, steps) = if dynamic_meta {
@@ -38,7 +37,7 @@ impl SpatiallyImplicitSimulation for ClassicalSimulation {
                 meta_speciation_probability_per_generation,
                 sample_percentage,
                 seed,
-                reporter_context,
+                local_partition,
             )
         } else {
             r#static::simulate_static(
@@ -48,7 +47,7 @@ impl SpatiallyImplicitSimulation for ClassicalSimulation {
                 meta_speciation_probability_per_generation,
                 sample_percentage,
                 seed,
-                reporter_context,
+                local_partition,
             )
         };
 

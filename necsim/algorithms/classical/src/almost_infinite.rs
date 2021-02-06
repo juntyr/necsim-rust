@@ -7,7 +7,7 @@ use necsim_impls_no_std::cogs::{
 };
 
 use necsim_impls_no_std::{
-    partitioning::Partitioning, reporter::ReporterContext,
+    partitioning::LocalPartition, reporter::ReporterContext,
     simulation::almost_infinite::AlmostInfiniteSimulation,
 };
 
@@ -21,14 +21,13 @@ impl AlmostInfiniteSimulation for ClassicalSimulation {
     /// Simulates the classical coalescence algorithm on an almost-infinite
     /// `habitat` with N(0, sigma) `dispersal`. Only a circular region with
     /// `radius` is sampled.
-    fn simulate<P: Partitioning, R: ReporterContext>(
+    fn simulate<R: ReporterContext, P: LocalPartition<R>>(
         radius: u32,
         sigma: f64,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
         seed: u64,
-        _partitioning: &mut P,
-        reporter_context: R,
+        local_partition: &mut P,
         _auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = AlmostInfiniteHabitat::default();
@@ -49,7 +48,7 @@ impl AlmostInfiniteSimulation for ClassicalSimulation {
             dispersal_sampler,
             lineage_store,
             seed,
-            reporter_context,
+            local_partition,
         ))
     }
 }
