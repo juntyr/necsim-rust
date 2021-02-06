@@ -8,7 +8,7 @@ use necsim_impls_no_std::cogs::{
     speciation_probability::spatially_implicit::SpatiallyImplicitSpeciationProbability,
 };
 
-use necsim_impls_no_std::reporter::ReporterContext;
+use necsim_impls_no_std::{partitioning::LocalPartition, reporter::ReporterContext};
 
 use super::ClassicalSimulation;
 
@@ -17,14 +17,14 @@ use super::ClassicalSimulation;
 /// migration from the meta- to the local community.
 /// The metacommunity is assumed to be dynamic.
 #[allow(clippy::too_many_arguments, clippy::module_name_repetitions)]
-pub fn simulate_dynamic<P: ReporterContext>(
+pub fn simulate_dynamic<R: ReporterContext, P: LocalPartition<R>>(
     local_area_deme: ((u32, u32), u32),
     meta_area_deme: ((u32, u32), u32),
     local_migration_probability_per_generation: f64,
     meta_speciation_probability_per_generation: f64,
     sample_percentage: f64,
     seed: u64,
-    reporter_context: P,
+    local_partition: &mut P,
 ) -> (f64, u64) {
     let habitat = SpatiallyImplicitHabitat::new(
         local_area_deme.0,
@@ -48,6 +48,6 @@ pub fn simulate_dynamic<P: ReporterContext>(
         dispersal_sampler,
         lineage_store,
         seed,
-        reporter_context,
+        local_partition,
     )
 }

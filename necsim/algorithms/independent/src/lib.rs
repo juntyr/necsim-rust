@@ -16,20 +16,23 @@ use necsim_core::{
         RngCore, SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
     },
     lineage::{GlobalLineageReference, Lineage},
-    reporter::Reporter,
     simulation::Simulation,
 };
 
-use necsim_impls_no_std::cogs::{
-    active_lineage_sampler::independent::{
-        event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
+use necsim_impls_no_std::{
+    cogs::{
+        active_lineage_sampler::independent::{
+            event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
+        },
+        coalescence_sampler::independent::IndependentCoalescenceSampler,
+        emigration_exit::never::NeverEmigrationExit,
+        event_sampler::independent::IndependentEventSampler,
+        immigration_entry::never::NeverImmigrationEntry,
+        lineage_store::independent::IndependentLineageStore,
+        rng::seahash::SeaHash,
     },
-    coalescence_sampler::independent::IndependentCoalescenceSampler,
-    emigration_exit::never::NeverEmigrationExit,
-    event_sampler::independent::IndependentEventSampler,
-    immigration_entry::never::NeverImmigrationEntry,
-    lineage_store::independent::IndependentLineageStore,
-    rng::seahash::SeaHash,
+    partitioning::LocalPartition,
+    reporter::ReporterContext,
 };
 
 mod almost_infinite;
@@ -48,18 +51,19 @@ impl IndependentSimulation {
         H: Habitat,
         N: SpeciationProbability<H>,
         D: DispersalSampler<H, SeaHash>,
-        R: Reporter,
+        R: ReporterContext,
+        P: LocalPartition<R>,
     >(
         habitat: H,
         speciation_probability: N,
         dispersal_sampler: D,
         lineages: Vec<Lineage>,
         seed: u64,
-        reporter: &mut R,
+        local_partition: &mut P,
     ) -> (f64, u64) {
         const SIMULATION_STEP_SLICE: u64 = 10_u64;
 
-        let mut reporter = DeduplicatingReporterProxy::from(reporter);
+        let mut proxy = DeduplicatingReporterProxy::from(local_partition);
 
         let rng = SeaHash::seed_from_u64(seed);
         let lineage_store = IndependentLineageStore::default();
@@ -95,8 +99,9 @@ impl IndependentSimulation {
 
         while !lineages.is_empty()
             || simulation.active_lineage_sampler().number_active_lineages() > 0
+            || proxy.local_partition().wait_for_termination()
         {
-            reporter.report_total_progress(lineages.len() as u64);
+            proxy.report_total_progress(lineages.len() as u64);
 
             let previous_task = simulation
                 .active_lineage_sampler_mut()
@@ -119,7 +124,7 @@ impl IndependentSimulation {
             }
 
             let (new_time, new_steps) =
-                simulation.simulate_incremental(SIMULATION_STEP_SLICE, &mut reporter);
+                simulation.simulate_incremental(SIMULATION_STEP_SLICE, &mut proxy);
 
             total_steps += new_steps;
             max_time = max_time.max(new_time);

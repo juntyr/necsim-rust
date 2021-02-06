@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use hashbrown::{hash_map::RawEntryMut, HashMap};
 
 use necsim_core::{
@@ -5,17 +7,24 @@ use necsim_core::{
     reporter::{EventFilter, Reporter},
 };
 
-pub struct DeduplicatingReporterProxy<'r, P: Reporter> {
-    reporter: &'r mut P,
+use necsim_impls_no_std::{partitioning::LocalPartition, reporter::ReporterContext};
+
+pub struct DeduplicatingReporterProxy<'p, R: ReporterContext, P: LocalPartition<R>> {
+    local_partition: &'p mut P,
     event_deduplicator: HashMap<Event, ()>,
+    _marker: PhantomData<R>,
 }
 
-impl<'r, P: Reporter> EventFilter for DeduplicatingReporterProxy<'r, P> {
-    const REPORT_DISPERSAL: bool = P::REPORT_DISPERSAL;
-    const REPORT_SPECIATION: bool = P::REPORT_SPECIATION;
+impl<'p, R: ReporterContext, P: LocalPartition<R>> EventFilter
+    for DeduplicatingReporterProxy<'p, R, P>
+{
+    const REPORT_DISPERSAL: bool = R::Reporter::REPORT_DISPERSAL;
+    const REPORT_SPECIATION: bool = R::Reporter::REPORT_SPECIATION;
 }
 
-impl<'r, P: Reporter> Reporter for DeduplicatingReporterProxy<'r, P> {
+impl<'p, R: ReporterContext, P: LocalPartition<R>> Reporter
+    for DeduplicatingReporterProxy<'p, R, P>
+{
     #[inline]
     fn report_event(&mut self, event: &Event) {
         if (Self::REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
@@ -24,7 +33,8 @@ impl<'r, P: Reporter> Reporter for DeduplicatingReporterProxy<'r, P> {
             if let RawEntryMut::Vacant(entry) =
                 self.event_deduplicator.raw_entry_mut().from_key(event)
             {
-                self.reporter
+                self.local_partition
+                    .get_reporter()
                     .report_event(entry.insert(event.clone(), ()).0)
             }
         }
@@ -36,16 +46,23 @@ impl<'r, P: Reporter> Reporter for DeduplicatingReporterProxy<'r, P> {
     }
 }
 
-impl<'r, P: Reporter> DeduplicatingReporterProxy<'r, P> {
-    pub fn from(reporter: &'r mut P) -> Self {
+impl<'p, R: ReporterContext, P: LocalPartition<R>> DeduplicatingReporterProxy<'p, R, P> {
+    pub fn from(local_partition: &'p mut P) -> Self {
         Self {
-            reporter,
+            local_partition,
             event_deduplicator: HashMap::new(),
+            _marker: PhantomData::<R>,
         }
     }
 
     #[inline]
     pub fn report_total_progress(&mut self, remaining: u64) {
-        self.reporter.report_progress(remaining)
+        self.local_partition
+            .get_reporter()
+            .report_progress(remaining)
+    }
+
+    pub fn local_partition(&mut self) -> &mut P {
+        self.local_partition
     }
 }

@@ -6,7 +6,7 @@ use necsim_core::reporter::{EventFilter, Reporter};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ProgressReporter {
-    progress: ProgressBar,
+    progress: Option<ProgressBar>,
     last_remaining: u64,
     total: u64,
 }
@@ -19,15 +19,28 @@ impl EventFilter for ProgressReporter {
 impl Reporter for ProgressReporter {
     #[inline]
     fn report_progress(&mut self, remaining: u64) {
+        // TODO: Show the progress bar in MPI mode as well
+        let progress = self.progress.get_or_insert_with(|| {
+            let progress =
+                ProgressBar::new(1)
+                    .with_style(ProgressStyle::default_bar().template(
+                        "    [{elapsed_precise}] {bar:50.cyan/blue} [{eta_precise}]    ",
+                    ));
+
+            progress.enable_steady_tick(100);
+
+            progress
+        });
+
         match remaining.cmp(&self.last_remaining) {
             Ordering::Greater => {
                 self.total += remaining - self.last_remaining;
 
-                self.progress.set_length(self.total);
-                self.progress.set_position(self.total - remaining);
+                progress.set_length(self.total);
+                progress.set_position(self.total - remaining);
             },
             Ordering::Less => {
-                self.progress.inc(self.last_remaining - remaining);
+                progress.inc(self.last_remaining - remaining);
             },
             Ordering::Equal => (),
         }
@@ -36,25 +49,20 @@ impl Reporter for ProgressReporter {
     }
 }
 
-impl ProgressReporter {
-    #[must_use]
-    pub fn new(total: u64) -> Self {
-        let progress = ProgressBar::new(total).with_style(
-            ProgressStyle::default_bar()
-                .template("    [{elapsed_precise}] {bar:50.cyan/blue} [{eta_precise}]    "),
-        );
-
-        progress.enable_steady_tick(100);
-
+impl Default for ProgressReporter {
+    fn default() -> Self {
         Self {
-            progress,
-
+            progress: None,
             last_remaining: 0_u64,
             total: 0_u64,
         }
     }
+}
 
+impl ProgressReporter {
     pub fn finish(self) {
-        self.progress.finish()
+        if let Some(progress) = self.progress {
+            progress.finish()
+        }
     }
 }

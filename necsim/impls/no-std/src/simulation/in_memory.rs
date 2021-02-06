@@ -1,6 +1,6 @@
 use array2d::Array2D;
 
-use crate::{partitioning::Partitioning, reporter::ReporterContext};
+use crate::{partitioning::LocalPartition, reporter::ReporterContext};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
@@ -17,14 +17,13 @@ pub trait InMemorySimulation {
         (0.0_f64..=1.0_f64).contains(&sample_percentage),
         "0.0 <= sample_percentage <= 1.0"
     )]
-    fn simulate<P: Partitioning, R: ReporterContext>(
+    fn simulate<R: ReporterContext, P: LocalPartition<R>>(
         habitat: &Array2D<u32>,
         dispersal: &Array2D<f64>,
         speciation_probability_per_generation: f64,
         sample_percentage: f64,
         seed: u64,
-        partitioning: &mut P,
-        reporter_context: R,
+        local_partition: &mut P,
         auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error>;
 }
