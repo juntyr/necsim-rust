@@ -51,8 +51,12 @@ impl<'h, I: Iterator<Item = u64>> AlmostInfiniteOriginSampler<'h, I> {
         );
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let upper_bound_size_hint =
-            ceil(f64::from(radius) * f64::from(radius) * core::f64::consts::PI) as u64;
+        let upper_bound_size_hint = ceil(
+            f64::from(radius)
+                * f64::from(radius)
+                * core::f64::consts::PI
+                * pre_sampler.get_sample_proportion(),
+        ) as u64;
 
         Self {
             pre_sampler,

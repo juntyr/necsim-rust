@@ -72,7 +72,7 @@ In either case, you can then run `rustcoalescence` using:
 
 `rustcoalescence` accepts command line arguments according to the following format:
 ```shell
-> rustcoalescence --algorithm <algorithm> --sample <sample-percentage> --seed <seed> --speciation <speciation-probability-per-generation> <SUBCOMMAND>
+> rustcoalescence simulate --algorithm <algorithm> --sample <sample-percentage> --seed <seed> --speciation <speciation-probability-per-generation> <SUBCOMMAND>
 ```
 Here, the parameters have the following semantics:
 - `<algorithm>` is one of `classical`, `gillespie`, `skipping-gillespie`, `cuda` or `independent`, depending on which algorithms it was compiled with to support.
@@ -86,14 +86,14 @@ Here, the parameters have the following semantics:
     - `<dispersal-map>` is the path to a TIFF file storing grayscale f64 dispersal weights with dimensions `WxH x WxH`, i.e. the `i`th row of the image stores dispersal from the habitat cell `(i % W, i / W)`. Note that `rustcoalescence` checks that the habitat and dispersal maps make sense in combination. The maps/ folder contains two dispersal maps for testing.
     - `[--strict-load]` is an optional flag to disable GDAL GeoTiff map loading compatibility features. When disabled, `rustcoalescence` will check for and handle GDAL no data values and potential rounding errors in the habitat map.
 ```shell
-> rustcoalescence ... in-memory <habitat-map> <dispersal-map> [--strict-load]
+> rustcoalescence simulate ... in-memory <habitat-map> <dispersal-map> [--strict-load]
 ```
 - non-spatial: the individuals live uniformly with equal probability to disperse anywhere else. The parameters shown below have the following semantics:
     - `<area>` specifies the non-spatial area that the individuals will inhabit. It can be either one-dimensional `A` or two-dimensional `AxB`.
     - `<deme>` specifies the number of individuals that will be able to cohabit each space in the area. It is functionally equivalent to double the deme or to double the area (though it might impact the performance, and the result of one execution when using the Gillespie algorithm).
     - `[--spatial]` is an optional flag which allows using the spatially explicit simulation cogs to simulate the non-spatial scenario instead of specialised non-spatial cogs. This flag is mostly used to verify both scenarios are implemented correctly.
 ```shell
-> rustcoalescence ... non-spatial <area> <deme> [--spatial]
+> rustcoalescence simulate ... non-spatial <area> <deme> [--spatial]
 ```
 - spatially-implicit: the individuals live uniformly with equal probability to disperse anywhere else. The parameters shown below have the following semantics:
     - `<local-area>` specifies the non-spatial area that the individuals in the local community will inhabit. It can be either one-dimensional `A` or two-dimensional `AxB`. Note that individuals in the local community will not be able to speciate. Also note that the `<sample-percentage>` parameter will only apply to the local community.
@@ -103,13 +103,13 @@ Here, the parameters have the following semantics:
     - `<migration-probability-per-generation>` refers to the probability with which an individual in the local community migrates to the metacommunity at every generation.
     - `[--dynamic-meta]` is an optional flag to use a dynamic metacommunity instead of a static one. Specifically, this means that different species can have lived at the same location of the metacommunity at different points in time. The spatially-implicit model usually assumes that the metacommunity is static but of infinite size, instead.
 ```shell
-> rustcoalescence ... spatially-implicit --local-area <local-area> --local-deme <local-deme> --meta-area <meta-area> --meta-deme <meta-deme> --migration <migration-probability-per-generation> [--dynamic-meta]
+> rustcoalescence simulate ... spatially-implicit --local-area <local-area> --local-deme <local-deme> --meta-area <meta-area> --meta-deme <meta-deme> --migration <migration-probability-per-generation> [--dynamic-meta]
 ```
 - (almost) infinite: all individuals start in a perfect circle and can disperse anywhere in the (almost) infinite landscape (each 32bit coordinate wraps around). The parameters shown below have the following semantics:
     - `<radius>` specifies the radius of the circle from which the individuals will be sampled. Note that the number of individuals, and therefore the runtime, scales quadratically with the radius.
     - `<sigma>` specifies the standard deviation of the normal distribution that will be used as the dispersal kernel.
 ```shell
-> rustcoalescence ... almost-infinite <radius> <sigma>
+> rustcoalescence simulate ... almost-infinite <radius> <sigma>
 ```
 
 ## GDAL GeoTiff compatibility
