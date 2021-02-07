@@ -76,6 +76,9 @@ impl<P: ReporterContext> MpiParallelPartition<P> {
 impl<P: ReporterContext> LocalPartition<P> for MpiParallelPartition<P> {
     type Reporter = Self;
 
+    // TODO: call `self.event_reporter.mark_disjoint()` on any individual
+    //       exchange call (i.e. send or test for receive of migration)
+
     fn get_reporter(&mut self) -> &mut Self::Reporter {
         self
     }
