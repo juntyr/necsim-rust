@@ -1,4 +1,8 @@
-use std::{num::NonZeroU32, time::Instant};
+use std::{
+    num::NonZeroU32,
+    path::{Path, PathBuf},
+    time::Instant,
+};
 
 use mpi::{
     collective::{CommunicatorCollectives, SystemOperation},
@@ -10,7 +14,7 @@ use mpi::{
 };
 
 use necsim_core::{
-    event::Event,
+    event::{Event, EventType},
     reporter::{EventFilter, Reporter},
 };
 
@@ -18,6 +22,7 @@ use necsim_impls_no_std::{
     partitioning::LocalPartition,
     reporter::{GuardedReporter, ReporterContext},
 };
+use necsim_impls_std::reporter::commitlog::CommitLogReporter;
 
 use crate::MpiPartitioning;
 
@@ -30,6 +35,7 @@ pub struct MpiRootPartition<P: ReporterContext> {
     last_mpi_call_time: Instant,
     all_remaining: Box<[u64]>,
     reporter: GuardedReporter<P::Reporter, P::Finaliser>,
+    event_reporter: CommitLogReporter,
     barrier: Option<Request<'static, StaticScope>>,
     communicated_since_last_barrier: bool,
 }
@@ -47,11 +53,15 @@ impl<P: ReporterContext> MpiRootPartition<P> {
     const MPI_WAIT_TIME: f64 = 0.01_f64;
 
     #[must_use]
-    pub fn from_universe_world_and_reporter(
+    pub fn new(
         universe: Universe,
         world: SystemCommunicator,
         reporter: GuardedReporter<P::Reporter, P::Finaliser>,
+        event_log_path: &Path,
     ) -> Self {
+        let mut event_log_path = PathBuf::from(event_log_path);
+        event_log_path.push(world.rank().to_string());
+
         #[allow(clippy::cast_sign_loss)]
         let world_size = world.size() as usize;
 
@@ -61,6 +71,7 @@ impl<P: ReporterContext> MpiRootPartition<P> {
             last_mpi_call_time: Instant::now(),
             all_remaining: vec![0; world_size].into_boxed_slice(),
             reporter,
+            event_reporter: CommitLogReporter::try_new(&event_log_path).unwrap(),
             barrier: None,
             communicated_since_last_barrier: false,
         }
@@ -137,8 +148,12 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
 
 impl<P: ReporterContext> Reporter for MpiRootPartition<P> {
     #[inline]
-    fn report_event(&mut self, _event: &Event) {
-        // TODO: Dump events to disk
+    fn report_event(&mut self, event: &Event) {
+        if (Self::REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
+            || (Self::REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
+        {
+            self.event_reporter.report_event(event);
+        }
     }
 
     #[inline]

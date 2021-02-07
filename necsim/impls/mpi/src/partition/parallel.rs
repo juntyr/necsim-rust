@@ -1,4 +1,9 @@
-use std::{marker::PhantomData, num::NonZeroU32, time::Instant};
+use std::{
+    marker::PhantomData,
+    num::NonZeroU32,
+    path::{Path, PathBuf},
+    time::Instant,
+};
 
 use mpi::{
     collective::{CommunicatorCollectives, SystemOperation},
@@ -9,11 +14,12 @@ use mpi::{
 };
 
 use necsim_core::{
-    event::Event,
+    event::{Event, EventType},
     reporter::{EventFilter, Reporter},
 };
 
 use necsim_impls_no_std::{partitioning::LocalPartition, reporter::ReporterContext};
+use necsim_impls_std::reporter::commitlog::CommitLogReporter;
 
 use crate::{partition::root::MpiRootPartition, MpiPartitioning};
 
@@ -29,6 +35,7 @@ pub struct MpiParallelPartition<P: ReporterContext> {
     progress: Option<Request<'static, StaticScope>>,
     barrier: Option<Request<'static, StaticScope>>,
     communicated_since_last_barrier: bool,
+    event_reporter: CommitLogReporter,
     _marker: PhantomData<P>,
 }
 
@@ -48,7 +55,10 @@ impl<P: ReporterContext> MpiParallelPartition<P> {
     const MPI_WAIT_TIME: f64 = 0.05_f64;
 
     #[must_use]
-    pub fn from_universe_and_world(universe: Universe, world: SystemCommunicator) -> Self {
+    pub fn new(universe: Universe, world: SystemCommunicator, event_log_path: &Path) -> Self {
+        let mut event_log_path = PathBuf::from(event_log_path);
+        event_log_path.push(world.rank().to_string());
+
         Self {
             _universe: universe,
             world,
@@ -56,6 +66,7 @@ impl<P: ReporterContext> MpiParallelPartition<P> {
             progress: None,
             barrier: None,
             communicated_since_last_barrier: false,
+            event_reporter: CommitLogReporter::try_new(&event_log_path).unwrap(),
             _marker: PhantomData::<P>,
         }
     }
@@ -131,8 +142,12 @@ impl<P: ReporterContext> LocalPartition<P> for MpiParallelPartition<P> {
 
 impl<P: ReporterContext> Reporter for MpiParallelPartition<P> {
     #[inline]
-    fn report_event(&mut self, _event: &Event) {
-        // TODO: Dump events to disk
+    fn report_event(&mut self, event: &Event) {
+        if (Self::REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
+            || (Self::REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
+        {
+            self.event_reporter.report_event(event);
+        }
     }
 
     #[inline]
