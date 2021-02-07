@@ -1,12 +1,14 @@
 use core::num::NonZeroU64;
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
     cogs::{Habitat, LineageReference},
     landscape::IndexedLocation,
 };
 
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub struct GlobalLineageReference(NonZeroU64);
 
 #[cfg(feature = "mpi")]
