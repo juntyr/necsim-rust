@@ -6,16 +6,30 @@ use necsim_core::{
 };
 
 use anyhow::Result;
-use commitlog::{CommitLog, LogOptions};
+use commitlog::{message::MessageSet, CommitLog, LogOptions, ReadLimit};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct CommitLogReporter {
     commit_log: CommitLog,
-    buffer: Vec<u8>,
+    buffer: Box<[u8]>,
+    is_disjoint: bool,
 }
 
 impl Drop for CommitLogReporter {
     fn drop(&mut self) {
+        // Mark a log as non-disjoint by copying the first message such that
+        //  the log starts and ends with the same message
+        if !self.is_disjoint && self.commit_log.last_offset().is_some() {
+            if let Ok(messages) = self
+                .commit_log
+                .read(0, ReadLimit::max_bytes(Self::MAX_MESSAGE_SIZE))
+            {
+                if let Some(first_message) = messages.iter().next() {
+                    let _ = self.commit_log.append_msg(first_message.payload());
+                }
+            }
+        }
+
         let _ = self.commit_log.flush();
     }
 }
@@ -27,7 +41,7 @@ impl EventFilter for CommitLogReporter {
 
 impl Reporter for CommitLogReporter {
     fn report_event(&mut self, event: &Event) {
-        let mut cursor: Cursor<&mut Vec<u8>> = Cursor::new(&mut self.buffer);
+        let mut cursor: Cursor<&mut [u8]> = Cursor::new(self.buffer.as_mut());
 
         if let Ok(()) = bincode::serialize_into(&mut cursor, event) {
             #[allow(clippy::cast_possible_truncation)]
@@ -39,15 +53,14 @@ impl Reporter for CommitLogReporter {
 }
 
 impl CommitLogReporter {
-    /// # Errors
-    /// Fails to construct iff `bincode` cannot compute the size of an event or
-    ///  `commitlog` fails to open the log
-    pub fn try_new(path: &Path) -> Result<Self> {
-        let event_size = std::mem::size_of::<Event>();
+    const MAX_MESSAGE_SIZE: usize = crate::event_replay::EventReplayIterator::MAX_MESSAGE_SIZE;
 
+    /// # Errors
+    /// Fails to construct iff `commitlog` fails to open the log
+    pub fn try_new(path: &Path) -> Result<Self> {
         // Initialise the CommitLog with a conservative message size upper bound
         let mut log_options = LogOptions::new(path);
-        log_options.message_max_bytes(event_size * std::mem::size_of::<u64>());
+        log_options.message_max_bytes(Self::MAX_MESSAGE_SIZE);
 
         let mut commit_log = CommitLog::new(log_options)?;
 
@@ -57,7 +70,12 @@ impl CommitLogReporter {
 
         Ok(Self {
             commit_log,
-            buffer: vec![0; event_size],
+            buffer: vec![0; Self::MAX_MESSAGE_SIZE].into_boxed_slice(),
+            is_disjoint: false,
         })
+    }
+
+    pub fn mark_disjoint(&mut self) {
+        self.is_disjoint = true;
     }
 }

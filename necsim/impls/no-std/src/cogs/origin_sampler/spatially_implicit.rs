@@ -1,9 +1,6 @@
 use core::{fmt, iter::Iterator};
 
-use necsim_core::{
-    cogs::{Habitat, OriginSampler},
-    landscape::IndexedLocation,
-};
+use necsim_core::{cogs::OriginSampler, landscape::IndexedLocation};
 
 use crate::cogs::{
     habitat::spatially_implicit::SpatiallyImplicitHabitat,
@@ -44,7 +41,7 @@ impl<'h, I: Iterator<Item = u64>> OriginSampler<'h> for SpatiallyImplicitOriginS
     }
 
     fn full_upper_bound_size_hint(&self) -> u64 {
-        self.habitat.local().get_total_habitat()
+        self.local_iterator.full_upper_bound_size_hint()
     }
 }
 
