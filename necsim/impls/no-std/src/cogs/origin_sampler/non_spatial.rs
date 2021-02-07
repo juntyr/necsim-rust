@@ -56,7 +56,15 @@ impl<'h, I: Iterator<Item = u64>> OriginSampler<'h> for NonSpatialOriginSampler<
     }
 
     fn full_upper_bound_size_hint(&self) -> u64 {
-        self.habitat.get_total_habitat()
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            clippy::cast_precision_loss
+        )]
+        {
+            ((self.habitat.get_total_habitat() as f64) * self.pre_sampler.get_sample_proportion())
+                as u64
+        }
     }
 }
 

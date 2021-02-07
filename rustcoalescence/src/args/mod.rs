@@ -9,12 +9,27 @@ mod area;
 pub use algorithm::Algorithm;
 use area::try_parse_area;
 
+#[derive(Debug, StructOpt)]
+#[allow(clippy::module_name_repetitions)]
+pub enum RustcoalescenceArgs {
+    Simulate(SimulateArgs),
+    Replay(ReplayArgs),
+}
+
 #[derive(Debug, StructOpt, Getters)]
-pub struct CommandLineArguments {
+#[allow(clippy::module_name_repetitions)]
+pub struct SimulateArgs {
     #[structopt(subcommand)]
     command: Command,
     #[structopt(flatten)]
     common_args: CommonArgs,
+}
+
+#[derive(Debug, StructOpt, Getters)]
+#[allow(clippy::module_name_repetitions)]
+pub struct ReplayArgs {
+    #[structopt(parse(from_os_str))]
+    events: Vec<PathBuf>,
 }
 
 #[derive(Debug, StructOpt, Getters)]

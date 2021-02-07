@@ -8,4 +8,5 @@
 extern crate contracts;
 
 pub mod cogs;
+pub mod event_replay;
 pub mod reporter;

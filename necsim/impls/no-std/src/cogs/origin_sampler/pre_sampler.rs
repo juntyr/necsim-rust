@@ -6,18 +6,28 @@ use core::{
 const INV_PHI: f64 = 6.180_339_887_498_949e-1_f64;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct OriginPreSampler<I: Iterator<Item = u64>>(I);
+pub struct OriginPreSampler<I: Iterator<Item = u64>> {
+    inner: I,
+    proportion: f64,
+}
+
+impl<I: Iterator<Item = u64>> OriginPreSampler<I> {
+    #[debug_ensures((0.0_f64..=1.0_f64).contains(&ret), "returns a proportion")]
+    pub fn get_sample_proportion(&self) -> f64 {
+        self.proportion
+    }
+}
 
 impl<I: Iterator<Item = u64>> Deref for OriginPreSampler<I> {
     type Target = I;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.inner
     }
 }
 impl<I: Iterator<Item = u64>> DerefMut for OriginPreSampler<I> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        &mut self.inner
     }
 }
 
@@ -30,7 +40,10 @@ impl<I: Iterator<Item = u64>> fmt::Debug for OriginPreSampler<I> {
 impl OriginPreSampler<RangeFrom<u64>> {
     #[must_use]
     pub fn all() -> Self {
-        Self(0..)
+        Self {
+            inner: 0..,
+            proportion: 1.0_f64,
+        }
     }
 }
 
@@ -46,8 +59,9 @@ impl<I: Iterator<Item = u64>> OriginPreSampler<I> {
 
         let inv_geometric_sample_rate = ln(1.0_f64 - percentage).recip();
 
-        OriginPreSampler(
-            core::iter::repeat(()).scan(0.5_f64, move |quasi_random, _| {
+        OriginPreSampler {
+            proportion: self.proportion * percentage,
+            inner: core::iter::repeat(()).scan(0.5_f64, move |quasi_random, _| {
                 *quasi_random = necsim_core::intrinsics::fract(*quasi_random + INV_PHI);
 
                 #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
@@ -57,7 +71,7 @@ impl<I: Iterator<Item = u64>> OriginPreSampler<I> {
 
                 self.nth(skip)
             }),
-        )
+        }
     }
 
     pub fn partition(
@@ -67,6 +81,9 @@ impl<I: Iterator<Item = u64>> OriginPreSampler<I> {
     ) -> OriginPreSampler<impl Iterator<Item = u64>> {
         let _ = self.advance_by(offset as usize);
 
-        OriginPreSampler(self.0.step_by(stride as usize))
+        OriginPreSampler {
+            proportion: self.proportion / f64::from(stride),
+            inner: self.inner.step_by(stride as usize),
+        }
     }
 }
