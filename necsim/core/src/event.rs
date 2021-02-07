@@ -1,8 +1,10 @@
+use serde::{Deserialize, Serialize};
+
 use core::hash::{Hash, Hasher};
 
 use crate::{landscape::IndexedLocation, lineage::GlobalLineageReference};
 
-#[derive(Debug, TypeLayout, Clone)]
+#[derive(Debug, TypeLayout, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub struct Event {
     origin: IndexedLocation,
@@ -73,7 +75,7 @@ impl Event {
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub enum EventType {
     Speciation,

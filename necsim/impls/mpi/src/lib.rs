@@ -6,7 +6,10 @@
 #[macro_use]
 extern crate contracts;
 
-use std::num::NonZeroU32;
+use std::{
+    num::NonZeroU32,
+    path::{Path, PathBuf},
+};
 
 use mpi::{
     environment::Universe,
@@ -31,6 +34,7 @@ pub struct MpiAlreadyInitialisedError;
 pub struct MpiPartitioning {
     universe: Universe,
     world: SystemCommunicator,
+    event_log_path: PathBuf,
 }
 
 impl MpiPartitioning {
@@ -38,11 +42,12 @@ impl MpiPartitioning {
 
     /// # Errors
     /// Returns `MpiAlreadyInitialisedError` if MPI was already initialised.
-    pub fn initialise() -> Result<Self, MpiAlreadyInitialisedError> {
+    pub fn initialise(event_log_path: &Path) -> Result<Self, MpiAlreadyInitialisedError> {
         mpi::initialize()
             .map(|universe| Self {
                 world: universe.world(),
                 universe,
+                event_log_path: PathBuf::from(event_log_path),
             })
             .ok_or(MpiAlreadyInitialisedError)
     }
@@ -76,20 +81,22 @@ impl Partitioning for MpiPartitioning {
         reporter_context: P,
     ) -> Self::LocalPartition<P> {
         if self.is_monolithic() {
-            MpiLocalPartition::Monolithic(MonolithicLocalPartition::from_reporter(
+            MpiLocalPartition::Monolithic(Box::new(MonolithicLocalPartition::from_reporter(
                 reporter_context.build_guarded(),
-            ))
+            )))
         } else if self.is_root() {
-            MpiLocalPartition::Root(MpiRootPartition::from_universe_world_and_reporter(
+            MpiLocalPartition::Root(Box::new(MpiRootPartition::new(
                 self.universe,
                 self.world,
                 reporter_context.build_guarded(),
-            ))
+                &self.event_log_path,
+            )))
         } else {
-            MpiLocalPartition::Parallel(MpiParallelPartition::from_universe_and_world(
+            MpiLocalPartition::Parallel(Box::new(MpiParallelPartition::new(
                 self.universe,
                 self.world,
-            ))
+                &self.event_log_path,
+            )))
         }
     }
 }

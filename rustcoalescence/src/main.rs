@@ -35,7 +35,7 @@ fn main() -> Result<()> {
     let partitioning = {
         #[cfg(feature = "necsim-mpi")]
         {
-            necsim_impls_mpi::MpiPartitioning::initialise()
+            necsim_impls_mpi::MpiPartitioning::initialise(&std::path::PathBuf::from("event_log"))
                 .with_context(|| "Failed to initialise MPI.")?
         }
         #[cfg(not(feature = "necsim-mpi"))]
@@ -57,9 +57,11 @@ fn main() -> Result<()> {
 
         match partitioning.into_local_partition(reporter::RustcoalescenceReporterContext::default())
         {
-            MpiLocalPartition::Monolithic(ref mut partition) => main_with_logger(partition),
-            MpiLocalPartition::Root(ref mut partition) => main_with_logger(partition),
-            MpiLocalPartition::Parallel(ref mut partition) => main_with_logger(partition),
+            MpiLocalPartition::Monolithic(ref mut partition) => {
+                main_with_logger(partition.as_mut())
+            },
+            MpiLocalPartition::Root(ref mut partition) => main_with_logger(partition.as_mut()),
+            MpiLocalPartition::Parallel(ref mut partition) => main_with_logger(partition.as_mut()),
         }
     }
     #[cfg(not(feature = "necsim-mpi"))]

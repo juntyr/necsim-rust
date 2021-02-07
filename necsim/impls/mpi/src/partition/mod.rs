@@ -18,9 +18,9 @@ pub use root::MpiRootPartition;
 
 #[allow(clippy::module_name_repetitions)]
 pub enum MpiLocalPartition<P: ReporterContext> {
-    Monolithic(MonolithicLocalPartition<P>),
-    Root(MpiRootPartition<P>),
-    Parallel(MpiParallelPartition<P>),
+    Monolithic(Box<MonolithicLocalPartition<P>>),
+    Root(Box<MpiRootPartition<P>>),
+    Parallel(Box<MpiParallelPartition<P>>),
 }
 
 #[contract_trait]
