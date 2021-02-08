@@ -68,21 +68,21 @@ fn main() -> Result<()> {
                 use necsim_impls_mpi::MpiLocalPartition;
 
                 match partitioning.into_local_partition(ReporterContext::default()) {
-                    MpiLocalPartition::Monolithic(ref mut partition) => {
-                        cli::simulate::simulate_with_logger(partition.as_mut(), simulate_args)
+                    MpiLocalPartition::Monolithic(partition) => {
+                        cli::simulate::simulate_with_logger(partition, simulate_args)
                     },
-                    MpiLocalPartition::Root(ref mut partition) => {
-                        cli::simulate::simulate_with_logger(partition.as_mut(), simulate_args)
+                    MpiLocalPartition::Root(partition) => {
+                        cli::simulate::simulate_with_logger(partition, simulate_args)
                     },
-                    MpiLocalPartition::Parallel(ref mut partition) => {
-                        cli::simulate::simulate_with_logger(partition.as_mut(), simulate_args)
+                    MpiLocalPartition::Parallel(partition) => {
+                        cli::simulate::simulate_with_logger(partition, simulate_args)
                     },
                 }
             }
             #[cfg(not(feature = "necsim-mpi"))]
             {
                 cli::simulate::simulate_with_logger(
-                    &mut partitioning.into_local_partition(ReporterContext::default()),
+                    Box::new(partitioning.into_local_partition(ReporterContext::default())),
                     simulate_args,
                 )
             }
