@@ -24,7 +24,8 @@ impl Reporter for ProgressReporter {
             let progress =
                 ProgressBar::new(1)
                     .with_style(ProgressStyle::default_bar().template(
-                        "    [{elapsed_precise}] {bar:50.cyan/blue} [{eta_precise}]    ",
+                        "    [{elapsed_precise}] {bar:50.cyan/blue} [{eta_precise}]    \
+                        \n                   {pos:>20}/{len:<20}                   ",
                     ));
 
             progress.enable_steady_tick(100);
