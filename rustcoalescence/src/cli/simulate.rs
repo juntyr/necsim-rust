@@ -9,7 +9,7 @@ use crate::{
 
 #[allow(clippy::module_name_repetitions)]
 pub fn simulate_with_logger<R: ReporterContext, P: LocalPartition<R>>(
-    local_partition: &mut P,
+    mut local_partition: Box<P>,
     simulate_args: &SimulateArgs,
 ) -> Result<()> {
     // Parse and validate all command line arguments for the simulate subcommand
@@ -44,28 +44,30 @@ pub fn simulate_with_logger<R: ReporterContext, P: LocalPartition<R>>(
         Command::InMemory(in_memory_args) => simulation::setup_in_memory_simulation(
             simulate_args.common_args(),
             in_memory_args,
-            local_partition,
+            local_partition.as_mut(),
         )?,
         Command::NonSpatial(non_spatial_args) => simulation::setup_non_spatial_simulation(
             simulate_args.common_args(),
             non_spatial_args,
-            local_partition,
+            local_partition.as_mut(),
         )?,
         Command::SpatiallyImplicit(spatially_implicit_args) => {
             simulation::setup_spatially_implicit_simulation(
                 simulate_args.common_args(),
                 spatially_implicit_args,
-                local_partition,
+                local_partition.as_mut(),
             )?
         },
         Command::AlmostInfinite(almost_infinite_args) => {
             simulation::setup_almost_infinite_simulation(
                 simulate_args.common_args(),
                 almost_infinite_args,
-                local_partition,
+                local_partition.as_mut(),
             )?
         },
     };
+
+    std::mem::drop(local_partition);
 
     info!("Simulation finished after {} ({} steps).", time, steps);
 
