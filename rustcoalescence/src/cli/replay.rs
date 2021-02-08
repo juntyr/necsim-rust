@@ -22,6 +22,7 @@ pub fn replay_with_logger<R: ReporterContext>(
     );
 
     let mut remaining = 0_u64;
+    let mut any_overlapping = false;
 
     for path in replay_args.events() {
         anyhow::ensure!(
@@ -30,13 +31,23 @@ pub fn replay_with_logger<R: ReporterContext>(
         );
 
         remaining += match EventReplayIterator::try_new(path)? {
-            EventReplayType::Disjoint(iter) | EventReplayType::Overlapping(iter) => iter.len(),
+            EventReplayType::Disjoint(iter) => iter.len(),
+            EventReplayType::Overlapping(iter) => {
+                any_overlapping = true;
+
+                iter.len()
+            },
         };
     }
 
     let progress_update_step = remaining / 100;
 
-    let mut event_deduplicator: HashMap<Event, ()> = HashMap::new();
+    #[allow(clippy::cast_possible_truncation)]
+    let mut event_deduplicator: HashMap<Event, ()> = if any_overlapping {
+        HashMap::with_capacity((remaining as usize) / replay_args.events().len())
+    } else {
+        HashMap::new()
+    };
 
     info!("Starting event replay ...");
 
