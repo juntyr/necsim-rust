@@ -23,7 +23,7 @@ impl log::Log for MinimalLogger {
             Level::Trace => record.level().to_string().normal(),
         };
 
-        if record.level() < LevelFilter::Error {
+        if record.level() > LevelFilter::Error {
             println!("{:<5} {}", level_string, record.args())
         } else {
             eprintln!("{:<5} {}", level_string, record.args())
