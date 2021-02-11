@@ -21,11 +21,14 @@ impl Reporter for ExecutionTimeReporter {
         old(self.start_time).is_some() -> old(self.start_time) == self.start_time,
         "only updates start_time on first call"
     )]
-    fn report_progress(&mut self, _remaining: u64) {
-        let now = Instant::now();
+    fn report_progress(&mut self, remaining: u64) {
+        if self.start_time.is_none() {
+            self.start_time = Some(Instant::now());
+        }
 
-        self.start_time.get_or_insert(now);
-        self.end_time = Some(now);
+        if remaining == 0 {
+            self.end_time = Some(Instant::now());
+        }
     }
 }
 

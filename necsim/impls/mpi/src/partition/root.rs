@@ -50,7 +50,7 @@ impl<P: ReporterContext> Drop for MpiRootPartition<P> {
 
 impl<P: ReporterContext> MpiRootPartition<P> {
     pub(super) const MPI_PROGRESS_TAG: Tag = 0;
-    const MPI_WAIT_TIME: f64 = 0.01_f64;
+    const MPI_WAIT_TIME: f64 = 0.1_f64;
 
     #[must_use]
     pub fn new(
@@ -137,6 +137,10 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
         match barrier.test() {
             Ok(_) => {
                 let global_continue: &'static mut bool = unsafe { &mut MPI_GLOBAL_CONTINUE };
+
+                if !*global_continue {
+                    self.reporter.report_progress(0);
+                }
 
                 *global_continue
             },

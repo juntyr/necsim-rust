@@ -1,12 +1,10 @@
-use std::cmp::Ordering;
-
-use indicatif::{ProgressBar, ProgressStyle};
+use std::io::{self, Write};
 
 use necsim_core::reporter::{EventFilter, Reporter};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ProgressReporter {
-    progress: Option<ProgressBar>,
+    last_filter: u64,
     last_remaining: u64,
     total: u64,
 }
@@ -19,31 +17,46 @@ impl EventFilter for ProgressReporter {
 impl Reporter for ProgressReporter {
     #[inline]
     fn report_progress(&mut self, remaining: u64) {
-        // TODO: Show the progress bar in MPI mode as well
-        let progress = self.progress.get_or_insert_with(|| {
-            let progress =
-                ProgressBar::new(1)
-                    .with_style(ProgressStyle::default_bar().template(
-                        "    [{elapsed_precise}] {bar:50.cyan/blue} [{eta_precise}]    \
-                        \n                   {pos:>20}/{len:<20}                   ",
-                    ));
+        // Update the progress total in case of regression
+        if self.last_remaining < remaining {
+            self.total += remaining - self.last_remaining;
+        }
 
-            progress.enable_steady_tick(100);
+        let filter = remaining * Self::FILTER_PRECISION / self.last_filter.max(1_u64);
 
-            progress
-        });
+        // Filter out updates which do not change the progress significantly
+        // The filter gets more detailed towards the end of the task
+        if (filter + 1) < Self::FILTER_PRECISION || filter > Self::FILTER_PRECISION {
+            self.last_filter = remaining;
 
-        match remaining.cmp(&self.last_remaining) {
-            Ordering::Greater => {
-                self.total += remaining - self.last_remaining;
+            #[allow(clippy::cast_possible_truncation)]
+            let display_progress =
+                ((self.total - remaining) * (Self::UPDATE_PRECISION as u64) / self.total) as usize;
 
-                progress.set_length(self.total);
-                progress.set_position(self.total - remaining);
-            },
-            Ordering::Less => {
-                progress.inc(self.last_remaining - remaining);
-            },
-            Ordering::Equal => (),
+            // Display a simple progress bar to stderr
+
+            eprint!("\r{:>13} [", self.total - remaining);
+            if display_progress == 0 {
+                eprint!("{:>rest$}", "", rest = (Self::UPDATE_PRECISION));
+            } else if remaining > 0 {
+                eprint!(
+                    "{:=<progress$}>{:>rest$}",
+                    "",
+                    "",
+                    progress = (display_progress - 1),
+                    rest = (Self::UPDATE_PRECISION - display_progress)
+                );
+            } else {
+                eprint!("{:=<progress$}", "", progress = (Self::UPDATE_PRECISION));
+            }
+            eprint!("] {:<13}", self.total);
+
+            if remaining == 0 {
+                eprint!("\r\n");
+            }
+
+            // Flush stderr to update the progress bar
+            let _ = io::stderr().flush();
         }
 
         self.last_remaining = remaining;
@@ -53,7 +66,7 @@ impl Reporter for ProgressReporter {
 impl Default for ProgressReporter {
     fn default() -> Self {
         Self {
-            progress: None,
+            last_filter: 0_u64,
             last_remaining: 0_u64,
             total: 0_u64,
         }
@@ -61,9 +74,10 @@ impl Default for ProgressReporter {
 }
 
 impl ProgressReporter {
+    const FILTER_PRECISION: u64 = 100;
+    const UPDATE_PRECISION: usize = 50;
+
     pub fn finish(self) {
-        if let Some(progress) = self.progress {
-            progress.finish()
-        }
+        std::mem::drop(self)
     }
 }
