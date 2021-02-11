@@ -52,7 +52,7 @@ impl<P: ReporterContext> Drop for MpiParallelPartition<P> {
 }
 
 impl<P: ReporterContext> MpiParallelPartition<P> {
-    const MPI_WAIT_TIME: f64 = 0.05_f64;
+    const MPI_WAIT_TIME: f64 = 0.1_f64;
 
     #[must_use]
     pub fn new(universe: Universe, world: SystemCommunicator, event_log_path: &Path) -> Self {
