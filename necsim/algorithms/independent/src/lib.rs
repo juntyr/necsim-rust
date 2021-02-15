@@ -8,7 +8,7 @@ extern crate contracts;
 
 use std::collections::VecDeque;
 
-use lru::LruCache;
+use linked_hash_map::LinkedHashMap;
 
 use necsim_core::{
     cogs::{
@@ -89,8 +89,9 @@ impl IndependentSimulation {
             .active_lineage_sampler(active_lineage_sampler)
             .build();
 
-        let mut min_spec_samples: LruCache<SpeciationSample, ()> =
-            LruCache::new(lineages.len() * 5);
+        let min_spec_memory_size = lineages.len() * 2;
+        let mut min_spec_samples: LinkedHashMap<SpeciationSample, ()> =
+            LinkedHashMap::with_capacity(min_spec_memory_size);
 
         let mut total_steps = 0_u64;
         let mut max_time = 0.0_f64;
@@ -112,9 +113,13 @@ impl IndependentSimulation {
 
             if let Some(previous_speciation_sample) = previous_speciation_sample {
                 if min_spec_samples
-                    .put(previous_speciation_sample, ())
+                    .insert(previous_speciation_sample, ())
                     .is_none()
                 {
+                    if min_spec_samples.len() >= min_spec_memory_size {
+                        min_spec_samples.pop_front();
+                    }
+
                     if let Some(previous_task) = previous_task {
                         if previous_task.is_active() {
                             lineages.push_back(previous_task);
