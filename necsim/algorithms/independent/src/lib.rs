@@ -8,7 +8,7 @@ extern crate contracts;
 
 use std::collections::VecDeque;
 
-use linked_hash_map::LinkedHashMap;
+use lru_set::LruSet;
 
 use necsim_core::{
     cogs::{
@@ -89,9 +89,8 @@ impl IndependentSimulation {
             .active_lineage_sampler(active_lineage_sampler)
             .build();
 
-        let min_spec_memory_size = lineages.len() * 2;
-        let mut min_spec_samples: LinkedHashMap<SpeciationSample, ()> =
-            LinkedHashMap::with_capacity(min_spec_memory_size);
+        let mut min_spec_samples: LruSet<SpeciationSample> =
+            LruSet::with_capacity(lineages.len() * 2);
 
         let mut total_steps = 0_u64;
         let mut max_time = 0.0_f64;
@@ -102,7 +101,10 @@ impl IndependentSimulation {
             || simulation.active_lineage_sampler().number_active_lineages() > 0
             || proxy.local_partition().wait_for_termination()
         {
-            proxy.report_total_progress(lineages.len() as u64);
+            proxy.report_total_progress(
+                (lineages.len() + simulation.active_lineage_sampler().number_active_lineages())
+                    as u64,
+            );
 
             let previous_task = simulation
                 .active_lineage_sampler_mut()
@@ -112,14 +114,7 @@ impl IndependentSimulation {
                 simulation.event_sampler_mut().replace_min_speciation(None);
 
             if let Some(previous_speciation_sample) = previous_speciation_sample {
-                if min_spec_samples
-                    .insert(previous_speciation_sample, ())
-                    .is_none()
-                {
-                    if min_spec_samples.len() >= min_spec_memory_size {
-                        min_spec_samples.pop_front();
-                    }
-
+                if min_spec_samples.insert(previous_speciation_sample) {
                     if let Some(previous_task) = previous_task {
                         if previous_task.is_active() {
                             lineages.push_back(previous_task);
@@ -134,6 +129,8 @@ impl IndependentSimulation {
             total_steps += new_steps;
             max_time = max_time.max(new_time);
         }
+
+        proxy.report_total_progress(0_u64);
 
         (max_time, total_steps)
     }
