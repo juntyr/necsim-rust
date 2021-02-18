@@ -83,7 +83,7 @@ impl<'h, I: Iterator<Item = u64>> Iterator for NonSpatialOriginSampler<'h, I> {
         while u64::from(self.next_location_index) + index_difference
             >= u64::from(self.habitat.get_deme())
         {
-            index_difference -= u64::from(self.habitat.get_deme());
+            index_difference -= u64::from(self.habitat.get_deme() - self.next_location_index);
 
             self.next_location_index = 0;
 
