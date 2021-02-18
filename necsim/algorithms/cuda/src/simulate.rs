@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use anyhow::Result;
 
-use linked_hash_map::LinkedHashMap;
+use lru_set::LruSet;
 
 use rustacuda::{
     function::{BlockSize, GridSize},
@@ -84,9 +84,8 @@ pub fn simulate<
         .with_dimensions(grid_size, block_size, 0_u32)
         .with_stream(stream);
 
-    let min_spec_memory_size = individual_tasks.len() * 2;
-    let mut min_spec_samples: LinkedHashMap<SpeciationSample, ()> =
-        LinkedHashMap::with_capacity(min_spec_memory_size);
+    let mut min_spec_samples: LruSet<SpeciationSample> =
+        LruSet::with_capacity(individual_tasks.len() * 2);
 
     let mut duplicate_individuals = bitbox![0; min_spec_sample_buffer.len()];
 
@@ -133,11 +132,7 @@ pub fn simulate<
             // Fetch the completion of the tasks
             for (i, spec_sample) in min_spec_sample_buffer.iter_mut().enumerate() {
                 if let Some(spec_sample) = spec_sample.take() {
-                    if min_spec_samples.insert(spec_sample, ()).is_some() {
-                        duplicate_individuals.set(i, true);
-                    } else if min_spec_samples.len() >= min_spec_memory_size {
-                        min_spec_samples.pop_front();
-                    }
+                    duplicate_individuals.set(i, !min_spec_samples.insert(spec_sample));
                 }
             }
 
