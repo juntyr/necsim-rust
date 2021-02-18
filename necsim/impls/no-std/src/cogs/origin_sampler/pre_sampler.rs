@@ -62,6 +62,14 @@ impl<I: Iterator<Item = u64>> OriginPreSampler<I> {
         OriginPreSampler {
             proportion: self.proportion * percentage,
             inner: core::iter::repeat(()).scan(0.5_f64, move |quasi_random, _| {
+                if percentage <= 0.0_f64 {
+                    return None;
+                }
+
+                if percentage >= 1.0_f64 {
+                    return self.next();
+                }
+
                 *quasi_random = necsim_core::intrinsics::fract(*quasi_random + INV_PHI);
 
                 #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
