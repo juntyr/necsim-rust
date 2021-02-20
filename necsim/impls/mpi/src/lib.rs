@@ -14,6 +14,7 @@ use std::{
 use mpi::{
     environment::Universe,
     topology::{Communicator, Rank, SystemCommunicator},
+    Tag,
 };
 
 use thiserror::Error;
@@ -38,6 +39,8 @@ pub struct MpiPartitioning {
 }
 
 impl MpiPartitioning {
+    const MPI_MIGRATION_TAG: Tag = 1;
+    const MPI_PROGRESS_TAG: Tag = 0;
     const ROOT_RANK: Rank = 0;
 
     /// # Errors

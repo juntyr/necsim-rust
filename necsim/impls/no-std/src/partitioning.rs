@@ -100,7 +100,7 @@ impl<P: ReporterContext> LocalPartition<P> for MonolithicLocalPartition<P> {
     }
 
     fn wait_for_termination(&mut self) -> bool {
-        false
+        !self.loopback.is_empty()
     }
 
     fn reduce_global_time_steps(&self, local_time: f64, local_steps: u64) -> (f64, u64) {
@@ -113,7 +113,7 @@ pub struct ImmigrantPopIterator<'i> {
 }
 
 impl<'i> ImmigrantPopIterator<'i> {
-    fn new(immigrants: &'i mut Vec<MigratingLineage>) -> Self {
+    pub fn new(immigrants: &'i mut Vec<MigratingLineage>) -> Self {
         Self { immigrants }
     }
 }
