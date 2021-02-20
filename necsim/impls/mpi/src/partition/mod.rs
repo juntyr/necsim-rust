@@ -2,11 +2,12 @@ use std::num::NonZeroU32;
 
 use necsim_core::{
     event::Event,
+    lineage::MigratingLineage,
     reporter::{EventFilter, Reporter},
 };
 
 use necsim_impls_no_std::{
-    partitioning::{LocalPartition, MonolithicLocalPartition},
+    partitioning::{ImmigrantPopIterator, LocalPartition, MonolithicLocalPartition},
     reporter::ReporterContext,
 };
 
@@ -25,6 +26,7 @@ pub enum MpiLocalPartition<P: ReporterContext> {
 
 #[contract_trait]
 impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
+    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
     type Reporter = Self;
 
     fn get_reporter(&mut self) -> &mut Self::Reporter {
@@ -55,6 +57,25 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
         }
     }
 
+    fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(
+        &mut self,
+        emigrants: &mut E,
+    ) -> Self::ImmigrantIterator<'_> {
+        match self {
+            Self::Monolithic(partition) => partition.migrate_individuals(emigrants),
+            Self::Root(partition) => partition.migrate_individuals(emigrants),
+            Self::Parallel(partition) => partition.migrate_individuals(emigrants),
+        }
+    }
+
+    fn wait_for_termination(&mut self) -> bool {
+        match self {
+            Self::Monolithic(partition) => partition.wait_for_termination(),
+            Self::Root(partition) => partition.wait_for_termination(),
+            Self::Parallel(partition) => partition.wait_for_termination(),
+        }
+    }
+
     fn reduce_global_time_steps(&self, local_time: f64, local_steps: u64) -> (f64, u64) {
         match self {
             Self::Monolithic(partition) => {
@@ -64,14 +85,6 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
             Self::Parallel(partition) => {
                 partition.reduce_global_time_steps(local_time, local_steps)
             },
-        }
-    }
-
-    fn wait_for_termination(&mut self) -> bool {
-        match self {
-            Self::Monolithic(partition) => partition.wait_for_termination(),
-            Self::Root(partition) => partition.wait_for_termination(),
-            Self::Parallel(partition) => partition.wait_for_termination(),
         }
     }
 }
