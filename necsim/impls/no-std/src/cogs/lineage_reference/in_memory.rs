@@ -1,8 +1,4 @@
-use core::{
-    hash::Hash,
-    iter::{ExactSizeIterator, Iterator},
-    num::NonZeroUsize,
-};
+use core::{hash::Hash, num::NonZeroUsize};
 
 use necsim_core::cogs::{Habitat, LineageReference};
 
@@ -29,35 +25,3 @@ impl Into<usize> for InMemoryLineageReference {
         self.0.get() - 1
     }
 }
-
-#[allow(clippy::module_name_repetitions)]
-pub struct InMemoryLineageReferenceIterator {
-    from: usize,
-    len: usize,
-}
-
-impl From<usize> for InMemoryLineageReferenceIterator {
-    fn from(len: usize) -> Self {
-        Self { from: 0_usize, len }
-    }
-}
-
-impl Iterator for InMemoryLineageReferenceIterator {
-    type Item = InMemoryLineageReference;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.from < self.len {
-            self.from += 1;
-
-            Some(InMemoryLineageReference::from(self.from - 1))
-        } else {
-            None
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len - self.from, Some(self.len - self.from))
-    }
-}
-
-impl ExactSizeIterator for InMemoryLineageReferenceIterator {}
