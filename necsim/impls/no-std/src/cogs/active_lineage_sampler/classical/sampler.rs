@@ -203,10 +203,10 @@ impl<
     #[allow(clippy::type_complexity)]
     fn insert_new_lineage_to_indexed_location(
         &mut self,
-        _global_reference: GlobalLineageReference,
-        _indexed_location: IndexedLocation,
-        _time: f64,
-        _simulation: &mut PartialSimulation<
+        global_reference: GlobalLineageReference,
+        indexed_location: IndexedLocation,
+        time: f64,
+        simulation: &mut PartialSimulation<
             H,
             G,
             N,
@@ -228,9 +228,17 @@ impl<
         >,
         _rng: &mut G,
     ) {
+        let immigrant_lineage_reference = simulation.lineage_store.immigrate(
+            &simulation.habitat,
+            global_reference,
+            indexed_location,
+            time,
+        );
+
+        self.active_lineage_references
+            .push(immigrant_lineage_reference);
+
         // Reset the next event time because the internal state has changed
         self.next_event_time = None;
-
-        unimplemented!("TODO: insert not yet implemented")
     }
 }

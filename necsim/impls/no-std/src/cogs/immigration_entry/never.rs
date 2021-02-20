@@ -1,8 +1,4 @@
-use necsim_core::{
-    cogs::{CoalescenceRngSample, ImmigrationEntry},
-    landscape::{IndexedLocation, Location},
-    lineage::GlobalLineageReference,
-};
+use necsim_core::{cogs::ImmigrationEntry, lineage::MigratingLineage};
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
@@ -19,16 +15,11 @@ impl Default for NeverImmigrationEntry {
 impl ImmigrationEntry for NeverImmigrationEntry {
     #[must_use]
     #[inline]
+    #[debug_ensures(ret.is_none(), "no lineage ever immigrates")]
     fn next_optional_immigration(
         &mut self,
         _optional_next_event_time: Option<f64>,
-    ) -> Option<(
-        GlobalLineageReference,
-        IndexedLocation,
-        Location,
-        f64,
-        CoalescenceRngSample,
-    )> {
+    ) -> Option<MigratingLineage> {
         None
     }
 }
