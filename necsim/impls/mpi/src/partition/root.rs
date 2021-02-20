@@ -15,11 +15,12 @@ use mpi::{
 
 use necsim_core::{
     event::{Event, EventType},
+    lineage::MigratingLineage,
     reporter::{EventFilter, Reporter},
 };
 
 use necsim_impls_no_std::{
-    partitioning::LocalPartition,
+    partitioning::{ImmigrantPopIterator, LocalPartition},
     reporter::{GuardedReporter, ReporterContext},
 };
 use necsim_impls_std::reporter::commitlog::CommitLogReporter;
@@ -80,6 +81,7 @@ impl<P: ReporterContext> MpiRootPartition<P> {
 
 #[contract_trait]
 impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
+    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
     type Reporter = Self;
 
     // TODO: call `self.event_reporter.mark_disjoint()` on any individual
@@ -105,16 +107,14 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
         NonZeroU32::new(self.world.size() as u32).unwrap()
     }
 
-    fn reduce_global_time_steps(&self, local_time: f64, local_steps: u64) -> (f64, u64) {
-        let mut global_time_max: f64 = 0.0_f64;
-        let mut global_steps_sum: u64 = 0_u64;
+    fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(
+        &mut self,
+        _emigrants: &mut E,
+    ) -> Self::ImmigrantIterator<'_> {
+        // TODO: call `self.event_reporter.mark_disjoint()` on any individual
+        //       exchange call (i.e. send or test for receive of migration)
 
-        self.world
-            .all_reduce_into(&local_time, &mut global_time_max, SystemOperation::max());
-        self.world
-            .all_reduce_into(&local_steps, &mut global_steps_sum, SystemOperation::sum());
-
-        (global_time_max, global_steps_sum)
+        unimplemented!("TODO: migrate_individuals from MpiRootPartition")
     }
 
     fn wait_for_termination(&mut self) -> bool {
@@ -150,6 +150,18 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
                 true
             },
         }
+    }
+
+    fn reduce_global_time_steps(&self, local_time: f64, local_steps: u64) -> (f64, u64) {
+        let mut global_time_max: f64 = 0.0_f64;
+        let mut global_steps_sum: u64 = 0_u64;
+
+        self.world
+            .all_reduce_into(&local_time, &mut global_time_max, SystemOperation::max());
+        self.world
+            .all_reduce_into(&local_steps, &mut global_steps_sum, SystemOperation::sum());
+
+        (global_time_max, global_steps_sum)
     }
 }
 
