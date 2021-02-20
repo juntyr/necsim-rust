@@ -6,10 +6,6 @@ use crate::{
     simulation::partial::emigration_exit::PartialSimulation,
 };
 
-// TODO: Should the emigration exit handle the removal from the store,
-//       or should that be up to the active lineage sampler when no event is
-// returned?
-
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait EmigrationExit<
@@ -38,9 +34,9 @@ pub trait EmigrationExit<
         },
         None => true,
     }, "if ret is Some, it returns the input parameters unchanged")]
-    // TODO: Ensures that if None, that the lineage reference has been removed from
-    // the lineage store TODO: Ensures that lineage only emigrates iff dispersal
-    // target outside local chunk
+    #[debug_ensures(if ret.as_ref().is_none() {
+        simulation.lineage_store.get(old(lineage_reference.clone())).is_none()
+    } else { true }, "if ret is None, lineage_reference has been removed from the lineage store")]
     fn optionally_emigrate(
         &mut self,
         lineage_reference: R,

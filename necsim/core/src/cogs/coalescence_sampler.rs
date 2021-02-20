@@ -1,3 +1,5 @@
+use core::cmp::{Ord, Ordering};
+
 use crate::{
     cogs::RngCore,
     landscape::{IndexedLocation, Location},
@@ -22,8 +24,23 @@ pub trait CoalescenceSampler<H: Habitat, R: LineageReference<H>, S: LineageStore
     ) -> (IndexedLocation, Option<GlobalLineageReference>);
 }
 
+#[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 pub struct CoalescenceRngSample(f64);
+
+impl Ord for CoalescenceRngSample {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.total_cmp(&other.0)
+    }
+}
+
+impl PartialOrd for CoalescenceRngSample {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Eq for CoalescenceRngSample {}
 
 impl CoalescenceRngSample {
     #[must_use]
