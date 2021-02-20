@@ -8,6 +8,7 @@ use crate::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
         Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
     },
+    lineage::MigratingLineage,
     reporter::Reporter,
 };
 
@@ -46,13 +47,13 @@ impl<
             );
 
             // Check if an immigration event has to be processed before the next local event
-            if let Some((
+            if let Some(MigratingLineage {
                 global_reference,
                 dispersal_origin,
                 dispersal_target,
-                migration_event_time,
+                event_time: migration_event_time,
                 coalescence_rng_sample,
-            )) = self
+            }) = self
                 .immigration_entry_mut()
                 .next_optional_immigration(optional_next_event_time)
             {

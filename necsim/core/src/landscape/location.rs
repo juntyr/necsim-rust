@@ -2,7 +2,7 @@ use core::num::NonZeroU32;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Eq, PartialEq, Clone, Hash, Debug, Serialize, Deserialize)]
+#[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 #[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 pub struct Location {
@@ -35,7 +35,7 @@ impl From<IndexedLocation> for Location {
     }
 }
 
-#[derive(Eq, PartialEq, Clone, Copy, Hash, Debug, Serialize, Deserialize)]
+#[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Copy, Hash, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 struct LocationIndex(NonZeroU32);
 
@@ -52,7 +52,7 @@ unsafe impl mpi::traits::Equivalence for LocationIndex {
 
 // IndexedLocation uses a NonZeroU32 index internally to enable same-size
 //  Option optimisation
-#[derive(Eq, PartialEq, Clone, Hash, Debug, Serialize, Deserialize)]
+#[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 #[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]

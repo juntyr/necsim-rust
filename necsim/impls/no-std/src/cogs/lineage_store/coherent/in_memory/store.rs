@@ -145,4 +145,21 @@ impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
                 .update_time_of_last_event(event_time)
         }
     }
+
+    fn emigrate(
+        &mut self,
+        _local_lineage_reference: InMemoryLineageReference,
+    ) -> GlobalLineageReference {
+        unimplemented!("TODO: Implement emigration for CoherentInMemoryLineageStore")
+    }
+
+    fn immigrate(
+        &mut self,
+        _habitat: &H,
+        _global_reference: GlobalLineageReference,
+        _indexed_location: IndexedLocation,
+        _time_of_emigration: f64,
+    ) -> InMemoryLineageReference {
+        unimplemented!("TODO: Implement immigration for CoherentInMemoryLineageStore")
+    }
 }

@@ -84,7 +84,7 @@ pub trait CoherentLineageStore<H: Habitat, R: LineageReference<H>>:
         ).len() + 1) == self.get_active_local_lineage_references_at_location_unordered(
             &old(indexed_location.location().clone()), old(habitat)
         ).len(),
-        "unordered active lineage index at returned location has grown by 1"
+        "unordered active lineage index at given location has grown by 1"
     )]
     fn insert_lineage_to_indexed_location_coherent(
         &mut self,
@@ -127,4 +127,60 @@ pub trait CoherentLineageStore<H: Habitat, R: LineageReference<H>>:
         "updates the time of the last event of the lineage reference"
     )]
     fn update_lineage_time_of_last_event(&mut self, reference: R, event_time: f64);
+
+    #[debug_requires(
+        self.get(local_lineage_reference.clone()).is_some(),
+        "lineage reference is valid"
+    )]
+    #[debug_requires(
+        !self[local_lineage_reference.clone()].is_active(),
+        "lineage is inactive"
+    )]
+    #[debug_ensures(
+        self.get(old(local_lineage_reference.clone())).is_none(),
+        "lineage was removed"
+    )]
+    #[debug_ensures(
+        ret == old(self[local_lineage_reference.clone()].global_reference().clone()),
+        "returns the individual's GlobalLineageReference"
+    )]
+    fn emigrate(&mut self, local_lineage_reference: R) -> GlobalLineageReference;
+
+    #[must_use]
+    #[debug_requires(
+        habitat.contains(indexed_location.location()),
+        "indexed location is inside habitat"
+    )]
+    #[debug_ensures(self[ret.clone()].is_active(), "lineage was activated")]
+    #[debug_ensures(
+        self[ret.clone()].indexed_location() == Some(&old(indexed_location.clone())),
+        "lineage was added to indexed_location"
+    )]
+    #[debug_ensures(
+        self.get_active_global_lineage_reference_at_indexed_location(
+            &old(indexed_location.clone()), old(habitat)
+        ) == Some(self[ret.clone()].global_reference()),
+        "lineage is now indexed at indexed_location"
+    )]
+    #[debug_ensures(
+        self.get_active_local_lineage_references_at_location_unordered(
+            &old(indexed_location.location().clone()), old(habitat)
+        ).last() == Some(&ret),
+        "lineage is now indexed unordered at indexed_location.location()"
+    )]
+    #[debug_ensures(
+        old(self.get_active_local_lineage_references_at_location_unordered(
+            indexed_location.location(), old(habitat)
+        ).len() + 1) == self.get_active_local_lineage_references_at_location_unordered(
+            &old(indexed_location.location().clone()), old(habitat)
+        ).len(),
+        "unordered active lineage index at given location has grown by 1"
+    )]
+    fn immigrate(
+        &mut self,
+        habitat: &H,
+        global_reference: GlobalLineageReference,
+        indexed_location: IndexedLocation,
+        time_of_emigration: f64,
+    ) -> R;
 }
