@@ -3,8 +3,8 @@ use std::fmt;
 #[cfg(feature = "necsim-cuda")]
 pub mod cuda;
 
-#[cfg(feature = "necsim-cuda")]
-use cuda::CudaArguments;
+#[cfg(feature = "necsim-independent")]
+pub mod independent;
 
 #[derive(Debug)]
 #[non_exhaustive]
@@ -17,9 +17,9 @@ pub enum Algorithm {
     #[cfg(feature = "necsim-skipping-gillespie")]
     SkippingGillespie,
     #[cfg(feature = "necsim-cuda")]
-    Cuda(CudaArguments),
+    Cuda(necsim_cuda::CudaArguments),
     #[cfg(feature = "necsim-independent")]
-    Independent,
+    Independent(necsim_independent::IndependentArguments),
 }
 
 impl fmt::Display for Algorithm {
@@ -45,14 +45,14 @@ impl std::str::FromStr for Algorithm {
             },
             #[cfg(feature = "necsim-cuda")]
             "Cuda" | _ if s.to_ascii_lowercase().starts_with("cuda") => {
-                match s
-                    .to_ascii_lowercase()
-                    .strip_prefix("cuda")
-                    .and_then(|s| s.strip_prefix("["))
+                match s["cuda".len()..]
+                    .strip_prefix("[")
                     .and_then(|s| s.strip_suffix("]"))
                 {
                     Some(suffix) if !suffix.is_empty() => {
-                        match ron::from_str(&format!("({})", suffix)) {
+                        match ron::Deserializer::from_str(&format!("({})", suffix))
+                            .and_then(|mut de| cuda::ArgumentsDef::deserialize(&mut de))
+                        {
                             Ok(args) => Ok(Algorithm::Cuda(args)),
                             Err(err) => Err(format!(
                                 "Invalid CUDA algorithm arguments [{}]: {}",
@@ -60,12 +60,30 @@ impl std::str::FromStr for Algorithm {
                             )),
                         }
                     },
-                    _ => Ok(Algorithm::Cuda(CudaArguments::default())),
+                    _ => Ok(Algorithm::Cuda(necsim_cuda::CudaArguments::default())),
                 }
             },
             #[cfg(feature = "necsim-independent")]
-            "Independent" | _ if s.eq_ignore_ascii_case("Independent") => {
-                Ok(Algorithm::Independent)
+            "Independent" | _ if s.to_ascii_lowercase().starts_with("independent") => {
+                match s["independent".len()..]
+                    .strip_prefix("[")
+                    .and_then(|s| s.strip_suffix("]"))
+                {
+                    Some(suffix) if !suffix.is_empty() => {
+                        match ron::Deserializer::from_str(&format!("({})", suffix))
+                            .and_then(|mut de| independent::ArgumentsDef::deserialize(&mut de))
+                        {
+                            Ok(args) => Ok(Algorithm::Independent(args)),
+                            Err(err) => Err(format!(
+                                "Invalid Independent algorithm arguments [{}]: {}",
+                                suffix, err
+                            )),
+                        }
+                    },
+                    _ => Ok(Algorithm::Independent(
+                        necsim_independent::IndependentArguments::default(),
+                    )),
+                }
             },
             _ => Err(format!(
                 "valid values: {}",

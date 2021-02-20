@@ -15,11 +15,11 @@ use necsim_impls_no_std::{
     simulation::in_memory::InMemorySimulation,
 };
 
-use super::IndependentSimulation;
+use super::{IndependentArguments, IndependentSimulation};
 
 #[contract_trait]
 impl InMemorySimulation for IndependentSimulation {
-    type AuxiliaryArguments = ();
+    type AuxiliaryArguments = IndependentArguments;
     type Error = anyhow::Error;
 
     /// Simulates the independent coalescence algorithm on an in memory
@@ -37,7 +37,7 @@ impl InMemorySimulation for IndependentSimulation {
         sample_percentage: f64,
         seed: u64,
         local_partition: &mut P,
-        _auxiliary: Self::AuxiliaryArguments,
+        auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = InMemoryHabitat::new(habitat.clone());
         let speciation_probability =
@@ -62,7 +62,8 @@ impl InMemorySimulation for IndependentSimulation {
             lineages,
             seed,
             local_partition,
-        );
+            &auxiliary,
+        )?;
 
         Ok(local_partition.reduce_global_time_steps(partition_time, partition_steps))
     }

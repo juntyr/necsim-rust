@@ -104,7 +104,7 @@ pub fn simulate<R: ReporterContext, P: LocalPartition<R>>(
         // (),
         // ),
         // #[cfg(feature = "necsim-independent")]
-        // Algorithm::Independent => IndependentSimulation::simulate(
+        // Algorithm::Independent(auxiliary) => IndependentSimulation::simulate(
         // *spatially_implicit_args.dynamic_meta(),
         // spatially_implicit_args.local_area(),
         // spatially_implicit_args.local_deme(),
@@ -115,9 +115,8 @@ pub fn simulate<R: ReporterContext, P: LocalPartition<R>>(
         // common_args.sample_percentage(),
         // common_args.seed(),
         // local_partition,
-        // (),
-        // )
-        // .map_err(|_| unreachable!("Non-Spatial IndependentSimulation can never fail.")),
+        // *auxiliary,
+        // ),
         #[allow(unreachable_patterns)]
         _ => anyhow::bail!("rustcoalescence does not support the selected algorithm"),
     };
