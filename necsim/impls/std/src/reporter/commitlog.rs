@@ -75,6 +75,7 @@ impl CommitLogReporter {
         })
     }
 
+    // TODO: This will no longer be required in the custom improved event log
     pub fn mark_disjoint(&mut self) {
         self.is_disjoint = true;
     }
