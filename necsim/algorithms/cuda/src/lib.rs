@@ -1,5 +1,6 @@
 #![deny(clippy::pedantic)]
 #![feature(min_const_generics)]
+#![feature(stmt_expr_attributes)]
 
 #[macro_use]
 extern crate contracts;
@@ -54,12 +55,34 @@ use crate::kernel::SimulationKernel;
 use cuda::with_initialised_cuda;
 use simulate::simulate;
 
+#[derive(Copy, Clone, Debug)]
+pub enum DedupMode {
+    Static(usize),
+    Dynamic(f64),
+    None,
+}
+
+#[derive(Copy, Clone, Debug)]
 pub struct CudaArguments {
     pub ptx_jit: bool,
     pub delta_t: f64,
     pub block_size: u32,
     pub grid_size: u32,
     pub step_slice: usize,
+    pub dedup_mode: DedupMode,
+}
+
+impl Default for CudaArguments {
+    fn default() -> Self {
+        Self {
+            ptx_jit: false,
+            delta_t: 1.0_f64,
+            block_size: 32_u32,
+            grid_size: 256_u32,
+            step_slice: 200_usize,
+            dedup_mode: DedupMode::Dynamic(2.0_f64),
+        }
+    }
 }
 
 pub struct CudaSimulation;
@@ -86,7 +109,22 @@ impl CudaSimulation {
 
         anyhow::ensure!(
             auxiliary.delta_t > 0.0_f64,
-            "CUDA algorithm delta_t must be positive."
+            "CUDA algorithm delta_t={} must be positive.",
+            auxiliary.delta_t
+        );
+        anyhow::ensure!(
+            auxiliary.step_slice > 0,
+            "CUDA algorithm step_slice={} must be positive.",
+            auxiliary.step_slice
+        );
+        anyhow::ensure!(
+            if let DedupMode::Dynamic(scalar) = auxiliary.dedup_mode {
+                scalar >= 0.0_f64
+            } else {
+                true
+            },
+            "CUDA algorithm dedup_mode={:?} dynamic scalar must be non-negative.",
+            auxiliary.dedup_mode,
         );
 
         let rng = CudaRng::<Rng>::seed_from_u64(seed);
@@ -98,7 +136,6 @@ impl CudaSimulation {
         let event_sampler = EventSampler::default();
         let immigration_entry = NeverImmigrationEntry::default();
 
-        // TODO: Need to test dt on a variety of seeds to see which is optimal
         let active_lineage_sampler =
             ActiveLineageSampler::empty(ExpEventTimeSampler::new(auxiliary.delta_t));
 
@@ -147,7 +184,7 @@ impl CudaSimulation {
                 simulate(
                     &stream,
                     kernel,
-                    (grid_size, block_size),
+                    (grid_size, block_size, auxiliary.dedup_mode),
                     simulation,
                     lineages.into(),
                     task_list,

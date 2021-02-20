@@ -12,12 +12,12 @@ use necsim_impls_no_std::{
     simulation::almost_infinite::AlmostInfiniteSimulation,
 };
 
-use super::IndependentSimulation;
+use super::{IndependentArguments, IndependentSimulation};
 
 #[contract_trait]
 impl AlmostInfiniteSimulation for IndependentSimulation {
-    type AuxiliaryArguments = ();
-    type Error = !;
+    type AuxiliaryArguments = IndependentArguments;
+    type Error = anyhow::Error;
 
     /// Simulates the independent coalescence algorithm on an almost-infinite
     /// `habitat` with N(0, sigma) `dispersal`. Only a circular region with
@@ -29,7 +29,7 @@ impl AlmostInfiniteSimulation for IndependentSimulation {
         sample_percentage: f64,
         seed: u64,
         local_partition: &mut P,
-        _auxiliary: Self::AuxiliaryArguments,
+        auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = AlmostInfiniteHabitat::default();
         let speciation_probability =
@@ -53,7 +53,8 @@ impl AlmostInfiniteSimulation for IndependentSimulation {
             lineages,
             seed,
             local_partition,
-        );
+            &auxiliary,
+        )?;
 
         Ok(local_partition.reduce_global_time_steps(partition_time, partition_steps))
     }
