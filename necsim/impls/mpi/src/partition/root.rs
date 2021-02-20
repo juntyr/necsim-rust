@@ -1,16 +1,16 @@
 use std::{
     num::NonZeroU32,
     path::{Path, PathBuf},
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use mpi::{
     collective::{CommunicatorCollectives, SystemOperation},
+    datatype::Equivalence,
     environment::Universe,
-    point_to_point::Source,
+    point_to_point::{Destination, Source},
     request::{CancelGuard, Request, StaticScope},
     topology::{Communicator, SystemCommunicator},
-    Tag,
 };
 
 use necsim_core::{
@@ -30,11 +30,16 @@ use crate::MpiPartitioning;
 static mut MPI_LOCAL_CONTINUE: bool = false;
 static mut MPI_GLOBAL_CONTINUE: bool = false;
 
+static mut MPI_MIGRATION_BUFFERS: Vec<Vec<MigratingLineage>> = Vec::new();
+
 pub struct MpiRootPartition<P: ReporterContext> {
     _universe: Universe,
     world: SystemCommunicator,
-    last_mpi_call_time: Instant,
+    last_report_time: Instant,
     all_remaining: Box<[u64]>,
+    migration_buffers: Box<[Vec<MigratingLineage>]>,
+    last_migration_times: Box<[Instant]>,
+    emigration_requests: Box<[Option<Request<'static, StaticScope>>]>,
     reporter: GuardedReporter<P::Reporter, P::Finaliser>,
     event_reporter: CommitLogReporter,
     barrier: Option<Request<'static, StaticScope>>,
@@ -43,6 +48,12 @@ pub struct MpiRootPartition<P: ReporterContext> {
 
 impl<P: ReporterContext> Drop for MpiRootPartition<P> {
     fn drop(&mut self) {
+        for request in self.emigration_requests.iter_mut() {
+            if let Some(request) = request.take() {
+                CancelGuard::from(request);
+            }
+        }
+
         if let Some(barrier) = self.barrier.take() {
             CancelGuard::from(barrier);
         }
@@ -50,8 +61,8 @@ impl<P: ReporterContext> Drop for MpiRootPartition<P> {
 }
 
 impl<P: ReporterContext> MpiRootPartition<P> {
-    pub(super) const MPI_PROGRESS_TAG: Tag = 0;
-    const MPI_WAIT_TIME: f64 = 0.1_f64;
+    const MPI_MIGRATION_WAIT_TIME: Duration = Duration::from_millis(100_u64);
+    const MPI_PROGRESS_WAIT_TIME: Duration = Duration::from_millis(100_u64);
 
     #[must_use]
     pub fn new(
@@ -66,11 +77,27 @@ impl<P: ReporterContext> MpiRootPartition<P> {
         #[allow(clippy::cast_sign_loss)]
         let world_size = world.size() as usize;
 
+        let mut mpi_migration_buffers = Vec::with_capacity(world_size);
+        mpi_migration_buffers.resize_with(world_size, Vec::new);
+
+        unsafe { MPI_MIGRATION_BUFFERS = mpi_migration_buffers };
+
+        let mut migration_buffers = Vec::with_capacity(world_size);
+        migration_buffers.resize_with(world_size, Vec::new);
+
+        let mut emigration_requests = Vec::with_capacity(world_size);
+        emigration_requests.resize_with(world_size, || None);
+
+        let now = Instant::now();
+
         Self {
             _universe: universe,
             world,
-            last_mpi_call_time: Instant::now(),
+            last_report_time: now.checked_sub(Self::MPI_PROGRESS_WAIT_TIME).unwrap_or(now),
             all_remaining: vec![0; world_size].into_boxed_slice(),
+            migration_buffers: migration_buffers.into_boxed_slice(),
+            last_migration_times: vec![now; world_size].into_boxed_slice(),
+            emigration_requests: emigration_requests.into_boxed_slice(),
             reporter,
             event_reporter: CommitLogReporter::try_new(&event_log_path).unwrap(),
             barrier: None,
@@ -83,9 +110,6 @@ impl<P: ReporterContext> MpiRootPartition<P> {
 impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
     type Reporter = Self;
-
-    // TODO: call `self.event_reporter.mark_disjoint()` on any individual
-    //       exchange call (i.e. send or test for receive of migration)
 
     fn get_reporter(&mut self) -> &mut Self::Reporter {
         self
@@ -109,15 +133,111 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
 
     fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(
         &mut self,
-        _emigrants: &mut E,
+        emigrants: &mut E,
     ) -> Self::ImmigrantIterator<'_> {
-        // TODO: call `self.event_reporter.mark_disjoint()` on any individual
-        //       exchange call (i.e. send or test for receive of migration)
+        for (partition, emigrant) in emigrants {
+            self.migration_buffers[partition as usize].push(emigrant)
+        }
 
-        unimplemented!("TODO: migrate_individuals from MpiRootPartition")
+        let self_rank_index = self.get_partition_rank() as usize;
+
+        let now = Instant::now();
+
+        // Receive incomming immigrating lineages
+        if now.duration_since(self.last_migration_times[self_rank_index])
+            >= Self::MPI_MIGRATION_WAIT_TIME
+        {
+            self.last_migration_times[self_rank_index] = now;
+
+            let immigration_buffer = &mut self.migration_buffers[self_rank_index];
+
+            let any_process = self.world.any_process();
+
+            // Probe MPI to receive
+            while let Some((msg, status)) =
+                any_process.immediate_matched_probe_with_tag(MpiPartitioning::MPI_MIGRATION_TAG)
+            {
+                #[allow(clippy::cast_sign_loss)]
+                let number_immigrants =
+                    status.count(MigratingLineage::equivalent_datatype()) as usize;
+
+                let receive_start = immigration_buffer.len();
+
+                immigration_buffer.reserve(number_immigrants);
+
+                unsafe {
+                    immigration_buffer.set_len(receive_start + number_immigrants);
+                }
+
+                msg.matched_receive_into(&mut immigration_buffer[receive_start..]);
+            }
+        }
+
+        // Send outgoing emigrating lineages
+        for rank in 0..self.get_number_of_partitions().get() {
+            let rank_index = rank as usize;
+
+            if rank_index != self_rank_index
+                && now.duration_since(self.last_migration_times[rank_index])
+                    >= Self::MPI_PROGRESS_WAIT_TIME
+            {
+                // Check if the prior send request has finished
+                if let Some(request) = self.emigration_requests[rank_index].take() {
+                    if let Err(request) = request.test() {
+                        self.emigration_requests[rank_index] = Some(request);
+                    }
+                }
+
+                let emigration_buffer = &mut self.migration_buffers[rank_index];
+
+                // Send a new non-empty request iff the prior one has finished
+                if self.emigration_requests[rank_index].is_none() && !emigration_buffer.is_empty() {
+                    self.last_migration_times[rank_index] = now;
+
+                    // MPI cannot terminate in this round since this partition gave up work
+                    self.communicated_since_last_barrier = true;
+
+                    let local_emigration_buffer: &'static mut Vec<MigratingLineage> =
+                        unsafe { &mut MPI_MIGRATION_BUFFERS[rank_index] };
+
+                    std::mem::swap(emigration_buffer, local_emigration_buffer);
+                    emigration_buffer.clear();
+
+                    #[allow(clippy::cast_possible_wrap)]
+                    let receiver_process = self.world.process_at_rank(rank as i32);
+
+                    self.emigration_requests[rank_index] =
+                        Some(receiver_process.immediate_synchronous_send_with_tag(
+                            StaticScope,
+                            &local_emigration_buffer[..],
+                            MpiPartitioning::MPI_MIGRATION_TAG,
+                        ));
+                }
+            }
+        }
+
+        ImmigrantPopIterator::new(&mut self.migration_buffers[self.get_partition_rank() as usize])
     }
 
     fn wait_for_termination(&mut self) -> bool {
+        // This partition can only terminate once all migrations have been processed
+        for buffer in self.migration_buffers.iter() {
+            if !buffer.is_empty() {
+                return true;
+            }
+        }
+        for request in self.emigration_requests.iter() {
+            if request.is_some() {
+                return true;
+            }
+        }
+        for buffer in unsafe { &mut MPI_MIGRATION_BUFFERS } {
+            if !buffer.is_empty() {
+                return true;
+            }
+        }
+
+        // Create a new termination attempt if the last one failed
         let barrier = self.barrier.take().unwrap_or_else(|| {
             let local_continue: &'static mut bool = unsafe { &mut MPI_LOCAL_CONTINUE };
             let global_continue: &'static mut bool = unsafe { &mut MPI_GLOBAL_CONTINUE };
@@ -179,15 +299,15 @@ impl<P: ReporterContext> Reporter for MpiRootPartition<P> {
     fn report_progress(&mut self, remaining: u64) {
         let now = Instant::now();
 
-        if now.duration_since(self.last_mpi_call_time).as_secs_f64() >= Self::MPI_WAIT_TIME {
-            self.last_mpi_call_time = now;
+        if now.duration_since(self.last_report_time) >= Self::MPI_PROGRESS_WAIT_TIME {
+            self.last_report_time = now;
 
             self.all_remaining[MpiPartitioning::ROOT_RANK as usize] = remaining;
 
             let any_process = self.world.any_process();
 
             while let Some((msg, _)) =
-                any_process.immediate_matched_probe_with_tag(Self::MPI_PROGRESS_TAG)
+                any_process.immediate_matched_probe_with_tag(MpiPartitioning::MPI_PROGRESS_TAG)
             {
                 let remaining_status: (u64, _) = msg.matched_receive();
 
