@@ -2,12 +2,14 @@
 #![feature(never_type)]
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
+#![feature(stmt_expr_attributes)]
 
 #[macro_use]
 extern crate contracts;
 
 use std::collections::VecDeque;
 
+use anyhow::Result;
 use lru_set::LruSet;
 
 use necsim_core::{
@@ -42,6 +44,30 @@ mod non_spatial;
 mod reporter;
 use reporter::DeduplicatingReporterProxy;
 
+#[derive(Copy, Clone, Debug)]
+pub enum DedupMode {
+    Static(usize),
+    Dynamic(f64),
+    None,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct IndependentArguments {
+    pub delta_t: f64,
+    pub step_slice: usize,
+    pub dedup_mode: DedupMode,
+}
+
+impl Default for IndependentArguments {
+    fn default() -> Self {
+        Self {
+            delta_t: 1.0_f64,
+            step_slice: 10_usize,
+            dedup_mode: DedupMode::Dynamic(2.0_f64),
+        }
+    }
+}
+
 pub struct IndependentSimulation;
 
 impl IndependentSimulation {
@@ -60,8 +86,29 @@ impl IndependentSimulation {
         lineages: Vec<Lineage>,
         seed: u64,
         local_partition: &mut P,
-    ) -> (f64, u64) {
-        const SIMULATION_STEP_SLICE: u64 = 10_u64;
+        auxiliary: &IndependentArguments,
+    ) -> Result<(f64, u64)> {
+        anyhow::ensure!(
+            auxiliary.delta_t > 0.0_f64,
+            "Independent algorithm delta_t={} must be positive.",
+            auxiliary.delta_t
+        );
+        anyhow::ensure!(
+            auxiliary.step_slice > 0,
+            "Independent algorithm step_slice={} must be positive.",
+            auxiliary.step_slice
+        );
+        anyhow::ensure!(
+            if let DedupMode::Dynamic(scalar) = auxiliary.dedup_mode {
+                scalar >= 0.0_f64
+            } else {
+                true
+            },
+            "Independent algorithm dedup_mode={:?} dynamic scalar must be non-negative.",
+            auxiliary.dedup_mode,
+        );
+
+        let step_slice = auxiliary.step_slice as u64;
 
         let mut proxy = DeduplicatingReporterProxy::from(local_partition);
 
@@ -71,9 +118,8 @@ impl IndependentSimulation {
         let coalescence_sampler = IndependentCoalescenceSampler::default();
         let event_sampler = IndependentEventSampler::default();
         let immigration_entry = NeverImmigrationEntry::default();
-        let active_lineage_sampler = IndependentActiveLineageSampler::empty(
-            ExpEventTimeSampler::new(1.0_f64), // FixedEventTimeSampler::default()
-        );
+        let active_lineage_sampler =
+            IndependentActiveLineageSampler::empty(ExpEventTimeSampler::new(auxiliary.delta_t));
 
         let mut simulation = Simulation::builder()
             .habitat(habitat)
@@ -90,7 +136,19 @@ impl IndependentSimulation {
             .build();
 
         let mut min_spec_samples: LruSet<SpeciationSample> =
-            LruSet::with_capacity(lineages.len() * 2);
+            LruSet::with_capacity(match auxiliary.dedup_mode {
+                DedupMode::Static(capacity) => capacity,
+                DedupMode::Dynamic(scalar) =>
+                #[allow(
+                    clippy::cast_precision_loss,
+                    clippy::cast_sign_loss,
+                    clippy::cast_possible_truncation
+                )]
+                {
+                    ((lineages.len() as f64) * scalar) as usize
+                }
+                DedupMode::None => 0_usize,
+            });
 
         let mut total_steps = 0_u64;
         let mut max_time = 0.0_f64;
@@ -123,8 +181,7 @@ impl IndependentSimulation {
                 }
             }
 
-            let (new_time, new_steps) =
-                simulation.simulate_incremental(SIMULATION_STEP_SLICE, &mut proxy);
+            let (new_time, new_steps) = simulation.simulate_incremental(step_slice, &mut proxy);
 
             total_steps += new_steps;
             max_time = max_time.max(new_time);
@@ -132,6 +189,6 @@ impl IndependentSimulation {
 
         proxy.report_total_progress(0_u64);
 
-        (max_time, total_steps)
+        Ok((max_time, total_steps))
     }
 }
