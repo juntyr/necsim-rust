@@ -4,9 +4,7 @@ use necsim_core::{
     lineage::{GlobalLineageReference, Lineage},
 };
 
-use crate::cogs::lineage_reference::in_memory::{
-    InMemoryLineageReference, InMemoryLineageReferenceIterator,
-};
+use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 
 use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 
@@ -16,7 +14,11 @@ use super::CoherentAlmostInfiniteLineageStore;
 impl LineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
     for CoherentAlmostInfiniteLineageStore
 {
-    type LineageReferenceIterator<'a> = InMemoryLineageReferenceIterator;
+    #[allow(clippy::type_complexity)]
+    type LineageReferenceIterator<'a> = core::iter::Map<
+        slab::Iter<'a, Lineage>,
+        fn((usize, &'a Lineage)) -> InMemoryLineageReference,
+    >;
 
     #[must_use]
     fn get_number_total_lineages(&self) -> usize {
@@ -26,7 +28,10 @@ impl LineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
     #[must_use]
     #[must_use]
     fn iter_local_lineage_references(&self) -> Self::LineageReferenceIterator<'_> {
-        InMemoryLineageReferenceIterator::from(self.lineages_store.len())
+        self.lineages_store.iter().map(
+            (|(reference, _)| InMemoryLineageReference::from(reference))
+                as fn((usize, &'_ Lineage)) -> InMemoryLineageReference,
+        )
     }
 
     #[must_use]
@@ -42,8 +47,8 @@ impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
     #[allow(clippy::type_complexity)]
     type LocationIterator<'a> = core::iter::Cloned<
         core::iter::FilterMap<
-            core::slice::Iter<'a, Lineage>,
-            for<'l> fn(&'l Lineage) -> Option<&'l necsim_core::landscape::Location>,
+            slab::Iter<'a, Lineage>,
+            fn((usize, &'a Lineage)) -> Option<&'a necsim_core::landscape::Location>,
         >,
     >;
 
@@ -55,8 +60,8 @@ impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
         self.lineages_store
             .iter()
             .filter_map(
-                (|lineage| lineage.indexed_location().map(IndexedLocation::location))
-                    as for<'l> fn(&'l Lineage) -> Option<&'l Location>,
+                (|(_, lineage)| lineage.indexed_location().map(IndexedLocation::location))
+                    as fn((usize, &'_ Lineage)) -> Option<&'_ Location>,
             )
             .cloned()
     }
@@ -141,18 +146,30 @@ impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
 
     fn emigrate(
         &mut self,
-        _local_lineage_reference: InMemoryLineageReference,
+        local_lineage_reference: InMemoryLineageReference,
     ) -> GlobalLineageReference {
-        unimplemented!("TODO: Implement emigration for CoherentAlmostInfiniteLineageStore")
+        self.lineages_store
+            .remove(local_lineage_reference.into())
+            .emigrate()
     }
 
     fn immigrate(
         &mut self,
         _habitat: &AlmostInfiniteHabitat,
-        _global_reference: GlobalLineageReference,
-        _indexed_location: IndexedLocation,
-        _time_of_emigration: f64,
+        global_reference: GlobalLineageReference,
+        indexed_location: IndexedLocation,
+        time_of_emigration: f64,
     ) -> InMemoryLineageReference {
-        unimplemented!("TODO: Implement immigration for CoherentAlmostInfiniteLineageStore")
+        let location = indexed_location.location().clone();
+
+        let lineage = Lineage::immigrate(global_reference, indexed_location, time_of_emigration);
+
+        let local_lineage_reference =
+            InMemoryLineageReference::from(self.lineages_store.insert(lineage));
+
+        self.location_to_lineage_references
+            .insert(location, local_lineage_reference);
+
+        local_lineage_reference
     }
 }

@@ -1,8 +1,7 @@
 use core::ops::Index;
 
-use alloc::vec::Vec;
-
 use hashbrown::hash_map::HashMap;
+use slab::Slab;
 
 use necsim_core::{cogs::OriginSampler, landscape::Location, lineage::Lineage};
 
@@ -16,7 +15,7 @@ mod store;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct CoherentAlmostInfiniteLineageStore {
-    lineages_store: Vec<Lineage>,
+    lineages_store: Slab<Lineage>,
     location_to_lineage_references: HashMap<Location, InMemoryLineageReference>,
 }
 
@@ -41,7 +40,7 @@ impl CoherentAlmostInfiniteLineageStore {
         #[allow(clippy::cast_possible_truncation)]
         let lineages_amount_hint = origin_sampler.full_upper_bound_size_hint() as usize;
 
-        let mut lineages_store = Vec::with_capacity(lineages_amount_hint);
+        let mut lineages_store = Slab::with_capacity(lineages_amount_hint);
         let mut location_to_lineage_references = HashMap::with_capacity(lineages_amount_hint);
 
         while let Some(indexed_location) = origin_sampler.next() {
@@ -50,7 +49,8 @@ impl CoherentAlmostInfiniteLineageStore {
                 InMemoryLineageReference::from(lineages_store.len()),
             );
 
-            lineages_store.push(Lineage::new(indexed_location, origin_sampler.habitat()));
+            let _local_reference =
+                lineages_store.insert(Lineage::new(indexed_location, origin_sampler.habitat()));
         }
 
         lineages_store.shrink_to_fit();

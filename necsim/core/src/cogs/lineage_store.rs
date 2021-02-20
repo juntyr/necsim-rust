@@ -9,13 +9,9 @@ use crate::{
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait LineageStore<H: Habitat, R: LineageReference<H>>: Sized + core::fmt::Debug {
-    type LineageReferenceIterator<'a>: ExactSizeIterator<Item = R>;
+    type LineageReferenceIterator<'a>: Iterator<Item = R>;
 
     #[must_use]
-    #[debug_ensures(
-        ret >= self.iter_local_lineage_references().len(),
-        "total number of lineages is at least local number of lineages"
-    )]
     fn get_number_total_lineages(&self) -> usize;
 
     #[must_use]

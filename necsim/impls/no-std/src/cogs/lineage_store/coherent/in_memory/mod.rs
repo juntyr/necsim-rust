@@ -4,6 +4,7 @@ use alloc::vec::Vec;
 
 use array2d::Array2D;
 use hashbrown::hash_map::HashMap;
+use slab::Slab;
 
 use necsim_core::{
     cogs::{Habitat, OriginSampler},
@@ -18,7 +19,7 @@ mod store;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct CoherentInMemoryLineageStore<H: Habitat> {
-    lineages_store: Vec<Lineage>,
+    lineages_store: Slab<Lineage>,
     location_to_lineage_references: Array2D<Vec<InMemoryLineageReference>>,
     indexed_location_to_lineage_reference:
         HashMap<IndexedLocation, (GlobalLineageReference, usize)>,
@@ -44,7 +45,7 @@ impl<'h, H: 'h + Habitat> CoherentInMemoryLineageStore<H> {
         #[allow(clippy::cast_possible_truncation)]
         let lineages_amount_hint = origin_sampler.full_upper_bound_size_hint() as usize;
 
-        let mut lineages_store = Vec::with_capacity(lineages_amount_hint);
+        let mut lineages_store = Slab::with_capacity(lineages_amount_hint);
 
         let landscape_extent = origin_sampler.habitat().get_extent();
 
@@ -68,18 +69,15 @@ impl<'h, H: 'h + Habitat> CoherentInMemoryLineageStore<H> {
                 &mut location_to_lineage_references[(y_offset as usize, x_offset as usize)];
 
             let lineage = Lineage::new(indexed_location.clone(), origin_sampler.habitat());
-            let local_reference = InMemoryLineageReference::from(lineages_store.len());
+
+            let global_reference = lineage.global_reference().clone();
+            let local_reference = InMemoryLineageReference::from(lineages_store.insert(lineage));
 
             indexed_location_to_lineage_reference.insert(
                 indexed_location,
-                (
-                    lineage.global_reference().clone(),
-                    lineages_at_location.len(),
-                ),
+                (global_reference, lineages_at_location.len()),
             );
             lineages_at_location.push(local_reference);
-
-            lineages_store.push(lineage);
         }
 
         lineages_store.shrink_to_fit();

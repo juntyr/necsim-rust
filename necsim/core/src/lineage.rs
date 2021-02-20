@@ -55,6 +55,24 @@ impl Lineage {
     }
 
     #[must_use]
+    pub fn immigrate(
+        global_reference: GlobalLineageReference,
+        indexed_location: IndexedLocation,
+        time_of_emigration: f64,
+    ) -> Self {
+        Self {
+            global_reference,
+            indexed_location: Some(indexed_location),
+            time_of_last_event: time_of_emigration,
+        }
+    }
+
+    #[must_use]
+    pub fn emigrate(self) -> GlobalLineageReference {
+        self.global_reference
+    }
+
+    #[must_use]
     pub fn is_active(&self) -> bool {
         self.indexed_location.is_some()
     }
