@@ -80,17 +80,17 @@ pub fn simulate<R: ReporterContext, P: LocalPartition<R>>(
             *common_args.sample_percentage(),
             *common_args.seed(),
             local_partition,
-            (*auxiliary).into(),
+            *auxiliary,
         ),
         #[cfg(feature = "necsim-independent")]
-        Algorithm::Independent => IndependentSimulation::simulate(
+        Algorithm::Independent(auxiliary) => IndependentSimulation::simulate(
             habitat,
             &dispersal,
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
             local_partition,
-            (),
+            *auxiliary,
         ),
         #[allow(unreachable_patterns)]
         _ => anyhow::bail!("rustcoalescence does not support the selected algorithm"),

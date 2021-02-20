@@ -12,12 +12,12 @@ use necsim_impls_no_std::{
     simulation::non_spatial::NonSpatialSimulation,
 };
 
-use super::IndependentSimulation;
+use super::{IndependentArguments, IndependentSimulation};
 
 #[contract_trait]
 impl NonSpatialSimulation for IndependentSimulation {
-    type AuxiliaryArguments = ();
-    type Error = !;
+    type AuxiliaryArguments = IndependentArguments;
+    type Error = anyhow::Error;
 
     /// Simulates the independent coalescence algorithm on a non-spatial
     /// `habitat` with non-spatial `dispersal`.
@@ -28,7 +28,7 @@ impl NonSpatialSimulation for IndependentSimulation {
         sample_percentage: f64,
         seed: u64,
         local_partition: &mut P,
-        _auxiliary: Self::AuxiliaryArguments,
+        auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = NonSpatialHabitat::new(area, deme);
         let speciation_probability =
@@ -53,7 +53,8 @@ impl NonSpatialSimulation for IndependentSimulation {
             lineages,
             seed,
             local_partition,
-        );
+            &auxiliary,
+        )?;
 
         Ok(local_partition.reduce_global_time_steps(partition_time, partition_steps))
     }
