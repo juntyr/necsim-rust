@@ -18,6 +18,7 @@ extern crate contracts;
 
 pub mod alias;
 pub mod cogs;
+pub mod decomposition;
 pub mod partitioning;
 pub mod reporter;
 pub mod simulation;

@@ -1,14 +1,17 @@
-use core::num::NonZeroU64;
+use core::{
+    cmp::{Ord, Ordering},
+    num::NonZeroU64,
+};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    cogs::{Habitat, LineageReference},
-    landscape::IndexedLocation,
+    cogs::{CoalescenceRngSample, Habitat, LineageReference},
+    landscape::{IndexedLocation, Location},
 };
 
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Serialize, Deserialize)]
 pub struct GlobalLineageReference(NonZeroU64);
 
 #[cfg(feature = "mpi")]
@@ -125,3 +128,48 @@ impl Lineage {
         self.time_of_last_event = event_time;
     }
 }
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
+pub struct MigratingLineage {
+    pub global_reference: GlobalLineageReference,
+    pub dispersal_origin: IndexedLocation,
+    pub dispersal_target: Location,
+    pub event_time: f64,
+    pub coalescence_rng_sample: CoalescenceRngSample,
+}
+
+impl Ord for MigratingLineage {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Order `MigratingLineage`s in lexicographical order:
+        //  (1) event_time
+        //  (2) dispersal_target
+        //  (3) dispersal_origin
+        //  (4) global_reference
+        //  (5) coalescence_rng_sample
+        match self.event_time.total_cmp(&other.event_time) {
+            Ordering::Equal => (
+                &self.dispersal_target,
+                &self.dispersal_origin,
+                &self.global_reference,
+                &self.coalescence_rng_sample,
+            )
+                .cmp(&(
+                    &other.dispersal_target,
+                    &other.dispersal_origin,
+                    &other.global_reference,
+                    &other.coalescence_rng_sample,
+                )),
+            ordering => ordering,
+        }
+    }
+}
+
+impl PartialOrd for MigratingLineage {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Eq for MigratingLineage {}

@@ -162,12 +162,37 @@ impl<
 
     fn insert_new_lineage_to_indexed_location(
         &mut self,
-        _global_reference: GlobalLineageReference,
-        _indexed_location: IndexedLocation,
-        _time: f64,
-        _simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
-        _rng: &mut G,
+        global_reference: GlobalLineageReference,
+        indexed_location: IndexedLocation,
+        time: f64,
+        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
+        rng: &mut G,
     ) {
-        unimplemented!("TODO: insert not yet implemented")
+        use necsim_core::cogs::RngSampler;
+
+        let location = indexed_location.location().clone();
+
+        let _immigrant_lineage_reference = simulation.lineage_store.immigrate(
+            &simulation.habitat,
+            global_reference,
+            indexed_location,
+            time,
+        );
+
+        let event_rate_at_location =
+            simulation.with_split_event_sampler(|event_sampler, simulation| {
+                event_sampler.get_event_rate_at_location(
+                    &location, simulation,
+                    true, /* all lineages including _immigrant_lineage_reference
+                          *   are (back) in the store */
+                )
+            });
+
+        self.active_locations.push(
+            location,
+            EventTime::from(time + rng.sample_exponential(event_rate_at_location)),
+        );
+
+        self.number_active_lineages += 1;
     }
 }
