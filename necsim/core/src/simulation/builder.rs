@@ -188,6 +188,10 @@ impl<
         &self.coalescence_sampler
     }
 
+    pub fn emigration_exit(&self) -> &X {
+        &self.emigration_exit
+    }
+
     pub fn emigration_exit_mut(&mut self) -> &mut X {
         &mut self.emigration_exit
     }

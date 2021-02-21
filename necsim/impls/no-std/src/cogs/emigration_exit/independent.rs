@@ -1,23 +1,24 @@
-use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        CoalescenceRngSample, CoherentLineageStore, DispersalSampler, EmigrationExit, Habitat,
-        LineageReference, RngCore, SpeciationProbability,
+        CoalescenceRngSample, DispersalSampler, EmigrationExit, Habitat, RngCore,
+        SpeciationProbability,
     },
     landscape::{IndexedLocation, Location},
-    lineage::MigratingLineage,
+    lineage::{GlobalLineageReference, MigratingLineage},
     simulation::partial::emigration_exit::PartialSimulation,
 };
 
-use crate::decomposition::Decomposition;
+use crate::{
+    cogs::lineage_store::independent::IndependentLineageStore, decomposition::Decomposition,
+};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct DomainEmigrationExit<H: Habitat, C: Decomposition<H>> {
+pub struct IndependentEmigrationExit<H: Habitat, C: Decomposition<H>> {
     decomposition: C,
-    emigrants: Vec<(u32, MigratingLineage)>,
+    emigrant: Option<(u32, MigratingLineage)>,
     _marker: PhantomData<H>,
 }
 
@@ -28,11 +29,12 @@ impl<
         G: RngCore,
         N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
-        R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
-    > EmigrationExit<H, G, N, D, R, S> for DomainEmigrationExit<H, C>
+    > EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>
+    for IndependentEmigrationExit<H, C>
 {
     #[must_use]
+    #[inline]
+    #[debug_requires(self.emigrant.is_none(), "can only hold one emigrant")]
     #[debug_ensures(ret.is_some() == (
         old(self.decomposition.map_location_to_subdomain_rank(
             &dispersal_target, &simulation.habitat
@@ -40,13 +42,20 @@ impl<
     ), "lineage only emigrates to other subdomains")]
     fn optionally_emigrate(
         &mut self,
-        lineage_reference: R,
+        lineage_reference: GlobalLineageReference,
         dispersal_origin: IndexedLocation,
         dispersal_target: Location,
         event_time: f64,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S>,
+        simulation: &mut PartialSimulation<
+            H,
+            G,
+            N,
+            D,
+            GlobalLineageReference,
+            IndependentLineageStore<H>,
+        >,
         rng: &mut G,
-    ) -> Option<(R, IndexedLocation, Location, f64)> {
+    ) -> Option<(GlobalLineageReference, IndexedLocation, Location, f64)> {
         let target_subdomain = self
             .decomposition
             .map_location_to_subdomain_rank(&dispersal_target, &simulation.habitat);
@@ -60,10 +69,10 @@ impl<
             ));
         }
 
-        self.emigrants.push((
+        self.emigrant = Some((
             target_subdomain,
             MigratingLineage {
-                global_reference: simulation.lineage_store.emigrate(lineage_reference),
+                global_reference: lineage_reference,
                 dispersal_origin,
                 dispersal_target,
                 event_time,
@@ -75,29 +84,25 @@ impl<
     }
 }
 
-impl<H: Habitat, C: Decomposition<H>> DomainEmigrationExit<H, C> {
+impl<H: Habitat, C: Decomposition<H>> IndependentEmigrationExit<H, C> {
     #[must_use]
     pub fn new(decomposition: C) -> Self {
         Self {
             decomposition,
-            emigrants: Vec::new(),
+            emigrant: None,
             _marker: PhantomData::<H>,
         }
     }
 
     pub fn len(&self) -> usize {
-        self.emigrants.len()
+        self.emigrant.is_some() as usize
     }
 
     pub fn is_empty(&self) -> bool {
-        self.emigrants.is_empty()
+        self.emigrant.is_none()
     }
-}
 
-impl<H: Habitat, C: Decomposition<H>> Iterator for DomainEmigrationExit<H, C> {
-    type Item = (u32, MigratingLineage);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.emigrants.pop()
+    pub fn take(&mut self) -> Option<(u32, MigratingLineage)> {
+        self.emigrant.take()
     }
 }
