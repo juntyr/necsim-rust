@@ -185,6 +185,8 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
                 if let Some(request) = self.emigration_requests[rank_index].take() {
                     if let Err(request) = request.test() {
                         self.emigration_requests[rank_index] = Some(request);
+                    } else {
+                        unsafe { MPI_MIGRATION_BUFFERS[rank_index].clear() };
                     }
                 }
 
@@ -201,7 +203,6 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
                         unsafe { &mut MPI_MIGRATION_BUFFERS[rank_index] };
 
                     std::mem::swap(emigration_buffer, local_emigration_buffer);
-                    emigration_buffer.clear();
 
                     #[allow(clippy::cast_possible_wrap)]
                     let receiver_process = self.world.process_at_rank(rank as i32);

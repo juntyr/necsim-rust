@@ -1,18 +1,22 @@
 use necsim_core::lineage::Lineage;
 
-use necsim_impls_no_std::cogs::{
-    dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
-    habitat::non_spatial::NonSpatialHabitat,
-    origin_sampler::{non_spatial::NonSpatialOriginSampler, pre_sampler::OriginPreSampler},
-    speciation_probability::uniform::UniformSpeciationProbability,
-};
-
 use necsim_impls_no_std::{
-    partitioning::LocalPartition, reporter::ReporterContext,
+    cogs::{
+        dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
+        habitat::non_spatial::NonSpatialHabitat,
+        origin_sampler::{
+            decomposition::DecompositionOriginSampler, non_spatial::NonSpatialOriginSampler,
+            pre_sampler::OriginPreSampler,
+        },
+        speciation_probability::uniform::UniformSpeciationProbability,
+    },
+    decomposition::modulo::ModuloDecomposition,
+    partitioning::LocalPartition,
+    reporter::ReporterContext,
     simulation::non_spatial::NonSpatialSimulation,
 };
 
-use super::{IndependentArguments, IndependentSimulation};
+use super::{IndependentArguments, IndependentSimulation, PartitionMode};
 
 #[contract_trait]
 impl NonSpatialSimulation for IndependentSimulation {
@@ -35,16 +39,31 @@ impl NonSpatialSimulation for IndependentSimulation {
             UniformSpeciationProbability::new(speciation_probability_per_generation);
         let dispersal_sampler = NonSpatialDispersalSampler::default();
 
-        let lineage_origins = OriginPreSampler::all()
-            .percentage(sample_percentage)
-            .partition(
-                local_partition.get_partition_rank(),
-                local_partition.get_number_of_partitions().get(),
-            );
+        let lineage_origins = OriginPreSampler::all().percentage(sample_percentage);
+        let decomposition = ModuloDecomposition::new(
+            local_partition.get_partition_rank(),
+            local_partition.get_number_of_partitions(),
+        );
 
-        let lineages = NonSpatialOriginSampler::new(lineage_origins, &habitat)
+        let lineages = match auxiliary.partition_mode {
+            // Apply lineage origin partitioning in the `Individuals` mode
+            PartitionMode::Individuals => NonSpatialOriginSampler::new(
+                lineage_origins.partition(
+                    local_partition.get_partition_rank(),
+                    local_partition.get_number_of_partitions().get(),
+                ),
+                &habitat,
+            )
             .map(|indexed_location| Lineage::new(indexed_location, &habitat))
-            .collect();
+            .collect(),
+            // Apply lineage origin decomposition in the `Landscape` mode
+            PartitionMode::Landscape => DecompositionOriginSampler::new(
+                NonSpatialOriginSampler::new(lineage_origins, &habitat),
+                &decomposition,
+            )
+            .map(|indexed_location| Lineage::new(indexed_location, &habitat))
+            .collect(),
+        };
 
         let (partition_time, partition_steps) = IndependentSimulation::simulate(
             habitat,
@@ -53,6 +72,7 @@ impl NonSpatialSimulation for IndependentSimulation {
             lineages,
             seed,
             local_partition,
+            decomposition,
             &auxiliary,
         )?;
 
