@@ -88,7 +88,6 @@ impl<
             None => return None,
         };
 
-        // TODO: Check repriming happens correctly
         let next_event_time = self
             .event_time_sampler
             .next_event_time_at_indexed_location_after(

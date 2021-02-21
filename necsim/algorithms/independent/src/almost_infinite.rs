@@ -1,10 +1,16 @@
 use necsim_core::lineage::Lineage;
 
-use necsim_impls_no_std::cogs::{
-    dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
-    habitat::almost_infinite::AlmostInfiniteHabitat,
-    origin_sampler::{almost_infinite::AlmostInfiniteOriginSampler, pre_sampler::OriginPreSampler},
-    speciation_probability::uniform::UniformSpeciationProbability,
+use necsim_impls_no_std::{
+    cogs::{
+        dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
+        habitat::almost_infinite::AlmostInfiniteHabitat,
+        origin_sampler::{
+            almost_infinite::AlmostInfiniteOriginSampler,
+            decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
+        },
+        speciation_probability::uniform::UniformSpeciationProbability,
+    },
+    decomposition::modulo::ModuloDecomposition,
 };
 
 use necsim_impls_no_std::{
@@ -12,7 +18,7 @@ use necsim_impls_no_std::{
     simulation::almost_infinite::AlmostInfiniteSimulation,
 };
 
-use super::{IndependentArguments, IndependentSimulation};
+use super::{IndependentArguments, IndependentSimulation, PartitionMode};
 
 #[contract_trait]
 impl AlmostInfiniteSimulation for IndependentSimulation {
@@ -36,15 +42,32 @@ impl AlmostInfiniteSimulation for IndependentSimulation {
             UniformSpeciationProbability::new(speciation_probability_per_generation);
         let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(sigma);
 
-        let lineage_origins = OriginPreSampler::all()
-            .percentage(sample_percentage)
-            .partition(
-                local_partition.get_partition_rank(),
-                local_partition.get_number_of_partitions().get(),
-            );
-        let lineages = AlmostInfiniteOriginSampler::new(lineage_origins, &habitat, radius)
+        let lineage_origins = OriginPreSampler::all().percentage(sample_percentage);
+        let decomposition = ModuloDecomposition::new(
+            local_partition.get_partition_rank(),
+            local_partition.get_number_of_partitions(),
+        );
+
+        let lineages = match auxiliary.partition_mode {
+            // Apply lineage origin partitioning in the `Individuals` mode
+            PartitionMode::Individuals => AlmostInfiniteOriginSampler::new(
+                lineage_origins.partition(
+                    local_partition.get_partition_rank(),
+                    local_partition.get_number_of_partitions().get(),
+                ),
+                &habitat,
+                radius,
+            )
             .map(|indexed_location| Lineage::new(indexed_location, &habitat))
-            .collect();
+            .collect(),
+            // Apply lineage origin decomposition in the `Landscape` mode
+            PartitionMode::Landscape => DecompositionOriginSampler::new(
+                AlmostInfiniteOriginSampler::new(lineage_origins, &habitat, radius),
+                &decomposition,
+            )
+            .map(|indexed_location| Lineage::new(indexed_location, &habitat))
+            .collect(),
+        };
 
         let (partition_time, partition_steps) = IndependentSimulation::simulate(
             habitat,
@@ -53,6 +76,7 @@ impl AlmostInfiniteSimulation for IndependentSimulation {
             lineages,
             seed,
             local_partition,
+            decomposition,
             &auxiliary,
         )?;
 
