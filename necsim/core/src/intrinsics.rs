@@ -25,6 +25,19 @@ pub fn ln(val: f64) -> f64 {
 
 #[must_use]
 #[inline]
+pub fn log2(val: f64) -> f64 {
+    #[cfg(not(target_os = "cuda"))]
+    unsafe {
+        core::intrinsics::log2f64(val)
+    }
+    #[cfg(target_os = "cuda")]
+    unsafe {
+        rust_cuda::device::nvptx::_log2(val)
+    }
+}
+
+#[must_use]
+#[inline]
 pub fn exp(val: f64) -> f64 {
     #[cfg(not(target_os = "cuda"))]
     unsafe {
