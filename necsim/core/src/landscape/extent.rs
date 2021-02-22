@@ -58,8 +58,7 @@ impl LandscapeExtent {
         LocationIterator {
             x: self.x,
             y: self.y,
-            width: self.width,
-            height: self.height,
+            extent: self.clone(),
         }
     }
 }
@@ -68,20 +67,19 @@ impl LandscapeExtent {
 pub struct LocationIterator {
     x: u32,
     y: u32,
-    width: u32,
-    height: u32,
+    extent: LandscapeExtent,
 }
 
 impl Iterator for LocationIterator {
     type Item = Location;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.y < self.height {
+        if self.y < (self.extent.y() + self.extent.height()) {
             let next = Some(Location::new(self.x, self.y));
 
-            self.x = if (self.x + 1) >= self.width {
+            self.x = if (self.x + 1) >= (self.extent.x() + self.extent.width()) {
                 self.y += 1;
-                0
+                self.extent.x()
             } else {
                 self.x + 1
             };
