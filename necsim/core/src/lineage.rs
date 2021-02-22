@@ -1,5 +1,6 @@
 use core::{
     cmp::{Ord, Ordering},
+    fmt,
     num::NonZeroU64,
 };
 
@@ -13,6 +14,12 @@ use crate::{
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Serialize, Deserialize)]
 pub struct GlobalLineageReference(NonZeroU64);
+
+impl fmt::Display for GlobalLineageReference {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0.get())
+    }
+}
 
 #[cfg(feature = "mpi")]
 unsafe impl mpi::traits::Equivalence for GlobalLineageReference {
