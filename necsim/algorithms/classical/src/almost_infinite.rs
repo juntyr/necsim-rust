@@ -1,13 +1,15 @@
-use necsim_impls_no_std::cogs::{
-    dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
-    habitat::almost_infinite::AlmostInfiniteHabitat,
-    lineage_store::coherent::almost_infinite::CoherentAlmostInfiniteLineageStore,
-    origin_sampler::{almost_infinite::AlmostInfiniteOriginSampler, pre_sampler::OriginPreSampler},
-    speciation_probability::uniform::UniformSpeciationProbability,
-};
-
 use necsim_impls_no_std::{
-    partitioning::LocalPartition, reporter::ReporterContext,
+    cogs::{
+        dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
+        habitat::almost_infinite::AlmostInfiniteHabitat,
+        lineage_store::coherent::almost_infinite::CoherentAlmostInfiniteLineageStore,
+        origin_sampler::{
+            almost_infinite::AlmostInfiniteOriginSampler, pre_sampler::OriginPreSampler,
+        },
+        speciation_probability::uniform::UniformSpeciationProbability,
+    },
+    partitioning::LocalPartition,
+    reporter::ReporterContext,
     simulation::almost_infinite::AlmostInfiniteSimulation,
 };
 

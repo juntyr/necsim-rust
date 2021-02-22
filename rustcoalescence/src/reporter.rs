@@ -1,9 +1,8 @@
 use necsim_impls_no_std::reporter::{GuardedReporter, ReporterContext};
 
-use necsim_impls_std::reporter::biodiversity::BiodiversityReporter;
-// use necsim_impls_std::reporter::events::EventReporter;
 use necsim_impls_std::reporter::{
-    execution_time::ExecutionTimeReporter, progress::ProgressReporter,
+    biodiversity::BiodiversityReporter, csv::CsvReporter, execution_time::ExecutionTimeReporter,
+    progress::ProgressReporter,
 };
 
 pub struct RustcoalescenceReporterContext(());
@@ -17,13 +16,14 @@ impl Default for RustcoalescenceReporterContext {
 impl RustcoalescenceReporterContext {
     pub fn finalise(reporter_group: <Self as ReporterContext>::Reporter) {
         let biodiversity_reporter;
+        let csv_reporter;
         let execution_time_reporter;
         let progress_reporter;
 
         // IV. Ungroup the reporters
         ReporterUnGroup! {reporter_group => [
             biodiversity_reporter,
-            // event_reporter,
+            csv_reporter,
             execution_time_reporter,
             progress_reporter
         ]};
@@ -33,7 +33,7 @@ impl RustcoalescenceReporterContext {
         let execution_time = execution_time_reporter.execution_time();
         progress_reporter.finish();
 
-        // event_reporter.report();
+        csv_reporter.finish();
 
         if let Some(execution_time) = execution_time {
             info!(
@@ -57,6 +57,7 @@ impl ReporterContext for RustcoalescenceReporterContext {
     type Finaliser = fn(Self::Reporter);
     type Reporter = ReporterGroupType![
         BiodiversityReporter,
+        CsvReporter,
         ExecutionTimeReporter,
         ProgressReporter
     ];
@@ -65,7 +66,7 @@ impl ReporterContext for RustcoalescenceReporterContext {
         // I. Initialise the reporters
 
         let biodiversity_reporter = BiodiversityReporter::default();
-        // let mut event_reporter = EventReporter::default();
+        let csv_reporter = CsvReporter::new(&std::path::PathBuf::from("events.csv"));
         let execution_time_reporter = ExecutionTimeReporter::default();
         let progress_reporter = ProgressReporter::default();
 
@@ -73,7 +74,7 @@ impl ReporterContext for RustcoalescenceReporterContext {
 
         let reporter_group = ReporterGroup![
             biodiversity_reporter,
-            // event_reporter,
+            csv_reporter,
             execution_time_reporter,
             progress_reporter
         ];
