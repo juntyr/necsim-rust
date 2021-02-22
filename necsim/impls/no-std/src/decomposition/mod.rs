@@ -2,6 +2,7 @@ use core::num::NonZeroU32;
 
 use necsim_core::{cogs::Habitat, landscape::Location};
 
+pub mod equal_area;
 pub mod modulo;
 pub mod monolithic;
 
