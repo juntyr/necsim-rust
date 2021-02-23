@@ -10,7 +10,7 @@ use necsim_impls_no_std::{
         },
         speciation_probability::uniform::UniformSpeciationProbability,
     },
-    decomposition::modulo::ModuloDecomposition,
+    decomposition::radial::RadialDecomposition,
 };
 
 use necsim_impls_no_std::{
@@ -43,7 +43,7 @@ impl AlmostInfiniteSimulation for IndependentSimulation {
         let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(sigma);
 
         let lineage_origins = OriginPreSampler::all().percentage(sample_percentage);
-        let decomposition = ModuloDecomposition::new(
+        let decomposition = RadialDecomposition::new(
             local_partition.get_partition_rank(),
             local_partition.get_number_of_partitions(),
         );

@@ -12,7 +12,7 @@ use necsim_impls_no_std::{
         },
         speciation_probability::uniform::UniformSpeciationProbability,
     },
-    decomposition::modulo::ModuloDecomposition,
+    decomposition::equal_area::EqualAreaDecomposition,
     partitioning::LocalPartition,
     reporter::ReporterContext,
     simulation::in_memory::InMemorySimulation,
@@ -49,10 +49,13 @@ impl InMemorySimulation for IndependentSimulation {
         let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
 
         let lineage_origins = OriginPreSampler::all().percentage(sample_percentage);
-        let decomposition = ModuloDecomposition::new(
+        let decomposition = match EqualAreaDecomposition::new(
+            &habitat,
             local_partition.get_partition_rank(),
             local_partition.get_number_of_partitions(),
-        );
+        ) {
+            Ok(decomposition) | Err(decomposition) => decomposition,
+        };
 
         let lineages = match auxiliary.partition_mode {
             // Apply lineage origin partitioning in the `Individuals` mode

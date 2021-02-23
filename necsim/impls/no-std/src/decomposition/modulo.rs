@@ -7,25 +7,25 @@ use crate::decomposition::Decomposition;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct ModuloDecomposition {
-    offset: u32,
-    stride: NonZeroU32,
+    rank: u32,
+    partitions: NonZeroU32,
 }
 
 impl ModuloDecomposition {
     #[must_use]
-    pub fn new(offset: u32, stride: NonZeroU32) -> Self {
-        Self { offset, stride }
+    pub fn new(rank: u32, partitions: NonZeroU32) -> Self {
+        Self { rank, partitions }
     }
 }
 
 #[contract_trait]
 impl<H: Habitat> Decomposition<H> for ModuloDecomposition {
     fn get_subdomain_rank(&self) -> u32 {
-        self.offset
+        self.rank
     }
 
     fn get_number_of_subdomains(&self) -> NonZeroU32 {
-        self.stride
+        self.partitions
     }
 
     fn map_location_to_subdomain_rank(&self, location: &Location, habitat: &H) -> u32 {
@@ -36,7 +36,7 @@ impl<H: Habitat> Decomposition<H> for ModuloDecomposition {
 
         #[allow(clippy::cast_possible_truncation)]
         {
-            (location_index % u64::from(self.stride.get())) as u32
+            (location_index % u64::from(self.partitions.get())) as u32
         }
     }
 }
