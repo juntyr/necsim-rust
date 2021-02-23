@@ -5,6 +5,7 @@ use necsim_core::{cogs::Habitat, landscape::Location};
 pub mod equal_area;
 pub mod modulo;
 pub mod monolithic;
+pub mod radial;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
