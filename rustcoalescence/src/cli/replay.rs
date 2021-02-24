@@ -21,7 +21,7 @@ pub fn replay_with_logger<R: ReporterContext>(
 
     let mut reporter = reporter_context.build_guarded();
 
-    for event in EventReplayIterator::try_new(replay_args.events())? {
+    for event in EventReplayIterator::try_new(replay_args.events(), 100_000)? {
         reporter.report_progress(1);
         reporter.report_event(&event);
         reporter.report_progress(0);
