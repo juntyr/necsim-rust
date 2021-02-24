@@ -1,12 +1,4 @@
 #[cfg(not(target_os = "cuda"))]
-use hashbrown::hash_map::{HashMap, RawEntryMut};
-
-#[cfg(not(target_os = "cuda"))]
-type HashSet<K> = HashMap<K, ()>;
-#[cfg(target_os = "cuda")]
-type HashSet<K> = core::marker::PhantomData<K>;
-
-#[cfg(not(target_os = "cuda"))]
 use rustacuda::{
     error::CudaResult,
     function::{BlockSize, GridSize},
@@ -26,8 +18,6 @@ use necsim_core::reporter::EventFilter;
 pub struct EventBuffer<const REPORT_SPECIATION: bool, const REPORT_DISPERSAL: bool> {
     #[r2cEmbed]
     buffer: CudaExchangeBuffer<Option<Event>>,
-    #[r2cPhantom(Event)]
-    event_deduplicator: HashSet<Event>,
     max_events: usize,
     event_counter: usize,
 }
@@ -57,7 +47,6 @@ impl<const REPORT_SPECIATION: bool, const REPORT_DISPERSAL: bool>
 
         Ok(Self {
             buffer: CudaExchangeBuffer::new(&None, total_capacity)?,
-            event_deduplicator: HashSet::new(),
             max_events,
             event_counter: 0_usize,
         })
@@ -68,11 +57,7 @@ impl<const REPORT_SPECIATION: bool, const REPORT_DISPERSAL: bool>
         //       enforcing associated const bounds at compile time
 
         for event in self.buffer.iter_mut().filter_map(Option::take) {
-            if let RawEntryMut::Vacant(entry) =
-                self.event_deduplicator.raw_entry_mut().from_key(&event)
-            {
-                reporter.report_event(entry.insert(event, ()).0)
-            }
+            reporter.report_event(&event)
         }
     }
 }

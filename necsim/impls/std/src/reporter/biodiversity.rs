@@ -5,6 +5,8 @@ use necsim_core::{
 
 #[allow(clippy::module_name_repetitions)]
 pub struct BiodiversityReporter {
+    last_event: Option<Event>,
+
     biodiversity: usize,
 }
 
@@ -14,11 +16,18 @@ impl EventFilter for BiodiversityReporter {
 }
 
 impl Reporter for BiodiversityReporter {
-    #[debug_ensures(match event.r#type() {
-        EventType::Speciation => self.biodiversity == old(self.biodiversity) + 1,
-        _ => self.biodiversity == old(self.biodiversity),
-    }, "EventType::Speciation increments self.biodiversity")]
+    #[debug_ensures(if old(Some(event) == self.last_event.as_ref()) {
+        match event.r#type() {
+            EventType::Speciation => self.biodiversity == old(self.biodiversity) + 1,
+            _ => self.biodiversity == old(self.biodiversity),
+        }
+    } else { true }, "EventType::Speciation increments self.biodiversity")]
     fn report_event(&mut self, event: &Event) {
+        if Some(event) == self.last_event.as_ref() {
+            return;
+        }
+        self.last_event = Some(event.clone());
+
         if let EventType::Speciation = event.r#type() {
             self.biodiversity += 1;
         }
@@ -28,7 +37,10 @@ impl Reporter for BiodiversityReporter {
 impl Default for BiodiversityReporter {
     #[debug_ensures(ret.biodiversity == 0, "biodiversity initialised to 0")]
     fn default() -> Self {
-        Self { biodiversity: 0 }
+        Self {
+            last_event: None,
+            biodiversity: 0,
+        }
     }
 }
 
