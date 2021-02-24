@@ -60,7 +60,7 @@ impl Drop for DurableLogReporter {
 
 impl DurableLogReporter {
     /// # Errors
-    /// Fails to construct iff `commitlog` fails to open the log
+    /// Fails to construct iff `path` is not a writable directory.
     pub fn try_new(path: &Path) -> Result<Self> {
         if !path.exists() {
             fs::create_dir_all(path)?;
