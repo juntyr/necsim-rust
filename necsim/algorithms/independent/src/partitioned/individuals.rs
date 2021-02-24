@@ -27,7 +27,7 @@ use necsim_impls_no_std::{
     reporter::ReporterContext,
 };
 
-use crate::{reporter::DeduplicatingReporterProxy, IndependentArguments};
+use crate::{reporter::PartitionReporterProxy, IndependentArguments};
 
 #[allow(clippy::too_many_arguments)]
 pub fn simulate<
@@ -44,7 +44,7 @@ pub fn simulate<
     dispersal_sampler: D,
     lineage_store: IndependentLineageStore<H>,
     mut lineages: VecDeque<Lineage>,
-    proxy: &mut DeduplicatingReporterProxy<R, P>,
+    proxy: &mut PartitionReporterProxy<R, P>,
     mut min_spec_samples: LruSet<SpeciationSample>,
     auxiliary: &IndependentArguments,
 ) -> Result<(f64, u64)> {

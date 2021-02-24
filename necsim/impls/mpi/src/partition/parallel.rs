@@ -24,7 +24,7 @@ use necsim_impls_no_std::{
     partitioning::{ImmigrantPopIterator, LocalPartition},
     reporter::ReporterContext,
 };
-use necsim_impls_std::reporter::commitlog::CommitLogReporter;
+use necsim_impls_std::reporter::durable_log::DurableLogReporter;
 
 use crate::MpiPartitioning;
 
@@ -45,7 +45,7 @@ pub struct MpiParallelPartition<P: ReporterContext> {
     emigration_requests: Box<[Option<Request<'static, StaticScope>>]>,
     barrier: Option<Request<'static, StaticScope>>,
     communicated_since_last_barrier: bool,
-    event_reporter: CommitLogReporter,
+    event_reporter: DurableLogReporter,
     _marker: PhantomData<P>,
 }
 
@@ -102,7 +102,7 @@ impl<P: ReporterContext> MpiParallelPartition<P> {
             emigration_requests: emigration_requests.into_boxed_slice(),
             barrier: None,
             communicated_since_last_barrier: false,
-            event_reporter: CommitLogReporter::try_new(&event_log_path).unwrap(),
+            event_reporter: DurableLogReporter::try_new(&event_log_path).unwrap(),
             _marker: PhantomData::<P>,
         }
     }

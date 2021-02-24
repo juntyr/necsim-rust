@@ -29,7 +29,7 @@ mod non_spatial;
 mod partitioned;
 
 mod reporter;
-use reporter::DeduplicatingReporterProxy;
+use reporter::PartitionReporterProxy;
 
 #[derive(Copy, Clone, Debug)]
 pub enum DedupMode {
@@ -106,7 +106,10 @@ impl IndependentSimulation {
             auxiliary.dedup_mode,
         );
 
-        let mut proxy = DeduplicatingReporterProxy::from(local_partition);
+        // TODO: how do I maintain event order during a monolithic run when events are
+        //       immediately reported?
+
+        let mut proxy = PartitionReporterProxy::from(local_partition);
 
         let rng = SeaHash::seed_from_u64(seed);
         let lineage_store = IndependentLineageStore::default();
