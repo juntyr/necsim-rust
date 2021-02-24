@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use core::hash::{Hash, Hasher};
+use core::{
+    cmp::{Ord, Ordering},
+    hash::{Hash, Hasher},
+};
 
 use crate::{landscape::IndexedLocation, lineage::GlobalLineageReference};
 
@@ -20,6 +23,29 @@ impl PartialEq for Event {
     // (`global_lineage_reference` is ignored)
     fn eq(&self, other: &Self) -> bool {
         self.origin == other.origin && self.time == other.time && self.r#type == other.r#type
+    }
+}
+
+impl Ord for Event {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Order `Event`s in lexicographical order:
+        //  (1) time
+        //  (2) origin
+        //  (3) r#type (target)
+        match self.time.total_cmp(&other.time) {
+            Ordering::Equal => (&self.origin, &self.r#type, &self.global_lineage_reference).cmp(&(
+                &other.origin,
+                &other.r#type,
+                &other.global_lineage_reference,
+            )),
+            ordering => ordering,
+        }
+    }
+}
+
+impl PartialOrd for Event {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -105,6 +131,32 @@ impl PartialEq for EventType {
             ) => self_target == other_target,
             _ => false,
         }
+    }
+}
+
+impl Ord for EventType {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (EventType::Speciation, EventType::Speciation) => Ordering::Equal,
+            (EventType::Speciation, _) => Ordering::Less,
+            (_, EventType::Speciation) => Ordering::Greater,
+            (
+                EventType::Dispersal {
+                    target: self_target,
+                    ..
+                },
+                EventType::Dispersal {
+                    target: other_target,
+                    ..
+                },
+            ) => self_target.cmp(other_target),
+        }
+    }
+}
+
+impl PartialOrd for EventType {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
