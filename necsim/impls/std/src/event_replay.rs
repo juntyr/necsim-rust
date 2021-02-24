@@ -1,6 +1,6 @@
 use std::{
     cmp::{Ord, Ordering},
-    collections::BinaryHeap,
+    collections::{BinaryHeap, VecDeque},
     fs::{File, OpenOptions},
     io::BufReader,
     path::{Path, PathBuf},
@@ -9,8 +9,6 @@ use std::{
 use necsim_core::event::Event;
 
 use anyhow::Result;
-
-// TODO: Make merging more efficient
 
 #[allow(clippy::module_name_repetitions)]
 pub struct EventReplayIterator {
@@ -21,11 +19,11 @@ impl EventReplayIterator {
     /// # Errors
     ///
     /// Returns `Err` iff any of the paths could not be read.
-    pub fn try_new(paths: &[PathBuf]) -> Result<Self> {
+    pub fn try_new(paths: &[PathBuf], capacity: usize) -> Result<Self> {
         let mut frontier = BinaryHeap::with_capacity(paths.len());
 
         for path in paths {
-            frontier.push(SortedSegment::new(path)?);
+            frontier.push(SortedSegment::new(path, capacity)?);
         }
 
         Ok(Self { frontier })
@@ -47,19 +45,32 @@ impl Iterator for EventReplayIterator {
 }
 
 struct SortedSegment {
-    front: Option<Event>,
     reader: BufReader<File>,
+    buffer: VecDeque<Event>,
+    capacity: usize,
 }
 
 impl SortedSegment {
-    fn new(path: &Path) -> Result<Self> {
+    fn new(path: &Path, capacity: usize) -> Result<Self> {
         let file = OpenOptions::new().read(true).write(false).open(path)?;
 
         let mut reader = BufReader::new(file);
 
-        let front = bincode::deserialize_from(&mut reader).ok();
+        let mut buffer = VecDeque::with_capacity(capacity);
 
-        Ok(Self { front, reader })
+        for _ in 0..capacity {
+            if let Ok(event) = bincode::deserialize_from(&mut reader) {
+                buffer.push_back(event)
+            } else {
+                break;
+            }
+        }
+
+        Ok(Self {
+            reader,
+            buffer,
+            capacity,
+        })
     }
 }
 
@@ -67,10 +78,16 @@ impl Iterator for SortedSegment {
     type Item = Event;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let next_event = self.front.take();
+        let next_event = self.buffer.pop_front();
 
-        if next_event.is_some() {
-            self.front = bincode::deserialize_from(&mut self.reader).ok();
+        if next_event.is_some() && self.buffer.is_empty() {
+            for _ in 0..self.capacity {
+                if let Ok(event) = bincode::deserialize_from(&mut self.reader) {
+                    self.buffer.push_back(event)
+                } else {
+                    break;
+                }
+            }
         }
 
         next_event
@@ -79,7 +96,7 @@ impl Iterator for SortedSegment {
 
 impl Ord for SortedSegment {
     fn cmp(&self, other: &Self) -> Ordering {
-        match (&self.front, &other.front) {
+        match (self.buffer.front(), other.buffer.front()) {
             (None, None) => Ordering::Equal,
             (None, _) => Ordering::Less,
             (_, None) => Ordering::Greater,
@@ -96,7 +113,7 @@ impl PartialOrd for SortedSegment {
 
 impl PartialEq for SortedSegment {
     fn eq(&self, other: &Self) -> bool {
-        self.front == other.front
+        self.buffer.front() == other.buffer.front()
     }
 }
 

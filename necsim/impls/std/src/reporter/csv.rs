@@ -1,21 +1,18 @@
 use std::{
-    fs::File,
+    fs::{File, OpenOptions},
+    io::{BufWriter, Write},
     path::{Path, PathBuf},
 };
 
-use csv::{Writer, WriterBuilder};
-
 use necsim_core::{
-    event::Event,
-    landscape::IndexedLocation,
-    lineage::GlobalLineageReference,
+    event::{Event, EventType},
     reporter::{EventFilter, Reporter},
 };
 
 #[allow(clippy::module_name_repetitions)]
 pub struct CsvReporter {
     output: PathBuf,
-    writer: Option<Writer<File>>,
+    writer: Option<BufWriter<File>>,
 }
 
 impl EventFilter for CsvReporter {
@@ -26,21 +23,34 @@ impl EventFilter for CsvReporter {
 impl Reporter for CsvReporter {
     fn report_event(&mut self, event: &Event) {
         let output = &self.output;
+
         let writer = self.writer.get_or_insert_with(|| {
-            let mut writer = WriterBuilder::new()
-                .from_path(output)
+            let file = OpenOptions::new()
+                .create(true)
+                .truncate(true)
+                .write(true)
+                .open(output)
                 .unwrap_or_else(|_| panic!("Could not open {:?}", output));
 
-            let _ = writer.write_record(&["reference", "time", "x", "y", "index"]);
+            let mut writer = BufWriter::new(file);
+
+            let _ = writeln!(writer, "reference,time,x,y,index,type");
 
             writer
         });
 
-        let _ = Self::write_event(
+        let _ = writeln!(
             writer,
+            "{},{},{},{},{},{}",
             event.global_lineage_reference(),
             event.time(),
-            event.origin(),
+            event.origin().location().x(),
+            event.origin().location().y(),
+            event.origin().index(),
+            match event.r#type() {
+                EventType::Speciation => 's',
+                EventType::Dispersal { .. } => 'd',
+            }
         );
     }
 }
@@ -56,20 +66,5 @@ impl CsvReporter {
 
     pub fn finish(self) {
         std::mem::drop(self)
-    }
-
-    fn write_event(
-        writer: &mut Writer<File>,
-        reference: &GlobalLineageReference,
-        event_time: f64,
-        indexed_location: &IndexedLocation,
-    ) -> csv::Result<()> {
-        writer.write_record(&[
-            &reference.to_string(),
-            &event_time.to_string(),
-            &indexed_location.location().x().to_string(),
-            &indexed_location.location().y().to_string(),
-            &indexed_location.index().to_string(),
-        ])
     }
 }
