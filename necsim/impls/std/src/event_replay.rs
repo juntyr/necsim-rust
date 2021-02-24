@@ -1,84 +1,34 @@
-use std::path::Path;
+use std::{
+    cmp::{Ord, Ordering},
+    collections::BinaryHeap,
+    fs::{File, OpenOptions},
+    io::BufReader,
+    path::{Path, PathBuf},
+};
 
 use necsim_core::event::Event;
 
 use anyhow::Result;
-use commitlog::{message::MessageSet, CommitLog, LogOptions, Offset, ReadLimit};
 
-#[allow(clippy::module_name_repetitions)]
-pub enum EventReplayType {
-    Disjoint(EventReplayIterator),
-    Overlapping(EventReplayIterator),
-}
+// TODO: Make merging more efficient
 
 #[allow(clippy::module_name_repetitions)]
 pub struct EventReplayIterator {
-    commit_log: CommitLog,
-    position: Offset,
-    buffer: Vec<Event>,
+    frontier: BinaryHeap<SortedSegment>,
 }
 
 impl EventReplayIterator {
-    pub(crate) const MAX_MESSAGE_SIZE: usize =
-        std::mem::size_of::<Event>() * std::mem::size_of::<u64>();
-
     /// # Errors
-    /// Fails to construct iff `commitlog` fails to open the log
-    pub fn try_new(path: &Path) -> Result<EventReplayType> {
-        // Initialise the CommitLog with a conservative message size upper bound
-        let mut log_options = LogOptions::new(path);
-        log_options.message_max_bytes(Self::MAX_MESSAGE_SIZE);
+    ///
+    /// Returns `Err` iff any of the paths could not be read.
+    pub fn try_new(paths: &[PathBuf]) -> Result<Self> {
+        let mut frontier = BinaryHeap::with_capacity(paths.len());
 
-        let commit_log = CommitLog::new(log_options)?;
+        for path in paths {
+            frontier.push(SortedSegment::new(path)?);
+        }
 
-        let is_disjoint = commit_log.last_offset().map_or(true, |last_offset| {
-            if last_offset > 0 {
-                let first_event = commit_log
-                    .read(0, ReadLimit::max_bytes(Self::MAX_MESSAGE_SIZE))
-                    .ok()
-                    .and_then(|messages| {
-                        messages
-                            .iter()
-                            .next()
-                            .map(|message| message.payload().to_owned())
-                    });
-                let last_event = commit_log
-                    .read(last_offset, ReadLimit::max_bytes(Self::MAX_MESSAGE_SIZE))
-                    .ok()
-                    .and_then(|messages| {
-                        messages
-                            .iter()
-                            .next()
-                            .map(|message| message.payload().to_owned())
-                    });
-
-                first_event != last_event
-            } else {
-                true
-            }
-        });
-
-        let iter = Self {
-            commit_log,
-            position: 0,
-            buffer: Vec::new(),
-        };
-
-        Ok(if is_disjoint {
-            EventReplayType::Disjoint(iter)
-        } else {
-            EventReplayType::Overlapping(iter)
-        })
-    }
-
-    #[must_use]
-    pub fn len(&self) -> u64 {
-        self.commit_log.next_offset()
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        Ok(Self { frontier })
     }
 }
 
@@ -86,25 +36,68 @@ impl Iterator for EventReplayIterator {
     type Item = Event;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(event) = self.buffer.pop() {
-            return Some(event);
-        }
+        let mut next_segment = self.frontier.pop()?;
 
-        let log_section = self
-            .commit_log
-            .read(self.position, ReadLimit::default())
-            .ok()?;
+        let next_event = next_segment.next();
 
-        self.buffer.reserve(log_section.len());
+        self.frontier.push(next_segment);
 
-        for message in log_section.iter() {
-            self.position = message.offset() + 1;
-
-            if let Ok(event) = bincode::deserialize(message.payload()) {
-                self.buffer.push(event);
-            }
-        }
-
-        self.buffer.pop()
+        next_event
     }
 }
+
+struct SortedSegment {
+    front: Option<Event>,
+    reader: BufReader<File>,
+}
+
+impl SortedSegment {
+    fn new(path: &Path) -> Result<Self> {
+        let file = OpenOptions::new().read(true).write(false).open(path)?;
+
+        let mut reader = BufReader::new(file);
+
+        let front = bincode::deserialize_from(&mut reader).ok();
+
+        Ok(Self { front, reader })
+    }
+}
+
+impl Iterator for SortedSegment {
+    type Item = Event;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let next_event = self.front.take();
+
+        if next_event.is_some() {
+            self.front = bincode::deserialize_from(&mut self.reader).ok();
+        }
+
+        next_event
+    }
+}
+
+impl Ord for SortedSegment {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (&self.front, &other.front) {
+            (None, None) => Ordering::Equal,
+            (None, _) => Ordering::Less,
+            (_, None) => Ordering::Greater,
+            (Some(this_event), Some(other_event)) => other_event.cmp(this_event),
+        }
+    }
+}
+
+impl PartialOrd for SortedSegment {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for SortedSegment {
+    fn eq(&self, other: &Self) -> bool {
+        self.front == other.front
+    }
+}
+
+impl Eq for SortedSegment {}

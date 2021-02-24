@@ -7,6 +7,8 @@ mod contract;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct EventReporter {
+    last_event: Option<Event>,
+
     speciation: usize,
     out_dispersal: usize,
     self_dispersal: usize,
@@ -20,13 +22,20 @@ impl EventFilter for EventReporter {
 }
 
 impl Reporter for EventReporter {
-    #[debug_ensures(contract::explicit_event_reporter_report_event_contract(
-        event.origin(), event.r#type(), old(self.speciation), old(self.out_dispersal),
-        old(self.self_dispersal), old(self.out_coalescence), old(self.self_coalescence),
-        self.speciation, self.out_dispersal, self.self_dispersal, self.out_coalescence,
-        self.self_coalescence
-    ), "counts all distinct event types without changing unaffected counts")]
+    #[debug_ensures(if old(Some(event) == self.last_event.as_ref()) {
+        contract::explicit_event_reporter_report_event_contract(
+            event.origin(), event.r#type(), old(self.speciation), old(self.out_dispersal),
+            old(self.self_dispersal), old(self.out_coalescence), old(self.self_coalescence),
+            self.speciation, self.out_dispersal, self.self_dispersal, self.out_coalescence,
+            self.self_coalescence
+        )
+    } else { true }, "counts all distinct event types without changing unaffected counts")]
     fn report_event(&mut self, event: &Event) {
+        if Some(event) == self.last_event.as_ref() {
+            return;
+        }
+        self.last_event = Some(event.clone());
+
         match event.r#type() {
             EventType::Speciation => {
                 self.speciation += 1;
@@ -69,6 +78,8 @@ impl Default for EventReporter {
     )]
     fn default() -> Self {
         Self {
+            last_event: None,
+
             speciation: 0,
             out_dispersal: 0,
             self_dispersal: 0,
