@@ -5,16 +5,20 @@ use necsim_impls_std::reporter::{
     progress::ProgressReporter,
 };
 
-pub struct RustcoalescenceReporterContext(());
+pub struct RustcoalescenceReporterContext {
+    report_analysis: bool,
+}
 
-impl Default for RustcoalescenceReporterContext {
-    fn default() -> Self {
-        Self(())
+impl RustcoalescenceReporterContext {
+    pub fn new(report_analysis: bool) -> Self {
+        Self { report_analysis }
     }
 }
 
 impl RustcoalescenceReporterContext {
-    pub fn finalise(reporter_group: <Self as ReporterContext>::Reporter) {
+    pub fn finalise<const REPORT_ANALYSIS: bool>(
+        reporter_group: <Self as ReporterContext>::Reporter,
+    ) {
         let biodiversity_reporter;
         let csv_reporter;
         let execution_time_reporter;
@@ -46,10 +50,12 @@ impl RustcoalescenceReporterContext {
             info!("The simulation was not executed.");
         }
 
-        info!(
-            "The simulation resulted in a biodiversity of {} unique species.",
-            biodiversity_reporter.biodiversity()
-        );
+        if REPORT_ANALYSIS {
+            info!(
+                "The simulation resulted in a biodiversity of {} unique species.",
+                biodiversity_reporter.biodiversity()
+            );
+        }
     }
 }
 
@@ -80,6 +86,10 @@ impl ReporterContext for RustcoalescenceReporterContext {
         ];
 
         // III. Return the guarded reporter group
-        GuardedReporter::from(reporter_group, Self::finalise)
+        if self.report_analysis {
+            GuardedReporter::from(reporter_group, Self::finalise::<true>)
+        } else {
+            GuardedReporter::from(reporter_group, Self::finalise::<false>)
+        }
     }
 }
