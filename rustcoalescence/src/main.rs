@@ -2,6 +2,7 @@
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
 #![feature(associated_type_bounds)]
+#![feature(min_const_generics)]
 
 #[macro_use]
 extern crate necsim_core;
@@ -67,7 +68,9 @@ fn main() -> Result<()> {
             {
                 use necsim_impls_mpi::MpiLocalPartition;
 
-                match partitioning.into_local_partition(ReporterContext::default()) {
+                let is_monolithic = partitioning.is_monolithic();
+
+                match partitioning.into_local_partition(ReporterContext::new(is_monolithic)) {
                     MpiLocalPartition::Monolithic(partition) => {
                         cli::simulate::simulate_with_logger(partition, simulate_args)
                     },
@@ -82,7 +85,7 @@ fn main() -> Result<()> {
             #[cfg(not(feature = "necsim-mpi"))]
             {
                 cli::simulate::simulate_with_logger(
-                    Box::new(partitioning.into_local_partition(ReporterContext::default())),
+                    Box::new(partitioning.into_local_partition(ReporterContext::new(true))),
                     simulate_args,
                 )
             }
@@ -95,7 +98,7 @@ fn main() -> Result<()> {
 
             info!("Parsed arguments:\n{:#?}", args);
 
-            cli::replay::replay_with_logger(replay_args, ReporterContext::default())
+            cli::replay::replay_with_logger(replay_args, ReporterContext::new(true))
                 .context("Failed to replay the simulation.")
         },
     }

@@ -38,6 +38,8 @@ impl<
     ) -> (f64, u64) {
         let mut steps = 0_u64;
 
+        reporter.report_progress(self.active_lineage_sampler().number_active_lineages() as u64);
+
         while steps < max_steps {
             // Peek the time of the next local event
             let optional_next_event_time = self.with_mut_split_active_lineage_sampler_and_rng(
@@ -67,6 +69,8 @@ impl<
                     coalescence_rng_sample,
                 );
             } else if !process::local::simulate_and_report_local_step_or_finish(self, reporter) {
+                reporter.report_progress(0_u64);
+
                 break;
             }
 
