@@ -99,7 +99,7 @@ pub fn simulate<
             }
         }
 
-        let (new_time, new_steps) = simulation.simulate_incremental(step_slice, proxy);
+        let (new_time, new_steps) = simulation.simulate_incremental_for(step_slice, proxy);
 
         total_steps += new_steps;
         max_time = max_time.max(new_time);
