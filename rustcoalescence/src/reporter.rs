@@ -1,9 +1,11 @@
 use necsim_impls_no_std::reporter::{GuardedReporter, ReporterContext};
 
 use necsim_impls_std::reporter::{
-    biodiversity::BiodiversityReporter, csv::CsvReporter, execution_time::ExecutionTimeReporter,
+    biodiversity::BiodiversityReporter, execution_time::ExecutionTimeReporter,
     progress::ProgressReporter,
 };
+
+// use necsim_impls_std::reporter::csv::CsvReporter;
 
 pub struct RustcoalescenceReporterContext {
     report_analysis: bool,
@@ -20,14 +22,14 @@ impl RustcoalescenceReporterContext {
         reporter_group: <Self as ReporterContext>::Reporter,
     ) {
         let biodiversity_reporter;
-        let csv_reporter;
+        // let csv_reporter;
         let execution_time_reporter;
         let progress_reporter;
 
         // IV. Ungroup the reporters
         ReporterUnGroup! {reporter_group => [
             biodiversity_reporter,
-            csv_reporter,
+            //csv_reporter,
             execution_time_reporter,
             progress_reporter
         ]};
@@ -37,7 +39,7 @@ impl RustcoalescenceReporterContext {
         let execution_time = execution_time_reporter.execution_time();
         progress_reporter.finish();
 
-        csv_reporter.finish();
+        // csv_reporter.finish();
 
         if let Some(execution_time) = execution_time {
             info!(
@@ -63,7 +65,7 @@ impl ReporterContext for RustcoalescenceReporterContext {
     type Finaliser = fn(Self::Reporter);
     type Reporter = ReporterGroupType![
         BiodiversityReporter,
-        CsvReporter,
+        // CsvReporter,
         ExecutionTimeReporter,
         ProgressReporter
     ];
@@ -72,15 +74,15 @@ impl ReporterContext for RustcoalescenceReporterContext {
         // I. Initialise the reporters
 
         let biodiversity_reporter = BiodiversityReporter::default();
-        let csv_reporter = CsvReporter::new(&std::path::PathBuf::from("events.csv"));
+        // let csv_reporter = CsvReporter::new(&std::path::PathBuf::from("events.csv"));
         let execution_time_reporter = ExecutionTimeReporter::default();
         let progress_reporter = ProgressReporter::default();
 
         // II. Group the reporters into one static group type
-
+        // 245
         let reporter_group = ReporterGroup![
             biodiversity_reporter,
-            csv_reporter,
+            // csv_reporter,
             execution_time_reporter,
             progress_reporter
         ];

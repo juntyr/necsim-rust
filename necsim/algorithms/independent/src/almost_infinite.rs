@@ -61,12 +61,14 @@ impl AlmostInfiniteSimulation for IndependentSimulation {
             .map(|indexed_location| Lineage::new(indexed_location, &habitat))
             .collect(),
             // Apply lineage origin decomposition in the `Landscape` mode
-            PartitionMode::Landscape => DecompositionOriginSampler::new(
-                AlmostInfiniteOriginSampler::new(lineage_origins, &habitat, radius),
-                &decomposition,
-            )
-            .map(|indexed_location| Lineage::new(indexed_location, &habitat))
-            .collect(),
+            PartitionMode::Landscape | PartitionMode::Probabilistic => {
+                DecompositionOriginSampler::new(
+                    AlmostInfiniteOriginSampler::new(lineage_origins, &habitat, radius),
+                    &decomposition,
+                )
+                .map(|indexed_location| Lineage::new(indexed_location, &habitat))
+                .collect()
+            },
         };
 
         let (partition_time, partition_steps) = IndependentSimulation::simulate(
