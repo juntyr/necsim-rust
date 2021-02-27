@@ -76,6 +76,14 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
         }
     }
 
+    fn reduce_vote_or(&self, local_vote: bool) -> bool {
+        match self {
+            Self::Monolithic(partition) => partition.reduce_vote_or(local_vote),
+            Self::Root(partition) => partition.reduce_vote_or(local_vote),
+            Self::Parallel(partition) => partition.reduce_vote_or(local_vote),
+        }
+    }
+
     fn wait_for_termination(&mut self) -> bool {
         match self {
             Self::Monolithic(partition) => partition.wait_for_termination(),
