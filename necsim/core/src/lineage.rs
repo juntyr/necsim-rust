@@ -32,6 +32,13 @@ unsafe impl mpi::traits::Equivalence for GlobalLineageReference {
     }
 }
 
+#[contract_trait]
+impl crate::cogs::Backup for GlobalLineageReference {
+    unsafe fn backup_unchecked(&self) -> Self {
+        GlobalLineageReference(self.0)
+    }
+}
+
 impl<H: Habitat> LineageReference<H> for GlobalLineageReference {}
 
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
@@ -163,6 +170,19 @@ pub struct MigratingLineage {
     pub dispersal_target: Location,
     pub event_time: f64,
     pub coalescence_rng_sample: CoalescenceRngSample,
+}
+
+#[contract_trait]
+impl crate::cogs::Backup for MigratingLineage {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            global_reference: self.global_reference.backup_unchecked(),
+            dispersal_origin: self.dispersal_origin.clone(),
+            dispersal_target: self.dispersal_target.clone(),
+            event_time: self.event_time,
+            coalescence_rng_sample: self.coalescence_rng_sample.backup_unchecked(),
+        }
+    }
 }
 
 impl Ord for MigratingLineage {

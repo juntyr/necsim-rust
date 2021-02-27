@@ -1,10 +1,19 @@
 use nanorand::{WyRand, RNG};
 
+use necsim_core::cogs::{Backup, RngCore};
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone)]
 pub struct WyRng(WyRand);
 
-impl necsim_core::cogs::RngCore for WyRng {
+#[contract_trait]
+impl Backup for WyRng {
+    unsafe fn backup_unchecked(&self) -> Self {
+        self.clone()
+    }
+}
+
+impl RngCore for WyRng {
     type Seed = [u8; 8];
 
     #[must_use]

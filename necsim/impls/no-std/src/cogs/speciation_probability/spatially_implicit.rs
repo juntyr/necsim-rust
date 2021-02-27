@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Habitat, SpeciationProbability},
+    cogs::{Backup, Habitat, SpeciationProbability},
     landscape::Location,
 };
 
@@ -20,6 +20,15 @@ impl SpatiallyImplicitSpeciationProbability {
     pub fn new(meta_speciation_probability: f64) -> Self {
         Self {
             meta_speciation_probability,
+        }
+    }
+}
+
+#[contract_trait]
+impl Backup for SpatiallyImplicitSpeciationProbability {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            meta_speciation_probability: self.meta_speciation_probability,
         }
     }
 }

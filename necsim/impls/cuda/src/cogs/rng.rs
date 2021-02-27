@@ -1,4 +1,4 @@
-use necsim_core::cogs::{Habitat, PrimeableRng, RngCore};
+use necsim_core::cogs::{Backup, Habitat, PrimeableRng, RngCore};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, RustToCuda, LendToCuda)]
@@ -9,6 +9,13 @@ impl<R: RngCore> From<R> for CudaRng<R> {
     #[inline]
     fn from(rng: R) -> Self {
         Self(rng)
+    }
+}
+
+#[contract_trait]
+impl<R: RngCore> Backup for CudaRng<R> {
+    unsafe fn backup_unchecked(&self) -> Self {
+        self.clone()
     }
 }
 

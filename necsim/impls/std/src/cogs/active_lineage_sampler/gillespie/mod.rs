@@ -1,9 +1,11 @@
+use std::marker::PhantomData;
+
 use priority_queue::PriorityQueue;
 
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, CoherentLineageStore, DispersalSampler, EmigrationExit, Habitat,
-        ImmigrationEntry, LineageReference, RngCore, SpeciationProbability,
+        Backup, CoalescenceSampler, CoherentLineageStore, DispersalSampler, EmigrationExit,
+        Habitat, ImmigrationEntry, LineageReference, RngCore, SpeciationProbability,
     },
     landscape::Location,
     simulation::partial::event_sampler::PartialSimulation,
@@ -33,7 +35,7 @@ pub struct GillespieActiveLineageSampler<
     active_locations: PriorityQueue<Location, EventTime>,
     number_active_lineages: usize,
     last_event_time: f64,
-    marker: std::marker::PhantomData<(H, G, N, D, R, S, X, C, E, I)>,
+    marker: PhantomData<(H, G, N, D, R, S, X, C, E, I)>,
 }
 
 impl<
@@ -95,7 +97,7 @@ impl<
             active_locations: PriorityQueue::from(active_locations),
             number_active_lineages,
             last_event_time: 0.0_f64,
-            marker: std::marker::PhantomData::<(H, G, N, D, R, S, X, C, E, I)>,
+            marker: PhantomData::<(H, G, N, D, R, S, X, C, E, I)>,
         }
     }
 }
@@ -119,5 +121,29 @@ impl<
             .field("number_active_lineages", &self.number_active_lineages)
             .field("marker", &self.marker)
             .finish()
+    }
+}
+
+#[contract_trait]
+impl<
+        H: Habitat,
+        G: RngCore,
+        N: SpeciationProbability<H>,
+        D: DispersalSampler<H, G>,
+        R: LineageReference<H>,
+        S: CoherentLineageStore<H, R>,
+        X: EmigrationExit<H, G, N, D, R, S>,
+        C: CoalescenceSampler<H, R, S>,
+        E: GillespieEventSampler<H, G, N, D, R, S, X, C>,
+        I: ImmigrationEntry,
+    > Backup for GillespieActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
+{
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            active_locations: self.active_locations.clone(),
+            number_active_lineages: self.number_active_lineages,
+            last_event_time: self.last_event_time,
+            marker: PhantomData::<(H, G, N, D, R, S, X, C, E, I)>,
+        }
     }
 }

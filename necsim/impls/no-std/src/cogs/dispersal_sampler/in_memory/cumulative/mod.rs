@@ -1,9 +1,9 @@
 use array2d::{Array2D, Error};
 
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec};
 
 use necsim_core::{
-    cogs::{Habitat, RngCore},
+    cogs::{Backup, Habitat, RngCore},
     landscape::Location,
 };
 
@@ -15,8 +15,8 @@ mod dispersal;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct InMemoryCumulativeDispersalSampler {
-    cumulative_dispersal: Vec<f64>,
-    valid_dispersal_targets: Vec<Option<usize>>,
+    cumulative_dispersal: Box<[f64]>,
+    valid_dispersal_targets: Box<[Option<usize>]>,
 }
 
 #[contract_trait]
@@ -39,8 +39,8 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G> for InMemoryCumulati
     fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Result<Self, Error> {
         let habitat_extent = habitat.get_extent();
 
-        let mut cumulative_dispersal = alloc::vec![0.0_f64; dispersal.num_elements()];
-        let mut valid_dispersal_targets = alloc::vec![None; dispersal.num_elements()];
+        let mut cumulative_dispersal = vec![0.0_f64; dispersal.num_elements()].into_boxed_slice();
+        let mut valid_dispersal_targets = vec![None; dispersal.num_elements()].into_boxed_slice();
 
         for (row_index, row) in dispersal.rows_iter().enumerate() {
             let sum: f64 = row
@@ -91,5 +91,15 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G> for InMemoryCumulati
             cumulative_dispersal,
             valid_dispersal_targets,
         })
+    }
+}
+
+#[contract_trait]
+impl Backup for InMemoryCumulativeDispersalSampler {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            cumulative_dispersal: self.cumulative_dispersal.clone(),
+            valid_dispersal_targets: self.valid_dispersal_targets.clone(),
+        }
     }
 }

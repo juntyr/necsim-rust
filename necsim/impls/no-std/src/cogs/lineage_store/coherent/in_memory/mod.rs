@@ -7,7 +7,7 @@ use hashbrown::hash_map::HashMap;
 use slab::Slab;
 
 use necsim_core::{
-    cogs::{Habitat, OriginSampler},
+    cogs::{Backup, Habitat, OriginSampler},
     landscape::IndexedLocation,
     lineage::{GlobalLineageReference, Lineage},
 };
@@ -86,6 +86,20 @@ impl<'h, H: 'h + Habitat> CoherentInMemoryLineageStore<H> {
             lineages_store,
             location_to_lineage_references,
             indexed_location_to_lineage_reference,
+            _marker: PhantomData::<H>,
+        }
+    }
+}
+
+#[contract_trait]
+impl<H: Habitat> Backup for CoherentInMemoryLineageStore<H> {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            lineages_store: self.lineages_store.clone(),
+            location_to_lineage_references: self.location_to_lineage_references.clone(),
+            indexed_location_to_lineage_reference: self
+                .indexed_location_to_lineage_reference
+                .clone(),
             _marker: PhantomData::<H>,
         }
     }

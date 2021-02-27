@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::Habitat,
+    cogs::{Backup, Habitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -14,6 +14,15 @@ impl Default for AlmostInfiniteHabitat {
     fn default() -> Self {
         Self {
             extent: LandscapeExtent::new(0_u32, 0_u32, u32::MAX, u32::MAX),
+        }
+    }
+}
+
+#[contract_trait]
+impl Backup for AlmostInfiniteHabitat {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            extent: self.extent.clone(),
         }
     }
 }
