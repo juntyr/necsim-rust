@@ -148,7 +148,7 @@ unsafe fn simulate_generic<
                                         .replace_min_speciation(min_spec_sample);
 
                                     let (time, steps) = simulation
-                                        .simulate_incremental(max_steps, event_buffer_reporter);
+                                        .simulate_incremental_for(max_steps, event_buffer_reporter);
 
                                     if steps > 0 {
                                         total_time_max.fetch_max(time.to_bits(), Ordering::Relaxed);
