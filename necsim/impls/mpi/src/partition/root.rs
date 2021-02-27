@@ -233,6 +233,18 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
         ImmigrantPopIterator::new(&mut self.migration_buffers[self.get_partition_rank() as usize])
     }
 
+    fn reduce_vote_or(&self, local_vote: bool) -> bool {
+        let mut global_vote_or: bool = local_vote;
+
+        self.world.all_reduce_into(
+            &local_vote,
+            &mut global_vote_or,
+            SystemOperation::logical_or(),
+        );
+
+        global_vote_or
+    }
+
     fn wait_for_termination(&mut self) -> bool {
         // This partition can only terminate once all migrations have been processed
         for buffer in self.migration_buffers.iter() {
