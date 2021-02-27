@@ -5,7 +5,7 @@
 
 extern crate alloc;
 
-#[cfg_attr(target_os = "cuda", macro_use)]
+#[macro_use]
 extern crate contracts;
 
 #[macro_use]

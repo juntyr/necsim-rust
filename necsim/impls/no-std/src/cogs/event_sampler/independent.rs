@@ -2,8 +2,8 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        CoalescenceRngSample, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        Habitat, MinSpeciationTrackingEventSampler, RngCore, SpeciationProbability,
+        Backup, CoalescenceRngSample, CoalescenceSampler, DispersalSampler, EmigrationExit,
+        EventSampler, Habitat, MinSpeciationTrackingEventSampler, RngCore, SpeciationProbability,
         SpeciationSample,
     },
     event::{Event, EventType},
@@ -46,6 +46,23 @@ impl<
     fn default() -> Self {
         Self {
             min_spec_sample: None,
+            marker: PhantomData::<(H, G, N, D, X)>,
+        }
+    }
+}
+
+#[contract_trait]
+impl<
+        H: Habitat,
+        G: RngCore,
+        N: SpeciationProbability<H>,
+        D: DispersalSampler<H, G>,
+        X: EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>,
+    > Backup for IndependentEventSampler<H, G, N, D, X>
+{
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            min_spec_sample: self.min_spec_sample.clone(),
             marker: PhantomData::<(H, G, N, D, X)>,
         }
     }

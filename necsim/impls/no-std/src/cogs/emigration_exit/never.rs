@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        DispersalSampler, EmigrationExit, Habitat, LineageReference, LineageStore, RngCore,
+        Backup, DispersalSampler, EmigrationExit, Habitat, LineageReference, LineageStore, RngCore,
         SpeciationProbability,
     },
     landscape::{IndexedLocation, Location},
@@ -19,8 +19,14 @@ impl Default for NeverEmigrationExit {
 }
 
 #[contract_trait]
+impl Backup for NeverEmigrationExit {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self(())
+    }
+}
+
+#[contract_trait]
 impl<
-        // TODO: Can we assert that the habitat must be monolithic here?
         H: Habitat,
         G: RngCore,
         N: SpeciationProbability<H>,

@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use array2d::{Array2D, Error};
 
 use necsim_core::{
-    cogs::{Habitat, RngCore},
+    cogs::{Backup, Habitat, RngCore},
     landscape::Location,
 };
 
@@ -72,5 +72,15 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G>
             alias_dispersal,
             marker: PhantomData::<(H, G)>,
         })
+    }
+}
+
+#[contract_trait]
+impl<H: Habitat, G: RngCore> Backup for InMemoryAliasDispersalSampler<H, G> {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            alias_dispersal: self.alias_dispersal.clone(),
+            marker: PhantomData::<(H, G)>,
+        }
     }
 }

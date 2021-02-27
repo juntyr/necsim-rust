@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        CoalescenceRngSample, DispersalSampler, EmigrationExit, Habitat, RngCore,
+        Backup, CoalescenceRngSample, DispersalSampler, EmigrationExit, Habitat, RngCore,
         SpeciationProbability,
     },
     landscape::{IndexedLocation, Location},
@@ -24,6 +24,25 @@ pub struct IndependentEmigrationExit<H: Habitat, C: Decomposition<H>, E: Emigrat
     choice: E,
     emigrant: Option<(u32, MigratingLineage)>,
     _marker: PhantomData<H>,
+}
+
+#[contract_trait]
+impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>> Backup
+    for IndependentEmigrationExit<H, C, E>
+{
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            decomposition: self.decomposition.backup_unchecked(),
+            choice: self.choice.backup_unchecked(),
+            emigrant: match &self.emigrant {
+                Some((partition, migrating_lineage)) => {
+                    Some((*partition, migrating_lineage.backup_unchecked()))
+                },
+                None => None,
+            },
+            _marker: PhantomData::<H>,
+        }
+    }
 }
 
 #[contract_trait]

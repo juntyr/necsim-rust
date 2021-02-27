@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::Habitat,
+    cogs::{Backup, Habitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -34,6 +34,16 @@ impl NonSpatialHabitat {
     #[must_use]
     pub fn get_deme(&self) -> u32 {
         self.deme
+    }
+}
+
+#[contract_trait]
+impl Backup for NonSpatialHabitat {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            extent: self.extent.clone(),
+            deme: self.deme,
+        }
     }
 }
 

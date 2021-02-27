@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::Habitat,
+    cogs::{Backup, Habitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -59,6 +59,17 @@ impl SpatiallyImplicitHabitat {
     #[must_use]
     pub fn meta(&self) -> &NonSpatialHabitat {
         &self.meta
+    }
+}
+
+#[contract_trait]
+impl Backup for SpatiallyImplicitHabitat {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            local: self.local.backup_unchecked(),
+            meta: self.meta.backup_unchecked(),
+            extent: self.extent.clone(),
+        }
     }
 }
 
