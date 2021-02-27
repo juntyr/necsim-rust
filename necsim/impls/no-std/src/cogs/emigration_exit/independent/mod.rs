@@ -14,10 +14,14 @@ use crate::{
     cogs::lineage_store::independent::IndependentLineageStore, decomposition::Decomposition,
 };
 
+pub mod choice;
+use choice::EmigrationChoice;
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct IndependentEmigrationExit<H: Habitat, C: Decomposition<H>> {
+pub struct IndependentEmigrationExit<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>> {
     decomposition: C,
+    choice: E,
     emigrant: Option<(u32, MigratingLineage)>,
     _marker: PhantomData<H>,
 }
@@ -26,11 +30,12 @@ pub struct IndependentEmigrationExit<H: Habitat, C: Decomposition<H>> {
 impl<
         H: Habitat,
         C: Decomposition<H>,
+        E: EmigrationChoice<H>,
         G: RngCore,
         N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
     > EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>
-    for IndependentEmigrationExit<H, C>
+    for IndependentEmigrationExit<H, C, E>
 {
     #[must_use]
     #[inline]
@@ -60,7 +65,13 @@ impl<
             .decomposition
             .map_location_to_subdomain_rank(&dispersal_target, &simulation.habitat);
 
-        if target_subdomain == self.decomposition.get_subdomain_rank() {
+        if (target_subdomain == self.decomposition.get_subdomain_rank())
+            || !self.choice.should_lineage_emigrate(
+                &dispersal_origin,
+                event_time,
+                &simulation.habitat,
+            )
+        {
             return Some((
                 lineage_reference,
                 dispersal_origin,
@@ -84,11 +95,12 @@ impl<
     }
 }
 
-impl<H: Habitat, C: Decomposition<H>> IndependentEmigrationExit<H, C> {
+impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>> IndependentEmigrationExit<H, C, E> {
     #[must_use]
-    pub fn new(decomposition: C) -> Self {
+    pub fn new(decomposition: C, choice: E) -> Self {
         Self {
             decomposition,
+            choice,
             emigrant: None,
             _marker: PhantomData::<H>,
         }

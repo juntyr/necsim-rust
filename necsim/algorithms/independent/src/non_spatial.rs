@@ -57,12 +57,14 @@ impl NonSpatialSimulation for IndependentSimulation {
             .map(|indexed_location| Lineage::new(indexed_location, &habitat))
             .collect(),
             // Apply lineage origin decomposition in the `Landscape` mode
-            PartitionMode::Landscape => DecompositionOriginSampler::new(
-                NonSpatialOriginSampler::new(lineage_origins, &habitat),
-                &decomposition,
-            )
-            .map(|indexed_location| Lineage::new(indexed_location, &habitat))
-            .collect(),
+            PartitionMode::Landscape | PartitionMode::Probabilistic => {
+                DecompositionOriginSampler::new(
+                    NonSpatialOriginSampler::new(lineage_origins, &habitat),
+                    &decomposition,
+                )
+                .map(|indexed_location| Lineage::new(indexed_location, &habitat))
+                .collect()
+            },
         };
 
         let (partition_time, partition_steps) = IndependentSimulation::simulate(

@@ -13,6 +13,7 @@ enum DedupModeDef {
 pub enum PartitionModeDef {
     Landscape,
     Individuals,
+    Probabilistic,
 }
 
 #[derive(Deserialize)]
