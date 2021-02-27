@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        CoalescenceRngSample, CoalescenceSampler, CoherentLineageStore, DispersalSampler,
+        Backup, CoalescenceRngSample, CoalescenceSampler, CoherentLineageStore, DispersalSampler,
         EmigrationExit, EventSampler, Habitat, LineageReference, RngCore, SpeciationProbability,
     },
     event::{Event, EventType},
@@ -35,6 +35,23 @@ impl<
     > Default for UnconditionalEventSampler<H, G, N, D, R, S, X, C>
 {
     fn default() -> Self {
+        Self(PhantomData::<(H, G, N, D, R, S, X, C)>)
+    }
+}
+
+#[contract_trait]
+impl<
+        H: Habitat,
+        G: RngCore,
+        N: SpeciationProbability<H>,
+        D: DispersalSampler<H, G>,
+        R: LineageReference<H>,
+        S: CoherentLineageStore<H, R>,
+        X: EmigrationExit<H, G, N, D, R, S>,
+        C: CoalescenceSampler<H, R, S>,
+    > Backup for UnconditionalEventSampler<H, G, N, D, R, S, X, C>
+{
+    unsafe fn backup_unchecked(&self) -> Self {
         Self(PhantomData::<(H, G, N, D, R, S, X, C)>)
     }
 }

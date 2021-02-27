@@ -1,4 +1,7 @@
-use necsim_core::{cogs::Habitat, landscape::IndexedLocation};
+use necsim_core::{
+    cogs::{Backup, Habitat},
+    landscape::IndexedLocation,
+};
 
 use super::EmigrationChoice;
 
@@ -8,6 +11,13 @@ pub struct AlwaysEmigrationChoice(());
 
 impl Default for AlwaysEmigrationChoice {
     fn default() -> Self {
+        Self(())
+    }
+}
+
+#[contract_trait]
+impl Backup for AlwaysEmigrationChoice {
+    unsafe fn backup_unchecked(&self) -> Self {
         Self(())
     }
 }

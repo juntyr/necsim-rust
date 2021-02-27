@@ -15,7 +15,7 @@ pub trait EmigrationExit<
     D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
->: core::fmt::Debug
+>: crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
     #[allow(clippy::float_cmp)]

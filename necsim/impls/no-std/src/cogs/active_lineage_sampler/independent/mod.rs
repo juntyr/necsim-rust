@@ -1,7 +1,9 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{DispersalSampler, EmigrationExit, Habitat, PrimeableRng, SpeciationProbability},
+    cogs::{
+        Backup, DispersalSampler, EmigrationExit, Habitat, PrimeableRng, SpeciationProbability,
+    },
     lineage::{GlobalLineageReference, Lineage},
 };
 
@@ -50,6 +52,25 @@ impl<
         Self {
             active_lineage: None,
             event_time_sampler,
+            marker: PhantomData::<(H, G, N, D, X)>,
+        }
+    }
+}
+
+#[contract_trait]
+impl<
+        H: Habitat,
+        G: PrimeableRng<H>,
+        N: SpeciationProbability<H>,
+        T: EventTimeSampler<H, G>,
+        D: DispersalSampler<H, G>,
+        X: EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>,
+    > Backup for IndependentActiveLineageSampler<H, G, N, T, D, X>
+{
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            active_lineage: self.active_lineage.clone(),
+            event_time_sampler: self.event_time_sampler.clone(),
             marker: PhantomData::<(H, G, N, D, X)>,
         }
     }

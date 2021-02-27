@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
+    cogs::{Backup, DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
 
@@ -17,6 +17,15 @@ pub struct NonSpatialDispersalSampler<G: RngCore> {
 impl<G: RngCore> Default for NonSpatialDispersalSampler<G> {
     #[must_use]
     fn default() -> Self {
+        Self {
+            marker: PhantomData::<G>,
+        }
+    }
+}
+
+#[contract_trait]
+impl<G: RngCore> Backup for NonSpatialDispersalSampler<G> {
+    unsafe fn backup_unchecked(&self) -> Self {
         Self {
             marker: PhantomData::<G>,
         }

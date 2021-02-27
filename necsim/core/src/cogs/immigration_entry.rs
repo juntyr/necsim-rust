@@ -2,7 +2,7 @@ use crate::lineage::MigratingLineage;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait ImmigrationEntry: core::fmt::Debug {
+pub trait ImmigrationEntry: crate::cogs::Backup + core::fmt::Debug {
     #[must_use]
     #[debug_requires(match &optional_next_event_time {
         Some(event_time) => *event_time >= 0.0_f64,

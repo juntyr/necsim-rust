@@ -2,7 +2,7 @@ use alloc::{boxed::Box, vec::Vec};
 use core::{marker::PhantomData, num::NonZeroU32};
 
 use necsim_core::{
-    cogs::Habitat,
+    cogs::{Backup, Habitat},
     intrinsics::{ceil, log2},
     landscape::{LandscapeExtent, Location},
 };
@@ -124,6 +124,20 @@ impl<H: Habitat> EqualAreaDecomposition<H> {
         }
 
         morton_index
+    }
+}
+
+#[contract_trait]
+impl<H: Habitat> Backup for EqualAreaDecomposition<H> {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            rank: self.rank,
+            partitions: self.partitions,
+            extent: self.extent.clone(),
+            morton: self.morton,
+            indices: self.indices.clone(),
+            _marker: PhantomData::<H>,
+        }
     }
 }
 

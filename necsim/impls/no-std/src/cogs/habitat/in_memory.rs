@@ -3,7 +3,7 @@ use array2d::Array2D;
 use alloc::{boxed::Box, vec::Vec};
 
 use necsim_core::{
-    cogs::Habitat,
+    cogs::{Backup, Habitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -16,6 +16,17 @@ pub struct InMemoryHabitat {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     u64_injection: Box<[u64]>,
     extent: LandscapeExtent,
+}
+
+#[contract_trait]
+impl Backup for InMemoryHabitat {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            habitat: self.habitat.clone(),
+            u64_injection: self.u64_injection.clone(),
+            extent: self.extent.clone(),
+        }
+    }
 }
 
 #[contract_trait]

@@ -3,7 +3,11 @@ use core::ops::Index;
 use hashbrown::hash_map::HashMap;
 use slab::Slab;
 
-use necsim_core::{cogs::OriginSampler, landscape::Location, lineage::Lineage};
+use necsim_core::{
+    cogs::{Backup, OriginSampler},
+    landscape::Location,
+    lineage::Lineage,
+};
 
 use crate::cogs::{
     habitat::almost_infinite::AlmostInfiniteHabitat,
@@ -58,6 +62,16 @@ impl CoherentAlmostInfiniteLineageStore {
         Self {
             lineages_store,
             location_to_lineage_references,
+        }
+    }
+}
+
+#[contract_trait]
+impl Backup for CoherentAlmostInfiniteLineageStore {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            lineages_store: self.lineages_store.clone(),
+            location_to_lineage_references: self.location_to_lineage_references.clone(),
         }
     }
 }

@@ -1,6 +1,9 @@
 use core::num::NonZeroU32;
 
-use necsim_core::{cogs::Habitat, landscape::Location};
+use necsim_core::{
+    cogs::{Backup, Habitat},
+    landscape::Location,
+};
 
 use crate::decomposition::Decomposition;
 
@@ -10,6 +13,13 @@ pub struct MonolithicDecomposition(());
 
 impl Default for MonolithicDecomposition {
     fn default() -> Self {
+        Self(())
+    }
+}
+
+#[contract_trait]
+impl Backup for MonolithicDecomposition {
+    unsafe fn backup_unchecked(&self) -> Self {
         Self(())
     }
 }

@@ -8,7 +8,9 @@ use crate::{
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait LineageStore<H: Habitat, R: LineageReference<H>>: Sized + core::fmt::Debug {
+pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
+    crate::cogs::Backup + Sized + core::fmt::Debug
+{
     type LineageReferenceIterator<'a>: Iterator<Item = R>;
 
     #[must_use]

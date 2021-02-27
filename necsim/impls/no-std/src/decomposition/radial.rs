@@ -2,7 +2,11 @@ use core::num::NonZeroU32;
 
 use libm::atan2;
 
-use necsim_core::{cogs::Habitat, intrinsics::floor, landscape::Location};
+use necsim_core::{
+    cogs::{Backup, Habitat},
+    intrinsics::floor,
+    landscape::Location,
+};
 
 use crate::decomposition::Decomposition;
 
@@ -17,6 +21,16 @@ impl RadialDecomposition {
     #[must_use]
     pub fn new(rank: u32, partitions: NonZeroU32) -> Self {
         Self { rank, partitions }
+    }
+}
+
+#[contract_trait]
+impl Backup for RadialDecomposition {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            rank: self.rank,
+            partitions: self.partitions,
+        }
     }
 }
 

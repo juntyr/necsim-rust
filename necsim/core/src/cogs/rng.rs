@@ -1,13 +1,13 @@
+use core::{convert::AsMut, default::Default, ptr::copy_nonoverlapping};
+
 use crate::{
     cogs::Habitat,
     intrinsics::{cos, floor, ln, sin, sqrt},
     landscape::IndexedLocation,
 };
 
-use core::{convert::AsMut, default::Default, ptr::copy_nonoverlapping};
-
 #[allow(clippy::module_name_repetitions)]
-pub trait RngCore: Sized + Clone + core::fmt::Debug {
+pub trait RngCore: crate::cogs::Backup + Sized + Clone + core::fmt::Debug {
     type Seed: AsMut<[u8]> + Default + Sized;
 
     #[must_use]

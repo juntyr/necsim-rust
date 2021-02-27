@@ -1,4 +1,7 @@
-use necsim_core::{cogs::ImmigrationEntry, lineage::MigratingLineage};
+use necsim_core::{
+    cogs::{Backup, ImmigrationEntry},
+    lineage::MigratingLineage,
+};
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
@@ -7,6 +10,13 @@ pub struct NeverImmigrationEntry(());
 
 impl Default for NeverImmigrationEntry {
     fn default() -> Self {
+        Self(())
+    }
+}
+
+#[contract_trait]
+impl Backup for NeverImmigrationEntry {
+    unsafe fn backup_unchecked(&self) -> Self {
         Self(())
     }
 }

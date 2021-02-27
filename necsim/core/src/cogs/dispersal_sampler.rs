@@ -5,7 +5,7 @@ use super::Habitat;
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
-pub trait DispersalSampler<H: Habitat, G: RngCore>: core::fmt::Debug {
+pub trait DispersalSampler<H: Habitat, G: RngCore>: crate::cogs::Backup + core::fmt::Debug {
     #[must_use]
     #[debug_requires(habitat.contains(location), "location is inside habitat")]
     #[debug_ensures(old(habitat).contains(&ret), "target is inside habitat")]
