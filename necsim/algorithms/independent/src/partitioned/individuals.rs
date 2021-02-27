@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 
 use anyhow::Result;
-use lru_set::LruSet;
 
 use necsim_core::{
     cogs::{
@@ -13,6 +12,7 @@ use necsim_core::{
 };
 
 use necsim_impls_no_std::{
+    cache::DirectMappedCache as LruCache,
     cogs::{
         active_lineage_sampler::independent::{
             event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
@@ -45,7 +45,7 @@ pub fn simulate<
     lineage_store: IndependentLineageStore<H>,
     mut lineages: VecDeque<Lineage>,
     proxy: &mut PartitionReporterProxy<R, P>,
-    mut min_spec_samples: LruSet<SpeciationSample>,
+    mut min_spec_samples: LruCache<SpeciationSample>,
     auxiliary: &IndependentArguments,
 ) -> Result<(f64, u64)> {
     let step_slice = auxiliary.step_slice as u64;
