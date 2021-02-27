@@ -8,7 +8,6 @@
 extern crate contracts;
 
 use anyhow::Result;
-use lru_set::LruSet;
 
 use necsim_core::{
     cogs::{DispersalSampler, Habitat, RngCore, SpeciationProbability, SpeciationSample},
@@ -16,7 +15,14 @@ use necsim_core::{
 };
 
 use necsim_impls_no_std::{
-    cogs::{lineage_store::independent::IndependentLineageStore, rng::seahash::SeaHash},
+    cache::DirectMappedCache as LruCache,
+    cogs::{
+        emigration_exit::independent::choice::{
+            always::AlwaysEmigrationChoice, probabilistic::ProbabilisticEmigrationChoice,
+        },
+        lineage_store::independent::IndependentLineageStore,
+        rng::seahash::SeaHash,
+    },
     decomposition::Decomposition,
     partitioning::LocalPartition,
     reporter::ReporterContext,
@@ -42,6 +48,7 @@ pub enum DedupMode {
 pub enum PartitionMode {
     Landscape,
     Individuals,
+    Probabilistic,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -114,8 +121,8 @@ impl IndependentSimulation {
         let rng = SeaHash::seed_from_u64(seed);
         let lineage_store = IndependentLineageStore::default();
 
-        let min_spec_samples: LruSet<SpeciationSample> =
-            LruSet::with_capacity(match auxiliary.dedup_mode {
+        let min_spec_samples: LruCache<SpeciationSample> =
+            LruCache::with_capacity(match auxiliary.dedup_mode {
                 DedupMode::Static(capacity) => capacity,
                 DedupMode::Dynamic(scalar) =>
                 #[allow(
@@ -150,6 +157,20 @@ impl IndependentSimulation {
                 lineages.into(),
                 &mut proxy,
                 decomposition,
+                AlwaysEmigrationChoice::default(),
+                min_spec_samples,
+                auxiliary,
+            ),
+            PartitionMode::Probabilistic => partitioned::landscape::simulate(
+                habitat,
+                rng,
+                speciation_probability,
+                dispersal_sampler,
+                lineage_store,
+                lineages.into(),
+                &mut proxy,
+                decomposition,
+                ProbabilisticEmigrationChoice::default(),
                 min_spec_samples,
                 auxiliary,
             ),

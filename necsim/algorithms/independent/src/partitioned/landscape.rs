@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 
 use anyhow::Result;
-use lru_set::LruSet;
 
 use necsim_core::{
     cogs::{
@@ -16,12 +15,13 @@ use necsim_core::{
 };
 
 use necsim_impls_no_std::{
+    cache::DirectMappedCache as LruCache,
     cogs::{
         active_lineage_sampler::independent::{
             event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
         },
         coalescence_sampler::independent::IndependentCoalescenceSampler,
-        emigration_exit::independent::IndependentEmigrationExit,
+        emigration_exit::independent::{choice::EmigrationChoice, IndependentEmigrationExit},
         event_sampler::independent::IndependentEventSampler,
         immigration_entry::never::NeverImmigrationEntry,
         lineage_store::independent::IndependentLineageStore,
@@ -37,6 +37,7 @@ use crate::{reporter::PartitionReporterProxy, IndependentArguments};
 pub fn simulate<
     H: Habitat,
     C: Decomposition<H>,
+    E: EmigrationChoice<H>,
     G: PrimeableRng<H>,
     N: SpeciationProbability<H>,
     D: DispersalSampler<H, G>,
@@ -51,12 +52,13 @@ pub fn simulate<
     mut lineages: VecDeque<Lineage>,
     proxy: &mut PartitionReporterProxy<R, P>,
     decomposition: C,
-    mut min_spec_samples: LruSet<SpeciationSample>,
+    emigration_choice: E,
+    mut min_spec_samples: LruCache<SpeciationSample>,
     auxiliary: &IndependentArguments,
 ) -> Result<(f64, u64)> {
     let step_slice = auxiliary.step_slice as u64;
 
-    let emigration_exit = IndependentEmigrationExit::new(decomposition);
+    let emigration_exit = IndependentEmigrationExit::new(decomposition, emigration_choice);
     let coalescence_sampler = IndependentCoalescenceSampler::default();
     let event_sampler = IndependentEventSampler::default();
     let immigration_entry = NeverImmigrationEntry::default();
