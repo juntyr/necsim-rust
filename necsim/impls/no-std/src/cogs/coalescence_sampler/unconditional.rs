@@ -2,7 +2,8 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        CoalescenceRngSample, CoalescenceSampler, CoherentLineageStore, Habitat, LineageReference,
+        Backup, CoalescenceRngSample, CoalescenceSampler, CoherentLineageStore, Habitat,
+        LineageReference,
     },
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
@@ -22,6 +23,15 @@ impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> Default
     for UnconditionalCoalescenceSampler<H, R, S>
 {
     fn default() -> Self {
+        Self(PhantomData::<(H, R, S)>)
+    }
+}
+
+#[contract_trait]
+impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> Backup
+    for UnconditionalCoalescenceSampler<H, R, S>
+{
+    unsafe fn backup_unchecked(&self) -> Self {
         Self(PhantomData::<(H, R, S)>)
     }
 }

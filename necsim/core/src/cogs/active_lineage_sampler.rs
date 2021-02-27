@@ -22,7 +22,7 @@ pub trait ActiveLineageSampler<
     C: CoalescenceSampler<H, R, S>,
     E: EventSampler<H, G, N, D, R, S, X, C>,
     I: ImmigrationEntry,
->: core::fmt::Debug
+>: crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize;

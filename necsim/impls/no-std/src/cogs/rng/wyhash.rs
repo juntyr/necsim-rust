@@ -1,4 +1,4 @@
-use necsim_core::cogs::Habitat;
+use necsim_core::cogs::{Backup, Habitat, RngCore};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
@@ -7,7 +7,14 @@ pub struct WyHash {
     state: u64,
 }
 
-impl necsim_core::cogs::RngCore for WyHash {
+#[contract_trait]
+impl Backup for WyHash {
+    unsafe fn backup_unchecked(&self) -> Self {
+        self.clone()
+    }
+}
+
+impl RngCore for WyHash {
     type Seed = [u8; 8];
 
     #[must_use]

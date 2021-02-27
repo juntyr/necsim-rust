@@ -4,7 +4,7 @@ use core::{marker::PhantomData, ops::Range};
 use array2d::{Array2D, Error};
 
 use necsim_core::{
-    cogs::{Habitat, RngCore},
+    cogs::{Backup, Habitat, RngCore},
     landscape::Location,
 };
 
@@ -120,5 +120,16 @@ impl<H: Habitat, G: RngCore> core::fmt::Debug for InMemoryPackedAliasDispersalSa
                 ),
             )
             .finish()
+    }
+}
+
+#[contract_trait]
+impl<H: Habitat, G: RngCore> Backup for InMemoryPackedAliasDispersalSampler<H, G> {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            alias_dispersal_ranges: self.alias_dispersal_ranges.clone(),
+            alias_dispersal_buffer: self.alias_dispersal_buffer.clone(),
+            marker: PhantomData::<(H, G)>,
+        }
     }
 }

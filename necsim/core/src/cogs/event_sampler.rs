@@ -23,7 +23,7 @@ pub trait EventSampler<
     S: LineageStore<H, R>,
     X: EmigrationExit<H, G, N, D, R, S>,
     C: CoalescenceSampler<H, R, S>,
->: core::fmt::Debug
+>: crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
     #[allow(clippy::float_cmp)]

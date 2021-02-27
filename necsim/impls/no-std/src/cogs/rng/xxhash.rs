@@ -1,4 +1,4 @@
-use necsim_core::cogs::Habitat;
+use necsim_core::cogs::{Backup, Habitat, PrimeableRng, RngCore};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
@@ -7,7 +7,14 @@ pub struct XxHash {
     state: u64,
 }
 
-impl necsim_core::cogs::RngCore for XxHash {
+#[contract_trait]
+impl Backup for XxHash {
+    unsafe fn backup_unchecked(&self) -> Self {
+        self.clone()
+    }
+}
+
+impl RngCore for XxHash {
     type Seed = [u8; 8];
 
     #[must_use]
@@ -26,7 +33,7 @@ impl necsim_core::cogs::RngCore for XxHash {
     }
 }
 
-impl<H: Habitat> necsim_core::cogs::PrimeableRng<H> for XxHash {
+impl<H: Habitat> PrimeableRng<H> for XxHash {
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         let location_bytes = location_index.to_le_bytes();
 

@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::Habitat,
+    cogs::{Backup, Habitat},
     intrinsics::{log2, round},
     landscape::IndexedLocation,
 };
@@ -12,6 +12,13 @@ pub struct ProbabilisticEmigrationChoice(());
 
 impl Default for ProbabilisticEmigrationChoice {
     fn default() -> Self {
+        Self(())
+    }
+}
+
+#[contract_trait]
+impl Backup for ProbabilisticEmigrationChoice {
+    unsafe fn backup_unchecked(&self) -> Self {
         Self(())
     }
 }

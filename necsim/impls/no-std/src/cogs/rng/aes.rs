@@ -1,4 +1,4 @@
-use necsim_core::cogs::Habitat;
+use necsim_core::cogs::{Backup, Habitat, PrimeableRng, RngCore};
 
 use aes_soft::{
     cipher::{generic_array::GenericArray, BlockCipher, NewBlockCipher},
@@ -13,7 +13,14 @@ pub struct AesRng {
     cached: bool,
 }
 
-impl necsim_core::cogs::RngCore for AesRng {
+#[contract_trait]
+impl Backup for AesRng {
+    unsafe fn backup_unchecked(&self) -> Self {
+        self.clone()
+    }
+}
+
+impl RngCore for AesRng {
     type Seed = [u8; 16];
 
     #[must_use]
@@ -66,7 +73,7 @@ impl necsim_core::cogs::RngCore for AesRng {
     }
 }
 
-impl<H: Habitat> necsim_core::cogs::PrimeableRng<H> for AesRng {
+impl<H: Habitat> PrimeableRng<H> for AesRng {
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         let location_bytes = location_index.to_le_bytes();
 

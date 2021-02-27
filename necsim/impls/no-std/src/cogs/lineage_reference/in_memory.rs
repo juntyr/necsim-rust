@@ -1,6 +1,6 @@
 use core::{hash::Hash, num::NonZeroUsize};
 
-use necsim_core::cogs::{Habitat, LineageReference};
+use necsim_core::cogs::{Backup, Habitat, LineageReference};
 
 // InMemoryLineageReference uses a NonZeroUsize internally to enable same-size
 // Option optimisation
@@ -11,6 +11,13 @@ pub struct InMemoryLineageReference(NonZeroUsize);
 
 #[cfg(feature = "cuda")]
 unsafe impl rustacuda_core::DeviceCopy for InMemoryLineageReference {}
+
+#[contract_trait]
+impl Backup for InMemoryLineageReference {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self(self.0)
+    }
+}
 
 impl<H: Habitat> LineageReference<H> for InMemoryLineageReference {}
 

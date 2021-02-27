@@ -1,3 +1,6 @@
+mod backup;
+pub use backup::{BackedUp, Backup};
+
 mod habitat;
 pub use habitat::Habitat;
 

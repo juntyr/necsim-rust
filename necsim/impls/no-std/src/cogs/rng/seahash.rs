@@ -1,4 +1,4 @@
-use necsim_core::cogs::Habitat;
+use necsim_core::cogs::{Backup, Habitat, PrimeableRng, RngCore};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
@@ -9,7 +9,14 @@ pub struct SeaHash {
     offset: u64,
 }
 
-impl necsim_core::cogs::RngCore for SeaHash {
+#[contract_trait]
+impl Backup for SeaHash {
+    unsafe fn backup_unchecked(&self) -> Self {
+        self.clone()
+    }
+}
+
+impl RngCore for SeaHash {
     type Seed = [u8; 8];
 
     #[must_use]
@@ -34,7 +41,7 @@ impl necsim_core::cogs::RngCore for SeaHash {
     }
 }
 
-impl<H: Habitat> necsim_core::cogs::PrimeableRng<H> for SeaHash {
+impl<H: Habitat> PrimeableRng<H> for SeaHash {
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         self.location = location_index;
         self.time = time_index;

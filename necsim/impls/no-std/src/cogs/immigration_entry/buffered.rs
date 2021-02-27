@@ -1,4 +1,7 @@
-use necsim_core::{cogs::ImmigrationEntry, lineage::MigratingLineage};
+use necsim_core::{
+    cogs::{Backup, ImmigrationEntry},
+    lineage::MigratingLineage,
+};
 
 use alloc::collections::BinaryHeap;
 use core::cmp::Reverse;
@@ -7,6 +10,19 @@ use core::cmp::Reverse;
 #[derive(Debug)]
 pub struct BufferedImmigrationEntry {
     immigrants: BinaryHeap<Reverse<MigratingLineage>>,
+}
+
+#[contract_trait]
+impl Backup for BufferedImmigrationEntry {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            immigrants: self
+                .immigrants
+                .iter()
+                .map(|migrating_lineage| Reverse(migrating_lineage.0.backup_unchecked()))
+                .collect(),
+        }
+    }
 }
 
 #[contract_trait]

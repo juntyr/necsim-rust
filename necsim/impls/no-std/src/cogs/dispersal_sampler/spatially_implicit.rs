@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
+    cogs::{Backup, DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
 
@@ -26,6 +26,18 @@ impl<G: RngCore> SpatiallyImplicitDispersalSampler<G> {
             local: NonSpatialDispersalSampler::default(),
             meta: NonSpatialDispersalSampler::default(),
             local_migration_probability_per_generation,
+        }
+    }
+}
+
+#[contract_trait]
+impl<G: RngCore> Backup for SpatiallyImplicitDispersalSampler<G> {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            local: self.local.backup_unchecked(),
+            meta: self.meta.backup_unchecked(),
+            local_migration_probability_per_generation: self
+                .local_migration_probability_per_generation,
         }
     }
 }

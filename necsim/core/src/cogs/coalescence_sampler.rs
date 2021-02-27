@@ -1,7 +1,7 @@
 use core::cmp::{Ord, Ordering};
 
 use crate::{
-    cogs::RngCore,
+    cogs::{Backup, RngCore},
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
 };
@@ -11,7 +11,7 @@ use super::{Habitat, LineageReference, LineageStore};
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait CoalescenceSampler<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>>:
-    core::fmt::Debug
+    crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
     #[debug_requires(habitat.get_habitat_at_location(&location) > 0, "location is habitable")]
@@ -27,6 +27,13 @@ pub trait CoalescenceSampler<H: Habitat, R: LineageReference<H>, S: LineageStore
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 pub struct CoalescenceRngSample(f64);
+
+#[contract_trait]
+impl Backup for CoalescenceRngSample {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self(self.0)
+    }
+}
 
 impl Ord for CoalescenceRngSample {
     fn cmp(&self, other: &Self) -> Ordering {

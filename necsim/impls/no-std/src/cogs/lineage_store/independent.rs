@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Habitat, LineageStore},
+    cogs::{Backup, Habitat, LineageStore},
     lineage::{GlobalLineageReference, Lineage},
 };
 
@@ -15,6 +15,15 @@ pub struct IndependentLineageStore<H: Habitat> {
 
 impl<H: Habitat> Default for IndependentLineageStore<H> {
     fn default() -> Self {
+        Self {
+            marker: PhantomData::<H>,
+        }
+    }
+}
+
+#[contract_trait]
+impl<H: Habitat> Backup for IndependentLineageStore<H> {
+    unsafe fn backup_unchecked(&self) -> Self {
         Self {
             marker: PhantomData::<H>,
         }
