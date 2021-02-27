@@ -30,6 +30,13 @@ pub trait Partitioning: Sized {
     ) -> Self::LocalPartition<P>;
 }
 
+#[derive(Copy, Clone)]
+pub enum MigrationMode {
+    Force,
+    Default,
+    Hold,
+}
+
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait LocalPartition<P: ReporterContext>: Sized {
@@ -55,6 +62,8 @@ pub trait LocalPartition<P: ReporterContext>: Sized {
     fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(
         &mut self,
         emigrants: &mut E,
+        emigration_mode: MigrationMode,
+        immigration_mode: MigrationMode,
     ) -> Self::ImmigrantIterator<'_>;
 
     fn wait_for_termination(&mut self) -> bool;
@@ -91,6 +100,8 @@ impl<P: ReporterContext> LocalPartition<P> for MonolithicLocalPartition<P> {
     fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(
         &mut self,
         emigrants: &mut E,
+        _emigration_mode: MigrationMode,
+        _immigration_mode: MigrationMode,
     ) -> Self::ImmigrantIterator<'_> {
         for (_, emigrant) in emigrants {
             self.loopback.push(emigrant);
