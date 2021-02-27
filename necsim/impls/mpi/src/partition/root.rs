@@ -20,7 +20,7 @@ use necsim_core::{
 };
 
 use necsim_impls_no_std::{
-    partitioning::{ImmigrantPopIterator, LocalPartition},
+    partitioning::{ImmigrantPopIterator, LocalPartition, MigrationMode},
     reporter::{GuardedReporter, ReporterContext},
 };
 use necsim_impls_std::reporter::durable_log::DurableLogReporter;
@@ -134,6 +134,8 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
     fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(
         &mut self,
         emigrants: &mut E,
+        emigration_mode: MigrationMode,
+        immigration_mode: MigrationMode,
     ) -> Self::ImmigrantIterator<'_> {
         for (partition, emigrant) in emigrants {
             self.migration_buffers[partition as usize].push(emigrant)
@@ -144,9 +146,14 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
         let now = Instant::now();
 
         // Receive incomming immigrating lineages
-        if now.duration_since(self.last_migration_times[self_rank_index])
-            >= Self::MPI_MIGRATION_WAIT_TIME
-        {
+        if match immigration_mode {
+            MigrationMode::Force => true,
+            MigrationMode::Default => {
+                now.duration_since(self.last_migration_times[self_rank_index])
+                    >= Self::MPI_MIGRATION_WAIT_TIME
+            },
+            MigrationMode::Hold => false,
+        } {
             self.last_migration_times[self_rank_index] = now;
 
             let immigration_buffer = &mut self.migration_buffers[self_rank_index];
@@ -178,8 +185,14 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
             let rank_index = rank as usize;
 
             if rank_index != self_rank_index
-                && now.duration_since(self.last_migration_times[rank_index])
-                    >= Self::MPI_PROGRESS_WAIT_TIME
+                && match emigration_mode {
+                    MigrationMode::Force => true,
+                    MigrationMode::Default => {
+                        now.duration_since(self.last_migration_times[rank_index])
+                            >= Self::MPI_PROGRESS_WAIT_TIME
+                    },
+                    MigrationMode::Hold => false,
+                }
             {
                 // Check if the prior send request has finished
                 if let Some(request) = self.emigration_requests[rank_index].take() {

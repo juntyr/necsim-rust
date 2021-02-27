@@ -7,7 +7,7 @@ use necsim_core::{
 };
 
 use necsim_impls_no_std::{
-    partitioning::{ImmigrantPopIterator, LocalPartition, MonolithicLocalPartition},
+    partitioning::{ImmigrantPopIterator, LocalPartition, MigrationMode, MonolithicLocalPartition},
     reporter::ReporterContext,
 };
 
@@ -60,11 +60,19 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
     fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(
         &mut self,
         emigrants: &mut E,
+        emigration_mode: MigrationMode,
+        immigration_mode: MigrationMode,
     ) -> Self::ImmigrantIterator<'_> {
         match self {
-            Self::Monolithic(partition) => partition.migrate_individuals(emigrants),
-            Self::Root(partition) => partition.migrate_individuals(emigrants),
-            Self::Parallel(partition) => partition.migrate_individuals(emigrants),
+            Self::Monolithic(partition) => {
+                partition.migrate_individuals(emigrants, emigration_mode, immigration_mode)
+            },
+            Self::Root(partition) => {
+                partition.migrate_individuals(emigrants, emigration_mode, immigration_mode)
+            },
+            Self::Parallel(partition) => {
+                partition.migrate_individuals(emigrants, emigration_mode, immigration_mode)
+            },
         }
     }
 

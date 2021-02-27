@@ -27,7 +27,7 @@ use necsim_impls_no_std::{
         lineage_store::independent::IndependentLineageStore,
     },
     decomposition::Decomposition,
-    partitioning::LocalPartition,
+    partitioning::{LocalPartition, MigrationMode},
     reporter::ReporterContext,
 };
 
@@ -115,14 +115,25 @@ pub fn simulate<
         total_steps += new_steps;
         max_time = max_time.max(new_time);
 
+        // Force migration when no local tasks remain
+        let migration_mode = if lineages.is_empty() {
+            MigrationMode::Force
+        } else {
+            MigrationMode::Default
+        };
+
         // Send off the possible emigrant and recieve immigrants
         let immigrants = match simulation.emigration_exit_mut().take() {
-            Some(emigrant) => proxy
-                .local_partition()
-                .migrate_individuals(&mut core::iter::once(emigrant)),
-            None => proxy
-                .local_partition()
-                .migrate_individuals(&mut core::iter::empty()),
+            Some(emigrant) => proxy.local_partition().migrate_individuals(
+                &mut core::iter::once(emigrant),
+                migration_mode,
+                migration_mode,
+            ),
+            None => proxy.local_partition().migrate_individuals(
+                &mut core::iter::empty(),
+                migration_mode,
+                migration_mode,
+            ),
         };
 
         // Create local Lineages from the MigrantLineags
