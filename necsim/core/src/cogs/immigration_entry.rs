@@ -20,4 +20,7 @@ pub trait ImmigrationEntry: crate::cogs::Backup + core::fmt::Debug {
         &mut self,
         optional_next_event_time: Option<f64>,
     ) -> Option<MigratingLineage>;
+
+    #[must_use]
+    fn peek_next_immigration(&self) -> Option<&MigratingLineage>;
 }
