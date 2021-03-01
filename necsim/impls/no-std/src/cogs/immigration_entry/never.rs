@@ -32,4 +32,11 @@ impl ImmigrationEntry for NeverImmigrationEntry {
     ) -> Option<MigratingLineage> {
         None
     }
+
+    #[must_use]
+    #[inline]
+    #[debug_ensures(ret.is_none(), "no lineage ever immigrates")]
+    fn peek_next_immigration(&self) -> Option<&MigratingLineage> {
+        None
+    }
 }

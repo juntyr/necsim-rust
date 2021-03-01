@@ -125,12 +125,12 @@ pub fn simulate<
         // Send off the possible emigrant and recieve immigrants
         let immigrants = match simulation.emigration_exit_mut().take() {
             Some(emigrant) => proxy.local_partition().migrate_individuals(
-                &mut core::iter::once(emigrant),
+                &mut std::iter::once(emigrant),
                 migration_mode,
                 migration_mode,
             ),
             None => proxy.local_partition().migrate_individuals(
-                &mut core::iter::empty(),
+                &mut std::iter::empty(),
                 migration_mode,
                 migration_mode,
             ),

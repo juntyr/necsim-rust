@@ -7,7 +7,7 @@ use core::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    cogs::{CoalescenceRngSample, Habitat, LineageReference},
+    cogs::{BackedUp, Backup, CoalescenceRngSample, Habitat, LineageReference},
     landscape::{IndexedLocation, Location},
 };
 
@@ -33,7 +33,7 @@ unsafe impl mpi::traits::Equivalence for GlobalLineageReference {
 }
 
 #[contract_trait]
-impl crate::cogs::Backup for GlobalLineageReference {
+impl Backup for GlobalLineageReference {
     unsafe fn backup_unchecked(&self) -> Self {
         GlobalLineageReference(self.0)
     }
@@ -173,7 +173,7 @@ pub struct MigratingLineage {
 }
 
 #[contract_trait]
-impl crate::cogs::Backup for MigratingLineage {
+impl Backup for MigratingLineage {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             global_reference: self.global_reference.backup_unchecked(),
@@ -218,3 +218,10 @@ impl PartialOrd for MigratingLineage {
 }
 
 impl Eq for MigratingLineage {}
+
+impl PartialEq<BackedUp<Self>> for MigratingLineage {
+    fn eq(&self, other: &BackedUp<Self>) -> bool {
+        use core::ops::Deref;
+        self.eq(other.deref())
+    }
+}

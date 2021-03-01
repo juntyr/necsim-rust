@@ -1,17 +1,22 @@
 use array2d::Array2D;
 
-use necsim_impls_no_std::cogs::{
-    dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
-    habitat::in_memory::InMemoryHabitat,
-    lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
-    origin_sampler::{in_memory::InMemoryOriginSampler, pre_sampler::OriginPreSampler},
-};
-use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
-
 use necsim_impls_no_std::{
-    partitioning::LocalPartition, reporter::ReporterContext,
+    cogs::{
+        dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
+        habitat::in_memory::InMemoryHabitat,
+        lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
+        origin_sampler::{
+            decomposition::DecompositionOriginSampler, in_memory::InMemoryOriginSampler,
+            pre_sampler::OriginPreSampler,
+        },
+    },
+    decomposition::equal_area::EqualAreaDecomposition,
+    partitioning::LocalPartition,
+    reporter::ReporterContext,
     simulation::in_memory::InMemorySimulation,
 };
+
+use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
 use super::SkippingGillespieSimulation;
 
@@ -40,10 +45,28 @@ impl InMemorySimulation for SkippingGillespieSimulation {
         let habitat = InMemoryHabitat::new(habitat.clone());
         let dispersal_sampler = InMemorySeparableAliasDispersalSampler::new(dispersal, &habitat)?;
 
-        let lineage_store = CoherentInMemoryLineageStore::new(InMemoryOriginSampler::new(
-            OriginPreSampler::all().percentage(sample_percentage),
+        let decomposition = match EqualAreaDecomposition::new(
             &habitat,
-        ));
+            local_partition.get_partition_rank(),
+            local_partition.get_number_of_partitions(),
+        ) {
+            Ok(decomposition) | Err(decomposition) => decomposition,
+        };
+
+        let lineage_store = if local_partition.get_number_of_partitions().get() > 1 {
+            CoherentInMemoryLineageStore::new(DecompositionOriginSampler::new(
+                InMemoryOriginSampler::new(
+                    OriginPreSampler::all().percentage(sample_percentage),
+                    &habitat,
+                ),
+                &decomposition,
+            ))
+        } else {
+            CoherentInMemoryLineageStore::new(InMemoryOriginSampler::new(
+                OriginPreSampler::all().percentage(sample_percentage),
+                &habitat,
+            ))
+        };
 
         Ok(SkippingGillespieSimulation::simulate(
             habitat,
@@ -52,6 +75,7 @@ impl InMemorySimulation for SkippingGillespieSimulation {
             speciation_probability_per_generation,
             seed,
             local_partition,
+            decomposition,
         ))
     }
 }
