@@ -1,12 +1,16 @@
-use necsim_impls_no_std::cogs::{
-    dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
-    habitat::non_spatial::NonSpatialHabitat,
-    lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
-    origin_sampler::{non_spatial::NonSpatialOriginSampler, pre_sampler::OriginPreSampler},
-};
-
 use necsim_impls_no_std::{
-    partitioning::LocalPartition, reporter::ReporterContext,
+    cogs::{
+        dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
+        habitat::non_spatial::NonSpatialHabitat,
+        lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
+        origin_sampler::{
+            decomposition::DecompositionOriginSampler, non_spatial::NonSpatialOriginSampler,
+            pre_sampler::OriginPreSampler,
+        },
+    },
+    decomposition::modulo::ModuloDecomposition,
+    partitioning::LocalPartition,
+    reporter::ReporterContext,
     simulation::non_spatial::NonSpatialSimulation,
 };
 
@@ -31,10 +35,25 @@ impl NonSpatialSimulation for SkippingGillespieSimulation {
         let habitat = NonSpatialHabitat::new(area, deme);
         let dispersal_sampler = NonSpatialDispersalSampler::default();
 
-        let lineage_store = CoherentInMemoryLineageStore::new(NonSpatialOriginSampler::new(
-            OriginPreSampler::all().percentage(sample_percentage),
-            &habitat,
-        ));
+        let decomposition = ModuloDecomposition::new(
+            local_partition.get_partition_rank(),
+            local_partition.get_number_of_partitions(),
+        );
+
+        let lineage_store = if local_partition.get_number_of_partitions().get() > 1 {
+            CoherentInMemoryLineageStore::new(DecompositionOriginSampler::new(
+                NonSpatialOriginSampler::new(
+                    OriginPreSampler::all().percentage(sample_percentage),
+                    &habitat,
+                ),
+                &decomposition,
+            ))
+        } else {
+            CoherentInMemoryLineageStore::new(NonSpatialOriginSampler::new(
+                OriginPreSampler::all().percentage(sample_percentage),
+                &habitat,
+            ))
+        };
 
         Ok(SkippingGillespieSimulation::simulate(
             habitat,
@@ -43,6 +62,7 @@ impl NonSpatialSimulation for SkippingGillespieSimulation {
             speciation_probability_per_generation,
             seed,
             local_partition,
+            decomposition,
         ))
     }
 }
