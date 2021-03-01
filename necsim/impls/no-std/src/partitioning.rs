@@ -53,10 +53,6 @@ pub trait LocalPartition<P: ReporterContext>: Sized {
     )]
     fn get_partition_rank(&self) -> u32;
 
-    #[debug_ensures(
-        ret.get() > 1,
-        "there are more than one parallel partitions"
-    )]
     fn get_number_of_partitions(&self) -> NonZeroU32;
 
     fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(

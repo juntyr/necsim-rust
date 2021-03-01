@@ -28,7 +28,6 @@ impl Backup for BufferedImmigrationEntry {
 #[contract_trait]
 impl ImmigrationEntry for BufferedImmigrationEntry {
     #[must_use]
-    #[inline]
     fn next_optional_immigration(
         &mut self,
         optional_next_event_time: Option<f64>,
@@ -42,6 +41,11 @@ impl ImmigrationEntry for BufferedImmigrationEntry {
         }
 
         self.immigrants.pop().map(|rev| rev.0)
+    }
+
+    #[must_use]
+    fn peek_next_immigration(&self) -> Option<&MigratingLineage> {
+        self.immigrants.peek().map(|immigrant| &immigrant.0)
     }
 }
 
