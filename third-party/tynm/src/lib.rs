@@ -2,6 +2,7 @@
 
 #![deny(clippy::pedantic)]
 #![allow(clippy::option_if_let_else)]
+#![allow(clippy::missing_panics_doc)]
 #![no_std]
 
 //! Returns type names with a specifiable number of module segments as a `String`.

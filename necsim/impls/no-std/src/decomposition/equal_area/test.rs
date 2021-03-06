@@ -50,17 +50,18 @@ fn test_equal_area_decomposition() {
                 if successful {
                     assert_eq!(num_indices, partition, "{}", &assert_message);
                 } else {
-                    assert!(num_indices > 0, &assert_message);
-                    assert!(num_indices < partition, &assert_message);
+                    assert!(num_indices > 0, "{}", assert_message);
+                    assert!(num_indices < partition, "{}", assert_message);
                     assert!(
                         u64::from(num_indices) == (u64::from(width) * u64::from(height)),
-                        &assert_message
+                        "{}",
+                        assert_message
                     );
                 }
 
                 // Check that all indices in [0, num_indices) have been assigned
                 for i in 0..num_indices {
-                    assert!(indices.contains_key(&i), &assert_message);
+                    assert!(indices.contains_key(&i), "{}", assert_message);
                 }
 
                 let min_index_frequency = indices.iter().map(|(_, freq)| freq).min().unwrap();
@@ -69,7 +70,8 @@ fn test_equal_area_decomposition() {
                 // Check that the indices are distributed equally
                 assert!(
                     (max_index_frequency - min_index_frequency) <= 1,
-                    &assert_message
+                    "{}",
+                    assert_message
                 );
             }
         }

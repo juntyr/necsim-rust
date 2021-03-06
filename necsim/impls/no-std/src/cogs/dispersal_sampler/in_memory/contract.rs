@@ -30,9 +30,9 @@ pub fn explicit_in_memory_dispersal_check_contract<H: Habitat>(
                     if habitat.get_habitat_at_location(&dispersal_target) == 0 {
                         // Dispersal from habitat to non-habitat
                         return false;
-                    } else {
-                        any_dispersal = true;
                     }
+
+                    any_dispersal = true;
                 } else if dispersal[(row_index, col_index)] < 0.0_f64 {
                     // Dispersal probabilities must be non-negative
                     return false;

@@ -100,9 +100,9 @@ impl<'h, I: Iterator<Item = u64>> Iterator for AlmostInfiniteOriginSampler<'h, I
             if distance_squared <= self.radius_squared {
                 if index_difference == 0 {
                     return Some(IndexedLocation::new(next_location, 0));
-                } else {
-                    index_difference -= 1;
                 }
+
+                index_difference -= 1;
             }
         }
 

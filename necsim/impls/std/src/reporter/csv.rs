@@ -34,12 +34,12 @@ impl Reporter for CsvReporter {
 
             let mut writer = BufWriter::new(file);
 
-            let _ = writeln!(writer, "reference,time,x,y,index,type");
+            std::mem::drop(writeln!(writer, "reference,time,x,y,index,type"));
 
             writer
         });
 
-        let _ = writeln!(
+        std::mem::drop(writeln!(
             writer,
             "{},{},{},{},{},{}",
             event.global_lineage_reference(),
@@ -51,7 +51,7 @@ impl Reporter for CsvReporter {
                 EventType::Speciation => 's',
                 EventType::Dispersal { .. } => 'd',
             }
-        );
+        ));
     }
 }
 
