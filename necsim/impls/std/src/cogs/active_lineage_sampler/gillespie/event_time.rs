@@ -23,8 +23,8 @@ impl From<f64> for EventTime {
     }
 }
 
-impl Into<f64> for EventTime {
-    fn into(self) -> f64 {
-        self.0
+impl From<EventTime> for f64 {
+    fn from(event_time: EventTime) -> Self {
+        event_time.0
     }
 }

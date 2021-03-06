@@ -18,7 +18,6 @@ pub trait EmigrationExit<
 >: crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
-    #[allow(clippy::float_cmp)]
     #[debug_requires(event_time >= 0.0_f64, "event time is non-negative")]
     #[debug_ensures(match &ret {
         Some((
@@ -30,7 +29,7 @@ pub trait EmigrationExit<
             ret_lineage_reference == &old(lineage_reference.clone()) &&
             ret_dispersal_origin == &old(dispersal_origin.clone()) &&
             ret_dispersal_target == &old(dispersal_target.clone()) &&
-            ret_event_time == &old(event_time)
+            ret_event_time.to_bits() == old(event_time.to_bits())
         },
         None => true,
     }, "if ret is Some, it returns the input parameters unchanged")]

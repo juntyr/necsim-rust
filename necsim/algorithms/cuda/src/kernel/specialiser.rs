@@ -37,7 +37,7 @@ pub fn get_ptx_cstr<
 
     let ptx_c_chars = unsafe { get_ptx_cstr_for_specialisation(type_name_cstring.as_ptr()) };
 
-    unsafe { CStr::from_ptr(ptx_c_chars as *const i8) }
+    unsafe { CStr::from_ptr(ptx_c_chars.cast::<i8>()) }
 }
 
 fn type_name_of<T>(_: T) -> CString {

@@ -49,13 +49,9 @@ impl OriginPreSampler<RangeFrom<u64>> {
 
 impl<I: Iterator<Item = u64>> OriginPreSampler<I> {
     #[must_use]
+    #[debug_requires((0.0_f64..=1.0_f64).contains(&percentage), "percentage is in [0, 1]")]
     pub fn percentage(mut self, percentage: f64) -> OriginPreSampler<impl Iterator<Item = u64>> {
         use necsim_core::intrinsics::{floor, ln};
-
-        debug_assert!(
-            (0.0_f64..=1.0_f64).contains(&percentage),
-            "percentage is in [0, 1]"
-        );
 
         let inv_geometric_sample_rate = ln(1.0_f64 - percentage).recip();
 

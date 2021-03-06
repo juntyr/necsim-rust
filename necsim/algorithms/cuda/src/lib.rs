@@ -1,5 +1,4 @@
 #![deny(clippy::pedantic)]
-#![feature(min_const_generics)]
 #![feature(stmt_expr_attributes)]
 
 #[macro_use]

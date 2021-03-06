@@ -48,10 +48,9 @@ impl<
         // Cast &mut self to a &mut PartialSimulation without the emigration exit
         // This is only safe as both types have the same fields and layout except for
         // emigration exit (and coalescence sampler) in Self at the end
-        #[allow(clippy::cast_ref_to_mut)]
         let partial_simulation = unsafe {
-            &mut *(self as *const Self
-                as *mut super::emigration_exit::PartialSimulation<H, G, N, D, R, S>)
+            &mut *(self as *mut Self)
+                .cast::<super::emigration_exit::PartialSimulation<H, G, N, D, R, S>>()
         };
 
         func(&mut self.emigration_exit, partial_simulation)

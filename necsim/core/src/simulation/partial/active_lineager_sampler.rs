@@ -52,8 +52,8 @@ impl<
         // This is only safe as both types have the same fields and layout except for
         // event_sampler in Self at the end
         let partial_simulation = unsafe {
-            &*(self as *const Self
-                as *const super::event_sampler::PartialSimulation<H, G, N, D, R, S, X, C>)
+            &*(self as *const Self)
+                .cast::<super::event_sampler::PartialSimulation<H, G, N, D, R, S, X, C>>()
         };
 
         func(&self.event_sampler, partial_simulation)
@@ -70,10 +70,9 @@ impl<
         // Cast &mut self to a &mut PartialSimulation without the event sampler
         // This is only safe as both types have the same fields and layout except for
         // event_sampler in Self at the end
-        #[allow(clippy::cast_ref_to_mut)]
         let partial_simulation = unsafe {
-            &mut *(self as *const Self
-                as *mut super::event_sampler::PartialSimulation<H, G, N, D, R, S, X, C>)
+            &mut *(self as *mut Self)
+                .cast::<super::event_sampler::PartialSimulation<H, G, N, D, R, S, X, C>>()
         };
 
         func(&mut self.event_sampler, partial_simulation)

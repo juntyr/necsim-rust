@@ -65,6 +65,9 @@ impl<P: ReporterContext> MpiRootPartition<P> {
     const MPI_PROGRESS_WAIT_TIME: Duration = Duration::from_millis(100_u64);
 
     #[must_use]
+    /// # Panics
+    /// Panics iff the `DurableLogReporter` cannot be created at
+    /// `event_log_path`
     pub fn new(
         universe: Universe,
         world: SystemCommunicator,
