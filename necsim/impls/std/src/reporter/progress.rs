@@ -66,7 +66,7 @@ impl Default for ProgressReporter {
                     display_progress(total, remaining.load(Ordering::Acquire).min(total));
 
                     // Flush stderr to update the progress bar
-                    let _ = io::stderr().flush();
+                    std::mem::drop(io::stderr().flush());
                 }
             }
         });
@@ -83,7 +83,7 @@ impl ProgressReporter {
     pub fn finish(mut self) {
         if let Some(updater) = self.updater.take() {
             if updater.sender.send(()).is_ok() {
-                let _ = updater.thread.join();
+                std::mem::drop(updater.thread.join());
             }
         }
 
@@ -98,7 +98,7 @@ impl ProgressReporter {
             eprint!("\r\n");
 
             // Flush stderr to update the progress bar
-            let _ = io::stderr().flush();
+            std::mem::drop(io::stderr().flush());
         }
 
         std::mem::drop(self)

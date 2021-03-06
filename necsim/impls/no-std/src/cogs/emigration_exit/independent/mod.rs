@@ -34,12 +34,12 @@ impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>> Backup
         Self {
             decomposition: self.decomposition.backup_unchecked(),
             choice: self.choice.backup_unchecked(),
-            emigrant: match &self.emigrant {
-                Some((partition, migrating_lineage)) => {
-                    Some((*partition, migrating_lineage.backup_unchecked()))
-                },
-                None => None,
-            },
+            emigrant: self
+                .emigrant
+                .as_ref()
+                .map(|(partition, migrating_lineage)| {
+                    (*partition, migrating_lineage.backup_unchecked())
+                }),
             _marker: PhantomData::<H>,
         }
     }

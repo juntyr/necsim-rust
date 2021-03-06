@@ -118,10 +118,9 @@ pub trait CoherentLineageStore<H: Habitat, R: LineageReference<H>>:
         habitat: &H,
     ) -> IndexedLocation;
 
-    #[allow(clippy::float_cmp)]
     #[debug_requires(self.get(reference.clone()).is_some(), "lineage reference is valid")]
     #[debug_ensures(
-        self[old(reference.clone())].time_of_last_event() == old(event_time),
+        self[old(reference.clone())].time_of_last_event().to_bits() == old(event_time.to_bits()),
         "updates the time of the last event of the lineage reference"
     )]
     fn update_lineage_time_of_last_event(&mut self, reference: R, event_time: f64);

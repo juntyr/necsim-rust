@@ -72,6 +72,9 @@ impl<P: ReporterContext> MpiParallelPartition<P> {
     const MPI_PROGRESS_WAIT_TIME: Duration = Duration::from_millis(100_u64);
 
     #[must_use]
+    /// # Panics
+    /// Panics iff the `DurableLogReporter` cannot be created at
+    /// `event_log_path`
     pub fn new(universe: Universe, world: SystemCommunicator, event_log_path: &Path) -> Self {
         let mut event_log_path = PathBuf::from(event_log_path);
         event_log_path.push(world.rank().to_string());

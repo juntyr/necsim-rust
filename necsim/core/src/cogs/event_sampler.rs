@@ -26,7 +26,6 @@ pub trait EventSampler<
 >: crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
-    #[allow(clippy::float_cmp)]
     #[debug_requires(event_time >= 0.0_f64, "event time is non-negative")]
     // TODO: If lineage removal is done by emigration exit, we should
     //       also assert that lineage has been removed here iff None
@@ -40,7 +39,7 @@ pub trait EventSampler<
     //     None => true,
     // } , "event occurs for lineage_reference")]
     #[debug_ensures(match &ret {
-        Some(event) => event.time() == event_time,
+        Some(event) => event.time().to_bits() == event_time.to_bits(),
         None => true,
     }, "event occurs at event_time")]
     fn sample_event_for_lineage_at_indexed_location_time_or_emigrate(

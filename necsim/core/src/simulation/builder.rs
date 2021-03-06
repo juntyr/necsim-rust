@@ -99,8 +99,8 @@ impl<
         // rng and active lineage sampler in Self at the end (PartialSimulation has a
         // zero-sized PhantomData rng)
         let partial_simulation = unsafe {
-            &mut *(self as *mut Self
-                as *mut super::partial::active_lineager_sampler::PartialSimulation<
+            &mut *(self as *mut Self)
+                .cast::<super::partial::active_lineager_sampler::PartialSimulation<
                     H,
                     G,
                     N,
@@ -110,7 +110,7 @@ impl<
                     X,
                     C,
                     E,
-                >)
+                >>()
         };
 
         func(
@@ -137,8 +137,16 @@ impl<
         // types have the same fields and layout except for rng and event sampler in
         // Self at the end (PartialSimulation has a zero-sized PhantomData rng)
         let partial_simulation = unsafe {
-            &*(self as *const Self
-                as *const super::partial::event_sampler::PartialSimulation<H, G, N, D, R, S, X, C>)
+            &mut *(self as *mut Self).cast::<super::partial::event_sampler::PartialSimulation<
+                H,
+                G,
+                N,
+                D,
+                R,
+                S,
+                X,
+                C,
+            >>()
         };
 
         func(&mut self.event_sampler, partial_simulation, &mut self.rng)
