@@ -36,7 +36,7 @@ pub trait RngCore: crate::cogs::Backup + Sized + Clone + core::fmt::Debug {
             let x = xorshifted.rotate_right(rot).to_le();
 
             unsafe {
-                let p = &x as *const u32 as *const u8;
+                let p = (&x as *const u32).cast::<u8>();
                 copy_nonoverlapping(p, chunk.as_mut_ptr(), chunk.len());
             }
         }

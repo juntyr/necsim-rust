@@ -27,8 +27,8 @@ impl From<usize> for InMemoryLineageReference {
     }
 }
 
-impl Into<usize> for InMemoryLineageReference {
-    fn into(self) -> usize {
-        self.0.get() - 1
+impl From<InMemoryLineageReference> for usize {
+    fn from(reference: InMemoryLineageReference) -> Self {
+        reference.0.get() - 1
     }
 }

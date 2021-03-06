@@ -25,9 +25,9 @@ impl From<Range<usize>> for AliasSamplerRange {
     }
 }
 
-impl Into<Range<usize>> for AliasSamplerRange {
-    fn into(self) -> Range<usize> {
-        self.0
+impl From<AliasSamplerRange> for Range<usize> {
+    fn from(range: AliasSamplerRange) -> Self {
+        range.0
     }
 }
 

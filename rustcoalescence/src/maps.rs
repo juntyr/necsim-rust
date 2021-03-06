@@ -1,15 +1,15 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use anyhow::{Context, Result};
 use array2d::Array2D;
 
-pub fn load_dispersal_map(path: &PathBuf, strict_load: bool) -> Result<Array2D<f64>> {
+pub fn load_dispersal_map(path: &Path, strict_load: bool) -> Result<Array2D<f64>> {
     crate::tiff::load_map_from_tiff::<f64>(path, strict_load)
         .with_context(|| format!("Failed to load the dispersal map from {:?}.", path))
 }
 
 pub fn load_habitat_map(
-    path: &PathBuf,
+    path: &Path,
     dispersal: &Array2D<f64>,
     strict_load: bool,
 ) -> Result<Array2D<u32>> {

@@ -45,7 +45,7 @@ impl Reporter for DurableLogReporter {
         self.buffer.push(event.clone());
 
         if self.buffer.len() >= self.segment_size {
-            let _ = self.sort_and_write_segment();
+            std::mem::drop(self.sort_and_write_segment());
         }
     }
 }
@@ -53,7 +53,7 @@ impl Reporter for DurableLogReporter {
 impl Drop for DurableLogReporter {
     fn drop(&mut self) {
         if !self.buffer.is_empty() {
-            let _ = self.sort_and_write_segment();
+            std::mem::drop(self.sort_and_write_segment());
         }
     }
 }
@@ -100,10 +100,10 @@ impl DurableLogReporter {
         let mut buf_writer = BufWriter::new(segment_file);
 
         for event in self.buffer.drain(0..) {
-            let _ = bincode::serialize_into(&mut buf_writer, &event);
+            std::mem::drop(bincode::serialize_into(&mut buf_writer, &event));
         }
 
-        let _ = buf_writer.into_inner()?;
+        std::mem::drop(buf_writer.into_inner()?);
 
         Ok(())
     }

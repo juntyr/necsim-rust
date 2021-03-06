@@ -39,7 +39,6 @@ pub trait ActiveLineageSampler<
     fn peek_time_of_next_event(&mut self, rng: &mut G) -> Option<f64>;
 
     #[must_use]
-    #[allow(clippy::float_cmp)]
     #[debug_ensures(match ret {
         Some(_) => {
             self.number_active_lineages() ==
@@ -61,7 +60,7 @@ pub trait ActiveLineageSampler<
     #[debug_ensures(match ret {
         None => true,
         Some((ref _reference, ref _location, event_time)) => {
-            self.get_time_of_last_event() == event_time
+            self.get_time_of_last_event().to_bits() == event_time.to_bits()
         },
     }, "updates the time of the last event")]
     fn pop_active_lineage_indexed_location_event_time(

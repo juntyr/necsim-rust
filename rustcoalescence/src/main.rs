@@ -2,7 +2,6 @@
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
 #![feature(associated_type_bounds)]
-#![feature(min_const_generics)]
 
 #[macro_use]
 extern crate necsim_core;

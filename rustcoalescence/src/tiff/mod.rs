@@ -1,4 +1,4 @@
-use std::{fs::File, path::PathBuf};
+use std::{fs::File, path::Path};
 
 use array2d::Array2D;
 use tiff::{decoder::Decoder, tags::Tag};
@@ -22,10 +22,7 @@ impl<T: private::TiffDataType> TiffDataType for T {}
 ///
 /// Furthermore, only the first image is read and any subsequent ones are
 /// currently ignored.
-pub fn load_map_from_tiff<D: TiffDataType>(
-    path: &PathBuf,
-    strict_load: bool,
-) -> Result<Array2D<D>> {
+pub fn load_map_from_tiff<D: TiffDataType>(path: &Path, strict_load: bool) -> Result<Array2D<D>> {
     let file = File::open(path).context("Could not read file.")?;
 
     let mut decoder = Decoder::new(file).context("Could not decode TIFF file.")?;
