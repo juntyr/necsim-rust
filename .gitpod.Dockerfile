@@ -17,7 +17,7 @@ RUN echo "debconf debconf/frontend select Noninteractive" | sudo debconf-set-sel
 
 RUN sudo apt-get update -q && \
     sudo apt-get upgrade -y && \
-    sudo apt install mpich -y --no-install-recommends && \
+    sudo apt install libopenmpi-dev -y --no-install-recommends && \
     sudo apt-get install gdal-bin -y --no-install-recommends && \
     sudo apt-get install libgdal-dev -y --no-install-recommends && \
     sudo apt-get clean autoclean && \
