@@ -16,7 +16,7 @@ impl EventFilter for ExecutionTimeReporter {
 
 impl Reporter for ExecutionTimeReporter {
     #[debug_ensures(self.start_time.is_some(), "start_time is set after first call")]
-    #[debug_ensures(self.end_time.is_some(), "end_time is set")]
+    #[debug_ensures(remaining != 0 || self.end_time.is_some(), "end_time is set")]
     #[debug_ensures(
         old(self.start_time).is_some() -> old(self.start_time) == self.start_time,
         "only updates start_time on first call"

@@ -4,8 +4,9 @@
 #[macro_use]
 extern crate contracts;
 
-use necsim_core::cogs::{
-    CoherentLineageStore, Habitat, LineageReference, SeparableDispersalSampler,
+use necsim_core::{
+    cogs::{CoherentLineageStore, Habitat, LineageReference, SeparableDispersalSampler},
+    reporter::Reporter,
 };
 
 use necsim_impls_no_std::{decomposition::Decomposition, partitioning::LocalPartition};
@@ -86,7 +87,7 @@ impl SkippingGillespieSimulation {
             ParallelismMode::OptimisticLockstep => simulate::optimistic_lockstep::simulate,
         };
 
-        partitioned_simulate(
+        let (time, steps) = partitioned_simulate(
             habitat,
             dispersal_sampler,
             lineage_store,
@@ -94,6 +95,10 @@ impl SkippingGillespieSimulation {
             seed,
             local_partition,
             decomposition,
-        )
+        );
+
+        local_partition.get_reporter().report_progress(0_u64);
+
+        (time, steps)
     }
 }
