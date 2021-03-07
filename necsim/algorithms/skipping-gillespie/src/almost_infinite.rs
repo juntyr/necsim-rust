@@ -16,11 +16,11 @@ use necsim_impls_no_std::{
     simulation::almost_infinite::AlmostInfiniteSimulation,
 };
 
-use super::SkippingGillespieSimulation;
+use super::{SkippingGillespieArguments, SkippingGillespieSimulation};
 
 #[contract_trait]
 impl AlmostInfiniteSimulation for SkippingGillespieSimulation {
-    type AuxiliaryArguments = ();
+    type AuxiliaryArguments = SkippingGillespieArguments;
     type Error = !;
 
     /// Simulates the Gillespie coalescence algorithm with self-dispersal event
@@ -33,7 +33,7 @@ impl AlmostInfiniteSimulation for SkippingGillespieSimulation {
         sample_percentage: f64,
         seed: u64,
         local_partition: &mut P,
-        _auxiliary: Self::AuxiliaryArguments,
+        auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = AlmostInfiniteHabitat::default();
         let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(sigma);
@@ -68,6 +68,7 @@ impl AlmostInfiniteSimulation for SkippingGillespieSimulation {
             seed,
             local_partition,
             decomposition,
+            auxiliary,
         ))
     }
 }

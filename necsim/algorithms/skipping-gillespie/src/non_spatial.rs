@@ -14,11 +14,11 @@ use necsim_impls_no_std::{
     simulation::non_spatial::NonSpatialSimulation,
 };
 
-use super::SkippingGillespieSimulation;
+use super::{SkippingGillespieArguments, SkippingGillespieSimulation};
 
 #[contract_trait]
 impl NonSpatialSimulation for SkippingGillespieSimulation {
-    type AuxiliaryArguments = ();
+    type AuxiliaryArguments = SkippingGillespieArguments;
     type Error = !;
 
     /// Simulates the Gillespie coalescence algorithm with self-dispersal event
@@ -30,7 +30,7 @@ impl NonSpatialSimulation for SkippingGillespieSimulation {
         sample_percentage: f64,
         seed: u64,
         local_partition: &mut P,
-        _auxiliary: Self::AuxiliaryArguments,
+        auxiliary: Self::AuxiliaryArguments,
     ) -> Result<(f64, u64), Self::Error> {
         let habitat = NonSpatialHabitat::new(area, deme);
         let dispersal_sampler = NonSpatialDispersalSampler::default();
@@ -63,6 +63,7 @@ impl NonSpatialSimulation for SkippingGillespieSimulation {
             seed,
             local_partition,
             decomposition,
+            auxiliary,
         ))
     }
 }

@@ -3,8 +3,8 @@ use float_next_after::NextAfter;
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, CoherentLineageStore, DispersalSampler,
-        EmigrationExit, Habitat, ImmigrationEntry, LineageReference, RngCore,
-        SpeciationProbability,
+        EmigrationExit, EmptyActiveLineageSamplerError, Habitat, ImmigrationEntry,
+        LineageReference, PeekableActiveLineageSampler, RngCore, SpeciationProbability,
     },
     landscape::IndexedLocation,
     lineage::GlobalLineageReference,
@@ -38,13 +38,6 @@ impl<
     #[must_use]
     fn get_time_of_last_event(&self) -> f64 {
         self.last_event_time
-    }
-
-    #[must_use]
-    fn peek_time_of_next_event(&mut self, _rng: &mut G) -> Option<f64> {
-        self.active_locations
-            .peek()
-            .map(|(_, next_event_time)| next_event_time.clone().into())
     }
 
     #[must_use]
@@ -157,6 +150,8 @@ impl<
             EventTime::from(time + rng.sample_exponential(event_rate_at_location)),
         );
 
+        self.last_event_time = time;
+
         self.number_active_lineages += 1;
     }
 
@@ -193,6 +188,34 @@ impl<
             EventTime::from(time + rng.sample_exponential(event_rate_at_location)),
         );
 
+        self.last_event_time = time;
+
         self.number_active_lineages += 1;
+    }
+}
+
+#[contract_trait]
+impl<
+        H: Habitat,
+        G: RngCore,
+        N: SpeciationProbability<H>,
+        D: DispersalSampler<H, G>,
+        R: LineageReference<H>,
+        S: CoherentLineageStore<H, R>,
+        X: EmigrationExit<H, G, N, D, R, S>,
+        C: CoalescenceSampler<H, R, S>,
+        E: GillespieEventSampler<H, G, N, D, R, S, X, C>,
+        I: ImmigrationEntry,
+    > PeekableActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
+    for GillespieActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
+{
+    fn peek_time_of_next_event(
+        &mut self,
+        _rng: &mut G,
+    ) -> Result<f64, EmptyActiveLineageSamplerError> {
+        self.active_locations
+            .peek()
+            .map(|(_, next_event_time)| next_event_time.clone().into())
+            .ok_or(EmptyActiveLineageSamplerError)
     }
 }
