@@ -68,7 +68,7 @@ impl InMemorySimulation for SkippingGillespieSimulation {
             ))
         };
 
-        Ok(SkippingGillespieSimulation::simulate(
+        SkippingGillespieSimulation::simulate(
             habitat,
             dispersal_sampler,
             lineage_store,
@@ -77,6 +77,6 @@ impl InMemorySimulation for SkippingGillespieSimulation {
             local_partition,
             decomposition,
             auxiliary,
-        ))
+        )
     }
 }

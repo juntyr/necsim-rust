@@ -71,8 +71,7 @@ pub fn simulate<R: ReporterContext, P: LocalPartition<R>>(
             *common_args.seed(),
             local_partition,
             *auxiliary,
-        )
-        .map_err(|_| unreachable!("Non-Spatial SkippingGillespieSimulation can never fail.")),
+        ),
         #[cfg(feature = "necsim-cuda")]
         Algorithm::Cuda(auxiliary) => CudaSimulation::simulate(
             *non_spatial_args.area(),

@@ -21,7 +21,7 @@ use super::{SkippingGillespieArguments, SkippingGillespieSimulation};
 #[contract_trait]
 impl AlmostInfiniteSimulation for SkippingGillespieSimulation {
     type AuxiliaryArguments = SkippingGillespieArguments;
-    type Error = !;
+    type Error = anyhow::Error;
 
     /// Simulates the Gillespie coalescence algorithm with self-dispersal event
     /// skipping on on an almost-infinite `habitat` with N(0, sigma)
@@ -60,7 +60,7 @@ impl AlmostInfiniteSimulation for SkippingGillespieSimulation {
             ))
         };
 
-        Ok(SkippingGillespieSimulation::simulate(
+        SkippingGillespieSimulation::simulate(
             habitat,
             dispersal_sampler,
             lineage_store,
@@ -69,6 +69,6 @@ impl AlmostInfiniteSimulation for SkippingGillespieSimulation {
             local_partition,
             decomposition,
             auxiliary,
-        ))
+        )
     }
 }

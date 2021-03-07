@@ -2,10 +2,9 @@ use std::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, BackedUp, Backup, CoherentLineageStore, Habitat, LineageReference,
-        RngCore, SeparableDispersalSampler,
+        ActiveLineageSampler, CoherentLineageStore, Habitat, LineageReference, RngCore,
+        SeparableDispersalSampler,
     },
-    lineage::MigratingLineage,
     reporter::Reporter,
     simulation::{partial::event_sampler::PartialSimulation, Simulation},
 };
@@ -27,8 +26,6 @@ use necsim_impls_std::cogs::{
 };
 
 use necsim_impls_no_std::reporter::ReporterContext;
-
-use super::reporter::PartitionReporterProxy;
 
 #[allow(clippy::too_many_lines, clippy::too_many_arguments)]
 pub fn simulate<
@@ -119,78 +116,54 @@ pub fn simulate<
     }
 
     let mut global_safe_time = 0.0_f64;
-    let mut simulation_backup = simulation.backup();
-
-    let mut last_immigrants: Vec<BackedUp<MigratingLineage>> = Vec::new();
-    let mut immigrants: Vec<MigratingLineage> = Vec::new();
 
     let mut total_steps = 0_u64;
 
-    let mut proxy = PartitionReporterProxy::from(local_partition);
+    while local_partition.reduce_vote_continue(simulation.peek_time_of_next_event().is_some()) {
+        let (_, new_steps) = simulation.simulate_incremental_until_before(
+            global_safe_time + independent_time_slice,
+            local_partition.get_reporter(),
+        );
 
-    while proxy
-        .local_partition()
-        .reduce_vote_continue(simulation.peek_time_of_next_event().is_some())
-    {
-        loop {
-            let (_, new_steps) = simulation.simulate_incremental_until_before(
-                global_safe_time + independent_time_slice,
-                &mut proxy,
-            );
-            total_steps += new_steps;
+        total_steps += new_steps;
 
-            // Send off the possible emigrant and recieve immigrants
-            immigrants.extend(proxy.local_partition().migrate_individuals(
-                simulation.emigration_exit_mut(),
-                MigrationMode::Default,
-                MigrationMode::Default,
-            ));
+        // Send off the possible emigrant and recieve immigrants
+        for mut immigrant in local_partition.migrate_individuals(
+            simulation.emigration_exit_mut(),
+            MigrationMode::Default,
+            MigrationMode::Default,
+        ) {
+            // Push all immigrations to the next safe point such that they do
+            //  not conflict with the independence of the current time slice
+            immigrant.event_time = immigrant
+                .event_time
+                .max(global_safe_time + independent_time_slice);
 
-            while proxy.local_partition().wait_for_termination() {
-                immigrants.extend(proxy.local_partition().migrate_individuals(
-                    &mut std::iter::empty(),
-                    MigrationMode::Force,
-                    MigrationMode::Force,
-                ))
-            }
+            simulation.immigration_entry_mut().push(immigrant)
+        }
 
-            immigrants.sort();
+        while local_partition.wait_for_termination() {
+            for mut immigrant in local_partition.migrate_individuals(
+                &mut std::iter::empty(),
+                MigrationMode::Force,
+                MigrationMode::Force,
+            ) {
+                // Push all immigrations to the next safe point such that they
+                //  do not conflict with the independence of the current time
+                //  slice
+                immigrant.event_time = immigrant
+                    .event_time
+                    .max(global_safe_time + independent_time_slice);
 
-            // A global rollback is required if at least one partition received unexpected
-            // immigration
-            if proxy
-                .local_partition()
-                .reduce_vote_continue(immigrants != last_immigrants)
-            {
-                // Roll back the simulation to the last backup, clear out all generated events
-                simulation = simulation_backup.resume();
-                proxy.clear_events();
-
-                // Back up the previous immigrating lineages in last_immigrants
-                last_immigrants.clear();
-                for immigrant in &immigrants {
-                    last_immigrants.push(immigrant.backup())
-                }
-
-                // Move the immigrating lineages into the simulation's immigration entry
-                for immigrant in immigrants.drain(..) {
-                    simulation.immigration_entry_mut().push(immigrant)
-                }
-            } else {
-                immigrants.clear();
-                last_immigrants.clear();
-
-                break;
+                simulation.immigration_entry_mut().push(immigrant)
             }
         }
 
         // Globally advance the simulation to the next safe point
-        proxy.report_events();
-        simulation_backup = simulation.backup();
         global_safe_time += independent_time_slice;
     }
 
-    proxy.local_partition().reduce_global_time_steps(
+    local_partition.reduce_global_time_steps(
         simulation.active_lineage_sampler().get_time_of_last_event(),
         total_steps,
     )

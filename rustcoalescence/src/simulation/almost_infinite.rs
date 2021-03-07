@@ -71,8 +71,7 @@ pub fn simulate<R: ReporterContext, P: LocalPartition<R>>(
             *common_args.seed(),
             local_partition,
             *auxiliary,
-        )
-        .map_err(|_| unreachable!("Almost-Infinite SkippingGillespieSimulation can never fail.")),
+        ),
         #[cfg(feature = "necsim-cuda")]
         Algorithm::Cuda(auxiliary) => CudaSimulation::simulate(
             *almost_infinite_args.radius(),
