@@ -1,5 +1,6 @@
 mod reporter;
 
+pub mod averaging;
 pub mod lockstep;
 pub mod monolithic;
 pub mod optimistic;
