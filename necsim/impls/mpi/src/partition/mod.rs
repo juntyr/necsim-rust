@@ -76,11 +76,19 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
         }
     }
 
-    fn reduce_vote_or(&self, local_vote: bool) -> bool {
+    fn reduce_vote_continue(&self, local_continue: bool) -> bool {
         match self {
-            Self::Monolithic(partition) => partition.reduce_vote_or(local_vote),
-            Self::Root(partition) => partition.reduce_vote_or(local_vote),
-            Self::Parallel(partition) => partition.reduce_vote_or(local_vote),
+            Self::Monolithic(partition) => partition.reduce_vote_continue(local_continue),
+            Self::Root(partition) => partition.reduce_vote_continue(local_continue),
+            Self::Parallel(partition) => partition.reduce_vote_continue(local_continue),
+        }
+    }
+
+    fn reduce_vote_min_time(&self, local_time: f64) -> Result<f64, f64> {
+        match self {
+            Self::Monolithic(partition) => partition.reduce_vote_min_time(local_time),
+            Self::Root(partition) => partition.reduce_vote_min_time(local_time),
+            Self::Parallel(partition) => partition.reduce_vote_min_time(local_time),
         }
     }
 

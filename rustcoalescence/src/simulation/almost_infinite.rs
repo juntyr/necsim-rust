@@ -63,14 +63,14 @@ pub fn simulate<R: ReporterContext, P: LocalPartition<R>>(
         )
         .map_err(|_| unreachable!("Almost-Infinite GillespieSimulation can never fail.")),
         #[cfg(feature = "necsim-skipping-gillespie")]
-        Algorithm::SkippingGillespie => SkippingGillespieSimulation::simulate(
+        Algorithm::SkippingGillespie(auxiliary) => SkippingGillespieSimulation::simulate(
             *almost_infinite_args.radius(),
             *almost_infinite_args.sigma(),
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
             local_partition,
-            (),
+            *auxiliary,
         )
         .map_err(|_| unreachable!("Almost-Infinite SkippingGillespieSimulation can never fail.")),
         #[cfg(feature = "necsim-cuda")]

@@ -52,13 +52,6 @@ impl<
             .map_or(0.0_f64, Lineage::time_of_last_event)
     }
 
-    fn peek_time_of_next_event(&mut self, _rng: &mut G) -> Option<f64> {
-        // This is only valid because there will never be any dynamic
-        //  immigration in the independent algorithm
-
-        None
-    }
-
     #[must_use]
     #[allow(clippy::type_complexity)]
     #[inline]

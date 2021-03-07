@@ -35,4 +35,7 @@ mod immigration_entry;
 pub use immigration_entry::ImmigrationEntry;
 
 mod active_lineage_sampler;
-pub use active_lineage_sampler::{ActiveLineageSampler, SingularActiveLineageSampler};
+pub use active_lineage_sampler::{
+    ActiveLineageSampler, EmptyActiveLineageSamplerError, OptionallyPeekableActiveLineageSampler,
+    PeekableActiveLineageSampler, SingularActiveLineageSampler,
+};
