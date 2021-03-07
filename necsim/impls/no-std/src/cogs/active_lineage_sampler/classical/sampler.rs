@@ -2,8 +2,9 @@ use float_next_after::NextAfter;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoherentLineageStore, DispersalSampler, EmigrationExit, Habitat,
-        ImmigrationEntry, LineageReference, RngCore, SpeciationProbability,
+        ActiveLineageSampler, CoherentLineageStore, DispersalSampler, EmigrationExit,
+        EmptyActiveLineageSamplerError, Habitat, ImmigrationEntry, LineageReference,
+        PeekableActiveLineageSampler, RngCore, SpeciationProbability,
     },
     landscape::IndexedLocation,
     lineage::GlobalLineageReference,
@@ -50,28 +51,6 @@ impl<
         self.last_event_time
     }
 
-    fn peek_time_of_next_event(&mut self, rng: &mut G) -> Option<f64> {
-        use necsim_core::cogs::RngSampler;
-
-        if self.next_event_time.is_none() && !self.active_lineage_references.is_empty() {
-            // Assumption: This method is called before the next active lineage is popped
-            #[allow(clippy::cast_precision_loss)]
-            let lambda = 0.5_f64 * (self.number_active_lineages() as f64);
-
-            let event_time = self.last_event_time + rng.sample_exponential(lambda);
-
-            let unique_event_time: f64 = if event_time > self.last_event_time {
-                event_time
-            } else {
-                self.last_event_time.next_after(f64::INFINITY)
-            };
-
-            self.next_event_time = Some(unique_event_time);
-        }
-
-        self.next_event_time
-    }
-
     #[must_use]
     #[allow(clippy::type_complexity)]
     fn pop_active_lineage_indexed_location_event_time(
@@ -108,7 +87,7 @@ impl<
             optional_next_event_time,
             self.active_lineage_references.pop(),
         ) {
-            (Some(next_event_time), Some(reference)) => (next_event_time, reference),
+            (Ok(next_event_time), Some(reference)) => (next_event_time, reference),
             _ => return None, // In practice, this must match (None, None)
         };
 
@@ -163,7 +142,7 @@ impl<
         &mut self,
         lineage_reference: R,
         indexed_location: IndexedLocation,
-        _time: f64,
+        time: f64,
         simulation: &mut PartialSimulation<
             H,
             G,
@@ -195,6 +174,8 @@ impl<
             );
 
         self.active_lineage_references.push(lineage_reference);
+
+        self.last_event_time = time;
 
         // Reset the next event time because the internal state has changed
         self.next_event_time = None;
@@ -238,7 +219,59 @@ impl<
         self.active_lineage_references
             .push(immigrant_lineage_reference);
 
+        self.last_event_time = time;
+
         // Reset the next event time because the internal state has changed
         self.next_event_time = None;
+    }
+}
+
+#[contract_trait]
+impl<
+        H: Habitat,
+        G: RngCore,
+        N: SpeciationProbability<H>,
+        D: DispersalSampler<H, G>,
+        R: LineageReference<H>,
+        S: CoherentLineageStore<H, R>,
+        X: EmigrationExit<H, G, N, D, R, S>,
+        I: ImmigrationEntry,
+    >
+    PeekableActiveLineageSampler<
+        H,
+        G,
+        N,
+        D,
+        R,
+        S,
+        X,
+        UnconditionalCoalescenceSampler<H, R, S>,
+        UnconditionalEventSampler<H, G, N, D, R, S, X, UnconditionalCoalescenceSampler<H, R, S>>,
+        I,
+    > for ClassicalActiveLineageSampler<H, G, N, D, R, S, X, I>
+{
+    fn peek_time_of_next_event(
+        &mut self,
+        rng: &mut G,
+    ) -> Result<f64, EmptyActiveLineageSamplerError> {
+        use necsim_core::cogs::RngSampler;
+
+        if self.next_event_time.is_none() && !self.active_lineage_references.is_empty() {
+            // Assumption: This method is called before the next active lineage is popped
+            #[allow(clippy::cast_precision_loss)]
+            let lambda = 0.5_f64 * (self.number_active_lineages() as f64);
+
+            let event_time = self.last_event_time + rng.sample_exponential(lambda);
+
+            let unique_event_time: f64 = if event_time > self.last_event_time {
+                event_time
+            } else {
+                self.last_event_time.next_after(f64::INFINITY)
+            };
+
+            self.next_event_time = Some(unique_event_time);
+        }
+
+        self.next_event_time.ok_or(EmptyActiveLineageSamplerError)
     }
 }

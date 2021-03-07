@@ -6,7 +6,7 @@ use std::{
 };
 
 use mpi::{
-    collective::{CommunicatorCollectives, SystemOperation},
+    collective::{CommunicatorCollectives, SystemOperation, UserOperation},
     datatype::Equivalence,
     environment::Universe,
     point_to_point::{Destination, Source},
@@ -239,16 +239,46 @@ impl<P: ReporterContext> LocalPartition<P> for MpiParallelPartition<P> {
         ImmigrantPopIterator::new(&mut self.migration_buffers[self.get_partition_rank() as usize])
     }
 
-    fn reduce_vote_or(&self, local_vote: bool) -> bool {
-        let mut global_vote_or: bool = local_vote;
+    fn reduce_vote_continue(&self, local_continue: bool) -> bool {
+        let mut global_continue = local_continue;
 
         self.world.all_reduce_into(
-            &local_vote,
-            &mut global_vote_or,
+            &local_continue,
+            &mut global_continue,
             SystemOperation::logical_or(),
         );
 
-        global_vote_or
+        global_continue
+    }
+
+    fn reduce_vote_min_time(&self, local_time: f64) -> Result<f64, f64> {
+        #[derive(mpi::traits::Equivalence, PartialEq, Copy, Clone)]
+        struct TimePartition(f64, u32);
+
+        let local_time_partition = TimePartition(local_time, self.get_partition_rank());
+        let mut global_min_time_partition = local_time_partition;
+
+        self.world.all_reduce_into(
+            &local_time_partition,
+            &mut global_min_time_partition,
+            &UserOperation::commutative(|x, acc| {
+                let x: &[TimePartition] = x.downcast().unwrap();
+                let acc: &mut [TimePartition] = acc.downcast().unwrap();
+
+                // Lexicographic min reduction, by time first then partition rank
+                for (&x, acc) in x.iter().zip(acc) {
+                    if x.0 <= acc.0 && x.1 < acc.1 {
+                        *acc = x
+                    }
+                }
+            }),
+        );
+
+        if global_min_time_partition.1 == local_time_partition.1 {
+            Ok(local_time)
+        } else {
+            Err(global_min_time_partition.0)
+        }
     }
 
     fn wait_for_termination(&mut self) -> bool {

@@ -33,13 +33,6 @@ pub trait ActiveLineageSampler<
 
     #[must_use]
     #[debug_ensures(match ret {
-        Some(event_time) => event_time >= 0.0_f64,
-        None => true,
-    }, "next event time is non-negative")]
-    fn peek_time_of_next_event(&mut self, rng: &mut G) -> Option<f64>;
-
-    #[must_use]
-    #[debug_ensures(match ret {
         Some(_) => {
             self.number_active_lineages() ==
             old(self.number_active_lineages()) - 1
@@ -154,4 +147,95 @@ pub trait SingularActiveLineageSampler<
 {
     #[must_use]
     fn replace_active_lineage(&mut self, active_lineage: Option<Lineage>) -> Option<Lineage>;
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub struct EmptyActiveLineageSamplerError;
+
+#[allow(
+    clippy::module_name_repetitions,
+    clippy::inline_always,
+    clippy::inline_fn_without_body
+)]
+#[contract_trait]
+pub trait PeekableActiveLineageSampler<
+    H: Habitat,
+    G: RngCore,
+    N: SpeciationProbability<H>,
+    D: DispersalSampler<H, G>,
+    R: LineageReference<H>,
+    S: LineageStore<H, R>,
+    X: EmigrationExit<H, G, N, D, R, S>,
+    C: CoalescenceSampler<H, R, S>,
+    E: EventSampler<H, G, N, D, R, S, X, C>,
+    I: ImmigrationEntry,
+>: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
+{
+    #[debug_ensures(
+        ret.is_err() == (self.number_active_lineages() == 0),
+        "only returns Err when no more lineages remain"
+    )]
+    #[debug_ensures(match ret {
+        Ok(event_time) => event_time >= 0.0_f64,
+        Err(_) => true,
+    }, "next event time is non-negative")]
+    fn peek_time_of_next_event(
+        &mut self,
+        rng: &mut G,
+    ) -> Result<f64, EmptyActiveLineageSamplerError>;
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub trait OptionallyPeekableActiveLineageSampler<
+    H: Habitat,
+    G: RngCore,
+    N: SpeciationProbability<H>,
+    D: DispersalSampler<H, G>,
+    R: LineageReference<H>,
+    S: LineageStore<H, R>,
+    X: EmigrationExit<H, G, N, D, R, S>,
+    C: CoalescenceSampler<H, R, S>,
+    E: EventSampler<H, G, N, D, R, S, X, C>,
+    I: ImmigrationEntry,
+>: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
+{
+    fn peek_optional_time_of_next_event(&mut self, rng: &mut G) -> Option<f64>;
+}
+
+impl<
+        H: Habitat,
+        G: RngCore,
+        N: SpeciationProbability<H>,
+        D: DispersalSampler<H, G>,
+        R: LineageReference<H>,
+        S: LineageStore<H, R>,
+        X: EmigrationExit<H, G, N, D, R, S>,
+        C: CoalescenceSampler<H, R, S>,
+        E: EventSampler<H, G, N, D, R, S, X, C>,
+        I: ImmigrationEntry,
+        A: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>,
+    > OptionallyPeekableActiveLineageSampler<H, G, N, D, R, S, X, C, E, I> for A
+{
+    default fn peek_optional_time_of_next_event(&mut self, _rng: &mut G) -> Option<f64> {
+        None
+    }
+}
+
+impl<
+        H: Habitat,
+        G: RngCore,
+        N: SpeciationProbability<H>,
+        D: DispersalSampler<H, G>,
+        R: LineageReference<H>,
+        S: LineageStore<H, R>,
+        X: EmigrationExit<H, G, N, D, R, S>,
+        C: CoalescenceSampler<H, R, S>,
+        E: EventSampler<H, G, N, D, R, S, X, C>,
+        I: ImmigrationEntry,
+        A: PeekableActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>,
+    > OptionallyPeekableActiveLineageSampler<H, G, N, D, R, S, X, C, E, I> for A
+{
+    fn peek_optional_time_of_next_event(&mut self, rng: &mut G) -> Option<f64> {
+        self.peek_time_of_next_event(rng).ok()
+    }
 }

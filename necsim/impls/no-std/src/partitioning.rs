@@ -62,7 +62,9 @@ pub trait LocalPartition<P: ReporterContext>: Sized {
         immigration_mode: MigrationMode,
     ) -> Self::ImmigrantIterator<'_>;
 
-    fn reduce_vote_or(&self, local_vote: bool) -> bool;
+    fn reduce_vote_continue(&self, local_continue: bool) -> bool;
+
+    fn reduce_vote_min_time(&self, local_time: f64) -> Result<f64, f64>;
 
     fn wait_for_termination(&mut self) -> bool;
 
@@ -108,8 +110,12 @@ impl<P: ReporterContext> LocalPartition<P> for MonolithicLocalPartition<P> {
         ImmigrantPopIterator::new(&mut self.loopback)
     }
 
-    fn reduce_vote_or(&self, local_vote: bool) -> bool {
-        local_vote
+    fn reduce_vote_continue(&self, local_continue: bool) -> bool {
+        local_continue
+    }
+
+    fn reduce_vote_min_time(&self, local_time: f64) -> Result<f64, f64> {
+        Ok(local_time)
     }
 
     fn wait_for_termination(&mut self) -> bool {

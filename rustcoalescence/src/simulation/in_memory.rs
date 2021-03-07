@@ -63,14 +63,14 @@ pub fn simulate<R: ReporterContext, P: LocalPartition<R>>(
             (),
         ),
         #[cfg(feature = "necsim-skipping-gillespie")]
-        Algorithm::SkippingGillespie => SkippingGillespieSimulation::simulate(
+        Algorithm::SkippingGillespie(auxiliary) => SkippingGillespieSimulation::simulate(
             habitat,
             &dispersal,
             *common_args.speciation_probability_per_generation(),
             *common_args.sample_percentage(),
             *common_args.seed(),
             local_partition,
-            (),
+            *auxiliary,
         ),
         #[cfg(feature = "necsim-cuda")]
         Algorithm::Cuda(auxiliary) => CudaSimulation::simulate(
