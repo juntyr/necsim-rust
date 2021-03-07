@@ -75,7 +75,7 @@ pub fn simulate<R: ReporterContext, P: LocalPartition<R>>(
         // )
         // .map_err(|_| unreachable!("Non-Spatial GillespieSimulation can never fail.")),
         // #[cfg(feature = "necsim-skipping-gillespie")]
-        // Algorithm::SkippingGillespie => SkippingGillespieSimulation::simulate(
+        // Algorithm::SkippingGillespie(auxiliary) => SkippingGillespieSimulation::simulate(
         // *spatially_implicit_args.dynamic_meta(),
         // spatially_implicit_args.local_area(),
         // spatially_implicit_args.local_deme(),
@@ -86,7 +86,7 @@ pub fn simulate<R: ReporterContext, P: LocalPartition<R>>(
         // common_args.sample_percentage(),
         // common_args.seed(),
         // local_partition,
-        // (),
+        // *auxiliary,
         // )
         // .map_err(|_| unreachable!("Non-Spatial SkippingGillespieSimulation can never fail.")),
         // #[cfg(feature = "necsim-cuda")]

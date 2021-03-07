@@ -2,10 +2,9 @@ use std::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, BackedUp, Backup, CoherentLineageStore, Habitat, LineageReference,
-        RngCore, SeparableDispersalSampler,
+        ActiveLineageSampler, CoherentLineageStore, Habitat, LineageReference, RngCore,
+        SeparableDispersalSampler,
     },
-    lineage::MigratingLineage,
     simulation::{partial::event_sampler::PartialSimulation, Simulation},
 };
 
@@ -26,9 +25,6 @@ use necsim_impls_std::cogs::{
 };
 
 use necsim_impls_no_std::reporter::ReporterContext;
-
-mod reporter;
-use reporter::PartitionReporterProxy;
 
 #[allow(clippy::too_many_lines)]
 pub fn simulate<
@@ -104,83 +100,45 @@ pub fn simulate<
         .active_lineage_sampler(active_lineage_sampler)
         .build();
 
-    let safe_time_slice = 2.0_f64;
-
-    let mut global_safe_time = 0.0_f64;
-    let mut simulation_backup = simulation.backup();
-
-    let mut last_immigrants: Vec<BackedUp<MigratingLineage>> = Vec::new();
-    let mut immigrants: Vec<MigratingLineage> = Vec::new();
-
     let mut total_steps = 0_u64;
 
-    let mut proxy = PartitionReporterProxy::from(local_partition);
+    while local_partition.reduce_vote_continue(simulation.peek_time_of_next_event().is_some()) {
+        // Get the next local event time or +inf
+        //  (we already know at least one partition has some next event time)
+        let next_local_time = simulation
+            .peek_time_of_next_event()
+            .unwrap_or(f64::INFINITY);
 
-    loop {
-        let local_continue_simulation = loop {
+        // The partition with the next event gets to simulate just the next step
+        if let Ok(next_global_time) = local_partition.reduce_vote_min_time(next_local_time) {
             let (_, new_steps) = simulation
-                .simulate_incremental_until_before(global_safe_time + safe_time_slice, &mut proxy);
+                .simulate_incremental_until(next_global_time, local_partition.get_reporter());
+
             total_steps += new_steps;
 
-            // Send off the possible emigrant and recieve immigrants
-            immigrants.extend(proxy.local_partition().migrate_individuals(
+            // Send off any emigration that might have occurred
+            for immigrant in local_partition.migrate_individuals(
                 simulation.emigration_exit_mut(),
                 MigrationMode::Default,
                 MigrationMode::Default,
-            ));
-
-            while proxy.local_partition().wait_for_termination() {
-                immigrants.extend(proxy.local_partition().migrate_individuals(
-                    &mut std::iter::empty(),
-                    MigrationMode::Force,
-                    MigrationMode::Force,
-                ))
+            ) {
+                simulation.immigration_entry_mut().push(immigrant)
             }
+        }
 
-            immigrants.sort();
-
-            // A global rollback is required if at least one partition received unexpected
-            // immigration
-            if proxy
-                .local_partition()
-                .reduce_vote_or(immigrants != last_immigrants)
-            {
-                // Roll back the simulation to the last backup, clear out all generated events
-                simulation = simulation_backup.resume();
-                proxy.clear_events();
-
-                // Back up the previous immigrating lineages in last_immigrants
-                last_immigrants.clear();
-                for immigrant in &immigrants {
-                    last_immigrants.push(immigrant.backup())
-                }
-
-                // Move the immigrating lineages into the simulation's immigration entry
-                for immigrant in immigrants.drain(..) {
-                    simulation.immigration_entry_mut().push(immigrant)
-                }
-            } else {
-                immigrants.clear();
-                last_immigrants.clear();
-
-                break new_steps > 0;
+        // Synchronise after performing any inter-partition migration
+        while local_partition.wait_for_termination() {
+            for immigrant in local_partition.migrate_individuals(
+                &mut std::iter::empty(),
+                MigrationMode::Force,
+                MigrationMode::Force,
+            ) {
+                simulation.immigration_entry_mut().push(immigrant)
             }
-        };
-
-        // Globally advance the simulation to the next safe point
-        proxy.report_events();
-        simulation_backup = simulation.backup();
-        global_safe_time += safe_time_slice;
-
-        if !proxy
-            .local_partition()
-            .reduce_vote_or(local_continue_simulation)
-        {
-            break;
         }
     }
 
-    proxy.local_partition().reduce_global_time_steps(
+    local_partition.reduce_global_time_steps(
         simulation.active_lineage_sampler().get_time_of_last_event(),
         total_steps,
     )

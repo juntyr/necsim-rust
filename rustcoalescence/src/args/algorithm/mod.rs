@@ -6,6 +6,9 @@ pub mod cuda;
 #[cfg(feature = "necsim-independent")]
 pub mod independent;
 
+#[cfg(feature = "necsim-skipping-gillespie")]
+pub mod skipping_gillespie;
+
 #[derive(Debug)]
 #[non_exhaustive]
 #[allow(clippy::empty_enum)]
@@ -15,7 +18,7 @@ pub enum Algorithm {
     #[cfg(feature = "necsim-gillespie")]
     Gillespie,
     #[cfg(feature = "necsim-skipping-gillespie")]
-    SkippingGillespie,
+    SkippingGillespie(necsim_skipping_gillespie::SkippingGillespieArguments),
     #[cfg(feature = "necsim-cuda")]
     Cuda(necsim_cuda::CudaArguments),
     #[cfg(feature = "necsim-independent")]
@@ -40,9 +43,29 @@ impl std::str::FromStr for Algorithm {
             #[cfg(feature = "necsim-gillespie")]
             "Gillespie" | _ if s.eq_ignore_ascii_case("Gillespie") => Ok(Algorithm::Gillespie),
             #[cfg(feature = "necsim-skipping-gillespie")]
-            "Skipping-Gillespie" | _ if s.eq_ignore_ascii_case("Skipping-Gillespie") => {
-                Ok(Algorithm::SkippingGillespie)
-            },
+            "Skipping-Gillespie" | _
+                if s.to_ascii_lowercase().starts_with("skipping-gillespie") =>
+            {
+                match s["skipping-gillespie".len()..]
+                    .strip_prefix("[")
+                    .and_then(|s| s.strip_suffix("]"))
+                {
+                    Some(suffix) if !suffix.is_empty() => {
+                        match ron::Deserializer::from_str(&format!("({})", suffix)).and_then(
+                            |mut de| skipping_gillespie::ArgumentsDef::deserialize(&mut de),
+                        ) {
+                            Ok(args) => Ok(Algorithm::SkippingGillespie(args)),
+                            Err(err) => Err(format!(
+                                "Invalid Skipping-Gillespie algorithm arguments [{}]: {}",
+                                suffix, err
+                            )),
+                        }
+                    },
+                    _ => Ok(Algorithm::SkippingGillespie(
+                        necsim_skipping_gillespie::SkippingGillespieArguments::default(),
+                    )),
+                }
+            }
             #[cfg(feature = "necsim-cuda")]
             "Cuda" | _ if s.to_ascii_lowercase().starts_with("cuda") => {
                 match s["cuda".len()..]

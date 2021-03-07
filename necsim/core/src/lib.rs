@@ -5,6 +5,7 @@
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
 #![feature(total_cmp)]
+#![feature(specialization)]
 
 extern crate alloc;
 
