@@ -5,6 +5,7 @@ use necsim_core::{
         ActiveLineageSampler, CoherentLineageStore, Habitat, LineageReference, RngCore,
         SeparableDispersalSampler,
     },
+    reporter::Reporter,
     simulation::{partial::event_sampler::PartialSimulation, Simulation},
 };
 
@@ -99,6 +100,19 @@ pub fn simulate<
         .immigration_entry(immigration_entry)
         .active_lineage_sampler(active_lineage_sampler)
         .build();
+
+    // TODO: This is hacky but ensures that the progress bar has the expected target
+    if !local_partition.is_root() {
+        local_partition
+            .get_reporter()
+            .report_progress(simulation.active_lineage_sampler().number_active_lineages() as u64);
+    }
+    local_partition.reduce_vote_continue(true);
+    if local_partition.is_root() {
+        local_partition
+            .get_reporter()
+            .report_progress(simulation.active_lineage_sampler().number_active_lineages() as u64);
+    }
 
     let mut total_steps = 0_u64;
 

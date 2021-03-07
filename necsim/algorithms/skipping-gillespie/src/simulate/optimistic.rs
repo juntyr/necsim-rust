@@ -6,6 +6,7 @@ use necsim_core::{
         RngCore, SeparableDispersalSampler,
     },
     lineage::MigratingLineage,
+    reporter::Reporter,
     simulation::{partial::event_sampler::PartialSimulation, Simulation},
 };
 
@@ -103,6 +104,19 @@ pub fn simulate<
         .active_lineage_sampler(active_lineage_sampler)
         .build();
 
+    // TODO: This is hacky but ensures that the progress bar has the expected target
+    if !local_partition.is_root() {
+        local_partition
+            .get_reporter()
+            .report_progress(simulation.active_lineage_sampler().number_active_lineages() as u64);
+    }
+    local_partition.reduce_vote_continue(true);
+    if local_partition.is_root() {
+        local_partition
+            .get_reporter()
+            .report_progress(simulation.active_lineage_sampler().number_active_lineages() as u64);
+    }
+
     let safe_time_slice = 2.0_f64;
 
     let mut global_safe_time = 0.0_f64;
@@ -115,8 +129,11 @@ pub fn simulate<
 
     let mut proxy = PartitionReporterProxy::from(local_partition);
 
-    loop {
-        let local_continue_simulation = loop {
+    while proxy
+        .local_partition()
+        .reduce_vote_continue(simulation.peek_time_of_next_event().is_some())
+    {
+        loop {
             let (_, new_steps) = simulation
                 .simulate_incremental_until_before(global_safe_time + safe_time_slice, &mut proxy);
             total_steps += new_steps;
@@ -162,21 +179,14 @@ pub fn simulate<
                 immigrants.clear();
                 last_immigrants.clear();
 
-                break new_steps > 0;
+                break;
             }
-        };
+        }
 
         // Globally advance the simulation to the next safe point
         proxy.report_events();
         simulation_backup = simulation.backup();
         global_safe_time += safe_time_slice;
-
-        if !proxy
-            .local_partition()
-            .reduce_vote_continue(local_continue_simulation)
-        {
-            break;
-        }
     }
 
     proxy.local_partition().reduce_global_time_steps(

@@ -95,7 +95,7 @@ impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>>
         lineage_store_includes_self: bool,
     ) -> f64 {
         // If the lineage store includes self, the population must be decremented
-        // to avoid coalescence with the self lineage
+        //  to avoid coalescence with the currently active lineage
 
         #[allow(clippy::cast_precision_loss)]
         let population = (lineage_store

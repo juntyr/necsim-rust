@@ -48,8 +48,6 @@ impl RustcoalescenceReporterContext {
                 execution_time.execution.as_secs_f32(),
                 execution_time.cleanup.as_secs_f32()
             );
-        } else {
-            info!("The simulation was not executed.");
         }
 
         if REPORT_ANALYSIS {
