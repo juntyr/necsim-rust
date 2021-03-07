@@ -5,7 +5,7 @@ use necsim_core::{
         ActiveLineageSampler, Backup, CoherentLineageStore, Habitat, LineageReference, RngCore,
         SeparableDispersalSampler,
     },
-    reporter::NullReporter,
+    reporter::{NullReporter, Reporter},
     simulation::{partial::event_sampler::PartialSimulation, Simulation},
 };
 
@@ -101,6 +101,19 @@ pub fn simulate<
         .active_lineage_sampler(active_lineage_sampler)
         .build();
 
+    // TODO: This is hacky but ensures that the progress bar has the expected target
+    if !local_partition.is_root() {
+        local_partition
+            .get_reporter()
+            .report_progress(simulation.active_lineage_sampler().number_active_lineages() as u64);
+    }
+    local_partition.reduce_vote_continue(true);
+    if local_partition.is_root() {
+        local_partition
+            .get_reporter()
+            .report_progress(simulation.active_lineage_sampler().number_active_lineages() as u64);
+    }
+
     let mut simulation_backup = simulation.backup();
 
     let mut total_steps = 0_u64;
@@ -155,9 +168,6 @@ pub fn simulate<
             },
         }
 
-        // Advance the simulation backup to this new safe point
-        simulation_backup = simulation.backup();
-
         // Synchronise after performing any inter-partition migration
         while local_partition.wait_for_termination() {
             for immigrant in local_partition.migrate_individuals(
@@ -168,6 +178,9 @@ pub fn simulate<
                 simulation.immigration_entry_mut().push(immigrant)
             }
         }
+
+        // Advance the simulation backup to this new safe point
+        simulation_backup = simulation.backup();
     }
 
     local_partition.reduce_global_time_steps(
