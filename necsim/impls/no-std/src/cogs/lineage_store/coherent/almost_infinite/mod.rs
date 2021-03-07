@@ -28,8 +28,8 @@ impl Index<InMemoryLineageReference> for CoherentAlmostInfiniteLineageStore {
 
     #[must_use]
     #[debug_requires(
-        Into::<usize>::into(reference) < self.lineages_store.len(),
-        "lineage reference is in range"
+        self.lineages_store.contains(reference.into()),
+        "lineage reference is valid in the lineage store"
     )]
     fn index(&self, reference: InMemoryLineageReference) -> &Self::Output {
         &self.lineages_store[Into::<usize>::into(reference)]

@@ -91,8 +91,6 @@ impl<
                 }
             });
 
-        active_locations.shrink_to_fit();
-
         Self {
             active_locations: PriorityQueue::from(active_locations),
             number_active_lineages,
