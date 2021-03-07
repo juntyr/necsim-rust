@@ -3,9 +3,10 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 #[serde(remote = "necsim_skipping_gillespie::ParallelismMode")]
 enum ParallelismModeDef {
-    Optimistic,
+    Optimistic(f64),
     Lockstep,
     OptimisticLockstep,
+    Averaging(f64),
 }
 
 #[derive(Deserialize)]
