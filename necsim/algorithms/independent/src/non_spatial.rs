@@ -56,6 +56,13 @@ impl NonSpatialSimulation for IndependentSimulation {
             )
             .map(|indexed_location| Lineage::new(indexed_location, &habitat))
             .collect(),
+            // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
+            PartitionMode::IsolatedIndividuals(rank, partitions) => NonSpatialOriginSampler::new(
+                lineage_origins.partition(rank, partitions.get()),
+                &habitat,
+            )
+            .map(|indexed_location| Lineage::new(indexed_location, &habitat))
+            .collect(),
             // Apply lineage origin decomposition in the `Landscape` mode
             PartitionMode::Landscape | PartitionMode::Probabilistic => {
                 DecompositionOriginSampler::new(

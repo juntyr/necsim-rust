@@ -12,7 +12,7 @@ use necsim_impls_no_std::cogs::{
 };
 
 use necsim_impls_no_std::{
-    partitioning::{LocalPartition, MonolithicLocalPartition},
+    partitioning::{monolithic::MonolithicLocalPartition, LocalPartition},
     reporter::{GuardedReporter, ReporterContext},
 };
 

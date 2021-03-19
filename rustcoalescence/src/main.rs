@@ -42,16 +42,28 @@ fn main() -> Result<()> {
             let partitioning = {
                 #[cfg(feature = "necsim-mpi")]
                 {
-                    necsim_impls_mpi::MpiPartitioning::initialise(&std::path::PathBuf::from(
-                        "event_log",
-                    ))
+                    necsim_impls_mpi::MpiPartitioning::initialise(
+                        simulate_args.common_args().event_log().as_deref(),
+                    )
                     .with_context(|| "Failed to initialise MPI.")?
                 }
                 #[cfg(not(feature = "necsim-mpi"))]
                 {
-                    necsim_impls_no_std::partitioning::MonolithicPartitioning::default()
+                    necsim_impls_no_std::partitioning::monolithic::MonolithicPartitioning::default()
                 }
             };
+
+            #[cfg(feature = "necsim-independent")]
+            if let args::Algorithm::Independent(necsim_independent::IndependentArguments {
+                partition_mode:
+                    necsim_independent::PartitionMode::IsolatedIndividuals(_rank, partitions),
+                ..
+            }) = simulate_args.common_args().algorithm()
+            {
+                if partitions.get() > 1 && !partitioning.is_monolithic() {
+                    anyhow::bail!("MPI partitioning is incompatible with isolated partitions.");
+                }
+            }
 
             // Only log to stderr if the partition is the root partition
             log::set_max_level(if partitioning.is_root() {

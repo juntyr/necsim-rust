@@ -7,6 +7,8 @@
 #[macro_use]
 extern crate contracts;
 
+use std::num::NonZeroU32;
+
 use anyhow::Result;
 
 use necsim_core::{
@@ -46,8 +48,9 @@ pub enum DedupMode {
 
 #[derive(Copy, Clone, Debug)]
 pub enum PartitionMode {
-    Landscape,
     Individuals,
+    IsolatedIndividuals(u32, NonZeroU32),
+    Landscape,
     Probabilistic,
 }
 
@@ -112,6 +115,16 @@ impl IndependentSimulation {
             "Independent algorithm dedup_mode={:?} dynamic scalar must be non-negative.",
             auxiliary.dedup_mode,
         );
+        anyhow::ensure!(
+            if let PartitionMode::IsolatedIndividuals(rank, partitions) = auxiliary.partition_mode {
+                rank < partitions.get()
+            } else {
+                true
+            },
+            "Independent algorithm partition_mode={:?} isolated rank must be in range [0, \
+             partitions).",
+            auxiliary.partition_mode,
+        );
 
         // TODO: how do I maintain event order during a monolithic run when events are
         //       immediately reported?
@@ -137,17 +150,19 @@ impl IndependentSimulation {
             });
 
         let (time, steps) = match auxiliary.partition_mode {
-            PartitionMode::Individuals => partitioned::individuals::simulate(
-                habitat,
-                rng,
-                speciation_probability,
-                dispersal_sampler,
-                lineage_store,
-                lineages.into(),
-                &mut proxy,
-                min_spec_samples,
-                auxiliary,
-            ),
+            PartitionMode::Individuals | PartitionMode::IsolatedIndividuals(..) => {
+                partitioned::individuals::simulate(
+                    habitat,
+                    rng,
+                    speciation_probability,
+                    dispersal_sampler,
+                    lineage_store,
+                    lineages.into(),
+                    &mut proxy,
+                    min_spec_samples,
+                    auxiliary,
+                )
+            },
             PartitionMode::Landscape => partitioned::landscape::simulate(
                 habitat,
                 rng,
