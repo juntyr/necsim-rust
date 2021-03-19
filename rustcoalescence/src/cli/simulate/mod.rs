@@ -7,6 +7,11 @@ use crate::{
     simulation,
 };
 
+#[cfg(not(feature = "necsim-mpi"))]
+pub mod monolithic;
+#[cfg(feature = "necsim-mpi")]
+pub mod mpi;
+
 #[allow(clippy::module_name_repetitions)]
 pub fn simulate_with_logger<R: ReporterContext, P: LocalPartition<R>>(
     mut local_partition: Box<P>,

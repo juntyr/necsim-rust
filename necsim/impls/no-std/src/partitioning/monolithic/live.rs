@@ -9,17 +9,17 @@ use crate::{
 };
 
 #[allow(clippy::module_name_repetitions)]
-pub struct MonolithicPartitioning(());
+pub struct LiveMonolithicPartitioning(());
 
-impl Default for MonolithicPartitioning {
+impl Default for LiveMonolithicPartitioning {
     fn default() -> Self {
         Self(())
     }
 }
 
 #[contract_trait]
-impl Partitioning for MonolithicPartitioning {
-    type LocalPartition<P: ReporterContext> = MonolithicLocalPartition<P>;
+impl Partitioning for LiveMonolithicPartitioning {
+    type LocalPartition<P: ReporterContext> = LiveMonolithicLocalPartition<P>;
 
     fn is_monolithic(&self) -> bool {
         true
@@ -37,18 +37,18 @@ impl Partitioning for MonolithicPartitioning {
         self,
         reporter_context: P,
     ) -> Self::LocalPartition<P> {
-        MonolithicLocalPartition::from_reporter(reporter_context.build_guarded())
+        LiveMonolithicLocalPartition::from_reporter(reporter_context.build_guarded())
     }
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct MonolithicLocalPartition<P: ReporterContext> {
+pub struct LiveMonolithicLocalPartition<P: ReporterContext> {
     reporter: GuardedReporter<P::Reporter, P::Finaliser>,
     loopback: Vec<MigratingLineage>,
 }
 
 #[contract_trait]
-impl<P: ReporterContext> LocalPartition<P> for MonolithicLocalPartition<P> {
+impl<P: ReporterContext> LocalPartition<P> for LiveMonolithicLocalPartition<P> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
     type Reporter = P::Reporter;
 
@@ -98,7 +98,7 @@ impl<P: ReporterContext> LocalPartition<P> for MonolithicLocalPartition<P> {
     }
 }
 
-impl<P: ReporterContext> MonolithicLocalPartition<P> {
+impl<P: ReporterContext> LiveMonolithicLocalPartition<P> {
     pub fn from_reporter(reporter_guard: GuardedReporter<P::Reporter, P::Finaliser>) -> Self {
         Self {
             reporter: reporter_guard,
