@@ -7,7 +7,10 @@ use necsim_core::{
 };
 
 use necsim_impls_no_std::{
-    partitioning::{ImmigrantPopIterator, LocalPartition, MigrationMode, MonolithicLocalPartition},
+    partitioning::{
+        iterator::ImmigrantPopIterator, monolithic::MonolithicLocalPartition, LocalPartition,
+        MigrationMode,
+    },
     reporter::ReporterContext,
 };
 

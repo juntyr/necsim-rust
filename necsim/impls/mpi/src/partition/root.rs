@@ -20,7 +20,7 @@ use necsim_core::{
 };
 
 use necsim_impls_no_std::{
-    partitioning::{ImmigrantPopIterator, LocalPartition, MigrationMode},
+    partitioning::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode},
     reporter::{GuardedReporter, ReporterContext},
 };
 use necsim_impls_std::reporter::durable_log::DurableLogReporter;

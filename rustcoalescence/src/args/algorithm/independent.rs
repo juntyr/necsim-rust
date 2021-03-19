@@ -1,3 +1,5 @@
+use std::num::NonZeroU32;
+
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -11,8 +13,9 @@ enum DedupModeDef {
 #[derive(Deserialize)]
 #[serde(remote = "necsim_independent::PartitionMode")]
 pub enum PartitionModeDef {
-    Landscape,
     Individuals,
+    IsolatedIndividuals(u32, NonZeroU32),
+    Landscape,
     Probabilistic,
 }
 

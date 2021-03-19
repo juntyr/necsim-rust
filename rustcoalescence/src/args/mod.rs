@@ -43,6 +43,8 @@ pub struct CommonArgs {
     seed: u64,
     #[structopt(case_insensitive = true, long = "algorithm")]
     algorithm: Algorithm,
+    #[structopt(parse(from_os_str), long = "log")]
+    event_log: Option<PathBuf>,
 }
 
 #[derive(Debug, StructOpt)]

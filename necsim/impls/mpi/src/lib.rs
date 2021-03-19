@@ -2,6 +2,7 @@
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
 #![feature(stmt_expr_attributes)]
+#![feature(result_flattening)]
 
 #[macro_use]
 extern crate contracts;
@@ -20,7 +21,7 @@ use mpi::{
 use thiserror::Error;
 
 use necsim_impls_no_std::{
-    partitioning::{MonolithicLocalPartition, Partitioning},
+    partitioning::{monolithic::MonolithicLocalPartition, Partitioning},
     reporter::ReporterContext,
 };
 
@@ -29,13 +30,17 @@ mod partition;
 pub use partition::{MpiLocalPartition, MpiParallelPartition, MpiRootPartition};
 
 #[derive(Error, Debug)]
-#[error("MPI has already been initialised.")]
-pub struct MpiAlreadyInitialisedError;
+pub enum MpiPartitioningError {
+    #[error("MPI has already been initialised.")]
+    AlreadyInitialised,
+    #[error("MPI needs a valid event log path.")]
+    MissingEventLog,
+}
 
 pub struct MpiPartitioning {
     universe: Universe,
     world: SystemCommunicator,
-    event_log_path: PathBuf,
+    event_log_path: Option<PathBuf>,
 }
 
 impl MpiPartitioning {
@@ -44,15 +49,28 @@ impl MpiPartitioning {
     const ROOT_RANK: Rank = 0;
 
     /// # Errors
-    /// Returns `MpiAlreadyInitialisedError` if MPI was already initialised.
-    pub fn initialise(event_log_path: &Path) -> Result<Self, MpiAlreadyInitialisedError> {
+    /// Returns `AlreadyInitialised` if MPI was already initialised.
+    ///
+    /// Returns `MissingEventLog` if the partitioning is non-monolithic and
+    /// `event_log_path` is `None`.
+    pub fn initialise(event_log_path: Option<&Path>) -> Result<Self, MpiPartitioningError> {
         mpi::initialize()
-            .map(|universe| Self {
-                world: universe.world(),
-                universe,
-                event_log_path: PathBuf::from(event_log_path),
+            .map(|universe| {
+                let world = universe.world();
+
+                let event_log_path = match event_log_path {
+                    None if world.size() > 1 => Err(MpiPartitioningError::MissingEventLog),
+                    _ => Ok(event_log_path.map(PathBuf::from)),
+                }?;
+
+                Ok(Self {
+                    universe,
+                    world,
+                    event_log_path,
+                })
             })
-            .ok_or(MpiAlreadyInitialisedError)
+            .ok_or(MpiPartitioningError::AlreadyInitialised)
+            .flatten()
     }
 
     pub fn update_message_buffer_size(&mut self, size: usize) {
@@ -83,22 +101,27 @@ impl Partitioning for MpiPartitioning {
         self,
         reporter_context: P,
     ) -> Self::LocalPartition<P> {
-        if self.is_monolithic() {
+        #[allow(clippy::option_if_let_else)]
+        if let Some(event_log_path) = &self.event_log_path {
+            // !self.is_monolithic()
+            if self.is_root() {
+                MpiLocalPartition::Root(Box::new(MpiRootPartition::new(
+                    self.universe,
+                    self.world,
+                    reporter_context.build_guarded(),
+                    &event_log_path,
+                )))
+            } else {
+                MpiLocalPartition::Parallel(Box::new(MpiParallelPartition::new(
+                    self.universe,
+                    self.world,
+                    &event_log_path,
+                )))
+            }
+        } else {
+            // self.is_monolithic()
             MpiLocalPartition::Monolithic(Box::new(MonolithicLocalPartition::from_reporter(
                 reporter_context.build_guarded(),
-            )))
-        } else if self.is_root() {
-            MpiLocalPartition::Root(Box::new(MpiRootPartition::new(
-                self.universe,
-                self.world,
-                reporter_context.build_guarded(),
-                &self.event_log_path,
-            )))
-        } else {
-            MpiLocalPartition::Parallel(Box::new(MpiParallelPartition::new(
-                self.universe,
-                self.world,
-                &self.event_log_path,
             )))
         }
     }
