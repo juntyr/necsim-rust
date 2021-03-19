@@ -8,11 +8,13 @@ use necsim_core::{
 
 use necsim_impls_no_std::{
     partitioning::{
-        iterator::ImmigrantPopIterator, monolithic::MonolithicLocalPartition, LocalPartition,
-        MigrationMode,
+        iterator::ImmigrantPopIterator, monolithic::live::LiveMonolithicLocalPartition,
+        LocalPartition, MigrationMode,
     },
     reporter::ReporterContext,
 };
+
+use necsim_impls_std::partitioning::monolithic::recorded::RecordedMonolithicLocalPartition;
 
 mod parallel;
 mod root;
@@ -22,7 +24,8 @@ pub use root::MpiRootPartition;
 
 #[allow(clippy::module_name_repetitions)]
 pub enum MpiLocalPartition<P: ReporterContext> {
-    Monolithic(Box<MonolithicLocalPartition<P>>),
+    LiveMonolithic(Box<LiveMonolithicLocalPartition<P>>),
+    RecordedMonolithic(Box<RecordedMonolithicLocalPartition<P>>),
     Root(Box<MpiRootPartition<P>>),
     Parallel(Box<MpiParallelPartition<P>>),
 }
@@ -38,7 +41,8 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
 
     fn is_root(&self) -> bool {
         match self {
-            Self::Monolithic(partition) => partition.is_root(),
+            Self::LiveMonolithic(partition) => partition.is_root(),
+            Self::RecordedMonolithic(partition) => partition.is_root(),
             Self::Root(partition) => partition.is_root(),
             Self::Parallel(partition) => partition.is_root(),
         }
@@ -46,7 +50,8 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
 
     fn get_partition_rank(&self) -> u32 {
         match self {
-            Self::Monolithic(partition) => partition.get_partition_rank(),
+            Self::LiveMonolithic(partition) => partition.get_partition_rank(),
+            Self::RecordedMonolithic(partition) => partition.get_partition_rank(),
             Self::Root(partition) => partition.get_partition_rank(),
             Self::Parallel(partition) => partition.get_partition_rank(),
         }
@@ -54,7 +59,8 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
 
     fn get_number_of_partitions(&self) -> NonZeroU32 {
         match self {
-            Self::Monolithic(partition) => partition.get_number_of_partitions(),
+            Self::LiveMonolithic(partition) => partition.get_number_of_partitions(),
+            Self::RecordedMonolithic(partition) => partition.get_number_of_partitions(),
             Self::Root(partition) => partition.get_number_of_partitions(),
             Self::Parallel(partition) => partition.get_number_of_partitions(),
         }
@@ -67,7 +73,10 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
         immigration_mode: MigrationMode,
     ) -> Self::ImmigrantIterator<'_> {
         match self {
-            Self::Monolithic(partition) => {
+            Self::LiveMonolithic(partition) => {
+                partition.migrate_individuals(emigrants, emigration_mode, immigration_mode)
+            },
+            Self::RecordedMonolithic(partition) => {
                 partition.migrate_individuals(emigrants, emigration_mode, immigration_mode)
             },
             Self::Root(partition) => {
@@ -81,7 +90,8 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
 
     fn reduce_vote_continue(&self, local_continue: bool) -> bool {
         match self {
-            Self::Monolithic(partition) => partition.reduce_vote_continue(local_continue),
+            Self::LiveMonolithic(partition) => partition.reduce_vote_continue(local_continue),
+            Self::RecordedMonolithic(partition) => partition.reduce_vote_continue(local_continue),
             Self::Root(partition) => partition.reduce_vote_continue(local_continue),
             Self::Parallel(partition) => partition.reduce_vote_continue(local_continue),
         }
@@ -89,7 +99,8 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
 
     fn reduce_vote_min_time(&self, local_time: f64) -> Result<f64, f64> {
         match self {
-            Self::Monolithic(partition) => partition.reduce_vote_min_time(local_time),
+            Self::LiveMonolithic(partition) => partition.reduce_vote_min_time(local_time),
+            Self::RecordedMonolithic(partition) => partition.reduce_vote_min_time(local_time),
             Self::Root(partition) => partition.reduce_vote_min_time(local_time),
             Self::Parallel(partition) => partition.reduce_vote_min_time(local_time),
         }
@@ -97,7 +108,8 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
 
     fn wait_for_termination(&mut self) -> bool {
         match self {
-            Self::Monolithic(partition) => partition.wait_for_termination(),
+            Self::LiveMonolithic(partition) => partition.wait_for_termination(),
+            Self::RecordedMonolithic(partition) => partition.wait_for_termination(),
             Self::Root(partition) => partition.wait_for_termination(),
             Self::Parallel(partition) => partition.wait_for_termination(),
         }
@@ -105,7 +117,10 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
 
     fn reduce_global_time_steps(&self, local_time: f64, local_steps: u64) -> (f64, u64) {
         match self {
-            Self::Monolithic(partition) => {
+            Self::LiveMonolithic(partition) => {
+                partition.reduce_global_time_steps(local_time, local_steps)
+            },
+            Self::RecordedMonolithic(partition) => {
                 partition.reduce_global_time_steps(local_time, local_steps)
             },
             Self::Root(partition) => partition.reduce_global_time_steps(local_time, local_steps),
@@ -120,7 +135,8 @@ impl<P: ReporterContext> Reporter for MpiLocalPartition<P> {
     #[inline]
     fn report_event(&mut self, event: &Event) {
         match self {
-            Self::Monolithic(partition) => partition.get_reporter().report_event(event),
+            Self::LiveMonolithic(partition) => partition.get_reporter().report_event(event),
+            Self::RecordedMonolithic(partition) => partition.get_reporter().report_event(event),
             Self::Root(partition) => partition.get_reporter().report_event(event),
             Self::Parallel(partition) => partition.get_reporter().report_event(event),
         }
@@ -129,7 +145,10 @@ impl<P: ReporterContext> Reporter for MpiLocalPartition<P> {
     #[inline]
     fn report_progress(&mut self, remaining: u64) {
         match self {
-            Self::Monolithic(partition) => partition.get_reporter().report_progress(remaining),
+            Self::LiveMonolithic(partition) => partition.get_reporter().report_progress(remaining),
+            Self::RecordedMonolithic(partition) => {
+                partition.get_reporter().report_progress(remaining)
+            },
             Self::Root(partition) => partition.get_reporter().report_progress(remaining),
             Self::Parallel(partition) => partition.get_reporter().report_progress(remaining),
         }

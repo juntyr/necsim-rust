@@ -12,7 +12,7 @@ use necsim_impls_no_std::cogs::{
 };
 
 use necsim_impls_no_std::{
-    partitioning::{monolithic::MonolithicLocalPartition, LocalPartition},
+    partitioning::{monolithic::live::LiveMonolithicLocalPartition, LocalPartition},
     reporter::{GuardedReporter, ReporterContext},
 };
 
@@ -55,14 +55,14 @@ pub fn simulate_static<R: ReporterContext, P: LocalPartition<R>>(
         InMemoryLineageReference,
         CoherentInMemoryLineageStore<_>,
         MigrationReporterContext<_>,
-        MonolithicLocalPartition<_>,
+        LiveMonolithicLocalPartition<_>,
     >(
         local_habitat,
         local_speciation_probability,
         local_dispersal_sampler,
         local_lineage_store,
         seed,
-        &mut MonolithicLocalPartition::from_reporter(
+        &mut LiveMonolithicLocalPartition::from_reporter(
             MigrationReporterContext::new(|migration_reporter| {
                 number_of_migrations = migration_reporter.biodiversity()
             })

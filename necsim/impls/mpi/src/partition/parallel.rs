@@ -1,7 +1,6 @@
 use std::{
     marker::PhantomData,
     num::NonZeroU32,
-    path::{Path, PathBuf},
     time::{Duration, Instant},
 };
 
@@ -24,7 +23,7 @@ use necsim_impls_no_std::{
     partitioning::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode},
     reporter::ReporterContext,
 };
-use necsim_impls_std::reporter::durable_log::DurableLogReporter;
+use necsim_impls_std::event_log::recorder::EventLogRecorder;
 
 use crate::MpiPartitioning;
 
@@ -45,7 +44,7 @@ pub struct MpiParallelPartition<P: ReporterContext> {
     emigration_requests: Box<[Option<Request<'static, StaticScope>>]>,
     barrier: Option<Request<'static, StaticScope>>,
     communicated_since_last_barrier: bool,
-    event_reporter: DurableLogReporter,
+    recorder: EventLogRecorder,
     _marker: PhantomData<P>,
 }
 
@@ -72,13 +71,7 @@ impl<P: ReporterContext> MpiParallelPartition<P> {
     const MPI_PROGRESS_WAIT_TIME: Duration = Duration::from_millis(100_u64);
 
     #[must_use]
-    /// # Panics
-    /// Panics iff the `DurableLogReporter` cannot be created at
-    /// `event_log_path`
-    pub fn new(universe: Universe, world: SystemCommunicator, event_log_path: &Path) -> Self {
-        let mut event_log_path = PathBuf::from(event_log_path);
-        event_log_path.push(world.rank().to_string());
-
+    pub fn new(universe: Universe, world: SystemCommunicator, recorder: EventLogRecorder) -> Self {
         #[allow(clippy::cast_sign_loss)]
         let world_size = world.size() as usize;
 
@@ -105,7 +98,7 @@ impl<P: ReporterContext> MpiParallelPartition<P> {
             emigration_requests: emigration_requests.into_boxed_slice(),
             barrier: None,
             communicated_since_last_barrier: false,
-            event_reporter: DurableLogReporter::try_new(&event_log_path).unwrap(),
+            recorder,
             _marker: PhantomData::<P>,
         }
     }
@@ -349,7 +342,7 @@ impl<P: ReporterContext> Reporter for MpiParallelPartition<P> {
         if (Self::REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
             || (Self::REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
         {
-            self.event_reporter.report_event(event);
+            self.recorder.record_event(event);
         }
     }
 

@@ -77,7 +77,6 @@ impl ReporterContext for RustcoalescenceReporterContext {
         let progress_reporter = ProgressReporter::default();
 
         // II. Group the reporters into one static group type
-        // 245
         let reporter_group = ReporterGroup![
             biodiversity_reporter,
             // csv_reporter,

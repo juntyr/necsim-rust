@@ -1,6 +1,5 @@
 use std::{
     num::NonZeroU32,
-    path::{Path, PathBuf},
     time::{Duration, Instant},
 };
 
@@ -23,7 +22,7 @@ use necsim_impls_no_std::{
     partitioning::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode},
     reporter::{GuardedReporter, ReporterContext},
 };
-use necsim_impls_std::reporter::durable_log::DurableLogReporter;
+use necsim_impls_std::event_log::recorder::EventLogRecorder;
 
 use crate::MpiPartitioning;
 
@@ -41,7 +40,7 @@ pub struct MpiRootPartition<P: ReporterContext> {
     last_migration_times: Box<[Instant]>,
     emigration_requests: Box<[Option<Request<'static, StaticScope>>]>,
     reporter: GuardedReporter<P::Reporter, P::Finaliser>,
-    event_reporter: DurableLogReporter,
+    recorder: EventLogRecorder,
     barrier: Option<Request<'static, StaticScope>>,
     communicated_since_last_barrier: bool,
 }
@@ -65,18 +64,12 @@ impl<P: ReporterContext> MpiRootPartition<P> {
     const MPI_PROGRESS_WAIT_TIME: Duration = Duration::from_millis(100_u64);
 
     #[must_use]
-    /// # Panics
-    /// Panics iff the `DurableLogReporter` cannot be created at
-    /// `event_log_path`
     pub fn new(
         universe: Universe,
         world: SystemCommunicator,
         reporter: GuardedReporter<P::Reporter, P::Finaliser>,
-        event_log_path: &Path,
+        recorder: EventLogRecorder,
     ) -> Self {
-        let mut event_log_path = PathBuf::from(event_log_path);
-        event_log_path.push(world.rank().to_string());
-
         #[allow(clippy::cast_sign_loss)]
         let world_size = world.size() as usize;
 
@@ -102,7 +95,7 @@ impl<P: ReporterContext> MpiRootPartition<P> {
             last_migration_times: vec![now; world_size].into_boxed_slice(),
             emigration_requests: emigration_requests.into_boxed_slice(),
             reporter,
-            event_reporter: DurableLogReporter::try_new(&event_log_path).unwrap(),
+            recorder,
             barrier: None,
             communicated_since_last_barrier: false,
         }
@@ -350,7 +343,7 @@ impl<P: ReporterContext> Reporter for MpiRootPartition<P> {
         if (Self::REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
             || (Self::REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
         {
-            self.event_reporter.report_event(event);
+            self.recorder.record_event(event);
         }
     }
 

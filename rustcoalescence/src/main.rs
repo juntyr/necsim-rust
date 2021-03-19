@@ -14,8 +14,6 @@ use anyhow::{Context, Result};
 use log::LevelFilter;
 use structopt::StructOpt;
 
-use necsim_impls_no_std::partitioning::Partitioning;
-
 mod args;
 mod cli;
 mod maps;
@@ -26,7 +24,7 @@ mod tiff;
 
 use args::RustcoalescenceArgs;
 use minimal_logger::MinimalLogger;
-use reporter::RustcoalescenceReporterContext as ReporterContext;
+use reporter::RustcoalescenceReporterContext;
 
 static MINIMAL_LOGGER: MinimalLogger = MinimalLogger;
 
@@ -38,67 +36,13 @@ fn main() -> Result<()> {
 
     match args {
         RustcoalescenceArgs::Simulate(ref simulate_args) => {
-            // Initialise the simulation partitioning
-            let partitioning = {
-                #[cfg(feature = "necsim-mpi")]
-                {
-                    necsim_impls_mpi::MpiPartitioning::initialise(
-                        simulate_args.common_args().event_log().as_deref(),
-                    )
-                    .with_context(|| "Failed to initialise MPI.")?
-                }
-                #[cfg(not(feature = "necsim-mpi"))]
-                {
-                    necsim_impls_no_std::partitioning::monolithic::MonolithicPartitioning::default()
-                }
-            };
-
-            #[cfg(feature = "necsim-independent")]
-            if let args::Algorithm::Independent(necsim_independent::IndependentArguments {
-                partition_mode:
-                    necsim_independent::PartitionMode::IsolatedIndividuals(_rank, partitions),
-                ..
-            }) = simulate_args.common_args().algorithm()
-            {
-                if partitions.get() > 1 && !partitioning.is_monolithic() {
-                    anyhow::bail!("MPI partitioning is incompatible with isolated partitions.");
-                }
-            }
-
-            // Only log to stderr if the partition is the root partition
-            log::set_max_level(if partitioning.is_root() {
-                LevelFilter::Info
-            } else {
-                LevelFilter::Off
-            });
-
-            info!("Parsed arguments:\n{:#?}", args);
-
-            // Initialise the local partition and the simulation
             #[cfg(feature = "necsim-mpi")]
             {
-                use necsim_impls_mpi::MpiLocalPartition;
-
-                let is_monolithic = partitioning.is_monolithic();
-
-                match partitioning.into_local_partition(ReporterContext::new(is_monolithic)) {
-                    MpiLocalPartition::Monolithic(partition) => {
-                        cli::simulate::simulate_with_logger(partition, simulate_args)
-                    },
-                    MpiLocalPartition::Root(partition) => {
-                        cli::simulate::simulate_with_logger(partition, simulate_args)
-                    },
-                    MpiLocalPartition::Parallel(partition) => {
-                        cli::simulate::simulate_with_logger(partition, simulate_args)
-                    },
-                }
+                cli::simulate::mpi::simulate_with_logger_mpi(&args, simulate_args)
             }
             #[cfg(not(feature = "necsim-mpi"))]
             {
-                cli::simulate::simulate_with_logger(
-                    Box::new(partitioning.into_local_partition(ReporterContext::new(true))),
-                    simulate_args,
-                )
+                cli::simulate::monolithic::simulate_with_logger_monolithic(&args, simulate_args)
             }
         }
         .context("Failed to initialise or perform the simulation."),
@@ -109,7 +53,7 @@ fn main() -> Result<()> {
 
             info!("Parsed arguments:\n{:#?}", args);
 
-            cli::replay::replay_with_logger(replay_args, ReporterContext::new(true))
+            cli::replay::replay_with_logger(replay_args, RustcoalescenceReporterContext::new(true))
                 .context("Failed to replay the simulation.")
         },
     }
