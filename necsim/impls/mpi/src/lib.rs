@@ -2,15 +2,11 @@
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
 #![feature(stmt_expr_attributes)]
-#![feature(result_flattening)]
 
 #[macro_use]
 extern crate contracts;
 
-use std::{
-    num::NonZeroU32,
-    path::{Path, PathBuf},
-};
+use std::num::NonZeroU32;
 
 use mpi::{
     environment::Universe,
@@ -38,16 +34,17 @@ pub use partition::{MpiLocalPartition, MpiParallelPartition, MpiRootPartition};
 pub enum MpiPartitioningError {
     #[error("MPI has already been initialised.")]
     AlreadyInitialised,
+}
+
+#[derive(Error, Debug)]
+pub enum MpiLocalPartitionError {
     #[error("MPI needs a valid event log path.")]
     MissingEventLog,
-    #[error(transparent)]
-    InvalidEventLog(#[from] anyhow::Error),
 }
 
 pub struct MpiPartitioning {
     universe: Universe,
     world: SystemCommunicator,
-    recorder: Option<EventLogRecorder>,
 }
 
 impl MpiPartitioning {
@@ -56,37 +53,15 @@ impl MpiPartitioning {
     const ROOT_RANK: Rank = 0;
 
     /// # Errors
-    /// Returns `AlreadyInitialised` if MPI was already initialised.
     ///
-    /// Returns `MissingEventLog` if the partitioning is non-monolithic and
-    /// `event_log_path` is `None`.
-    pub fn initialise(event_log_path: Option<&Path>) -> Result<Self, MpiPartitioningError> {
+    /// Returns `AlreadyInitialised` if MPI was already initialised.
+    pub fn initialise() -> Result<Self, MpiPartitioningError> {
         mpi::initialize()
-            .map(|universe| {
-                let world = universe.world();
-
-                let recorder = match event_log_path {
-                    None if world.size() > 1 => Err(MpiPartitioningError::MissingEventLog),
-                    None => Ok(None),
-                    Some(event_log_path) => {
-                        let mut event_log_path = PathBuf::from(event_log_path);
-                        event_log_path.push(world.rank().to_string());
-
-                        match EventLogRecorder::try_new(&event_log_path) {
-                            Ok(recorder) => Ok(Some(recorder)),
-                            Err(err) => Err(MpiPartitioningError::InvalidEventLog(err)),
-                        }
-                    },
-                }?;
-
-                Ok(Self {
-                    universe,
-                    world,
-                    recorder,
-                })
+            .map(|universe| Self {
+                world: universe.world(),
+                universe,
             })
             .ok_or(MpiPartitioningError::AlreadyInitialised)
-            .flatten()
     }
 
     pub fn update_message_buffer_size(&mut self, size: usize) {
@@ -98,6 +73,8 @@ impl MpiPartitioning {
 
 #[contract_trait]
 impl Partitioning for MpiPartitioning {
+    type Auxiliary = Option<EventLogRecorder>;
+    type Error = MpiLocalPartitionError;
     type LocalPartition<P: ReporterContext> = MpiLocalPartition<P>;
 
     fn is_monolithic(&self) -> bool {
@@ -113,18 +90,28 @@ impl Partitioning for MpiPartitioning {
         NonZeroU32::new(self.world.size() as u32).unwrap()
     }
 
+    fn get_rank(&self) -> u32 {
+        #[allow(clippy::cast_sign_loss)]
+        (self.world.rank() as u32)
+    }
+
+    /// # Errors
+    ///
+    /// Returns `MissingEventLog` if the local partition is non-monolithic and
+    /// the `auxiliary` event log is `None`.
     fn into_local_partition<P: ReporterContext>(
         self,
         reporter_context: P,
-    ) -> Self::LocalPartition<P> {
+        auxiliary: Self::Auxiliary,
+    ) -> Result<Self::LocalPartition<P>, Self::Error> {
         #[allow(clippy::option_if_let_else)]
-        if let Some(recorder) = self.recorder {
-            if self.world.size() <= 1 {
+        if let Some(event_log) = auxiliary {
+            Ok(if self.world.size() <= 1 {
                 // recorded && is_monolithic
                 MpiLocalPartition::RecordedMonolithic(Box::new(
                     RecordedMonolithicLocalPartition::from_reporter_and_recorder(
                         reporter_context.build_guarded(),
-                        recorder,
+                        event_log,
                     ),
                 ))
             } else if self.world.rank() == MpiPartitioning::ROOT_RANK {
@@ -133,21 +120,23 @@ impl Partitioning for MpiPartitioning {
                     self.universe,
                     self.world,
                     reporter_context.build_guarded(),
-                    recorder,
+                    event_log,
                 )))
             } else {
                 // recorded && !is_monolithic && !is_root
                 MpiLocalPartition::Parallel(Box::new(MpiParallelPartition::new(
                     self.universe,
                     self.world,
-                    recorder,
+                    event_log,
                 )))
-            }
-        } else {
-            // !recorded
-            MpiLocalPartition::LiveMonolithic(Box::new(
+            })
+        } else if self.world.size() <= 1 {
+            // !recorded && monolithic
+            Ok(MpiLocalPartition::LiveMonolithic(Box::new(
                 LiveMonolithicLocalPartition::from_reporter(reporter_context.build_guarded()),
-            ))
+            )))
+        } else {
+            Err(MpiLocalPartitionError::MissingEventLog)
         }
     }
 }

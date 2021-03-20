@@ -9,7 +9,6 @@ extern crate necsim_core;
 #[macro_use]
 extern crate log;
 
-#[allow(unused_imports)]
 use anyhow::{Context, Result};
 use log::LevelFilter;
 use structopt::StructOpt;
@@ -29,29 +28,27 @@ use reporter::RustcoalescenceReporterContext;
 static MINIMAL_LOGGER: MinimalLogger = MinimalLogger;
 
 fn main() -> Result<()> {
+    // Set up the minimal logger to stderr
+    log::set_logger(&MINIMAL_LOGGER)?;
+
     // Parse and validate all command line arguments
     let args = RustcoalescenceArgs::from_args();
 
-    log::set_logger(&MINIMAL_LOGGER)?;
-
     match args {
-        RustcoalescenceArgs::Simulate(ref simulate_args) => {
+        RustcoalescenceArgs::Simulate(simulate_args) => {
             #[cfg(feature = "necsim-mpi")]
             {
-                cli::simulate::mpi::simulate_with_logger_mpi(&args, simulate_args)
+                cli::simulate::mpi::simulate_with_logger_mpi(simulate_args)
             }
             #[cfg(not(feature = "necsim-mpi"))]
             {
-                cli::simulate::monolithic::simulate_with_logger_monolithic(&args, simulate_args)
+                cli::simulate::monolithic::simulate_with_logger_monolithic(simulate_args)
             }
         }
         .context("Failed to initialise or perform the simulation."),
-
-        RustcoalescenceArgs::Replay(ref replay_args) => {
+        RustcoalescenceArgs::Replay(replay_args) => {
             // Always log to stderr (replay is run without partitioning)
             log::set_max_level(LevelFilter::Info);
-
-            info!("Parsed arguments:\n{:#?}", args);
 
             cli::replay::replay_with_logger(replay_args, RustcoalescenceReporterContext::new(true))
                 .context("Failed to replay the simulation.")

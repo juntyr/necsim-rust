@@ -19,7 +19,7 @@ use super::{SkippingGillespieArguments, SkippingGillespieSimulation};
 #[contract_trait]
 impl NonSpatialSimulation for SkippingGillespieSimulation {
     type AuxiliaryArguments = SkippingGillespieArguments;
-    type Error = anyhow::Error;
+    type Error = !;
 
     /// Simulates the Gillespie coalescence algorithm with self-dispersal event
     /// skipping on a non-spatial `habitat` with non-spatial `dispersal`.
@@ -55,7 +55,7 @@ impl NonSpatialSimulation for SkippingGillespieSimulation {
             ))
         };
 
-        SkippingGillespieSimulation::simulate(
+        Ok(SkippingGillespieSimulation::simulate(
             habitat,
             dispersal_sampler,
             lineage_store,
@@ -64,6 +64,6 @@ impl NonSpatialSimulation for SkippingGillespieSimulation {
             local_partition,
             decomposition,
             auxiliary,
-        )
+        ))
     }
 }

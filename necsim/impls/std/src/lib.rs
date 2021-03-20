@@ -7,6 +7,7 @@
 #[macro_use]
 extern crate contracts;
 
+pub mod bounded;
 pub mod cogs;
 pub mod event_log;
 pub mod partitioning;

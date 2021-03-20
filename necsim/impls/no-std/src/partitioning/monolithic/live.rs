@@ -19,6 +19,8 @@ impl Default for LiveMonolithicPartitioning {
 
 #[contract_trait]
 impl Partitioning for LiveMonolithicPartitioning {
+    type Auxiliary = ();
+    type Error = !;
     type LocalPartition<P: ReporterContext> = LiveMonolithicLocalPartition<P>;
 
     fn is_monolithic(&self) -> bool {
@@ -33,11 +35,18 @@ impl Partitioning for LiveMonolithicPartitioning {
         unsafe { NonZeroU32::new_unchecked(1) }
     }
 
+    fn get_rank(&self) -> u32 {
+        0
+    }
+
     fn into_local_partition<P: ReporterContext>(
         self,
         reporter_context: P,
-    ) -> Self::LocalPartition<P> {
-        LiveMonolithicLocalPartition::from_reporter(reporter_context.build_guarded())
+        _auxiliary: Self::Auxiliary,
+    ) -> Result<Self::LocalPartition<P>, Self::Error> {
+        Ok(LiveMonolithicLocalPartition::from_reporter(
+            reporter_context.build_guarded(),
+        ))
     }
 }
 

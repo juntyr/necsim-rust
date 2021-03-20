@@ -16,12 +16,12 @@ use necsim_impls_no_std::{
     simulation::non_spatial::NonSpatialSimulation,
 };
 
-use super::{IndependentArguments, IndependentSimulation, PartitionMode};
+use super::{IndependentArguments, IndependentSimulation, IsolatedPartition, PartitionMode};
 
 #[contract_trait]
 impl NonSpatialSimulation for IndependentSimulation {
     type AuxiliaryArguments = IndependentArguments;
-    type Error = anyhow::Error;
+    type Error = !;
 
     /// Simulates the independent coalescence algorithm on a non-spatial
     /// `habitat` with non-spatial `dispersal`.
@@ -57,12 +57,14 @@ impl NonSpatialSimulation for IndependentSimulation {
             .map(|indexed_location| Lineage::new(indexed_location, &habitat))
             .collect(),
             // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
-            PartitionMode::IsolatedIndividuals(rank, partitions) => NonSpatialOriginSampler::new(
-                lineage_origins.partition(rank, partitions.get()),
-                &habitat,
-            )
-            .map(|indexed_location| Lineage::new(indexed_location, &habitat))
-            .collect(),
+            PartitionMode::IsolatedIndividuals(IsolatedPartition { rank, partitions }) => {
+                NonSpatialOriginSampler::new(
+                    lineage_origins.partition(rank, partitions.get()),
+                    &habitat,
+                )
+                .map(|indexed_location| Lineage::new(indexed_location, &habitat))
+                .collect()
+            },
             // Apply lineage origin decomposition in the `Landscape` mode
             PartitionMode::Landscape | PartitionMode::Probabilistic => {
                 DecompositionOriginSampler::new(
@@ -83,7 +85,7 @@ impl NonSpatialSimulation for IndependentSimulation {
             local_partition,
             decomposition,
             &auxiliary,
-        )?;
+        );
 
         Ok(local_partition.reduce_global_time_steps(partition_time, partition_steps))
     }

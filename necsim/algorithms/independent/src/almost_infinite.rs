@@ -18,12 +18,12 @@ use necsim_impls_no_std::{
     simulation::almost_infinite::AlmostInfiniteSimulation,
 };
 
-use super::{IndependentArguments, IndependentSimulation, PartitionMode};
+use super::{IndependentArguments, IndependentSimulation, IsolatedPartition, PartitionMode};
 
 #[contract_trait]
 impl AlmostInfiniteSimulation for IndependentSimulation {
     type AuxiliaryArguments = IndependentArguments;
-    type Error = anyhow::Error;
+    type Error = !;
 
     /// Simulates the independent coalescence algorithm on an almost-infinite
     /// `habitat` with N(0, sigma) `dispersal`. Only a circular region with
@@ -61,7 +61,7 @@ impl AlmostInfiniteSimulation for IndependentSimulation {
             .map(|indexed_location| Lineage::new(indexed_location, &habitat))
             .collect(),
             // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
-            PartitionMode::IsolatedIndividuals(rank, partitions) => {
+            PartitionMode::IsolatedIndividuals(IsolatedPartition { rank, partitions }) => {
                 AlmostInfiniteOriginSampler::new(
                     lineage_origins.partition(rank, partitions.get()),
                     &habitat,
@@ -90,7 +90,7 @@ impl AlmostInfiniteSimulation for IndependentSimulation {
             local_partition,
             decomposition,
             &auxiliary,
-        )?;
+        );
 
         Ok(local_partition.reduce_global_time_steps(partition_time, partition_steps))
     }
