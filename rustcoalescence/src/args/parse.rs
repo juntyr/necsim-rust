@@ -1,13 +1,16 @@
-use std::convert::TryFrom;
+use anyhow::{Context, Result};
+use serde_state::DeserializeState;
 
-use anyhow::Context;
+use necsim_impls_no_std::partitioning::Partitioning;
+use necsim_impls_std::bounded::Partition;
 
 use super::{SimulateArgs, SimulateCommandArgs};
 
-impl TryFrom<SimulateCommandArgs> for SimulateArgs {
-    type Error = anyhow::Error;
-
-    fn try_from(command_args: SimulateCommandArgs) -> Result<Self, Self::Error> {
+impl SimulateArgs {
+    pub fn try_parse<P: Partitioning>(
+        command_args: SimulateCommandArgs,
+        partitioning: &P,
+    ) -> Result<Self> {
         // Parse and validate all command line arguments for the simulate subcommand
         let mut ron_args = String::new();
 
@@ -29,28 +32,32 @@ impl TryFrom<SimulateCommandArgs> for SimulateArgs {
             ron_args.push(')');
         }
 
-        let mut de = ron::Deserializer::from_str(&ron_args)
+        let mut de_ron = ron::Deserializer::from_str(&ron_args)
             .context("Failed to parse the simulate arguments.")?;
 
-        let args: SimulateArgs = serde_path_to_error::deserialize(&mut de)
-            .map_err(|err| {
-                anyhow::Error::msg(format!(
+        let mut track = serde_path_to_error::Track::new();
+        let de = serde_path_to_error::Deserializer::new(&mut de_ron, &mut track);
+
+        let mut partition = Partition::try_new(
+            partitioning.get_rank(),
+            partitioning.get_number_of_partitions(),
+        )?;
+
+        let args = match SimulateArgs::deserialize_state(&mut partition, de) {
+            Ok(args) => Ok(args),
+            Err(err) => {
+                let path = track.path();
+
+                Err(anyhow::Error::msg(format!(
                     "simulate{}{}{}: {}",
-                    if err.path().iter().count() >= 1 {
-                        "."
-                    } else {
-                        ""
-                    },
-                    err.path(),
-                    if err.path().iter().count() >= 1 {
-                        ""
-                    } else {
-                        "*"
-                    },
-                    err.inner(),
-                ))
-            })
-            .context("Failed to parse the simulate arguments.")?;
+                    if path.iter().count() >= 1 { "." } else { "" },
+                    path,
+                    if path.iter().count() >= 1 { "" } else { "*" },
+                    err,
+                )))
+            },
+        }
+        .context("Failed to parse the simulate arguments.")?;
 
         Ok(args)
     }

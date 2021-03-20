@@ -7,14 +7,12 @@
 #[macro_use]
 extern crate contracts;
 
-use std::{
-    convert::TryFrom,
-    num::{NonZeroU32, NonZeroU64, NonZeroUsize},
-};
+#[macro_use]
+extern crate serde_derive_state;
 
-use anyhow::Result;
+use std::num::{NonZeroU64, NonZeroUsize};
+
 use serde::Deserialize;
-use thiserror::Error;
 
 use necsim_core::{
     cogs::{DispersalSampler, Habitat, RngCore, SpeciationProbability, SpeciationSample},
@@ -35,7 +33,7 @@ use necsim_impls_no_std::{
     reporter::ReporterContext,
 };
 
-use necsim_impls_std::bounded::PositiveF64;
+use necsim_impls_std::bounded::{Partition, PositiveF64};
 
 mod almost_infinite;
 mod in_memory;
@@ -53,54 +51,46 @@ pub enum DedupCache {
     None,
 }
 
-#[derive(Debug, Error)]
-#[error("{0} is not in range [0, {1}].")]
-#[allow(clippy::module_name_repetitions)]
-pub struct PartitionRankOutOfBounds(u32, NonZeroU32);
-
-#[derive(Copy, Clone, Debug, Deserialize)]
-#[serde(try_from = "IsolatedPartitionRaw")]
-pub struct IsolatedPartition {
-    rank: u32,
-    partitions: NonZeroU32,
-}
-
-impl TryFrom<IsolatedPartitionRaw> for IsolatedPartition {
-    type Error = PartitionRankOutOfBounds;
-
-    fn try_from(raw: IsolatedPartitionRaw) -> Result<Self, Self::Error> {
-        if raw.rank < raw.partitions.get() {
-            Ok(Self {
-                rank: raw.rank,
-                partitions: raw.partitions,
-            })
-        } else {
-            Err(PartitionRankOutOfBounds(raw.rank, raw.partitions))
-        }
-    }
-}
-
-#[derive(Copy, Clone, Debug, Deserialize)]
-struct IsolatedPartitionRaw {
-    rank: u32,
-    partitions: NonZeroU32,
-}
-
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Copy, Clone, Debug, DeserializeState)]
+#[serde(deserialize_state = "Partition")]
 pub enum PartitionMode {
     Individuals,
     #[serde(alias = "Isolated")]
-    IsolatedIndividuals(IsolatedPartition),
+    IsolatedIndividuals(
+        #[serde(deserialize_state_with = "deserialize_isolated_partition")] Partition,
+    ),
     Landscape,
     Probabilistic,
 }
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+fn deserialize_isolated_partition<'de, D>(
+    partition: &mut Partition,
+    deserializer: D,
+) -> Result<Partition, D::Error>
+where
+    D: serde::de::Deserializer<'de>,
+{
+    use serde::de::Error;
+
+    let isolated_partition = Partition::deserialize(deserializer)?;
+
+    if isolated_partition.partitions().get() > 1 && partition.partitions().get() > 1 {
+        Err(D::Error::custom(
+            "IsolatedIndividuals is incompatible with non-monolithic partitioning.",
+        ))
+    } else {
+        Ok(isolated_partition)
+    }
+}
+
+#[derive(Copy, Clone, Debug, DeserializeState)]
 #[serde(default)]
+#[serde(deserialize_state = "Partition")]
 pub struct IndependentArguments {
     delta_t: PositiveF64,
     step_slice: NonZeroU64,
     dedup_cache: DedupCache,
+    #[serde(deserialize_state)]
     partition_mode: PartitionMode,
 }
 

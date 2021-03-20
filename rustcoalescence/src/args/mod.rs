@@ -1,12 +1,18 @@
 use std::{convert::TryFrom, path::PathBuf};
 
 use array2d::Array2D;
-use serde::Deserialize;
+
+use serde::{de::Deserializer, Deserialize};
+use serde_state::DeserializeState;
+
 use structopt::StructOpt;
 
 mod parse;
 
-use necsim_impls_std::bounded::{NonNegativeF64, ZeroExclOneInclF64, ZeroInclOneInclF64};
+use necsim_impls_std::{
+    bounded::{NonNegativeF64, Partition, ZeroExclOneInclF64, ZeroInclOneInclF64},
+    event_log::recorder::EventLogRecorder,
+};
 
 #[derive(Debug, StructOpt)]
 #[allow(clippy::module_name_repetitions)]
@@ -31,21 +37,22 @@ pub struct ReplayCommandArgs {
     pub events: Vec<PathBuf>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
-#[serde(from = "SimulateArgsRaw")]
 pub struct SimulateArgs {
     pub common: CommonArgs,
-
-    #[serde(alias = "log")]
-    pub event_log: Option<PathBuf>,
-
+    pub event_log: Option<EventLogRecorder>,
     pub scenario: Scenario,
 }
 
-impl From<SimulateArgsRaw> for SimulateArgs {
-    fn from(raw: SimulateArgsRaw) -> Self {
-        Self {
+impl<'de> DeserializeState<'de, Partition> for SimulateArgs {
+    fn deserialize_state<D>(seed: &mut Partition, deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = SimulateArgsRaw::deserialize_state(seed, deserializer)?;
+
+        Ok(Self {
             common: CommonArgs {
                 speciation_probability_per_generation: raw.speciation_probability_per_generation,
                 sample_percentage: raw.sample_percentage,
@@ -54,12 +61,13 @@ impl From<SimulateArgsRaw> for SimulateArgs {
             },
             event_log: raw.event_log,
             scenario: raw.scenario,
-        }
+        })
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, DeserializeState)]
 #[allow(clippy::module_name_repetitions)]
+#[serde(deserialize_state = "Partition")]
 struct SimulateArgsRaw {
     #[serde(alias = "speciation")]
     pub speciation_probability_per_generation: ZeroExclOneInclF64,
@@ -69,12 +77,37 @@ struct SimulateArgsRaw {
 
     pub seed: u64,
 
+    #[serde(deserialize_state)]
     pub algorithm: Algorithm,
 
     #[serde(alias = "log")]
-    pub event_log: Option<PathBuf>,
+    #[serde(deserialize_state_with = "deserialize_state_event_log")]
+    pub event_log: Option<EventLogRecorder>,
 
     pub scenario: Scenario,
+}
+
+fn deserialize_state_event_log<'de, D>(
+    partition: &mut Partition,
+    deserializer: D,
+) -> Result<Option<EventLogRecorder>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de::Error;
+
+    let event_log_path = <Option<PathBuf>>::deserialize(deserializer)?;
+
+    match event_log_path {
+        Some(mut event_log_path) => {
+            event_log_path.push(partition.rank().to_string());
+
+            let event_log = EventLogRecorder::try_new(&event_log_path).map_err(D::Error::custom)?;
+
+            Ok(Some(event_log))
+        },
+        None => Ok(None),
+    }
 }
 
 #[derive(Debug)]
@@ -86,9 +119,10 @@ pub struct CommonArgs {
     pub algorithm: Algorithm,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, DeserializeState)]
 #[non_exhaustive]
 #[allow(clippy::empty_enum)]
+#[serde(deserialize_state = "Partition")]
 pub enum Algorithm {
     #[cfg(feature = "necsim-classical")]
     Classical,
@@ -100,7 +134,7 @@ pub enum Algorithm {
     #[serde(alias = "CUDA")]
     Cuda(necsim_cuda::CudaArguments),
     #[cfg(feature = "necsim-independent")]
-    Independent(necsim_independent::IndependentArguments),
+    Independent(#[serde(deserialize_state)] necsim_independent::IndependentArguments),
 }
 
 #[derive(Debug, Deserialize)]
