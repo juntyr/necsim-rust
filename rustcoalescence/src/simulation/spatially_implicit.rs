@@ -21,7 +21,7 @@ pub fn simulate<R: ReporterContext, P: LocalPartition<R>>(
     local_partition: &mut P,
 ) -> Result<(f64, u64)> {
     info!(
-        "Setting up the spatially-implicit {:?} coalescence algorithm ...",
+        "Setting up the spatially-implicit {} coalescence algorithm ...",
         common_args.algorithm
     );
 
@@ -53,10 +53,5 @@ pub fn simulate<R: ReporterContext, P: LocalPartition<R>>(
         _ => anyhow::bail!("rustcoalescence does not support the selected algorithm"),
     };
 
-    result.with_context(|| {
-        format!(
-            "Failed to run the spatially-implicit simulation with {:#?}.",
-            spatially_implicit_args
-        )
-    })
+    result.with_context(|| "Failed to run the spatially-implicit simulation.")
 }

@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, path::PathBuf};
+use std::{convert::TryFrom, fmt, path::PathBuf};
 
 use array2d::Array2D;
 
@@ -135,6 +135,25 @@ pub enum Algorithm {
     Cuda(necsim_cuda::CudaArguments),
     #[cfg(feature = "necsim-independent")]
     Independent(#[serde(deserialize_state)] necsim_independent::IndependentArguments),
+}
+
+impl fmt::Display for Algorithm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        #[allow(unreachable_patterns)]
+        match self {
+            #[cfg(feature = "necsim-classical")]
+            Algorithm::Classical => f.write_str("Classical"),
+            #[cfg(feature = "necsim-gillespie")]
+            Algorithm::Gillespie => f.write_str("Gillespie"),
+            #[cfg(feature = "necsim-skipping-gillespie")]
+            Algorithm::SkippingGillespie(_) => f.write_str("Skipping-Gillespie"),
+            #[cfg(feature = "necsim-cuda")]
+            Algorithm::Cuda(_) => f.write_str("CUDA"),
+            #[cfg(feature = "necsim-independent")]
+            Algorithm::Independent(_) => f.write_str("Independent"),
+            _ => f.write_str("Unknown"),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
