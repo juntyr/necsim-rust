@@ -18,7 +18,7 @@ use necsim_impls_no_std::{
     simulation::almost_infinite::AlmostInfiniteSimulation,
 };
 
-use super::{IndependentArguments, IndependentSimulation, IsolatedPartition, PartitionMode};
+use super::{IndependentArguments, IndependentSimulation, PartitionMode};
 
 #[contract_trait]
 impl AlmostInfiniteSimulation for IndependentSimulation {
@@ -61,15 +61,13 @@ impl AlmostInfiniteSimulation for IndependentSimulation {
             .map(|indexed_location| Lineage::new(indexed_location, &habitat))
             .collect(),
             // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
-            PartitionMode::IsolatedIndividuals(IsolatedPartition { rank, partitions }) => {
-                AlmostInfiniteOriginSampler::new(
-                    lineage_origins.partition(rank, partitions.get()),
-                    &habitat,
-                    radius,
-                )
-                .map(|indexed_location| Lineage::new(indexed_location, &habitat))
-                .collect()
-            },
+            PartitionMode::IsolatedIndividuals(partition) => AlmostInfiniteOriginSampler::new(
+                lineage_origins.partition(partition.rank(), partition.partitions().get()),
+                &habitat,
+                radius,
+            )
+            .map(|indexed_location| Lineage::new(indexed_location, &habitat))
+            .collect(),
             // Apply lineage origin decomposition in the `Landscape` mode
             PartitionMode::Landscape | PartitionMode::Probabilistic => {
                 DecompositionOriginSampler::new(

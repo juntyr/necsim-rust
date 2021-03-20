@@ -7,6 +7,9 @@
 extern crate necsim_core;
 
 #[macro_use]
+extern crate serde_derive_state;
+
+#[macro_use]
 extern crate log;
 
 use anyhow::{Context, Result};
@@ -34,7 +37,7 @@ fn main() -> Result<()> {
     // Parse and validate all command line arguments
     let args = RustcoalescenceArgs::from_args();
 
-    match args {
+    let result = match args {
         RustcoalescenceArgs::Simulate(simulate_args) => {
             #[cfg(feature = "necsim-mpi")]
             {
@@ -53,5 +56,12 @@ fn main() -> Result<()> {
             cli::replay::replay_with_logger(replay_args, RustcoalescenceReporterContext::new(true))
                 .context("Failed to replay the simulation.")
         },
+    };
+
+    // Hide non-root error messages
+    if log::max_level() == LevelFilter::Off {
+        Ok(())
+    } else {
+        result
     }
 }

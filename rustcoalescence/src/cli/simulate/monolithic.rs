@@ -1,15 +1,11 @@
-use std::convert::TryInto;
-
 use anyhow::Result;
 use log::LevelFilter;
 
 use necsim_impls_no_std::{
-    partitioning::monolithic::live::LiveMonolithicLocalPartition, reporter::ReporterContext,
+    partitioning::monolithic::live::{LiveMonolithicLocalPartition, LiveMonolithicPartitioning},
+    reporter::ReporterContext,
 };
-use necsim_impls_std::{
-    event_log::recorder::EventLogRecorder,
-    partitioning::monolithic::recorded::RecordedMonolithicLocalPartition,
-};
+use necsim_impls_std::partitioning::monolithic::recorded::RecordedMonolithicLocalPartition;
 
 use crate::{
     args::{SimulateArgs, SimulateCommandArgs},
@@ -22,16 +18,17 @@ pub fn simulate_with_logger_monolithic(simulate_args: SimulateCommandArgs) -> Re
 
     let guard_reporter = RustcoalescenceReporterContext::new(true).build_guarded();
 
-    let simulate_args: SimulateArgs = simulate_args.try_into()?;
+    let simulate_args =
+        SimulateArgs::try_parse(simulate_args, &LiveMonolithicPartitioning::default())?;
     info!("Parsed simulation arguments:\n{:#?}", simulate_args);
 
     // Initialise the local partition and the simulation
     match simulate_args.event_log {
-        Some(event_log_path) => super::simulate_with_logger::<RustcoalescenceReporterContext, _>(
+        Some(event_log) => super::simulate_with_logger::<RustcoalescenceReporterContext, _>(
             Box::new(
                 RecordedMonolithicLocalPartition::from_reporter_and_recorder(
                     guard_reporter,
-                    EventLogRecorder::try_new(&event_log_path)?,
+                    event_log,
                 ),
             ),
             simulate_args.common,
