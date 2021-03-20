@@ -7,7 +7,13 @@ extern crate contracts;
 #[macro_use]
 extern crate bitvec;
 
+use std::{
+    convert::TryInto,
+    num::{NonZeroU64, NonZeroUsize},
+};
+
 use anyhow::Result;
+use serde::Deserialize;
 
 use rustacuda::{
     function::{BlockSize, FunctionAttribute, GridSize},
@@ -20,24 +26,27 @@ use necsim_core::{
     simulation::Simulation,
 };
 
-use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
-use necsim_impls_no_std::{partitioning::LocalPartition, reporter::ReporterContext};
-
-use necsim_impls_no_std::cogs::{
-    active_lineage_sampler::independent::{
-        event_time_sampler::exp::ExpEventTimeSampler,
-        IndependentActiveLineageSampler as ActiveLineageSampler,
+use necsim_impls_no_std::{
+    cogs::{
+        active_lineage_sampler::independent::{
+            event_time_sampler::exp::ExpEventTimeSampler,
+            IndependentActiveLineageSampler as ActiveLineageSampler,
+        },
+        coalescence_sampler::independent::IndependentCoalescenceSampler as CoalescenceSampler,
+        emigration_exit::never::NeverEmigrationExit,
+        event_sampler::independent::IndependentEventSampler as EventSampler,
+        immigration_entry::never::NeverImmigrationEntry,
+        lineage_store::independent::IndependentLineageStore,
+        rng::fixedseahash::FixedSeaHash as Rng,
+        speciation_probability::uniform::UniformSpeciationProbability,
     },
-    coalescence_sampler::independent::IndependentCoalescenceSampler as CoalescenceSampler,
-    emigration_exit::never::NeverEmigrationExit,
-    event_sampler::independent::IndependentEventSampler as EventSampler,
-    immigration_entry::never::NeverImmigrationEntry,
-    lineage_store::independent::IndependentLineageStore,
-    rng::fixedseahash::FixedSeaHash as Rng,
-    speciation_probability::uniform::UniformSpeciationProbability,
+    partitioning::LocalPartition,
+    reporter::ReporterContext,
 };
 
-use necsim_impls_cuda::cogs::rng::CudaRng;
+use necsim_impls_std::bounded::PositiveF64;
+
+use necsim_impls_cuda::{cogs::rng::CudaRng, event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
 use rust_cuda::{common::RustToCuda, host::CudaDropWrapper};
 
@@ -54,32 +63,33 @@ use crate::kernel::SimulationKernel;
 use cuda::with_initialised_cuda;
 use simulate::simulate;
 
-#[derive(Copy, Clone, Debug)]
-pub enum DedupMode {
-    Static(usize),
-    Dynamic(f64),
+#[derive(Copy, Clone, Debug, Deserialize)]
+pub enum DedupCache {
+    Absolute(NonZeroUsize),
+    Relative(PositiveF64),
     None,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Deserialize)]
+#[serde(default)]
 pub struct CudaArguments {
-    pub ptx_jit: bool,
-    pub delta_t: f64,
-    pub block_size: u32,
-    pub grid_size: u32,
-    pub step_slice: usize,
-    pub dedup_mode: DedupMode,
+    ptx_jit: bool,
+    delta_t: PositiveF64,
+    block_size: u32,
+    grid_size: u32,
+    step_slice: NonZeroU64,
+    dedup_cache: DedupCache,
 }
 
 impl Default for CudaArguments {
     fn default() -> Self {
         Self {
             ptx_jit: false,
-            delta_t: 1.0_f64,
+            delta_t: PositiveF64::new(1.0_f64).unwrap(),
             block_size: 32_u32,
             grid_size: 256_u32,
-            step_slice: 200_usize,
-            dedup_mode: DedupMode::Dynamic(2.0_f64),
+            step_slice: NonZeroU64::new(200_u64).unwrap(),
+            dedup_cache: DedupCache::Relative(PositiveF64::new(2.0_f64).unwrap()),
         }
     }
 }
@@ -106,26 +116,6 @@ impl CudaSimulation {
         const REPORT_SPECIATION: bool = true;
         const REPORT_DISPERSAL: bool = false;
 
-        anyhow::ensure!(
-            auxiliary.delta_t > 0.0_f64,
-            "CUDA algorithm delta_t={} must be positive.",
-            auxiliary.delta_t
-        );
-        anyhow::ensure!(
-            auxiliary.step_slice > 0,
-            "CUDA algorithm step_slice={} must be positive.",
-            auxiliary.step_slice
-        );
-        anyhow::ensure!(
-            if let DedupMode::Dynamic(scalar) = auxiliary.dedup_mode {
-                scalar >= 0.0_f64
-            } else {
-                true
-            },
-            "CUDA algorithm dedup_mode={:?} dynamic scalar must be non-negative.",
-            auxiliary.dedup_mode,
-        );
-
         let rng = CudaRng::<Rng>::seed_from_u64(seed);
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation);
@@ -136,7 +126,7 @@ impl CudaSimulation {
         let immigration_entry = NeverImmigrationEntry::default();
 
         let active_lineage_sampler =
-            ActiveLineageSampler::empty(ExpEventTimeSampler::new(auxiliary.delta_t));
+            ActiveLineageSampler::empty(ExpEventTimeSampler::new(auxiliary.delta_t.get()));
 
         let simulation = Simulation::builder()
             .habitat(habitat)
@@ -178,19 +168,23 @@ impl CudaSimulation {
                 let event_buffer: EventBuffer<
                     { REPORT_SPECIATION },
                     { REPORT_DISPERSAL },
-                > = EventBuffer::new(&block_size, &grid_size, auxiliary.step_slice)?;
+                > = EventBuffer::new(
+                    &block_size,
+                    &grid_size,
+                    auxiliary.step_slice.get().try_into()?,
+                )?;
 
                 simulate(
                     &stream,
                     kernel,
-                    (grid_size, block_size, auxiliary.dedup_mode),
+                    (grid_size, block_size, auxiliary.dedup_cache),
                     simulation,
                     lineages.into(),
                     task_list,
                     event_buffer,
                     min_spec_sample_buffer,
                     local_partition.get_reporter(),
-                    auxiliary.step_slice as u64,
+                    auxiliary.step_slice.get(),
                 )
             })
         })

@@ -7,9 +7,14 @@
 #[macro_use]
 extern crate contracts;
 
-use std::num::NonZeroU32;
+use std::{
+    convert::TryFrom,
+    num::{NonZeroU32, NonZeroU64, NonZeroUsize},
+};
 
 use anyhow::Result;
+use serde::Deserialize;
+use thiserror::Error;
 
 use necsim_core::{
     cogs::{DispersalSampler, Habitat, RngCore, SpeciationProbability, SpeciationSample},
@@ -30,6 +35,8 @@ use necsim_impls_no_std::{
     reporter::ReporterContext,
 };
 
+use necsim_impls_std::bounded::PositiveF64;
+
 mod almost_infinite;
 mod in_memory;
 mod non_spatial;
@@ -39,35 +46,70 @@ mod partitioned;
 mod reporter;
 use reporter::PartitionReporterProxy;
 
-#[derive(Copy, Clone, Debug)]
-pub enum DedupMode {
-    Static(usize),
-    Dynamic(f64),
+#[derive(Copy, Clone, Debug, Deserialize)]
+pub enum DedupCache {
+    Absolute(NonZeroUsize),
+    Relative(PositiveF64),
     None,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Debug, Error)]
+#[error("{0} is not in range [0, {1}].")]
+#[allow(clippy::module_name_repetitions)]
+pub struct PartitionRankOutOfBounds(u32, NonZeroU32);
+
+#[derive(Copy, Clone, Debug, Deserialize)]
+#[serde(try_from = "IsolatedPartitionRaw")]
+pub struct IsolatedPartition {
+    rank: u32,
+    partitions: NonZeroU32,
+}
+
+impl TryFrom<IsolatedPartitionRaw> for IsolatedPartition {
+    type Error = PartitionRankOutOfBounds;
+
+    fn try_from(raw: IsolatedPartitionRaw) -> Result<Self, Self::Error> {
+        if raw.rank < raw.partitions.get() {
+            Ok(Self {
+                rank: raw.rank,
+                partitions: raw.partitions,
+            })
+        } else {
+            Err(PartitionRankOutOfBounds(raw.rank, raw.partitions))
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Deserialize)]
+struct IsolatedPartitionRaw {
+    rank: u32,
+    partitions: NonZeroU32,
+}
+
+#[derive(Copy, Clone, Debug, Deserialize)]
 pub enum PartitionMode {
     Individuals,
-    IsolatedIndividuals(u32, NonZeroU32),
+    #[serde(alias = "Isolated")]
+    IsolatedIndividuals(IsolatedPartition),
     Landscape,
     Probabilistic,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Deserialize)]
+#[serde(default)]
 pub struct IndependentArguments {
-    pub delta_t: f64,
-    pub step_slice: usize,
-    pub dedup_mode: DedupMode,
-    pub partition_mode: PartitionMode,
+    delta_t: PositiveF64,
+    step_slice: NonZeroU64,
+    dedup_cache: DedupCache,
+    partition_mode: PartitionMode,
 }
 
 impl Default for IndependentArguments {
     fn default() -> Self {
         Self {
-            delta_t: 1.0_f64,
-            step_slice: 10_usize,
-            dedup_mode: DedupMode::Dynamic(2.0_f64),
+            delta_t: PositiveF64::new(1.0_f64).unwrap(),
+            step_slice: NonZeroU64::new(10_u64).unwrap(),
+            dedup_cache: DedupCache::Relative(PositiveF64::new(2.0_f64).unwrap()),
             partition_mode: PartitionMode::Individuals,
         }
     }
@@ -95,37 +137,7 @@ impl IndependentSimulation {
         local_partition: &mut P,
         decomposition: C,
         auxiliary: &IndependentArguments,
-    ) -> Result<(f64, u64)> {
-        anyhow::ensure!(
-            auxiliary.delta_t > 0.0_f64,
-            "Independent algorithm delta_t={} must be positive.",
-            auxiliary.delta_t
-        );
-        anyhow::ensure!(
-            auxiliary.step_slice > 0,
-            "Independent algorithm step_slice={} must be positive.",
-            auxiliary.step_slice
-        );
-        anyhow::ensure!(
-            if let DedupMode::Dynamic(scalar) = auxiliary.dedup_mode {
-                scalar >= 0.0_f64
-            } else {
-                true
-            },
-            "Independent algorithm dedup_mode={:?} dynamic scalar must be non-negative.",
-            auxiliary.dedup_mode,
-        );
-        anyhow::ensure!(
-            if let PartitionMode::IsolatedIndividuals(rank, partitions) = auxiliary.partition_mode {
-                rank < partitions.get()
-            } else {
-                true
-            },
-            "Independent algorithm partition_mode={:?} isolated rank must be in range [0, \
-             partitions).",
-            auxiliary.partition_mode,
-        );
-
+    ) -> (f64, u64) {
         // TODO: how do I maintain event order during a monolithic run when events are
         //       immediately reported?
 
@@ -135,18 +147,18 @@ impl IndependentSimulation {
         let lineage_store = IndependentLineageStore::default();
 
         let min_spec_samples: LruCache<SpeciationSample> =
-            LruCache::with_capacity(match auxiliary.dedup_mode {
-                DedupMode::Static(capacity) => capacity,
-                DedupMode::Dynamic(scalar) =>
+            LruCache::with_capacity(match auxiliary.dedup_cache {
+                DedupCache::Absolute(capacity) => capacity.get(),
+                DedupCache::Relative(scalar) =>
                 #[allow(
                     clippy::cast_precision_loss,
                     clippy::cast_sign_loss,
                     clippy::cast_possible_truncation
                 )]
                 {
-                    ((lineages.len() as f64) * scalar) as usize
+                    ((lineages.len() as f64) * scalar.get()) as usize
                 }
-                DedupMode::None => 0_usize,
+                DedupCache::None => 0_usize,
             });
 
         let (time, steps) = match auxiliary.partition_mode {
@@ -189,10 +201,10 @@ impl IndependentSimulation {
                 min_spec_samples,
                 auxiliary,
             ),
-        }?;
+        };
 
         proxy.report_total_progress(0_u64);
 
-        Ok((time, steps))
+        (time, steps)
     }
 }

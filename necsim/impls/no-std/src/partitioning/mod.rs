@@ -11,6 +11,8 @@ pub mod monolithic;
 #[contract_trait]
 pub trait Partitioning: Sized {
     type LocalPartition<P: ReporterContext>: LocalPartition<P>;
+    type Auxiliary;
+    type Error;
 
     fn is_monolithic(&self) -> bool;
 
@@ -26,10 +28,17 @@ pub trait Partitioning: Sized {
     )]
     fn get_number_of_partitions(&self) -> NonZeroU32;
 
+    #[debug_ensures(
+        ret < self.get_number_of_partitions().get(),
+        "rank is in range [0, number_of_partitions)"
+    )]
+    fn get_rank(&self) -> u32;
+
     fn into_local_partition<P: ReporterContext>(
         self,
         reporter_context: P,
-    ) -> Self::LocalPartition<P>;
+        auxiliary: Self::Auxiliary,
+    ) -> Result<Self::LocalPartition<P>, Self::Error>;
 }
 
 #[derive(Copy, Clone)]

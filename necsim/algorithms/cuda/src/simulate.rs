@@ -28,7 +28,7 @@ use necsim_core::{
 
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
-use crate::{kernel::SimulationKernel, DedupMode};
+use crate::{kernel::SimulationKernel, DedupCache};
 
 #[allow(clippy::too_many_arguments)]
 pub fn simulate<
@@ -65,7 +65,7 @@ pub fn simulate<
         REPORT_SPECIATION,
         REPORT_DISPERSAL,
     >,
-    config: (GridSize, BlockSize, DedupMode),
+    config: (GridSize, BlockSize, DedupCache),
     mut simulation: Simulation<H, G, N, D, R, S, X, C, E, I, A>,
     mut individual_tasks: VecDeque<Lineage>,
     task_list: ValueBuffer<Lineage>,
@@ -85,17 +85,17 @@ pub fn simulate<
         .with_stream(stream);
 
     let mut min_spec_samples: LruSet<SpeciationSample> = LruSet::with_capacity(match dedup_mode {
-        DedupMode::Static(capacity) => capacity,
-        DedupMode::Dynamic(scalar) =>
+        DedupCache::Absolute(capacity) => capacity.get(),
+        DedupCache::Relative(scalar) =>
         #[allow(
             clippy::cast_precision_loss,
             clippy::cast_sign_loss,
             clippy::cast_possible_truncation
         )]
         {
-            ((individual_tasks.len() as f64) * scalar) as usize
+            ((individual_tasks.len() as f64) * scalar.get()) as usize
         }
-        DedupMode::None => 0_usize,
+        DedupCache::None => 0_usize,
     });
 
     let mut duplicate_individuals = bitbox![0; min_spec_sample_buffer.len()];

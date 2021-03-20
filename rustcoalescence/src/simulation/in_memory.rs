@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use array2d::Array2D;
 
 #[cfg(feature = "necsim-classical")]
 use necsim_classical::ClassicalSimulation;
@@ -29,68 +28,66 @@ use crate::args::{Algorithm, CommonArgs, InMemoryArgs};
 #[allow(unused_variables)]
 #[allow(clippy::needless_pass_by_value)]
 pub fn simulate<R: ReporterContext, P: LocalPartition<R>>(
-    common_args: &CommonArgs,
-    in_memory_args: &InMemoryArgs,
-    habitat: &Array2D<u32>,
-    dispersal: &Array2D<f64>,
+    common_args: CommonArgs,
+    in_memory_args: InMemoryArgs,
     local_partition: &mut P,
 ) -> Result<(f64, u64)> {
     info!(
         "Setting up the in-memory {:?} coalescence algorithm ...",
-        common_args.algorithm()
+        common_args.algorithm
     );
 
     #[allow(clippy::match_single_binding)]
-    let result: Result<(f64, u64)> = match common_args.algorithm() {
+    let result: Result<(f64, u64)> = match common_args.algorithm {
         #[cfg(feature = "necsim-classical")]
         Algorithm::Classical => ClassicalSimulation::simulate(
-            habitat,
-            &dispersal,
-            *common_args.speciation_probability_per_generation(),
-            *common_args.sample_percentage(),
-            *common_args.seed(),
+            &in_memory_args.habitat_map,
+            &in_memory_args.dispersal_map,
+            common_args.speciation_probability_per_generation.get(),
+            common_args.sample_percentage.get(),
+            common_args.seed,
             local_partition,
             (),
         ),
         #[cfg(feature = "necsim-gillespie")]
         Algorithm::Gillespie => GillespieSimulation::simulate(
-            habitat,
-            &dispersal,
-            *common_args.speciation_probability_per_generation(),
-            *common_args.sample_percentage(),
-            *common_args.seed(),
+            &in_memory_args.habitat_map,
+            &in_memory_args.dispersal_map,
+            common_args.speciation_probability_per_generation.get(),
+            common_args.sample_percentage.get(),
+            common_args.seed,
             local_partition,
             (),
         ),
         #[cfg(feature = "necsim-skipping-gillespie")]
         Algorithm::SkippingGillespie(auxiliary) => SkippingGillespieSimulation::simulate(
-            habitat,
-            &dispersal,
-            *common_args.speciation_probability_per_generation(),
-            *common_args.sample_percentage(),
-            *common_args.seed(),
+            &in_memory_args.habitat_map,
+            &in_memory_args.dispersal_map,
+            common_args.speciation_probability_per_generation.get(),
+            common_args.sample_percentage.get(),
+            common_args.seed,
             local_partition,
-            *auxiliary,
+            auxiliary,
         ),
         #[cfg(feature = "necsim-cuda")]
         Algorithm::Cuda(auxiliary) => CudaSimulation::simulate(
-            habitat,
-            &dispersal,
-            *common_args.speciation_probability_per_generation(),
-            *common_args.sample_percentage(),
-            *common_args.seed(),
+            &in_memory_args.habitat_map,
+            &in_memory_args.dispersal_map,
+            common_args.speciation_probability_per_generation.get(),
+            common_args.sample_percentage.get(),
+            common_args.seed,
             local_partition,
-            *auxiliary,
+            auxiliary,
         ),
         #[cfg(feature = "necsim-independent")]
         Algorithm::Independent(auxiliary) => IndependentSimulation::simulate(
-            habitat,
-            &dispersal,
-            *common_args.speciation_probability_per_generation(),
-            *common_args.sample_percentage(),
-            *common_args.seed(),
+            &in_memory_args.habitat_map,
+            &in_memory_args.dispersal_map,
+            common_args.speciation_probability_per_generation.get(),
+            common_args.sample_percentage.get(),
+            common_args.seed,
             local_partition,
-            *auxiliary,
+            auxiliary,
         ),
         #[allow(unreachable_patterns)]
         _ => anyhow::bail!("rustcoalescence does not support the selected algorithm"),
@@ -98,10 +95,8 @@ pub fn simulate<R: ReporterContext, P: LocalPartition<R>>(
 
     result.with_context(|| {
         format!(
-            "Failed to run the in-memory simulation with the habitat map {:?} and the dispersal \
-             map {:?}.",
-            in_memory_args.dispersal_map(),
-            in_memory_args.habitat_map()
+            "Failed to run the in-memory simulation with {:#?}.",
+            in_memory_args
         )
     })
 }

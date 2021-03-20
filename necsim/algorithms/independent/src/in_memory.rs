@@ -19,7 +19,7 @@ use necsim_impls_no_std::{
 };
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
-use super::{IndependentArguments, IndependentSimulation, PartitionMode};
+use super::{IndependentArguments, IndependentSimulation, IsolatedPartition, PartitionMode};
 
 #[contract_trait]
 impl InMemorySimulation for IndependentSimulation {
@@ -69,12 +69,14 @@ impl InMemorySimulation for IndependentSimulation {
             .map(|indexed_location| Lineage::new(indexed_location, &habitat))
             .collect(),
             // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
-            PartitionMode::IsolatedIndividuals(rank, partitions) => InMemoryOriginSampler::new(
-                lineage_origins.partition(rank, partitions.get()),
-                &habitat,
-            )
-            .map(|indexed_location| Lineage::new(indexed_location, &habitat))
-            .collect(),
+            PartitionMode::IsolatedIndividuals(IsolatedPartition { rank, partitions }) => {
+                InMemoryOriginSampler::new(
+                    lineage_origins.partition(rank, partitions.get()),
+                    &habitat,
+                )
+                .map(|indexed_location| Lineage::new(indexed_location, &habitat))
+                .collect()
+            },
             // Apply lineage origin decomposition in the `Landscape` mode
             PartitionMode::Landscape | PartitionMode::Probabilistic => {
                 DecompositionOriginSampler::new(
@@ -95,7 +97,7 @@ impl InMemorySimulation for IndependentSimulation {
             local_partition,
             decomposition,
             &auxiliary,
-        )?;
+        );
 
         Ok(local_partition.reduce_global_time_steps(partition_time, partition_steps))
     }

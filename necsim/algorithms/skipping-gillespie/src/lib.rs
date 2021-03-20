@@ -4,35 +4,46 @@
 #[macro_use]
 extern crate contracts;
 
-use anyhow::Result;
+use serde::Deserialize;
 
 use necsim_core::{
     cogs::{CoherentLineageStore, Habitat, LineageReference, SeparableDispersalSampler},
     reporter::Reporter,
 };
 
-use necsim_impls_no_std::{decomposition::Decomposition, partitioning::LocalPartition};
+use necsim_impls_no_std::{
+    decomposition::Decomposition, partitioning::LocalPartition, reporter::ReporterContext,
+};
 
-use necsim_impls_std::cogs::rng::std::StdRng;
-
-use necsim_impls_no_std::reporter::ReporterContext;
+use necsim_impls_std::{bounded::PositiveF64, cogs::rng::std::StdRng};
 
 mod almost_infinite;
 mod in_memory;
 mod non_spatial;
 mod simulate;
 
-#[derive(Copy, Clone, Debug)]
-pub enum ParallelismMode {
-    Optimistic(f64),
-    Lockstep,
-    OptimisticLockstep,
-    Averaging(f64),
+#[derive(Copy, Clone, Debug, Deserialize)]
+pub struct OptimisticParallelismMode {
+    delta_sync: PositiveF64,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Deserialize)]
+pub struct AveragingParallelismMode {
+    delta_sync: PositiveF64,
+}
+
+#[derive(Copy, Clone, Debug, Deserialize)]
+pub enum ParallelismMode {
+    Optimistic(OptimisticParallelismMode),
+    Lockstep,
+    OptimisticLockstep,
+    Averaging(AveragingParallelismMode),
+}
+
+#[derive(Copy, Clone, Debug, Deserialize)]
+#[serde(default)]
 pub struct SkippingGillespieArguments {
-    pub parallelism_mode: ParallelismMode,
+    parallelism_mode: ParallelismMode,
 }
 
 impl Default for SkippingGillespieArguments {
@@ -67,33 +78,22 @@ impl SkippingGillespieSimulation {
         local_partition: &mut L,
         decomposition: C,
         auxiliary: SkippingGillespieArguments,
-    ) -> Result<(f64, u64)> {
+    ) -> (f64, u64) {
         if local_partition.get_number_of_partitions().get() == 1 {
             log::warn!(
                 "Parallelism mode {:?} is ignored in monolithic mode.",
                 auxiliary.parallelism_mode
             );
 
-            return Ok(simulate::monolithic::simulate(
+            return simulate::monolithic::simulate(
                 habitat,
                 dispersal_sampler,
                 lineage_store,
                 speciation_probability_per_generation,
                 seed,
                 local_partition,
-            ));
+            );
         }
-
-        anyhow::ensure!(
-            match auxiliary.parallelism_mode {
-                ParallelismMode::Optimistic(time_slice)
-                | ParallelismMode::Averaging(time_slice) => time_slice > 0.0_f64,
-                _ => true,
-            },
-            "Skipping-Gillespie algorithm parallelism_mode={:?} independent time step scalar must \
-             be positive.",
-            auxiliary.parallelism_mode,
-        );
 
         let (time, steps) = match auxiliary.parallelism_mode {
             ParallelismMode::Lockstep => simulate::lockstep::simulate(
@@ -105,16 +105,18 @@ impl SkippingGillespieSimulation {
                 local_partition,
                 decomposition,
             ),
-            ParallelismMode::Optimistic(independent_time_slice) => simulate::optimistic::simulate(
-                habitat,
-                dispersal_sampler,
-                lineage_store,
-                speciation_probability_per_generation,
-                seed,
-                local_partition,
-                decomposition,
-                independent_time_slice,
-            ),
+            ParallelismMode::Optimistic(OptimisticParallelismMode { delta_sync }) => {
+                simulate::optimistic::simulate(
+                    habitat,
+                    dispersal_sampler,
+                    lineage_store,
+                    speciation_probability_per_generation,
+                    seed,
+                    local_partition,
+                    decomposition,
+                    delta_sync.get(),
+                )
+            },
             ParallelismMode::OptimisticLockstep => simulate::optimistic_lockstep::simulate(
                 habitat,
                 dispersal_sampler,
@@ -124,20 +126,22 @@ impl SkippingGillespieSimulation {
                 local_partition,
                 decomposition,
             ),
-            ParallelismMode::Averaging(independent_time_slice) => simulate::averaging::simulate(
-                habitat,
-                dispersal_sampler,
-                lineage_store,
-                speciation_probability_per_generation,
-                seed,
-                local_partition,
-                decomposition,
-                independent_time_slice,
-            ),
+            ParallelismMode::Averaging(AveragingParallelismMode { delta_sync }) => {
+                simulate::averaging::simulate(
+                    habitat,
+                    dispersal_sampler,
+                    lineage_store,
+                    speciation_probability_per_generation,
+                    seed,
+                    local_partition,
+                    decomposition,
+                    delta_sync.get(),
+                )
+            },
         };
 
         local_partition.get_reporter().report_progress(0_u64);
 
-        Ok((time, steps))
+        (time, steps)
     }
 }

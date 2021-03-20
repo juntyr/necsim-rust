@@ -1,7 +1,5 @@
 use std::collections::VecDeque;
 
-use anyhow::Result;
-
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, DispersalSampler, Habitat, MinSpeciationTrackingEventSampler,
@@ -47,15 +45,15 @@ pub fn simulate<
     proxy: &mut PartitionReporterProxy<R, P>,
     mut min_spec_samples: LruCache<SpeciationSample>,
     auxiliary: &IndependentArguments,
-) -> Result<(f64, u64)> {
-    let step_slice = auxiliary.step_slice as u64;
+) -> (f64, u64) {
+    let step_slice = auxiliary.step_slice.get();
 
     let emigration_exit = NeverEmigrationExit::default();
     let coalescence_sampler = IndependentCoalescenceSampler::default();
     let event_sampler = IndependentEventSampler::default();
     let immigration_entry = NeverImmigrationEntry::default();
     let active_lineage_sampler =
-        IndependentActiveLineageSampler::empty(ExpEventTimeSampler::new(auxiliary.delta_t));
+        IndependentActiveLineageSampler::empty(ExpEventTimeSampler::new(auxiliary.delta_t.get()));
 
     let mut simulation = Simulation::builder()
         .habitat(habitat)
@@ -105,5 +103,5 @@ pub fn simulate<
         max_time = max_time.max(new_time);
     }
 
-    Ok((max_time, total_steps))
+    (max_time, total_steps)
 }

@@ -6,6 +6,7 @@
 #![feature(total_cmp)]
 #![feature(iter_advance_by)]
 #![feature(fn_traits)]
+#![feature(never_type)]
 
 extern crate alloc;
 
