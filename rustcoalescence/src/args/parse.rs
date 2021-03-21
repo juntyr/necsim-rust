@@ -33,7 +33,7 @@ impl SimulateArgs {
         }
 
         let mut de_ron = ron::Deserializer::from_str(&ron_args)
-            .context("Failed to parse the simulate arguments.")?;
+            .context("Failed to create the simulate subcommand argument parser.")?;
 
         let mut track = serde_path_to_error::Track::new();
         let de = serde_path_to_error::Deserializer::new(&mut de_ron, &mut track);
@@ -57,7 +57,7 @@ impl SimulateArgs {
                 )))
             },
         }
-        .context("Failed to parse the simulate arguments.")?;
+        .context("Failed to parse the simulate subcommand arguments.")?;
 
         Ok(args)
     }
