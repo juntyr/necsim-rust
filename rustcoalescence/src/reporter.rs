@@ -51,10 +51,14 @@ impl RustcoalescenceReporterContext {
         }
 
         if REPORT_ANALYSIS {
-            info!(
-                "The simulation resulted in a biodiversity of {} unique species.",
-                biodiversity_reporter.biodiversity()
-            );
+            let biodiversity = biodiversity_reporter.biodiversity();
+
+            if biodiversity > 0 {
+                info!(
+                    "The simulation resulted in a biodiversity of {} unique species.",
+                    biodiversity
+                );
+            }
         }
     }
 }
