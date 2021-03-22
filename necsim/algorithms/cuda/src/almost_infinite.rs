@@ -48,7 +48,7 @@ impl AlmostInfiniteSimulation for CudaSimulation {
             speciation_probability_per_generation,
             seed,
             local_partition,
-            &auxiliary,
+            auxiliary,
         )
     }
 }

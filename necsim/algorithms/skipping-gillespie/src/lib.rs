@@ -22,17 +22,17 @@ mod in_memory;
 mod non_spatial;
 mod simulate;
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct OptimisticParallelismMode {
     delta_sync: PositiveF64,
 }
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct AveragingParallelismMode {
     delta_sync: PositiveF64,
 }
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub enum ParallelismMode {
     Optimistic(OptimisticParallelismMode),
     Lockstep,
@@ -40,7 +40,7 @@ pub enum ParallelismMode {
     Averaging(AveragingParallelismMode),
 }
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(default)]
 pub struct SkippingGillespieArguments {
     parallelism_mode: ParallelismMode,
@@ -61,6 +61,7 @@ impl SkippingGillespieSimulation {
     /// skipping on the `habitat` with `dispersal` and lineages from
     /// `lineage_store`.
     #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::needless_pass_by_value)]
     fn simulate<
         H: Habitat,
         D: SeparableDispersalSampler<H, StdRng>,

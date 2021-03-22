@@ -28,6 +28,7 @@ use necsim_impls_no_std::{
 use crate::{reporter::PartitionReporterProxy, IndependentArguments};
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::needless_pass_by_value)]
 pub fn simulate<
     H: Habitat,
     G: PrimeableRng<H>,
@@ -44,7 +45,7 @@ pub fn simulate<
     mut lineages: VecDeque<Lineage>,
     proxy: &mut PartitionReporterProxy<R, P>,
     mut min_spec_samples: LruCache<SpeciationSample>,
-    auxiliary: &IndependentArguments,
+    auxiliary: IndependentArguments,
 ) -> (f64, u64) {
     let step_slice = auxiliary.step_slice.get();
 

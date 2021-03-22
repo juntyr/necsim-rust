@@ -28,7 +28,7 @@ use necsim_core::{
 
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
-use crate::{kernel::SimulationKernel, DedupCache};
+use crate::{kernel::SimulationKernel, AbsoluteDedupCache, DedupCache, RelativeDedupCache};
 
 #[allow(clippy::too_many_arguments)]
 pub fn simulate<
@@ -85,15 +85,15 @@ pub fn simulate<
         .with_stream(stream);
 
     let mut min_spec_samples: LruSet<SpeciationSample> = LruSet::with_capacity(match dedup_mode {
-        DedupCache::Absolute(capacity) => capacity.get(),
-        DedupCache::Relative(scalar) =>
+        DedupCache::Absolute(AbsoluteDedupCache { capacity }) => capacity.get(),
+        DedupCache::Relative(RelativeDedupCache { factor }) =>
         #[allow(
             clippy::cast_precision_loss,
             clippy::cast_sign_loss,
             clippy::cast_possible_truncation
         )]
         {
-            ((individual_tasks.len() as f64) * scalar.get()) as usize
+            ((individual_tasks.len() as f64) * factor.get()) as usize
         }
         DedupCache::None => 0_usize,
     });

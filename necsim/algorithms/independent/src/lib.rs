@@ -44,14 +44,24 @@ mod partitioned;
 mod reporter;
 use reporter::PartitionReporterProxy;
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
+pub struct AbsoluteDedupCache {
+    capacity: NonZeroUsize,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RelativeDedupCache {
+    factor: PositiveF64,
+}
+
+#[derive(Debug, Deserialize)]
 pub enum DedupCache {
-    Absolute(NonZeroUsize),
-    Relative(PositiveF64),
+    Absolute(AbsoluteDedupCache),
+    Relative(RelativeDedupCache),
     None,
 }
 
-#[derive(Copy, Clone, Debug, DeserializeState)]
+#[derive(Debug, DeserializeState)]
 #[serde(deserialize_state = "Partition")]
 pub enum PartitionMode {
     Individuals,
@@ -83,7 +93,7 @@ where
     }
 }
 
-#[derive(Copy, Clone, Debug, DeserializeState)]
+#[derive(Debug, DeserializeState)]
 #[serde(default)]
 #[serde(deserialize_state = "Partition")]
 pub struct IndependentArguments {
@@ -99,7 +109,9 @@ impl Default for IndependentArguments {
         Self {
             delta_t: PositiveF64::new(1.0_f64).unwrap(),
             step_slice: NonZeroU64::new(10_u64).unwrap(),
-            dedup_cache: DedupCache::Relative(PositiveF64::new(2.0_f64).unwrap()),
+            dedup_cache: DedupCache::Relative(RelativeDedupCache {
+                factor: PositiveF64::new(2.0_f64).unwrap(),
+            }),
             partition_mode: PartitionMode::Individuals,
         }
     }
@@ -126,7 +138,7 @@ impl IndependentSimulation {
         seed: u64,
         local_partition: &mut P,
         decomposition: C,
-        auxiliary: &IndependentArguments,
+        auxiliary: IndependentArguments,
     ) -> (f64, u64) {
         // TODO: how do I maintain event order during a monolithic run when events are
         //       immediately reported?
@@ -138,15 +150,15 @@ impl IndependentSimulation {
 
         let min_spec_samples: LruCache<SpeciationSample> =
             LruCache::with_capacity(match auxiliary.dedup_cache {
-                DedupCache::Absolute(capacity) => capacity.get(),
-                DedupCache::Relative(scalar) =>
+                DedupCache::Absolute(AbsoluteDedupCache { capacity }) => capacity.get(),
+                DedupCache::Relative(RelativeDedupCache { factor }) =>
                 #[allow(
                     clippy::cast_precision_loss,
                     clippy::cast_sign_loss,
                     clippy::cast_possible_truncation
                 )]
                 {
-                    ((lineages.len() as f64) * scalar.get()) as usize
+                    ((lineages.len() as f64) * factor.get()) as usize
                 }
                 DedupCache::None => 0_usize,
             });

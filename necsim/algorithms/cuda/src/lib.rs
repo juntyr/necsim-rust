@@ -63,14 +63,24 @@ use crate::kernel::SimulationKernel;
 use cuda::with_initialised_cuda;
 use simulate::simulate;
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
+pub struct AbsoluteDedupCache {
+    capacity: NonZeroUsize,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RelativeDedupCache {
+    factor: PositiveF64,
+}
+
+#[derive(Debug, Deserialize)]
 pub enum DedupCache {
-    Absolute(NonZeroUsize),
-    Relative(PositiveF64),
+    Absolute(AbsoluteDedupCache),
+    Relative(RelativeDedupCache),
     None,
 }
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(default)]
 pub struct CudaArguments {
     ptx_jit: bool,
@@ -89,7 +99,9 @@ impl Default for CudaArguments {
             block_size: 32_u32,
             grid_size: 256_u32,
             step_slice: NonZeroU64::new(200_u64).unwrap(),
-            dedup_cache: DedupCache::Relative(PositiveF64::new(2.0_f64).unwrap()),
+            dedup_cache: DedupCache::Relative(RelativeDedupCache {
+                factor: PositiveF64::new(2.0_f64).unwrap(),
+            }),
         }
     }
 }
@@ -111,7 +123,7 @@ impl CudaSimulation {
         speciation_probability_per_generation: f64,
         seed: u64,
         local_partition: &mut P,
-        auxiliary: &CudaArguments,
+        auxiliary: CudaArguments,
     ) -> Result<(f64, u64)> {
         const REPORT_SPECIATION: bool = true;
         const REPORT_DISPERSAL: bool = false;
