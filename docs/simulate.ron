@@ -1,0 +1,213 @@
+(
+    /* per-individual per-generation probability that an individual speciates
+     *  i.e. is the creator of a new unique species */
+    speciation: (0.0 < f64 <= 1.0),
+    /* percentage of how many individuals are simulated */
+    sample: (0.0 <= f64 <= 1.0),
+    /* initial seed for the random number generator */
+    seed: (u64),
+
+    /* selection of the coalescence algorithm which is used */
+    algorithm: (
+        /* monolithic; picks a random individual for the next event; CPU-based */
+      | Classical
+        /* monolithic; has a queue of the next events for all locations; CPU-based */
+      | Gillespie
+        /* monolithic; like Gillespie but skips no-coalescence self-dispersal events; CPU-based */
+      | SkippingGillespie(
+            /* selection of how the algorithm should be parallelised across partitions */
+            /* optional, default = OptimisticLockstep */
+            parallelism_mode: (
+                /* (1) simulate each partition independently for some delta_sync
+                 * (2) check if any (unknown) migrations between partitions occured
+                 *     (a) if yes, roll back and try again with >= 1 more known migration
+                 *     (b) if no, exit the repetition
+                 * (3) designate the past delta_sync as the last safe point
+                 * (4) repeat with the next delta_sync until finished */
+              | Optimistic(
+                    /* simulation time between safe points */
+                    delta_sync: (0.0 < f64),
+                )
+                /* (1) vote on which partition has the earliest next event
+                 * (2) advance this partition by one step
+                 * (3) repeat until finished */
+              | Lockstep
+                /* (1) simulate each partition independently until their next emigration
+                 * (2) vote on which partition has the earliest emigration event
+                 * (3) roll back and simulate exactly until and including this first migration
+                 * (4) repeat until finished */
+              | OptimisticLockstep
+                /* WARNING: may produce inaccurate results
+                 *
+                 * (1) simulate each partition independently for some delta_sync
+                 * (2) perform all migrations simultaneously at this synchronisation point
+                 * (3) repeat until finished */
+              | Averaging(
+                    delta_sync: (0.0 < f64),
+                )
+            )
+        )
+        /* independent; simulates each individual without knowledge of others; CUDA GPU-based */
+      | CUDA(
+            /* if true, enables just-in-time compilation of the simulation parameters into
+             *  the CUDA kernel
+             * optional, default = false */
+            ptx_jit: (bool),
+            /* simulation time between random number generator repriming
+             *  -> lower deltas require fewer draws to pick the time of the next event
+             *  -> higher deltas require fewer reprimings to pick the time of the next event
+             * optional, default = 1.0 */
+            delta_t: (0.0 < f64),
+            /* CUDA thread block 1D size, should be a power of 2
+             * optional, default = 32 */
+            block_size: (u32),
+            /* CUDA thread grid 1D size, should be a power of 2
+             * optional, default = 256 */
+            grid_size: (u32),
+            /* number of steps which an individual performs on the GPU without supervision
+             *  -> shorter slices enable quicker termination of single individuals
+             *  -> longer slices incur less overhead from kernel launches
+             * optional, default = 200 */
+            step_slice: (0 < u64),
+            /* selection of the mode of the individual deduplication cache
+             * optional, default = Relative(factor: 2.0) */
+            dedup_cache: (
+                /* cache has an absolute maximum capacity */
+              | Absolute(
+                    /* absolute capacity of the cache */
+                    capacity: (0 < usize),
+                )
+                /* cache has a relative maximum capacity */
+              | Relative(
+                    /* capacity is the initial number of individuals * factor */
+                    factor: (0.0 < f64),
+                )
+                /* individual deduplication is disabled */
+              | None
+            ),
+        )
+        /* independent; simulates each individual without knowledge of others; CPU-based */
+      | Independent(
+            /* simulation time between random number generator repriming
+             *  -> lower deltas require fewer draws to pick the time of the next event
+             *  -> higher deltas require fewer reprimings to pick the time of the next event
+             * optional, default = 1.0 */
+            delta_t: (0.0 < f64),
+            /* number of steps which an individual performs on the CPU without supervision
+             *  -> shorter slices enable quicker termination of single individuals
+             * optional, default = 10 */
+            step_slice: (0 < u64),
+            /* Selection of the mode of the individual deduplication cache
+             * optional, default = Relative(factor: 2.0) */
+            dedup_cache: (
+                /* cache has an absolute maximum capacity */
+              | Absolute(
+                    /* absolute capacity of the cache */
+                    capacity: (0 < usize),
+                )
+                /* cache has a relative maximum capacity */
+              | Relative(
+                    /* capacity is the initial number of individuals * factor */
+                    factor: (0.0 < f64),
+                )
+                /* individual deduplication is disabled */
+              | None
+            ),
+            /* selection of the mode in which the simulation is partitioned
+             * optional, default = Individuals */
+            partition_mode: (
+                /* partition the initial set of individuals
+                 * no individuals are migrated between partitions
+                 * automatically coordinates between partitions
+                 * communication between partitions only occurs for progress measuring */
+              | Individuals
+                /* partition the initial set of individuals
+                 * no individuals are migrated between partitions
+                 * does not coordinate with other partitions
+                 * only simulates a single partition which does not communicate at all
+                 * invalid when the simulation is internally parallelised */
+              | Isolated(
+                    rank: (u32 < partitions),
+                    partitions: (0 < u32),
+                )
+                /* partition the landscape
+                 * individuals naturally migrate between partitions
+                 * automatically coordinates between partitions
+                 * communication between partitions occurs mostly for migration */
+              | Landscape
+                /* like Landscape but only migrates individuals at random intervals
+                 *  to minimise the communication overhead */
+              | Probabilistic
+            )
+        )
+    ),
+
+    /* selection of the event persistence strategy
+     * optional, default = None */
+    log: (
+        /* file path to a directory in which a log of all events will be saved
+         * implies that events will not be reported live, but can be replayed later
+         * required when the simulation is internally parellelised */
+      | Some(PathBuf)
+        /* equivalent to Some(PathBuf) */
+      | (PathBuf)
+        /* events are reported live but not persisted
+         * invalid when the simulation is internally parallelised */
+      | None
+    ),
+
+    /* selection of the scenario which will be simulated */
+    scenario: (
+        /* spatially explicit scenario using habitat and dispersal maps */
+      | InMemory(
+          /* file path to a (WxH) TIFF file storing grayscale u32 habitat values */
+          habitat: (PathBuf),
+          /* file path to a (WxH x WxH) TIFF file storing grayscale f64 dispersal weights
+           * the ith row of the image stores dispersal from the habitat cell (i % W, i / W) */
+          dispersal: (PathBuf),
+          /* if true, does NOT fix off-by-one discrepancies between the habitat and dispersal maps
+           * optional, default = false */
+          strict: (bool),
+      )
+        /* non-spatial scenario with homogeneous dispersal and a community size of
+         *  (area.0 * area.1 * deme) */
+      | NonSpatial(
+            /* width and height of the non-spatial landscape */
+            area: (u32, u32),
+            /* number of individuals which can live at the same habitat location */
+            deme: (u32),
+            /* if true, uses the InMemory scenario to emulate the NonSpatial scenario
+             * optional, default = false */
+            spatial: (bool),
+        )
+        /* spatially-implicit scenario with a non-spatial local and a non-spatial meta community
+         *  and migration from the meta to the local community */
+      | SpatiallyImplicit(
+            /* width and height of the non-spatial local landscape */
+            local_area: (u32, u32),
+            /* number of individuals which can live at the same local habitat location */
+            local_deme: (u32),
+            /* width and height of the non-spatial meta landscape */
+            meta_area: (u32, u32),
+            /* number of individuals which can live at the same meta habitat location */
+            meta_deme: (u32),
+            /* per-individual per-generation probability that the parent of an individual
+             *  in the local community migrated from the meta community */
+            migration: (0.0 < f64 <= 1.0),
+            /* if false, the meta community is assumed to be static but of infinite size
+             *  i.e. all reverse-migrations to the meta community occur 'at the same time'
+             * if true, the meta community is assumed to be dynamic but of finite size
+             *  i.e. all reverse-migrations to the meta community occur immediately
+             * optional, default = false */
+            dynamic_meta: (bool),
+        )
+        /* (almost) infinite spatially-explicit scenario with Gaussian distributed dispersal
+         *  the entire infinite landscape is habitat but, without loss of generality, has deme 1 */
+      | AlmostInfinite(
+            /* radius of a circle from which individuals are sampled */
+            radius: (u32),
+            /* sigma for the Gaussian dispersal kernel N(0, sigma^2) */
+            sigma: (0.0 <= f64),
+        )
+    ),
+)

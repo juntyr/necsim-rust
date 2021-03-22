@@ -94,7 +94,7 @@ impl InMemorySimulation for IndependentSimulation {
             seed,
             local_partition,
             decomposition,
-            &auxiliary,
+            auxiliary,
         );
 
         Ok(local_partition.reduce_global_time_steps(partition_time, partition_steps))
