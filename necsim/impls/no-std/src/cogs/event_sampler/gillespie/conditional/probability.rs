@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
         CoherentLineageStore, EmigrationExit, Habitat, LineageReference, RngCore,
-        SeparableDispersalSampler, SpeciationProbability,
+        SeparableDispersalSampler, SpeciationProbability, TurnoverRate,
     },
     landscape::Location,
     simulation::partial::event_sampler::PartialSimulation,
@@ -21,14 +21,25 @@ impl ProbabilityAtLocation {
     pub fn new<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: SeparableDispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: SeparableDispersalSampler<H, G>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
     >(
         location: &Location,
-        simulation: &PartialSimulation<H, G, N, D, R, S, X, ConditionalCoalescenceSampler<H, R, S>>,
+        simulation: &PartialSimulation<
+            H,
+            G,
+            R,
+            S,
+            X,
+            D,
+            ConditionalCoalescenceSampler<H, R, S>,
+            T,
+            N,
+        >,
         lineage_store_includes_self: bool,
     ) -> Self {
         let speciation_probability = simulation

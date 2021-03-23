@@ -6,18 +6,20 @@ use core::marker::PhantomData;
 use crate::cogs::{
     ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
     Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
+    TurnoverRate,
 };
 
 #[derive(TypedBuilder, Debug, TypeLayout)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda, LendToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(N: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(R: rustacuda_core::DeviceCopy))]
 #[cfg_attr(feature = "cuda", r2cBound(S: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(X: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(C: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(T: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(N: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(E: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(I: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(A: rust_cuda::common::RustToCuda))]
@@ -25,35 +27,38 @@ use crate::cogs::{
 pub struct Simulation<
     H: Habitat,
     G: RngCore,
-    N: SpeciationProbability<H>,
-    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
-    X: EmigrationExit<H, G, N, D, R, S>,
+    X: EmigrationExit<H, G, R, S>,
+    D: DispersalSampler<H, G>,
     C: CoalescenceSampler<H, R, S>,
-    E: EventSampler<H, G, N, D, R, S, X, C>,
+    T: TurnoverRate<H>,
+    N: SpeciationProbability<H>,
+    E: EventSampler<H, G, R, S, X, D, C, T, N>,
     I: ImmigrationEntry,
-    A: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>,
+    A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
 > {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) habitat: H,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
-    pub(super) speciation_probability: N,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
-    pub(super) dispersal_sampler: D,
     pub(super) lineage_reference: PhantomData<R>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) lineage_store: S,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) emigration_exit: X,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
+    pub(super) dispersal_sampler: D,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) coalescence_sampler: C,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    pub(super) turnover_rate: T,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    pub(super) speciation_probability: N,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) event_sampler: E,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
-    pub(super) rng: G,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) active_lineage_sampler: A,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    pub(super) rng: G,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) immigration_entry: I,
 }
@@ -61,16 +66,17 @@ pub struct Simulation<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-        E: EventSampler<H, G, N, D, R, S, X, C>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+        E: EventSampler<H, G, R, S, X, D, C, T, N>,
         I: ImmigrationEntry,
-        A: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>,
-    > Simulation<H, G, N, D, R, S, X, C, E, I, A>
+        A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
+    > Simulation<H, G, R, S, X, D, C, T, N, E, I, A>
 {
     #[inline]
     pub fn with_mut_split_active_lineage_sampler_and_rng<
@@ -80,12 +86,13 @@ impl<
             &mut super::partial::active_lineager_sampler::PartialSimulation<
                 H,
                 G,
-                N,
-                D,
                 R,
                 S,
                 X,
+                D,
                 C,
+                T,
+                N,
                 E,
             >,
             &mut G,
@@ -94,21 +101,22 @@ impl<
         &mut self,
         func: F,
     ) -> Q {
-        // Cast &self to a &PartialSimulation without the active lineage sampler and rng
-        // This is only safe as both types have the same fields and layout except for
-        // rng and active lineage sampler in Self at the end (PartialSimulation has a
-        // zero-sized PhantomData rng)
+        // Cast &self to a &PartialSimulation without the active lineage sampler
+        //  and rng
+        // This is only safe as PartialSimulation's type and layout is a prefix
+        //  subsequence of Self's type and layout
         let partial_simulation = unsafe {
             &mut *(self as *mut Self)
                 .cast::<super::partial::active_lineager_sampler::PartialSimulation<
                     H,
                     G,
-                    N,
-                    D,
                     R,
                     S,
                     X,
+                    D,
                     C,
+                    T,
+                    N,
                     E,
                 >>()
         };
@@ -125,27 +133,28 @@ impl<
         Q,
         F: FnOnce(
             &mut E,
-            &super::partial::event_sampler::PartialSimulation<H, G, N, D, R, S, X, C>,
+            &super::partial::event_sampler::PartialSimulation<H, G, R, S, X, D, C, T, N>,
             &mut G,
         ) -> Q,
     >(
         &mut self,
         func: F,
     ) -> Q {
-        // Cast &self to a &PartialSimulation without the event sampler and rng (active
-        // lineage sampler also removed implicitly) This is only safe as both
-        // types have the same fields and layout except for rng and event sampler in
-        // Self at the end (PartialSimulation has a zero-sized PhantomData rng)
+        // Cast &self to a &PartialSimulation without the event sampler and rng
+        //  (the active lineage sampler is also removed implicitly)
+        // This is only safe as PartialSimulation's type and layout is a prefix
+        //  subsequence of Self's type and layout
         let partial_simulation = unsafe {
             &mut *(self as *mut Self).cast::<super::partial::event_sampler::PartialSimulation<
                 H,
                 G,
-                N,
-                D,
                 R,
                 S,
                 X,
+                D,
                 C,
+                T,
+                N,
             >>()
         };
 
@@ -182,6 +191,10 @@ impl<
 
     pub fn speciation_probability(&self) -> &N {
         &self.speciation_probability
+    }
+
+    pub fn turnover_rate(&self) -> &T {
+        &self.turnover_rate
     }
 
     pub fn habitat(&self) -> &H {

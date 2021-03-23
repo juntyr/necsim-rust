@@ -1,7 +1,7 @@
 use float_next_after::NextAfter;
 
 use necsim_core::{
-    cogs::{Habitat, PrimeableRng, RngSampler},
+    cogs::{Habitat, PrimeableRng, RngSampler, TurnoverRate},
     intrinsics::floor,
     landscape::IndexedLocation,
 };
@@ -16,8 +16,6 @@ pub struct ExpEventTimeSampler {
 }
 
 impl ExpEventTimeSampler {
-    const LAMBDA: f64 = 0.5_f64;
-
     #[debug_requires(delta_t > 0.0_f64, "delta_t is positive")]
     pub fn new(delta_t: f64) -> Self {
         Self { delta_t }
@@ -25,7 +23,9 @@ impl ExpEventTimeSampler {
 }
 
 #[contract_trait]
-impl<H: Habitat, G: PrimeableRng<H>> EventTimeSampler<H, G> for ExpEventTimeSampler {
+impl<H: Habitat, G: PrimeableRng<H>, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
+    for ExpEventTimeSampler
+{
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
         &self,
@@ -33,7 +33,11 @@ impl<H: Habitat, G: PrimeableRng<H>> EventTimeSampler<H, G> for ExpEventTimeSamp
         time: f64,
         habitat: &H,
         rng: &mut G,
+        turnover_rate: &T,
     ) -> f64 {
+        let lambda =
+            turnover_rate.get_turnover_rate_at_location(indexed_location.location(), habitat);
+
         let mut event_time: f64 = floor(time / self.delta_t) * self.delta_t;
         let mut time_slice_end: f64 = event_time + self.delta_t;
 
@@ -41,8 +45,7 @@ impl<H: Habitat, G: PrimeableRng<H>> EventTimeSampler<H, G> for ExpEventTimeSamp
             rng.prime_with_habitat(habitat, indexed_location, event_time.to_bits());
 
             // next_after is required on every iteration to ensure progress
-            event_time =
-                (event_time + rng.sample_exponential(Self::LAMBDA)).next_after(f64::INFINITY);
+            event_time = (event_time + rng.sample_exponential(lambda)).next_after(f64::INFINITY);
 
             // The time slice is exclusive at time_slice_end
             if event_time >= time_slice_end {

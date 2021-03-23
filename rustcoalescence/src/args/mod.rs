@@ -81,6 +81,7 @@ struct SimulateArgsRaw {
     pub algorithm: Algorithm,
 
     #[serde(alias = "log")]
+    #[serde(default)]
     #[serde(deserialize_state_with = "deserialize_state_event_log")]
     pub event_log: Option<EventLogRecorder>,
 

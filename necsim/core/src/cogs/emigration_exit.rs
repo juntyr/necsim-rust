@@ -1,21 +1,13 @@
 use crate::{
-    cogs::{
-        DispersalSampler, Habitat, LineageReference, LineageStore, RngCore, SpeciationProbability,
-    },
+    cogs::{Habitat, LineageReference, LineageStore, RngCore},
     landscape::{IndexedLocation, Location},
     simulation::partial::emigration_exit::PartialSimulation,
 };
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait EmigrationExit<
-    H: Habitat,
-    G: RngCore,
-    N: SpeciationProbability<H>,
-    D: DispersalSampler<H, G>,
-    R: LineageReference<H>,
-    S: LineageStore<H, R>,
->: crate::cogs::Backup + core::fmt::Debug
+pub trait EmigrationExit<H: Habitat, G: RngCore, R: LineageReference<H>, S: LineageStore<H, R>>:
+    crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
     #[debug_requires(event_time >= 0.0_f64, "event time is non-negative")]
@@ -42,7 +34,7 @@ pub trait EmigrationExit<
         dispersal_origin: IndexedLocation,
         dispersal_target: Location,
         event_time: f64,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S>,
+        simulation: &mut PartialSimulation<H, G, R, S>,
         rng: &mut G,
     ) -> Option<(R, IndexedLocation, Location, f64)>;
 }

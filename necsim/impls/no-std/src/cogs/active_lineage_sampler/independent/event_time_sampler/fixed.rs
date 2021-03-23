@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Habitat, PrimeableRng},
+    cogs::{Habitat, PrimeableRng, TurnoverRate},
     intrinsics::floor,
     landscape::IndexedLocation,
 };
@@ -18,7 +18,9 @@ impl Default for FixedEventTimeSampler {
 }
 
 #[contract_trait]
-impl<H: Habitat, G: PrimeableRng<H>> EventTimeSampler<H, G> for FixedEventTimeSampler {
+impl<H: Habitat, G: PrimeableRng<H>, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
+    for FixedEventTimeSampler
+{
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
         &self,
@@ -26,8 +28,10 @@ impl<H: Habitat, G: PrimeableRng<H>> EventTimeSampler<H, G> for FixedEventTimeSa
         time: f64,
         habitat: &H,
         rng: &mut G,
+        turnover_rate: &T,
     ) -> f64 {
-        let lambda = 0.5_f64;
+        let lambda =
+            turnover_rate.get_turnover_rate_at_location(indexed_location.location(), habitat);
 
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]

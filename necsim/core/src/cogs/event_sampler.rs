@@ -6,7 +6,7 @@ use core::{
 
 use super::{
     CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, LineageReference, LineageStore,
-    RngCore, SpeciationProbability,
+    RngCore, SpeciationProbability, TurnoverRate,
 };
 use crate::{
     event::Event, landscape::IndexedLocation, simulation::partial::event_sampler::PartialSimulation,
@@ -17,12 +17,13 @@ use crate::{
 pub trait EventSampler<
     H: Habitat,
     G: RngCore,
-    N: SpeciationProbability<H>,
-    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
-    X: EmigrationExit<H, G, N, D, R, S>,
+    X: EmigrationExit<H, G, R, S>,
+    D: DispersalSampler<H, G>,
     C: CoalescenceSampler<H, R, S>,
+    T: TurnoverRate<H>,
+    N: SpeciationProbability<H>,
 >: crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
@@ -47,7 +48,7 @@ pub trait EventSampler<
         lineage_reference: R,
         indexed_location: IndexedLocation,
         event_time: f64,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C>,
+        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N>,
         rng: &mut G,
     ) -> Option<Event>;
 }
@@ -120,13 +121,14 @@ impl Ord for SpeciationSample {
 pub trait MinSpeciationTrackingEventSampler<
     H: Habitat,
     G: RngCore,
-    N: SpeciationProbability<H>,
-    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
-    X: EmigrationExit<H, G, N, D, R, S>,
+    X: EmigrationExit<H, G, R, S>,
+    D: DispersalSampler<H, G>,
     C: CoalescenceSampler<H, R, S>,
->: EventSampler<H, G, N, D, R, S, X, C>
+    T: TurnoverRate<H>,
+    N: SpeciationProbability<H>,
+>: EventSampler<H, G, R, S, X, D, C, T, N>
 {
     fn replace_min_speciation(&mut self, new: Option<SpeciationSample>)
         -> Option<SpeciationSample>;

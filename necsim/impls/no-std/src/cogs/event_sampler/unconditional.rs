@@ -4,6 +4,7 @@ use necsim_core::{
     cogs::{
         Backup, CoalescenceRngSample, CoalescenceSampler, CoherentLineageStore, DispersalSampler,
         EmigrationExit, EventSampler, Habitat, LineageReference, RngCore, SpeciationProbability,
+        TurnoverRate,
     },
     event::{Event, EventType},
     landscape::IndexedLocation,
@@ -15,27 +16,29 @@ use necsim_core::{
 pub struct UnconditionalEventSampler<
     H: Habitat,
     G: RngCore,
-    N: SpeciationProbability<H>,
-    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: CoherentLineageStore<H, R>,
-    X: EmigrationExit<H, G, N, D, R, S>,
+    X: EmigrationExit<H, G, R, S>,
+    D: DispersalSampler<H, G>,
     C: CoalescenceSampler<H, R, S>,
->(PhantomData<(H, G, N, D, R, S, X, C)>);
+    T: TurnoverRate<H>,
+    N: SpeciationProbability<H>,
+>(PhantomData<(H, G, R, S, X, D, C, T, N)>);
 
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-    > Default for UnconditionalEventSampler<H, G, N, D, R, S, X, C>
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+    > Default for UnconditionalEventSampler<H, G, R, S, X, D, C, T, N>
 {
     fn default() -> Self {
-        Self(PhantomData::<(H, G, N, D, R, S, X, C)>)
+        Self(PhantomData::<(H, G, R, S, X, D, C, T, N)>)
     }
 }
 
@@ -43,16 +46,17 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-    > Backup for UnconditionalEventSampler<H, G, N, D, R, S, X, C>
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+    > Backup for UnconditionalEventSampler<H, G, R, S, X, D, C, T, N>
 {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(PhantomData::<(H, G, N, D, R, S, X, C)>)
+        Self(PhantomData::<(H, G, R, S, X, D, C, T, N)>)
     }
 }
 
@@ -60,13 +64,15 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-    > EventSampler<H, G, N, D, R, S, X, C> for UnconditionalEventSampler<H, G, N, D, R, S, X, C>
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+    > EventSampler<H, G, R, S, X, D, C, T, N>
+    for UnconditionalEventSampler<H, G, R, S, X, D, C, T, N>
 {
     #[must_use]
     #[allow(clippy::shadow_unrelated)] // https://github.com/rust-lang/rust-clippy/issues/5455
@@ -75,7 +81,7 @@ impl<
         lineage_reference: R,
         indexed_location: IndexedLocation,
         event_time: f64,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C>,
+        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N>,
         rng: &mut G,
     ) -> Option<Event> {
         use necsim_core::cogs::RngSampler;

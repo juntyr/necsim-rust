@@ -5,7 +5,7 @@ use priority_queue::PriorityQueue;
 use necsim_core::{
     cogs::{
         Backup, CoalescenceSampler, CoherentLineageStore, DispersalSampler, EmigrationExit,
-        Habitat, ImmigrationEntry, LineageReference, RngCore, SpeciationProbability,
+        Habitat, ImmigrationEntry, LineageReference, RngCore, SpeciationProbability, TurnoverRate,
     },
     landscape::Location,
     simulation::partial::event_sampler::PartialSimulation,
@@ -23,37 +23,39 @@ use event_time::EventTime;
 pub struct GillespieActiveLineageSampler<
     H: Habitat,
     G: RngCore,
-    N: SpeciationProbability<H>,
-    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: CoherentLineageStore<H, R>,
-    X: EmigrationExit<H, G, N, D, R, S>,
+    X: EmigrationExit<H, G, R, S>,
+    D: DispersalSampler<H, G>,
     C: CoalescenceSampler<H, R, S>,
-    E: GillespieEventSampler<H, G, N, D, R, S, X, C>,
+    T: TurnoverRate<H>,
+    N: SpeciationProbability<H>,
+    E: GillespieEventSampler<H, G, R, S, X, D, C, T, N>,
     I: ImmigrationEntry,
 > {
     active_locations: PriorityQueue<Location, EventTime>,
     number_active_lineages: usize,
     last_event_time: f64,
-    marker: PhantomData<(H, G, N, D, R, S, X, C, E, I)>,
+    marker: PhantomData<(H, G, R, S, X, D, C, T, N, E, I)>,
 }
 
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-        E: GillespieEventSampler<H, G, N, D, R, S, X, C>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+        E: GillespieEventSampler<H, G, R, S, X, D, C, T, N>,
         I: ImmigrationEntry,
-    > GillespieActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
+    > GillespieActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
 {
     #[must_use]
     pub fn new(
-        partial_simulation: &PartialSimulation<H, G, N, D, R, S, X, C>,
+        partial_simulation: &PartialSimulation<H, G, R, S, X, D, C, T, N>,
         event_sampler: &E,
         rng: &mut G,
     ) -> Self {
@@ -95,7 +97,7 @@ impl<
             active_locations: PriorityQueue::from(active_locations),
             number_active_lineages,
             last_event_time: 0.0_f64,
-            marker: PhantomData::<(H, G, N, D, R, S, X, C, E, I)>,
+            marker: PhantomData::<(H, G, R, S, X, D, C, T, N, E, I)>,
         }
     }
 }
@@ -103,15 +105,16 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-        E: GillespieEventSampler<H, G, N, D, R, S, X, C>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+        E: GillespieEventSampler<H, G, R, S, X, D, C, T, N>,
         I: ImmigrationEntry,
-    > core::fmt::Debug for GillespieActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
+    > core::fmt::Debug for GillespieActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("GillespieActiveLineageSampler")
@@ -126,22 +129,23 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-        E: GillespieEventSampler<H, G, N, D, R, S, X, C>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+        E: GillespieEventSampler<H, G, R, S, X, D, C, T, N>,
         I: ImmigrationEntry,
-    > Backup for GillespieActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
+    > Backup for GillespieActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             active_locations: self.active_locations.clone(),
             number_active_lineages: self.number_active_lineages,
             last_event_time: self.last_event_time,
-            marker: PhantomData::<(H, G, N, D, R, S, X, C, E, I)>,
+            marker: PhantomData::<(H, G, R, S, X, D, C, T, N, E, I)>,
         }
     }
 }

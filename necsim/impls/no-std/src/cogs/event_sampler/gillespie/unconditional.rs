@@ -4,6 +4,7 @@ use necsim_core::{
     cogs::{
         Backup, CoalescenceRngSample, CoalescenceSampler, CoherentLineageStore, DispersalSampler,
         EmigrationExit, EventSampler, Habitat, LineageReference, RngCore, SpeciationProbability,
+        TurnoverRate,
     },
     event::{Event, EventType},
     landscape::{IndexedLocation, Location},
@@ -17,27 +18,29 @@ use super::GillespieEventSampler;
 pub struct UnconditionalGillespieEventSampler<
     H: Habitat,
     G: RngCore,
-    N: SpeciationProbability<H>,
-    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: CoherentLineageStore<H, R>,
-    X: EmigrationExit<H, G, N, D, R, S>,
+    X: EmigrationExit<H, G, R, S>,
+    D: DispersalSampler<H, G>,
     C: CoalescenceSampler<H, R, S>,
->(PhantomData<(H, G, N, D, R, S, X, C)>);
+    T: TurnoverRate<H>,
+    N: SpeciationProbability<H>,
+>(PhantomData<(H, G, R, S, X, D, C, T, N)>);
 
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-    > Default for UnconditionalGillespieEventSampler<H, G, N, D, R, S, X, C>
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+    > Default for UnconditionalGillespieEventSampler<H, G, R, S, X, D, C, T, N>
 {
     fn default() -> Self {
-        Self(PhantomData::<(H, G, N, D, R, S, X, C)>)
+        Self(PhantomData::<(H, G, R, S, X, D, C, T, N)>)
     }
 }
 
@@ -45,16 +48,17 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-    > Backup for UnconditionalGillespieEventSampler<H, G, N, D, R, S, X, C>
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+    > Backup for UnconditionalGillespieEventSampler<H, G, R, S, X, D, C, T, N>
 {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(PhantomData::<(H, G, N, D, R, S, X, C)>)
+        Self(PhantomData::<(H, G, R, S, X, D, C, T, N)>)
     }
 }
 
@@ -62,14 +66,15 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-    > EventSampler<H, G, N, D, R, S, X, C>
-    for UnconditionalGillespieEventSampler<H, G, N, D, R, S, X, C>
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+    > EventSampler<H, G, R, S, X, D, C, T, N>
+    for UnconditionalGillespieEventSampler<H, G, R, S, X, D, C, T, N>
 {
     #[must_use]
     #[allow(clippy::shadow_unrelated)] // https://github.com/rust-lang/rust-clippy/issues/5455
@@ -78,7 +83,7 @@ impl<
         lineage_reference: R,
         indexed_location: IndexedLocation,
         event_time: f64,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C>,
+        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N>,
         rng: &mut G,
     ) -> Option<Event> {
         use necsim_core::cogs::RngSampler;
@@ -154,20 +159,21 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-    > GillespieEventSampler<H, G, N, D, R, S, X, C>
-    for UnconditionalGillespieEventSampler<H, G, N, D, R, S, X, C>
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+    > GillespieEventSampler<H, G, R, S, X, D, C, T, N>
+    for UnconditionalGillespieEventSampler<H, G, R, S, X, D, C, T, N>
 {
     #[must_use]
     fn get_event_rate_at_location(
         &self,
         location: &Location,
-        simulation: &PartialSimulation<H, G, N, D, R, S, X, C>,
+        simulation: &PartialSimulation<H, G, R, S, X, D, C, T, N>,
         lineage_store_includes_self: bool,
     ) -> f64 {
         #[allow(clippy::cast_precision_loss)]
@@ -180,6 +186,9 @@ impl<
             .len()
             + usize::from(!lineage_store_includes_self)) as f64;
 
-        population * 0.5_f64
+        population
+            * simulation
+                .turnover_rate
+                .get_turnover_rate_at_location(location, &simulation.habitat)
     }
 }

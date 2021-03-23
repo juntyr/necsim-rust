@@ -19,7 +19,7 @@ use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
         LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
-        SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
+        SingularActiveLineageSampler, SpeciationProbability, SpeciationSample, TurnoverRate,
     },
     lineage::Lineage,
     reporter::Reporter,
@@ -30,21 +30,22 @@ use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
 use crate::{kernel::SimulationKernel, AbsoluteDedupCache, DedupCache, RelativeDedupCache};
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn simulate<
     'k,
     H: Habitat + RustToCuda,
     G: PrimeableRng<H> + RustToCuda,
-    N: SpeciationProbability<H> + RustToCuda,
-    D: DispersalSampler<H, G> + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
     P: Reporter,
     S: LineageStore<H, R> + RustToCuda,
-    X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
+    X: EmigrationExit<H, G, R, S> + RustToCuda,
+    D: DispersalSampler<H, G> + RustToCuda,
     C: CoalescenceSampler<H, R, S> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
+    T: TurnoverRate<H> + RustToCuda,
+    N: SpeciationProbability<H> + RustToCuda,
+    E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
     I: ImmigrationEntry + RustToCuda,
-    A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E, I> + RustToCuda,
+    A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
     const REPORT_SPECIATION: bool,
     const REPORT_DISPERSAL: bool,
 >(
@@ -53,12 +54,13 @@ pub fn simulate<
         'k,
         H,
         G,
-        N,
-        D,
         R,
         S,
         X,
+        D,
         C,
+        T,
+        N,
         E,
         I,
         A,
@@ -66,7 +68,7 @@ pub fn simulate<
         REPORT_DISPERSAL,
     >,
     config: (GridSize, BlockSize, DedupCache),
-    mut simulation: Simulation<H, G, N, D, R, S, X, C, E, I, A>,
+    mut simulation: Simulation<H, G, R, S, X, D, C, T, N, E, I, A>,
     mut individual_tasks: VecDeque<Lineage>,
     task_list: ValueBuffer<Lineage>,
     event_buffer: EventBuffer<REPORT_SPECIATION, REPORT_DISPERSAL>,

@@ -12,6 +12,7 @@ use necsim_impls_no_std::{
         event_sampler::gillespie::conditional::ConditionalGillespieEventSampler,
         immigration_entry::never::NeverImmigrationEntry,
         speciation_probability::uniform::UniformSpeciationProbability,
+        turnover_rate::uniform::UniformTurnoverRate,
     },
     partitioning::LocalPartition,
 };
@@ -41,6 +42,7 @@ pub fn simulate<
         UniformSpeciationProbability::new(speciation_probability_per_generation);
     let emigration_exit = NeverEmigrationExit::default();
     let coalescence_sampler = ConditionalCoalescenceSampler::default();
+    let turnover_rate = UniformTurnoverRate::default();
     let event_sampler = ConditionalGillespieEventSampler::default();
 
     // Pack a PartialSimulation to initialise the GillespieActiveLineageSampler
@@ -52,7 +54,8 @@ pub fn simulate<
         lineage_store: lineage_store_in,
         emigration_exit,
         coalescence_sampler,
-        rng: PhantomData::<StdRng>,
+        turnover_rate,
+        _rng: PhantomData::<StdRng>,
     };
 
     let active_lineage_sampler =
@@ -67,7 +70,8 @@ pub fn simulate<
         lineage_store,
         emigration_exit,
         coalescence_sampler,
-        rng: _,
+        turnover_rate,
+        _rng: _,
     } = partial_simulation;
 
     let immigration_entry = NeverImmigrationEntry::default();
@@ -81,6 +85,7 @@ pub fn simulate<
         .lineage_store(lineage_store)
         .emigration_exit(emigration_exit)
         .coalescence_sampler(coalescence_sampler)
+        .turnover_rate(turnover_rate)
         .event_sampler(event_sampler)
         .immigration_entry(immigration_entry)
         .active_lineage_sampler(active_lineage_sampler)

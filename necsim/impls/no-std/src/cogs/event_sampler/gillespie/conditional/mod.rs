@@ -4,7 +4,7 @@ use necsim_core::{
     cogs::{
         Backup, CoalescenceRngSample, CoalescenceSampler, CoherentLineageStore, EmigrationExit,
         EventSampler, Habitat, LineageReference, RngCore, RngSampler, SeparableDispersalSampler,
-        SpeciationProbability,
+        SpeciationProbability, TurnoverRate,
     },
     event::{Event, EventType},
     landscape::{IndexedLocation, Location},
@@ -20,30 +20,32 @@ mod probability;
 
 use probability::ProbabilityAtLocation;
 
-#[allow(clippy::module_name_repetitions)]
+#[allow(clippy::module_name_repetitions, clippy::type_complexity)]
 #[derive(Debug)]
 pub struct ConditionalGillespieEventSampler<
     H: Habitat,
     G: RngCore,
-    N: SpeciationProbability<H>,
-    D: SeparableDispersalSampler<H, G>,
     R: LineageReference<H>,
     S: CoherentLineageStore<H, R>,
-    X: EmigrationExit<H, G, N, D, R, S>,
->(PhantomData<(H, G, N, D, R, S, X)>);
+    X: EmigrationExit<H, G, R, S>,
+    D: SeparableDispersalSampler<H, G>,
+    T: TurnoverRate<H>,
+    N: SpeciationProbability<H>,
+>(PhantomData<(H, G, R, S, X, D, T, N)>);
 
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: SeparableDispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
-    > Default for ConditionalGillespieEventSampler<H, G, N, D, R, S, X>
+        X: EmigrationExit<H, G, R, S>,
+        D: SeparableDispersalSampler<H, G>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+    > Default for ConditionalGillespieEventSampler<H, G, R, S, X, D, T, N>
 {
     fn default() -> Self {
-        Self(PhantomData::<(H, G, N, D, R, S, X)>)
+        Self(PhantomData::<(H, G, R, S, X, D, T, N)>)
     }
 }
 
@@ -51,15 +53,16 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: SeparableDispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
-    > Backup for ConditionalGillespieEventSampler<H, G, N, D, R, S, X>
+        X: EmigrationExit<H, G, R, S>,
+        D: SeparableDispersalSampler<H, G>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+    > Backup for ConditionalGillespieEventSampler<H, G, R, S, X, D, T, N>
 {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(PhantomData::<(H, G, N, D, R, S, X)>)
+        Self(PhantomData::<(H, G, R, S, X, D, T, N)>)
     }
 }
 
@@ -67,13 +70,14 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: SeparableDispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
-    > EventSampler<H, G, N, D, R, S, X, ConditionalCoalescenceSampler<H, R, S>>
-    for ConditionalGillespieEventSampler<H, G, N, D, R, S, X>
+        X: EmigrationExit<H, G, R, S>,
+        D: SeparableDispersalSampler<H, G>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+    > EventSampler<H, G, R, S, X, D, ConditionalCoalescenceSampler<H, R, S>, T, N>
+    for ConditionalGillespieEventSampler<H, G, R, S, X, D, T, N>
 {
     #[must_use]
     #[allow(clippy::double_parens)]
@@ -97,12 +101,13 @@ impl<
         simulation: &mut PartialSimulation<
             H,
             G,
-            N,
-            D,
             R,
             S,
             X,
+            D,
             ConditionalCoalescenceSampler<H, R, S>,
+            T,
+            N,
         >,
         rng: &mut G,
     ) -> Option<Event> {
@@ -204,20 +209,31 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: SeparableDispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
-    > GillespieEventSampler<H, G, N, D, R, S, X, ConditionalCoalescenceSampler<H, R, S>>
-    for ConditionalGillespieEventSampler<H, G, N, D, R, S, X>
+        X: EmigrationExit<H, G, R, S>,
+        D: SeparableDispersalSampler<H, G>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+    > GillespieEventSampler<H, G, R, S, X, D, ConditionalCoalescenceSampler<H, R, S>, T, N>
+    for ConditionalGillespieEventSampler<H, G, R, S, X, D, T, N>
 {
     #[must_use]
     #[allow(clippy::type_complexity)]
     fn get_event_rate_at_location(
         &self,
         location: &Location,
-        simulation: &PartialSimulation<H, G, N, D, R, S, X, ConditionalCoalescenceSampler<H, R, S>>,
+        simulation: &PartialSimulation<
+            H,
+            G,
+            R,
+            S,
+            X,
+            D,
+            ConditionalCoalescenceSampler<H, R, S>,
+            T,
+            N,
+        >,
         lineage_store_includes_self: bool,
     ) -> f64 {
         let probability_at_location =
@@ -233,6 +249,10 @@ impl<
             .len()
             + usize::from(!lineage_store_includes_self)) as f64;
 
-        probability_at_location.total() * population * 0.5_f64
+        probability_at_location.total()
+            * population
+            * simulation
+                .turnover_rate
+                .get_turnover_rate_at_location(location, &simulation.habitat)
     }
 }

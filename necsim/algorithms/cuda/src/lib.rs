@@ -39,6 +39,7 @@ use necsim_impls_no_std::{
         lineage_store::independent::IndependentLineageStore,
         rng::fixedseahash::FixedSeaHash as Rng,
         speciation_probability::uniform::UniformSpeciationProbability,
+        turnover_rate::uniform::UniformTurnoverRate,
     },
     partitioning::LocalPartition,
     reporter::ReporterContext,
@@ -134,6 +135,7 @@ impl CudaSimulation {
         let lineage_store = IndependentLineageStore::default();
         let emigration_exit = NeverEmigrationExit::default();
         let coalescence_sampler = CoalescenceSampler::default();
+        let turnover_rate = UniformTurnoverRate::default();
         let event_sampler = EventSampler::default();
         let immigration_entry = NeverImmigrationEntry::default();
 
@@ -149,6 +151,7 @@ impl CudaSimulation {
             .lineage_store(lineage_store)
             .emigration_exit(emigration_exit)
             .coalescence_sampler(coalescence_sampler)
+            .turnover_rate(turnover_rate)
             .event_sampler(event_sampler)
             .immigration_entry(immigration_entry)
             .active_lineage_sampler(active_lineage_sampler)

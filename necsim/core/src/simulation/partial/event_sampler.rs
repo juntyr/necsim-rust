@@ -2,55 +2,58 @@ use core::marker::PhantomData;
 
 use crate::cogs::{
     CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, LineageReference, LineageStore,
-    RngCore, SpeciationProbability,
+    RngCore, SpeciationProbability, TurnoverRate,
 };
 
 #[repr(C)]
 pub struct PartialSimulation<
     H: Habitat,
     G: RngCore,
-    N: SpeciationProbability<H>,
-    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
-    X: EmigrationExit<H, G, N, D, R, S>,
+    X: EmigrationExit<H, G, R, S>,
+    D: DispersalSampler<H, G>,
     C: CoalescenceSampler<H, R, S>,
+    T: TurnoverRate<H>,
+    N: SpeciationProbability<H>,
 > {
     pub habitat: H,
-    pub speciation_probability: N,
-    pub dispersal_sampler: D,
     pub lineage_reference: PhantomData<R>,
     pub lineage_store: S,
     pub emigration_exit: X,
+    pub dispersal_sampler: D,
     pub coalescence_sampler: C,
-    pub rng: PhantomData<G>,
+    pub turnover_rate: T,
+    pub speciation_probability: N,
+    pub _rng: PhantomData<G>,
 }
 
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-    > PartialSimulation<H, G, N, D, R, S, X, C>
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+    > PartialSimulation<H, G, R, S, X, D, C, T, N>
 {
     #[inline]
     pub fn with_mut_split_emigration_exit<
         Q,
-        F: FnOnce(&mut X, &mut super::emigration_exit::PartialSimulation<H, G, N, D, R, S>) -> Q,
+        F: FnOnce(&mut X, &mut super::emigration_exit::PartialSimulation<H, G, R, S>) -> Q,
     >(
         &mut self,
         func: F,
     ) -> Q {
         // Cast &mut self to a &mut PartialSimulation without the emigration exit
-        // This is only safe as both types have the same fields and layout except for
-        // emigration exit (and coalescence sampler) in Self at the end
+        // This is only safe as PartialSimulation's type and layout is a prefix
+        //  subsequence of Self's type and layout
         let partial_simulation = unsafe {
             &mut *(self as *mut Self)
-                .cast::<super::emigration_exit::PartialSimulation<H, G, N, D, R, S>>()
+                .cast::<super::emigration_exit::PartialSimulation<H, G, R, S>>()
         };
 
         func(&mut self.emigration_exit, partial_simulation)

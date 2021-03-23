@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Habitat, PrimeableRng, RngSampler},
+    cogs::{Habitat, PrimeableRng, RngSampler, TurnoverRate},
     intrinsics::{exp, floor},
     landscape::IndexedLocation,
 };
@@ -11,23 +11,19 @@ use super::EventTimeSampler;
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 pub struct PoissonEventTimeSampler {
     delta_t: f64,
-    no_event_probability_per_step: f64,
 }
 
 impl PoissonEventTimeSampler {
-    const LAMBDA: f64 = 0.5_f64;
-
     #[debug_requires(delta_t > 0.0_f64, "delta_t is positive")]
     pub fn new(delta_t: f64) -> Self {
-        Self {
-            delta_t,
-            no_event_probability_per_step: exp(-Self::LAMBDA * delta_t),
-        }
+        Self { delta_t }
     }
 }
 
 #[contract_trait]
-impl<H: Habitat, G: PrimeableRng<H>> EventTimeSampler<H, G> for PoissonEventTimeSampler {
+impl<H: Habitat, G: PrimeableRng<H>, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
+    for PoissonEventTimeSampler
+{
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
         &self,
@@ -35,7 +31,12 @@ impl<H: Habitat, G: PrimeableRng<H>> EventTimeSampler<H, G> for PoissonEventTime
         time: f64,
         habitat: &H,
         rng: &mut G,
+        turnover_rate: &T,
     ) -> f64 {
+        let lambda =
+            turnover_rate.get_turnover_rate_at_location(indexed_location.location(), habitat);
+        let no_event_probability_per_step = exp(-lambda * self.delta_t);
+
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
         let mut time_step = floor(time / self.delta_t) as u64;
@@ -45,14 +46,14 @@ impl<H: Habitat, G: PrimeableRng<H>> EventTimeSampler<H, G> for PoissonEventTime
 
             // https://en.wikipedia.org/wiki/Poisson_distribution#cite_ref-Devroye1986_54-0
             let mut x = 0_u8;
-            let mut p = self.no_event_probability_per_step;
+            let mut p = no_event_probability_per_step;
             let mut s = p;
 
             let u = rng.sample_uniform();
 
             while x < 254 && u > s {
                 x += 1;
-                p *= Self::LAMBDA / f64::from(x);
+                p *= lambda / f64::from(x);
                 s += p;
             }
 

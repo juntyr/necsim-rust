@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use necsim_core::cogs::{
     CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
     LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
-    SingularActiveLineageSampler, SpeciationProbability,
+    SingularActiveLineageSampler, SpeciationProbability, TurnoverRate,
 };
 
 use rustacuda::{function::Function, module::Module};
@@ -23,15 +23,16 @@ pub struct SimulationKernel<
     'k,
     H: Habitat + RustToCuda,
     G: PrimeableRng<H> + RustToCuda,
-    N: SpeciationProbability<H> + RustToCuda,
-    D: DispersalSampler<H, G> + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
     S: LineageStore<H, R> + RustToCuda,
-    X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
+    X: EmigrationExit<H, G, R, S> + RustToCuda,
+    D: DispersalSampler<H, G> + RustToCuda,
     C: CoalescenceSampler<H, R, S> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
+    T: TurnoverRate<H> + RustToCuda,
+    N: SpeciationProbability<H> + RustToCuda,
+    E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
     I: ImmigrationEntry + RustToCuda,
-    A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E, I> + RustToCuda,
+    A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
     const REPORT_SPECIATION: bool,
     const REPORT_DISPERSAL: bool,
 > {
@@ -39,5 +40,5 @@ pub struct SimulationKernel<
     ptx_jit: bool,
     module: &'k mut Module,
     entry_point: &'k mut Function<'k>,
-    marker: PhantomData<(H, G, N, D, R, S, X, C, E, I, A)>,
+    marker: PhantomData<(H, G, R, S, X, D, C, T, N, E, I, A)>,
 }

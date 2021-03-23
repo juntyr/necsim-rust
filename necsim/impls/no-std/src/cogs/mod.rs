@@ -10,3 +10,4 @@ pub mod lineage_store;
 pub mod origin_sampler;
 pub mod rng;
 pub mod speciation_probability;
+pub mod turnover_rate;

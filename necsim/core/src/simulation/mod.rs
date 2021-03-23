@@ -9,7 +9,7 @@ use crate::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
         Habitat, ImmigrationEntry, LineageReference, LineageStore,
         OptionallyPeekableActiveLineageSampler, PeekableActiveLineageSampler, RngCore,
-        SpeciationProbability,
+        SpeciationProbability, TurnoverRate,
     },
     lineage::MigratingLineage,
     reporter::Reporter,
@@ -20,16 +20,17 @@ pub use builder::Simulation;
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-        E: EventSampler<H, G, N, D, R, S, X, C>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+        E: EventSampler<H, G, R, S, X, D, C, T, N>,
         I: ImmigrationEntry,
-        A: PeekableActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>,
-    > Simulation<H, G, N, D, R, S, X, C, E, I, A>
+        A: PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
+    > Simulation<H, G, R, S, X, D, C, T, N, E, I, A>
 {
     pub fn peek_time_of_next_event(&mut self) -> Option<f64> {
         let next_immigration_time = self
@@ -88,16 +89,17 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-        E: EventSampler<H, G, N, D, R, S, X, C>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+        E: EventSampler<H, G, R, S, X, D, C, T, N>,
         I: ImmigrationEntry,
-        A: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>,
-    > Simulation<H, G, N, D, R, S, X, C, E, I, A>
+        A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
+    > Simulation<H, G, R, S, X, D, C, T, N, E, I, A>
 {
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
     #[inline]
