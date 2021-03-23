@@ -3,6 +3,7 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         Backup, DispersalSampler, EmigrationExit, Habitat, PrimeableRng, SpeciationProbability,
+        TurnoverRate,
     },
     lineage::{GlobalLineageReference, Lineage},
 };
@@ -20,39 +21,42 @@ use event_time_sampler::EventTimeSampler;
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(N: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(T: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(X: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(T: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(N: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cBound(J: rust_cuda::common::RustToCuda))]
 #[derive(Debug)]
 pub struct IndependentActiveLineageSampler<
     H: Habitat,
     G: PrimeableRng<H>,
-    N: SpeciationProbability<H>,
-    T: EventTimeSampler<H, G>,
+    X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
     D: DispersalSampler<H, G>,
-    X: EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>,
+    T: TurnoverRate<H>,
+    N: SpeciationProbability<H>,
+    J: EventTimeSampler<H, G, T>,
 > {
     active_lineage: Option<Lineage>,
-    event_time_sampler: T,
-    marker: PhantomData<(H, G, N, D, X)>,
+    event_time_sampler: J,
+    marker: PhantomData<(H, G, X, D, T, N)>,
 }
 
 impl<
         H: Habitat,
         G: PrimeableRng<H>,
-        N: SpeciationProbability<H>,
-        T: EventTimeSampler<H, G>,
+        X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
         D: DispersalSampler<H, G>,
-        X: EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>,
-    > IndependentActiveLineageSampler<H, G, N, T, D, X>
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+        J: EventTimeSampler<H, G, T>,
+    > IndependentActiveLineageSampler<H, G, X, D, T, N, J>
 {
     #[must_use]
-    pub fn empty(event_time_sampler: T) -> Self {
+    pub fn empty(event_time_sampler: J) -> Self {
         Self {
             active_lineage: None,
             event_time_sampler,
-            marker: PhantomData::<(H, G, N, D, X)>,
+            marker: PhantomData::<(H, G, X, D, T, N)>,
         }
     }
 }
@@ -61,17 +65,18 @@ impl<
 impl<
         H: Habitat,
         G: PrimeableRng<H>,
-        N: SpeciationProbability<H>,
-        T: EventTimeSampler<H, G>,
+        X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
         D: DispersalSampler<H, G>,
-        X: EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>,
-    > Backup for IndependentActiveLineageSampler<H, G, N, T, D, X>
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+        J: EventTimeSampler<H, G, T>,
+    > Backup for IndependentActiveLineageSampler<H, G, X, D, T, N, J>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             active_lineage: self.active_lineage.clone(),
             event_time_sampler: self.event_time_sampler.clone(),
-            marker: PhantomData::<(H, G, N, D, X)>,
+            marker: PhantomData::<(H, G, X, D, T, N)>,
         }
     }
 }

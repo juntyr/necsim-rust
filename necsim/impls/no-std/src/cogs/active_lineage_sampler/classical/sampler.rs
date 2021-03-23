@@ -14,6 +14,7 @@ use necsim_core::{
 use crate::cogs::{
     coalescence_sampler::unconditional::UnconditionalCoalescenceSampler,
     event_sampler::unconditional::UnconditionalEventSampler,
+    turnover_rate::uniform::UniformTurnoverRate,
 };
 
 use super::ClassicalActiveLineageSampler;
@@ -22,25 +23,36 @@ use super::ClassicalActiveLineageSampler;
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
+        N: SpeciationProbability<H>,
         I: ImmigrationEntry,
     >
     ActiveLineageSampler<
         H,
         G,
-        N,
-        D,
         R,
         S,
         X,
+        D,
         UnconditionalCoalescenceSampler<H, R, S>,
-        UnconditionalEventSampler<H, G, N, D, R, S, X, UnconditionalCoalescenceSampler<H, R, S>>,
+        UniformTurnoverRate,
+        N,
+        UnconditionalEventSampler<
+            H,
+            G,
+            R,
+            S,
+            X,
+            D,
+            UnconditionalCoalescenceSampler<H, R, S>,
+            UniformTurnoverRate,
+            N,
+        >,
         I,
-    > for ClassicalActiveLineageSampler<H, G, N, D, R, S, X, I>
+    > for ClassicalActiveLineageSampler<H, G, R, S, X, D, N, I>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -58,21 +70,23 @@ impl<
         simulation: &mut PartialSimulation<
             H,
             G,
-            N,
-            D,
             R,
             S,
             X,
+            D,
             UnconditionalCoalescenceSampler<H, R, S>,
+            UniformTurnoverRate,
+            N,
             UnconditionalEventSampler<
                 H,
                 G,
-                N,
-                D,
                 R,
                 S,
                 X,
+                D,
                 UnconditionalCoalescenceSampler<H, R, S>,
+                UniformTurnoverRate,
+                N,
             >,
         >,
         rng: &mut G,
@@ -80,7 +94,7 @@ impl<
         use necsim_core::cogs::RngSampler;
 
         // The next event time must be calculated before the next active lineage is
-        // popped
+        //  popped
         let optional_next_event_time = self.peek_time_of_next_event(rng);
 
         let (next_event_time, last_active_lineage_reference) = match (
@@ -146,21 +160,23 @@ impl<
         simulation: &mut PartialSimulation<
             H,
             G,
-            N,
-            D,
             R,
             S,
             X,
+            D,
             UnconditionalCoalescenceSampler<H, R, S>,
+            UniformTurnoverRate,
+            N,
             UnconditionalEventSampler<
                 H,
                 G,
-                N,
-                D,
                 R,
                 S,
                 X,
+                D,
                 UnconditionalCoalescenceSampler<H, R, S>,
+                UniformTurnoverRate,
+                N,
             >,
         >,
         _rng: &mut G,
@@ -190,21 +206,23 @@ impl<
         simulation: &mut PartialSimulation<
             H,
             G,
-            N,
-            D,
             R,
             S,
             X,
+            D,
             UnconditionalCoalescenceSampler<H, R, S>,
+            UniformTurnoverRate,
+            N,
             UnconditionalEventSampler<
                 H,
                 G,
-                N,
-                D,
                 R,
                 S,
                 X,
+                D,
                 UnconditionalCoalescenceSampler<H, R, S>,
+                UniformTurnoverRate,
+                N,
             >,
         >,
         _rng: &mut G,
@@ -230,25 +248,36 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
+        N: SpeciationProbability<H>,
         I: ImmigrationEntry,
     >
     PeekableActiveLineageSampler<
         H,
         G,
-        N,
-        D,
         R,
         S,
         X,
+        D,
         UnconditionalCoalescenceSampler<H, R, S>,
-        UnconditionalEventSampler<H, G, N, D, R, S, X, UnconditionalCoalescenceSampler<H, R, S>>,
+        UniformTurnoverRate,
+        N,
+        UnconditionalEventSampler<
+            H,
+            G,
+            R,
+            S,
+            X,
+            D,
+            UnconditionalCoalescenceSampler<H, R, S>,
+            UniformTurnoverRate,
+            N,
+        >,
         I,
-    > for ClassicalActiveLineageSampler<H, G, N, D, R, S, X, I>
+    > for ClassicalActiveLineageSampler<H, G, R, S, X, D, N, I>
 {
     fn peek_time_of_next_event(
         &mut self,
@@ -259,7 +288,8 @@ impl<
         if self.next_event_time.is_none() && !self.active_lineage_references.is_empty() {
             // Assumption: This method is called before the next active lineage is popped
             #[allow(clippy::cast_precision_loss)]
-            let lambda = 0.5_f64 * (self.number_active_lineages() as f64);
+            let lambda = UniformTurnoverRate::get_uniform_turnover_rate_at_location()
+                * (self.number_active_lineages() as f64);
 
             let event_time = self.last_event_time + rng.sample_exponential(lambda);
 

@@ -28,6 +28,9 @@ pub use emigration_exit::EmigrationExit;
 mod coalescence_sampler;
 pub use coalescence_sampler::{CoalescenceRngSample, CoalescenceSampler};
 
+mod turnover_rate;
+pub use turnover_rate::TurnoverRate;
+
 mod event_sampler;
 pub use event_sampler::{EventSampler, MinSpeciationTrackingEventSampler, SpeciationSample};
 

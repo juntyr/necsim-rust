@@ -1,8 +1,5 @@
 use necsim_core::{
-    cogs::{
-        Backup, DispersalSampler, EmigrationExit, Habitat, LineageReference, LineageStore, RngCore,
-        SpeciationProbability,
-    },
+    cogs::{Backup, EmigrationExit, Habitat, LineageReference, LineageStore, RngCore},
     landscape::{IndexedLocation, Location},
     simulation::partial::emigration_exit::PartialSimulation,
 };
@@ -26,14 +23,8 @@ impl Backup for NeverEmigrationExit {
 }
 
 #[contract_trait]
-impl<
-        H: Habitat,
-        G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
-        R: LineageReference<H>,
-        S: LineageStore<H, R>,
-    > EmigrationExit<H, G, N, D, R, S> for NeverEmigrationExit
+impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: LineageStore<H, R>>
+    EmigrationExit<H, G, R, S> for NeverEmigrationExit
 {
     #[must_use]
     #[inline]
@@ -44,7 +35,7 @@ impl<
         dispersal_origin: IndexedLocation,
         dispersal_target: Location,
         event_time: f64,
-        _simulation: &mut PartialSimulation<H, G, N, D, R, S>,
+        _simulation: &mut PartialSimulation<H, G, R, S>,
         _rng: &mut G,
     ) -> Option<(R, IndexedLocation, Location, f64)> {
         Some((

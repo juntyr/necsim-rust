@@ -2,7 +2,7 @@ use crate::{
     cogs::{
         ActiveLineageSampler, CoalescenceRngSample, CoalescenceSampler, DispersalSampler,
         EmigrationExit, EventSampler, Habitat, ImmigrationEntry, LineageReference, LineageStore,
-        RngCore, SpeciationProbability,
+        RngCore, SpeciationProbability, TurnoverRate,
     },
     event::{Event, EventType},
     landscape::{IndexedLocation, Location},
@@ -11,21 +11,23 @@ use crate::{
     simulation::Simulation,
 };
 
+#[allow(clippy::type_complexity)]
 pub fn simulate_and_report_immigration_step<
     H: Habitat,
     G: RngCore,
-    N: SpeciationProbability<H>,
-    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
-    X: EmigrationExit<H, G, N, D, R, S>,
+    X: EmigrationExit<H, G, R, S>,
+    D: DispersalSampler<H, G>,
     C: CoalescenceSampler<H, R, S>,
-    E: EventSampler<H, G, N, D, R, S, X, C>,
+    T: TurnoverRate<H>,
+    N: SpeciationProbability<H>,
+    E: EventSampler<H, G, R, S, X, D, C, T, N>,
     I: ImmigrationEntry,
-    A: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>,
+    A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
     P: Reporter,
 >(
-    simulation: &mut Simulation<H, G, N, D, R, S, X, C, E, I, A>,
+    simulation: &mut Simulation<H, G, R, S, X, D, C, T, N, E, I, A>,
     reporter: &mut P,
 
     global_reference: GlobalLineageReference,

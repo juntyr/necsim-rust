@@ -1,10 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{
-        Backup, CoalescenceRngSample, DispersalSampler, EmigrationExit, Habitat, RngCore,
-        SpeciationProbability,
-    },
+    cogs::{Backup, CoalescenceRngSample, EmigrationExit, Habitat, RngCore},
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, MigratingLineage},
     simulation::partial::emigration_exit::PartialSimulation,
@@ -46,14 +43,8 @@ impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>> Backup
 }
 
 #[contract_trait]
-impl<
-        H: Habitat,
-        C: Decomposition<H>,
-        E: EmigrationChoice<H>,
-        G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
-    > EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>
+impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>, G: RngCore>
+    EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>
     for IndependentEmigrationExit<H, C, E>
 {
     #[must_use]
@@ -73,8 +64,6 @@ impl<
         simulation: &mut PartialSimulation<
             H,
             G,
-            N,
-            D,
             GlobalLineageReference,
             IndependentLineageStore<H>,
         >,

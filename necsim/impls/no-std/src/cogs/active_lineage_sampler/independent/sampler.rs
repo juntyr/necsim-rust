@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, DispersalSampler, EmigrationExit, Habitat, PrimeableRng,
-        SpeciationProbability,
+        SpeciationProbability, TurnoverRate,
     },
     landscape::IndexedLocation,
     lineage::{GlobalLineageReference, Lineage},
@@ -21,23 +21,25 @@ use super::{EventTimeSampler, IndependentActiveLineageSampler};
 impl<
         H: Habitat,
         G: PrimeableRng<H>,
-        N: SpeciationProbability<H>,
-        T: EventTimeSampler<H, G>,
+        X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
         D: DispersalSampler<H, G>,
-        X: EmigrationExit<H, G, N, D, GlobalLineageReference, IndependentLineageStore<H>>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+        J: EventTimeSampler<H, G, T>,
     >
     ActiveLineageSampler<
         H,
         G,
-        N,
-        D,
         GlobalLineageReference,
         IndependentLineageStore<H>,
         X,
+        D,
         IndependentCoalescenceSampler<H>,
-        IndependentEventSampler<H, G, N, D, X>,
+        T,
+        N,
+        IndependentEventSampler<H, G, X, D, T, N>,
         NeverImmigrationEntry,
-    > for IndependentActiveLineageSampler<H, G, N, T, D, X>
+    > for IndependentActiveLineageSampler<H, G, X, D, T, N, J>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -60,13 +62,14 @@ impl<
         simulation: &mut PartialSimulation<
             H,
             G,
-            N,
-            D,
             GlobalLineageReference,
             IndependentLineageStore<H>,
             X,
+            D,
             IndependentCoalescenceSampler<H>,
-            IndependentEventSampler<H, G, N, D, X>,
+            T,
+            N,
+            IndependentEventSampler<H, G, X, D, T, N>,
         >,
         rng: &mut G,
     ) -> Option<(GlobalLineageReference, IndexedLocation, f64)> {
@@ -88,6 +91,7 @@ impl<
                 chosen_lineage.time_of_last_event(),
                 &simulation.habitat,
                 rng,
+                &simulation.turnover_rate,
             );
 
         unsafe { chosen_lineage.update_time_of_last_event(next_event_time) };
@@ -113,13 +117,14 @@ impl<
         _simulation: &mut PartialSimulation<
             H,
             G,
-            N,
-            D,
             GlobalLineageReference,
             IndependentLineageStore<H>,
             X,
+            D,
             IndependentCoalescenceSampler<H>,
-            IndependentEventSampler<H, G, N, D, X>,
+            T,
+            N,
+            IndependentEventSampler<H, G, X, D, T, N>,
         >,
         _rng: &mut G,
     ) {
@@ -137,13 +142,14 @@ impl<
         _simulation: &mut PartialSimulation<
             H,
             G,
-            N,
-            D,
             GlobalLineageReference,
             IndependentLineageStore<H>,
             X,
+            D,
             IndependentCoalescenceSampler<H>,
-            IndependentEventSampler<H, G, N, D, X>,
+            T,
+            N,
+            IndependentEventSampler<H, G, X, D, T, N>,
         >,
         _rng: &mut G,
     ) {

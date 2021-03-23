@@ -20,6 +20,7 @@ use necsim_impls_no_std::{
         event_sampler::independent::IndependentEventSampler,
         immigration_entry::never::NeverImmigrationEntry,
         lineage_store::independent::IndependentLineageStore,
+        turnover_rate::uniform::UniformTurnoverRate,
     },
     partitioning::LocalPartition,
     reporter::ReporterContext,
@@ -51,6 +52,7 @@ pub fn simulate<
 
     let emigration_exit = NeverEmigrationExit::default();
     let coalescence_sampler = IndependentCoalescenceSampler::default();
+    let turnover_rate = UniformTurnoverRate::default();
     let event_sampler = IndependentEventSampler::default();
     let immigration_entry = NeverImmigrationEntry::default();
     let active_lineage_sampler =
@@ -65,6 +67,7 @@ pub fn simulate<
         .lineage_store(lineage_store)
         .emigration_exit(emigration_exit)
         .coalescence_sampler(coalescence_sampler)
+        .turnover_rate(turnover_rate)
         .event_sampler(event_sampler)
         .immigration_entry(immigration_entry)
         .active_lineage_sampler(active_lineage_sampler)

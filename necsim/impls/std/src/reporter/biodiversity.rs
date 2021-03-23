@@ -16,7 +16,7 @@ impl EventFilter for BiodiversityReporter {
 }
 
 impl Reporter for BiodiversityReporter {
-    #[debug_ensures(if old(Some(event) == self.last_event.as_ref()) {
+    #[debug_ensures(if old(Some(event) != self.last_event.as_ref()) {
         match event.r#type() {
             EventType::Speciation => self.biodiversity == old(self.biodiversity) + 1,
             _ => self.biodiversity == old(self.biodiversity),

@@ -5,6 +5,7 @@ use necsim_core::{
         ActiveLineageSampler, CoalescenceSampler, CoherentLineageStore, DispersalSampler,
         EmigrationExit, EmptyActiveLineageSamplerError, Habitat, ImmigrationEntry,
         LineageReference, PeekableActiveLineageSampler, RngCore, SpeciationProbability,
+        TurnoverRate,
     },
     landscape::IndexedLocation,
     lineage::GlobalLineageReference,
@@ -19,16 +20,17 @@ use super::{EventTime, GillespieActiveLineageSampler};
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-        E: GillespieEventSampler<H, G, N, D, R, S, X, C>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+        E: GillespieEventSampler<H, G, R, S, X, D, C, T, N>,
         I: ImmigrationEntry,
-    > ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
-    for GillespieActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
+    > ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+    for GillespieActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -43,7 +45,7 @@ impl<
     #[must_use]
     fn pop_active_lineage_indexed_location_event_time(
         &mut self,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
+        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
     ) -> Option<(R, IndexedLocation, f64)> {
         use necsim_core::cogs::RngSampler;
@@ -122,7 +124,7 @@ impl<
         lineage_reference: R,
         indexed_location: IndexedLocation,
         time: f64,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
+        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
     ) {
         use necsim_core::cogs::RngSampler;
@@ -160,7 +162,7 @@ impl<
         global_reference: GlobalLineageReference,
         indexed_location: IndexedLocation,
         time: f64,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
+        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
     ) {
         use necsim_core::cogs::RngSampler;
@@ -198,16 +200,17 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-        E: GillespieEventSampler<H, G, N, D, R, S, X, C>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+        E: GillespieEventSampler<H, G, R, S, X, D, C, T, N>,
         I: ImmigrationEntry,
-    > PeekableActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
-    for GillespieActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
+    > PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+    for GillespieActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
 {
     fn peek_time_of_next_event(
         &mut self,

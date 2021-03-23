@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Habitat, PrimeableRng, RngSampler},
+    cogs::{Habitat, PrimeableRng, RngSampler, TurnoverRate},
     intrinsics::{exp, floor},
     landscape::IndexedLocation,
 };
@@ -11,23 +11,19 @@ use super::EventTimeSampler;
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 pub struct GeometricEventTimeSampler {
     delta_t: f64,
-    event_probability_per_step: f64,
 }
 
 impl GeometricEventTimeSampler {
     #[debug_requires(delta_t > 0.0_f64, "delta_t is positive")]
     pub fn new(delta_t: f64) -> Self {
-        let lambda = 0.5_f64;
-
-        Self {
-            delta_t,
-            event_probability_per_step: 1.0_f64 - exp(-lambda * delta_t),
-        }
+        Self { delta_t }
     }
 }
 
 #[contract_trait]
-impl<H: Habitat, G: PrimeableRng<H>> EventTimeSampler<H, G> for GeometricEventTimeSampler {
+impl<H: Habitat, G: PrimeableRng<H>, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
+    for GeometricEventTimeSampler
+{
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
         &self,
@@ -35,7 +31,13 @@ impl<H: Habitat, G: PrimeableRng<H>> EventTimeSampler<H, G> for GeometricEventTi
         time: f64,
         habitat: &H,
         rng: &mut G,
+        turnover_rate: &T,
     ) -> f64 {
+        let event_probability_per_step = 1.0_f64
+            - exp(-turnover_rate
+                .get_turnover_rate_at_location(indexed_location.location(), habitat)
+                * self.delta_t);
+
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
         let mut time_step = floor(time / self.delta_t) as u64 + 1;
@@ -43,7 +45,7 @@ impl<H: Habitat, G: PrimeableRng<H>> EventTimeSampler<H, G> for GeometricEventTi
         loop {
             rng.prime_with_habitat(habitat, indexed_location, time_step);
 
-            if rng.sample_event(self.event_probability_per_step) {
+            if rng.sample_event(event_probability_per_step) {
                 break;
             }
 

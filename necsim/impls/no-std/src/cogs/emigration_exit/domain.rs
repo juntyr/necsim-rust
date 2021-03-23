@@ -3,8 +3,8 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        Backup, CoalescenceRngSample, CoherentLineageStore, DispersalSampler, EmigrationExit,
-        Habitat, LineageReference, RngCore, SpeciationProbability,
+        Backup, CoalescenceRngSample, CoherentLineageStore, EmigrationExit, Habitat,
+        LineageReference, RngCore,
     },
     landscape::{IndexedLocation, Location},
     lineage::MigratingLineage,
@@ -43,11 +43,9 @@ impl<
         H: Habitat,
         C: Decomposition<H>,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: CoherentLineageStore<H, R>,
-    > EmigrationExit<H, G, N, D, R, S> for DomainEmigrationExit<H, C>
+    > EmigrationExit<H, G, R, S> for DomainEmigrationExit<H, C>
 {
     #[must_use]
     #[debug_ensures(ret.is_some() == (
@@ -61,7 +59,7 @@ impl<
         dispersal_origin: IndexedLocation,
         dispersal_target: Location,
         event_time: f64,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S>,
+        simulation: &mut PartialSimulation<H, G, R, S>,
         rng: &mut G,
     ) -> Option<(R, IndexedLocation, Location, f64)> {
         let target_subdomain = self

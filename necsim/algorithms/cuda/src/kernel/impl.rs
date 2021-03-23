@@ -5,7 +5,7 @@ use anyhow::Result;
 use necsim_core::cogs::{
     CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
     LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
-    SingularActiveLineageSampler, SpeciationProbability,
+    SingularActiveLineageSampler, SpeciationProbability, TurnoverRate,
 };
 
 use rustacuda::{function::Function, module::Module};
@@ -20,18 +20,20 @@ impl<
         'k,
         H: Habitat + RustToCuda,
         G: PrimeableRng<H> + RustToCuda,
-        N: SpeciationProbability<H> + RustToCuda,
-        D: DispersalSampler<H, G> + RustToCuda,
         R: LineageReference<H> + DeviceCopy,
         S: LineageStore<H, R> + RustToCuda,
-        X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
+        X: EmigrationExit<H, G, R, S> + RustToCuda,
+        D: DispersalSampler<H, G> + RustToCuda,
         C: CoalescenceSampler<H, R, S> + RustToCuda,
-        E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
+        T: TurnoverRate<H> + RustToCuda,
+        N: SpeciationProbability<H> + RustToCuda,
+        E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
         I: ImmigrationEntry + RustToCuda,
-        A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E, I> + RustToCuda,
+        A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
         const REPORT_SPECIATION: bool,
         const REPORT_DISPERSAL: bool,
-    > SimulationKernel<'k, H, G, N, D, R, S, X, C, E, I, A, REPORT_SPECIATION, REPORT_DISPERSAL>
+    >
+    SimulationKernel<'k, H, G, R, S, X, D, C, T, N, E, I, A, REPORT_SPECIATION, REPORT_DISPERSAL>
 {
     pub fn with_kernel<Q, F>(ptx_jit: bool, inner: F) -> Result<Q>
     where
@@ -40,12 +42,13 @@ impl<
                 's,
                 H,
                 G,
-                N,
-                D,
                 R,
                 S,
                 X,
+                D,
                 C,
+                T,
+                N,
                 E,
                 I,
                 A,
@@ -58,12 +61,13 @@ impl<
         let ptx_cstr = specialiser::get_ptx_cstr::<
             H,
             G,
-            N,
-            D,
             R,
             S,
             X,
+            D,
             C,
+            T,
+            N,
             E,
             I,
             A,
@@ -91,7 +95,7 @@ impl<
             ptx_jit,
             module: unsafe { &mut *module.get() },
             entry_point: &mut entry_point,
-            marker: PhantomData::<(H, G, N, D, R, S, X, C, E, I, A)>,
+            marker: PhantomData::<(H, G, R, S, X, D, C, T, N, E, I, A)>,
         };
 
         inner(&mut kernel)
@@ -106,19 +110,36 @@ impl<
         'k,
         H: Habitat + RustToCuda,
         G: PrimeableRng<H> + RustToCuda,
-        N: SpeciationProbability<H> + RustToCuda,
-        D: DispersalSampler<H, G> + RustToCuda,
         R: LineageReference<H> + DeviceCopy,
         S: LineageStore<H, R> + RustToCuda,
-        X: EmigrationExit<H, G, N, D, R, S> + RustToCuda,
+        X: EmigrationExit<H, G, R, S> + RustToCuda,
+        D: DispersalSampler<H, G> + RustToCuda,
         C: CoalescenceSampler<H, R, S> + RustToCuda,
-        E: MinSpeciationTrackingEventSampler<H, G, N, D, R, S, X, C> + RustToCuda,
+        T: TurnoverRate<H> + RustToCuda,
+        N: SpeciationProbability<H> + RustToCuda,
+        E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
         I: ImmigrationEntry + RustToCuda,
-        A: SingularActiveLineageSampler<H, G, N, D, R, S, X, C, E, I> + RustToCuda,
+        A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
         const REPORT_SPECIATION: bool,
         const REPORT_DISPERSAL: bool,
     > Deref
-    for SimulationKernel<'k, H, G, N, D, R, S, X, C, E, I, A, REPORT_SPECIATION, REPORT_DISPERSAL>
+    for SimulationKernel<
+        'k,
+        H,
+        G,
+        R,
+        S,
+        X,
+        D,
+        C,
+        T,
+        N,
+        E,
+        I,
+        A,
+        REPORT_SPECIATION,
+        REPORT_DISPERSAL,
+    >
 {
     type Target = Module;
 

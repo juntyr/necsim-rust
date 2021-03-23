@@ -4,7 +4,7 @@ pub mod unconditional;
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat,
-        LineageReference, LineageStore, RngCore, SpeciationProbability,
+        LineageReference, LineageStore, RngCore, SpeciationProbability, TurnoverRate,
     },
     landscape::Location,
     simulation::partial::event_sampler::PartialSimulation,
@@ -16,20 +16,21 @@ use necsim_core::{
 pub trait GillespieEventSampler<
     H: Habitat,
     G: RngCore,
-    N: SpeciationProbability<H>,
-    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
-    X: EmigrationExit<H, G, N, D, R, S>,
+    X: EmigrationExit<H, G, R, S>,
+    D: DispersalSampler<H, G>,
     C: CoalescenceSampler<H, R, S>,
->: EventSampler<H, G, N, D, R, S, X, C>
+    T: TurnoverRate<H>,
+    N: SpeciationProbability<H>,
+>: EventSampler<H, G, R, S, X, D, C, T, N>
 {
     #[must_use]
     #[debug_ensures(ret >= 0.0_f64, "returns a rate")]
     fn get_event_rate_at_location(
         &self,
         location: &Location,
-        simulation: &PartialSimulation<H, G, N, D, R, S, X, C>,
+        simulation: &PartialSimulation<H, G, R, S, X, D, C, T, N>,
         lineage_store_includes_self: bool,
     ) -> f64;
 }

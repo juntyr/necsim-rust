@@ -22,7 +22,7 @@ impl EventFilter for EventReporter {
 }
 
 impl Reporter for EventReporter {
-    #[debug_ensures(if old(Some(event) == self.last_event.as_ref()) {
+    #[debug_ensures(if old(Some(event) != self.last_event.as_ref()) {
         contract::explicit_event_reporter_report_event_contract(
             event.origin(), event.r#type(), old(self.speciation), old(self.out_dispersal),
             old(self.self_dispersal), old(self.out_coalescence), old(self.self_coalescence),

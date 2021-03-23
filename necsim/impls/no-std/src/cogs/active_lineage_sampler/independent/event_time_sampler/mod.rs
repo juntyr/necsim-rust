@@ -1,7 +1,7 @@
 use float_next_after::NextAfter;
 
 use necsim_core::{
-    cogs::{Habitat, PrimeableRng},
+    cogs::{Habitat, PrimeableRng, TurnoverRate},
     landscape::IndexedLocation,
 };
 
@@ -13,7 +13,9 @@ pub mod poisson;
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait EventTimeSampler<H: Habitat, G: PrimeableRng<H>>: Clone + core::fmt::Debug {
+pub trait EventTimeSampler<H: Habitat, G: PrimeableRng<H>, T: TurnoverRate<H>>:
+    Clone + core::fmt::Debug
+{
     #[debug_requires(time >= 0.0_f64, "event times must be non-negative")]
     #[debug_ensures(ret > time, "the next event will happen after time")]
     #[inline]
@@ -23,12 +25,14 @@ pub trait EventTimeSampler<H: Habitat, G: PrimeableRng<H>>: Clone + core::fmt::D
         time: f64,
         habitat: &H,
         rng: &mut G,
+        turnover_rate: &T,
     ) -> f64 {
         let next_event_time = self.next_event_time_at_indexed_location_weakly_after(
             indexed_location,
             time,
             habitat,
             rng,
+            turnover_rate,
         );
 
         let unique_next_event_time: f64 = if next_event_time > time {
@@ -48,5 +52,6 @@ pub trait EventTimeSampler<H: Habitat, G: PrimeableRng<H>>: Clone + core::fmt::D
         time: f64,
         habitat: &H,
         rng: &mut G,
+        turnover_rate: &T,
     ) -> f64;
 }

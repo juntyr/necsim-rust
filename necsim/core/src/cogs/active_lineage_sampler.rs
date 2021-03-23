@@ -1,6 +1,6 @@
 use super::{
     CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, ImmigrationEntry,
-    LineageReference, LineageStore, RngCore, SpeciationProbability,
+    LineageReference, LineageStore, RngCore, SpeciationProbability, TurnoverRate,
 };
 
 use crate::{
@@ -14,13 +14,14 @@ use crate::{
 pub trait ActiveLineageSampler<
     H: Habitat,
     G: RngCore,
-    N: SpeciationProbability<H>,
-    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
-    X: EmigrationExit<H, G, N, D, R, S>,
+    X: EmigrationExit<H, G, R, S>,
+    D: DispersalSampler<H, G>,
     C: CoalescenceSampler<H, R, S>,
-    E: EventSampler<H, G, N, D, R, S, X, C>,
+    T: TurnoverRate<H>,
+    N: SpeciationProbability<H>,
+    E: EventSampler<H, G, R, S, X, D, C, T, N>,
     I: ImmigrationEntry,
 >: crate::cogs::Backup + core::fmt::Debug
 {
@@ -58,7 +59,7 @@ pub trait ActiveLineageSampler<
     }, "updates the time of the last event")]
     fn pop_active_lineage_indexed_location_event_time(
         &mut self,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
+        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
     ) -> Option<(R, IndexedLocation, f64)>;
 
@@ -72,7 +73,7 @@ pub trait ActiveLineageSampler<
         lineage_reference: R,
         indexed_location: IndexedLocation,
         time: f64,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
+        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
     );
 
@@ -86,14 +87,14 @@ pub trait ActiveLineageSampler<
         global_reference: GlobalLineageReference,
         indexed_location: IndexedLocation,
         time: f64,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
+        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
     );
 
     #[inline]
     fn with_next_active_lineage_indexed_location_event_time<
         F: FnOnce(
-            &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
+            &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
             &mut G,
             R,
             IndexedLocation,
@@ -101,7 +102,7 @@ pub trait ActiveLineageSampler<
         ) -> Option<IndexedLocation>,
     >(
         &mut self,
-        simulation: &mut PartialSimulation<H, G, N, D, R, S, X, C, E>,
+        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
         inner: F,
     ) -> bool {
@@ -135,15 +136,16 @@ pub trait ActiveLineageSampler<
 pub trait SingularActiveLineageSampler<
     H: Habitat,
     G: RngCore,
-    N: SpeciationProbability<H>,
-    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
-    X: EmigrationExit<H, G, N, D, R, S>,
+    X: EmigrationExit<H, G, R, S>,
+    D: DispersalSampler<H, G>,
     C: CoalescenceSampler<H, R, S>,
-    E: EventSampler<H, G, N, D, R, S, X, C>,
+    T: TurnoverRate<H>,
+    N: SpeciationProbability<H>,
+    E: EventSampler<H, G, R, S, X, D, C, T, N>,
     I: ImmigrationEntry,
->: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
+>: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
 {
     #[must_use]
     fn replace_active_lineage(&mut self, active_lineage: Option<Lineage>) -> Option<Lineage>;
@@ -161,15 +163,16 @@ pub struct EmptyActiveLineageSamplerError;
 pub trait PeekableActiveLineageSampler<
     H: Habitat,
     G: RngCore,
-    N: SpeciationProbability<H>,
-    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
-    X: EmigrationExit<H, G, N, D, R, S>,
+    X: EmigrationExit<H, G, R, S>,
+    D: DispersalSampler<H, G>,
     C: CoalescenceSampler<H, R, S>,
-    E: EventSampler<H, G, N, D, R, S, X, C>,
+    T: TurnoverRate<H>,
+    N: SpeciationProbability<H>,
+    E: EventSampler<H, G, R, S, X, D, C, T, N>,
     I: ImmigrationEntry,
->: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
+>: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
 {
     #[debug_ensures(
         ret.is_err() == (self.number_active_lineages() == 0),
@@ -189,15 +192,16 @@ pub trait PeekableActiveLineageSampler<
 pub trait OptionallyPeekableActiveLineageSampler<
     H: Habitat,
     G: RngCore,
-    N: SpeciationProbability<H>,
-    D: DispersalSampler<H, G>,
     R: LineageReference<H>,
     S: LineageStore<H, R>,
-    X: EmigrationExit<H, G, N, D, R, S>,
+    X: EmigrationExit<H, G, R, S>,
+    D: DispersalSampler<H, G>,
     C: CoalescenceSampler<H, R, S>,
-    E: EventSampler<H, G, N, D, R, S, X, C>,
+    T: TurnoverRate<H>,
+    N: SpeciationProbability<H>,
+    E: EventSampler<H, G, R, S, X, D, C, T, N>,
     I: ImmigrationEntry,
->: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>
+>: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
 {
     fn peek_optional_time_of_next_event(&mut self, rng: &mut G) -> Option<f64>;
 }
@@ -205,16 +209,17 @@ pub trait OptionallyPeekableActiveLineageSampler<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-        E: EventSampler<H, G, N, D, R, S, X, C>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+        E: EventSampler<H, G, R, S, X, D, C, T, N>,
         I: ImmigrationEntry,
-        A: ActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>,
-    > OptionallyPeekableActiveLineageSampler<H, G, N, D, R, S, X, C, E, I> for A
+        A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
+    > OptionallyPeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> for A
 {
     default fn peek_optional_time_of_next_event(&mut self, _rng: &mut G) -> Option<f64> {
         None
@@ -224,16 +229,17 @@ impl<
 impl<
         H: Habitat,
         G: RngCore,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, G>,
         R: LineageReference<H>,
         S: LineageStore<H, R>,
-        X: EmigrationExit<H, G, N, D, R, S>,
+        X: EmigrationExit<H, G, R, S>,
+        D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
-        E: EventSampler<H, G, N, D, R, S, X, C>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+        E: EventSampler<H, G, R, S, X, D, C, T, N>,
         I: ImmigrationEntry,
-        A: PeekableActiveLineageSampler<H, G, N, D, R, S, X, C, E, I>,
-    > OptionallyPeekableActiveLineageSampler<H, G, N, D, R, S, X, C, E, I> for A
+        A: PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
+    > OptionallyPeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> for A
 {
     fn peek_optional_time_of_next_event(&mut self, rng: &mut G) -> Option<f64> {
         self.peek_time_of_next_event(rng).ok()
