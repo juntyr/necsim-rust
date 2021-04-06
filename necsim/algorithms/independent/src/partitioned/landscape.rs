@@ -81,6 +81,11 @@ pub fn simulate<
         .active_lineage_sampler(active_lineage_sampler)
         .build();
 
+    // Ensure that the progress bar starts with the expected target
+    proxy
+        .local_partition()
+        .report_progress_sync(simulation.active_lineage_sampler().number_active_lineages() as u64);
+
     let mut immigration_events = Vec::new();
 
     let mut total_steps = 0_u64;

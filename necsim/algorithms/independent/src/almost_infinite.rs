@@ -49,6 +49,12 @@ impl AlmostInfiniteSimulation for IndependentSimulation {
         );
 
         let lineages = match auxiliary.partition_mode {
+            // Apply no lineage origin partitioning in the `Monolithic` mode
+            PartitionMode::Monolithic => {
+                AlmostInfiniteOriginSampler::new(lineage_origins, &habitat, radius)
+                    .map(|indexed_location| Lineage::new(indexed_location, &habitat))
+                    .collect()
+            },
             // Apply lineage origin partitioning in the `Individuals` mode
             PartitionMode::Individuals => AlmostInfiniteOriginSampler::new(
                 lineage_origins.partition(

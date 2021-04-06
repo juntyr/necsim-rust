@@ -38,7 +38,7 @@ impl<
     }
 
     #[must_use]
-    fn get_time_of_last_event(&self) -> f64 {
+    fn get_last_event_time(&self) -> f64 {
         self.last_event_time
     }
 
@@ -101,7 +101,7 @@ impl<
 
         simulation
             .lineage_store
-            .update_lineage_time_of_last_event(chosen_lineage_reference.clone(), unique_event_time);
+            .update_lineage_last_event_time(chosen_lineage_reference.clone(), unique_event_time);
 
         self.last_event_time = unique_event_time;
 

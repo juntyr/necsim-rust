@@ -120,10 +120,10 @@ pub trait CoherentLineageStore<H: Habitat, R: LineageReference<H>>:
 
     #[debug_requires(self.get(reference.clone()).is_some(), "lineage reference is valid")]
     #[debug_ensures(
-        self[old(reference.clone())].time_of_last_event().to_bits() == old(event_time.to_bits()),
+        self[old(reference.clone())].last_event_time().to_bits() == old(event_time.to_bits()),
         "updates the time of the last event of the lineage reference"
     )]
-    fn update_lineage_time_of_last_event(&mut self, reference: R, event_time: f64);
+    fn update_lineage_last_event_time(&mut self, reference: R, event_time: f64);
 
     #[debug_requires(
         self.get(local_lineage_reference.clone()).is_some(),

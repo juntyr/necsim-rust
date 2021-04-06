@@ -82,6 +82,13 @@ impl<
     #[must_use]
     #[allow(clippy::double_parens)]
     #[allow(clippy::type_complexity)]
+    #[debug_ensures(ret.as_ref().map_or(true, |event| {
+        Some(event.global_lineage_reference().clone()) == old(
+            simulation.lineage_store.get(lineage_reference.clone()).map(
+                |lineage| lineage.global_reference().clone()
+            )
+        )
+    }), "event occurs for lineage_reference")]
     #[debug_ensures(match &ret {
         Some(event) => match event.r#type() {
             EventType::Speciation => true,

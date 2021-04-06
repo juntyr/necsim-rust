@@ -5,7 +5,7 @@ use std::{
 };
 
 use mpi::{
-    collective::{CommunicatorCollectives, SystemOperation, UserOperation},
+    collective::{CommunicatorCollectives, Root, SystemOperation, UserOperation},
     datatype::Equivalence,
     environment::Universe,
     point_to_point::{Destination, Source},
@@ -333,6 +333,12 @@ impl<P: ReporterContext> LocalPartition<P> for MpiParallelPartition<P> {
             .all_reduce_into(&local_steps, &mut global_steps_sum, SystemOperation::sum());
 
         (global_time_max, global_steps_sum)
+    }
+
+    fn report_progress_sync(&mut self, remaining: u64) {
+        let root_process = self.world.process_at_rank(MpiPartitioning::ROOT_RANK);
+
+        root_process.gather_into(&remaining);
     }
 }
 

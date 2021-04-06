@@ -48,10 +48,10 @@ impl<
             .map_or(0, |lineage| lineage.is_active() as usize)
     }
 
-    fn get_time_of_last_event(&self) -> f64 {
+    fn get_last_event_time(&self) -> f64 {
         self.active_lineage
             .as_ref()
-            .map_or(0.0_f64, Lineage::time_of_last_event)
+            .map_or(0.0_f64, Lineage::last_event_time)
     }
 
     #[must_use]
@@ -88,13 +88,13 @@ impl<
             .event_time_sampler
             .next_event_time_at_indexed_location_after(
                 &lineage_indexed_location,
-                chosen_lineage.time_of_last_event(),
+                chosen_lineage.last_event_time(),
                 &simulation.habitat,
                 rng,
                 &simulation.turnover_rate,
             );
 
-        unsafe { chosen_lineage.update_time_of_last_event(next_event_time) };
+        unsafe { chosen_lineage.update_last_event_time(next_event_time) };
 
         Some((
             chosen_lineage.global_reference().clone(),

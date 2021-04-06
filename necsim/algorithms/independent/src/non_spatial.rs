@@ -46,6 +46,10 @@ impl NonSpatialSimulation for IndependentSimulation {
         );
 
         let lineages = match auxiliary.partition_mode {
+            // Apply no lineage origin partitioning in the `Monolithic` mode
+            PartitionMode::Monolithic => NonSpatialOriginSampler::new(lineage_origins, &habitat)
+                .map(|indexed_location| Lineage::new(indexed_location, &habitat))
+                .collect(),
             // Apply lineage origin partitioning in the `Individuals` mode
             PartitionMode::Individuals => NonSpatialOriginSampler::new(
                 lineage_origins.partition(

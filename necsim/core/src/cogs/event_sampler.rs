@@ -28,21 +28,12 @@ pub trait EventSampler<
 {
     #[must_use]
     #[debug_requires(event_time >= 0.0_f64, "event time is non-negative")]
-    // TODO: If lineage removal is done by emigration exit, we should
-    //       also assert that lineage has been removed here iff None
-    // TODO: IndependentLineageStore cannot satisfy this condition
-    // #[debug_ensures(match &ret {
-    //     Some(event) => Some(event.global_lineage_reference().clone()) == old(
-    //         simulation.lineage_store.get(lineage_reference.clone()).map(
-    //             |lineage| lineage.global_reference().clone()
-    //         )
-    //     ),
-    //     None => true,
-    // } , "event occurs for lineage_reference")]
-    #[debug_ensures(match &ret {
-        Some(event) => event.time().to_bits() == event_time.to_bits(),
-        None => true,
-    }, "event occurs at event_time")]
+    #[debug_ensures(if ret.is_none() { simulation.lineage_store.get(
+        old(lineage_reference.clone())
+    ).is_none() } else { true }, "lineage emigrated if no event is returned")]
+    #[debug_ensures(ret.as_ref().map_or(true, |event| {
+        event.time().to_bits() == event_time.to_bits()
+    }), "event occurs at event_time")]
     fn sample_event_for_lineage_at_indexed_location_time_or_emigrate(
         &mut self,
         lineage_reference: R,

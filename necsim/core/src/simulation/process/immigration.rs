@@ -49,9 +49,18 @@ pub fn simulate_and_report_immigration_step<
                     coalescence_rng_sample,
                 );
 
-            // TODO: How should incrementing time be handled for migration events?
-            // - To maintain consistency with the origin, we cannot change the event time
-            // - But we also assert that locally events have distinct timestamps
+            // NOTE: event time rules
+            // - event time monotonically increases locally
+            // - events from the same individual must have unique event times
+            // - events from different individuals should not, but can have the the same
+            //   event time - currently this can only occur through partitioning / in the
+            //   independent algorithm
+
+            // TODO: inconsistency between monolithic and independent algorithm
+            // - a jumps to b at the same time as b jumps to a
+            // - independent: no coalescence occurs
+            // - monolithic: coalescence will occur, which one depends on which one is
+            //   executed first, i.e. random
 
             // In the event of migration without coalescence, the lineage has
             // to be added to the active lineage sampler and lineage store

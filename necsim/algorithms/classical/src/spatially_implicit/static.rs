@@ -46,10 +46,13 @@ pub fn simulate_static<R: ReporterContext, P: LocalPartition<R>>(
 
     let mut number_of_migrations = 0_usize;
 
+    let rng = StdRng::seed_from_u64(seed);
+
     // TODO: How can we still report the local events (without risking of confusion)
     // TODO: Two stage migration should also be distributed
-    let (local_time, local_steps) = ClassicalSimulation::simulate::<
+    let (local_time, local_steps, mut rng) = ClassicalSimulation::simulate_chain::<
         NonSpatialHabitat,
+        StdRng,
         UniformSpeciationProbability,
         NonSpatialDispersalSampler<_>,
         InMemoryLineageReference,
@@ -61,7 +64,7 @@ pub fn simulate_static<R: ReporterContext, P: LocalPartition<R>>(
         local_speciation_probability,
         local_dispersal_sampler,
         local_lineage_store,
-        seed,
+        rng,
         &mut LiveMonolithicLocalPartition::from_reporter(
             MigrationReporterContext::new(|migration_reporter| {
                 number_of_migrations = migration_reporter.biodiversity()
@@ -71,11 +74,6 @@ pub fn simulate_static<R: ReporterContext, P: LocalPartition<R>>(
     );
 
     let meta_habitat = NonSpatialHabitat::new(meta_area_deme.0, meta_area_deme.1);
-
-    // TODO: get 'next' seed from first simulation somehow
-    // IDEALLY: the rng would be accessible here somehow so at least the type is the
-    // same
-    let mut rng = StdRng::seed_from_u64(seed.wrapping_add(0x8000_0000_0000_0000_u64));
 
     let mut unique_migration_targets = HashSet::with_capacity(number_of_migrations);
 

@@ -30,7 +30,7 @@ pub trait ActiveLineageSampler<
 
     #[must_use]
     #[debug_ensures(ret >= 0.0_f64, "last event time is non-negative")]
-    fn get_time_of_last_event(&self) -> f64;
+    fn get_last_event_time(&self) -> f64;
 
     #[must_use]
     #[debug_ensures(match ret {
@@ -41,22 +41,17 @@ pub trait ActiveLineageSampler<
         None => old(self.number_active_lineages()) == 0,
     }, "removes an active lineage if some left")]
     #[debug_ensures(
-        ret.is_some() -> ret.as_ref().unwrap().2 > old(self.get_time_of_last_event()),
+        ret.is_some() -> ret.as_ref().unwrap().2 > old(self.get_last_event_time()),
         "event occurs later than last event time"
     )]
-    // TODO: This property is not satisfied by the independent sampler which caches the lineage
-    // #[debug_ensures(match ret {
-    //     None => true,
-    //     Some((ref reference, ref _location, event_time)) => {
-    //         simulation.lineage_store[reference.clone()].time_of_last_event() == event_time
-    //     },
-    // }, "updates the time of the last event of the returned lineage to the time of the event")]
-    #[debug_ensures(match ret {
-        None => true,
-        Some((ref _reference, ref _location, event_time)) => {
-            self.get_time_of_last_event().to_bits() == event_time.to_bits()
-        },
-    }, "updates the time of the last event")]
+    #[debug_ensures(if let Some((ref reference, ref _location, event_time)) = ret {
+        simulation.lineage_store.get(reference.clone()).map_or(true, |lineage| {
+            lineage.last_event_time().to_bits() == event_time.to_bits()
+        })
+    } else { true } , "updates the time of the last event of the returned lineage to event time")]
+    #[debug_ensures(if let Some((ref _reference, ref _location, event_time)) = ret {
+        self.get_last_event_time().to_bits() == event_time.to_bits()
+    } else { true }, "updates the time of the last event")]
     fn pop_active_lineage_indexed_location_event_time(
         &mut self,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
