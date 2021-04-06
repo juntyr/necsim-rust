@@ -34,6 +34,12 @@ pub fn simulate_static<R: ReporterContext, P: LocalPartition<R>>(
     seed: u64,
     local_partition: &mut P,
 ) -> (f64, u64) {
+    if u64::from(meta_area_deme.0 .0) * u64::from(meta_area_deme.0 .1) * u64::from(meta_area_deme.1)
+        == 0
+    {
+        return (0.0_f64, 0_u64);
+    }
+
     let local_habitat = NonSpatialHabitat::new(local_area_deme.0, local_area_deme.1);
     let local_speciation_probability =
         UniformSpeciationProbability::new(local_migration_probability_per_generation);

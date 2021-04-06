@@ -26,6 +26,12 @@ pub fn simulate_dynamic<R: ReporterContext, P: LocalPartition<R>>(
     seed: u64,
     local_partition: &mut P,
 ) -> (f64, u64) {
+    if u64::from(meta_area_deme.0 .0) * u64::from(meta_area_deme.0 .1) * u64::from(meta_area_deme.1)
+        == 0
+    {
+        return (0.0_f64, 0_u64);
+    }
+
     let habitat = SpatiallyImplicitHabitat::new(
         local_area_deme.0,
         local_area_deme.1,
