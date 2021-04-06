@@ -16,7 +16,7 @@ Add the following dependency to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-memoffset = "0.6"
+memoffset = "0.6.1"
 ```
 
 These versions will compile fine with rustc versions greater or equal to 1.19.

@@ -7,6 +7,7 @@
 #![feature(iter_advance_by)]
 #![feature(fn_traits)]
 #![feature(never_type)]
+#![feature(debug_non_exhaustive)]
 
 extern crate alloc;
 

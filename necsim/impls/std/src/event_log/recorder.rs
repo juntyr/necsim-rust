@@ -91,7 +91,7 @@ impl EventLogRecorder {
     }
 
     fn sort_and_write_segment(&mut self) -> Result<()> {
-        self.buffer.sort_unstable();
+        self.buffer.sort();
 
         let segment_path = self.directory.join(format!("{}", self.segment_index));
         self.segment_index += 1;

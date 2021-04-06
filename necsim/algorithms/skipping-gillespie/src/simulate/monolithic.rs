@@ -15,16 +15,16 @@ use necsim_impls_no_std::{
         turnover_rate::uniform::UniformTurnoverRate,
     },
     partitioning::LocalPartition,
-};
-use necsim_impls_std::cogs::{
-    active_lineage_sampler::gillespie::GillespieActiveLineageSampler, rng::std::StdRng,
+    reporter::ReporterContext,
 };
 
-use necsim_impls_no_std::reporter::ReporterContext;
+use necsim_impls_std::cogs::{
+    active_lineage_sampler::gillespie::GillespieActiveLineageSampler, rng::pcg::Pcg,
+};
 
 pub fn simulate<
     H: Habitat,
-    D: SeparableDispersalSampler<H, StdRng>,
+    D: SeparableDispersalSampler<H, Pcg>,
     R: LineageReference<H>,
     S: CoherentLineageStore<H, R>,
     P: ReporterContext,
@@ -37,7 +37,7 @@ pub fn simulate<
     seed: u64,
     local_partition: &mut L,
 ) -> (f64, u64) {
-    let mut rng = StdRng::seed_from_u64(seed);
+    let mut rng = Pcg::seed_from_u64(seed);
     let speciation_probability =
         UniformSpeciationProbability::new(speciation_probability_per_generation);
     let emigration_exit = NeverEmigrationExit::default();
@@ -55,7 +55,7 @@ pub fn simulate<
         emigration_exit,
         coalescence_sampler,
         turnover_rate,
-        _rng: PhantomData::<StdRng>,
+        _rng: PhantomData::<Pcg>,
     };
 
     let active_lineage_sampler =
@@ -91,5 +91,7 @@ pub fn simulate<
         .active_lineage_sampler(active_lineage_sampler)
         .build();
 
-    simulation.simulate(local_partition.get_reporter())
+    let (time, steps, _rng) = simulation.simulate(local_partition.get_reporter());
+
+    (time, steps)
 }

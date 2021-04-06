@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use core::num::NonZeroU32;
 
-use necsim_core::lineage::MigratingLineage;
+use necsim_core::{lineage::MigratingLineage, reporter::Reporter};
 
 use crate::{
     partitioning::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode, Partitioning},
@@ -104,6 +104,10 @@ impl<P: ReporterContext> LocalPartition<P> for LiveMonolithicLocalPartition<P> {
 
     fn reduce_global_time_steps(&self, local_time: f64, local_steps: u64) -> (f64, u64) {
         (local_time, local_steps)
+    }
+
+    fn report_progress_sync(&mut self, remaining: u64) {
+        self.reporter.report_progress(remaining)
     }
 }
 

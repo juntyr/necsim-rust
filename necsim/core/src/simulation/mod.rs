@@ -151,7 +151,7 @@ impl<
             steps += 1;
         }
 
-        (self.active_lineage_sampler.get_time_of_last_event(), steps)
+        (self.active_lineage_sampler.get_last_event_time(), steps)
     }
 
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
@@ -173,7 +173,7 @@ impl<
     ) -> (f64, u64) {
         self.simulate_incremental_early_stop(
             |simulation, _| {
-                simulation.active_lineage_sampler().get_time_of_last_event() >= min_time_inclusive
+                simulation.active_lineage_sampler().get_last_event_time() >= min_time_inclusive
             },
             reporter,
         )
@@ -181,7 +181,9 @@ impl<
 
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
     #[inline]
-    pub fn simulate<P: Reporter>(mut self, reporter: &mut P) -> (f64, u64) {
-        self.simulate_incremental_early_stop(|_, _| false, reporter)
+    pub fn simulate<P: Reporter>(mut self, reporter: &mut P) -> (f64, u64, G) {
+        let (time, steps) = self.simulate_incremental_early_stop(|_, _| false, reporter);
+
+        (time, steps, self.rng)
     }
 }

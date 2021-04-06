@@ -3,10 +3,9 @@ use std::marker::PhantomData;
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, BackedUp, Backup, CoherentLineageStore, Habitat, LineageReference,
-        RngCore, SeparableDispersalSampler,
+        RngCore, SeparableDispersalSampler, SplittableRng,
     },
     lineage::MigratingLineage,
-    reporter::Reporter,
     simulation::{partial::event_sampler::PartialSimulation, Simulation},
 };
 
@@ -21,20 +20,19 @@ use necsim_impls_no_std::{
     },
     decomposition::Decomposition,
     partitioning::{LocalPartition, MigrationMode},
+    reporter::ReporterContext,
 };
 
 use necsim_impls_std::cogs::{
-    active_lineage_sampler::gillespie::GillespieActiveLineageSampler, rng::std::StdRng,
+    active_lineage_sampler::gillespie::GillespieActiveLineageSampler, rng::pcg::Pcg,
 };
-
-use necsim_impls_no_std::reporter::ReporterContext;
 
 use super::reporter::PartitionReporterProxy;
 
 #[allow(clippy::too_many_lines, clippy::too_many_arguments)]
 pub fn simulate<
     H: Habitat,
-    D: SeparableDispersalSampler<H, StdRng>,
+    D: SeparableDispersalSampler<H, Pcg>,
     R: LineageReference<H>,
     S: CoherentLineageStore<H, R>,
     P: ReporterContext,
@@ -51,11 +49,8 @@ pub fn simulate<
     independent_time_slice: f64,
 ) -> (f64, u64) {
     // Create a unique RNG seed for each partition
-    let mut rng = StdRng::seed_from_u64(seed);
-    for _ in 0..local_partition.get_partition_rank() {
-        let _ = rng.sample_u64();
-    }
-    let mut rng = StdRng::seed_from_u64(rng.sample_u64());
+    let mut rng =
+        Pcg::seed_from_u64(seed).split_to_stream(u64::from(local_partition.get_partition_rank()));
 
     let speciation_probability =
         UniformSpeciationProbability::new(speciation_probability_per_generation);
@@ -74,7 +69,7 @@ pub fn simulate<
         emigration_exit,
         coalescence_sampler,
         turnover_rate,
-        _rng: PhantomData::<StdRng>,
+        _rng: PhantomData::<Pcg>,
     };
 
     let active_lineage_sampler =
@@ -110,18 +105,9 @@ pub fn simulate<
         .active_lineage_sampler(active_lineage_sampler)
         .build();
 
-    // TODO: This is hacky but ensures that the progress bar has the expected target
-    if !local_partition.is_root() {
-        local_partition
-            .get_reporter()
-            .report_progress(simulation.active_lineage_sampler().number_active_lineages() as u64);
-    }
-    local_partition.reduce_vote_continue(true);
-    if local_partition.is_root() {
-        local_partition
-            .get_reporter()
-            .report_progress(simulation.active_lineage_sampler().number_active_lineages() as u64);
-    }
+    // Ensure that the progress bar starts with the expected target
+    local_partition
+        .report_progress_sync(simulation.active_lineage_sampler().number_active_lineages() as u64);
 
     let mut global_safe_time = 0.0_f64;
     let mut simulation_backup = simulation.backup();
@@ -196,7 +182,7 @@ pub fn simulate<
     }
 
     proxy.local_partition().reduce_global_time_steps(
-        simulation.active_lineage_sampler().get_time_of_last_event(),
+        simulation.active_lineage_sampler().get_last_event_time(),
         total_steps,
     )
 }

@@ -18,30 +18,41 @@
             /* selection of how the algorithm should be parallelised across partitions */
             /* optional, default = OptimisticLockstep */
             parallelism_mode: (
+                /* no parallelisation, the algorithm runs on a single partition only
+                 * invalid when the simulation is internally parallelised */
+              | Monolithic
                 /* (1) simulate each partition independently for some delta_sync
                  * (2) check if any (unknown) migrations between partitions occured
                  *     (a) if yes, roll back and try again with >= 1 more known migration
                  *     (b) if no, exit the repetition
                  * (3) designate the past delta_sync as the last safe point
-                 * (4) repeat with the next delta_sync until finished */
+                 * (4) repeat with the next delta_sync until finished
+                 *
+                 * invalid when the simulation is NOT internally parallelised */
               | Optimistic(
                     /* simulation time between safe points */
                     delta_sync: (0.0 < f64),
                 )
                 /* (1) vote on which partition has the earliest next event
                  * (2) advance this partition by one step
-                 * (3) repeat until finished */
+                 * (3) repeat until finished
+                 *
+                 * invalid when the simulation is NOT internally parallelised */
               | Lockstep
                 /* (1) simulate each partition independently until their next emigration
                  * (2) vote on which partition has the earliest emigration event
                  * (3) roll back and simulate exactly until and including this first migration
-                 * (4) repeat until finished */
+                 * (4) repeat until finished
+                 *
+                 * invalid when the simulation is NOT internally parallelised */
               | OptimisticLockstep
                 /* WARNING: may produce inaccurate results
                  *
                  * (1) simulate each partition independently for some delta_sync
                  * (2) perform all migrations simultaneously at this synchronisation point
-                 * (3) repeat until finished */
+                 * (3) repeat until finished
+                 *
+                 * invalid when the simulation is NOT internally parallelised */
               | Averaging(
                     delta_sync: (0.0 < f64),
                 )
@@ -116,10 +127,14 @@
             /* selection of the mode in which the simulation is partitioned
              * optional, default = Individuals */
             partition_mode: (
+                /* no partitioning occurs
+                 * invalid when the simulation is internally parallelised */
+              | Monolithic
                 /* partition the initial set of individuals
                  * no individuals are migrated between partitions
                  * automatically coordinates between partitions
-                 * communication between partitions only occurs for progress measuring */
+                 * communication between partitions only occurs for progress measuring
+                 * invalid when the simulation is NOT internally parallelised */
               | Individuals
                 /* partition the initial set of individuals
                  * no individuals are migrated between partitions
@@ -133,10 +148,12 @@
                 /* partition the landscape
                  * individuals naturally migrate between partitions
                  * automatically coordinates between partitions
-                 * communication between partitions occurs mostly for migration */
+                 * communication between partitions occurs mostly for migration
+                 * invalid when the simulation is NOT internally parallelised */
               | Landscape
                 /* like Landscape but only migrates individuals at random intervals
-                 *  to minimise the communication overhead */
+                 *  to minimise the communication overhead
+                 * invalid when the simulation is NOT internally parallelised */
               | Probabilistic
             )
         )

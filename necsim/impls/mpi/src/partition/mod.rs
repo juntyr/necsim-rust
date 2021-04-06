@@ -129,6 +129,15 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
             },
         }
     }
+
+    fn report_progress_sync(&mut self, remaining: u64) {
+        match self {
+            Self::LiveMonolithic(partition) => partition.report_progress_sync(remaining),
+            Self::RecordedMonolithic(partition) => partition.report_progress_sync(remaining),
+            Self::Root(partition) => partition.report_progress_sync(remaining),
+            Self::Parallel(partition) => partition.report_progress_sync(remaining),
+        }
+    }
 }
 
 impl<P: ReporterContext> Reporter for MpiLocalPartition<P> {

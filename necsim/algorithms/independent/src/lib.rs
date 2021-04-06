@@ -3,16 +3,15 @@
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
 #![feature(stmt_expr_attributes)]
+#![feature(drain_filter)]
 
 #[macro_use]
 extern crate contracts;
 
-#[macro_use]
-extern crate serde_derive_state;
-
 use std::num::{NonZeroU64, NonZeroUsize};
 
 use serde::Deserialize;
+use serde_state::DeserializeState;
 
 use necsim_core::{
     cogs::{DispersalSampler, Habitat, RngCore, SpeciationProbability, SpeciationSample},
@@ -61,50 +60,83 @@ pub enum DedupCache {
     None,
 }
 
-#[derive(Debug, DeserializeState)]
-#[serde(deserialize_state = "Partition")]
+#[derive(Debug, Deserialize)]
 pub enum PartitionMode {
+    Monolithic,
     Individuals,
     #[serde(alias = "Isolated")]
-    IsolatedIndividuals(
-        #[serde(deserialize_state_with = "deserialize_isolated_partition")] Partition,
-    ),
+    IsolatedIndividuals(Partition),
     Landscape,
     Probabilistic,
 }
 
-fn deserialize_isolated_partition<'de, D>(
-    partition: &mut Partition,
-    deserializer: D,
-) -> Result<Partition, D::Error>
-where
-    D: serde::de::Deserializer<'de>,
-{
-    use serde::de::Error;
-
-    let isolated_partition = Partition::deserialize(deserializer)?;
-
-    if isolated_partition.partitions().get() > 1 && partition.partitions().get() > 1 {
-        Err(D::Error::custom(
-            "IsolatedIndividuals is incompatible with non-monolithic partitioning.",
-        ))
-    } else {
-        Ok(isolated_partition)
-    }
-}
-
-#[derive(Debug, DeserializeState)]
-#[serde(default)]
-#[serde(deserialize_state = "Partition")]
+#[derive(Debug)]
 pub struct IndependentArguments {
     delta_t: PositiveF64,
     step_slice: NonZeroU64,
     dedup_cache: DedupCache,
-    #[serde(deserialize_state)]
     partition_mode: PartitionMode,
 }
 
-impl Default for IndependentArguments {
+impl<'de> DeserializeState<'de, Partition> for IndependentArguments {
+    fn deserialize_state<D>(seed: &mut Partition, deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        use serde::de::Error;
+
+        let raw = IndependentArgumentsRaw::deserialize(deserializer)?;
+
+        let partition_mode = match raw.partition_mode {
+            Some(partition_mode) => match partition_mode {
+                PartitionMode::Monolithic | PartitionMode::IsolatedIndividuals(_)
+                    if seed.partitions().get() > 1 =>
+                {
+                    return Err(D::Error::custom(format!(
+                        "partition_mode {:?} is incompatible with non-monolithic partitioning.",
+                        partition_mode
+                    )))
+                },
+                PartitionMode::Individuals
+                | PartitionMode::Landscape
+                | PartitionMode::Probabilistic
+                    if seed.partitions().get() == 1 =>
+                {
+                    return Err(D::Error::custom(format!(
+                        "partition_mode {:?} is incompatible with monolithic partitioning.",
+                        partition_mode
+                    )))
+                },
+                partition_mode => partition_mode,
+            },
+            None => {
+                if seed.partitions().get() > 1 {
+                    PartitionMode::Individuals
+                } else {
+                    PartitionMode::Monolithic
+                }
+            },
+        };
+
+        Ok(IndependentArguments {
+            delta_t: raw.delta_t,
+            step_slice: raw.step_slice,
+            dedup_cache: raw.dedup_cache,
+            partition_mode,
+        })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+struct IndependentArgumentsRaw {
+    delta_t: PositiveF64,
+    step_slice: NonZeroU64,
+    dedup_cache: DedupCache,
+    partition_mode: Option<PartitionMode>,
+}
+
+impl Default for IndependentArgumentsRaw {
     fn default() -> Self {
         Self {
             delta_t: PositiveF64::new(1.0_f64).unwrap(),
@@ -112,7 +144,7 @@ impl Default for IndependentArguments {
             dedup_cache: DedupCache::Relative(RelativeDedupCache {
                 factor: PositiveF64::new(2.0_f64).unwrap(),
             }),
-            partition_mode: PartitionMode::Individuals,
+            partition_mode: None,
         }
     }
 }
@@ -140,9 +172,6 @@ impl IndependentSimulation {
         decomposition: C,
         auxiliary: IndependentArguments,
     ) -> (f64, u64) {
-        // TODO: how do I maintain event order during a monolithic run when events are
-        //       immediately reported?
-
         let mut proxy = PartitionReporterProxy::from(local_partition);
 
         let rng = SeaHash::seed_from_u64(seed);
@@ -164,8 +193,8 @@ impl IndependentSimulation {
             });
 
         let (time, steps) = match auxiliary.partition_mode {
-            PartitionMode::Individuals | PartitionMode::IsolatedIndividuals(..) => {
-                partitioned::individuals::simulate(
+            PartitionMode::Monolithic | PartitionMode::IsolatedIndividuals(..) => {
+                partitioned::monolithic::simulate(
                     habitat,
                     rng,
                     speciation_probability,
@@ -177,6 +206,17 @@ impl IndependentSimulation {
                     auxiliary,
                 )
             },
+            PartitionMode::Individuals => partitioned::individuals::simulate(
+                habitat,
+                rng,
+                speciation_probability,
+                dispersal_sampler,
+                lineage_store,
+                lineages.into(),
+                &mut proxy,
+                min_spec_samples,
+                auxiliary,
+            ),
             PartitionMode::Landscape => partitioned::landscape::simulate(
                 habitat,
                 rng,

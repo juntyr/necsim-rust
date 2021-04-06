@@ -46,7 +46,7 @@ impl<H: Habitat> LineageReference<H> for GlobalLineageReference {}
 pub struct Lineage {
     global_reference: GlobalLineageReference,
     indexed_location: Option<IndexedLocation>,
-    time_of_last_event: f64,
+    last_event_time: f64,
 }
 
 impl Lineage {
@@ -55,7 +55,7 @@ impl Lineage {
         ret.indexed_location() == Some(&old(indexed_location.clone())),
         "stores the indexed_location"
     )]
-    #[debug_ensures(ret.time_of_last_event() == 0.0_f64, "starts at t_0 = 0.0")]
+    #[debug_ensures(ret.last_event_time() == 0.0_f64, "starts at t_0 = 0.0")]
     pub fn new<H: Habitat>(indexed_location: IndexedLocation, habitat: &H) -> Self {
         Self {
             global_reference: GlobalLineageReference(unsafe {
@@ -64,7 +64,7 @@ impl Lineage {
                 )
             }),
             indexed_location: Some(indexed_location),
-            time_of_last_event: 0.0_f64,
+            last_event_time: 0.0_f64,
         }
     }
 
@@ -77,7 +77,7 @@ impl Lineage {
         Self {
             global_reference,
             indexed_location: Some(indexed_location),
-            time_of_last_event: time_of_emigration,
+            last_event_time: time_of_emigration,
         }
     }
 
@@ -97,8 +97,8 @@ impl Lineage {
     }
 
     #[must_use]
-    pub fn time_of_last_event(&self) -> f64 {
-        self.time_of_last_event
+    pub fn last_event_time(&self) -> f64 {
+        self.last_event_time
     }
 
     #[must_use]
@@ -154,10 +154,10 @@ impl Lineage {
     /// This method should only be called by internal `LineageStore` code to
     /// update the state of the lineages being simulated.
     #[allow(clippy::float_cmp)]
-    #[debug_requires(event_time > self.time_of_last_event(), "event_time is after the last event")]
-    #[debug_ensures(self.time_of_last_event() == old(event_time), "updates the time_of_last_event")]
-    pub unsafe fn update_time_of_last_event(&mut self, event_time: f64) {
-        self.time_of_last_event = event_time;
+    #[debug_requires(event_time > self.last_event_time(), "event_time is after the last event")]
+    #[debug_ensures(self.last_event_time() == old(event_time), "updates the last_event_time")]
+    pub unsafe fn update_last_event_time(&mut self, event_time: f64) {
+        self.last_event_time = event_time;
     }
 }
 

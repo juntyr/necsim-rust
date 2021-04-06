@@ -130,7 +130,9 @@ pub enum Algorithm {
     #[cfg(feature = "necsim-gillespie")]
     Gillespie,
     #[cfg(feature = "necsim-skipping-gillespie")]
-    SkippingGillespie(necsim_skipping_gillespie::SkippingGillespieArguments),
+    SkippingGillespie(
+        #[serde(deserialize_state)] necsim_skipping_gillespie::SkippingGillespieArguments,
+    ),
     #[cfg(feature = "necsim-cuda")]
     #[serde(alias = "CUDA")]
     Cuda(necsim_cuda::CudaArguments),

@@ -112,6 +112,8 @@ impl GillespieSimulation {
             .active_lineage_sampler(active_lineage_sampler)
             .build();
 
-        simulation.simulate(local_partition.get_reporter())
+        let (time, steps, _rng) = simulation.simulate(local_partition.get_reporter());
+
+        (time, steps)
     }
 }

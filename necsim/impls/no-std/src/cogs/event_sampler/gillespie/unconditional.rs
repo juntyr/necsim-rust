@@ -78,6 +78,13 @@ impl<
 {
     #[must_use]
     #[allow(clippy::shadow_unrelated)] // https://github.com/rust-lang/rust-clippy/issues/5455
+    #[debug_ensures(ret.as_ref().map_or(true, |event| {
+        Some(event.global_lineage_reference().clone()) == old(
+            simulation.lineage_store.get(lineage_reference.clone()).map(
+                |lineage| lineage.global_reference().clone()
+            )
+        )
+    }), "event occurs for lineage_reference")]
     fn sample_event_for_lineage_at_indexed_location_time_or_emigrate(
         &mut self,
         lineage_reference: R,

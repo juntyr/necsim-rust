@@ -151,3 +151,10 @@ pub trait PrimeableRng<H: Habitat>: RngCore {
 
     fn prime_with(&mut self, location_index: u64, time_index: u64);
 }
+
+#[allow(clippy::module_name_repetitions)]
+pub trait SplittableRng: RngCore {
+    fn split(self) -> (Self, Self);
+
+    fn split_to_stream(self, stream: u64) -> Self;
+}

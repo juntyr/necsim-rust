@@ -133,14 +133,13 @@ impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
         }
     }
 
-    fn update_lineage_time_of_last_event(
+    fn update_lineage_last_event_time(
         &mut self,
         reference: InMemoryLineageReference,
         event_time: f64,
     ) {
         unsafe {
-            self.lineages_store[Into::<usize>::into(reference)]
-                .update_time_of_last_event(event_time)
+            self.lineages_store[Into::<usize>::into(reference)].update_last_event_time(event_time)
         }
     }
 
