@@ -6,7 +6,7 @@ use crate::{
         EmigrationExit, EventSampler, Habitat, ImmigrationEntry, LineageReference, LineageStore,
         RngCore, SpeciationProbability, TurnoverRate,
     },
-    event::{Event, EventType},
+    event::DispersalEvent,
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
     reporter::Reporter,
@@ -80,15 +80,16 @@ pub fn simulate_and_report_immigration_step<
             }
 
             // Report the migration dispersal event
-            reporter.report_event(&Event::new(
-                dispersal_origin,
-                migration_event_time,
-                global_reference,
-                EventType::Dispersal {
+            reporter.report_event(
+                &DispersalEvent {
+                    origin: dispersal_origin,
+                    time: migration_event_time,
+                    global_lineage_reference: global_reference,
                     target: dispersal_target,
                     coalescence: optional_coalescence,
-                },
-            ))
+                }
+                .into(),
+            )
         },
     )
 }

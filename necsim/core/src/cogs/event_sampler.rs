@@ -9,7 +9,8 @@ use super::{
     RngCore, SpeciationProbability, TurnoverRate,
 };
 use crate::{
-    event::Event, landscape::IndexedLocation, simulation::partial::event_sampler::PartialSimulation,
+    event::PackedEvent, landscape::IndexedLocation,
+    simulation::partial::event_sampler::PartialSimulation,
 };
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
@@ -41,7 +42,7 @@ pub trait EventSampler<
         event_time: f64,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N>,
         rng: &mut G,
-    ) -> Option<Event>;
+    ) -> Option<PackedEvent>;
 }
 
 // The time of a speciation sample can be stored as a NonZeroU64 as:

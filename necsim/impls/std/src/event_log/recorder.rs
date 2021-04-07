@@ -24,7 +24,7 @@ use std::{
 
 use anyhow::{Error, Result};
 
-use necsim_core::event::Event;
+use necsim_core::event::PackedEvent;
 
 use super::EventLogHeader;
 
@@ -35,7 +35,7 @@ pub struct EventLogRecorder {
     segment_size: usize,
     directory: PathBuf,
     segment_index: usize,
-    buffer: Vec<Event>,
+    buffer: Vec<PackedEvent>,
 }
 
 impl TryFrom<PathBuf> for EventLogRecorder {
@@ -82,7 +82,7 @@ impl EventLogRecorder {
         })
     }
 
-    pub fn record_event(&mut self, event: &Event) {
+    pub fn record_event(&mut self, event: &PackedEvent) {
         self.buffer.push(event.clone());
 
         if self.buffer.len() >= self.segment_size {

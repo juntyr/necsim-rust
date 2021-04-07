@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use necsim_core::{
-    event::{Event, EventType},
+    event::{EventType, PackedEvent},
     reporter::{EventFilter, Reporter},
 };
 
@@ -10,8 +10,8 @@ use necsim_impls_no_std::reporter::ReporterContext;
 #[allow(clippy::module_name_repetitions)]
 pub struct WaterLevelReporter<'e, R: ReporterContext> {
     water_level: f64,
-    slow_events: &'e mut Vec<Event>,
-    fast_events: &'e mut Vec<Event>,
+    slow_events: &'e mut Vec<PackedEvent>,
+    fast_events: &'e mut Vec<PackedEvent>,
     _marker: PhantomData<R>,
 }
 
@@ -22,7 +22,7 @@ impl<'e, R: ReporterContext> EventFilter for WaterLevelReporter<'e, R> {
 
 impl<'e, R: ReporterContext> Reporter for WaterLevelReporter<'e, R> {
     #[inline]
-    fn report_event(&mut self, event: &Event) {
+    fn report_event(&mut self, event: &PackedEvent) {
         if (Self::REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
             || (Self::REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
         {
@@ -43,8 +43,8 @@ impl<'e, R: ReporterContext> Reporter for WaterLevelReporter<'e, R> {
 impl<'e, R: ReporterContext> WaterLevelReporter<'e, R> {
     pub fn new(
         water_level: f64,
-        slow_events: &'e mut Vec<Event>,
-        fast_events: &'e mut Vec<Event>,
+        slow_events: &'e mut Vec<PackedEvent>,
+        fast_events: &'e mut Vec<PackedEvent>,
     ) -> Self {
         Self {
             water_level,

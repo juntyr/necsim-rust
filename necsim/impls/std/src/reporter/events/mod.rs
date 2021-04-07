@@ -1,5 +1,5 @@
 use necsim_core::{
-    event::{Event, EventType},
+    event::{Dispersal, EventType, PackedEvent},
     reporter::{EventFilter, Reporter},
 };
 
@@ -7,7 +7,7 @@ mod contract;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct EventReporter {
-    last_event: Option<Event>,
+    last_event: Option<PackedEvent>,
 
     speciation: usize,
     out_dispersal: usize,
@@ -30,7 +30,7 @@ impl Reporter for EventReporter {
             self.self_coalescence
         )
     } else { true }, "counts all distinct event types without changing unaffected counts")]
-    fn report_event(&mut self, event: &Event) {
+    fn report_event(&mut self, event: &PackedEvent) {
         if Some(event) == self.last_event.as_ref() {
             return;
         }
@@ -40,11 +40,11 @@ impl Reporter for EventReporter {
             EventType::Speciation => {
                 self.speciation += 1;
             },
-            EventType::Dispersal {
+            EventType::Dispersal(Dispersal {
                 target,
                 coalescence,
                 ..
-            } => {
+            }) => {
                 let self_dispersal = event.origin() == target;
                 let coalescence = coalescence.is_some();
 

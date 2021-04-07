@@ -5,7 +5,7 @@ use necsim_core::{
         ActiveLineageSampler, DispersalSampler, Habitat, MinSpeciationTrackingEventSampler,
         PrimeableRng, SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
     },
-    event::{Event, EventType},
+    event::DispersalEvent,
     landscape::IndexedLocation,
     lineage::{GlobalLineageReference, Lineage, MigratingLineage},
     reporter::Reporter,
@@ -162,15 +162,16 @@ pub fn simulate<
             let dispersal_target = IndexedLocation::new(dispersal_target, target_index);
 
             // Cache the immigration event
-            immigration_events.push(Event::new(
-                dispersal_origin,
-                event_time,
-                global_reference.clone(),
-                EventType::Dispersal {
+            immigration_events.push(
+                DispersalEvent {
+                    origin: dispersal_origin,
+                    time: event_time,
+                    global_lineage_reference: global_reference.clone(),
                     target: dispersal_target.clone(),
                     coalescence: None,
-                },
-            ));
+                }
+                .into(),
+            );
 
             // Append the new Lineage to the local task list
             lineages.push_back(Lineage::immigrate(

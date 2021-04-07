@@ -1,4 +1,4 @@
-use crate::event::Event;
+use crate::event::PackedEvent;
 
 pub trait EventFilter {
     const REPORT_SPECIATION: bool;
@@ -8,7 +8,7 @@ pub trait EventFilter {
 pub trait Reporter: EventFilter {
     #[inline]
     #[allow(unused_variables)]
-    fn report_event(&mut self, event: &Event) {
+    fn report_event(&mut self, event: &PackedEvent) {
         // no-op
     }
 
@@ -29,7 +29,7 @@ impl EventFilter for NullReporter {
 
 impl Reporter for NullReporter {
     #[inline]
-    fn report_event(&mut self, _event: &Event) {
+    fn report_event(&mut self, _event: &PackedEvent) {
         // no-op
     }
 
@@ -52,7 +52,7 @@ impl<F: Reporter, T: Reporter> EventFilter for ReporterCombinator<F, T> {
 
 impl<F: Reporter, T: Reporter> Reporter for ReporterCombinator<F, T> {
     #[inline]
-    fn report_event(&mut self, event: &Event) {
+    fn report_event(&mut self, event: &PackedEvent) {
         self.front.report_event(event);
         self.tail.report_event(event);
     }

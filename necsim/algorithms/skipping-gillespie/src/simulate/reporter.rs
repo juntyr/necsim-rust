@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use necsim_core::{
-    event::{Event, EventType},
+    event::{EventType, PackedEvent},
     reporter::{EventFilter, Reporter},
 };
 
@@ -9,7 +9,7 @@ use necsim_impls_no_std::{partitioning::LocalPartition, reporter::ReporterContex
 
 pub struct PartitionReporterProxy<'p, R: ReporterContext, P: LocalPartition<R>> {
     local_partition: &'p mut P,
-    event_buffer: Vec<Event>,
+    event_buffer: Vec<PackedEvent>,
     _marker: PhantomData<R>,
 }
 
@@ -22,7 +22,7 @@ impl<'p, R: ReporterContext, P: LocalPartition<R>> EventFilter
 
 impl<'p, R: ReporterContext, P: LocalPartition<R>> Reporter for PartitionReporterProxy<'p, R, P> {
     #[inline]
-    fn report_event(&mut self, event: &Event) {
+    fn report_event(&mut self, event: &PackedEvent) {
         if (Self::REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
             || (Self::REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
         {

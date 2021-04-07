@@ -7,18 +7,112 @@ use core::{
 
 use crate::{landscape::IndexedLocation, lineage::GlobalLineageReference};
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, TypeLayout, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
-pub struct Event {
+pub struct PackedEvent {
     origin: IndexedLocation,
     time: f64,
     global_lineage_reference: GlobalLineageReference,
     r#type: EventType,
 }
 
-impl Eq for Event {}
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
+pub enum EventType {
+    Speciation,
+    Dispersal(Dispersal),
+}
 
-impl PartialEq for Event {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
+pub struct Dispersal {
+    pub target: IndexedLocation,
+    pub coalescence: Option<GlobalLineageReference>,
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub struct SpeciationEvent {
+    pub origin: IndexedLocation,
+    pub time: f64,
+    pub global_lineage_reference: GlobalLineageReference,
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub struct DispersalEvent {
+    pub origin: IndexedLocation,
+    pub time: f64,
+    pub global_lineage_reference: GlobalLineageReference,
+    pub target: IndexedLocation,
+    pub coalescence: Option<GlobalLineageReference>,
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub enum TypedEvent {
+    Speciation(SpeciationEvent),
+    Dispersal(DispersalEvent),
+}
+
+impl From<SpeciationEvent> for PackedEvent {
+    fn from(event: SpeciationEvent) -> Self {
+        Self {
+            origin: event.origin,
+            time: event.time,
+            global_lineage_reference: event.global_lineage_reference,
+            r#type: EventType::Speciation,
+        }
+    }
+}
+
+impl From<DispersalEvent> for PackedEvent {
+    fn from(event: DispersalEvent) -> Self {
+        Self {
+            origin: event.origin,
+            time: event.time,
+            global_lineage_reference: event.global_lineage_reference,
+            r#type: EventType::Dispersal(Dispersal {
+                target: event.target,
+                coalescence: event.coalescence,
+            }),
+        }
+    }
+}
+
+impl From<TypedEvent> for PackedEvent {
+    fn from(event: TypedEvent) -> Self {
+        match event {
+            TypedEvent::Speciation(event) => event.into(),
+            TypedEvent::Dispersal(event) => event.into(),
+        }
+    }
+}
+
+impl From<PackedEvent> for TypedEvent {
+    fn from(event: PackedEvent) -> Self {
+        match event.r#type {
+            EventType::Speciation => Self::Speciation(SpeciationEvent {
+                origin: event.origin,
+                time: event.time,
+                global_lineage_reference: event.global_lineage_reference,
+            }),
+            EventType::Dispersal(Dispersal {
+                target,
+                coalescence,
+            }) => Self::Dispersal(DispersalEvent {
+                origin: event.origin,
+                time: event.time,
+                global_lineage_reference: event.global_lineage_reference,
+                target,
+                coalescence,
+            }),
+        }
+    }
+}
+
+impl Eq for PackedEvent {}
+
+impl PartialEq for PackedEvent {
     // `Event`s are equal when they have the same `origin`, `time` and `r#type`
     // (`global_lineage_reference` is ignored)
     fn eq(&self, other: &Self) -> bool {
@@ -26,7 +120,7 @@ impl PartialEq for Event {
     }
 }
 
-impl Ord for Event {
+impl Ord for PackedEvent {
     fn cmp(&self, other: &Self) -> Ordering {
         // Order `Event`s in lexicographical order:
         //  (1) time
@@ -43,13 +137,13 @@ impl Ord for Event {
     }
 }
 
-impl PartialOrd for Event {
+impl PartialOrd for PackedEvent {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Hash for Event {
+impl Hash for PackedEvent {
     // `Event`s are equal when they have the same `origin`, `time` and `r#type`
     // (`global_lineage_reference` is ignored)
     fn hash<S: Hasher>(&self, state: &mut S) {
@@ -59,7 +153,7 @@ impl Hash for Event {
     }
 }
 
-impl Event {
+impl PackedEvent {
     #[must_use]
     #[allow(clippy::float_cmp)]
     //#[debug_ensures(ret.r#type() == &r#type, "stores r#type")]
@@ -100,74 +194,33 @@ impl Event {
     }
 }
 
-#[allow(clippy::module_name_repetitions)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
-pub enum EventType {
-    Speciation,
-    Dispersal {
-        target: IndexedLocation,
-        coalescence: Option<GlobalLineageReference>,
-    },
-}
+impl Eq for Dispersal {}
 
-impl Eq for EventType {}
-
-impl PartialEq for EventType {
-    // `EventType`s are equal when they have the same type and `target`
-    // (`coalescence` is ignored)
+impl PartialEq for Dispersal {
+    // `Dispersal`s are equal when they have the same `target` (`coalescence` is
+    // ignored)
     fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (EventType::Speciation, EventType::Speciation) => true,
-            (
-                EventType::Dispersal {
-                    target: self_target,
-                    ..
-                },
-                EventType::Dispersal {
-                    target: other_target,
-                    ..
-                },
-            ) => self_target == other_target,
-            _ => false,
-        }
+        self.target == other.target
     }
 }
 
-impl Ord for EventType {
+impl Ord for Dispersal {
+    // `Dispersal`s are ordered by their `target`s (`coalescence` is ignored)
     fn cmp(&self, other: &Self) -> Ordering {
-        match (self, other) {
-            (EventType::Speciation, EventType::Speciation) => Ordering::Equal,
-            (EventType::Speciation, _) => Ordering::Less,
-            (_, EventType::Speciation) => Ordering::Greater,
-            (
-                EventType::Dispersal {
-                    target: self_target,
-                    ..
-                },
-                EventType::Dispersal {
-                    target: other_target,
-                    ..
-                },
-            ) => self_target.cmp(other_target),
-        }
+        self.target.cmp(&other.target)
     }
 }
 
-impl PartialOrd for EventType {
+impl PartialOrd for Dispersal {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Hash for EventType {
-    // `EventType`s are equal when they have the same type and `target`
-    // (`coalescence` is ignored)
+impl Hash for Dispersal {
+    // `Dispersal`s are equal when they have the same `target` (`coalescence` is
+    // ignored)
     fn hash<S: Hasher>(&self, state: &mut S) {
-        core::mem::discriminant(self).hash(state);
-
-        if let EventType::Dispersal { target, .. } = self {
-            target.hash(state);
-        }
+        self.target.hash(state)
     }
 }

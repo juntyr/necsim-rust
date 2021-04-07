@@ -2,7 +2,7 @@ use std::{collections::BinaryHeap, path::PathBuf};
 
 use anyhow::Result;
 
-use necsim_core::event::Event;
+use necsim_core::event::PackedEvent;
 
 mod segment;
 mod sorted_segments;
@@ -78,7 +78,7 @@ impl EventLogReplay {
 }
 
 impl Iterator for EventLogReplay {
-    type Item = Event;
+    type Item = PackedEvent;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut next_segment = self.frontier.pop()?;

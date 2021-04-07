@@ -6,7 +6,7 @@ use crate::{
         Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
         TurnoverRate,
     },
-    event::EventType,
+    event::{Dispersal, EventType},
     reporter::Reporter,
     simulation::Simulation,
 };
@@ -64,11 +64,11 @@ pub fn simulate_and_report_local_step_or_finish<
 
                                 // In the event of dispersal without coalescence, the lineage
                                 // remains active
-                                if let EventType::Dispersal {
+                                if let EventType::Dispersal(Dispersal {
                                     target: dispersal_target,
                                     coalescence: None,
                                     ..
-                                } = event.r#type()
+                                }) = event.r#type()
                                 {
                                     Some(dispersal_target.clone())
                                 } else {

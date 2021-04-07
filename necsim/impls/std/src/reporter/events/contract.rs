@@ -1,4 +1,7 @@
-use necsim_core::{event::EventType, landscape::IndexedLocation};
+use necsim_core::{
+    event::{Dispersal, EventType},
+    landscape::IndexedLocation,
+};
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::too_many_arguments)]
@@ -24,42 +27,42 @@ pub fn explicit_event_reporter_report_event_contract(
             out_coalescence == old_out_coalescence &&
             self_coalescence == old_self_coalescence
         },
-        EventType::Dispersal {
+        EventType::Dispersal(Dispersal {
             target,
             coalescence: None,
             ..
-        } if dispersal_origin == target => {
+        }) if dispersal_origin == target => {
             speciation == old_speciation &&
             out_dispersal == old_out_dispersal &&
             self_dispersal == old_self_dispersal + 1 &&
             out_coalescence == old_out_coalescence &&
             self_coalescence == old_self_coalescence
         },
-        EventType::Dispersal {
+        EventType::Dispersal(Dispersal {
             coalescence: None,
             ..
-        } /*if origin != target*/ => {
+        }) /*if origin != target*/ => {
             speciation == old_speciation &&
             out_dispersal == old_out_dispersal + 1 &&
             self_dispersal == old_self_dispersal &&
             out_coalescence == old_out_coalescence &&
             self_coalescence == old_self_coalescence
         },
-        EventType::Dispersal {
+        EventType::Dispersal(Dispersal {
             target,
             coalescence: Some(_),
             ..
-        } if dispersal_origin == target => {
+        }) if dispersal_origin == target => {
             speciation == old_speciation &&
             out_dispersal == old_out_dispersal &&
             self_dispersal == old_self_dispersal &&
             out_coalescence == old_out_coalescence &&
             self_coalescence == old_self_coalescence + 1
         },
-        EventType::Dispersal {
+        EventType::Dispersal(Dispersal {
             coalescence: Some(_),
             ..
-        } /*if origin != target*/ => {
+        }) /*if origin != target*/ => {
             speciation == old_speciation &&
             out_dispersal == old_out_dispersal &&
             self_dispersal == old_self_dispersal &&
