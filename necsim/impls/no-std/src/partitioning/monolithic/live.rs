@@ -1,7 +1,10 @@
 use alloc::vec::Vec;
 use core::num::NonZeroU32;
 
-use necsim_core::{lineage::MigratingLineage, reporter::Reporter};
+use necsim_core::{
+    lineage::MigratingLineage,
+    reporter::{used::Unused, Reporter},
+};
 
 use crate::{
     partitioning::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode, Partitioning},
@@ -107,7 +110,7 @@ impl<P: ReporterContext> LocalPartition<P> for LiveMonolithicLocalPartition<P> {
     }
 
     fn report_progress_sync(&mut self, remaining: u64) {
-        self.reporter.report_progress(remaining)
+        self.reporter.report_progress(Unused::new(&remaining));
     }
 }
 

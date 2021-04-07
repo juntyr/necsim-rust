@@ -2,10 +2,12 @@
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
 #![feature(total_cmp)]
-#![feature(maybe_uninit_ref)]
 
 #[macro_use]
 extern crate contracts;
+
+#[macro_use]
+extern crate log;
 
 pub mod bounded;
 pub mod cogs;

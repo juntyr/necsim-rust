@@ -8,7 +8,7 @@ use necsim_core::{
     event::DispersalEvent,
     landscape::IndexedLocation,
     lineage::{GlobalLineageReference, Lineage, MigratingLineage},
-    reporter::Reporter,
+    reporter::{used::Unused, Reporter},
     simulation::Simulation,
 };
 
@@ -162,16 +162,13 @@ pub fn simulate<
             let dispersal_target = IndexedLocation::new(dispersal_target, target_index);
 
             // Cache the immigration event
-            immigration_events.push(
-                DispersalEvent {
-                    origin: dispersal_origin,
-                    time: event_time,
-                    global_lineage_reference: global_reference.clone(),
-                    target: dispersal_target.clone(),
-                    coalescence: None,
-                }
-                .into(),
-            );
+            immigration_events.push(DispersalEvent {
+                origin: dispersal_origin,
+                time: event_time,
+                global_lineage_reference: global_reference.clone(),
+                target: dispersal_target.clone(),
+                coalescence: None,
+            });
 
             // Append the new Lineage to the local task list
             lineages.push_back(Lineage::immigrate(
@@ -183,7 +180,7 @@ pub fn simulate<
 
         // Report any immigration events
         while let Some(immigration_event) = immigration_events.pop() {
-            proxy.report_event(&immigration_event);
+            proxy.report_dispersal(Unused::new(&immigration_event));
         }
     }
 

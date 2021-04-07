@@ -23,6 +23,7 @@ use rustacuda::{
 use necsim_core::{
     cogs::{DispersalSampler, Habitat, RngCore},
     lineage::{GlobalLineageReference, Lineage},
+    reporter::Reporter,
     simulation::Simulation,
 };
 
@@ -128,9 +129,6 @@ impl CudaSimulation {
         local_partition: &mut P,
         auxiliary: CudaArguments,
     ) -> Result<(f64, u64)> {
-        const REPORT_SPECIATION: bool = true;
-        const REPORT_DISPERSAL: bool = false;
-
         let rng = CudaRng::<Rng>::seed_from_u64(seed);
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation);
@@ -183,8 +181,8 @@ impl CudaSimulation {
 
                 #[allow(clippy::type_complexity)]
                 let event_buffer: EventBuffer<
-                    { REPORT_SPECIATION },
-                    { REPORT_DISPERSAL },
+                    <<P as LocalPartition<R>>::Reporter as Reporter>::ReportSpeciation,
+                    <<P as LocalPartition<R>>::Reporter as Reporter>::ReportDispersal,
                 > = EventBuffer::new(
                     &block_size,
                     &grid_size,

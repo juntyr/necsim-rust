@@ -6,9 +6,9 @@ use necsim_core::{
         PrimeableRng, SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
         TurnoverRate,
     },
-    event::PackedEvent,
+    event::{PackedEvent, TypedEvent},
     lineage::{GlobalLineageReference, Lineage},
-    reporter::Reporter,
+    reporter::{used::Unused, Reporter},
     simulation::Simulation,
 };
 
@@ -104,7 +104,7 @@ pub fn simulate<
             .sum();
         level_time += f64::from(EVENT_BUFFER_SIZE) / total_event_rate;
 
-        slow_events.extend(fast_events.drain_filter(|event| event.time() < level_time));
+        slow_events.extend(fast_events.drain_filter(|event| event.time < level_time));
 
         let mut reporter: WaterLevelReporter<R> =
             WaterLevelReporter::new(level_time, &mut slow_events, &mut fast_events);
@@ -148,10 +148,16 @@ pub fn simulate<
         }
 
         slow_events.sort();
-        for event in &slow_events {
-            proxy.report_event(event);
+        for event in slow_events.drain(..) {
+            match event.into() {
+                TypedEvent::Speciation(event) => {
+                    proxy.report_speciation(Unused::new(&event));
+                },
+                TypedEvent::Dispersal(event) => {
+                    proxy.report_dispersal(Unused::new(&event));
+                },
+            }
         }
-        slow_events.clear();
 
         std::mem::swap(&mut slow_lineages, &mut fast_lineages);
     }

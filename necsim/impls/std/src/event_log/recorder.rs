@@ -24,7 +24,7 @@ use std::{
 
 use anyhow::{Error, Result};
 
-use necsim_core::event::PackedEvent;
+use necsim_core::event::{DispersalEvent, PackedEvent, SpeciationEvent};
 
 use super::EventLogHeader;
 
@@ -82,8 +82,16 @@ impl EventLogRecorder {
         })
     }
 
-    pub fn record_event(&mut self, event: &PackedEvent) {
-        self.buffer.push(event.clone());
+    pub fn record_speciation(&mut self, event: &SpeciationEvent) {
+        self.buffer.push(event.clone().into());
+
+        if self.buffer.len() >= self.segment_size {
+            std::mem::drop(self.sort_and_write_segment());
+        }
+    }
+
+    pub fn record_dispersal(&mut self, event: &DispersalEvent) {
+        self.buffer.push(event.clone().into());
 
         if self.buffer.len() >= self.segment_size {
             std::mem::drop(self.sort_and_write_segment());
@@ -105,10 +113,7 @@ impl EventLogRecorder {
 
         std::mem::drop(bincode::serialize_into(
             &mut buf_writer,
-            &EventLogHeader::new(
-                self.buffer[0].time(),
-                self.buffer[self.buffer.len() - 1].time(),
-            ),
+            &EventLogHeader::new(self.buffer[0].time, self.buffer[self.buffer.len() - 1].time),
         ));
 
         for event in self.buffer.drain(0..) {

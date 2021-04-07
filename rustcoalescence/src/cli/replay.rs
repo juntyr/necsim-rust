@@ -1,6 +1,9 @@
 use anyhow::Result;
 
-use necsim_core::reporter::Reporter;
+use necsim_core::{
+    event::TypedEvent,
+    reporter::{used::Unused, Reporter},
+};
 
 use necsim_impls_no_std::reporter::ReporterContext;
 use necsim_impls_std::event_log::replay::EventLogReplay;
@@ -22,9 +25,18 @@ pub fn replay_with_logger<R: ReporterContext>(
     let mut reporter = reporter_context.build_guarded();
 
     for event in EventLogReplay::try_new(&replay_args.events, 100_000)? {
-        reporter.report_progress(1_u64);
-        reporter.report_event(&event);
-        reporter.report_progress(0_u64);
+        reporter.report_progress(Unused::new(&1_u64));
+
+        match event.into() {
+            TypedEvent::Speciation(event) => {
+                reporter.report_speciation(Unused::new(&event));
+            },
+            TypedEvent::Dispersal(event) => {
+                reporter.report_dispersal(Unused::new(&event));
+            },
+        }
+
+        reporter.report_progress(Unused::new(&0_u64));
     }
 
     std::mem::drop(reporter);

@@ -1,9 +1,12 @@
 use std::marker::PhantomData;
 
-use necsim_core::cogs::{
-    CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-    LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
-    SingularActiveLineageSampler, SpeciationProbability, TurnoverRate,
+use necsim_core::{
+    cogs::{
+        CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+        LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
+        SingularActiveLineageSampler, SpeciationProbability, TurnoverRate,
+    },
+    reporter::boolean::Boolean,
 };
 
 use rustacuda::{function::Function, module::Module};
@@ -33,12 +36,27 @@ pub struct SimulationKernel<
     E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
     I: ImmigrationEntry + RustToCuda,
     A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
-    const REPORT_SPECIATION: bool,
-    const REPORT_DISPERSAL: bool,
+    ReportSpeciation: Boolean,
+    ReportDispersal: Boolean,
 > {
     compiler: &'k mut PtxJITCompiler,
     ptx_jit: bool,
     module: &'k mut Module,
     entry_point: &'k mut Function<'k>,
-    marker: PhantomData<(H, G, R, S, X, D, C, T, N, E, I, A)>,
+    marker: PhantomData<(
+        H,
+        G,
+        R,
+        S,
+        X,
+        D,
+        C,
+        T,
+        N,
+        E,
+        I,
+        A,
+        ReportSpeciation,
+        ReportDispersal,
+    )>,
 }

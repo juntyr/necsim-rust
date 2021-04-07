@@ -2,10 +2,13 @@ use std::{cell::UnsafeCell, ffi::CString, marker::PhantomData, ops::Deref};
 
 use anyhow::Result;
 
-use necsim_core::cogs::{
-    CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-    LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
-    SingularActiveLineageSampler, SpeciationProbability, TurnoverRate,
+use necsim_core::{
+    cogs::{
+        CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+        LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
+        SingularActiveLineageSampler, SpeciationProbability, TurnoverRate,
+    },
+    reporter::boolean::Boolean,
 };
 
 use rustacuda::{function::Function, module::Module};
@@ -30,10 +33,9 @@ impl<
         E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
         I: ImmigrationEntry + RustToCuda,
         A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
-        const REPORT_SPECIATION: bool,
-        const REPORT_DISPERSAL: bool,
-    >
-    SimulationKernel<'k, H, G, R, S, X, D, C, T, N, E, I, A, REPORT_SPECIATION, REPORT_DISPERSAL>
+        ReportSpeciation: Boolean,
+        ReportDispersal: Boolean,
+    > SimulationKernel<'k, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
 {
     pub fn with_kernel<Q, F>(ptx_jit: bool, inner: F) -> Result<Q>
     where
@@ -52,8 +54,8 @@ impl<
                 E,
                 I,
                 A,
-                REPORT_SPECIATION,
-                REPORT_DISPERSAL,
+                ReportSpeciation,
+                ReportDispersal,
             >,
         ) -> Result<Q>,
     {
@@ -71,8 +73,8 @@ impl<
             E,
             I,
             A,
-            REPORT_SPECIATION,
-            REPORT_DISPERSAL,
+            ReportSpeciation,
+            ReportDispersal,
         >();
 
         // Initialise the PTX JIT compiler with the original PTX source string
@@ -95,7 +97,22 @@ impl<
             ptx_jit,
             module: unsafe { &mut *module.get() },
             entry_point: &mut entry_point,
-            marker: PhantomData::<(H, G, R, S, X, D, C, T, N, E, I, A)>,
+            marker: PhantomData::<(
+                H,
+                G,
+                R,
+                S,
+                X,
+                D,
+                C,
+                T,
+                N,
+                E,
+                I,
+                A,
+                ReportSpeciation,
+                ReportDispersal,
+            )>,
         };
 
         inner(&mut kernel)
@@ -120,26 +137,10 @@ impl<
         E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
         I: ImmigrationEntry + RustToCuda,
         A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
-        const REPORT_SPECIATION: bool,
-        const REPORT_DISPERSAL: bool,
+        ReportSpeciation: Boolean,
+        ReportDispersal: Boolean,
     > Deref
-    for SimulationKernel<
-        'k,
-        H,
-        G,
-        R,
-        S,
-        X,
-        D,
-        C,
-        T,
-        N,
-        E,
-        I,
-        A,
-        REPORT_SPECIATION,
-        REPORT_DISPERSAL,
-    >
+    for SimulationKernel<'k, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
 {
     type Target = Module;
 

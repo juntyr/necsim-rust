@@ -1,37 +1,32 @@
-use necsim_core::{
-    event::{EventType, PackedEvent},
-    reporter::{EventFilter, Reporter},
-};
+use necsim_core::{event::SpeciationEvent, impl_report, reporter::Reporter};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct BiodiversityReporter {
-    last_event: Option<PackedEvent>,
+    last_event: Option<SpeciationEvent>,
 
     biodiversity: usize,
 }
 
-impl EventFilter for BiodiversityReporter {
-    const REPORT_DISPERSAL: bool = false;
-    const REPORT_SPECIATION: bool = true;
-}
-
 impl Reporter for BiodiversityReporter {
-    #[debug_ensures(if old(Some(event) != self.last_event.as_ref()) {
-        match event.r#type() {
-            EventType::Speciation => self.biodiversity == old(self.biodiversity) + 1,
-            _ => self.biodiversity == old(self.biodiversity),
-        }
-    } else { true }, "EventType::Speciation increments self.biodiversity")]
-    fn report_event(&mut self, event: &PackedEvent) {
-        if Some(event) == self.last_event.as_ref() {
-            return;
-        }
-        self.last_event = Some(event.clone());
+    impl_report!(speciation(&mut self, event: Unused) -> Used {
+        event.use_in(|event| {
+            if Some(event) == self.last_event.as_ref() {
+                return;
+            }
 
-        if let EventType::Speciation = event.r#type() {
+            self.last_event = Some(event.clone());
+
             self.biodiversity += 1;
-        }
-    }
+        })
+    });
+
+    impl_report!(dispersal(&mut self, event: Unused) -> Unused {
+        event.ignore()
+    });
+
+    impl_report!(progress(&mut self, remaining: Unused) -> Unused {
+        remaining.ignore()
+    });
 }
 
 impl Default for BiodiversityReporter {

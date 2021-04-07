@@ -7,6 +7,7 @@ use necsim_core::{
         SingularActiveLineageSampler, SpeciationProbability, SpeciationSample, TurnoverRate,
     },
     lineage::Lineage,
+    reporter::boolean::Boolean,
     simulation::Simulation,
 };
 
@@ -44,8 +45,8 @@ impl<
         E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
         I: ImmigrationEntry + RustToCuda,
         A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
-        const REPORT_SPECIATION: bool,
-        const REPORT_DISPERSAL: bool,
+        ReportSpeciation: Boolean,
+        ReportDispersal: Boolean,
     >
     SimulationKernelWithDimensionsStream<
         'k,
@@ -62,8 +63,8 @@ impl<
         E,
         I,
         A,
-        REPORT_SPECIATION,
-        REPORT_DISPERSAL,
+        ReportSpeciation,
+        ReportDispersal,
     >
 {
     #[allow(clippy::type_complexity, clippy::too_many_arguments)]
@@ -76,7 +77,7 @@ impl<
             <ValueBuffer<Lineage> as RustToCuda>::CudaRepresentation,
         >,
         event_buffer_ptr: &mut HostDeviceBoxMut<
-            <EventBuffer<REPORT_SPECIATION, REPORT_DISPERSAL> as RustToCuda>::CudaRepresentation,
+            <EventBuffer<ReportSpeciation, ReportDispersal> as RustToCuda>::CudaRepresentation,
         >,
         min_spec_sample_buffer_ptr: &mut HostDeviceBoxMut<
             <ValueBuffer<SpeciationSample> as RustToCuda>::CudaRepresentation,

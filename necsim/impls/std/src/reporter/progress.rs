@@ -9,7 +9,7 @@ use std::{
     time::Duration,
 };
 
-use necsim_core::reporter::{EventFilter, Reporter};
+use necsim_core::{impl_report, reporter::Reporter};
 
 struct ProgressUpdater {
     thread: JoinHandle<()>,
@@ -23,22 +23,26 @@ pub struct ProgressReporter {
     total: Arc<AtomicU64>,
 }
 
-impl EventFilter for ProgressReporter {
-    const REPORT_DISPERSAL: bool = false;
-    const REPORT_SPECIATION: bool = false;
-}
-
 impl Reporter for ProgressReporter {
-    #[inline]
-    fn report_progress(&mut self, remaining: u64) {
-        let last_remaining = self.last_remaining.swap(remaining, Ordering::AcqRel);
+    impl_report!(speciation(&mut self, event: Unused) -> Unused {
+        event.ignore()
+    });
 
-        // Update the progress total in case of regression
-        if last_remaining < remaining {
-            self.total
-                .fetch_add(remaining - last_remaining, Ordering::AcqRel);
-        }
-    }
+    impl_report!(dispersal(&mut self, event: Unused) -> Unused {
+        event.ignore()
+    });
+
+    impl_report!(progress(&mut self, remaining: Unused) -> Used {
+        remaining.use_in(|remaining| {
+            let last_remaining = self.last_remaining.swap(*remaining, Ordering::AcqRel);
+
+            // Update the progress total in case of regression
+            if last_remaining < *remaining {
+                self.total
+                    .fetch_add(remaining - last_remaining, Ordering::AcqRel);
+            }
+        })
+    });
 }
 
 impl Default for ProgressReporter {

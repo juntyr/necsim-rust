@@ -4,7 +4,6 @@
 #![feature(abi_ptx)]
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
-#![feature(min_const_generics)]
 #![feature(atomic_from_mut)]
 #![feature(asm)]
 
@@ -22,6 +21,7 @@ use necsim_core::{
         SingularActiveLineageSampler, SpeciationProbability, SpeciationSample, TurnoverRate,
     },
     lineage::Lineage,
+    reporter::boolean::Boolean,
     simulation::Simulation,
 };
 
@@ -103,15 +103,15 @@ unsafe fn simulate_generic<
     E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
     I: ImmigrationEntry + RustToCuda,
     A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
-    const REPORT_SPECIATION: bool,
-    const REPORT_DISPERSAL: bool,
+    ReportSpeciation: Boolean,
+    ReportDispersal: Boolean,
 >(
     simulation_cuda_repr: DeviceBoxMut<
         <Simulation<H, G, R, S, X, D, C, T, N, E, I, A> as RustToCuda>::CudaRepresentation,
     >,
     task_list_cuda_repr: DeviceBoxMut<<ValueBuffer<Lineage> as RustToCuda>::CudaRepresentation>,
     event_buffer_cuda_repr: DeviceBoxMut<
-        <EventBuffer<REPORT_SPECIATION, REPORT_DISPERSAL> as RustToCuda>::CudaRepresentation,
+        <EventBuffer<ReportSpeciation, ReportDispersal> as RustToCuda>::CudaRepresentation,
     >,
     min_spec_sample_buffer_cuda_repr: DeviceBoxMut<
         <ValueBuffer<SpeciationSample> as RustToCuda>::CudaRepresentation,

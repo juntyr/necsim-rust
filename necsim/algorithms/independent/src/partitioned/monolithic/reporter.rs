@@ -1,9 +1,6 @@
 use std::marker::PhantomData;
 
-use necsim_core::{
-    event::{EventType, PackedEvent},
-    reporter::{EventFilter, Reporter},
-};
+use necsim_core::{event::PackedEvent, impl_report, reporter::Reporter};
 
 use necsim_impls_no_std::reporter::ReporterContext;
 
@@ -15,29 +12,34 @@ pub struct WaterLevelReporter<'e, R: ReporterContext> {
     _marker: PhantomData<R>,
 }
 
-impl<'e, R: ReporterContext> EventFilter for WaterLevelReporter<'e, R> {
-    const REPORT_DISPERSAL: bool = R::Reporter::REPORT_DISPERSAL;
-    const REPORT_SPECIATION: bool = R::Reporter::REPORT_SPECIATION;
-}
-
 impl<'e, R: ReporterContext> Reporter for WaterLevelReporter<'e, R> {
-    #[inline]
-    fn report_event(&mut self, event: &PackedEvent) {
-        if (Self::REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
-            || (Self::REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
-        {
-            if event.time() < self.water_level {
-                self.slow_events.push(event.clone())
+    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<
+        <<R as ReporterContext>::Reporter as Reporter
+    >::ReportSpeciation> {
+        event.maybe_use_in(|event| {
+            if event.time < self.water_level {
+                self.slow_events.push(event.clone().into())
             } else {
-                self.fast_events.push(event.clone())
+                self.fast_events.push(event.clone().into())
             }
-        }
-    }
+        })
+    });
 
-    #[inline]
-    fn report_progress(&mut self, _remaining: u64) {
-        // Ignore the progress from the individual simulations
-    }
+    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<
+            <<R as ReporterContext>::Reporter as Reporter
+        >::ReportDispersal> {
+        event.maybe_use_in(|event| {
+            if event.time < self.water_level {
+                self.slow_events.push(event.clone().into())
+            } else {
+                self.fast_events.push(event.clone().into())
+            }
+        })
+    });
+
+    impl_report!(progress(&mut self, remaining: Unused) -> Unused {
+        remaining.ignore()
+    });
 }
 
 impl<'e, R: ReporterContext> WaterLevelReporter<'e, R> {

@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use necsim_core::reporter::{EventFilter, Reporter};
+use necsim_core::{impl_report, reporter::Reporter};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ExecutionTimeReporter {
@@ -9,27 +9,29 @@ pub struct ExecutionTimeReporter {
     end_time: Option<Instant>,
 }
 
-impl EventFilter for ExecutionTimeReporter {
-    const REPORT_DISPERSAL: bool = false;
-    const REPORT_SPECIATION: bool = false;
-}
-
 impl Reporter for ExecutionTimeReporter {
-    #[debug_ensures(self.start_time.is_some(), "start_time is set after first call")]
-    #[debug_ensures(remaining != 0 || self.end_time.is_some(), "end_time is set")]
-    #[debug_ensures(
-        old(self.start_time).is_some() -> old(self.start_time) == self.start_time,
-        "only updates start_time on first call"
-    )]
-    fn report_progress(&mut self, remaining: u64) {
-        if self.start_time.is_none() {
-            self.start_time = Some(Instant::now());
-        }
+    impl_report!(speciation(&mut self, event: Unused) -> Unused {
+        event.ignore()
+    });
 
-        if remaining == 0 {
-            self.end_time = Some(Instant::now());
+    impl_report!(dispersal(&mut self, event: Unused) -> Unused {
+        event.ignore()
+    });
+
+    impl_report!(
+        #[debug_ensures(self.start_time.is_some(), "start_time is set after first call")]
+        progress(&mut self, remaining: Unused) -> Used {
+            remaining.use_in(|remaining| {
+                if self.start_time.is_none() {
+                    self.start_time = Some(Instant::now());
+                }
+
+                if *remaining == 0 {
+                    self.end_time = Some(Instant::now());
+                }
+            })
         }
-    }
+    );
 }
 
 impl Default for ExecutionTimeReporter {

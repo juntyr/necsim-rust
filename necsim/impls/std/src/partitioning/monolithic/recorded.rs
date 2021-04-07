@@ -1,9 +1,9 @@
 use std::num::NonZeroU32;
 
 use necsim_core::{
-    event::{EventType, PackedEvent},
+    impl_report,
     lineage::MigratingLineage,
-    reporter::{EventFilter, Reporter},
+    reporter::{used::Unused, Reporter},
 };
 
 use necsim_impls_no_std::{
@@ -73,7 +73,7 @@ impl<P: ReporterContext> LocalPartition<P> for RecordedMonolithicLocalPartition<
     }
 
     fn report_progress_sync(&mut self, remaining: u64) {
-        self.reporter.report_progress(remaining)
+        self.reporter.report_progress(Unused::new(&remaining));
     }
 }
 
@@ -91,22 +91,25 @@ impl<P: ReporterContext> RecordedMonolithicLocalPartition<P> {
 }
 
 impl<P: ReporterContext> Reporter for RecordedMonolithicLocalPartition<P> {
-    #[inline]
-    fn report_event(&mut self, event: &PackedEvent) {
-        if (Self::REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
-            || (Self::REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
-        {
-            self.recorder.record_event(event);
-        }
-    }
+    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<
+            <<P as ReporterContext>::Reporter as Reporter>::ReportSpeciation
+    > {
+        event.maybe_use_in(|event| {
+            self.recorder.record_speciation(event)
+        })
+    });
 
-    #[inline]
-    fn report_progress(&mut self, remaining: u64) {
+    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<
+        <<P as ReporterContext>::Reporter as Reporter>::ReportDispersal
+    > {
+        event.maybe_use_in(|event| {
+            self.recorder.record_dispersal(event)
+        })
+    });
+
+    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<
+        <<P as ReporterContext>::Reporter as Reporter>::ReportProgress
+    > {
         self.reporter.report_progress(remaining)
-    }
-}
-
-impl<P: ReporterContext> EventFilter for RecordedMonolithicLocalPartition<P> {
-    const REPORT_DISPERSAL: bool = P::Reporter::REPORT_DISPERSAL;
-    const REPORT_SPECIATION: bool = P::Reporter::REPORT_SPECIATION;
+    });
 }
