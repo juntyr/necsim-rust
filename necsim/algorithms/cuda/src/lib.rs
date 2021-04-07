@@ -65,11 +65,13 @@ use cuda::with_initialised_cuda;
 use simulate::simulate;
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct AbsoluteDedupCache {
     capacity: NonZeroUsize,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct RelativeDedupCache {
     factor: PositiveF64,
 }
@@ -82,7 +84,7 @@ pub enum DedupCache {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct CudaArguments {
     ptx_jit: bool,
     delta_t: PositiveF64,

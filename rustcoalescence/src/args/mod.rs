@@ -67,6 +67,7 @@ impl<'de> DeserializeState<'de, Partition> for SimulateArgs {
 
 #[derive(Debug, DeserializeState)]
 #[allow(clippy::module_name_repetitions)]
+#[serde(deny_unknown_fields)]
 #[serde(deserialize_state = "Partition")]
 struct SimulateArgsRaw {
     #[serde(alias = "speciation")]
@@ -258,6 +259,7 @@ impl TryFrom<InMemoryArgsRaw> for InMemoryArgs {
 #[derive(Debug, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
 #[serde(rename = "InMemory")]
+#[serde(deny_unknown_fields)]
 struct InMemoryArgsRaw {
     #[serde(alias = "habitat")]
     habitat_map: PathBuf,
@@ -279,6 +281,7 @@ pub struct NonSpatialArgs {
 
 #[derive(Debug, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
+#[serde(deny_unknown_fields)]
 struct NonSpatialArgsRaw {
     pub area: (u32, u32),
     pub deme: u32,
@@ -289,6 +292,7 @@ struct NonSpatialArgsRaw {
 
 #[derive(Debug, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
+#[serde(deny_unknown_fields)]
 pub struct SpatiallyImplicitArgs {
     pub local_area: (u32, u32),
     pub local_deme: u32,
@@ -304,6 +308,7 @@ pub struct SpatiallyImplicitArgs {
 
 #[derive(Debug, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
+#[serde(deny_unknown_fields)]
 pub struct AlmostInfiniteArgs {
     pub radius: u32,
     pub sigma: NonNegativeF64,
