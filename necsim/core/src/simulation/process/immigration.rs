@@ -9,7 +9,7 @@ use crate::{
     event::DispersalEvent,
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
-    reporter::Reporter,
+    reporter::{used::Unused, Reporter},
     simulation::Simulation,
 };
 
@@ -80,16 +80,13 @@ pub fn simulate_and_report_immigration_step<
             }
 
             // Report the migration dispersal event
-            reporter.report_event(
-                &DispersalEvent {
-                    origin: dispersal_origin,
-                    time: migration_event_time,
-                    global_lineage_reference: global_reference,
-                    target: dispersal_target,
-                    coalescence: optional_coalescence,
-                }
-                .into(),
-            )
+            reporter.report_dispersal(Unused::new(&DispersalEvent {
+                origin: dispersal_origin,
+                time: migration_event_time,
+                global_lineage_reference: global_reference,
+                target: dispersal_target,
+                coalescence: optional_coalescence,
+            }));
         },
     )
 }

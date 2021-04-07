@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 use necsim_core::{
-    event::{EventType, PackedEvent},
-    reporter::{EventFilter, Reporter},
+    impl_report,
+    reporter::{used::Unused, Reporter},
 };
 
 use necsim_impls_no_std::{partitioning::LocalPartition, reporter::ReporterContext};
@@ -12,27 +12,22 @@ pub struct PartitionReporterProxy<'p, R: ReporterContext, P: LocalPartition<R>> 
     _marker: PhantomData<R>,
 }
 
-impl<'p, R: ReporterContext, P: LocalPartition<R>> EventFilter
-    for PartitionReporterProxy<'p, R, P>
-{
-    const REPORT_DISPERSAL: bool = R::Reporter::REPORT_DISPERSAL;
-    const REPORT_SPECIATION: bool = R::Reporter::REPORT_SPECIATION;
-}
-
 impl<'p, R: ReporterContext, P: LocalPartition<R>> Reporter for PartitionReporterProxy<'p, R, P> {
-    #[inline]
-    fn report_event(&mut self, event: &PackedEvent) {
-        if (Self::REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
-            || (Self::REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
-        {
-            self.local_partition.get_reporter().report_event(event)
-        }
-    }
+    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<
+        <<P as LocalPartition<R>>::Reporter as Reporter
+    >::ReportSpeciation> {
+        self.local_partition.get_reporter().report_speciation(event)
+    });
 
-    #[inline]
-    fn report_progress(&mut self, _remaining: u64) {
-        // Ignore the progress from the individual simulations
-    }
+    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<
+        <<P as LocalPartition<R>>::Reporter as Reporter
+    >::ReportDispersal> {
+        self.local_partition.get_reporter().report_dispersal(event)
+    });
+
+    impl_report!(progress(&mut self, remaining: Unused) -> Unused {
+        remaining.ignore()
+    });
 }
 
 impl<'p, R: ReporterContext, P: LocalPartition<R>> PartitionReporterProxy<'p, R, P> {
@@ -47,7 +42,7 @@ impl<'p, R: ReporterContext, P: LocalPartition<R>> PartitionReporterProxy<'p, R,
     pub fn report_total_progress(&mut self, remaining: u64) {
         self.local_partition
             .get_reporter()
-            .report_progress(remaining)
+            .report_progress(Unused::new(&remaining));
     }
 
     pub fn local_partition(&mut self) -> &mut P {

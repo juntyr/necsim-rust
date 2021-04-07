@@ -14,7 +14,7 @@ use crate::{
         SpeciationProbability, TurnoverRate,
     },
     lineage::MigratingLineage,
-    reporter::Reporter,
+    reporter::{used::Unused, Reporter},
 };
 
 pub use builder::Simulation;
@@ -119,7 +119,7 @@ impl<
     ) -> (f64, u64) {
         let mut steps = 0_u64;
 
-        reporter.report_progress(self.get_balanced_remaining_work().0);
+        reporter.report_progress(Unused::new(&self.get_balanced_remaining_work().0));
 
         while !early_stop(self, steps) {
             // Peek the time of the next local event
@@ -150,12 +150,12 @@ impl<
                     coalescence_rng_sample,
                 );
             } else if !process::local::simulate_and_report_local_step_or_finish(self, reporter) {
-                reporter.report_progress(self.get_balanced_remaining_work().0);
+                reporter.report_progress(Unused::new(&self.get_balanced_remaining_work().0));
 
                 break;
             }
 
-            reporter.report_progress(self.get_balanced_remaining_work().0);
+            reporter.report_progress(Unused::new(&self.get_balanced_remaining_work().0));
 
             steps += 1;
         }

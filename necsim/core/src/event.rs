@@ -11,10 +11,10 @@ use crate::{landscape::IndexedLocation, lineage::GlobalLineageReference};
 #[derive(Debug, TypeLayout, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub struct PackedEvent {
-    origin: IndexedLocation,
-    time: f64,
-    global_lineage_reference: GlobalLineageReference,
-    r#type: EventType,
+    pub origin: IndexedLocation,
+    pub time: f64,
+    pub global_lineage_reference: GlobalLineageReference,
+    pub r#type: EventType,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -33,6 +33,8 @@ pub struct Dispersal {
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub struct SpeciationEvent {
     pub origin: IndexedLocation,
     pub time: f64,
@@ -40,6 +42,8 @@ pub struct SpeciationEvent {
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub struct DispersalEvent {
     pub origin: IndexedLocation,
     pub time: f64,
@@ -49,6 +53,7 @@ pub struct DispersalEvent {
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypedEvent {
     Speciation(SpeciationEvent),
     Dispersal(DispersalEvent),
@@ -153,47 +158,6 @@ impl Hash for PackedEvent {
     }
 }
 
-impl PackedEvent {
-    #[must_use]
-    #[allow(clippy::float_cmp)]
-    //#[debug_ensures(ret.r#type() == &r#type, "stores r#type")]
-    //#[debug_ensures(ret.lineage_reference() == &lineage_reference, "stores lineage_reference")]
-    #[debug_ensures(ret.time() == time, "stores time")]
-    pub fn new(
-        origin: IndexedLocation,
-        time: f64,
-        global_lineage_reference: GlobalLineageReference,
-        r#type: EventType,
-    ) -> Self {
-        Self {
-            origin,
-            time,
-            global_lineage_reference,
-            r#type,
-        }
-    }
-
-    #[must_use]
-    pub fn origin(&self) -> &IndexedLocation {
-        &self.origin
-    }
-
-    #[must_use]
-    pub fn time(&self) -> f64 {
-        self.time
-    }
-
-    #[must_use]
-    pub fn global_lineage_reference(&self) -> &GlobalLineageReference {
-        &self.global_lineage_reference
-    }
-
-    #[must_use]
-    pub fn r#type(&self) -> &EventType {
-        &self.r#type
-    }
-}
-
 impl Eq for Dispersal {}
 
 impl PartialEq for Dispersal {
@@ -222,5 +186,21 @@ impl Hash for Dispersal {
     // ignored)
     fn hash<S: Hasher>(&self, state: &mut S) {
         self.target.hash(state)
+    }
+}
+
+impl Eq for SpeciationEvent {}
+
+impl PartialEq for SpeciationEvent {
+    fn eq(&self, other: &Self) -> bool {
+        self.origin == other.origin && self.time == other.time
+    }
+}
+
+impl Eq for DispersalEvent {}
+
+impl PartialEq for DispersalEvent {
+    fn eq(&self, other: &Self) -> bool {
+        self.origin == other.origin && self.time == other.time && self.target == other.target
     }
 }

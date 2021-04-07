@@ -32,8 +32,8 @@ pub trait EventSampler<
     #[debug_ensures(if ret.is_none() { simulation.lineage_store.get(
         old(lineage_reference.clone())
     ).is_none() } else { true }, "lineage emigrated if no event is returned")]
-    #[debug_ensures(ret.as_ref().map_or(true, |event| {
-        event.time().to_bits() == event_time.to_bits()
+    #[debug_ensures(ret.as_ref().map_or(true, |event: &PackedEvent| {
+        event.time.to_bits() == event_time.to_bits()
     }), "event occurs at event_time")]
     fn sample_event_for_lineage_at_indexed_location_time_or_emigrate(
         &mut self,

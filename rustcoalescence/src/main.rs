@@ -1,6 +1,4 @@
 #![deny(clippy::pedantic)]
-#![allow(incomplete_features)]
-#![feature(generic_associated_types)]
 #![feature(associated_type_bounds)]
 
 #[macro_use]

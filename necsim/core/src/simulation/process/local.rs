@@ -6,8 +6,8 @@ use crate::{
         Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
         TurnoverRate,
     },
-    event::{Dispersal, EventType},
-    reporter::Reporter,
+    event::TypedEvent,
+    reporter::{used::Unused, Reporter},
     simulation::Simulation,
 };
 
@@ -59,20 +59,23 @@ pub fn simulate_and_report_local_step_or_finish<
                                 None
                             },
                             |event| {
-                                // Report the local event
-                                reporter.report_event(&event);
+                                match event.into() {
+                                    TypedEvent::Speciation(event) => {
+                                        // Report the local speciation event
+                                        reporter.report_speciation(Unused::new(&event));
 
-                                // In the event of dispersal without coalescence, the lineage
-                                // remains active
-                                if let EventType::Dispersal(Dispersal {
-                                    target: dispersal_target,
-                                    coalescence: None,
-                                    ..
-                                }) = event.r#type()
-                                {
-                                    Some(dispersal_target.clone())
-                                } else {
-                                    None
+                                        None
+                                    },
+                                    TypedEvent::Dispersal(event) => {
+                                        // Report the local dispersal event
+                                        reporter.report_dispersal(Unused::new(&event));
+
+                                        if event.coalescence.is_none() {
+                                            Some(event.target)
+                                        } else {
+                                            None
+                                        }
+                                    },
                                 }
                             },
                         )

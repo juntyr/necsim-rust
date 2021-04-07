@@ -5,8 +5,7 @@ use std::{
 };
 
 use necsim_core::{
-    event::{EventType, PackedEvent},
-    reporter::{EventFilter, Reporter},
+    impl_report, landscape::IndexedLocation, lineage::GlobalLineageReference, reporter::Reporter,
 };
 
 #[allow(clippy::module_name_repetitions)]
@@ -15,13 +14,44 @@ pub struct CsvReporter {
     writer: Option<BufWriter<File>>,
 }
 
-impl EventFilter for CsvReporter {
-    const REPORT_DISPERSAL: bool = true;
-    const REPORT_SPECIATION: bool = true;
+impl Reporter for CsvReporter {
+    impl_report!(speciation(&mut self, event: Unused) -> Used {
+        event.use_in(|event| {
+            self.write_event(&event.global_lineage_reference, event.time, &event.origin, 's')
+        })
+    });
+
+    impl_report!(dispersal(&mut self, event: Unused) -> Used {
+        event.use_in(|event| {
+            self.write_event(&event.global_lineage_reference, event.time, &event.origin, 'd')
+        })
+    });
+
+    impl_report!(progress(&mut self, remaining: Unused) -> Unused {
+        remaining.ignore()
+    });
 }
 
-impl Reporter for CsvReporter {
-    fn report_event(&mut self, event: &PackedEvent) {
+impl CsvReporter {
+    #[must_use]
+    pub fn new(path: &Path) -> Self {
+        Self {
+            output: path.to_owned(),
+            writer: None,
+        }
+    }
+
+    pub fn finish(self) {
+        std::mem::drop(self)
+    }
+
+    fn write_event(
+        &mut self,
+        reference: &GlobalLineageReference,
+        time: f64,
+        origin: &IndexedLocation,
+        r#type: char,
+    ) {
         let output = &self.output;
 
         let writer = self.writer.get_or_insert_with(|| {
@@ -42,29 +72,12 @@ impl Reporter for CsvReporter {
         std::mem::drop(writeln!(
             writer,
             "{},{},{},{},{},{}",
-            event.global_lineage_reference(),
-            event.time(),
-            event.origin().location().x(),
-            event.origin().location().y(),
-            event.origin().index(),
-            match event.r#type() {
-                EventType::Speciation => 's',
-                EventType::Dispersal { .. } => 'd',
-            }
+            reference,
+            time,
+            origin.location().x(),
+            origin.location().y(),
+            origin.index(),
+            r#type,
         ));
-    }
-}
-
-impl CsvReporter {
-    #[must_use]
-    pub fn new(path: &Path) -> Self {
-        Self {
-            output: path.to_owned(),
-            writer: None,
-        }
-    }
-
-    pub fn finish(self) {
-        std::mem::drop(self)
     }
 }

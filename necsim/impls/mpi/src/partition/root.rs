@@ -13,9 +13,9 @@ use mpi::{
 };
 
 use necsim_core::{
-    event::{EventType, PackedEvent},
+    impl_report,
     lineage::MigratingLineage,
-    reporter::{EventFilter, Reporter},
+    reporter::{used::Unused, Reporter},
 };
 
 use necsim_impls_no_std::{
@@ -313,7 +313,7 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
                 if !*global_continue {
                     let remaining = self.all_remaining[self.get_partition_rank() as usize];
 
-                    self.report_progress(remaining);
+                    self.report_progress(Unused::new(&remaining));
                 }
 
                 *global_continue
@@ -343,60 +343,67 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
 
         root_process.gather_into_root(&remaining, &mut self.all_remaining[..]);
 
-        self.reporter.report_progress(
-            self.all_remaining
+        self.reporter.report_progress(Unused::new(
+            &self
+                .all_remaining
                 .iter()
                 .copied()
                 .map(Wrapping)
                 .sum::<Wrapping<u64>>()
                 .0,
-        );
+        ));
     }
 }
 
 impl<P: ReporterContext> Reporter for MpiRootPartition<P> {
-    #[inline]
-    fn report_event(&mut self, event: &PackedEvent) {
-        if (Self::REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
-            || (Self::REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
-        {
-            self.recorder.record_event(event);
-        }
-    }
+    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<
+        <<P as ReporterContext>::Reporter as Reporter
+    >::ReportSpeciation> {
+        event.maybe_use_in(|event| {
+            self.recorder.record_speciation(event)
+        })
+    });
 
-    #[inline]
-    fn report_progress(&mut self, remaining: u64) {
-        let now = Instant::now();
+    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<
+        <<P as ReporterContext>::Reporter as Reporter
+    >::ReportDispersal> {
+        event.maybe_use_in(|event| {
+            self.recorder.record_dispersal(event)
+        })
+    });
 
-        if now.duration_since(self.last_report_time) >= Self::MPI_PROGRESS_WAIT_TIME {
-            self.last_report_time = now;
+    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<
+        <<P as ReporterContext>::Reporter as Reporter
+    >::ReportProgress> {
+        remaining.maybe_use_in(|remaining| {
+            let now = Instant::now();
 
-            self.all_remaining[MpiPartitioning::ROOT_RANK as usize] = remaining;
+            if now.duration_since(self.last_report_time) >= Self::MPI_PROGRESS_WAIT_TIME {
+                self.last_report_time = now;
 
-            let any_process = self.world.any_process();
+                self.all_remaining[MpiPartitioning::ROOT_RANK as usize] = *remaining;
 
-            while let Some((msg, _)) =
-                any_process.immediate_matched_probe_with_tag(MpiPartitioning::MPI_PROGRESS_TAG)
-            {
-                let remaining_status: (u64, _) = msg.matched_receive();
+                let any_process = self.world.any_process();
 
-                #[allow(clippy::cast_sign_loss)]
-                self.all_remaining[remaining_status.1.source_rank() as usize] = remaining_status.0;
+                while let Some((msg, _)) =
+                    any_process.immediate_matched_probe_with_tag(MpiPartitioning::MPI_PROGRESS_TAG)
+                {
+                    let remaining_status: (u64, _) = msg.matched_receive();
+
+                    #[allow(clippy::cast_sign_loss)]
+                    self.all_remaining[remaining_status.1.source_rank() as usize] = remaining_status.0;
+                }
+
+                self.reporter.report_progress(
+                    Unused::new(&self.all_remaining
+                        .iter()
+                        .copied()
+                        .map(Wrapping)
+                        .sum::<Wrapping<u64>>()
+                        .0
+                    )
+                );
             }
-
-            self.reporter.report_progress(
-                self.all_remaining
-                    .iter()
-                    .copied()
-                    .map(Wrapping)
-                    .sum::<Wrapping<u64>>()
-                    .0,
-            );
-        }
-    }
-}
-
-impl<P: ReporterContext> EventFilter for MpiRootPartition<P> {
-    const REPORT_DISPERSAL: bool = P::Reporter::REPORT_DISPERSAL;
-    const REPORT_SPECIATION: bool = P::Reporter::REPORT_SPECIATION;
+        })
+    });
 }

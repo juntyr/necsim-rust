@@ -13,11 +13,7 @@ use mpi::{
     topology::{Communicator, SystemCommunicator},
 };
 
-use necsim_core::{
-    event::{EventType, PackedEvent},
-    lineage::MigratingLineage,
-    reporter::{EventFilter, Reporter},
-};
+use necsim_core::{impl_report, lineage::MigratingLineage, reporter::Reporter};
 
 use necsim_impls_no_std::{
     partitioning::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode},
@@ -342,49 +338,54 @@ impl<P: ReporterContext> LocalPartition<P> for MpiParallelPartition<P> {
 }
 
 impl<P: ReporterContext> Reporter for MpiParallelPartition<P> {
-    #[inline]
-    fn report_event(&mut self, event: &PackedEvent) {
-        if (Self::REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
-            || (Self::REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
-        {
-            self.recorder.record_event(event);
-        }
-    }
+    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<
+        <<P as ReporterContext>::Reporter as Reporter
+    >::ReportSpeciation> {
+        event.maybe_use_in(|event| {
+            self.recorder.record_speciation(event)
+        })
+    });
 
-    #[inline]
-    fn report_progress(&mut self, remaining: u64) {
-        if unsafe { MPI_LOCAL_REMAINING } == remaining {
-            return;
-        }
+    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<
+        <<P as ReporterContext>::Reporter as Reporter
+    >::ReportDispersal> {
+        event.maybe_use_in(|event| {
+            self.recorder.record_dispersal(event)
+        })
+    });
 
-        if remaining > 0 || self.barrier.is_none() {
-            let now = Instant::now();
+    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<
+        <<P as ReporterContext>::Reporter as Reporter
+    >::ReportProgress> {
+        remaining.maybe_use_in(|remaining| {
+            if unsafe { MPI_LOCAL_REMAINING } == *remaining {
+                return;
+            }
 
-            if now.duration_since(self.last_report_time) >= Self::MPI_PROGRESS_WAIT_TIME {
-                let progress = self.progress.take().unwrap_or_else(|| {
-                    let local_remaining: &'static mut u64 = unsafe { &mut MPI_LOCAL_REMAINING };
+            if *remaining > 0 || self.barrier.is_none() {
+                let now = Instant::now();
 
-                    self.last_report_time = now;
-                    *local_remaining = remaining;
+                if now.duration_since(self.last_report_time) >= Self::MPI_PROGRESS_WAIT_TIME {
+                    let progress = self.progress.take().unwrap_or_else(|| {
+                        let local_remaining: &'static mut u64 = unsafe { &mut MPI_LOCAL_REMAINING };
 
-                    let root_process = self.world.process_at_rank(MpiPartitioning::ROOT_RANK);
+                        self.last_report_time = now;
+                        *local_remaining = *remaining;
 
-                    root_process.immediate_send_with_tag(
-                        StaticScope,
-                        local_remaining,
-                        MpiPartitioning::MPI_PROGRESS_TAG,
-                    )
-                });
+                        let root_process = self.world.process_at_rank(MpiPartitioning::ROOT_RANK);
 
-                if let Err(progress) = progress.test() {
-                    self.progress = Some(progress);
+                        root_process.immediate_send_with_tag(
+                            StaticScope,
+                            local_remaining,
+                            MpiPartitioning::MPI_PROGRESS_TAG,
+                        )
+                    });
+
+                    if let Err(progress) = progress.test() {
+                        self.progress = Some(progress);
+                    }
                 }
             }
-        }
-    }
-}
-
-impl<P: ReporterContext> EventFilter for MpiParallelPartition<P> {
-    const REPORT_DISPERSAL: bool = P::Reporter::REPORT_DISPERSAL;
-    const REPORT_SPECIATION: bool = P::Reporter::REPORT_SPECIATION;
+        })
+    });
 }

@@ -83,19 +83,19 @@ impl<
     #[allow(clippy::double_parens)]
     #[allow(clippy::type_complexity)]
     #[debug_ensures(ret.as_ref().map_or(true, |event: &PackedEvent| {
-        Some(event.global_lineage_reference().clone()) == old(
+        Some(event.global_lineage_reference.clone()) == old(
             simulation.lineage_store.get(lineage_reference.clone()).map(
                 |lineage| lineage.global_reference().clone()
             )
         )
     }), "event occurs for lineage_reference")]
     #[debug_ensures(match &ret {
-        Some(event) => match event.r#type() {
+        Some(event) => match &event.r#type {
             EventType::Speciation => true,
             EventType::Dispersal(Dispersal {
                 target,
                 coalescence,
-            }) => ((event.origin() == target) -> coalescence.is_some()),
+            }) => (event.origin.eq(target) -> coalescence.is_some()),
         },
         None => true,
     }, "always coalesces on self-dispersal")]

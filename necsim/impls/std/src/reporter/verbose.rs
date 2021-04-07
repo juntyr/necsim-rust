@@ -1,20 +1,26 @@
-use necsim_core::{
-    event::PackedEvent,
-    reporter::{EventFilter, Reporter},
-};
+use necsim_core::{impl_report, reporter::Reporter};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct VerboseReporter(());
 
-impl EventFilter for VerboseReporter {
-    const REPORT_DISPERSAL: bool = true;
-    const REPORT_SPECIATION: bool = true;
-}
-
 impl Reporter for VerboseReporter {
-    fn report_event(&mut self, event: &PackedEvent) {
-        println!("{:#?}", event)
-    }
+    impl_report!(speciation(&mut self, event: Unused) -> Used {
+        event.use_in(|event| {
+            info!("{:#?}", event)
+        })
+    });
+
+    impl_report!(dispersal(&mut self, event: Unused) -> Used {
+        event.use_in(|event| {
+            info!("{:#?}", event)
+        })
+    });
+
+    impl_report!(progress(&mut self, remaining: Unused) -> Used {
+        remaining.use_in(|remaining| {
+            info!("Remaining({})", remaining)
+        })
+    });
 }
 
 impl Default for VerboseReporter {

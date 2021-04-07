@@ -1,10 +1,6 @@
 use std::num::NonZeroU32;
 
-use necsim_core::{
-    event::PackedEvent,
-    lineage::MigratingLineage,
-    reporter::{EventFilter, Reporter},
-};
+use necsim_core::{impl_report, lineage::MigratingLineage, reporter::Reporter};
 
 use necsim_impls_no_std::{
     partitioning::{
@@ -141,18 +137,31 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
 }
 
 impl<P: ReporterContext> Reporter for MpiLocalPartition<P> {
-    #[inline]
-    fn report_event(&mut self, event: &PackedEvent) {
+    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<
+        <<P as ReporterContext>::Reporter as Reporter
+    >::ReportSpeciation> {
         match self {
-            Self::LiveMonolithic(partition) => partition.get_reporter().report_event(event),
-            Self::RecordedMonolithic(partition) => partition.get_reporter().report_event(event),
-            Self::Root(partition) => partition.get_reporter().report_event(event),
-            Self::Parallel(partition) => partition.get_reporter().report_event(event),
+            Self::LiveMonolithic(partition) => partition.get_reporter().report_speciation(event),
+            Self::RecordedMonolithic(partition) => partition.get_reporter().report_speciation(event),
+            Self::Root(partition) => partition.get_reporter().report_speciation(event),
+            Self::Parallel(partition) => partition.get_reporter().report_speciation(event),
         }
-    }
+    });
 
-    #[inline]
-    fn report_progress(&mut self, remaining: u64) {
+    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<
+        <<P as ReporterContext>::Reporter as Reporter>::ReportDispersal
+    > {
+        match self {
+            Self::LiveMonolithic(partition) => partition.get_reporter().report_dispersal(event),
+            Self::RecordedMonolithic(partition) => partition.get_reporter().report_dispersal(event),
+            Self::Root(partition) => partition.get_reporter().report_dispersal(event),
+            Self::Parallel(partition) => partition.get_reporter().report_dispersal(event),
+        }
+    });
+
+    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<
+        <<P as ReporterContext>::Reporter as Reporter
+    >::ReportProgress> {
         match self {
             Self::LiveMonolithic(partition) => partition.get_reporter().report_progress(remaining),
             Self::RecordedMonolithic(partition) => {
@@ -161,10 +170,5 @@ impl<P: ReporterContext> Reporter for MpiLocalPartition<P> {
             Self::Root(partition) => partition.get_reporter().report_progress(remaining),
             Self::Parallel(partition) => partition.get_reporter().report_progress(remaining),
         }
-    }
-}
-
-impl<P: ReporterContext> EventFilter for MpiLocalPartition<P> {
-    const REPORT_DISPERSAL: bool = P::Reporter::REPORT_DISPERSAL;
-    const REPORT_SPECIATION: bool = P::Reporter::REPORT_SPECIATION;
+    });
 }

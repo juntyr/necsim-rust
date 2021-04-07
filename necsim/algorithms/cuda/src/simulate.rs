@@ -22,7 +22,7 @@ use necsim_core::{
         SingularActiveLineageSampler, SpeciationProbability, SpeciationSample, TurnoverRate,
     },
     lineage::Lineage,
-    reporter::Reporter,
+    reporter::{used::Unused, Reporter},
     simulation::Simulation,
 };
 
@@ -46,8 +46,6 @@ pub fn simulate<
     E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
     I: ImmigrationEntry + RustToCuda,
     A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
-    const REPORT_SPECIATION: bool,
-    const REPORT_DISPERSAL: bool,
 >(
     stream: &Stream,
     kernel: &'k mut SimulationKernel<
@@ -64,14 +62,14 @@ pub fn simulate<
         E,
         I,
         A,
-        REPORT_SPECIATION,
-        REPORT_DISPERSAL,
+        P::ReportSpeciation,
+        P::ReportDispersal,
     >,
     config: (GridSize, BlockSize, DedupCache),
     mut simulation: Simulation<H, G, R, S, X, D, C, T, N, E, I, A>,
     mut individual_tasks: VecDeque<Lineage>,
     task_list: ValueBuffer<Lineage>,
-    event_buffer: EventBuffer<REPORT_SPECIATION, REPORT_DISPERSAL>,
+    event_buffer: EventBuffer<P::ReportSpeciation, P::ReportDispersal>,
     min_spec_sample_buffer: ValueBuffer<SpeciationSample>,
     reporter: &mut P,
     max_steps: u64,
@@ -160,7 +158,7 @@ pub fn simulate<
 
             event_buffer.report_events(reporter);
             // TODO: balance with migration
-            reporter.report_progress(individual_tasks.len() as u64);
+            reporter.report_progress(Unused::new(&(individual_tasks.len() as u64)));
         }
 
         Ok(())

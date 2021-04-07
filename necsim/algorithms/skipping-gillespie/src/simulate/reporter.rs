@@ -1,8 +1,9 @@
 use std::marker::PhantomData;
 
 use necsim_core::{
-    event::{EventType, PackedEvent},
-    reporter::{EventFilter, Reporter},
+    event::{PackedEvent, TypedEvent},
+    impl_report,
+    reporter::{used::Unused, Reporter},
 };
 
 use necsim_impls_no_std::{partitioning::LocalPartition, reporter::ReporterContext};
@@ -13,29 +14,28 @@ pub struct PartitionReporterProxy<'p, R: ReporterContext, P: LocalPartition<R>> 
     _marker: PhantomData<R>,
 }
 
-impl<'p, R: ReporterContext, P: LocalPartition<R>> EventFilter
-    for PartitionReporterProxy<'p, R, P>
-{
-    const REPORT_DISPERSAL: bool = R::Reporter::REPORT_DISPERSAL;
-    const REPORT_SPECIATION: bool = R::Reporter::REPORT_SPECIATION;
-}
-
 impl<'p, R: ReporterContext, P: LocalPartition<R>> Reporter for PartitionReporterProxy<'p, R, P> {
-    #[inline]
-    fn report_event(&mut self, event: &PackedEvent) {
-        if (Self::REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
-            || (Self::REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
-        {
-            self.event_buffer.push(event.clone())
-        }
-    }
+    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<
+        <<P as LocalPartition<R>>::Reporter as Reporter
+    >::ReportSpeciation> {
+        event.maybe_use_in(|event| {
+            self.event_buffer.push(event.clone().into())
+        })
+    });
 
-    #[inline]
-    fn report_progress(&mut self, remaining: u64) {
-        self.local_partition
-            .get_reporter()
-            .report_progress(remaining)
-    }
+    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<
+        <<P as LocalPartition<R>>::Reporter as Reporter
+    >::ReportDispersal> {
+        event.maybe_use_in(|event| {
+            self.event_buffer.push(event.clone().into())
+        })
+    });
+
+    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<
+        <<P as LocalPartition<R>>::Reporter as Reporter
+    >::ReportProgress> {
+        self.local_partition.get_reporter().report_progress(remaining)
+    });
 }
 
 impl<'p, R: ReporterContext, P: LocalPartition<R>> PartitionReporterProxy<'p, R, P> {
@@ -52,11 +52,20 @@ impl<'p, R: ReporterContext, P: LocalPartition<R>> PartitionReporterProxy<'p, R,
     }
 
     pub fn report_events(&mut self) {
-        for event in &self.event_buffer {
-            self.local_partition.get_reporter().report_event(event)
+        for event in self.event_buffer.drain(..) {
+            match event.into() {
+                TypedEvent::Speciation(event) => {
+                    self.local_partition
+                        .get_reporter()
+                        .report_speciation(Unused::new(&event));
+                },
+                TypedEvent::Dispersal(event) => {
+                    self.local_partition
+                        .get_reporter()
+                        .report_dispersal(Unused::new(&event));
+                },
+            }
         }
-
-        self.clear_events()
     }
 
     pub fn local_partition(&mut self) -> &mut P {
