@@ -6,7 +6,7 @@ use necsim_core::{
         EventSampler, Habitat, LineageReference, RngCore, RngSampler, SeparableDispersalSampler,
         SpeciationProbability, TurnoverRate,
     },
-    event::{Event, EventType},
+    event::{Dispersal, DispersalEvent, EventType, PackedEvent, SpeciationEvent},
     landscape::{IndexedLocation, Location},
     simulation::partial::event_sampler::PartialSimulation,
 };
@@ -82,7 +82,7 @@ impl<
     #[must_use]
     #[allow(clippy::double_parens)]
     #[allow(clippy::type_complexity)]
-    #[debug_ensures(ret.as_ref().map_or(true, |event| {
+    #[debug_ensures(ret.as_ref().map_or(true, |event: &PackedEvent| {
         Some(event.global_lineage_reference().clone()) == old(
             simulation.lineage_store.get(lineage_reference.clone()).map(
                 |lineage| lineage.global_reference().clone()
@@ -92,11 +92,10 @@ impl<
     #[debug_ensures(match &ret {
         Some(event) => match event.r#type() {
             EventType::Speciation => true,
-            EventType::Dispersal {
+            EventType::Dispersal(Dispersal {
                 target,
                 coalescence,
-                ..
-            } => ((event.origin() == target) -> coalescence.is_some()),
+            }) => ((event.origin() == target) -> coalescence.is_some()),
         },
         None => true,
     }, "always coalesces on self-dispersal")]
@@ -117,7 +116,7 @@ impl<
             N,
         >,
         rng: &mut G,
-    ) -> Option<Event> {
+    ) -> Option<PackedEvent> {
         let dispersal_origin = indexed_location;
 
         let probability_at_location = ProbabilityAtLocation::new(
@@ -128,87 +127,87 @@ impl<
 
         let event_sample = probability_at_location.total() * rng.sample_uniform();
 
-        let (event_type, lineage_reference, dispersal_origin, event_time) =
-            if event_sample < probability_at_location.speciation() {
-                // Speciation Event
-                (
-                    EventType::Speciation,
-                    lineage_reference,
-                    dispersal_origin,
-                    event_time,
-                )
-            } else if event_sample
-                < (probability_at_location.speciation() + probability_at_location.out_dispersal())
-            {
-                // Out-Dispersal Event
-                let dispersal_target = simulation
-                    .dispersal_sampler
-                    .sample_non_self_dispersal_from_location(
-                        dispersal_origin.location(),
-                        &simulation.habitat,
-                        rng,
-                    );
+        if event_sample < probability_at_location.speciation() {
+            // Speciation Event
+            Some(
+                SpeciationEvent {
+                    origin: dispersal_origin,
+                    time: event_time,
+                    global_lineage_reference: simulation.lineage_store[lineage_reference]
+                        .global_reference()
+                        .clone(),
+                }
+                .into(),
+            )
+        } else if event_sample
+            < (probability_at_location.speciation() + probability_at_location.out_dispersal())
+        {
+            // Out-Dispersal Event
+            let dispersal_target = simulation
+                .dispersal_sampler
+                .sample_non_self_dispersal_from_location(
+                    dispersal_origin.location(),
+                    &simulation.habitat,
+                    rng,
+                );
 
-                // Check for emigration and return None iff lineage emigrated
-                let (lineage_reference, dispersal_origin, dispersal_target, event_time) =
-                    simulation.with_mut_split_emigration_exit(|emigration_exit, simulation| {
-                        emigration_exit.optionally_emigrate(
-                            lineage_reference,
-                            dispersal_origin,
-                            dispersal_target,
-                            event_time,
-                            simulation,
-                            rng,
-                        )
-                    })?;
-
-                let (dispersal_target, optional_coalescence) = simulation
-                    .coalescence_sampler
-                    .sample_optional_coalescence_at_location(
+            // Check for emigration and return None iff lineage emigrated
+            let (lineage_reference, dispersal_origin, dispersal_target, event_time) = simulation
+                .with_mut_split_emigration_exit(|emigration_exit, simulation| {
+                    emigration_exit.optionally_emigrate(
+                        lineage_reference,
+                        dispersal_origin,
                         dispersal_target,
-                        &simulation.habitat,
-                        &simulation.lineage_store,
-                        CoalescenceRngSample::new(rng),
-                    );
+                        event_time,
+                        simulation,
+                        rng,
+                    )
+                })?;
 
-                (
-                    EventType::Dispersal {
-                        coalescence: optional_coalescence,
-                        target: dispersal_target,
-                    },
-                    lineage_reference,
-                    dispersal_origin,
-                    event_time,
-                )
-            } else {
-                // In-Coalescence Event
-                let (dispersal_target, coalescence) =
-                    ConditionalCoalescenceSampler::sample_coalescence_at_location(
-                        dispersal_origin.location().clone(),
-                        &simulation.habitat,
-                        &simulation.lineage_store,
-                        CoalescenceRngSample::new(rng),
-                    );
+            let (dispersal_target, optional_coalescence) = simulation
+                .coalescence_sampler
+                .sample_optional_coalescence_at_location(
+                    dispersal_target,
+                    &simulation.habitat,
+                    &simulation.lineage_store,
+                    CoalescenceRngSample::new(rng),
+                );
 
-                (
-                    EventType::Dispersal {
-                        coalescence: Some(coalescence),
-                        target: dispersal_target,
-                    },
-                    lineage_reference,
-                    dispersal_origin,
-                    event_time,
-                )
-            };
+            Some(
+                DispersalEvent {
+                    origin: dispersal_origin,
+                    time: event_time,
+                    global_lineage_reference: simulation.lineage_store[lineage_reference]
+                        .global_reference()
+                        .clone(),
+                    target: dispersal_target,
+                    coalescence: optional_coalescence,
+                }
+                .into(),
+            )
+        } else {
+            // In-Coalescence Event
+            let (dispersal_target, coalescence) =
+                ConditionalCoalescenceSampler::sample_coalescence_at_location(
+                    dispersal_origin.location().clone(),
+                    &simulation.habitat,
+                    &simulation.lineage_store,
+                    CoalescenceRngSample::new(rng),
+                );
 
-        Some(Event::new(
-            dispersal_origin,
-            event_time,
-            simulation.lineage_store[lineage_reference]
-                .global_reference()
-                .clone(),
-            event_type,
-        ))
+            Some(
+                DispersalEvent {
+                    origin: dispersal_origin,
+                    time: event_time,
+                    global_lineage_reference: simulation.lineage_store[lineage_reference]
+                        .global_reference()
+                        .clone(),
+                    target: dispersal_target,
+                    coalescence: Some(coalescence),
+                }
+                .into(),
+            )
+        }
     }
 }
 

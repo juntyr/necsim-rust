@@ -6,7 +6,7 @@ use necsim_core::{
         PrimeableRng, SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
         TurnoverRate,
     },
-    event::Event,
+    event::PackedEvent,
     lineage::{GlobalLineageReference, Lineage},
     reporter::Reporter,
     simulation::Simulation,
@@ -87,8 +87,8 @@ pub fn simulate<
     let mut slow_lineages = lineages;
     let mut fast_lineages = VecDeque::new();
 
-    let mut slow_events: Vec<Event> = Vec::with_capacity(EVENT_BUFFER_SIZE as usize);
-    let mut fast_events: Vec<Event> = Vec::with_capacity(EVENT_BUFFER_SIZE as usize);
+    let mut slow_events: Vec<PackedEvent> = Vec::with_capacity(EVENT_BUFFER_SIZE as usize);
+    let mut fast_events: Vec<PackedEvent> = Vec::with_capacity(EVENT_BUFFER_SIZE as usize);
 
     let mut level_time = 0.0_f64;
 

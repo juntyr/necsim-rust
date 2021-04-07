@@ -6,7 +6,7 @@ use rustacuda::{
 
 use rust_cuda::utils::exchange::buffer::CudaExchangeBuffer;
 
-use necsim_core::{event::Event, reporter::Reporter};
+use necsim_core::{event::PackedEvent, reporter::Reporter};
 
 #[cfg(target_os = "cuda")]
 use necsim_core::event::EventType;
@@ -17,7 +17,7 @@ use necsim_core::reporter::EventFilter;
 #[derive(RustToCuda, LendToCuda)]
 pub struct EventBuffer<const REPORT_SPECIATION: bool, const REPORT_DISPERSAL: bool> {
     #[r2cEmbed]
-    buffer: CudaExchangeBuffer<Option<Event>>,
+    buffer: CudaExchangeBuffer<Option<PackedEvent>>,
     max_events: usize,
     event_counter: usize,
 }
@@ -79,9 +79,9 @@ impl<const REPORT_SPECIATION: bool, const REPORT_DISPERSAL: bool> Reporter
         self.event_counter < self.max_events,
         "does not report extraneous events"
     )]
-    fn report_event(&mut self, event: &Event) {
+    fn report_event(&mut self, event: &PackedEvent) {
         if (REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
-            || (REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
+            || (REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal(..)))
         {
             self.buffer[rust_cuda::device::utils::index() * self.max_events + self.event_counter] =
                 Some(event.clone());

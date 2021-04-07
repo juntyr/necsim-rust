@@ -5,7 +5,7 @@ use std::{
 };
 
 use necsim_core::{
-    event::{Event, EventType},
+    event::{EventType, PackedEvent},
     reporter::{EventFilter, Reporter},
 };
 
@@ -21,7 +21,7 @@ impl EventFilter for CsvReporter {
 }
 
 impl Reporter for CsvReporter {
-    fn report_event(&mut self, event: &Event) {
+    fn report_event(&mut self, event: &PackedEvent) {
         let output = &self.output;
 
         let writer = self.writer.get_or_insert_with(|| {

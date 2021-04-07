@@ -1,5 +1,5 @@
 use necsim_core::{
-    event::Event,
+    event::PackedEvent,
     reporter::{EventFilter, Reporter},
 };
 
@@ -12,7 +12,7 @@ impl EventFilter for VerboseReporter {
 }
 
 impl Reporter for VerboseReporter {
-    fn report_event(&mut self, event: &Event) {
+    fn report_event(&mut self, event: &PackedEvent) {
         println!("{:#?}", event)
     }
 }

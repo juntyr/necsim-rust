@@ -1,7 +1,7 @@
 use std::num::NonZeroU32;
 
 use necsim_core::{
-    event::Event,
+    event::PackedEvent,
     lineage::MigratingLineage,
     reporter::{EventFilter, Reporter},
 };
@@ -142,7 +142,7 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
 
 impl<P: ReporterContext> Reporter for MpiLocalPartition<P> {
     #[inline]
-    fn report_event(&mut self, event: &Event) {
+    fn report_event(&mut self, event: &PackedEvent) {
         match self {
             Self::LiveMonolithic(partition) => partition.get_reporter().report_event(event),
             Self::RecordedMonolithic(partition) => partition.get_reporter().report_event(event),

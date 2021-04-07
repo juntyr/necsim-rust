@@ -6,7 +6,7 @@ use necsim_core::{
         EmigrationExit, EventSampler, Habitat, LineageReference, RngCore, SpeciationProbability,
         TurnoverRate,
     },
-    event::{Event, EventType},
+    event::{DispersalEvent, PackedEvent, SpeciationEvent},
     landscape::{IndexedLocation, Location},
     simulation::partial::event_sampler::PartialSimulation,
 };
@@ -77,8 +77,7 @@ impl<
     for UnconditionalGillespieEventSampler<H, G, R, S, X, D, C, T, N>
 {
     #[must_use]
-    #[allow(clippy::shadow_unrelated)] // https://github.com/rust-lang/rust-clippy/issues/5455
-    #[debug_ensures(ret.as_ref().map_or(true, |event| {
+    #[debug_ensures(ret.as_ref().map_or(true, |event: &PackedEvent| {
         Some(event.global_lineage_reference().clone()) == old(
             simulation.lineage_store.get(lineage_reference.clone()).map(
                 |lineage| lineage.global_reference().clone()
@@ -92,12 +91,12 @@ impl<
         event_time: f64,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N>,
         rng: &mut G,
-    ) -> Option<Event> {
+    ) -> Option<PackedEvent> {
         use necsim_core::cogs::RngSampler;
 
         let dispersal_origin = indexed_location;
 
-        let (event_type, lineage_reference, dispersal_origin, event_time) = if rng.sample_event(
+        if rng.sample_event(
             simulation
                 .speciation_probability
                 .get_speciation_probability_at_location(
@@ -105,11 +104,15 @@ impl<
                     &simulation.habitat,
                 ),
         ) {
-            (
-                EventType::Speciation,
-                lineage_reference,
-                dispersal_origin,
-                event_time,
+            Some(
+                SpeciationEvent {
+                    origin: dispersal_origin,
+                    time: event_time,
+                    global_lineage_reference: simulation.lineage_store[lineage_reference]
+                        .global_reference()
+                        .clone(),
+                }
+                .into(),
             )
         } else {
             let dispersal_target = simulation.dispersal_sampler.sample_dispersal_from_location(
@@ -140,25 +143,19 @@ impl<
                     CoalescenceRngSample::new(rng),
                 );
 
-            (
-                EventType::Dispersal {
-                    coalescence: optional_coalescence,
+            Some(
+                DispersalEvent {
+                    origin: dispersal_origin,
+                    time: event_time,
+                    global_lineage_reference: simulation.lineage_store[lineage_reference]
+                        .global_reference()
+                        .clone(),
                     target: dispersal_target,
-                },
-                lineage_reference,
-                dispersal_origin,
-                event_time,
+                    coalescence: optional_coalescence,
+                }
+                .into(),
             )
-        };
-
-        Some(Event::new(
-            dispersal_origin,
-            event_time,
-            simulation.lineage_store[lineage_reference]
-                .global_reference()
-                .clone(),
-            event_type,
-        ))
+        }
     }
 }
 

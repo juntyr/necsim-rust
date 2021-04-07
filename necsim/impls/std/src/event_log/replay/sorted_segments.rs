@@ -1,6 +1,6 @@
 use std::cmp::{Ord, Ordering};
 
-use necsim_core::event::Event;
+use necsim_core::event::PackedEvent;
 
 use super::segment::SortedSegment;
 
@@ -8,7 +8,7 @@ use super::segment::SortedSegment;
 #[allow(clippy::module_name_repetitions)]
 pub struct SortedSortedSegments {
     segments: Vec<SortedSegment>,
-    next: Option<Event>,
+    next: Option<PackedEvent>,
 }
 
 impl SortedSortedSegments {
@@ -27,7 +27,7 @@ impl SortedSortedSegments {
 }
 
 impl Iterator for SortedSortedSegments {
-    type Item = Event;
+    type Item = PackedEvent;
 
     fn next(&mut self) -> Option<Self::Item> {
         let next = std::mem::replace(

@@ -9,7 +9,7 @@ use std::{
 
 use anyhow::Result;
 
-use necsim_core::event::Event;
+use necsim_core::event::PackedEvent;
 
 use crate::event_log::EventLogHeader;
 
@@ -17,7 +17,7 @@ use crate::event_log::EventLogHeader;
 pub struct SortedSegment {
     header: EventLogHeader,
     reader: BufReader<File>,
-    buffer: VecDeque<Event>,
+    buffer: VecDeque<PackedEvent>,
     capacity: usize,
 }
 
@@ -63,7 +63,7 @@ impl SortedSegment {
 }
 
 impl Iterator for SortedSegment {
-    type Item = Event;
+    type Item = PackedEvent;
 
     fn next(&mut self) -> Option<Self::Item> {
         let next_event = self.buffer.pop_front();

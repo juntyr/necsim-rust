@@ -1,7 +1,7 @@
 use std::num::NonZeroU32;
 
 use necsim_core::{
-    event::{Event, EventType},
+    event::{EventType, PackedEvent},
     lineage::MigratingLineage,
     reporter::{EventFilter, Reporter},
 };
@@ -92,7 +92,7 @@ impl<P: ReporterContext> RecordedMonolithicLocalPartition<P> {
 
 impl<P: ReporterContext> Reporter for RecordedMonolithicLocalPartition<P> {
     #[inline]
-    fn report_event(&mut self, event: &Event) {
+    fn report_event(&mut self, event: &PackedEvent) {
         if (Self::REPORT_SPECIATION && matches!(event.r#type(), EventType::Speciation))
             || (Self::REPORT_DISPERSAL && matches!(event.r#type(), EventType::Dispersal { .. }))
         {

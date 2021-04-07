@@ -1,11 +1,11 @@
 use necsim_core::{
-    event::{Event, EventType},
+    event::{EventType, PackedEvent},
     reporter::{EventFilter, Reporter},
 };
 
 #[allow(clippy::module_name_repetitions)]
 pub struct BiodiversityReporter {
-    last_event: Option<Event>,
+    last_event: Option<PackedEvent>,
 
     biodiversity: usize,
 }
@@ -22,7 +22,7 @@ impl Reporter for BiodiversityReporter {
             _ => self.biodiversity == old(self.biodiversity),
         }
     } else { true }, "EventType::Speciation increments self.biodiversity")]
-    fn report_event(&mut self, event: &Event) {
+    fn report_event(&mut self, event: &PackedEvent) {
         if Some(event) == self.last_event.as_ref() {
             return;
         }
