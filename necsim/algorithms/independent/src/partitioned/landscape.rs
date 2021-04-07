@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, num::Wrapping};
 
 use necsim_core::{
     cogs::{
@@ -82,9 +82,9 @@ pub fn simulate<
         .build();
 
     // Ensure that the progress bar starts with the expected target
-    proxy
-        .local_partition()
-        .report_progress_sync(simulation.active_lineage_sampler().number_active_lineages() as u64);
+    proxy.local_partition().report_progress_sync(
+        (Wrapping(lineages.len() as u64) + simulation.get_balanced_remaining_work()).0,
+    );
 
     let mut immigration_events = Vec::new();
 
@@ -97,7 +97,7 @@ pub fn simulate<
         || proxy.local_partition().wait_for_termination()
     {
         proxy.report_total_progress(
-            (lineages.len() + simulation.active_lineage_sampler().number_active_lineages()) as u64,
+            (Wrapping(lineages.len() as u64) + simulation.get_balanced_remaining_work()).0,
         );
 
         let previous_task = simulation

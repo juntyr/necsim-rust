@@ -8,6 +8,7 @@
 #![feature(fn_traits)]
 #![feature(never_type)]
 #![feature(debug_non_exhaustive)]
+#![feature(option_result_unwrap_unchecked)]
 
 extern crate alloc;
 

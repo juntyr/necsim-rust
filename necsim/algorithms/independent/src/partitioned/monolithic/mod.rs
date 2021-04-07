@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, num::Wrapping};
 
 use necsim_core::{
     cogs::{
@@ -113,10 +113,10 @@ pub fn simulate<
             || simulation.active_lineage_sampler().number_active_lineages() > 0
         {
             proxy.report_total_progress(
-                (slow_lineages.len()
-                    + fast_lineages.len()
-                    + simulation.active_lineage_sampler().number_active_lineages())
-                    as u64,
+                (Wrapping(slow_lineages.len() as u64)
+                    + Wrapping(fast_lineages.len() as u64)
+                    + simulation.get_balanced_remaining_work())
+                .0,
             );
 
             let previous_task = simulation

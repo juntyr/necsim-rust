@@ -1,3 +1,5 @@
+use core::num::Wrapping;
+
 use crate::{
     cogs::{
         ActiveLineageSampler, CoalescenceRngSample, CoalescenceSampler, DispersalSampler,
@@ -36,6 +38,9 @@ pub fn simulate_and_report_immigration_step<
     migration_event_time: f64,
     coalescence_rng_sample: CoalescenceRngSample,
 ) {
+    // Immigration decrements the migration balance (extra external work)
+    simulation.migration_balance -= Wrapping(1_u64);
+
     simulation.with_mut_split_active_lineage_sampler_and_rng(
         |active_lineage_sampler, simulation, rng| {
             // Sample the missing coalescence using the random sample generated

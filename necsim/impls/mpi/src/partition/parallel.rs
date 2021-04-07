@@ -214,7 +214,6 @@ impl<P: ReporterContext> LocalPartition<P> for MpiParallelPartition<P> {
                         unsafe { &mut MPI_MIGRATION_BUFFERS[rank_index] };
 
                     std::mem::swap(emigration_buffer, local_emigration_buffer);
-                    // emigration_buffer.clear();
 
                     #[allow(clippy::cast_possible_wrap)]
                     let receiver_process = self.world.process_at_rank(rank as i32);

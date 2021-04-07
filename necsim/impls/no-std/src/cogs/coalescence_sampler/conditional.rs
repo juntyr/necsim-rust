@@ -74,15 +74,16 @@ impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>>
         let population = lineages_at_location.len() as u32;
 
         let chosen_coalescence_index = coalescence_rng_sample.sample_coalescence_index(population);
-
-        let indexed_location = IndexedLocation::new(location, chosen_coalescence_index);
-
         let chosen_coalescence = lineages_at_location[chosen_coalescence_index as usize].clone();
 
-        (
-            indexed_location,
-            lineage_store[chosen_coalescence].global_reference().clone(),
-        )
+        let lineage = &lineage_store[chosen_coalescence];
+
+        let indexed_location = IndexedLocation::new(
+            location,
+            unsafe { lineage.indexed_location().unwrap_unchecked() }.index(),
+        );
+
+        (indexed_location, lineage.global_reference().clone())
     }
 
     #[must_use]

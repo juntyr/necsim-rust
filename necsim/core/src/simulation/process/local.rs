@@ -1,3 +1,5 @@
+use core::num::Wrapping;
+
 use crate::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
@@ -28,7 +30,9 @@ pub fn simulate_and_report_local_step_or_finish<
     simulation: &mut Simulation<H, G, R, S, X, D, C, T, N, E, I, A>,
     reporter: &mut P,
 ) -> bool {
-    simulation.with_mut_split_active_lineage_sampler_and_rng(
+    let mut emigration = false;
+
+    let should_continue = simulation.with_mut_split_active_lineage_sampler_and_rng(
         |active_lineage_sampler, simulation, rng| {
             // Fetch the next `chosen_lineage` to be simulated with its
             // `dispersal_origin` and `event_time`
@@ -49,25 +53,38 @@ pub fn simulate_and_report_local_step_or_finish<
                                     rng,
                                 )
                         })
-                        .and_then(|event| {
-                            // Report the local event
-                            reporter.report_event(&event);
-
-                            // In the event of dispersal without coalescence, the lineage remains
-                            // active
-                            if let EventType::Dispersal {
-                                target: dispersal_target,
-                                coalescence: None,
-                                ..
-                            } = event.r#type()
-                            {
-                                Some(dispersal_target.clone())
-                            } else {
+                        .map_or_else(
+                            || {
+                                emigration = true;
                                 None
-                            }
-                        })
+                            },
+                            |event| {
+                                // Report the local event
+                                reporter.report_event(&event);
+
+                                // In the event of dispersal without coalescence, the lineage
+                                // remains active
+                                if let EventType::Dispersal {
+                                    target: dispersal_target,
+                                    coalescence: None,
+                                    ..
+                                } = event.r#type()
+                                {
+                                    Some(dispersal_target.clone())
+                                } else {
+                                    None
+                                }
+                            },
+                        )
                 },
             )
         },
-    )
+    );
+
+    if emigration {
+        // Emigration increments the migration balance (less local work)
+        simulation.migration_balance += Wrapping(1_u64);
+    }
+
+    should_continue
 }

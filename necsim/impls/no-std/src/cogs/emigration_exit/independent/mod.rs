@@ -51,9 +51,15 @@ impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>, G: RngCore>
     #[inline]
     #[debug_requires(self.emigrant.is_none(), "can only hold one emigrant")]
     #[debug_ensures(ret.is_some() == (
-        old(self.decomposition.map_location_to_subdomain_rank(
-            &dispersal_target, &simulation.habitat
-        )) == self.decomposition.get_subdomain_rank()
+        (
+            old(self.decomposition.map_location_to_subdomain_rank(
+                &dispersal_target, &simulation.habitat
+            )) == self.decomposition.get_subdomain_rank()
+        ) || !old(self.choice.should_lineage_emigrate(
+            &dispersal_origin,
+            event_time,
+            &simulation.habitat,
+        ))
     ), "lineage only emigrates to other subdomains")]
     fn optionally_emigrate(
         &mut self,

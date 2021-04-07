@@ -4,6 +4,8 @@ mod process;
 
 pub mod partial;
 
+use core::num::Wrapping;
+
 use crate::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
@@ -101,6 +103,13 @@ impl<
         A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
     > Simulation<H, G, R, S, X, D, C, T, N, E, I, A>
 {
+    pub fn get_balanced_remaining_work(&self) -> Wrapping<u64> {
+        let local_remaining =
+            Wrapping(self.active_lineage_sampler().number_active_lineages() as u64);
+
+        local_remaining + self.migration_balance
+    }
+
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
     #[inline]
     fn simulate_incremental_early_stop<F: FnMut(&mut Self, u64) -> bool, P: Reporter>(
@@ -110,7 +119,7 @@ impl<
     ) -> (f64, u64) {
         let mut steps = 0_u64;
 
-        reporter.report_progress(self.active_lineage_sampler().number_active_lineages() as u64);
+        reporter.report_progress(self.get_balanced_remaining_work().0);
 
         while !early_stop(self, steps) {
             // Peek the time of the next local event
@@ -141,12 +150,12 @@ impl<
                     coalescence_rng_sample,
                 );
             } else if !process::local::simulate_and_report_local_step_or_finish(self, reporter) {
-                reporter.report_progress(0_u64);
+                reporter.report_progress(self.get_balanced_remaining_work().0);
 
                 break;
             }
 
-            reporter.report_progress(self.active_lineage_sampler().number_active_lineages() as u64);
+            reporter.report_progress(self.get_balanced_remaining_work().0);
 
             steps += 1;
         }
