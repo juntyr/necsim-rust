@@ -1,5 +1,5 @@
 use std::{
-    num::NonZeroU32,
+    num::{NonZeroU32, Wrapping},
     time::{Duration, Instant},
 };
 
@@ -311,7 +311,9 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
                 let global_continue: &'static mut bool = unsafe { &mut MPI_GLOBAL_CONTINUE };
 
                 if !*global_continue {
-                    self.reporter.report_progress(0);
+                    let remaining = self.all_remaining[self.get_partition_rank() as usize];
+
+                    self.reporter.report_progress(remaining);
                 }
 
                 *global_continue
@@ -341,8 +343,14 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
 
         root_process.gather_into_root(&remaining, &mut self.all_remaining[..]);
 
-        self.reporter
-            .report_progress(self.all_remaining.iter().sum());
+        self.reporter.report_progress(
+            self.all_remaining
+                .iter()
+                .copied()
+                .map(Wrapping)
+                .sum::<Wrapping<u64>>()
+                .0,
+        );
     }
 }
 
@@ -376,8 +384,14 @@ impl<P: ReporterContext> Reporter for MpiRootPartition<P> {
                 self.all_remaining[remaining_status.1.source_rank() as usize] = remaining_status.0;
             }
 
-            self.reporter
-                .report_progress(self.all_remaining.iter().sum());
+            self.reporter.report_progress(
+                self.all_remaining
+                    .iter()
+                    .copied()
+                    .map(Wrapping)
+                    .sum::<Wrapping<u64>>()
+                    .0,
+            );
         }
     }
 }

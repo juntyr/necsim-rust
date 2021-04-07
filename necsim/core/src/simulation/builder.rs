@@ -1,7 +1,7 @@
 #![allow(clippy::used_underscore_binding)]
 #![allow(clippy::empty_enum)]
 
-use core::marker::PhantomData;
+use core::{marker::PhantomData, num::Wrapping};
 
 use crate::cogs::{
     ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
@@ -61,6 +61,8 @@ pub struct Simulation<
     pub(super) rng: G,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) immigration_entry: I,
+    #[builder(default = Wrapping(0), setter(skip))]
+    pub(super) migration_balance: Wrapping<u64>,
 }
 
 impl<

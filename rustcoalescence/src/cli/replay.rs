@@ -22,9 +22,9 @@ pub fn replay_with_logger<R: ReporterContext>(
     let mut reporter = reporter_context.build_guarded();
 
     for event in EventLogReplay::try_new(&replay_args.events, 100_000)? {
-        reporter.report_progress(1);
+        reporter.report_progress(1_u64);
         reporter.report_event(&event);
-        reporter.report_progress(0);
+        reporter.report_progress(0_u64);
     }
 
     std::mem::drop(reporter);

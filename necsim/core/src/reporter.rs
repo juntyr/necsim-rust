@@ -7,12 +7,14 @@ pub trait EventFilter {
 
 pub trait Reporter: EventFilter {
     #[inline]
-    fn report_event(&mut self, _event: &Event) {
+    #[allow(unused_variables)]
+    fn report_event(&mut self, event: &Event) {
         // no-op
     }
 
     #[inline]
-    fn report_progress(&mut self, _remaining: u64) {
+    #[allow(unused_variables)]
+    fn report_progress(&mut self, remaining: u64) {
         // no-op
     }
 }

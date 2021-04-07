@@ -159,6 +159,7 @@ pub fn simulate<
             }
 
             event_buffer.report_events(reporter);
+            // TODO: balance with migration
             reporter.report_progress(individual_tasks.len() as u64);
         }
 

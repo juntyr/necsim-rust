@@ -245,7 +245,7 @@ impl IndependentSimulation {
             ),
         };
 
-        proxy.report_total_progress(0_u64);
+        proxy.local_partition().report_progress_sync(0_u64);
 
         (time, steps)
     }

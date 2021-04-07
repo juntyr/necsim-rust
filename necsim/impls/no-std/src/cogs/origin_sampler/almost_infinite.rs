@@ -87,8 +87,8 @@ impl<'h, I: Iterator<Item = u64>> Iterator for AlmostInfiniteOriginSampler<'h, I
 
     fn next(&mut self) -> Option<Self::Item> {
         let next_index = self.pre_sampler.next()?;
-        let mut index_difference = (next_index - self.last_index).saturating_sub(1);
-        self.last_index = next_index;
+        let mut index_difference = next_index - self.last_index;
+        self.last_index = next_index + 1;
 
         while let Some(next_location) = self.location_iterator.next() {
             let dx = i64::from(next_location.x()) - i64::from(HABITAT_CENTRE);

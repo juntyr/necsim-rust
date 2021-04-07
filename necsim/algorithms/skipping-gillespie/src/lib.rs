@@ -7,9 +7,8 @@ extern crate contracts;
 use serde::Deserialize;
 use serde_state::DeserializeState;
 
-use necsim_core::{
-    cogs::{CoherentLineageStore, Habitat, LineageReference, SeparableDispersalSampler},
-    reporter::Reporter,
+use necsim_core::cogs::{
+    CoherentLineageStore, Habitat, LineageReference, SeparableDispersalSampler,
 };
 
 use necsim_impls_no_std::{
@@ -186,7 +185,7 @@ impl SkippingGillespieSimulation {
             },
         };
 
-        local_partition.get_reporter().report_progress(0_u64);
+        local_partition.report_progress_sync(0_u64);
 
         (time, steps)
     }

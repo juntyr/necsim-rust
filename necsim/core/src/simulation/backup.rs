@@ -38,6 +38,7 @@ impl<
             active_lineage_sampler: self.active_lineage_sampler.backup_unchecked(),
             rng: self.rng.backup_unchecked(),
             immigration_entry: self.immigration_entry.backup_unchecked(),
+            migration_balance: self.migration_balance,
         }
     }
 }
@@ -72,6 +73,7 @@ impl<
                 active_lineage_sampler: self.0.active_lineage_sampler.backup_unchecked(),
                 rng: self.0.rng.backup_unchecked(),
                 immigration_entry: self.0.immigration_entry.backup_unchecked(),
+                migration_balance: self.0.migration_balance,
             }
         }
     }

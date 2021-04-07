@@ -37,7 +37,7 @@ impl SortedSegment {
 
         let mut buf_reader = BufReader::new(file);
 
-        let header = bincode::deserialize_from(&mut buf_reader)?;
+        let header: EventLogHeader = bincode::deserialize_from(&mut buf_reader)?;
 
         let mut buffer = VecDeque::with_capacity(capacity);
 

@@ -103,8 +103,7 @@ pub fn simulate<
         .build();
 
     // Ensure that the progress bar starts with the expected target
-    local_partition
-        .report_progress_sync(simulation.active_lineage_sampler().number_active_lineages() as u64);
+    local_partition.report_progress_sync(simulation.get_balanced_remaining_work().0);
 
     let mut global_safe_time = 0.0_f64;
 
