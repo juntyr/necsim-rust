@@ -93,7 +93,7 @@ impl<'de> DeserializeState<'de, Partition> for SkippingGillespieArguments {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 struct SkippingGillespieArgumentsRaw {
     parallelism_mode: Option<ParallelismMode>,
 }

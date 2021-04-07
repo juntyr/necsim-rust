@@ -313,7 +313,7 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
                 if !*global_continue {
                     let remaining = self.all_remaining[self.get_partition_rank() as usize];
 
-                    self.reporter.report_progress(remaining);
+                    self.report_progress(remaining);
                 }
 
                 *global_continue

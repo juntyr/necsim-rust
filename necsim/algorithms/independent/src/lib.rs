@@ -44,11 +44,13 @@ mod reporter;
 use reporter::PartitionReporterProxy;
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct AbsoluteDedupCache {
     capacity: NonZeroUsize,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct RelativeDedupCache {
     factor: PositiveF64,
 }
@@ -128,7 +130,7 @@ impl<'de> DeserializeState<'de, Partition> for IndependentArguments {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 struct IndependentArgumentsRaw {
     delta_t: PositiveF64,
     step_slice: NonZeroU64,
