@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{fmt, marker::PhantomData};
 
 use necsim_core::{event::PackedEvent, impl_report, reporter::Reporter};
 
@@ -10,6 +10,24 @@ pub struct WaterLevelReporter<'e, R: ReporterContext> {
     slow_events: &'e mut Vec<PackedEvent>,
     fast_events: &'e mut Vec<PackedEvent>,
     _marker: PhantomData<R>,
+}
+
+impl<'e, R: ReporterContext> fmt::Debug for WaterLevelReporter<'e, R> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        struct EventBufferLen(usize);
+
+        impl fmt::Debug for EventBufferLen {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "Vec<PackedEvent; {}>", self.0)
+            }
+        }
+
+        fmt.debug_struct("PartitionReporterProxy")
+            .field("water_level", &self.water_level)
+            .field("slow_events", &EventBufferLen(self.slow_events.len()))
+            .field("fast_events", &EventBufferLen(self.fast_events.len()))
+            .finish()
+    }
 }
 
 impl<'e, R: ReporterContext> Reporter for WaterLevelReporter<'e, R> {

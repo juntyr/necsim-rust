@@ -1,4 +1,5 @@
 use std::{
+    fmt,
     fs::{File, OpenOptions},
     io::{BufWriter, Write},
     path::{Path, PathBuf},
@@ -12,6 +13,14 @@ use necsim_core::{
 pub struct CsvReporter {
     output: PathBuf,
     writer: Option<BufWriter<File>>,
+}
+
+impl fmt::Debug for CsvReporter {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("CsvReporter")
+            .field("output", &self.output)
+            .finish()
+    }
 }
 
 impl Reporter for CsvReporter {

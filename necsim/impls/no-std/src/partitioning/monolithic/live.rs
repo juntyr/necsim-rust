@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-use core::num::NonZeroU32;
+use core::{fmt, num::NonZeroU32};
 
 use necsim_core::{
     lineage::MigratingLineage,
@@ -57,6 +57,23 @@ impl Partitioning for LiveMonolithicPartitioning {
 pub struct LiveMonolithicLocalPartition<P: ReporterContext> {
     reporter: GuardedReporter<P::Reporter, P::Finaliser>,
     loopback: Vec<MigratingLineage>,
+}
+
+impl<P: ReporterContext> fmt::Debug for LiveMonolithicLocalPartition<P> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        struct LoopbackLen(usize);
+
+        impl fmt::Debug for LoopbackLen {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "Vec<MigratingLineage; {}>", self.0)
+            }
+        }
+
+        fmt.debug_struct("LiveMonolithicLocalPartition")
+            .field("reporter", &self.reporter)
+            .field("loopback", &LoopbackLen(self.loopback.len()))
+            .finish()
+    }
 }
 
 #[contract_trait]

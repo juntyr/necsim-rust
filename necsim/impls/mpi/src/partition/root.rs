@@ -1,4 +1,5 @@
 use std::{
+    fmt,
     num::{NonZeroU32, Wrapping},
     time::{Duration, Instant},
 };
@@ -43,6 +44,12 @@ pub struct MpiRootPartition<P: ReporterContext> {
     recorder: EventLogRecorder,
     barrier: Option<Request<'static, StaticScope>>,
     communicated_since_last_barrier: bool,
+}
+
+impl<P: ReporterContext> fmt::Debug for MpiRootPartition<P> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("MpiRootPartition").finish()
+    }
 }
 
 impl<P: ReporterContext> Drop for MpiRootPartition<P> {

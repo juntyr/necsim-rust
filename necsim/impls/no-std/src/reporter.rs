@@ -1,4 +1,5 @@
 use core::{
+    fmt,
     mem::ManuallyDrop,
     ops::{Deref, DerefMut},
 };
@@ -6,7 +7,7 @@ use core::{
 use necsim_core::reporter::Reporter;
 
 #[allow(clippy::module_name_repetitions)]
-pub trait ReporterContext {
+pub trait ReporterContext: fmt::Debug {
     type Reporter: Reporter;
     type Finaliser: FnOnce(Self::Reporter);
 
@@ -17,6 +18,14 @@ pub trait ReporterContext {
 pub struct GuardedReporter<R: Reporter, F: FnOnce(R)> {
     reporter: ManuallyDrop<R>,
     finaliser: ManuallyDrop<F>,
+}
+
+impl<R: Reporter, F: FnOnce(R)> fmt::Debug for GuardedReporter<R, F> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("GuardedReporter")
+            .field("reporter", &self.reporter)
+            .finish()
+    }
 }
 
 impl<R: Reporter, F: FnOnce(R)> GuardedReporter<R, F> {

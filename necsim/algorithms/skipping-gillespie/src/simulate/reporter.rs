@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{fmt, marker::PhantomData};
 
 use necsim_core::{
     event::{PackedEvent, TypedEvent},
@@ -12,6 +12,22 @@ pub struct PartitionReporterProxy<'p, R: ReporterContext, P: LocalPartition<R>> 
     local_partition: &'p mut P,
     event_buffer: Vec<PackedEvent>,
     _marker: PhantomData<R>,
+}
+
+impl<'p, R: ReporterContext, P: LocalPartition<R>> fmt::Debug for PartitionReporterProxy<'p, R, P> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        struct EventBufferLen(usize);
+
+        impl fmt::Debug for EventBufferLen {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "Vec<PackedEvent; {}>", self.0)
+            }
+        }
+
+        fmt.debug_struct("PartitionReporterProxy")
+            .field("event_buffer", &EventBufferLen(self.event_buffer.len()))
+            .finish()
+    }
 }
 
 impl<'p, R: ReporterContext, P: LocalPartition<R>> Reporter for PartitionReporterProxy<'p, R, P> {

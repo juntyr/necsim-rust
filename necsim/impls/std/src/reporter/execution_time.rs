@@ -3,10 +3,17 @@ use std::time::{Duration, Instant};
 use necsim_core::{impl_report, reporter::Reporter};
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug)]
 pub struct ExecutionTimeReporter {
     init_time: Instant,
     start_time: Option<Instant>,
     end_time: Option<Instant>,
+}
+
+impl<'de> serde::Deserialize<'de> for ExecutionTimeReporter {
+    fn deserialize<D: serde::Deserializer<'de>>(_deserializer: D) -> Result<Self, D::Error> {
+        Ok(Self::default())
+    }
 }
 
 impl Reporter for ExecutionTimeReporter {

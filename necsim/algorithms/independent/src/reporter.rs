@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{fmt, marker::PhantomData};
 
 use necsim_core::{
     impl_report,
@@ -10,6 +10,12 @@ use necsim_impls_no_std::{partitioning::LocalPartition, reporter::ReporterContex
 pub struct PartitionReporterProxy<'p, R: ReporterContext, P: LocalPartition<R>> {
     local_partition: &'p mut P,
     _marker: PhantomData<R>,
+}
+
+impl<'p, R: ReporterContext, P: LocalPartition<R>> fmt::Debug for PartitionReporterProxy<'p, R, P> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("PartitionReporterProxy").finish()
+    }
 }
 
 impl<'p, R: ReporterContext, P: LocalPartition<R>> Reporter for PartitionReporterProxy<'p, R, P> {

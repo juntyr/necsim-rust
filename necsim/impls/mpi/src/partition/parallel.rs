@@ -1,4 +1,5 @@
 use std::{
+    fmt,
     marker::PhantomData,
     num::NonZeroU32,
     time::{Duration, Instant},
@@ -42,6 +43,12 @@ pub struct MpiParallelPartition<P: ReporterContext> {
     communicated_since_last_barrier: bool,
     recorder: EventLogRecorder,
     _marker: PhantomData<P>,
+}
+
+impl<P: ReporterContext> fmt::Debug for MpiParallelPartition<P> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("MpiParallelPartition").finish()
+    }
 }
 
 impl<P: ReporterContext> Drop for MpiParallelPartition<P> {

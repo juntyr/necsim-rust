@@ -3,14 +3,25 @@
     seed: 24,
     sample: 1.0,
 
-    algorithm: SkippingGillespie(
-        parallelism_mode: Optimistic(delta_sync: 0.01),
+    algorithm: Classical,
+
+    /*log: "event_log",*/
+
+    scenario: NonSpatial(
+        area: (10, 10),
+        deme: 0,
     ),
 
-    log: "event_log",
-
-    scenario: AlmostInfinite(
-        radius: 1000,
-        sigma: 1.0,
-    )
+    reporters: [
+        Plugin(
+            library: "target/debug/deps/libnecsim_plugins_common.so",
+            reporters: [
+                Progress(),
+                Execution(),
+                Counter(),
+                Verbose(),
+                Biodiversity(),
+            ],
+        ),
+    ],
 )

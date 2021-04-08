@@ -14,7 +14,7 @@ pub mod used;
 pub use combinator::ReporterCombinator;
 pub use null::NullReporter;
 
-pub trait Reporter {
+pub trait Reporter: core::fmt::Debug {
     type ReportSpeciation: Boolean;
     type ReportDispersal: Boolean;
     type ReportProgress: Boolean;

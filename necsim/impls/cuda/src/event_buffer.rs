@@ -1,4 +1,4 @@
-use core::marker::PhantomData;
+use core::{fmt, marker::PhantomData};
 
 #[cfg(not(target_os = "cuda"))]
 use rustacuda::{
@@ -29,6 +29,17 @@ pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
     max_events: usize,
     event_counter: usize,
     marker: PhantomData<(ReportSpeciation, ReportDispersal)>,
+}
+
+impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> fmt::Debug
+    for EventBuffer<ReportSpeciation, ReportDispersal>
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("EventBuffer")
+            .field("max_events", &self.max_events)
+            .field("event_counter", &self.event_counter)
+            .finish()
+    }
 }
 
 #[cfg(not(target_os = "cuda"))]

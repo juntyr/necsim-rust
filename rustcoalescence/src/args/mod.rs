@@ -14,6 +14,8 @@ use necsim_impls_std::{
     event_log::recorder::EventLogRecorder,
 };
 
+use necsim_plugins_core::{common::ReporterPlugin, import::ReporterPluginLibrary};
+
 #[derive(Debug, StructOpt)]
 #[allow(clippy::module_name_repetitions)]
 pub enum RustcoalescenceArgs {
@@ -43,6 +45,7 @@ pub struct SimulateArgs {
     pub common: CommonArgs,
     pub event_log: Option<EventLogRecorder>,
     pub scenario: Scenario,
+    pub reporters: Vec<ReporterPlugin>,
 }
 
 impl<'de> DeserializeState<'de, Partition> for SimulateArgs {
@@ -61,32 +64,35 @@ impl<'de> DeserializeState<'de, Partition> for SimulateArgs {
             },
             event_log: raw.event_log,
             scenario: raw.scenario,
+            reporters: raw.reporters.into_iter().flatten().collect(),
         })
     }
 }
 
-#[derive(Debug, DeserializeState)]
+#[derive(DeserializeState)]
 #[allow(clippy::module_name_repetitions)]
 #[serde(deny_unknown_fields)]
 #[serde(deserialize_state = "Partition")]
 struct SimulateArgsRaw {
     #[serde(alias = "speciation")]
-    pub speciation_probability_per_generation: ZeroExclOneInclF64,
+    speciation_probability_per_generation: ZeroExclOneInclF64,
 
     #[serde(alias = "sample")]
-    pub sample_percentage: ZeroInclOneInclF64,
+    sample_percentage: ZeroInclOneInclF64,
 
-    pub seed: u64,
+    seed: u64,
 
     #[serde(deserialize_state)]
-    pub algorithm: Algorithm,
+    algorithm: Algorithm,
 
     #[serde(alias = "log")]
     #[serde(default)]
     #[serde(deserialize_state_with = "deserialize_state_event_log")]
-    pub event_log: Option<EventLogRecorder>,
+    event_log: Option<EventLogRecorder>,
 
-    pub scenario: Scenario,
+    scenario: Scenario,
+
+    reporters: Vec<ReporterPluginLibrary>,
 }
 
 fn deserialize_state_event_log<'de, D>(

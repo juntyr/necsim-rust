@@ -1,4 +1,4 @@
-use std::num::NonZeroU32;
+use std::{fmt, num::NonZeroU32};
 
 use necsim_core::{
     impl_report,
@@ -20,6 +20,24 @@ pub struct RecordedMonolithicLocalPartition<P: ReporterContext> {
     reporter: GuardedReporter<P::Reporter, P::Finaliser>,
     recorder: EventLogRecorder,
     loopback: Vec<MigratingLineage>,
+}
+
+impl<P: ReporterContext> fmt::Debug for RecordedMonolithicLocalPartition<P> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        struct LoopbackLen(usize);
+
+        impl fmt::Debug for LoopbackLen {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "Vec<MigratingLineage; {}>", self.0)
+            }
+        }
+
+        fmt.debug_struct("RecordedMonolithicLocalPartition")
+            .field("reporter", &self.reporter)
+            .field("recorder", &self.recorder)
+            .field("loopback", &LoopbackLen(self.loopback.len()))
+            .finish()
+    }
 }
 
 #[contract_trait]

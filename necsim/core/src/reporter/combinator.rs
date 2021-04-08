@@ -4,6 +4,7 @@ use crate::{
 };
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug)]
 pub struct ReporterCombinator<F: Reporter, T: Reporter> {
     front: F,
     tail: T, // R = ReporterCombinator<...>
