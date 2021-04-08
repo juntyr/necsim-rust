@@ -19,6 +19,7 @@ pub use parallel::MpiParallelPartition;
 pub use root::MpiRootPartition;
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug)]
 pub enum MpiLocalPartition<P: ReporterContext> {
     LiveMonolithic(Box<LiveMonolithicLocalPartition<P>>),
     RecordedMonolithic(Box<RecordedMonolithicLocalPartition<P>>),

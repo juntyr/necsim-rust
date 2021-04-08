@@ -1,4 +1,5 @@
 use std::{
+    fmt,
     io::{self, Write},
     sync::{
         atomic::{AtomicU64, Ordering},
@@ -21,6 +22,21 @@ pub struct ProgressReporter {
     updater: Option<ProgressUpdater>,
     last_remaining: Arc<AtomicU64>,
     total: Arc<AtomicU64>,
+}
+
+impl fmt::Debug for ProgressReporter {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("ProgressReporter")
+            .field("last_remaining", &self.last_remaining)
+            .field("total", &self.total)
+            .finish()
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for ProgressReporter {
+    fn deserialize<D: serde::Deserializer<'de>>(_deserializer: D) -> Result<Self, D::Error> {
+        Ok(Self::default())
+    }
 }
 
 impl Reporter for ProgressReporter {

@@ -1,3 +1,5 @@
+use std::fmt;
+
 use necsim_core::{
     event::{DispersalEvent, SpeciationEvent},
     impl_report,
@@ -5,7 +7,7 @@ use necsim_core::{
 };
 
 #[allow(clippy::module_name_repetitions)]
-pub struct EventReporter {
+pub struct EventCounterReporter {
     last_speciation_event: Option<SpeciationEvent>,
     last_dispersal_event: Option<DispersalEvent>,
 
@@ -16,7 +18,25 @@ pub struct EventReporter {
     self_coalescence: usize,
 }
 
-impl Reporter for EventReporter {
+impl fmt::Debug for EventCounterReporter {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("EventReporter")
+            .field("speciation", &self.speciation)
+            .field("out_dispersal", &self.out_dispersal)
+            .field("self_dispersal", &self.self_dispersal)
+            .field("out_coalescence", &self.out_coalescence)
+            .field("self_coalescence", &self.self_coalescence)
+            .finish()
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for EventCounterReporter {
+    fn deserialize<D: serde::Deserializer<'de>>(_deserializer: D) -> Result<Self, D::Error> {
+        Ok(Self::default())
+    }
+}
+
+impl Reporter for EventCounterReporter {
     impl_report!(speciation(&mut self, event: Unused) -> Used {
         event.use_in(|event| {
             if Some(event) == self.last_speciation_event.as_ref() {
@@ -60,7 +80,7 @@ impl Reporter for EventReporter {
     });
 }
 
-impl Default for EventReporter {
+impl Default for EventCounterReporter {
     #[debug_ensures(
         ret.speciation == 0 &&
         ret.out_dispersal == 0 &&
@@ -83,7 +103,7 @@ impl Default for EventReporter {
     }
 }
 
-impl EventReporter {
+impl EventCounterReporter {
     pub fn report(self) {
         println!("{:=^80}", " Event Summary ");
 

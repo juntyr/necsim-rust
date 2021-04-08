@@ -16,7 +16,7 @@ necsim-rust is built in a modular way to reduce code duplication and allow the u
 
 First, you need to clone the necsim-rust GitHub repository:
 ```shell
-> git clone https://github.com/MoritzLangenstein/necsim-rust.git
+> git clone https://github.com/MomoLangenstein/necsim-rust.git
 ```
 necsim-rust is written in the [Rust language](https://www.rust-lang.org/tools/install), which must be installed in your `PATH` first. As it also uses some nightly features, you must switch to the nightly toolchain to built the library and tool:
 ```shell

@@ -7,6 +7,7 @@ use necsim_impls_std::reporter::{
 
 // use necsim_impls_std::reporter::csv::CsvReporter;
 
+#[derive(Debug)]
 pub struct RustcoalescenceReporterContext {
     report_analysis: bool,
 }

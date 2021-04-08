@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt};
 
 use necsim_core::cogs::{Habitat, RngCore, RngSampler};
 
@@ -116,6 +116,12 @@ pub fn simulate_static<R: ReporterContext, P: LocalPartition<R>>(
 
 struct MigrationReporterContext<F: FnOnce(BiodiversityReporter)> {
     finaliser: F,
+}
+
+impl<F: FnOnce(BiodiversityReporter)> fmt::Debug for MigrationReporterContext<F> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("MigrationReporterContext").finish()
+    }
 }
 
 impl<F: FnOnce(BiodiversityReporter)> MigrationReporterContext<F> {

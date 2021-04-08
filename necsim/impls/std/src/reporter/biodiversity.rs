@@ -1,3 +1,5 @@
+use std::fmt;
+
 use necsim_core::{event::SpeciationEvent, impl_report, reporter::Reporter};
 
 #[allow(clippy::module_name_repetitions)]
@@ -5,6 +7,20 @@ pub struct BiodiversityReporter {
     last_event: Option<SpeciationEvent>,
 
     biodiversity: usize,
+}
+
+impl fmt::Debug for BiodiversityReporter {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("BiodiversityReporter")
+            .field("biodiversity", &self.biodiversity)
+            .finish()
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for BiodiversityReporter {
+    fn deserialize<D: serde::Deserializer<'de>>(_deserializer: D) -> Result<Self, D::Error> {
+        Ok(Self::default())
+    }
 }
 
 impl Reporter for BiodiversityReporter {
