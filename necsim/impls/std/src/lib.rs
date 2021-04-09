@@ -6,11 +6,7 @@
 #[macro_use]
 extern crate contracts;
 
-#[macro_use]
-extern crate log;
-
 pub mod bounded;
 pub mod cogs;
 pub mod event_log;
 pub mod partitioning;
-pub mod reporter;
