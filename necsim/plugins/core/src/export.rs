@@ -59,6 +59,7 @@ macro_rules! export_plugin {
             $crate::erased_serde::Error,
         > {
             #[derive($crate::serde::Deserialize)]
+            #[serde(crate = "::necsim_plugins_core::serde")]
             enum Reporters {
                 $($name($plugin)),*
             }
@@ -79,7 +80,7 @@ macro_rules! export_plugin {
 
         #[doc(hidden)]
         #[no_mangle]
-        pub static necsim_reporter_plugin_declaration: $crate::export::ReporterPluginDeclaration =
+        pub static NECSIM_REPORTER_PLUGIN_DECLARATION: $crate::export::ReporterPluginDeclaration =
             $crate::export::ReporterPluginDeclaration {
                 rustc_version: $crate::RUSTC_VERSION,
                 core_version: $crate::CORE_VERSION,

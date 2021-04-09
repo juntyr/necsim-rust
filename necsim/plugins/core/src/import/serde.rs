@@ -1,10 +1,12 @@
 /// Inspired by the <https://adventures.michaelfbryan.com/posts/plugins-in-rust/> blog post
-use std::{convert::TryFrom, fmt, io, iter::IntoIterator, mem::ManuallyDrop, rc::Rc};
+use std::{
+    convert::TryFrom, fmt, io, iter::IntoIterator, mem::ManuallyDrop, path::PathBuf, rc::Rc,
+};
 
 use libloading::Library;
 use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
 
-use crate::{common::ReporterPlugin, export::ReporterPluginDeclaration};
+use crate::{export::ReporterPluginDeclaration, import::ReporterPlugin};
 
 pub struct ReporterPluginLibrary {
     library: Rc<PluginLibrary>,
@@ -39,16 +41,16 @@ impl<'de> Deserialize<'de> for ReporterPluginLibrary {
 
 // Helper struct to load the library from its path
 #[derive(serde::Deserialize)]
-#[serde(try_from = "String")]
+#[serde(try_from = "PathBuf")]
 pub(crate) struct PluginLibrary {
     pub(crate) library: Library,
     pub(crate) declaration: ReporterPluginDeclaration,
 }
 
-impl TryFrom<String> for PluginLibrary {
+impl TryFrom<PathBuf> for PluginLibrary {
     type Error = io::Error;
 
-    fn try_from(library_path: String) -> Result<Self, Self::Error> {
+    fn try_from(library_path: PathBuf) -> Result<Self, Self::Error> {
         // Load the plugin library into memory
         let library = unsafe { Library::new(library_path) }
             .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
@@ -56,7 +58,7 @@ impl TryFrom<String> for PluginLibrary {
         // Load the plugin declaration symbol
         let declaration = unsafe {
             library
-                .get::<*const ReporterPluginDeclaration>(b"necsim_reporter_plugin_declaration")
+                .get::<*const ReporterPluginDeclaration>(b"NECSIM_REPORTER_PLUGIN_DECLARATION")
                 .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?
                 .read()
         };
