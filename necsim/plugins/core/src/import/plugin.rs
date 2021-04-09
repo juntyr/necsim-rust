@@ -2,8 +2,9 @@ use std::{fmt, mem::ManuallyDrop, rc::Rc};
 
 use necsim_core::reporter::{boolean::True, Reporter};
 
-use crate::{export::UnsafeReporterPlugin, import::PluginLibrary};
+use crate::{export::UnsafeReporterPlugin, import::serde::PluginLibrary};
 
+#[allow(clippy::module_name_repetitions)]
 pub struct ReporterPlugin {
     pub(crate) library: Rc<PluginLibrary>,
 

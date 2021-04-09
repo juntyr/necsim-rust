@@ -14,7 +14,7 @@ use necsim_impls_std::{
     event_log::recorder::EventLogRecorder,
 };
 
-use necsim_plugins_core::{common::ReporterPlugin, import::ReporterPluginLibrary};
+use necsim_plugins_core::import::{ReporterPlugin, ReporterPluginLibrary};
 
 #[derive(Debug, StructOpt)]
 #[allow(clippy::module_name_repetitions)]

@@ -13,7 +13,7 @@ use necsim_core::{
     },
 };
 
-use crate::common::ReporterPlugin;
+use crate::import::ReporterPlugin;
 
 pub struct ReporterPluginVec<
     ReportSpeciation: Boolean,

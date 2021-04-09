@@ -5,13 +5,19 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use serde::Deserialize;
+
 use necsim_core::{
     impl_report, landscape::IndexedLocation, lineage::GlobalLineageReference, reporter::Reporter,
 };
 
+necsim_plugins_core::export_plugin!(Csv => CsvReporter);
+
 #[allow(clippy::module_name_repetitions)]
+#[derive(Deserialize)]
 pub struct CsvReporter {
     output: PathBuf,
+    #[serde(skip)]
     writer: Option<BufWriter<File>>,
 }
 

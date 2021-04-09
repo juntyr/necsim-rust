@@ -3,7 +3,8 @@
 // LINEAGES (
 //    individual_id, /* should combine original indexed location + community */
 //    species_id, /* should combine speciation indexed location + community +
-// time */    community_original,
+//                   time */
+//    community_original,
 //    x_original,
 //    y_original,
 //    index_original,
