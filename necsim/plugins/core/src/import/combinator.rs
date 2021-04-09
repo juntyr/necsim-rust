@@ -5,7 +5,7 @@ use std::{
 };
 
 use necsim_core::{
-    impl_report,
+    impl_finalise, impl_report,
     reporter::{
         boolean::{Boolean, False, True},
         used::Unused,
@@ -67,10 +67,18 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
         })
     });
 
-    fn finalise_impl(&mut self) {
-        for plugin in self.plugins.iter_mut() {
-            plugin.reporter.finalise_impl()
+    impl_finalise!((self) {
+        for plugin in self.plugins.into_vec() {
+            plugin.finalise()
         }
+    });
+
+    fn initialise(&mut self) -> Result<(), String> {
+        for plugin in self.plugins.iter_mut() {
+            plugin.reporter.initialise()?;
+        }
+
+        Ok(())
     }
 }
 

@@ -58,10 +58,6 @@ impl<'e, R: ReporterContext> Reporter for WaterLevelReporter<'e, R> {
     impl_report!(progress(&mut self, remaining: Unused) -> Unused {
         remaining.ignore()
     });
-
-    fn finalise_impl(&mut self) {
-        // no-op
-    }
 }
 
 impl<'e, R: ReporterContext> WaterLevelReporter<'e, R> {

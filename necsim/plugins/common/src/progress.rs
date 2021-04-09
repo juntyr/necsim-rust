@@ -10,7 +10,7 @@ use std::{
     time::Duration,
 };
 
-use necsim_core::{impl_report, reporter::Reporter};
+use necsim_core::{impl_finalise, impl_report, reporter::Reporter};
 
 struct ProgressUpdater {
     thread: JoinHandle<()>,
@@ -21,14 +21,14 @@ struct ProgressUpdater {
 pub struct ProgressReporter {
     updater: Option<ProgressUpdater>,
     last_remaining: Arc<AtomicU64>,
-    total: Arc<AtomicU64>,
+    last_total: Arc<AtomicU64>,
 }
 
 impl fmt::Debug for ProgressReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("ProgressReporter")
             .field("last_remaining", &self.last_remaining)
-            .field("total", &self.total)
+            .field("last_total", &self.last_total)
             .finish()
     }
 }
@@ -54,12 +54,12 @@ impl Reporter for ProgressReporter {
 
             // Update the progress total in case of regression
             if last_remaining < *remaining {
-                self.total
+                self.last_total
                     .fetch_add(remaining - last_remaining, Ordering::AcqRel);
             }
 
             if last_remaining > 0 && *remaining == 0 {
-                let total = self.total.load(Ordering::Acquire);
+                let total = self.last_total.load(Ordering::Acquire);
 
                 display_progress(total, self.last_remaining.load(Ordering::Acquire).min(total));
 
@@ -69,32 +69,17 @@ impl Reporter for ProgressReporter {
         })
     });
 
-    fn finalise_impl(&mut self) {
-        if let Some(updater) = self.updater.take() {
-            if updater.sender.send(()).is_ok() {
-                std::mem::drop(updater.thread.join());
-            }
+    impl_finalise!((self) {
+        std::mem::drop(self)
+    });
+
+    fn initialise(&mut self) -> Result<(), String> {
+        if self.updater.is_some() {
+            return Ok(());
         }
-    }
-}
 
-impl Drop for ProgressReporter {
-    fn drop(&mut self) {
-        if let Some(updater) = self.updater.take() {
-            if updater.sender.send(()).is_ok() {
-                std::mem::drop(updater.thread.join());
-            }
-        }
-    }
-}
-
-impl Default for ProgressReporter {
-    fn default() -> Self {
-        let last_remaining = Arc::new(AtomicU64::new(0_u64));
-        let last_total = Arc::new(AtomicU64::new(0_u64));
-
-        let remaining = Arc::clone(&last_remaining);
-        let total = Arc::clone(&last_total);
+        let remaining = Arc::clone(&self.last_remaining);
+        let total = Arc::clone(&self.last_total);
 
         let (sender, receiver) = mpsc::channel();
 
@@ -118,10 +103,31 @@ impl Default for ProgressReporter {
             }
         });
 
+        self.updater = Some(ProgressUpdater { thread, sender });
+
+        Ok(())
+    }
+}
+
+impl Drop for ProgressReporter {
+    fn drop(&mut self) {
+        if let Some(updater) = self.updater.take() {
+            if updater.sender.send(()).is_ok() {
+                std::mem::drop(updater.thread.join());
+            }
+        }
+    }
+}
+
+impl Default for ProgressReporter {
+    fn default() -> Self {
+        let last_remaining = Arc::new(AtomicU64::new(0_u64));
+        let last_total = Arc::new(AtomicU64::new(0_u64));
+
         Self {
-            updater: Some(ProgressUpdater { thread, sender }),
+            updater: None,
             last_remaining,
-            total: last_total,
+            last_total,
         }
     }
 }

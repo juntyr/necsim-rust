@@ -35,10 +35,6 @@ impl Reporter for VerboseReporter {
             info!("Remaining: {}", remaining)
         })
     });
-
-    fn finalise_impl(&mut self) {
-        // no-op
-    }
 }
 
 impl Default for VerboseReporter {

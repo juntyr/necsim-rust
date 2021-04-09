@@ -53,13 +53,13 @@ pub fn simulate_with_logger<R: ReporterContext, P: LocalPartition<R>>(
     if log::log_enabled!(log::Level::Info) {
         eprintln!("\n");
         eprintln!("{:=^80}", " Reporter Summary ");
-        eprintln!("");
+        eprintln!();
     }
     local_partition.finalise_reporting();
     if log::log_enabled!(log::Level::Info) {
-        eprintln!("");
+        eprintln!();
         eprintln!("{:=^80}", " Reporter Summary ");
-        eprintln!("");
+        eprintln!();
     }
 
     info!(

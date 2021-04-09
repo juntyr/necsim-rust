@@ -11,7 +11,8 @@ use std::{
 use serde::Deserialize;
 
 use necsim_core::{
-    impl_report, landscape::IndexedLocation, lineage::GlobalLineageReference, reporter::Reporter,
+    impl_finalise, impl_report, landscape::IndexedLocation, lineage::GlobalLineageReference,
+    reporter::Reporter,
 };
 
 necsim_plugins_core::export_plugin!(Csv => CsvReporter);
@@ -72,9 +73,38 @@ impl Reporter for CsvReporter {
         remaining.ignore()
     });
 
-    fn finalise_impl(&mut self) {
+    impl_finalise!((mut self) {
         if let Some(writer) = &mut self.writer {
             std::mem::drop(writer.flush());
+        }
+    });
+
+    fn initialise(&mut self) -> Result<(), String> {
+        if self.writer.is_some() {
+            return Ok(());
+        }
+
+        let result = (|| -> io::Result<BufWriter<File>> {
+            let file = OpenOptions::new()
+                .create(true)
+                .truncate(true)
+                .write(true)
+                .open(&self.output)?;
+
+            let mut writer = BufWriter::new(file);
+
+            writeln!(writer, "reference,time,x,y,index,type")?;
+
+            Ok(writer)
+        })();
+
+        match result {
+            Ok(writer) => {
+                self.writer = Some(writer);
+
+                Ok(())
+            },
+            Err(err) => Err(err.to_string()),
         }
     }
 }
@@ -87,32 +117,17 @@ impl CsvReporter {
         origin: &IndexedLocation,
         r#type: char,
     ) {
-        let output = &self.output;
-
-        let writer = self.writer.get_or_insert_with(|| {
-            let file = OpenOptions::new()
-                .create(true)
-                .truncate(true)
-                .write(true)
-                .open(output)
-                .unwrap_or_else(|_| panic!("Could not write to the output path {:?}", output));
-
-            let mut writer = BufWriter::new(file);
-
-            std::mem::drop(writeln!(writer, "reference,time,x,y,index,type"));
-
-            writer
-        });
-
-        std::mem::drop(writeln!(
-            writer,
-            "{},{},{},{},{},{}",
-            reference,
-            time,
-            origin.location().x(),
-            origin.location().y(),
-            origin.index(),
-            r#type,
-        ));
+        if let Some(writer) = &mut self.writer {
+            std::mem::drop(writeln!(
+                writer,
+                "{},{},{},{},{},{}",
+                reference,
+                time,
+                origin.location().x(),
+                origin.location().y(),
+                origin.index(),
+                r#type,
+            ));
+        }
     }
 }

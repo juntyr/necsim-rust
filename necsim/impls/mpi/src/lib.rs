@@ -74,7 +74,6 @@ impl MpiPartitioning {
 #[contract_trait]
 impl Partitioning for MpiPartitioning {
     type Auxiliary = Option<EventLogRecorder>;
-    type Error = MpiLocalPartitionError;
     type LocalPartition<P: ReporterContext> = MpiLocalPartition<P>;
 
     fn is_monolithic(&self) -> bool {
@@ -103,23 +102,23 @@ impl Partitioning for MpiPartitioning {
         self,
         reporter_context: P,
         auxiliary: Self::Auxiliary,
-    ) -> Result<Self::LocalPartition<P>, Self::Error> {
+    ) -> anyhow::Result<Self::LocalPartition<P>> {
         #[allow(clippy::option_if_let_else)]
         if let Some(event_log) = auxiliary {
             Ok(if self.world.size() <= 1 {
                 // recorded && is_monolithic
                 MpiLocalPartition::RecordedMonolithic(Box::new(
-                    RecordedMonolithicLocalPartition::from_context_and_recorder(
+                    RecordedMonolithicLocalPartition::try_from_context_and_recorder(
                         reporter_context,
                         event_log,
-                    ),
+                    )?,
                 ))
             } else if self.world.rank() == MpiPartitioning::ROOT_RANK {
                 // recorded && !is_monolithic && is_root
                 MpiLocalPartition::Root(Box::new(MpiRootPartition::new(
                     self.universe,
                     self.world,
-                    reporter_context,
+                    reporter_context.try_build()?,
                     event_log,
                 )))
             } else {
@@ -133,10 +132,10 @@ impl Partitioning for MpiPartitioning {
         } else if self.world.size() <= 1 {
             // !recorded && monolithic
             Ok(MpiLocalPartition::LiveMonolithic(Box::new(
-                LiveMonolithicLocalPartition::from_context(reporter_context),
+                LiveMonolithicLocalPartition::try_from_context(reporter_context)?,
             )))
         } else {
-            Err(MpiLocalPartitionError::MissingEventLog)
+            Err(anyhow::Error::new(MpiLocalPartitionError::MissingEventLog))
         }
     }
 }

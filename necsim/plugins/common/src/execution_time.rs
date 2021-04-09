@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use necsim_core::{impl_report, reporter::Reporter};
+use necsim_core::{impl_finalise, impl_report, reporter::Reporter};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
@@ -40,7 +40,7 @@ impl Reporter for ExecutionTimeReporter {
         }
     );
 
-    fn finalise_impl(&mut self) {
+    impl_finalise!((self) {
         if let (Some(start_time), Some(end_time)) = (self.start_time, self.end_time) {
             info!(
                 "The simulation took:\n - initialisation: {}s\n - execution: {}s\n - cleanup: {}s",
@@ -49,6 +49,14 @@ impl Reporter for ExecutionTimeReporter {
                 end_time.elapsed().as_secs_f32()
             )
         }
+    });
+
+    fn initialise(&mut self) -> Result<(), String> {
+        self.init_time = Instant::now();
+        self.start_time = None;
+        self.end_time = None;
+
+        Ok(())
     }
 }
 

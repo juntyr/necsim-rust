@@ -1,6 +1,6 @@
 use std::fmt;
 
-use necsim_core::{event::SpeciationEvent, impl_report, reporter::Reporter};
+use necsim_core::{event::SpeciationEvent, impl_finalise, impl_report, reporter::Reporter};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct BiodiversityReporter {
@@ -44,14 +44,14 @@ impl Reporter for BiodiversityReporter {
         remaining.ignore()
     });
 
-    fn finalise_impl(&mut self) {
+    impl_finalise!((self) {
         if self.biodiversity > 0 {
             info!(
                 "The simulation resulted in a biodiversity of {} unique species.",
                 self.biodiversity
             );
         }
-    }
+    });
 }
 
 impl Default for BiodiversityReporter {

@@ -181,8 +181,4 @@ impl<P: ReporterContext> Reporter for MpiLocalPartition<P> {
             Self::Parallel(partition) => partition.get_reporter().report_progress(remaining),
         }
     });
-
-    fn finalise_impl(&mut self) {
-        // no-op
-    }
 }

@@ -15,15 +15,29 @@ pub struct ReporterPlugin {
         Box<dyn Reporter<ReportSpeciation = True, ReportDispersal = True, ReportProgress = True>>,
     >,
     pub(crate) filter: ReporterPluginFilter,
+
+    pub(crate) finalised: bool,
+}
+
+impl ReporterPlugin {
+    pub(crate) fn finalise(mut self) {
+        self.finalised = true;
+
+        std::mem::drop(self)
+    }
 }
 
 impl Drop for ReporterPlugin {
     fn drop(&mut self) {
-        unsafe {
-            (self.library.declaration.drop)(ManuallyDrop::new(UnsafeReporterPlugin {
-                reporter: ManuallyDrop::take(&mut self.reporter),
-                filter: self.filter,
-            }))
+        if self.finalised {
+            unsafe { ManuallyDrop::take(&mut self.reporter).finalise_boxed() }
+        } else {
+            unsafe {
+                (self.library.declaration.drop)(ManuallyDrop::new(UnsafeReporterPlugin {
+                    reporter: ManuallyDrop::take(&mut self.reporter),
+                    filter: self.filter,
+                }))
+            }
         }
     }
 }

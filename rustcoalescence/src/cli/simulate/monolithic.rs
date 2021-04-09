@@ -20,21 +20,29 @@ pub fn simulate_with_logger_monolithic(simulate_args: SimulateCommandArgs) -> Re
         SimulateArgs::try_parse(simulate_args, &LiveMonolithicPartitioning::default())?;
     info!("Parsed simulation arguments:\n{:#?}", simulate_args);
 
+    if let Some(event_log) = &simulate_args.event_log {
+        info!(
+            "The simulation will log its events to {:?}.",
+            event_log.directory()
+        );
+        warn!("Therefore, only progress will be reported live.");
+    }
+
     match_any_reporter_plugin_vec!(simulate_args.reporters => |reporter| {
         // Initialise the local partition and the simulation
         match simulate_args.event_log {
             Some(event_log) => super::simulate_with_logger(
                 Box::new(
-                    RecordedMonolithicLocalPartition::from_context_and_recorder(
+                    RecordedMonolithicLocalPartition::try_from_context_and_recorder(
                         DynamicReporterContext::new(reporter),
                         event_log,
-                    ),
+                    )?,
                 ),
                 simulate_args.common,
                 simulate_args.scenario,
             ),
             None => super::simulate_with_logger(
-                Box::new(LiveMonolithicLocalPartition::from_context(DynamicReporterContext::new(reporter))),
+                Box::new(LiveMonolithicLocalPartition::try_from_context(DynamicReporterContext::new(reporter))?),
                 simulate_args.common,
                 simulate_args.scenario,
             ),

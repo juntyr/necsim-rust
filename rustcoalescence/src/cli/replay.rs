@@ -22,7 +22,7 @@ pub fn replay_with_logger<R: ReporterContext>(
 
     info!("Starting event replay ...");
 
-    let mut reporter = reporter_context.build();
+    let mut reporter = reporter_context.try_build()?;
 
     for event in EventLogReplay::try_new(&replay_args.events, 100_000)? {
         reporter.report_progress(Unused::new(&1_u64));
