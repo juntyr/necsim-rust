@@ -51,14 +51,21 @@ pub fn simulate_with_logger<R: ReporterContext, P: LocalPartition<R>>(
     };
 
     if log::log_enabled!(log::Level::Info) {
-        eprintln!("\n\n{:=^80}\n", " Reporter Summary ")
-    };
+        eprintln!("\n");
+        eprintln!("{:=^80}", " Reporter Summary ");
+        eprintln!("");
+    }
     local_partition.finalise_reporting();
     if log::log_enabled!(log::Level::Info) {
-        eprintln!("\n{:=^80}\n", " Reporter Summary ")
-    };
+        eprintln!("");
+        eprintln!("{:=^80}", " Reporter Summary ");
+        eprintln!("");
+    }
 
-    info!("Simulation finished after {} ({} steps).\n", time, steps);
+    info!(
+        "The simulation finished at time {} after {} steps.\n",
+        time, steps
+    );
 
     Ok(())
 }

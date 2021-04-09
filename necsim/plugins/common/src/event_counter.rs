@@ -80,6 +80,10 @@ impl Reporter for EventCounterReporter {
     });
 
     fn finalise_impl(&mut self) {
+        if self.last_speciation_event.is_none() && self.last_dispersal_event.is_none() {
+            return;
+        }
+
         let mut event_summary = String::new();
 
         let _ = writeln!(&mut event_summary, "Event Summary:");

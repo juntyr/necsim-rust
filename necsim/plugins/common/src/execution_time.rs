@@ -54,6 +54,7 @@ impl Reporter for ExecutionTimeReporter {
 
 impl Default for ExecutionTimeReporter {
     #[debug_ensures(ret.start_time.is_none(), "initialises start_time to None")]
+    #[debug_ensures(ret.end_time.is_none(), "initialises end_time to None")]
     fn default() -> Self {
         Self {
             init_time: Instant::now(),

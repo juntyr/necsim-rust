@@ -1,8 +1,11 @@
+#![deny(clippy::pedantic)]
+
 use std::{
+    convert::TryFrom,
     fmt,
     fs::{File, OpenOptions},
-    io::{BufWriter, Write},
-    path::{Path, PathBuf},
+    io::{self, BufWriter, Write},
+    path::PathBuf,
 };
 
 use serde::Deserialize;
@@ -15,9 +18,9 @@ necsim_plugins_core::export_plugin!(Csv => CsvReporter);
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Deserialize)]
+#[serde(try_from = "CsvReporterArgs")]
 pub struct CsvReporter {
     output: PathBuf,
-    #[serde(skip)]
     writer: Option<BufWriter<File>>,
 }
 
@@ -26,6 +29,29 @@ impl fmt::Debug for CsvReporter {
         fmt.debug_struct("CsvReporter")
             .field("output", &self.output)
             .finish()
+    }
+}
+
+#[derive(Deserialize)]
+struct CsvReporterArgs {
+    output: PathBuf,
+}
+
+impl TryFrom<CsvReporterArgs> for CsvReporter {
+    type Error = io::Error;
+
+    fn try_from(args: CsvReporterArgs) -> Result<Self, Self::Error> {
+        // Preliminary argument parsing check if the output is a writable file
+        let file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&args.output)?;
+        std::mem::drop(file);
+
+        Ok(Self {
+            output: args.output,
+            writer: None,
+        })
     }
 }
 
@@ -47,23 +73,13 @@ impl Reporter for CsvReporter {
     });
 
     fn finalise_impl(&mut self) {
-        // no-op
+        if let Some(writer) = &mut self.writer {
+            std::mem::drop(writer.flush());
+        }
     }
 }
 
 impl CsvReporter {
-    #[must_use]
-    pub fn new(path: &Path) -> Self {
-        Self {
-            output: path.to_owned(),
-            writer: None,
-        }
-    }
-
-    pub fn finish(self) {
-        std::mem::drop(self)
-    }
-
     fn write_event(
         &mut self,
         reference: &GlobalLineageReference,
@@ -79,7 +95,7 @@ impl CsvReporter {
                 .truncate(true)
                 .write(true)
                 .open(output)
-                .unwrap_or_else(|_| panic!("Could not open {:?}", output));
+                .unwrap_or_else(|_| panic!("Could not write to the output path {:?}", output));
 
             let mut writer = BufWriter::new(file);
 

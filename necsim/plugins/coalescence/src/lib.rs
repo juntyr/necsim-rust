@@ -1,3 +1,5 @@
+#![deny(clippy::pedantic)]
+
 // IDEA: produce the coalescence tree in the form of a queryable DB
 
 // LINEAGES (
