@@ -23,7 +23,6 @@ impl Default for LiveMonolithicPartitioning {
 #[contract_trait]
 impl Partitioning for LiveMonolithicPartitioning {
     type Auxiliary = ();
-    type Error = !;
     type LocalPartition<P: ReporterContext> = LiveMonolithicLocalPartition<P>;
 
     fn is_monolithic(&self) -> bool {
@@ -46,8 +45,8 @@ impl Partitioning for LiveMonolithicPartitioning {
         self,
         reporter_context: P,
         _auxiliary: Self::Auxiliary,
-    ) -> Result<Self::LocalPartition<P>, Self::Error> {
-        Ok(LiveMonolithicLocalPartition::from_context(reporter_context))
+    ) -> anyhow::Result<Self::LocalPartition<P>> {
+        LiveMonolithicLocalPartition::try_from_context(reporter_context)
     }
 }
 
@@ -134,10 +133,17 @@ impl<P: ReporterContext> LocalPartition<P> for LiveMonolithicLocalPartition<P> {
 }
 
 impl<P: ReporterContext> LiveMonolithicLocalPartition<P> {
-    pub fn from_context(context: P) -> Self {
+    pub fn from_reporter(reporter: P::Reporter) -> Self {
         Self {
-            reporter: context.build(),
+            reporter,
             loopback: Vec::new(),
         }
+    }
+
+    /// # Errors
+    ///
+    /// Returns any error which occured while building the context's reporter
+    pub fn try_from_context(context: P) -> anyhow::Result<Self> {
+        Ok(Self::from_reporter(context.try_build()?))
     }
 }

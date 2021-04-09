@@ -34,12 +34,29 @@ pub trait Reporter: core::fmt::Debug {
         remaining: Unused<'a, u64>,
     ) -> MaybeUsed<'a, u64, Self::ReportProgress>;
 
-    fn finalise_impl(&mut self);
+    /// This `initialise` hook can be used to commit to make final
+    /// initialisation steps which have side effects.
+    ///
+    /// # Errors
+    ///
+    /// Return an error `String` iff initialisation failed.
+    /// The calling code should take this as a hint to abort.
+    fn initialise(&mut self) -> Result<(), alloc::string::String> {
+        Ok(())
+    }
 
-    fn finalise(mut self)
+    fn finalise(self)
     where
         Self: Sized,
     {
-        self.finalise_impl()
+        core::mem::drop(self)
+    }
+
+    /// # Safety
+    ///
+    /// This method should not be implemented manually
+    //  please - use the`impl_finalise` macro instead.
+    unsafe fn finalise_boxed(self: alloc::boxed::Box<Self>) {
+        core::mem::drop(self)
     }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    impl_report,
+    impl_finalise, impl_report,
     reporter::{boolean::Or, Reporter},
 };
 
@@ -61,8 +61,12 @@ where
         remaining.into()
     });
 
-    fn finalise_impl(&mut self) {
-        self.front.finalise_impl();
-        self.tail.finalise_impl()
+    impl_finalise!((self) {
+        self.front.finalise();
+        self.tail.finalise()
+    });
+
+    fn initialise(&mut self) -> Result<(), alloc::string::String> {
+        self.front.initialise().and_then(|_| self.tail.initialise())
     }
 }

@@ -82,6 +82,11 @@ impl EventLogRecorder {
         })
     }
 
+    #[must_use]
+    pub fn directory(&self) -> &Path {
+        &self.directory
+    }
+
     pub fn record_speciation(&mut self, event: &SpeciationEvent) {
         self.buffer.push(event.clone().into());
 

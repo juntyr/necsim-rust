@@ -76,7 +76,7 @@ pub fn simulate_static<R: ReporterContext, P: LocalPartition<R>>(
         local_dispersal_sampler,
         local_lineage_store,
         rng,
-        &mut LiveMonolithicLocalPartition::from_context(MigrationReporter::new(
+        &mut LiveMonolithicLocalPartition::from_reporter(MigrationReporter::new(
             &mut number_of_migrations,
         )),
     );
@@ -136,8 +136,8 @@ impl<'m> MigrationReporter<'m> {
 impl<'m> ReporterContext for MigrationReporter<'m> {
     type Reporter = Self;
 
-    fn build(self) -> Self::Reporter {
-        self
+    fn try_build(self) -> anyhow::Result<Self::Reporter> {
+        Ok(self)
     }
 }
 
@@ -161,8 +161,4 @@ impl<'m> Reporter for MigrationReporter<'m> {
     impl_report!(progress(&mut self, remaining: Unused) -> Unused {
         remaining.ignore()
     });
-
-    fn finalise_impl(&mut self) {
-        // no-op
-    }
 }

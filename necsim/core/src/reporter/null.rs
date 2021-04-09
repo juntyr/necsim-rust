@@ -18,8 +18,4 @@ impl Reporter for NullReporter {
     impl_report!(progress(&mut self, remaining: Unused) -> Unused {
         remaining.ignore()
     });
-
-    fn finalise_impl(&mut self) {
-        // no-op
-    }
 }

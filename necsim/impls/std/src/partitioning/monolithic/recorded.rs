@@ -100,12 +100,18 @@ impl<P: ReporterContext> LocalPartition<P> for RecordedMonolithicLocalPartition<
 }
 
 impl<P: ReporterContext> RecordedMonolithicLocalPartition<P> {
-    pub fn from_context_and_recorder(context: P, recorder: EventLogRecorder) -> Self {
-        Self {
-            reporter: context.build(),
+    /// # Errors
+    ///
+    /// Returns any error which occured while building the context's reporter
+    pub fn try_from_context_and_recorder(
+        context: P,
+        recorder: EventLogRecorder,
+    ) -> anyhow::Result<Self> {
+        Ok(Self {
+            reporter: context.try_build()?,
             recorder,
             loopback: Vec::new(),
-        }
+        })
     }
 }
 
@@ -131,8 +137,4 @@ impl<P: ReporterContext> Reporter for RecordedMonolithicLocalPartition<P> {
     > {
         self.reporter.report_progress(remaining)
     });
-
-    fn finalise_impl(&mut self) {
-        // no-op
-    }
 }

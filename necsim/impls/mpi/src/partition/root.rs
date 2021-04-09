@@ -1,5 +1,6 @@
 use std::{
     fmt,
+    mem::ManuallyDrop,
     num::{NonZeroU32, Wrapping},
     time::{Duration, Instant},
 };
@@ -40,10 +41,11 @@ pub struct MpiRootPartition<P: ReporterContext> {
     migration_buffers: Box<[Vec<MigratingLineage>]>,
     last_migration_times: Box<[Instant]>,
     emigration_requests: Box<[Option<Request<'static, StaticScope>>]>,
-    reporter: P::Reporter,
+    reporter: ManuallyDrop<P::Reporter>,
     recorder: EventLogRecorder,
     barrier: Option<Request<'static, StaticScope>>,
     communicated_since_last_barrier: bool,
+    finalised: bool,
 }
 
 impl<P: ReporterContext> fmt::Debug for MpiRootPartition<P> {
@@ -54,6 +56,12 @@ impl<P: ReporterContext> fmt::Debug for MpiRootPartition<P> {
 
 impl<P: ReporterContext> Drop for MpiRootPartition<P> {
     fn drop(&mut self) {
+        if self.finalised {
+            unsafe { ManuallyDrop::take(&mut self.reporter) }.finalise()
+        } else {
+            unsafe { ManuallyDrop::drop(&mut self.reporter) }
+        }
+
         for request in self.emigration_requests.iter_mut() {
             if let Some(request) = request.take() {
                 CancelGuard::from(request);
@@ -74,7 +82,7 @@ impl<P: ReporterContext> MpiRootPartition<P> {
     pub fn new(
         universe: Universe,
         world: SystemCommunicator,
-        context: P,
+        reporter: P::Reporter,
         recorder: EventLogRecorder,
     ) -> Self {
         #[allow(clippy::cast_sign_loss)]
@@ -101,10 +109,11 @@ impl<P: ReporterContext> MpiRootPartition<P> {
             migration_buffers: migration_buffers.into_boxed_slice(),
             last_migration_times: vec![now; world_size].into_boxed_slice(),
             emigration_requests: emigration_requests.into_boxed_slice(),
-            reporter: context.build(),
+            reporter: ManuallyDrop::new(reporter),
             recorder,
             barrier: None,
             communicated_since_last_barrier: false,
+            finalised: false,
         }
     }
 }
@@ -362,7 +371,9 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
     }
 
     fn finalise_reporting(mut self) {
-        self.reporter.finalise_impl()
+        self.finalised = true;
+
+        std::mem::drop(self)
     }
 }
 
@@ -417,8 +428,4 @@ impl<P: ReporterContext> Reporter for MpiRootPartition<P> {
             }
         })
     });
-
-    fn finalise_impl(&mut self) {
-        // no-op
-    }
 }

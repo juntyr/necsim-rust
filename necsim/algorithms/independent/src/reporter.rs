@@ -34,10 +34,6 @@ impl<'p, R: ReporterContext, P: LocalPartition<R>> Reporter for PartitionReporte
     impl_report!(progress(&mut self, remaining: Unused) -> Unused {
         remaining.ignore()
     });
-
-    fn finalise_impl(&mut self) {
-        self.local_partition.get_reporter().finalise_impl()
-    }
 }
 
 impl<'p, R: ReporterContext, P: LocalPartition<R>> PartitionReporterProxy<'p, R, P> {

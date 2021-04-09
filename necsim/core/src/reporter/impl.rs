@@ -68,3 +68,29 @@ macro_rules! impl_report {
         type $UsageIdent = $UsageTy;
     };
 }
+
+#[macro_export]
+macro_rules! impl_finalise {
+    ($(#[$metas:meta])* ($self:ident) $code:block) => {
+        $(#[$metas])*
+        fn finalise($self) where Self:Sized {
+            $code
+        }
+
+        $(#[$metas])*
+        unsafe fn finalise_boxed($self: $crate::alloc::boxed::Box<Self>) {
+            $code
+        }
+    };
+    ($(#[$metas:meta])* (mut $self:ident) $code:block) => {
+        $(#[$metas])*
+        fn finalise(mut $self) where Self:Sized {
+            $code
+        }
+
+        $(#[$metas])*
+        unsafe fn finalise_boxed(mut $self: $crate::alloc::boxed::Box<Self>) {
+            $code
+        }
+    };
+}

@@ -2,7 +2,7 @@ use std::{fmt, fmt::Write};
 
 use necsim_core::{
     event::{DispersalEvent, SpeciationEvent},
-    impl_report,
+    impl_finalise, impl_report,
     reporter::Reporter,
 };
 
@@ -79,7 +79,7 @@ impl Reporter for EventCounterReporter {
         remaining.ignore()
     });
 
-    fn finalise_impl(&mut self) {
+    impl_finalise!((self) {
         if self.last_speciation_event.is_none() && self.last_dispersal_event.is_none() {
             return;
         }
@@ -130,7 +130,7 @@ impl Reporter for EventCounterReporter {
         );
 
         log::info!("{}", event_summary)
-    }
+    });
 }
 
 impl Default for EventCounterReporter {

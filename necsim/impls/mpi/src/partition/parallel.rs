@@ -344,7 +344,7 @@ impl<P: ReporterContext> LocalPartition<P> for MpiParallelPartition<P> {
     }
 
     fn finalise_reporting(self) {
-        // no-op
+        std::mem::drop(self)
     }
 }
 
@@ -399,8 +399,4 @@ impl<P: ReporterContext> Reporter for MpiParallelPartition<P> {
             }
         })
     });
-
-    fn finalise_impl(&mut self) {
-        // no-op
-    }
 }

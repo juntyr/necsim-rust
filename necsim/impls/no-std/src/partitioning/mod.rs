@@ -12,7 +12,6 @@ pub mod monolithic;
 pub trait Partitioning: Sized {
     type LocalPartition<P: ReporterContext>: LocalPartition<P>;
     type Auxiliary;
-    type Error;
 
     fn is_monolithic(&self) -> bool;
 
@@ -38,7 +37,7 @@ pub trait Partitioning: Sized {
         self,
         reporter_context: P,
         auxiliary: Self::Auxiliary,
-    ) -> Result<Self::LocalPartition<P>, Self::Error>;
+    ) -> anyhow::Result<Self::LocalPartition<P>>;
 }
 
 #[derive(Copy, Clone)]
