@@ -8,6 +8,9 @@ pub static RUSTC_VERSION: &str = env!("RUSTC_VERSION");
 pub use erased_serde;
 #[cfg(feature = "export")]
 #[doc(hidden)]
+pub use log;
+#[cfg(feature = "export")]
+#[doc(hidden)]
 pub use serde;
 
 #[cfg(feature = "export")]

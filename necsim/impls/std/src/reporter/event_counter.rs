@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, fmt::Write};
 
 use necsim_core::{
     event::{DispersalEvent, SpeciationEvent},
@@ -19,7 +19,7 @@ pub struct EventCounterReporter {
 }
 
 impl fmt::Debug for EventCounterReporter {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("EventReporter")
             .field("speciation", &self.speciation)
             .field("out_dispersal", &self.out_dispersal)
@@ -78,6 +78,55 @@ impl Reporter for EventCounterReporter {
     impl_report!(progress(&mut self, remaining: Unused) -> Unused {
         remaining.ignore()
     });
+
+    fn finalise_impl(&mut self) {
+        let mut event_summary = String::new();
+
+        let _ = writeln!(&mut event_summary, "Event Summary:");
+
+        let _ = writeln!(
+            &mut event_summary,
+            " - Total #individuals:\n     {}",
+            self.speciation + self.self_coalescence + self.out_coalescence
+        );
+        let _ = writeln!(
+            &mut event_summary,
+            " - Total #events:\n     {}",
+            self.speciation
+                + self.self_coalescence
+                + self.out_coalescence
+                + self.self_dispersal
+                + self.out_dispersal
+        );
+
+        let _ = writeln!(
+            &mut event_summary,
+            " - Speciation:\n     {}",
+            self.speciation
+        );
+        let _ = writeln!(
+            &mut event_summary,
+            " - Dispersal outside cell:\n     {}",
+            self.out_dispersal
+        );
+        let _ = writeln!(
+            &mut event_summary,
+            " - Dispersal inside cell:\n     {}",
+            self.self_dispersal
+        );
+        let _ = writeln!(
+            &mut event_summary,
+            " - Coalescence outside cell:\n     {}",
+            self.out_coalescence
+        );
+        let _ = write!(
+            &mut event_summary,
+            " - Coalescence inside cell:\n     {}",
+            self.self_coalescence
+        );
+
+        log::info!("{}", event_summary)
+    }
 }
 
 impl Default for EventCounterReporter {
@@ -100,32 +149,5 @@ impl Default for EventCounterReporter {
             out_coalescence: 0,
             self_coalescence: 0,
         }
-    }
-}
-
-impl EventCounterReporter {
-    pub fn report(self) {
-        println!("{:=^80}", " Event Summary ");
-
-        println!(
-            "Total #individuals:\n\t{}",
-            self.speciation + self.self_coalescence + self.out_coalescence
-        );
-        println!(
-            "Total #events:\n\t{}",
-            self.speciation
-                + self.self_coalescence
-                + self.out_coalescence
-                + self.self_dispersal
-                + self.out_dispersal
-        );
-
-        println!("Speciation:\n\t{}", self.speciation);
-        println!("Dispersal outside cell:\n\t{}", self.out_dispersal);
-        println!("Dispersal inside cell:\n\t{}", self.self_dispersal);
-        println!("Coalescence outside cell:\n\t{}", self.out_coalescence);
-        println!("Coalescence inside cell:\n\t{}", self.self_coalescence);
-
-        println!("{:=^80}", " Event Summary ");
     }
 }

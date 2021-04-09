@@ -22,7 +22,7 @@ pub struct CsvReporter {
 }
 
 impl fmt::Debug for CsvReporter {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("CsvReporter")
             .field("output", &self.output)
             .finish()
@@ -45,6 +45,10 @@ impl Reporter for CsvReporter {
     impl_report!(progress(&mut self, remaining: Unused) -> Unused {
         remaining.ignore()
     });
+
+    fn finalise_impl(&mut self) {
+        // no-op
+    }
 }
 
 impl CsvReporter {

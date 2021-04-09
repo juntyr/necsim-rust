@@ -8,7 +8,7 @@ use necsim_core::{
 
 use crate::{
     partitioning::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode, Partitioning},
-    reporter::{GuardedReporter, ReporterContext},
+    reporter::ReporterContext,
 };
 
 #[allow(clippy::module_name_repetitions)]
@@ -47,24 +47,22 @@ impl Partitioning for LiveMonolithicPartitioning {
         reporter_context: P,
         _auxiliary: Self::Auxiliary,
     ) -> Result<Self::LocalPartition<P>, Self::Error> {
-        Ok(LiveMonolithicLocalPartition::from_reporter(
-            reporter_context.build_guarded(),
-        ))
+        Ok(LiveMonolithicLocalPartition::from_context(reporter_context))
     }
 }
 
 #[allow(clippy::module_name_repetitions)]
 pub struct LiveMonolithicLocalPartition<P: ReporterContext> {
-    reporter: GuardedReporter<P::Reporter, P::Finaliser>,
+    reporter: P::Reporter,
     loopback: Vec<MigratingLineage>,
 }
 
 impl<P: ReporterContext> fmt::Debug for LiveMonolithicLocalPartition<P> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         struct LoopbackLen(usize);
 
         impl fmt::Debug for LoopbackLen {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
                 write!(f, "Vec<MigratingLineage; {}>", self.0)
             }
         }
@@ -129,12 +127,16 @@ impl<P: ReporterContext> LocalPartition<P> for LiveMonolithicLocalPartition<P> {
     fn report_progress_sync(&mut self, remaining: u64) {
         self.reporter.report_progress(Unused::new(&remaining));
     }
+
+    fn finalise_reporting(self) {
+        self.reporter.finalise()
+    }
 }
 
 impl<P: ReporterContext> LiveMonolithicLocalPartition<P> {
-    pub fn from_reporter(reporter_guard: GuardedReporter<P::Reporter, P::Finaliser>) -> Self {
+    pub fn from_context(context: P) -> Self {
         Self {
-            reporter: reporter_guard,
+            reporter: context.build(),
             loopback: Vec::new(),
         }
     }

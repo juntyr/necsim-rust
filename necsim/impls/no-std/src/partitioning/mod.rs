@@ -82,4 +82,6 @@ pub trait LocalPartition<P: ReporterContext>: Sized {
     fn reduce_global_time_steps(&self, local_time: f64, local_steps: u64) -> (f64, u64);
 
     fn report_progress_sync(&mut self, remaining: u64);
+
+    fn finalise_reporting(self);
 }

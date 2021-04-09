@@ -9,6 +9,8 @@ pub struct ReporterPluginDeclaration {
     pub rustc_version: &'static str,
     pub core_version: &'static str,
 
+    pub init: unsafe extern "C" fn(&'static dyn log::Log, log::LevelFilter),
+
     pub deserialise:
         unsafe extern "C" fn(
             &mut dyn erased_serde::Deserializer,
@@ -52,6 +54,16 @@ impl<R: Reporter> From<R> for UnsafeReporterPlugin {
 macro_rules! export_plugin {
     ($($name:ident => $plugin:ty),+$(,)?) => {
         #[doc(hidden)]
+        extern "C" fn __necsim_reporter_plugin_init(
+            log: &'static dyn $crate::log::Log,
+            max_level: $crate::log::LevelFilter,
+        ) {
+            let _ = $crate::log::set_logger(log);
+
+            $crate::log::set_max_level(max_level);
+        }
+
+        #[doc(hidden)]
         extern "C" fn __necsim_reporter_plugin_deserialise<'de>(
             deserializer: &mut dyn $crate::erased_serde::Deserializer<'de>,
         ) -> Result<
@@ -85,6 +97,7 @@ macro_rules! export_plugin {
                 rustc_version: $crate::RUSTC_VERSION,
                 core_version: $crate::CORE_VERSION,
 
+                init: __necsim_reporter_plugin_init,
                 deserialise: __necsim_reporter_plugin_deserialise,
                 drop: __necsim_reporter_plugin_drop,
             };

@@ -32,7 +32,7 @@ impl<I: Iterator<Item = u64>> DerefMut for OriginPreSampler<I> {
 }
 
 impl<I: Iterator<Item = u64>> fmt::Debug for OriginPreSampler<I> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("OriginPreSampler").finish()
     }
 }

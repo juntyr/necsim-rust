@@ -915,7 +915,7 @@ pub struct Position {
 }
 
 impl Display for Position {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
         write!(f, "{}:{}", self.line, self.col)
     }
 }

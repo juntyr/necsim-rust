@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use necsim_core::{impl_report, reporter::Reporter};
 
@@ -39,6 +39,17 @@ impl Reporter for ExecutionTimeReporter {
             })
         }
     );
+
+    fn finalise_impl(&mut self) {
+        if let (Some(start_time), Some(end_time)) = (self.start_time, self.end_time) {
+            info!(
+                "The simulation took:\n - initialisation: {}s\n - execution: {}s\n - cleanup: {}s",
+                (start_time - self.init_time).as_secs_f32(),
+                (end_time - start_time).as_secs_f32(),
+                end_time.elapsed().as_secs_f32()
+            )
+        }
+    }
 }
 
 impl Default for ExecutionTimeReporter {
@@ -48,27 +59,6 @@ impl Default for ExecutionTimeReporter {
             init_time: Instant::now(),
             start_time: None,
             end_time: None,
-        }
-    }
-}
-
-pub struct ExecutionTime {
-    pub initialisation: Duration,
-    pub execution: Duration,
-    pub cleanup: Duration,
-}
-
-impl ExecutionTimeReporter {
-    #[must_use]
-    pub fn execution_time(self) -> Option<ExecutionTime> {
-        if let (Some(start_time), Some(end_time)) = (self.start_time, self.end_time) {
-            Some(ExecutionTime {
-                initialisation: start_time - self.init_time,
-                execution: end_time - start_time,
-                cleanup: end_time.elapsed(),
-            })
-        } else {
-            None
         }
     }
 }

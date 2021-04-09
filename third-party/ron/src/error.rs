@@ -60,7 +60,7 @@ pub enum ErrorCode {
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if (self.position == Position { line: 0, col: 0 }) {
             write!(f, "{}", self.code)
         } else {
@@ -70,7 +70,7 @@ impl fmt::Display for Error {
 }
 
 impl fmt::Display for ErrorCode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             ErrorCode::Io(ref s) => f.write_str(s),
             ErrorCode::Message(ref s) => f.write_str(s),

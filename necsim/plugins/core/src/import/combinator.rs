@@ -27,7 +27,7 @@ pub struct ReporterPluginVec<
 impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolean> fmt::Debug
     for ReporterPluginVec<ReportSpeciation, ReportDispersal, ReportProgress>
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("ReporterPluginVec")
             .field("plugins", &self.plugins)
             .finish()
@@ -66,9 +66,16 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
             }
         })
     });
+
+    fn finalise_impl(&mut self) {
+        for plugin in self.plugins.iter_mut() {
+            plugin.reporter.finalise_impl()
+        }
+    }
 }
 
 #[allow(clippy::pub_enum_variant_names)]
+#[derive(Debug)]
 pub enum AnyReporterPluginVec {
     IgnoreSpeciationIgnoreDispersalIgnoreProgress(ReporterPluginVec<False, False, False>),
     IgnoreSpeciationIgnoreDispersalReportProgress(ReporterPluginVec<False, False, True>),
@@ -142,4 +149,22 @@ impl FromIterator<ReporterPlugin> for AnyReporterPluginVec {
             },
         }
     }
+}
+
+#[macro_export]
+macro_rules! match_any_reporter_plugin_vec {
+    ($any:expr => | $inner:ident | $code:block) => {{
+        use $crate::import::AnyReporterPluginVec::*;
+
+        match $any {
+            IgnoreSpeciationIgnoreDispersalIgnoreProgress($inner) => $code,
+            IgnoreSpeciationIgnoreDispersalReportProgress($inner) => $code,
+            IgnoreSpeciationReportDispersalIgnoreProgress($inner) => $code,
+            IgnoreSpeciationReportDispersalReportProgress($inner) => $code,
+            ReportSpeciationIgnoreDispersalIgnoreProgress($inner) => $code,
+            ReportSpeciationIgnoreDispersalReportProgress($inner) => $code,
+            ReportSpeciationReportDispersalIgnoreProgress($inner) => $code,
+            ReportSpeciationReportDispersalReportProgress($inner) => $code,
+        }
+    }};
 }

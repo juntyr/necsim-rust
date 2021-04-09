@@ -14,7 +14,7 @@ use necsim_impls_std::{
     event_log::recorder::EventLogRecorder,
 };
 
-use necsim_plugins_core::import::{ReporterPlugin, ReporterPluginLibrary};
+use necsim_plugins_core::import::{AnyReporterPluginVec, ReporterPluginLibrary};
 
 #[derive(Debug, StructOpt)]
 #[allow(clippy::module_name_repetitions)]
@@ -45,7 +45,7 @@ pub struct SimulateArgs {
     pub common: CommonArgs,
     pub event_log: Option<EventLogRecorder>,
     pub scenario: Scenario,
-    pub reporters: Vec<ReporterPlugin>,
+    pub reporters: AnyReporterPluginVec,
 }
 
 impl<'de> DeserializeState<'de, Partition> for SimulateArgs {
@@ -148,7 +148,7 @@ pub enum Algorithm {
 }
 
 impl fmt::Display for Algorithm {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         #[allow(unreachable_patterns)]
         match self {
             #[cfg(feature = "necsim-classical")]

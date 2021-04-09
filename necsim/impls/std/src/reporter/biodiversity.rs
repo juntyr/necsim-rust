@@ -10,7 +10,7 @@ pub struct BiodiversityReporter {
 }
 
 impl fmt::Debug for BiodiversityReporter {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("BiodiversityReporter")
             .field("biodiversity", &self.biodiversity)
             .finish()
@@ -43,6 +43,15 @@ impl Reporter for BiodiversityReporter {
     impl_report!(progress(&mut self, remaining: Unused) -> Unused {
         remaining.ignore()
     });
+
+    fn finalise_impl(&mut self) {
+        if self.biodiversity > 0 {
+            info!(
+                "The simulation resulted in a biodiversity of {} unique species.",
+                self.biodiversity
+            );
+        }
+    }
 }
 
 impl Default for BiodiversityReporter {
@@ -52,13 +61,5 @@ impl Default for BiodiversityReporter {
             last_event: None,
             biodiversity: 0,
         }
-    }
-}
-
-impl BiodiversityReporter {
-    #[must_use]
-    #[debug_ensures(ret == self.biodiversity, "returns biodiversity")]
-    pub fn biodiversity(self) -> usize {
-        self.biodiversity
     }
 }

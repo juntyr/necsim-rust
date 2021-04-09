@@ -33,4 +33,13 @@ pub trait Reporter: core::fmt::Debug {
         &mut self,
         remaining: Unused<'a, u64>,
     ) -> MaybeUsed<'a, u64, Self::ReportProgress>;
+
+    fn finalise_impl(&mut self);
+
+    fn finalise(mut self)
+    where
+        Self: Sized,
+    {
+        self.finalise_impl()
+    }
 }

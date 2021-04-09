@@ -21,7 +21,7 @@ use necsim_core::{
 
 use necsim_impls_no_std::{
     partitioning::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode},
-    reporter::{GuardedReporter, ReporterContext},
+    reporter::ReporterContext,
 };
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 
@@ -40,14 +40,14 @@ pub struct MpiRootPartition<P: ReporterContext> {
     migration_buffers: Box<[Vec<MigratingLineage>]>,
     last_migration_times: Box<[Instant]>,
     emigration_requests: Box<[Option<Request<'static, StaticScope>>]>,
-    reporter: GuardedReporter<P::Reporter, P::Finaliser>,
+    reporter: P::Reporter,
     recorder: EventLogRecorder,
     barrier: Option<Request<'static, StaticScope>>,
     communicated_since_last_barrier: bool,
 }
 
 impl<P: ReporterContext> fmt::Debug for MpiRootPartition<P> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("MpiRootPartition").finish()
     }
 }
@@ -74,7 +74,7 @@ impl<P: ReporterContext> MpiRootPartition<P> {
     pub fn new(
         universe: Universe,
         world: SystemCommunicator,
-        reporter: GuardedReporter<P::Reporter, P::Finaliser>,
+        context: P,
         recorder: EventLogRecorder,
     ) -> Self {
         #[allow(clippy::cast_sign_loss)]
@@ -101,7 +101,7 @@ impl<P: ReporterContext> MpiRootPartition<P> {
             migration_buffers: migration_buffers.into_boxed_slice(),
             last_migration_times: vec![now; world_size].into_boxed_slice(),
             emigration_requests: emigration_requests.into_boxed_slice(),
-            reporter,
+            reporter: context.build(),
             recorder,
             barrier: None,
             communicated_since_last_barrier: false,
@@ -360,6 +360,10 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
                 .0,
         ));
     }
+
+    fn finalise_reporting(mut self) {
+        self.reporter.finalise_impl()
+    }
 }
 
 impl<P: ReporterContext> Reporter for MpiRootPartition<P> {
@@ -413,4 +417,8 @@ impl<P: ReporterContext> Reporter for MpiRootPartition<P> {
             }
         })
     });
+
+    fn finalise_impl(&mut self) {
+        // no-op
+    }
 }

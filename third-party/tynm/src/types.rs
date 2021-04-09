@@ -31,7 +31,7 @@ pub struct TypeNameDisplay<'s> {
 }
 
 impl<'s> fmt::Display for TypeNameDisplay<'s> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.inner
             .write_str(f, self.parameters.0, self.parameters.1)
     }

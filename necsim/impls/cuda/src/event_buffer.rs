@@ -34,7 +34,7 @@ pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
 impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> fmt::Debug
     for EventBuffer<ReportSpeciation, ReportDispersal>
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("EventBuffer")
             .field("max_events", &self.max_events)
             .field("event_counter", &self.event_counter)
@@ -132,4 +132,8 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
     impl_report!(progress(&mut self, remaining: Unused) -> Unused {
         remaining.ignore()
     });
+
+    fn finalise_impl(&mut self) {
+        // no-op
+    }
 }

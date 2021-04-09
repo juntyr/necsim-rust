@@ -87,6 +87,10 @@ impl TryFrom<PathBuf> for PluginLibrary {
             ));
         }
 
+        unsafe {
+            (declaration.init)(log::logger(), log::max_level());
+        }
+
         Ok(Self {
             library,
             declaration,

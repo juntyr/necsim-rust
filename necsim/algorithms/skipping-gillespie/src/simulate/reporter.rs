@@ -15,11 +15,11 @@ pub struct PartitionReporterProxy<'p, R: ReporterContext, P: LocalPartition<R>> 
 }
 
 impl<'p, R: ReporterContext, P: LocalPartition<R>> fmt::Debug for PartitionReporterProxy<'p, R, P> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         struct EventBufferLen(usize);
 
         impl fmt::Debug for EventBufferLen {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
                 write!(f, "Vec<PackedEvent; {}>", self.0)
             }
         }
@@ -52,6 +52,10 @@ impl<'p, R: ReporterContext, P: LocalPartition<R>> Reporter for PartitionReporte
     >::ReportProgress> {
         self.local_partition.get_reporter().report_progress(remaining)
     });
+
+    fn finalise_impl(&mut self) {
+        self.local_partition.get_reporter().finalise_impl()
+    }
 }
 
 impl<'p, R: ReporterContext, P: LocalPartition<R>> PartitionReporterProxy<'p, R, P> {

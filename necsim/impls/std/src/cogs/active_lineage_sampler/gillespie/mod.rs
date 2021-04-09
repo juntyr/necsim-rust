@@ -116,7 +116,7 @@ impl<
         I: ImmigrationEntry,
     > core::fmt::Debug for GillespieActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
 {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct("GillespieActiveLineageSampler")
             .field("active_locations", &"PriorityQueue")
             .field("number_active_lineages", &self.number_active_lineages)

@@ -1,6 +1,11 @@
-use std::{collections::HashSet, fmt};
+use std::collections::HashSet;
 
-use necsim_core::cogs::{Habitat, RngCore, RngSampler};
+use necsim_core::{
+    cogs::{Habitat, RngCore, RngSampler},
+    event::SpeciationEvent,
+    impl_report,
+    reporter::Reporter,
+};
 
 use necsim_impls_no_std::cogs::{
     dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
@@ -13,10 +18,10 @@ use necsim_impls_no_std::cogs::{
 
 use necsim_impls_no_std::{
     partitioning::{monolithic::live::LiveMonolithicLocalPartition, LocalPartition},
-    reporter::{GuardedReporter, ReporterContext},
+    reporter::ReporterContext,
 };
 
-use necsim_impls_std::{cogs::rng::std::StdRng, reporter::biodiversity::BiodiversityReporter};
+use necsim_impls_std::cogs::rng::std::StdRng;
 
 use super::ClassicalSimulation;
 
@@ -63,7 +68,7 @@ pub fn simulate_static<R: ReporterContext, P: LocalPartition<R>>(
         NonSpatialDispersalSampler<_>,
         InMemoryLineageReference,
         CoherentInMemoryLineageStore<_>,
-        MigrationReporterContext<_>,
+        MigrationReporter,
         LiveMonolithicLocalPartition<_>,
     >(
         local_habitat,
@@ -71,12 +76,9 @@ pub fn simulate_static<R: ReporterContext, P: LocalPartition<R>>(
         local_dispersal_sampler,
         local_lineage_store,
         rng,
-        &mut LiveMonolithicLocalPartition::from_reporter(
-            MigrationReporterContext::new(|migration_reporter| {
-                number_of_migrations = migration_reporter.biodiversity()
-            })
-            .build_guarded(),
-        ),
+        &mut LiveMonolithicLocalPartition::from_context(MigrationReporter::new(
+            &mut number_of_migrations,
+        )),
     );
 
     let meta_habitat = NonSpatialHabitat::new(meta_area_deme.0, meta_area_deme.1);
@@ -114,27 +116,53 @@ pub fn simulate_static<R: ReporterContext, P: LocalPartition<R>>(
     (local_time + meta_time, local_steps + meta_steps)
 }
 
-struct MigrationReporterContext<F: FnOnce(BiodiversityReporter)> {
-    finaliser: F,
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug)]
+pub struct MigrationReporter<'m> {
+    last_event: Option<SpeciationEvent>,
+
+    migrations: &'m mut usize,
 }
 
-impl<F: FnOnce(BiodiversityReporter)> fmt::Debug for MigrationReporterContext<F> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("MigrationReporterContext").finish()
+impl<'m> MigrationReporter<'m> {
+    pub fn new(migrations: &'m mut usize) -> Self {
+        Self {
+            last_event: None,
+            migrations,
+        }
     }
 }
 
-impl<F: FnOnce(BiodiversityReporter)> MigrationReporterContext<F> {
-    pub fn new(finaliser: F) -> Self {
-        Self { finaliser }
+impl<'m> ReporterContext for MigrationReporter<'m> {
+    type Reporter = Self;
+
+    fn build(self) -> Self::Reporter {
+        self
     }
 }
 
-impl<F: FnOnce(BiodiversityReporter)> ReporterContext for MigrationReporterContext<F> {
-    type Finaliser = F;
-    type Reporter = BiodiversityReporter;
+impl<'m> Reporter for MigrationReporter<'m> {
+    impl_report!(speciation(&mut self, event: Unused) -> Used {
+        event.use_in(|event| {
+            if Some(event) == self.last_event.as_ref() {
+                return;
+            }
 
-    fn build_guarded(self) -> GuardedReporter<Self::Reporter, Self::Finaliser> {
-        GuardedReporter::from(BiodiversityReporter::default(), self.finaliser)
+            self.last_event = Some(event.clone());
+
+            *self.migrations += 1;
+        })
+    });
+
+    impl_report!(dispersal(&mut self, event: Unused) -> Unused {
+        event.ignore()
+    });
+
+    impl_report!(progress(&mut self, remaining: Unused) -> Unused {
+        remaining.ignore()
+    });
+
+    fn finalise_impl(&mut self) {
+        // no-op
     }
 }
