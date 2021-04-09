@@ -57,6 +57,15 @@ impl Reporter for ProgressReporter {
                 self.total
                     .fetch_add(remaining - last_remaining, Ordering::AcqRel);
             }
+
+            if last_remaining > 0 && *remaining == 0 {
+                let total = self.total.load(Ordering::Acquire);
+
+                display_progress(total, self.last_remaining.load(Ordering::Acquire).min(total));
+
+                // Flush stderr to update the progress bar
+                std::mem::drop(io::stderr().flush());
+            }
         })
     });
 
