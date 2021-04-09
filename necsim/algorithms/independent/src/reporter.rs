@@ -13,7 +13,7 @@ pub struct PartitionReporterProxy<'p, R: ReporterContext, P: LocalPartition<R>> 
 }
 
 impl<'p, R: ReporterContext, P: LocalPartition<R>> fmt::Debug for PartitionReporterProxy<'p, R, P> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("PartitionReporterProxy").finish()
     }
 }
@@ -34,6 +34,10 @@ impl<'p, R: ReporterContext, P: LocalPartition<R>> Reporter for PartitionReporte
     impl_report!(progress(&mut self, remaining: Unused) -> Unused {
         remaining.ignore()
     });
+
+    fn finalise_impl(&mut self) {
+        self.local_partition.get_reporter().finalise_impl()
+    }
 }
 
 impl<'p, R: ReporterContext, P: LocalPartition<R>> PartitionReporterProxy<'p, R, P> {

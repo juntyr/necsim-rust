@@ -109,8 +109,8 @@ impl Partitioning for MpiPartitioning {
             Ok(if self.world.size() <= 1 {
                 // recorded && is_monolithic
                 MpiLocalPartition::RecordedMonolithic(Box::new(
-                    RecordedMonolithicLocalPartition::from_reporter_and_recorder(
-                        reporter_context.build_guarded(),
+                    RecordedMonolithicLocalPartition::from_context_and_recorder(
+                        reporter_context,
                         event_log,
                     ),
                 ))
@@ -119,7 +119,7 @@ impl Partitioning for MpiPartitioning {
                 MpiLocalPartition::Root(Box::new(MpiRootPartition::new(
                     self.universe,
                     self.world,
-                    reporter_context.build_guarded(),
+                    reporter_context,
                     event_log,
                 )))
             } else {
@@ -133,7 +133,7 @@ impl Partitioning for MpiPartitioning {
         } else if self.world.size() <= 1 {
             // !recorded && monolithic
             Ok(MpiLocalPartition::LiveMonolithic(Box::new(
-                LiveMonolithicLocalPartition::from_reporter(reporter_context.build_guarded()),
+                LiveMonolithicLocalPartition::from_context(reporter_context),
             )))
         } else {
             Err(MpiLocalPartitionError::MissingEventLog)

@@ -14,7 +14,7 @@ pub struct SpatiallyImplicitOriginSampler<'h, I: Iterator<Item = u64>> {
 }
 
 impl<'h, I: Iterator<Item = u64>> fmt::Debug for SpatiallyImplicitOriginSampler<'h, I> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("SpatiallyImplicitOriginSampler")
             .field("local_iterator", &self.local_iterator)
             .field("habitat", &self.habitat)

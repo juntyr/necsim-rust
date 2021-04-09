@@ -60,4 +60,9 @@ where
 
         remaining.into()
     });
+
+    fn finalise_impl(&mut self) {
+        self.front.finalise_impl();
+        self.tail.finalise_impl()
+    }
 }

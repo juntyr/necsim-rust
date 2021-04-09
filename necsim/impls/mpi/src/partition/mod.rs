@@ -135,6 +135,15 @@ impl<P: ReporterContext> LocalPartition<P> for MpiLocalPartition<P> {
             Self::Parallel(partition) => partition.report_progress_sync(remaining),
         }
     }
+
+    fn finalise_reporting(self) {
+        match self {
+            Self::LiveMonolithic(partition) => partition.finalise_reporting(),
+            Self::RecordedMonolithic(partition) => partition.finalise_reporting(),
+            Self::Root(partition) => partition.finalise_reporting(),
+            Self::Parallel(partition) => partition.finalise_reporting(),
+        }
+    }
 }
 
 impl<P: ReporterContext> Reporter for MpiLocalPartition<P> {
@@ -172,4 +181,8 @@ impl<P: ReporterContext> Reporter for MpiLocalPartition<P> {
             Self::Parallel(partition) => partition.get_reporter().report_progress(remaining),
         }
     });
+
+    fn finalise_impl(&mut self) {
+        // no-op
+    }
 }

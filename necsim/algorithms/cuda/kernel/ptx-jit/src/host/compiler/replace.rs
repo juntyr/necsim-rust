@@ -7,7 +7,7 @@ const S_ASCII_BYTE: u8 = 0x73;
 const D_ASCII_BYTE: u8 = 0x64;
 
 impl PtxJITCompiler {
-    pub fn with_arguments(&mut self, arguments: Option<&[Option<&[u8]>]>) -> PtxJITResult<'_> {
+    pub fn with_arguments(&mut self, arguments: Option<&[Option<&[u8]>]>) -> PtxJITResult {
         // Check if the arguments, cast as byte slices, are the same as the last cached
         //  ones
         #[allow(clippy::explicit_deref_methods)]

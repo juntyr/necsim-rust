@@ -50,9 +50,15 @@ pub fn simulate_with_logger<R: ReporterContext, P: LocalPartition<R>>(
         )?,
     };
 
-    std::mem::drop(local_partition);
+    if log::log_enabled!(log::Level::Info) {
+        eprintln!("\n\n{:=^80}\n", " Reporter Summary ")
+    };
+    local_partition.finalise_reporting();
+    if log::log_enabled!(log::Level::Info) {
+        eprintln!("\n{:=^80}\n", " Reporter Summary ")
+    };
 
-    info!("Simulation finished after {} ({} steps).", time, steps);
+    info!("Simulation finished after {} ({} steps).\n", time, steps);
 
     Ok(())
 }

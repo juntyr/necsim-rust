@@ -108,7 +108,7 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G>
 }
 
 impl<H: Habitat, G: RngCore> core::fmt::Debug for InMemoryPackedAliasDispersalSampler<H, G> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct("InMemoryPackedAliasDispersalSampler")
             .field("alias_dispersal_ranges", &self.alias_dispersal_ranges)
             .field(

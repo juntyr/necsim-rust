@@ -21,11 +21,11 @@ impl TryFrom<f64> for ZeroExclOneInclF64 {
 }
 
 impl std::fmt::Debug for ZeroExclOneInclF64 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         struct ZeroExclOneInclF64Range(f64);
 
         impl std::fmt::Debug for ZeroExclOneInclF64Range {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
                 write!(f, "0.0 < {} <= 1.0", self.0)
             }
         }

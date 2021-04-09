@@ -38,7 +38,7 @@ struct ValueVisitor;
 impl<'de> Visitor<'de> for ValueVisitor {
     type Value = Value;
 
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "a RON value")
     }
 

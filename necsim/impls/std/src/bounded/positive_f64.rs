@@ -21,11 +21,11 @@ impl TryFrom<f64> for PositiveF64 {
 }
 
 impl std::fmt::Debug for PositiveF64 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         struct PositiveF64Range(f64);
 
         impl std::fmt::Debug for PositiveF64Range {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
                 write!(f, "0.0 < {}", self.0)
             }
         }

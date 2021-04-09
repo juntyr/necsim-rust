@@ -25,7 +25,7 @@ pub struct ProgressReporter {
 }
 
 impl fmt::Debug for ProgressReporter {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("ProgressReporter")
             .field("last_remaining", &self.last_remaining)
             .field("total", &self.total)
@@ -59,6 +59,14 @@ impl Reporter for ProgressReporter {
             }
         })
     });
+
+    fn finalise_impl(&mut self) {
+        if let Some(updater) = self.updater.take() {
+            if updater.sender.send(()).is_ok() {
+                std::mem::drop(updater.thread.join());
+            }
+        }
+    }
 }
 
 impl Default for ProgressReporter {
@@ -96,32 +104,6 @@ impl Default for ProgressReporter {
             last_remaining,
             total: last_total,
         }
-    }
-}
-
-impl ProgressReporter {
-    pub fn finish(mut self) {
-        if let Some(updater) = self.updater.take() {
-            if updater.sender.send(()).is_ok() {
-                std::mem::drop(updater.thread.join());
-            }
-        }
-
-        let total = self.total.load(Ordering::Acquire);
-
-        if total > 0 {
-            display_progress(
-                total,
-                self.last_remaining.load(Ordering::Acquire).min(total),
-            );
-
-            eprint!("\r\n");
-
-            // Flush stderr to update the progress bar
-            std::mem::drop(io::stderr().flush());
-        }
-
-        std::mem::drop(self)
     }
 }
 

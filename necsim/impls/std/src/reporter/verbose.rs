@@ -6,7 +6,7 @@ use necsim_core::{impl_report, reporter::Reporter};
 pub struct VerboseReporter(());
 
 impl fmt::Debug for VerboseReporter {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("VerboseReporter").finish()
     }
 }
@@ -32,9 +32,13 @@ impl Reporter for VerboseReporter {
 
     impl_report!(progress(&mut self, remaining: Unused) -> Used {
         remaining.use_in(|remaining| {
-            info!("Remaining({})", remaining)
+            info!("Remaining: {}", remaining)
         })
     });
+
+    fn finalise_impl(&mut self) {
+        // no-op
+    }
 }
 
 impl Default for VerboseReporter {

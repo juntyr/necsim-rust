@@ -46,7 +46,7 @@ pub struct MpiParallelPartition<P: ReporterContext> {
 }
 
 impl<P: ReporterContext> fmt::Debug for MpiParallelPartition<P> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("MpiParallelPartition").finish()
     }
 }
@@ -342,6 +342,10 @@ impl<P: ReporterContext> LocalPartition<P> for MpiParallelPartition<P> {
 
         root_process.gather_into(&remaining);
     }
+
+    fn finalise_reporting(self) {
+        // no-op
+    }
 }
 
 impl<P: ReporterContext> Reporter for MpiParallelPartition<P> {
@@ -395,4 +399,8 @@ impl<P: ReporterContext> Reporter for MpiParallelPartition<P> {
             }
         })
     });
+
+    fn finalise_impl(&mut self) {
+        // no-op
+    }
 }

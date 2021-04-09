@@ -13,11 +13,11 @@ pub struct WaterLevelReporter<'e, R: ReporterContext> {
 }
 
 impl<'e, R: ReporterContext> fmt::Debug for WaterLevelReporter<'e, R> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         struct EventBufferLen(usize);
 
         impl fmt::Debug for EventBufferLen {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
                 write!(f, "Vec<PackedEvent; {}>", self.0)
             }
         }
@@ -58,6 +58,10 @@ impl<'e, R: ReporterContext> Reporter for WaterLevelReporter<'e, R> {
     impl_report!(progress(&mut self, remaining: Unused) -> Unused {
         remaining.ignore()
     });
+
+    fn finalise_impl(&mut self) {
+        // no-op
+    }
 }
 
 impl<'e, R: ReporterContext> WaterLevelReporter<'e, R> {

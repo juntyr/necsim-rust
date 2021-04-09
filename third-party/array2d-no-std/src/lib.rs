@@ -208,7 +208,7 @@ pub struct Array2D<T> {
 }
 
 impl<T> core::fmt::Debug for Array2D<T> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct("Array2D")
             .field(
                 "array",

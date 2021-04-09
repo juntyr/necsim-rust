@@ -8,7 +8,7 @@ use necsim_core::{
 
 use necsim_impls_no_std::{
     partitioning::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode},
-    reporter::{GuardedReporter, ReporterContext},
+    reporter::ReporterContext,
 };
 
 use crate::event_log::recorder::EventLogRecorder;
@@ -17,17 +17,17 @@ use anyhow::Result;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct RecordedMonolithicLocalPartition<P: ReporterContext> {
-    reporter: GuardedReporter<P::Reporter, P::Finaliser>,
+    reporter: P::Reporter,
     recorder: EventLogRecorder,
     loopback: Vec<MigratingLineage>,
 }
 
 impl<P: ReporterContext> fmt::Debug for RecordedMonolithicLocalPartition<P> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         struct LoopbackLen(usize);
 
         impl fmt::Debug for LoopbackLen {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
                 write!(f, "Vec<MigratingLineage; {}>", self.0)
             }
         }
@@ -93,15 +93,16 @@ impl<P: ReporterContext> LocalPartition<P> for RecordedMonolithicLocalPartition<
     fn report_progress_sync(&mut self, remaining: u64) {
         self.reporter.report_progress(Unused::new(&remaining));
     }
+
+    fn finalise_reporting(self) {
+        self.reporter.finalise()
+    }
 }
 
 impl<P: ReporterContext> RecordedMonolithicLocalPartition<P> {
-    pub fn from_reporter_and_recorder(
-        reporter_guard: GuardedReporter<P::Reporter, P::Finaliser>,
-        recorder: EventLogRecorder,
-    ) -> Self {
+    pub fn from_context_and_recorder(context: P, recorder: EventLogRecorder) -> Self {
         Self {
-            reporter: reporter_guard,
+            reporter: context.build(),
             recorder,
             loopback: Vec::new(),
         }
@@ -130,4 +131,8 @@ impl<P: ReporterContext> Reporter for RecordedMonolithicLocalPartition<P> {
     > {
         self.reporter.report_progress(remaining)
     });
+
+    fn finalise_impl(&mut self) {
+        // no-op
+    }
 }

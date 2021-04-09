@@ -23,7 +23,7 @@ pub struct NonSpatialOriginSampler<'h, I: Iterator<Item = u64>> {
 }
 
 impl<'h, I: Iterator<Item = u64>> fmt::Debug for NonSpatialOriginSampler<'h, I> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("NonSpatialOriginSampler")
             .field("pre_sampler", &self.pre_sampler)
             .field("last_index", &self.last_index)

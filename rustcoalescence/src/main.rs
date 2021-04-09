@@ -2,9 +2,6 @@
 #![feature(associated_type_bounds)]
 
 #[macro_use]
-extern crate necsim_core;
-
-#[macro_use]
 extern crate serde_derive_state;
 
 #[macro_use]
@@ -25,7 +22,6 @@ mod tiff;
 
 use args::RustcoalescenceArgs;
 use minimal_logger::MinimalLogger;
-use reporter::RustcoalescenceReporterContext;
 
 static MINIMAL_LOGGER: MinimalLogger = MinimalLogger;
 
@@ -52,8 +48,11 @@ fn main() -> Result<()> {
             // Always log to stderr (replay is run without partitioning)
             log::set_max_level(LevelFilter::Info);
 
-            cli::replay::replay_with_logger(replay_args, RustcoalescenceReporterContext::new(true))
-                .context("Failed to replay the simulation.")
+            Ok(())
+
+            // cli::replay::replay_with_logger(replay_args,
+            // RustcoalescenceReporterContext::new(true))
+            //    .context("Failed to replay the simulation.")
         },
     };
 
