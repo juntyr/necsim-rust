@@ -78,6 +78,16 @@ impl Reporter for ProgressReporter {
     }
 }
 
+impl Drop for ProgressReporter {
+    fn drop(&mut self) {
+        if let Some(updater) = self.updater.take() {
+            if updater.sender.send(()).is_ok() {
+                std::mem::drop(updater.thread.join());
+            }
+        }
+    }
+}
+
 impl Default for ProgressReporter {
     fn default() -> Self {
         let last_remaining = Arc::new(AtomicU64::new(0_u64));

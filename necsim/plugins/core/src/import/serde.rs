@@ -125,9 +125,7 @@ impl<'de> serde::de::DeserializeSeed<'de> for RcPluginLibrary {
                     Ok(reporter) => Ok(ReporterPlugin {
                         library: self.library,
 
-                        report_speciation: reporter.report_speciation,
-                        report_dispersal: reporter.report_dispersal,
-                        report_progress: reporter.report_progress,
+                        filter: reporter.filter,
 
                         reporter: ManuallyDrop::new(ManuallyDrop::into_inner(reporter).reporter),
                     }),

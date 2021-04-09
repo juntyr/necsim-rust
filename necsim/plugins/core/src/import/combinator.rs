@@ -40,7 +40,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
     impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<ReportSpeciation> {
         event.maybe_use_in(|event| {
             for plugin in self.plugins.iter_mut() {
-                if plugin.report_speciation {
+                if plugin.filter.report_speciation {
                     plugin.reporter.report_speciation(Unused::new(event));
                 }
             }
@@ -50,7 +50,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
     impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<ReportDispersal> {
         event.maybe_use_in(|event| {
             for plugin in self.plugins.iter_mut() {
-                if plugin.report_dispersal {
+                if plugin.filter.report_dispersal {
                     plugin.reporter.report_dispersal(Unused::new(event));
                 }
             }
@@ -60,7 +60,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
     impl_report!(progress(&mut self, event: Unused) -> MaybeUsed<ReportProgress> {
         event.maybe_use_in(|event| {
             for plugin in self.plugins.iter_mut() {
-                if plugin.report_progress {
+                if plugin.filter.report_progress {
                     plugin.reporter.report_progress(Unused::new(event));
                 }
             }
@@ -94,9 +94,15 @@ impl FromIterator<ReporterPlugin> for AnyReporterPluginVec {
             .collect::<Vec<ReporterPlugin>>()
             .into_boxed_slice();
 
-        let report_speciation = plugins.iter().any(|reporter| reporter.report_speciation);
-        let report_dispersal = plugins.iter().any(|reporter| reporter.report_dispersal);
-        let report_progress = plugins.iter().any(|reporter| reporter.report_progress);
+        let report_speciation = plugins
+            .iter()
+            .any(|reporter| reporter.filter.report_speciation);
+        let report_dispersal = plugins
+            .iter()
+            .any(|reporter| reporter.filter.report_dispersal);
+        let report_progress = plugins
+            .iter()
+            .any(|reporter| reporter.filter.report_progress);
 
         match (report_speciation, report_dispersal, report_progress) {
             (false, false, false) => {

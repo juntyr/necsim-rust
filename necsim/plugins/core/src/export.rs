@@ -20,14 +20,30 @@ pub struct ReporterPluginDeclaration {
     pub drop: unsafe extern "C" fn(ManuallyDrop<UnsafeReporterPlugin>),
 }
 
+#[derive(Copy, Clone)]
+pub struct ReporterPluginFilter {
+    pub(crate) report_speciation: bool,
+    pub(crate) report_dispersal: bool,
+    pub(crate) report_progress: bool,
+}
+
+impl ReporterPluginFilter {
+    #[must_use]
+    pub fn from_reporter<R: Reporter>() -> Self {
+        Self {
+            report_speciation: R::ReportSpeciation::VALUE,
+            report_dispersal: R::ReportDispersal::VALUE,
+            report_progress: R::ReportProgress::VALUE,
+        }
+    }
+}
+
 #[repr(C)]
 pub struct UnsafeReporterPlugin {
     pub(crate) reporter:
         Box<dyn Reporter<ReportSpeciation = True, ReportDispersal = True, ReportProgress = True>>,
 
-    pub(crate) report_speciation: bool,
-    pub(crate) report_dispersal: bool,
-    pub(crate) report_progress: bool,
+    pub(crate) filter: ReporterPluginFilter,
 }
 
 impl<R: Reporter> From<R> for UnsafeReporterPlugin {
@@ -42,10 +58,7 @@ impl<R: Reporter> From<R> for UnsafeReporterPlugin {
 
         Self {
             reporter: unsafe { std::mem::transmute(boxed_reporter) },
-
-            report_speciation: R::ReportSpeciation::VALUE,
-            report_dispersal: R::ReportDispersal::VALUE,
-            report_progress: R::ReportProgress::VALUE,
+            filter: ReporterPluginFilter::from_reporter::<R>(),
         }
     }
 }
