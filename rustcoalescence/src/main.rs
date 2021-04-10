@@ -45,14 +45,7 @@ fn main() -> Result<()> {
         }
         .context("Failed to initialise or perform the simulation."),
         RustcoalescenceArgs::Replay(replay_args) => {
-            // Always log to stderr (replay is run without partitioning)
-            log::set_max_level(LevelFilter::Info);
-
-            Ok(())
-
-            // cli::replay::replay_with_logger(replay_args,
-            // RustcoalescenceReporterContext::new(true))
-            //    .context("Failed to replay the simulation.")
+            cli::replay::replay_with_logger(replay_args).context("Failed to replay the simulation.")
         },
     };
 

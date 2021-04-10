@@ -1,21 +1,48 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt};
 
 use serde::{Deserialize, Serialize};
 
 pub mod recorder;
 pub mod replay;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Serialize, Deserialize, PartialEq)]
 #[allow(clippy::module_name_repetitions)]
 pub struct EventLogHeader {
     min_time: f64,
     max_time: f64,
+
+    length: usize,
+
+    with_speciation: bool,
+    with_dispersal: bool,
+}
+
+impl fmt::Debug for EventLogHeader {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("EventLogHeader")
+            .field("min_time", &self.min_time)
+            .field("max_time", &self.max_time)
+            .field("length", &self.length)
+            .finish()
+    }
 }
 
 impl EventLogHeader {
     #[must_use]
-    pub fn new(min_time: f64, max_time: f64) -> Self {
-        Self { min_time, max_time }
+    pub fn new(
+        min_time: f64,
+        max_time: f64,
+        length: usize,
+        with_speciation: bool,
+        with_dispersal: bool,
+    ) -> Self {
+        Self {
+            min_time,
+            max_time,
+            length,
+            with_speciation,
+            with_dispersal,
+        }
     }
 
     #[must_use]
@@ -26,6 +53,21 @@ impl EventLogHeader {
     #[must_use]
     pub fn max_time(&self) -> f64 {
         self.max_time
+    }
+
+    #[must_use]
+    pub fn length(&self) -> usize {
+        self.length
+    }
+
+    #[must_use]
+    pub fn with_speciation(&self) -> bool {
+        self.with_speciation
+    }
+
+    #[must_use]
+    pub fn with_dispersal(&self) -> bool {
+        self.with_dispersal
     }
 }
 

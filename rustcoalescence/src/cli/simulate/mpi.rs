@@ -6,12 +6,12 @@ use necsim_impls_no_std::partitioning::Partitioning;
 use necsim_plugins_core::match_any_reporter_plugin_vec;
 
 use crate::{
-    args::{SimulateArgs, SimulateCommandArgs},
+    args::{CommandArgs, SimulateArgs},
     reporter::DynamicReporterContext,
 };
 
 #[allow(clippy::module_name_repetitions)]
-pub fn simulate_with_logger_mpi(simulate_args: SimulateCommandArgs) -> Result<()> {
+pub fn simulate_with_logger_mpi(simulate_args: CommandArgs) -> Result<()> {
     // Initialise the simulation partitioning
     let partitioning =
         MpiPartitioning::initialise().with_context(|| "Failed to initialise MPI.")?;

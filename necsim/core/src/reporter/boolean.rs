@@ -30,3 +30,15 @@ impl<O: Boolean> Or<O> for False {
 impl<O: Boolean> Or<O> for True {
     type RESULT = True;
 }
+
+pub trait And<O: Boolean>: Boolean {
+    type RESULT: Boolean;
+}
+
+impl<O: Boolean> And<O> for False {
+    type RESULT = False;
+}
+
+impl<O: Boolean> And<O> for True {
+    type RESULT = O;
+}

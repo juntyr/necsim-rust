@@ -4,7 +4,7 @@ use necsim_core::{
     cogs::{Habitat, RngCore, RngSampler},
     event::SpeciationEvent,
     impl_report,
-    reporter::Reporter,
+    reporter::{boolean::Boolean, FilteredReporter, Reporter},
 };
 
 use necsim_impls_no_std::cogs::{
@@ -76,8 +76,8 @@ pub fn simulate_static<R: ReporterContext, P: LocalPartition<R>>(
         local_dispersal_sampler,
         local_lineage_store,
         rng,
-        &mut LiveMonolithicLocalPartition::from_reporter(MigrationReporter::new(
-            &mut number_of_migrations,
+        &mut LiveMonolithicLocalPartition::from_reporter(FilteredReporter::from(
+            MigrationReporter::new(&mut number_of_migrations),
         )),
     );
 
@@ -136,8 +136,11 @@ impl<'m> MigrationReporter<'m> {
 impl<'m> ReporterContext for MigrationReporter<'m> {
     type Reporter = Self;
 
-    fn try_build(self) -> anyhow::Result<Self::Reporter> {
-        Ok(self)
+    fn try_build<KeepSpeciation: Boolean, KeepDispersal: Boolean, KeepProgress: Boolean>(
+        self,
+    ) -> anyhow::Result<FilteredReporter<Self::Reporter, KeepSpeciation, KeepDispersal, KeepProgress>>
+    {
+        Ok(FilteredReporter::from(self))
     }
 }
 

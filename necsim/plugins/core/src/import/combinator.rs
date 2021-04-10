@@ -34,6 +34,32 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
     }
 }
 
+impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolean>
+    ReporterPluginVec<ReportSpeciation, ReportDispersal, ReportProgress>
+{
+    #[must_use]
+    pub fn internal_filter<
+        KeepSpeciation: Boolean,
+        KeepDispersal: Boolean,
+        KeepProgress: Boolean,
+    >(
+        self,
+    ) -> Self {
+        let mut plugins: Vec<ReporterPlugin> = self.plugins.into_vec();
+
+        plugins.drain_filter(|plugin| {
+            !((plugin.filter.report_speciation && KeepSpeciation::VALUE)
+                || (plugin.filter.report_dispersal && KeepDispersal::VALUE)
+                || (plugin.filter.report_progress && KeepProgress::VALUE))
+        });
+
+        Self {
+            plugins: plugins.into_boxed_slice(),
+            marker: self.marker,
+        }
+    }
+}
+
 impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolean> Reporter
     for ReporterPluginVec<ReportSpeciation, ReportDispersal, ReportProgress>
 {
@@ -179,6 +205,20 @@ macro_rules! match_any_reporter_plugin_vec {
             ReportSpeciationIgnoreDispersalReportProgress($inner) => $code,
             ReportSpeciationReportDispersalIgnoreProgress($inner) => $code,
             ReportSpeciationReportDispersalReportProgress($inner) => $code,
+        }
+    }};
+    ($any:expr => | mut $inner:ident | $code:block) => {{
+        use $crate::import::AnyReporterPluginVec::*;
+
+        match $any {
+            IgnoreSpeciationIgnoreDispersalIgnoreProgress(mut $inner) => $code,
+            IgnoreSpeciationIgnoreDispersalReportProgress(mut $inner) => $code,
+            IgnoreSpeciationReportDispersalIgnoreProgress(mut $inner) => $code,
+            IgnoreSpeciationReportDispersalReportProgress(mut $inner) => $code,
+            ReportSpeciationIgnoreDispersalIgnoreProgress(mut $inner) => $code,
+            ReportSpeciationIgnoreDispersalReportProgress(mut $inner) => $code,
+            ReportSpeciationReportDispersalIgnoreProgress(mut $inner) => $code,
+            ReportSpeciationReportDispersalReportProgress(mut $inner) => $code,
         }
     }};
 }

@@ -25,14 +25,15 @@ impl fmt::Debug for SortedSegment {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("SortedSegment")
             .field("header", &self.header)
-            .field("capacity", &self.capacity)
-            .field("next", &self.buffer.front())
             .finish()
     }
 }
 
 impl SortedSegment {
-    pub fn new(path: &Path, capacity: usize) -> Result<Self> {
+    /// # Errors
+    ///
+    /// Fails if the path cannot be read as an event log segment
+    pub fn try_new(path: &Path, capacity: usize) -> Result<Self> {
         let file = OpenOptions::new().read(true).write(false).open(path)?;
 
         let mut buf_reader = BufReader::new(file);
@@ -57,8 +58,14 @@ impl SortedSegment {
         })
     }
 
+    #[must_use]
     pub fn header(&self) -> &EventLogHeader {
         &self.header
+    }
+
+    #[must_use]
+    pub fn length(&self) -> usize {
+        self.header.length()
     }
 }
 

@@ -1,13 +1,33 @@
-use std::time::Instant;
+use std::{fmt, time::Instant};
 
 use necsim_core::{impl_finalise, impl_report, reporter::Reporter};
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
 pub struct ExecutionTimeReporter {
     init_time: Instant,
     start_time: Option<Instant>,
     end_time: Option<Instant>,
+}
+
+impl fmt::Debug for ExecutionTimeReporter {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("ExecutionTimeReporter")
+            .field(
+                "start_time",
+                &self
+                    .start_time
+                    .as_ref()
+                    .map(|time| time.duration_since(self.init_time)),
+            )
+            .field(
+                "end_time",
+                &self
+                    .end_time
+                    .as_ref()
+                    .map(|time| time.duration_since(self.init_time)),
+            )
+            .finish()
+    }
 }
 
 impl<'de> serde::Deserialize<'de> for ExecutionTimeReporter {
@@ -43,10 +63,11 @@ impl Reporter for ExecutionTimeReporter {
     impl_finalise!((self) {
         if let (Some(start_time), Some(end_time)) = (self.start_time, self.end_time) {
             info!(
-                "The simulation took:\n - initialisation: {}s\n - execution: {}s\n - cleanup: {}s",
-                (start_time - self.init_time).as_secs_f32(),
-                (end_time - start_time).as_secs_f32(),
-                end_time.elapsed().as_secs_f32()
+                "The simulation took:\n - initialisation: {:?}\n - execution: {:?}\n - \
+                cleanup: {:?}",
+                (start_time - self.init_time),
+                (end_time - start_time),
+                end_time.elapsed()
             )
         }
     });

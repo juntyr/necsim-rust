@@ -3,7 +3,11 @@ use std::{fmt, num::NonZeroU32};
 use necsim_core::{
     impl_report,
     lineage::MigratingLineage,
-    reporter::{used::Unused, Reporter},
+    reporter::{
+        boolean::{Boolean, False, True},
+        used::Unused,
+        FilteredReporter, Reporter,
+    },
 };
 
 use necsim_impls_no_std::{
@@ -17,7 +21,7 @@ use anyhow::Result;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct RecordedMonolithicLocalPartition<P: ReporterContext> {
-    reporter: P::Reporter,
+    reporter: FilteredReporter<P::Reporter, False, False, True>,
     recorder: EventLogRecorder,
     loopback: Vec<MigratingLineage>,
 }
@@ -105,8 +109,13 @@ impl<P: ReporterContext> RecordedMonolithicLocalPartition<P> {
     /// Returns any error which occured while building the context's reporter
     pub fn try_from_context_and_recorder(
         context: P,
-        recorder: EventLogRecorder,
+        mut recorder: EventLogRecorder,
     ) -> anyhow::Result<Self> {
+        recorder.set_event_filter(
+            <<P as ReporterContext>::Reporter as Reporter>::ReportSpeciation::VALUE,
+            <<P as ReporterContext>::Reporter as Reporter>::ReportDispersal::VALUE,
+        );
+
         Ok(Self {
             reporter: context.try_build()?,
             recorder,

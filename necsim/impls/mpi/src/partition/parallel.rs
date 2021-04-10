@@ -14,7 +14,11 @@ use mpi::{
     topology::{Communicator, SystemCommunicator},
 };
 
-use necsim_core::{impl_report, lineage::MigratingLineage, reporter::Reporter};
+use necsim_core::{
+    impl_report,
+    lineage::MigratingLineage,
+    reporter::{boolean::Boolean, Reporter},
+};
 
 use necsim_impls_no_std::{
     partitioning::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode},
@@ -74,7 +78,16 @@ impl<P: ReporterContext> MpiParallelPartition<P> {
     const MPI_PROGRESS_WAIT_TIME: Duration = Duration::from_millis(100_u64);
 
     #[must_use]
-    pub fn new(universe: Universe, world: SystemCommunicator, recorder: EventLogRecorder) -> Self {
+    pub fn new(
+        universe: Universe,
+        world: SystemCommunicator,
+        mut recorder: EventLogRecorder,
+    ) -> Self {
+        recorder.set_event_filter(
+            <<P as ReporterContext>::Reporter as Reporter>::ReportSpeciation::VALUE,
+            <<P as ReporterContext>::Reporter as Reporter>::ReportDispersal::VALUE,
+        );
+
         #[allow(clippy::cast_sign_loss)]
         let world_size = world.size() as usize;
 
