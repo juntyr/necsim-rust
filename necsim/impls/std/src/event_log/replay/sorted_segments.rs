@@ -1,14 +1,24 @@
-use std::cmp::{Ord, Ordering};
+use std::{
+    cmp::{Ord, Ordering},
+    fmt,
+};
 
 use necsim_core::event::PackedEvent;
 
 use super::segment::SortedSegment;
 
-#[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
 pub struct SortedSortedSegments {
     segments: Vec<SortedSegment>,
     next: Option<PackedEvent>,
+}
+
+impl fmt::Debug for SortedSortedSegments {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("SortedSortedSegments")
+            .field("segments", &self.segments)
+            .finish()
+    }
 }
 
 impl SortedSortedSegments {
@@ -23,6 +33,10 @@ impl SortedSortedSegments {
         this.next();
 
         this
+    }
+
+    pub fn length(&self) -> usize {
+        self.segments.iter().map(SortedSegment::length).sum()
     }
 }
 

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use necsim_core::reporter::{boolean::Boolean, Reporter};
+use necsim_core::reporter::{boolean::Boolean, FilteredReporter, Reporter};
 
 use necsim_impls_no_std::reporter::ReporterContext;
 
@@ -39,9 +39,16 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
 {
     type Reporter = ReporterPluginVec<ReportSpeciation, ReportDispersal, ReportProgress>;
 
-    fn try_build(mut self) -> anyhow::Result<Self::Reporter> {
-        match self.reporter.initialise() {
-            Ok(()) => Ok(self.reporter),
+    fn try_build<KeepSpeciation: Boolean, KeepDispersal: Boolean, KeepProgress: Boolean>(
+        self,
+    ) -> anyhow::Result<FilteredReporter<Self::Reporter, KeepSpeciation, KeepDispersal, KeepProgress>>
+    {
+        let mut filtered_reporter = self
+            .reporter
+            .internal_filter::<KeepSpeciation, KeepDispersal, KeepProgress>();
+
+        match filtered_reporter.initialise() {
+            Ok(()) => Ok(FilteredReporter::from(filtered_reporter)),
             Err(err) => Err(anyhow::Error::msg(err)),
         }
     }

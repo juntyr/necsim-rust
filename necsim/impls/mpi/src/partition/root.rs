@@ -17,7 +17,11 @@ use mpi::{
 use necsim_core::{
     impl_report,
     lineage::MigratingLineage,
-    reporter::{used::Unused, Reporter},
+    reporter::{
+        boolean::{Boolean, False, True},
+        used::Unused,
+        FilteredReporter, Reporter,
+    },
 };
 
 use necsim_impls_no_std::{
@@ -41,7 +45,7 @@ pub struct MpiRootPartition<P: ReporterContext> {
     migration_buffers: Box<[Vec<MigratingLineage>]>,
     last_migration_times: Box<[Instant]>,
     emigration_requests: Box<[Option<Request<'static, StaticScope>>]>,
-    reporter: ManuallyDrop<P::Reporter>,
+    reporter: ManuallyDrop<FilteredReporter<P::Reporter, False, False, True>>,
     recorder: EventLogRecorder,
     barrier: Option<Request<'static, StaticScope>>,
     communicated_since_last_barrier: bool,
@@ -82,9 +86,14 @@ impl<P: ReporterContext> MpiRootPartition<P> {
     pub fn new(
         universe: Universe,
         world: SystemCommunicator,
-        reporter: P::Reporter,
-        recorder: EventLogRecorder,
+        reporter: FilteredReporter<P::Reporter, False, False, True>,
+        mut recorder: EventLogRecorder,
     ) -> Self {
+        recorder.set_event_filter(
+            <<P as ReporterContext>::Reporter as Reporter>::ReportSpeciation::VALUE,
+            <<P as ReporterContext>::Reporter as Reporter>::ReportDispersal::VALUE,
+        );
+
         #[allow(clippy::cast_sign_loss)]
         let world_size = world.size() as usize;
 

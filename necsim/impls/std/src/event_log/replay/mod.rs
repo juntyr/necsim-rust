@@ -1,30 +1,80 @@
-use std::{collections::BinaryHeap, path::PathBuf};
-
-use anyhow::Result;
+use serde::Deserialize;
+use std::{collections::BinaryHeap, convert::TryFrom, iter::FromIterator};
 
 use necsim_core::event::PackedEvent;
 
-mod segment;
+mod globbed;
+pub mod segment;
 mod sorted_segments;
 
+use globbed::GlobbedSortedSegments;
 use segment::SortedSegment;
 use sorted_segments::SortedSortedSegments;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
+#[serde(try_from = "Vec<GlobbedSortedSegments>")]
 pub struct EventLogReplay {
     frontier: BinaryHeap<SortedSortedSegments>,
+
+    with_speciation: bool,
+    with_dispersal: bool,
+}
+
+impl TryFrom<Vec<GlobbedSortedSegments>> for EventLogReplay {
+    type Error = anyhow::Error;
+
+    fn try_from(vec: Vec<GlobbedSortedSegments>) -> Result<Self, Self::Error> {
+        vec.into_iter().flatten().collect()
+    }
 }
 
 impl EventLogReplay {
-    /// # Errors
-    ///
-    /// Returns `Err` iff any of the paths could not be read.
-    pub fn try_new(paths: &[PathBuf], capacity: usize) -> Result<Self> {
-        let mut segments = Vec::with_capacity(paths.len());
+    #[must_use]
+    pub fn length(&self) -> usize {
+        self.frontier.iter().map(SortedSortedSegments::length).sum()
+    }
 
-        for path in paths {
-            segments.push(SortedSegment::new(path, capacity)?);
+    #[must_use]
+    pub fn with_speciation(&self) -> bool {
+        self.with_speciation
+    }
+
+    #[must_use]
+    pub fn with_dispersal(&self) -> bool {
+        self.with_dispersal
+    }
+}
+
+impl FromIterator<SortedSegment> for anyhow::Result<EventLogReplay> {
+    fn from_iter<T: IntoIterator<Item = SortedSegment>>(iter: T) -> Self {
+        let mut segments: Vec<SortedSegment> = iter.into_iter().collect();
+
+        if segments.is_empty() {
+            anyhow::bail!("The EventLogReplay requires at least one event log segment.")
+        }
+
+        let mut with_speciation = None;
+        let mut with_dispersal = None;
+
+        for segment in &segments {
+            if let Some(with_speciation) = with_speciation {
+                anyhow::ensure!(
+                    with_speciation == segment.header().with_speciation(),
+                    "There is a mismatch in reporting speciation events between some segments."
+                );
+            } else {
+                with_speciation = Some(segment.header().with_speciation());
+            }
+
+            if let Some(with_dispersal) = with_dispersal {
+                anyhow::ensure!(
+                    with_dispersal == segment.header().with_dispersal(),
+                    "There is a mismatch in reporting dispersal events between some segments."
+                );
+            } else {
+                with_dispersal = Some(segment.header().with_dispersal());
+            }
         }
 
         let mut grouped_segments: Vec<Vec<SortedSegment>> = Vec::new();
@@ -73,7 +123,11 @@ impl EventLogReplay {
             frontier.push(SortedSortedSegments::new(group))
         }
 
-        Ok(Self { frontier })
+        Ok(EventLogReplay {
+            frontier,
+            with_speciation: with_speciation.unwrap(),
+            with_dispersal: with_dispersal.unwrap(),
+        })
     }
 }
 

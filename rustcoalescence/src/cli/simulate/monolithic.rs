@@ -8,12 +8,12 @@ use necsim_impls_std::partitioning::monolithic::recorded::RecordedMonolithicLoca
 use necsim_plugins_core::match_any_reporter_plugin_vec;
 
 use crate::{
-    args::{SimulateArgs, SimulateCommandArgs},
+    args::{CommandArgs, SimulateArgs},
     reporter::DynamicReporterContext,
 };
 
 #[allow(clippy::module_name_repetitions)]
-pub fn simulate_with_logger_monolithic(simulate_args: SimulateCommandArgs) -> Result<()> {
+pub fn simulate_with_logger_monolithic(simulate_args: CommandArgs) -> Result<()> {
     log::set_max_level(LevelFilter::Info);
 
     let simulate_args =

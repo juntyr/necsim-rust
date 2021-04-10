@@ -3,7 +3,7 @@ use core::{fmt, num::NonZeroU32};
 
 use necsim_core::{
     lineage::MigratingLineage,
-    reporter::{used::Unused, Reporter},
+    reporter::{boolean::True, used::Unused, FilteredReporter, Reporter},
 };
 
 use crate::{
@@ -52,7 +52,7 @@ impl Partitioning for LiveMonolithicPartitioning {
 
 #[allow(clippy::module_name_repetitions)]
 pub struct LiveMonolithicLocalPartition<P: ReporterContext> {
-    reporter: P::Reporter,
+    reporter: FilteredReporter<P::Reporter, True, True, True>,
     loopback: Vec<MigratingLineage>,
 }
 
@@ -76,7 +76,7 @@ impl<P: ReporterContext> fmt::Debug for LiveMonolithicLocalPartition<P> {
 #[contract_trait]
 impl<P: ReporterContext> LocalPartition<P> for LiveMonolithicLocalPartition<P> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
-    type Reporter = P::Reporter;
+    type Reporter = FilteredReporter<P::Reporter, True, True, True>;
 
     fn get_reporter(&mut self) -> &mut Self::Reporter {
         &mut self.reporter
@@ -133,7 +133,7 @@ impl<P: ReporterContext> LocalPartition<P> for LiveMonolithicLocalPartition<P> {
 }
 
 impl<P: ReporterContext> LiveMonolithicLocalPartition<P> {
-    pub fn from_reporter(reporter: P::Reporter) -> Self {
+    pub fn from_reporter(reporter: FilteredReporter<P::Reporter, True, True, True>) -> Self {
         Self {
             reporter,
             loopback: Vec::new(),

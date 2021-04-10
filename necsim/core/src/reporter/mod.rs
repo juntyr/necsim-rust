@@ -1,6 +1,7 @@
 use crate::event::{DispersalEvent, SpeciationEvent};
 
 mod combinator;
+mod filter;
 mod group;
 mod r#impl;
 mod null;
@@ -12,6 +13,7 @@ pub mod boolean;
 pub mod used;
 
 pub use combinator::ReporterCombinator;
+pub use filter::FilteredReporter;
 pub use null::NullReporter;
 
 pub trait Reporter: core::fmt::Debug {

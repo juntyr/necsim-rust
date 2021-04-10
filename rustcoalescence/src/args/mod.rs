@@ -11,7 +11,7 @@ mod parse;
 
 use necsim_impls_std::{
     bounded::{NonNegativeF64, Partition, ZeroExclOneInclF64, ZeroInclOneInclF64},
-    event_log::recorder::EventLogRecorder,
+    event_log::{recorder::EventLogRecorder, replay::EventLogReplay},
 };
 
 use necsim_plugins_core::import::{AnyReporterPluginVec, ReporterPluginLibrary};
@@ -19,24 +19,17 @@ use necsim_plugins_core::import::{AnyReporterPluginVec, ReporterPluginLibrary};
 #[derive(Debug, StructOpt)]
 #[allow(clippy::module_name_repetitions)]
 pub enum RustcoalescenceArgs {
-    Simulate(SimulateCommandArgs),
-    Replay(ReplayCommandArgs),
+    Simulate(CommandArgs),
+    Replay(CommandArgs),
 }
 
 #[derive(Debug, StructOpt)]
 #[allow(clippy::module_name_repetitions)]
 #[structopt(template("{bin} {version}\n\nUSAGE:\n    {usage} args..\n\n{all-args}"))]
 #[structopt(setting(structopt::clap::AppSettings::AllowLeadingHyphen))]
-pub struct SimulateCommandArgs {
+pub struct CommandArgs {
     #[structopt(hidden(true))]
     pub args: Vec<String>,
-}
-
-#[derive(Debug, StructOpt)]
-#[allow(clippy::module_name_repetitions)]
-pub struct ReplayCommandArgs {
-    #[structopt(parse(from_os_str))]
-    pub events: Vec<PathBuf>,
 }
 
 #[derive(Debug)]
@@ -318,4 +311,68 @@ pub struct SpatiallyImplicitArgs {
 pub struct AlmostInfiniteArgs {
     pub radius: u32,
     pub sigma: NonNegativeF64,
+}
+
+#[derive(Debug)]
+#[allow(clippy::module_name_repetitions)]
+pub struct ReplayArgs {
+    pub log: EventLogReplay,
+    pub reporters: AnyReporterPluginVec,
+}
+
+impl<'de> Deserialize<'de> for ReplayArgs {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = ReplayArgsRaw::deserialize(deserializer)?;
+
+        let log = raw.logs;
+        let reporters = raw.reporters.into_iter().flatten().collect();
+
+        let (report_speciation, report_dispersal) = match &reporters {
+            AnyReporterPluginVec::IgnoreSpeciationIgnoreDispersalIgnoreProgress(..)
+            | AnyReporterPluginVec::IgnoreSpeciationIgnoreDispersalReportProgress(..) => {
+                (false, false)
+            },
+            AnyReporterPluginVec::IgnoreSpeciationReportDispersalIgnoreProgress(..)
+            | AnyReporterPluginVec::IgnoreSpeciationReportDispersalReportProgress(..) => {
+                (false, true)
+            },
+            AnyReporterPluginVec::ReportSpeciationIgnoreDispersalIgnoreProgress(..)
+            | AnyReporterPluginVec::ReportSpeciationIgnoreDispersalReportProgress(..) => {
+                (true, false)
+            },
+            AnyReporterPluginVec::ReportSpeciationReportDispersalIgnoreProgress(..)
+            | AnyReporterPluginVec::ReportSpeciationReportDispersalReportProgress(..) => {
+                (true, true)
+            },
+        };
+
+        if report_speciation && !log.with_speciation() && report_dispersal && !log.with_dispersal()
+        {
+            Err(serde::de::Error::custom(
+                "The reporters require speciation and dispersal events, but the event log cannot \
+                 provide either.",
+            ))
+        } else if report_speciation && !log.with_speciation() {
+            Err(serde::de::Error::custom(
+                "The reporters require speciation events, but the event log cannot provide them.",
+            ))
+        } else if report_dispersal && !log.with_dispersal() {
+            Err(serde::de::Error::custom(
+                "The reporters require dispersal events, but the event log cannot provide them.",
+            ))
+        } else {
+            Ok(Self { log, reporters })
+        }
+    }
+}
+
+#[derive(Deserialize)]
+#[allow(clippy::module_name_repetitions)]
+#[serde(deny_unknown_fields)]
+struct ReplayArgsRaw {
+    logs: EventLogReplay,
+    reporters: Vec<ReporterPluginLibrary>,
 }

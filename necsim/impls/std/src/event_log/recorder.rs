@@ -36,6 +36,9 @@ pub struct EventLogRecorder {
     directory: PathBuf,
     segment_index: usize,
     buffer: Vec<PackedEvent>,
+
+    record_speciation: bool,
+    record_dispersal: bool,
 }
 
 impl TryFrom<PathBuf> for EventLogRecorder {
@@ -79,6 +82,9 @@ impl EventLogRecorder {
             directory: path.to_owned(),
             segment_index: 0_usize,
             buffer: Vec::with_capacity(segment_size),
+
+            record_speciation: false,
+            record_dispersal: false,
         })
     }
 
@@ -87,7 +93,14 @@ impl EventLogRecorder {
         &self.directory
     }
 
+    pub fn set_event_filter(&mut self, record_speciation: bool, record_dispersal: bool) {
+        self.record_speciation = record_speciation;
+        self.record_dispersal = record_dispersal;
+    }
+
     pub fn record_speciation(&mut self, event: &SpeciationEvent) {
+        self.record_speciation = true;
+
         self.buffer.push(event.clone().into());
 
         if self.buffer.len() >= self.segment_size {
@@ -96,6 +109,8 @@ impl EventLogRecorder {
     }
 
     pub fn record_dispersal(&mut self, event: &DispersalEvent) {
+        self.record_dispersal = true;
+
         self.buffer.push(event.clone().into());
 
         if self.buffer.len() >= self.segment_size {
@@ -118,7 +133,13 @@ impl EventLogRecorder {
 
         std::mem::drop(bincode::serialize_into(
             &mut buf_writer,
-            &EventLogHeader::new(self.buffer[0].time, self.buffer[self.buffer.len() - 1].time),
+            &EventLogHeader::new(
+                self.buffer[0].time,
+                self.buffer[self.buffer.len() - 1].time,
+                self.buffer.len(),
+                self.record_speciation,
+                self.record_dispersal,
+            ),
         ));
 
         for event in self.buffer.drain(0..) {
