@@ -1,5 +1,7 @@
 use necsim_core::{
-    cogs::{GloballyCoherentLineageStore, LineageStore, LocallyCoherentLineageStore},
+    cogs::{
+        GloballyCoherentLineageStore, LineageStore, LocallyCoherentLineageStore, OriginSampler,
+    },
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},
 };
@@ -17,6 +19,12 @@ impl LineageStore<AlmostInfiniteHabitat, InMemoryLineageReference> for AlmostInf
         slab::Iter<'a, Lineage>,
         fn((usize, &'a Lineage)) -> InMemoryLineageReference,
     >;
+
+    fn from_origin_sampler<'h, O: OriginSampler<'h, Habitat = AlmostInfiniteHabitat>>(
+        origin_sampler: O,
+    ) -> Self {
+        Self::new(origin_sampler)
+    }
 
     #[must_use]
     fn get_number_total_lineages(&self) -> usize {
