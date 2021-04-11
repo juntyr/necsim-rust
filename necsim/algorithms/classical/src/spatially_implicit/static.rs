@@ -11,7 +11,7 @@ use necsim_impls_no_std::cogs::{
     dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
     habitat::non_spatial::NonSpatialHabitat,
     lineage_reference::in_memory::InMemoryLineageReference,
-    lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
+    lineage_store::coherent::locally::classical::ClassicalLineageStore,
     origin_sampler::{non_spatial::NonSpatialOriginSampler, pre_sampler::OriginPreSampler},
     speciation_probability::uniform::UniformSpeciationProbability,
 };
@@ -50,7 +50,7 @@ pub fn simulate_static<R: ReporterContext, P: LocalPartition<R>>(
         UniformSpeciationProbability::new(local_migration_probability_per_generation);
     let local_dispersal_sampler = NonSpatialDispersalSampler::default();
 
-    let local_lineage_store = CoherentInMemoryLineageStore::new(NonSpatialOriginSampler::new(
+    let local_lineage_store = ClassicalLineageStore::new(NonSpatialOriginSampler::new(
         OriginPreSampler::all().percentage(sample_percentage),
         &local_habitat,
     ));
@@ -67,7 +67,7 @@ pub fn simulate_static<R: ReporterContext, P: LocalPartition<R>>(
         UniformSpeciationProbability,
         NonSpatialDispersalSampler<_>,
         InMemoryLineageReference,
-        CoherentInMemoryLineageStore<_>,
+        ClassicalLineageStore<_>,
         MigrationReporter,
         LiveMonolithicLocalPartition<_>,
     >(
@@ -97,7 +97,7 @@ pub fn simulate_static<R: ReporterContext, P: LocalPartition<R>>(
     let meta_dispersal_sampler = NonSpatialDispersalSampler::default();
 
     #[allow(clippy::cast_precision_loss)]
-    let meta_lineage_store = CoherentInMemoryLineageStore::new(NonSpatialOriginSampler::new(
+    let meta_lineage_store = ClassicalLineageStore::new(NonSpatialOriginSampler::new(
         OriginPreSampler::all().percentage(
             (unique_migration_targets.len() as f64) / (max_unique_location_index as f64),
         ),

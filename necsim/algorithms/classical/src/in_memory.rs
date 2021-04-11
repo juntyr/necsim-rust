@@ -3,7 +3,7 @@ use array2d::Array2D;
 use necsim_impls_no_std::cogs::{
     dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
     habitat::in_memory::InMemoryHabitat,
-    lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
+    lineage_store::coherent::locally::classical::ClassicalLineageStore,
     origin_sampler::{in_memory::InMemoryOriginSampler, pre_sampler::OriginPreSampler},
     speciation_probability::uniform::UniformSpeciationProbability,
 };
@@ -43,7 +43,7 @@ impl InMemorySimulation for ClassicalSimulation {
             UniformSpeciationProbability::new(speciation_probability_per_generation);
         let dispersal_sampler = InMemoryAliasDispersalSampler::new(dispersal, &habitat)?;
 
-        let lineage_store = CoherentInMemoryLineageStore::new(InMemoryOriginSampler::new(
+        let lineage_store = ClassicalLineageStore::new(InMemoryOriginSampler::new(
             OriginPreSampler::all().percentage(sample_percentage),
             &habitat,
         ));

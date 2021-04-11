@@ -6,7 +6,7 @@ extern crate contracts;
 
 use necsim_core::{
     cogs::{
-        CoherentLineageStore, DispersalSampler, Habitat, LineageReference, RngCore,
+        DispersalSampler, Habitat, LineageReference, LocallyCoherentLineageStore, RngCore,
         SpeciationProbability,
     },
     simulation::Simulation,
@@ -39,7 +39,7 @@ impl ClassicalSimulation {
         N: SpeciationProbability<H>,
         D: DispersalSampler<H, G>,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: LocallyCoherentLineageStore<H, R>,
         P: ReporterContext,
         L: LocalPartition<P>,
     >(
@@ -82,7 +82,7 @@ impl ClassicalSimulation {
         N: SpeciationProbability<H>,
         D: DispersalSampler<H, StdRng>,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: LocallyCoherentLineageStore<H, R>,
         P: ReporterContext,
         L: LocalPartition<P>,
     >(

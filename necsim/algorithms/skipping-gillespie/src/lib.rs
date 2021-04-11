@@ -8,7 +8,7 @@ use serde::Deserialize;
 use serde_state::DeserializeState;
 
 use necsim_core::cogs::{
-    CoherentLineageStore, Habitat, LineageReference, SeparableDispersalSampler,
+    GloballyCoherentLineageStore, Habitat, LineageReference, SeparableDispersalSampler,
 };
 
 use necsim_impls_no_std::{
@@ -118,7 +118,7 @@ impl SkippingGillespieSimulation {
         H: Habitat,
         D: SeparableDispersalSampler<H, Pcg>,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         P: ReporterContext,
         L: LocalPartition<P>,
         C: Decomposition<H>,

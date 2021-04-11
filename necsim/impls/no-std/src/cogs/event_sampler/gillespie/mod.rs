@@ -25,12 +25,12 @@ pub trait GillespieEventSampler<
     N: SpeciationProbability<H>,
 >: EventSampler<H, G, R, S, X, D, C, T, N>
 {
+    /// Pre: all lineages must be active in the lineage store
     #[must_use]
     #[debug_ensures(ret >= 0.0_f64, "returns a rate")]
     fn get_event_rate_at_location(
         &self,
         location: &Location,
         simulation: &PartialSimulation<H, G, R, S, X, D, C, T, N>,
-        lineage_store_includes_self: bool,
     ) -> f64;
 }

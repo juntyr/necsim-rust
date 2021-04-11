@@ -6,6 +6,7 @@
 #![feature(generic_associated_types)]
 #![feature(total_cmp)]
 #![feature(specialization)]
+#![feature(option_result_unwrap_unchecked)]
 
 #[doc(hidden)]
 pub extern crate alloc;

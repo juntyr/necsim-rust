@@ -2,7 +2,7 @@ use necsim_impls_no_std::{
     cogs::{
         dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
         habitat::non_spatial::NonSpatialHabitat,
-        lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
+        lineage_store::coherent::globally::gillespie::GillespieLineageStore,
         origin_sampler::{
             decomposition::DecompositionOriginSampler, non_spatial::NonSpatialOriginSampler,
             pre_sampler::OriginPreSampler,
@@ -41,7 +41,7 @@ impl NonSpatialSimulation for SkippingGillespieSimulation {
         );
 
         let lineage_store = if local_partition.get_number_of_partitions().get() > 1 {
-            CoherentInMemoryLineageStore::new(DecompositionOriginSampler::new(
+            GillespieLineageStore::new(DecompositionOriginSampler::new(
                 NonSpatialOriginSampler::new(
                     OriginPreSampler::all().percentage(sample_percentage),
                     &habitat,
@@ -49,7 +49,7 @@ impl NonSpatialSimulation for SkippingGillespieSimulation {
                 &decomposition,
             ))
         } else {
-            CoherentInMemoryLineageStore::new(NonSpatialOriginSampler::new(
+            GillespieLineageStore::new(NonSpatialOriginSampler::new(
                 OriginPreSampler::all().percentage(sample_percentage),
                 &habitat,
             ))

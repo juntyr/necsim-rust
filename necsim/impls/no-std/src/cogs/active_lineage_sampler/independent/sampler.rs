@@ -79,22 +79,20 @@ impl<
         };
 
         // Check for extraneously simulated (inactive) lineages
-        let lineage_indexed_location = match unsafe { chosen_lineage.try_remove_from_location() } {
-            Some(lineage_indexed_location) => lineage_indexed_location,
-            None => return None,
-        };
+        let lineage_indexed_location = chosen_lineage.indexed_location()?;
 
         let next_event_time = self
             .event_time_sampler
             .next_event_time_at_indexed_location_after(
-                &lineage_indexed_location,
+                lineage_indexed_location,
                 chosen_lineage.last_event_time(),
                 &simulation.habitat,
                 rng,
                 &simulation.turnover_rate,
             );
 
-        unsafe { chosen_lineage.update_last_event_time(next_event_time) };
+        let lineage_indexed_location =
+            unsafe { chosen_lineage.remove_from_location(next_event_time) };
 
         Some((
             chosen_lineage.global_reference().clone(),

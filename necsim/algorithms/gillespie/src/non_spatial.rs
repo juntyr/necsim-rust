@@ -1,7 +1,7 @@
 use necsim_impls_no_std::cogs::{
     dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
     habitat::non_spatial::NonSpatialHabitat,
-    lineage_store::coherent::in_memory::CoherentInMemoryLineageStore,
+    lineage_store::coherent::globally::gillespie::GillespieLineageStore,
     origin_sampler::{non_spatial::NonSpatialOriginSampler, pre_sampler::OriginPreSampler},
 };
 
@@ -31,7 +31,7 @@ impl NonSpatialSimulation for GillespieSimulation {
         let habitat = NonSpatialHabitat::new(area, deme);
         let dispersal_sampler = NonSpatialDispersalSampler::default();
 
-        let lineage_store = CoherentInMemoryLineageStore::new(NonSpatialOriginSampler::new(
+        let lineage_store = GillespieLineageStore::new(NonSpatialOriginSampler::new(
             OriginPreSampler::all().percentage(sample_percentage),
             &habitat,
         ));

@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{CoherentLineageStore, LineageStore},
+    cogs::{GloballyCoherentLineageStore, LineageStore, LocallyCoherentLineageStore},
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},
 };
@@ -8,12 +8,10 @@ use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 
 use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 
-use super::CoherentAlmostInfiniteLineageStore;
+use super::AlmostInfiniteLineageStore;
 
 #[contract_trait]
-impl LineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
-    for CoherentAlmostInfiniteLineageStore
-{
+impl LineageStore<AlmostInfiniteHabitat, InMemoryLineageReference> for AlmostInfiniteLineageStore {
     #[allow(clippy::type_complexity)]
     type LineageReferenceIterator<'a> = core::iter::Map<
         slab::Iter<'a, Lineage>,
@@ -41,8 +39,98 @@ impl LineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
 }
 
 #[contract_trait]
-impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
-    for CoherentAlmostInfiniteLineageStore
+impl LocallyCoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
+    for AlmostInfiniteLineageStore
+{
+    #[must_use]
+    #[debug_requires(indexed_location.index() == 0, "only one lineage per location")]
+    fn get_active_global_lineage_reference_at_indexed_location(
+        &self,
+        indexed_location: &IndexedLocation,
+        _habitat: &AlmostInfiniteHabitat,
+    ) -> Option<&GlobalLineageReference> {
+        self.location_to_lineage_references
+            .get(indexed_location.location())
+            .map(|local_reference| self[*local_reference].global_reference())
+    }
+
+    #[debug_requires(indexed_location.index() == 0, "only one lineage per location")]
+    fn insert_lineage_to_indexed_location_locally_coherent(
+        &mut self,
+        reference: InMemoryLineageReference,
+        indexed_location: IndexedLocation,
+        _habitat: &AlmostInfiniteHabitat,
+    ) {
+        self.location_to_lineage_references
+            .insert(indexed_location.location().clone(), reference);
+
+        unsafe {
+            self.lineages_store[Into::<usize>::into(reference)]
+                .move_to_indexed_location(indexed_location)
+        };
+    }
+
+    #[must_use]
+    #[debug_requires(
+        self[reference].indexed_location().unwrap().index() == 0,
+        "only one lineage per location"
+    )]
+    fn extract_lineage_from_its_location_locally_coherent(
+        &mut self,
+        reference: InMemoryLineageReference,
+        event_time: f64,
+        _habitat: &AlmostInfiniteHabitat,
+    ) -> IndexedLocation {
+        let lineage: &Lineage = &self.lineages_store[Into::<usize>::into(reference)];
+
+        let lineage_indexed_location = lineage.indexed_location().unwrap();
+
+        let lineage_location = lineage_indexed_location.location();
+
+        let lineage_reference_at_location = self
+            .location_to_lineage_references
+            .remove(lineage_location)
+            .unwrap();
+
+        unsafe {
+            self.lineages_store[Into::<usize>::into(lineage_reference_at_location)]
+                .remove_from_location(event_time)
+        }
+    }
+
+    fn emigrate(
+        &mut self,
+        local_lineage_reference: InMemoryLineageReference,
+    ) -> GlobalLineageReference {
+        self.lineages_store
+            .remove(local_lineage_reference.into())
+            .emigrate()
+    }
+
+    fn immigrate_locally_coherent(
+        &mut self,
+        _habitat: &AlmostInfiniteHabitat,
+        global_reference: GlobalLineageReference,
+        indexed_location: IndexedLocation,
+        time_of_emigration: f64,
+    ) -> InMemoryLineageReference {
+        let location = indexed_location.location().clone();
+
+        let lineage = Lineage::immigrate(global_reference, indexed_location, time_of_emigration);
+
+        let local_lineage_reference =
+            InMemoryLineageReference::from(self.lineages_store.insert(lineage));
+
+        self.location_to_lineage_references
+            .insert(location, local_lineage_reference);
+
+        local_lineage_reference
+    }
+}
+
+#[contract_trait]
+impl GloballyCoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
+    for AlmostInfiniteLineageStore
 {
     #[allow(clippy::type_complexity)]
     type LocationIterator<'a> = core::iter::Cloned<
@@ -76,99 +164,5 @@ impl CoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
             Some(local_reference) => core::slice::from_ref(local_reference),
             None => &[],
         }
-    }
-
-    #[must_use]
-    #[debug_requires(indexed_location.index() == 0, "only one lineage per location")]
-    fn get_active_global_lineage_reference_at_indexed_location(
-        &self,
-        indexed_location: &IndexedLocation,
-        _habitat: &AlmostInfiniteHabitat,
-    ) -> Option<&GlobalLineageReference> {
-        self.location_to_lineage_references
-            .get(indexed_location.location())
-            .map(|local_reference| self[*local_reference].global_reference())
-    }
-
-    #[debug_requires(indexed_location.index() == 0, "only one lineage per location")]
-    fn insert_lineage_to_indexed_location_coherent(
-        &mut self,
-        reference: InMemoryLineageReference,
-        indexed_location: IndexedLocation,
-        _habitat: &AlmostInfiniteHabitat,
-    ) {
-        self.location_to_lineage_references
-            .insert(indexed_location.location().clone(), reference);
-
-        unsafe {
-            self.lineages_store[Into::<usize>::into(reference)]
-                .move_to_indexed_location(indexed_location)
-        };
-    }
-
-    #[must_use]
-    #[debug_requires(
-        self[reference].indexed_location().unwrap().index() == 0,
-        "only one lineage per location"
-    )]
-    fn extract_lineage_from_its_location_coherent(
-        &mut self,
-        reference: InMemoryLineageReference,
-        _habitat: &AlmostInfiniteHabitat,
-    ) -> IndexedLocation {
-        let lineage: &Lineage = &self.lineages_store[Into::<usize>::into(reference)];
-
-        let lineage_indexed_location = lineage.indexed_location().unwrap();
-
-        let lineage_location = lineage_indexed_location.location();
-
-        let lineage_reference_at_location = self
-            .location_to_lineage_references
-            .remove(lineage_location)
-            .unwrap();
-
-        unsafe {
-            self.lineages_store[Into::<usize>::into(lineage_reference_at_location)]
-                .remove_from_location()
-        }
-    }
-
-    fn update_lineage_last_event_time(
-        &mut self,
-        reference: InMemoryLineageReference,
-        event_time: f64,
-    ) {
-        unsafe {
-            self.lineages_store[Into::<usize>::into(reference)].update_last_event_time(event_time)
-        }
-    }
-
-    fn emigrate(
-        &mut self,
-        local_lineage_reference: InMemoryLineageReference,
-    ) -> GlobalLineageReference {
-        self.lineages_store
-            .remove(local_lineage_reference.into())
-            .emigrate()
-    }
-
-    fn immigrate(
-        &mut self,
-        _habitat: &AlmostInfiniteHabitat,
-        global_reference: GlobalLineageReference,
-        indexed_location: IndexedLocation,
-        time_of_emigration: f64,
-    ) -> InMemoryLineageReference {
-        let location = indexed_location.location().clone();
-
-        let lineage = Lineage::immigrate(global_reference, indexed_location, time_of_emigration);
-
-        let local_lineage_reference =
-            InMemoryLineageReference::from(self.lineages_store.insert(lineage));
-
-        self.location_to_lineage_references
-            .insert(location, local_lineage_reference);
-
-        local_lineage_reference
     }
 }

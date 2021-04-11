@@ -1,15 +1,15 @@
 use necsim_core::{
-    cogs::{CoherentLineageStore, Habitat, LineageStore},
+    cogs::{GloballyCoherentLineageStore, Habitat, LineageStore, LocallyCoherentLineageStore},
     landscape::{IndexedLocation, Location, LocationIterator},
     lineage::{GlobalLineageReference, Lineage},
 };
 
 use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 
-use super::CoherentInMemoryLineageStore;
+use super::GillespieLineageStore;
 
 #[contract_trait]
-impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for CoherentInMemoryLineageStore<H> {
+impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for GillespieLineageStore<H> {
     #[allow(clippy::type_complexity)]
     type LineageReferenceIterator<'a> = core::iter::Map<
         slab::Iter<'a, Lineage>,
@@ -37,28 +37,9 @@ impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for CoherentInMemoryL
 }
 
 #[contract_trait]
-impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
-    for CoherentInMemoryLineageStore<H>
+impl<H: Habitat> LocallyCoherentLineageStore<H, InMemoryLineageReference>
+    for GillespieLineageStore<H>
 {
-    type LocationIterator<'a> = LocationIterator;
-
-    #[must_use]
-    fn iter_active_locations(&self, habitat: &H) -> Self::LocationIterator<'_> {
-        habitat.get_extent().iter()
-    }
-
-    #[must_use]
-    fn get_active_local_lineage_references_at_location_unordered(
-        &self,
-        location: &Location,
-        habitat: &H,
-    ) -> &[InMemoryLineageReference] {
-        &self.location_to_lineage_references[(
-            (location.y() - habitat.get_extent().y()) as usize,
-            (location.x() - habitat.get_extent().x()) as usize,
-        )]
-    }
-
     #[must_use]
     fn get_active_global_lineage_reference_at_indexed_location(
         &self,
@@ -70,7 +51,7 @@ impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
             .map(|(global_reference, _index)| global_reference)
     }
 
-    fn insert_lineage_to_indexed_location_coherent(
+    fn insert_lineage_to_indexed_location_locally_coherent(
         &mut self,
         reference: InMemoryLineageReference,
         indexed_location: IndexedLocation,
@@ -99,13 +80,15 @@ impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
     }
 
     #[must_use]
-    fn extract_lineage_from_its_location_coherent(
+    fn extract_lineage_from_its_location_locally_coherent(
         &mut self,
         reference: InMemoryLineageReference,
+        event_time: f64,
         habitat: &H,
     ) -> IndexedLocation {
-        let lineage_indexed_location =
-            unsafe { self.lineages_store[Into::<usize>::into(reference)].remove_from_location() };
+        let lineage_indexed_location = unsafe {
+            self.lineages_store[Into::<usize>::into(reference)].remove_from_location(event_time)
+        };
 
         // We know from the trait preconditions that this value exists
         let (_global_reference, local_index) = self
@@ -140,16 +123,6 @@ impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
         lineage_indexed_location
     }
 
-    fn update_lineage_last_event_time(
-        &mut self,
-        reference: InMemoryLineageReference,
-        event_time: f64,
-    ) {
-        unsafe {
-            self.lineages_store[Into::<usize>::into(reference)].update_last_event_time(event_time)
-        }
-    }
-
     fn emigrate(
         &mut self,
         local_lineage_reference: InMemoryLineageReference,
@@ -159,7 +132,7 @@ impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
             .emigrate()
     }
 
-    fn immigrate(
+    fn immigrate_locally_coherent(
         &mut self,
         habitat: &H,
         global_reference: GlobalLineageReference,
@@ -191,5 +164,29 @@ impl<H: Habitat> CoherentLineageStore<H, InMemoryLineageReference>
         lineages_at_location.push(local_lineage_reference);
 
         local_lineage_reference
+    }
+}
+
+#[contract_trait]
+impl<H: Habitat> GloballyCoherentLineageStore<H, InMemoryLineageReference>
+    for GillespieLineageStore<H>
+{
+    type LocationIterator<'a> = LocationIterator;
+
+    #[must_use]
+    fn iter_active_locations(&self, habitat: &H) -> Self::LocationIterator<'_> {
+        habitat.get_extent().iter()
+    }
+
+    #[must_use]
+    fn get_active_local_lineage_references_at_location_unordered(
+        &self,
+        location: &Location,
+        habitat: &H,
+    ) -> &[InMemoryLineageReference] {
+        &self.location_to_lineage_references[(
+            (location.y() - habitat.get_extent().y()) as usize,
+            (location.x() - habitat.get_extent().x()) as usize,
+        )]
     }
 }

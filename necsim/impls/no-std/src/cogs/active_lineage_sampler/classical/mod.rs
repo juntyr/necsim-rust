@@ -3,8 +3,8 @@ use core::marker::PhantomData;
 use alloc::vec::Vec;
 
 use necsim_core::cogs::{
-    Backup, CoherentLineageStore, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-    LineageReference, RngCore, SpeciationProbability,
+    Backup, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry, LineageReference,
+    LocallyCoherentLineageStore, RngCore, SpeciationProbability,
 };
 
 mod sampler;
@@ -15,7 +15,7 @@ pub struct ClassicalActiveLineageSampler<
     H: Habitat,
     G: RngCore,
     R: LineageReference<H>,
-    S: CoherentLineageStore<H, R>,
+    S: LocallyCoherentLineageStore<H, R>,
     X: EmigrationExit<H, G, R, S>,
     D: DispersalSampler<H, G>,
     N: SpeciationProbability<H>,
@@ -31,7 +31,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: LocallyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: DispersalSampler<H, G>,
         N: SpeciationProbability<H>,
@@ -57,7 +57,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: LocallyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: DispersalSampler<H, G>,
         N: SpeciationProbability<H>,

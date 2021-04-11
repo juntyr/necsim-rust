@@ -20,7 +20,7 @@ mod lineage_reference;
 pub use lineage_reference::LineageReference;
 
 mod lineage_store;
-pub use lineage_store::{CoherentLineageStore, LineageStore};
+pub use lineage_store::{GloballyCoherentLineageStore, LineageStore, LocallyCoherentLineageStore};
 
 mod emigration_exit;
 pub use emigration_exit::EmigrationExit;

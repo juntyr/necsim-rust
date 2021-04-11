@@ -1,2 +1,2 @@
-pub mod almost_infinite;
-pub mod in_memory;
+pub mod globally;
+pub mod locally;

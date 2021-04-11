@@ -2,8 +2,8 @@ use std::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, Backup, CoherentLineageStore, Habitat, LineageReference, RngCore,
-        SeparableDispersalSampler, SplittableRng,
+        ActiveLineageSampler, Backup, GloballyCoherentLineageStore, Habitat, LineageReference,
+        RngCore, SeparableDispersalSampler, SplittableRng,
     },
     reporter::NullReporter,
     simulation::{partial::event_sampler::PartialSimulation, Simulation},
@@ -32,7 +32,7 @@ pub fn simulate<
     H: Habitat,
     D: SeparableDispersalSampler<H, Pcg>,
     R: LineageReference<H>,
-    S: CoherentLineageStore<H, R>,
+    S: GloballyCoherentLineageStore<H, R>,
     P: ReporterContext,
     L: LocalPartition<P>,
     C: Decomposition<H>,

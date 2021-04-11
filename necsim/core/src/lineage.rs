@@ -110,32 +110,17 @@ impl Lineage {
     /// This method should only be called by internal `LineageStore` code to
     /// update the state of the lineages being simulated.
     #[debug_requires(self.is_active(), "lineage must be active to be deactivated")]
+    #[debug_requires(event_time > self.last_event_time(), "event_time is after the last event")]
     #[debug_ensures(!self.is_active(), "lineages has been deactivated")]
+    #[debug_ensures(self.last_event_time().to_bits() == old(event_time.to_bits()), "updates the last_event_time")]
     #[debug_ensures(
         ret == old(self.indexed_location.as_ref().unwrap().clone()),
         "returns the individual's prior indexed_location"
     )]
-    pub unsafe fn remove_from_location(&mut self) -> IndexedLocation {
-        match self.indexed_location.take() {
-            Some(indexed_location) => indexed_location,
-            None => unreachable!(),
-        }
-    }
+    pub unsafe fn remove_from_location(&mut self, event_time: f64) -> IndexedLocation {
+        self.last_event_time = event_time;
 
-    /// # Safety
-    /// This method should only be called by internal `LineageStore` code to
-    /// update the state of the lineages being simulated.
-    #[debug_ensures(!self.is_active(), "lineages has been deactivated")]
-    #[debug_ensures(
-        ret.is_some() == old(self.is_active()),
-        "returns None iff inactive"
-    )]
-    #[debug_ensures(
-        ret == old(self.indexed_location.clone()),
-        "if active, returns the individual's prior indexed_location"
-    )]
-    pub unsafe fn try_remove_from_location(&mut self) -> Option<IndexedLocation> {
-        self.indexed_location.take()
+        self.indexed_location.take().unwrap_unchecked()
     }
 
     /// # Safety
@@ -148,16 +133,6 @@ impl Lineage {
     )]
     pub unsafe fn move_to_indexed_location(&mut self, indexed_location: IndexedLocation) {
         self.indexed_location = Some(indexed_location);
-    }
-
-    /// # Safety
-    /// This method should only be called by internal `LineageStore` code to
-    /// update the state of the lineages being simulated.
-    #[allow(clippy::float_cmp)]
-    #[debug_requires(event_time > self.last_event_time(), "event_time is after the last event")]
-    #[debug_ensures(self.last_event_time() == old(event_time), "updates the last_event_time")]
-    pub unsafe fn update_last_event_time(&mut self, event_time: f64) {
-        self.last_event_time = event_time;
     }
 }
 
