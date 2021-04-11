@@ -1,6 +1,6 @@
 use core::ops::Index;
 
-use super::{Habitat, LineageReference};
+use super::{Habitat, LineageReference, OriginSampler};
 use crate::{
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},
@@ -12,6 +12,11 @@ pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
     crate::cogs::Backup + Sized + core::fmt::Debug
 {
     type LineageReferenceIterator<'a>: Iterator<Item = R>;
+
+    #[must_use]
+    fn from_origin_sampler<'h, O: OriginSampler<'h, Habitat = H>>(origin_sampler: O) -> Self
+    where
+        H: 'h;
 
     #[must_use]
     fn get_number_total_lineages(&self) -> usize;

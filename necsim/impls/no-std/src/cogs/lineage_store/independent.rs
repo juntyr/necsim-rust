@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, LineageStore},
+    cogs::{Backup, Habitat, LineageStore, OriginSampler},
     lineage::{GlobalLineageReference, Lineage},
 };
 
@@ -33,6 +33,13 @@ impl<H: Habitat> Backup for IndependentLineageStore<H> {
 #[contract_trait]
 impl<H: Habitat> LineageStore<H, GlobalLineageReference> for IndependentLineageStore<H> {
     type LineageReferenceIterator<'a> = core::iter::Empty<GlobalLineageReference>;
+
+    fn from_origin_sampler<'h, O: OriginSampler<'h, Habitat = H>>(_origin_sampler: O) -> Self
+    where
+        H: 'h,
+    {
+        Self::default()
+    }
 
     #[must_use]
     fn get_number_total_lineages(&self) -> usize {
