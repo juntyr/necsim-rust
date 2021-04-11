@@ -3,8 +3,8 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        Backup, CoalescenceRngSample, CoherentLineageStore, EmigrationExit, Habitat,
-        LineageReference, RngCore,
+        Backup, CoalescenceRngSample, EmigrationExit, Habitat, LineageReference,
+        LocallyCoherentLineageStore, RngCore,
     },
     landscape::{IndexedLocation, Location},
     lineage::MigratingLineage,
@@ -44,7 +44,7 @@ impl<
         C: Decomposition<H>,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: LocallyCoherentLineageStore<H, R>,
     > EmigrationExit<H, G, R, S> for DomainEmigrationExit<H, C>
 {
     #[must_use]

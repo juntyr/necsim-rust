@@ -2,9 +2,9 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        Backup, CoalescenceRngSample, CoalescenceSampler, CoherentLineageStore, DispersalSampler,
-        EmigrationExit, EventSampler, Habitat, LineageReference, RngCore, SpeciationProbability,
-        TurnoverRate,
+        Backup, CoalescenceRngSample, CoalescenceSampler, DispersalSampler, EmigrationExit,
+        EventSampler, GloballyCoherentLineageStore, Habitat, LineageReference, RngCore,
+        SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, PackedEvent, SpeciationEvent},
     landscape::{IndexedLocation, Location},
@@ -19,7 +19,7 @@ pub struct UnconditionalGillespieEventSampler<
     H: Habitat,
     G: RngCore,
     R: LineageReference<H>,
-    S: CoherentLineageStore<H, R>,
+    S: GloballyCoherentLineageStore<H, R>,
     X: EmigrationExit<H, G, R, S>,
     D: DispersalSampler<H, G>,
     C: CoalescenceSampler<H, R, S>,
@@ -31,7 +31,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
@@ -49,7 +49,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
@@ -67,7 +67,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
@@ -164,7 +164,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
@@ -178,17 +178,15 @@ impl<
         &self,
         location: &Location,
         simulation: &PartialSimulation<H, G, R, S, X, D, C, T, N>,
-        lineage_store_includes_self: bool,
     ) -> f64 {
         #[allow(clippy::cast_precision_loss)]
-        let population = (simulation
+        let population = simulation
             .lineage_store
             .get_active_local_lineage_references_at_location_unordered(
                 location,
                 &simulation.habitat,
             )
-            .len()
-            + usize::from(!lineage_store_includes_self)) as f64;
+            .len() as f64;
 
         population
             * simulation

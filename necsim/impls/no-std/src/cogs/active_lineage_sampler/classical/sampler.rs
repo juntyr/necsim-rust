@@ -2,8 +2,8 @@ use float_next_after::NextAfter;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoherentLineageStore, DispersalSampler, EmigrationExit,
-        EmptyActiveLineageSamplerError, Habitat, ImmigrationEntry, LineageReference,
+        ActiveLineageSampler, DispersalSampler, EmigrationExit, EmptyActiveLineageSamplerError,
+        Habitat, ImmigrationEntry, LineageReference, LocallyCoherentLineageStore,
         PeekableActiveLineageSampler, RngCore, SpeciationProbability,
     },
     landscape::IndexedLocation,
@@ -24,7 +24,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: LocallyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: DispersalSampler<H, G>,
         N: SpeciationProbability<H>,
@@ -123,14 +123,11 @@ impl<
 
         let lineage_indexed_location = simulation
             .lineage_store
-            .extract_lineage_from_its_location_coherent(
+            .extract_lineage_from_its_location_locally_coherent(
                 chosen_lineage_reference.clone(),
+                next_event_time,
                 &simulation.habitat,
             );
-
-        simulation
-            .lineage_store
-            .update_lineage_last_event_time(chosen_lineage_reference.clone(), next_event_time);
 
         self.last_event_time = next_event_time;
 
@@ -145,13 +142,6 @@ impl<
     }
 
     #[allow(clippy::type_complexity, clippy::cast_possible_truncation)]
-    #[debug_requires(
-        simulation.lineage_store.get_active_local_lineage_references_at_location_unordered(
-            indexed_location.location(), &simulation.habitat
-        ).len() < (
-            simulation.habitat.get_habitat_at_location(indexed_location.location()) as usize
-        ), "location has habitat capacity for the lineage"
-    )]
     fn push_active_lineage_to_indexed_location(
         &mut self,
         lineage_reference: R,
@@ -183,7 +173,7 @@ impl<
     ) {
         simulation
             .lineage_store
-            .insert_lineage_to_indexed_location_coherent(
+            .insert_lineage_to_indexed_location_locally_coherent(
                 lineage_reference.clone(),
                 indexed_location,
                 &simulation.habitat,
@@ -227,7 +217,7 @@ impl<
         >,
         _rng: &mut G,
     ) {
-        let immigrant_lineage_reference = simulation.lineage_store.immigrate(
+        let immigrant_lineage_reference = simulation.lineage_store.immigrate_locally_coherent(
             &simulation.habitat,
             global_reference,
             indexed_location,
@@ -249,7 +239,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: LocallyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: DispersalSampler<H, G>,
         N: SpeciationProbability<H>,

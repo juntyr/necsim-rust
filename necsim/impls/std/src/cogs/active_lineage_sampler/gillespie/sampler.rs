@@ -2,8 +2,8 @@ use float_next_after::NextAfter;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoalescenceSampler, CoherentLineageStore, DispersalSampler,
-        EmigrationExit, EmptyActiveLineageSamplerError, Habitat, ImmigrationEntry,
+        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit,
+        EmptyActiveLineageSamplerError, GloballyCoherentLineageStore, Habitat, ImmigrationEntry,
         LineageReference, PeekableActiveLineageSampler, RngCore, SpeciationProbability,
         TurnoverRate,
     },
@@ -21,7 +21,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
@@ -57,6 +57,12 @@ impl<
             None => return None,
         };
 
+        let unique_event_time: f64 = if chosen_event_time > self.last_event_time {
+            chosen_event_time
+        } else {
+            self.last_event_time.next_after(f64::INFINITY)
+        };
+
         let lineages_at_location = simulation
             .lineage_store
             .get_active_local_lineage_references_at_location_unordered(
@@ -71,26 +77,19 @@ impl<
 
         let lineage_indexed_location = simulation
             .lineage_store
-            .extract_lineage_from_its_location_coherent(
+            .extract_lineage_from_its_location_globally_coherent(
                 chosen_lineage_reference.clone(),
+                unique_event_time,
                 &simulation.habitat,
             );
         self.number_active_lineages -= 1;
 
-        let unique_event_time: f64 = if chosen_event_time > self.last_event_time {
-            chosen_event_time
-        } else {
-            self.last_event_time.next_after(f64::INFINITY)
-        };
-
         if number_lineages_left_at_location > 0 {
             let event_rate_at_location =
                 simulation.with_split_event_sampler(|event_sampler, simulation| {
-                    event_sampler.get_event_rate_at_location(
-                        &chosen_active_location,
-                        simulation,
-                        true, // all lineages that are left are in the store
-                    )
+                    // All active lineages which are left, which now excludes
+                    //  chosen_lineage_reference, are still in the lineage store
+                    event_sampler.get_event_rate_at_location(&chosen_active_location, simulation)
                 });
 
             self.active_locations.push(
@@ -98,10 +97,6 @@ impl<
                 EventTime::from(unique_event_time + rng.sample_exponential(event_rate_at_location)),
             );
         }
-
-        simulation
-            .lineage_store
-            .update_lineage_last_event_time(chosen_lineage_reference.clone(), unique_event_time);
 
         self.last_event_time = unique_event_time;
 
@@ -133,7 +128,7 @@ impl<
 
         simulation
             .lineage_store
-            .insert_lineage_to_indexed_location_coherent(
+            .insert_lineage_to_indexed_location_globally_coherent(
                 lineage_reference,
                 indexed_location,
                 &simulation.habitat,
@@ -141,10 +136,9 @@ impl<
 
         let event_rate_at_location =
             simulation.with_split_event_sampler(|event_sampler, simulation| {
-                event_sampler.get_event_rate_at_location(
-                    &location, simulation,
-                    true, // all lineages including lineage_reference are (back) in the store
-                )
+                // All active lineage references, including lineage_reference,
+                //  are now (back) in the lineage store
+                event_sampler.get_event_rate_at_location(&location, simulation)
             });
 
         self.active_locations.push(
@@ -169,7 +163,7 @@ impl<
 
         let location = indexed_location.location().clone();
 
-        let _immigrant_lineage_reference = simulation.lineage_store.immigrate(
+        let _immigrant_lineage_reference = simulation.lineage_store.immigrate_globally_coherent(
             &simulation.habitat,
             global_reference,
             indexed_location,
@@ -178,11 +172,9 @@ impl<
 
         let event_rate_at_location =
             simulation.with_split_event_sampler(|event_sampler, simulation| {
-                event_sampler.get_event_rate_at_location(
-                    &location, simulation,
-                    true, /* all lineages including _immigrant_lineage_reference
-                          *   are (back) in the store */
-                )
+                // All active lineages, including _immigrant_lineage_reference,
+                //  are now in the lineage store
+                event_sampler.get_event_rate_at_location(&location, simulation)
             });
 
         self.active_locations.push(
@@ -201,7 +193,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,

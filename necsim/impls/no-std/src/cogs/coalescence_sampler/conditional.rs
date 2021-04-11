@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        Backup, CoalescenceRngSample, CoalescenceSampler, CoherentLineageStore, Habitat,
+        Backup, CoalescenceRngSample, CoalescenceSampler, GloballyCoherentLineageStore, Habitat,
         LineageReference,
     },
     landscape::{IndexedLocation, Location},
@@ -16,10 +16,10 @@ use super::optional_coalescence;
 pub struct ConditionalCoalescenceSampler<
     H: Habitat,
     R: LineageReference<H>,
-    S: CoherentLineageStore<H, R>,
+    S: GloballyCoherentLineageStore<H, R>,
 >(PhantomData<(H, R, S)>);
 
-impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> Default
+impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>> Default
     for ConditionalCoalescenceSampler<H, R, S>
 {
     fn default() -> Self {
@@ -28,7 +28,7 @@ impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> Default
 }
 
 #[contract_trait]
-impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> Backup
+impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>> Backup
     for ConditionalCoalescenceSampler<H, R, S>
 {
     unsafe fn backup_unchecked(&self) -> Self {
@@ -37,8 +37,8 @@ impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> Backup
 }
 
 #[contract_trait]
-impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> CoalescenceSampler<H, R, S>
-    for ConditionalCoalescenceSampler<H, R, S>
+impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>>
+    CoalescenceSampler<H, R, S> for ConditionalCoalescenceSampler<H, R, S>
 {
     #[must_use]
     fn sample_optional_coalescence_at_location(
@@ -57,7 +57,7 @@ impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> Coalesce
     }
 }
 
-impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>>
+impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>>
     ConditionalCoalescenceSampler<H, R, S>
 {
     #[must_use]

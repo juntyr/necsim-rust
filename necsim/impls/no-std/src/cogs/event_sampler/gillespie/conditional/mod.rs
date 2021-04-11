@@ -2,9 +2,9 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        Backup, CoalescenceRngSample, CoalescenceSampler, CoherentLineageStore, EmigrationExit,
-        EventSampler, Habitat, LineageReference, RngCore, RngSampler, SeparableDispersalSampler,
-        SpeciationProbability, TurnoverRate,
+        Backup, CoalescenceRngSample, CoalescenceSampler, EmigrationExit, EventSampler,
+        GloballyCoherentLineageStore, Habitat, LineageReference, RngCore, RngSampler,
+        SeparableDispersalSampler, SpeciationProbability, TurnoverRate,
     },
     event::{Dispersal, DispersalEvent, EventType, PackedEvent, SpeciationEvent},
     landscape::{IndexedLocation, Location},
@@ -26,7 +26,7 @@ pub struct ConditionalGillespieEventSampler<
     H: Habitat,
     G: RngCore,
     R: LineageReference<H>,
-    S: CoherentLineageStore<H, R>,
+    S: GloballyCoherentLineageStore<H, R>,
     X: EmigrationExit<H, G, R, S>,
     D: SeparableDispersalSampler<H, G>,
     T: TurnoverRate<H>,
@@ -37,7 +37,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: SeparableDispersalSampler<H, G>,
         T: TurnoverRate<H>,
@@ -54,7 +54,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: SeparableDispersalSampler<H, G>,
         T: TurnoverRate<H>,
@@ -71,7 +71,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: SeparableDispersalSampler<H, G>,
         T: TurnoverRate<H>,
@@ -216,7 +216,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: SeparableDispersalSampler<H, G>,
         T: TurnoverRate<H>,
@@ -240,20 +240,17 @@ impl<
             T,
             N,
         >,
-        lineage_store_includes_self: bool,
     ) -> f64 {
-        let probability_at_location =
-            ProbabilityAtLocation::new(location, simulation, lineage_store_includes_self);
+        let probability_at_location = ProbabilityAtLocation::new(location, simulation, true);
 
         #[allow(clippy::cast_precision_loss)]
-        let population = (simulation
+        let population = simulation
             .lineage_store
             .get_active_local_lineage_references_at_location_unordered(
                 location,
                 &simulation.habitat,
             )
-            .len()
-            + usize::from(!lineage_store_includes_self)) as f64;
+            .len() as f64;
 
         probability_at_location.total()
             * population

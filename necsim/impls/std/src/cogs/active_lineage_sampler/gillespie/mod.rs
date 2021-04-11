@@ -4,7 +4,7 @@ use priority_queue::PriorityQueue;
 
 use necsim_core::{
     cogs::{
-        Backup, CoalescenceSampler, CoherentLineageStore, DispersalSampler, EmigrationExit,
+        Backup, CoalescenceSampler, DispersalSampler, EmigrationExit, GloballyCoherentLineageStore,
         Habitat, ImmigrationEntry, LineageReference, RngCore, SpeciationProbability, TurnoverRate,
     },
     landscape::Location,
@@ -24,7 +24,7 @@ pub struct GillespieActiveLineageSampler<
     H: Habitat,
     G: RngCore,
     R: LineageReference<H>,
-    S: CoherentLineageStore<H, R>,
+    S: GloballyCoherentLineageStore<H, R>,
     X: EmigrationExit<H, G, R, S>,
     D: DispersalSampler<H, G>,
     C: CoalescenceSampler<H, R, S>,
@@ -43,7 +43,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
@@ -78,11 +78,10 @@ impl<
                     .len();
 
                 if number_active_lineages_at_location > 0 {
-                    let event_rate_at_location = event_sampler.get_event_rate_at_location(
-                        &location,
-                        partial_simulation,
-                        true,
-                    );
+                    // All lineages were just initially inserted into the lineage store,
+                    //  so all active lineages are in the lineage store
+                    let event_rate_at_location =
+                        event_sampler.get_event_rate_at_location(&location, partial_simulation);
 
                     active_locations.push((
                         location,
@@ -106,7 +105,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,
@@ -130,7 +129,7 @@ impl<
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: DispersalSampler<H, G>,
         C: CoalescenceSampler<H, R, S>,

@@ -2,8 +2,8 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        Backup, CoalescenceRngSample, CoalescenceSampler, CoherentLineageStore, Habitat,
-        LineageReference,
+        Backup, CoalescenceRngSample, CoalescenceSampler, Habitat, LineageReference,
+        LocallyCoherentLineageStore,
     },
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
@@ -16,10 +16,10 @@ use super::optional_coalescence;
 pub struct UnconditionalCoalescenceSampler<
     H: Habitat,
     R: LineageReference<H>,
-    S: CoherentLineageStore<H, R>,
+    S: LocallyCoherentLineageStore<H, R>,
 >(PhantomData<(H, R, S)>);
 
-impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> Default
+impl<H: Habitat, R: LineageReference<H>, S: LocallyCoherentLineageStore<H, R>> Default
     for UnconditionalCoalescenceSampler<H, R, S>
 {
     fn default() -> Self {
@@ -28,7 +28,7 @@ impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> Default
 }
 
 #[contract_trait]
-impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> Backup
+impl<H: Habitat, R: LineageReference<H>, S: LocallyCoherentLineageStore<H, R>> Backup
     for UnconditionalCoalescenceSampler<H, R, S>
 {
     unsafe fn backup_unchecked(&self) -> Self {
@@ -37,8 +37,8 @@ impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> Backup
 }
 
 #[contract_trait]
-impl<H: Habitat, R: LineageReference<H>, S: CoherentLineageStore<H, R>> CoalescenceSampler<H, R, S>
-    for UnconditionalCoalescenceSampler<H, R, S>
+impl<H: Habitat, R: LineageReference<H>, S: LocallyCoherentLineageStore<H, R>>
+    CoalescenceSampler<H, R, S> for UnconditionalCoalescenceSampler<H, R, S>
 {
     #[must_use]
     fn sample_optional_coalescence_at_location(

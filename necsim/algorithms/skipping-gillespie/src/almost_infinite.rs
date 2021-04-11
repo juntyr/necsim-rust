@@ -2,7 +2,7 @@ use necsim_impls_no_std::{
     cogs::{
         dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
         habitat::almost_infinite::AlmostInfiniteHabitat,
-        lineage_store::coherent::almost_infinite::CoherentAlmostInfiniteLineageStore,
+        lineage_store::coherent::globally::almost_infinite::AlmostInfiniteLineageStore,
         origin_sampler::{
             almost_infinite::AlmostInfiniteOriginSampler,
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
@@ -44,7 +44,7 @@ impl AlmostInfiniteSimulation for SkippingGillespieSimulation {
         );
 
         let lineage_store = if local_partition.get_number_of_partitions().get() > 1 {
-            CoherentAlmostInfiniteLineageStore::new(DecompositionOriginSampler::new(
+            AlmostInfiniteLineageStore::new(DecompositionOriginSampler::new(
                 AlmostInfiniteOriginSampler::new(
                     OriginPreSampler::all().percentage(sample_percentage),
                     &habitat,
@@ -53,7 +53,7 @@ impl AlmostInfiniteSimulation for SkippingGillespieSimulation {
                 &decomposition,
             ))
         } else {
-            CoherentAlmostInfiniteLineageStore::new(AlmostInfiniteOriginSampler::new(
+            AlmostInfiniteLineageStore::new(AlmostInfiniteOriginSampler::new(
                 OriginPreSampler::all().percentage(sample_percentage),
                 &habitat,
                 radius,

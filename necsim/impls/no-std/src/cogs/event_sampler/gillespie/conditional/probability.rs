@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        CoherentLineageStore, EmigrationExit, Habitat, LineageReference, RngCore,
+        EmigrationExit, GloballyCoherentLineageStore, Habitat, LineageReference, RngCore,
         SeparableDispersalSampler, SpeciationProbability, TurnoverRate,
     },
     landscape::Location,
@@ -22,7 +22,7 @@ impl ProbabilityAtLocation {
         H: Habitat,
         G: RngCore,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         X: EmigrationExit<H, G, R, S>,
         D: SeparableDispersalSampler<H, G>,
         T: TurnoverRate<H>,

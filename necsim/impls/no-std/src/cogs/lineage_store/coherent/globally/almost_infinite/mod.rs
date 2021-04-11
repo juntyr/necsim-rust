@@ -18,12 +18,12 @@ mod store;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct CoherentAlmostInfiniteLineageStore {
+pub struct AlmostInfiniteLineageStore {
     lineages_store: Slab<Lineage>,
     location_to_lineage_references: HashMap<Location, InMemoryLineageReference>,
 }
 
-impl Index<InMemoryLineageReference> for CoherentAlmostInfiniteLineageStore {
+impl Index<InMemoryLineageReference> for AlmostInfiniteLineageStore {
     type Output = Lineage;
 
     #[must_use]
@@ -36,7 +36,7 @@ impl Index<InMemoryLineageReference> for CoherentAlmostInfiniteLineageStore {
     }
 }
 
-impl CoherentAlmostInfiniteLineageStore {
+impl AlmostInfiniteLineageStore {
     #[must_use]
     pub fn new<'h, O: OriginSampler<'h, Habitat = AlmostInfiniteHabitat>>(
         mut origin_sampler: O,
@@ -67,7 +67,7 @@ impl CoherentAlmostInfiniteLineageStore {
 }
 
 #[contract_trait]
-impl Backup for CoherentAlmostInfiniteLineageStore {
+impl Backup for AlmostInfiniteLineageStore {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             lineages_store: self.lineages_store.clone(),

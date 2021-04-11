@@ -7,7 +7,7 @@ extern crate contracts;
 use std::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{CoherentLineageStore, DispersalSampler, Habitat, LineageReference, RngCore},
+    cogs::{DispersalSampler, GloballyCoherentLineageStore, Habitat, LineageReference, RngCore},
     simulation::{partial::event_sampler::PartialSimulation, Simulation},
 };
 
@@ -47,7 +47,7 @@ impl GillespieSimulation {
         H: Habitat,
         D: DispersalSampler<H, StdRng>,
         R: LineageReference<H>,
-        S: CoherentLineageStore<H, R>,
+        S: GloballyCoherentLineageStore<H, R>,
         P: ReporterContext,
         L: LocalPartition<P>,
     >(
