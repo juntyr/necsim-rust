@@ -119,11 +119,10 @@ impl<
     ) -> Option<PackedEvent> {
         let dispersal_origin = indexed_location;
 
-        let probability_at_location = ProbabilityAtLocation::new(
-            dispersal_origin.location(),
-            simulation,
-            false, // lineage_reference was popped from the store
-        );
+        // The event is sampled after the active lineage has been removed from
+        //  the lineage store, but it must be included in the calculation
+        let probability_at_location =
+            ProbabilityAtLocation::new(dispersal_origin.location(), simulation, false);
 
         let event_sample = probability_at_location.total() * rng.sample_uniform();
 
@@ -241,6 +240,7 @@ impl<
             N,
         >,
     ) -> f64 {
+        // By PRE, all active lineages, including self, are in the lineage store
         let probability_at_location = ProbabilityAtLocation::new(location, simulation, true);
 
         #[allow(clippy::cast_precision_loss)]

@@ -35,8 +35,7 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
     )]
     #[debug_ensures(
         ret.iter().all(|s| {
-            #[allow(clippy::float_cmp)]
-            let full_bucket = s.U == 1.0_f64;
+            let full_bucket = s.U.to_bits() == 1.0_f64.to_bits();
             !full_bucket || (s.E == s.K)
         }),
         "full buckets sample the same event just in case"
