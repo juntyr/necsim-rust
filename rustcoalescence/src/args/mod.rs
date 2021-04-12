@@ -10,9 +10,17 @@ use structopt::StructOpt;
 mod parse;
 
 use necsim_impls_std::{
-    bounded::{NonNegativeF64, Partition, ZeroExclOneInclF64, ZeroInclOneInclF64},
+    bounded::{Partition, ZeroExclOneInclF64, ZeroInclOneInclF64},
     event_log::{recorder::EventLogRecorder, replay::EventLogReplay},
 };
+
+use necsim_scenarios::{
+    almost_infinite::AlmostInfiniteArguments, non_spatial::NonSpatialArguments,
+    spatially_explicit::InMemoryArguments, spatially_implicit::SpatiallyImplicitArguments,
+};
+
+#[allow(unused_imports)]
+use necsim_algorithms::AlgorithmArguments;
 
 use necsim_plugins_core::import::{AnyReporterPluginVec, ReporterPluginLibrary};
 
@@ -125,19 +133,28 @@ pub struct CommonArgs {
 #[allow(clippy::empty_enum)]
 #[serde(deserialize_state = "Partition")]
 pub enum Algorithm {
-    #[cfg(feature = "necsim-classical")]
-    Classical,
-    #[cfg(feature = "necsim-gillespie")]
-    Gillespie,
-    #[cfg(feature = "necsim-skipping-gillespie")]
-    SkippingGillespie(
-        #[serde(deserialize_state)] necsim_skipping_gillespie::SkippingGillespieArguments,
+    #[cfg(feature = "necsim-algorithms-monolithic")]
+    Classical(
+        #[serde(deserialize_state)]
+        <necsim_algorithms_monolithic::classical::ClassicalAlgorithm as necsim_algorithms::AlgorithmArguments>::Arguments,
     ),
-    #[cfg(feature = "necsim-cuda")]
+    #[cfg(feature = "necsim-algorithms-monolithic")]
+    Gillespie(
+        #[serde(deserialize_state)]
+        <necsim_algorithms_monolithic::gillespie::GillespieAlgorithm as AlgorithmArguments>::Arguments,
+    ),
+    #[cfg(feature = "necsim-algorithms-monolithic")]
+    SkippingGillespie(
+        #[serde(deserialize_state)]
+        <necsim_algorithms_monolithic::skipping_gillespie::SkippingGillespieAlgorithm as AlgorithmArguments>::Arguments,
+    ),
+    #[cfg(feature = "necsim-algorithms-cuda")]
     #[serde(alias = "CUDA")]
-    Cuda(necsim_cuda::CudaArguments),
-    #[cfg(feature = "necsim-independent")]
-    Independent(#[serde(deserialize_state)] necsim_independent::IndependentArguments),
+    Cuda(#[serde(deserialize_state)] <necsim_algorithms_cuda::CudaAlgorithm as AlgorithmArguments>::Arguments),
+    #[cfg(feature = "necsim-algorithms-independent")]
+    Independent(
+        #[serde(deserialize_state)] <necsim_algorithms_independent::IndependentAlgorithm as AlgorithmArguments>::Arguments,
+    ),
 }
 
 impl fmt::Display for Algorithm {
@@ -162,16 +179,21 @@ impl fmt::Display for Algorithm {
 #[derive(Debug, Deserialize)]
 #[serde(from = "ScenarioRaw")]
 pub enum Scenario {
-    InMemory(InMemoryArgs),
-    NonSpatial(NonSpatialArgs),
-    SpatiallyImplicit(SpatiallyImplicitArgs),
-    AlmostInfinite(AlmostInfiniteArgs),
+    SpatiallyExplicit(InMemoryArguments),
+    NonSpatial(NonSpatialArguments),
+    SpatiallyImplicit(SpatiallyImplicitArguments),
+    AlmostInfinite(AlmostInfiniteArguments),
 }
 
 impl From<ScenarioRaw> for Scenario {
     fn from(raw: ScenarioRaw) -> Self {
         match raw {
-            ScenarioRaw::InMemory(args) => Scenario::InMemory(args),
+            ScenarioRaw::SpatiallyExplicit(args) => {
+                Scenario::SpatiallyExplicit(InMemoryArguments {
+                    habitat_map: args.habitat_map,
+                    dispersal_map: args.dispersal_map,
+                })
+            },
             ScenarioRaw::NonSpatial(args) => {
                 if args.spatial {
                     let habitat_map =
@@ -181,12 +203,12 @@ impl From<ScenarioRaw> for Scenario {
 
                     let dispersal_map = Array2D::filled_with(1.0_f64, total_area, total_area);
 
-                    Scenario::InMemory(InMemoryArgs {
+                    Scenario::SpatiallyExplicit(InMemoryArguments {
                         habitat_map,
                         dispersal_map,
                     })
                 } else {
-                    Scenario::NonSpatial(NonSpatialArgs {
+                    Scenario::NonSpatial(NonSpatialArguments {
                         area: args.area,
                         deme: args.deme,
                     })
@@ -200,19 +222,17 @@ impl From<ScenarioRaw> for Scenario {
 
 #[derive(Debug, Deserialize)]
 enum ScenarioRaw {
-    InMemory(InMemoryArgs),
+    SpatiallyExplicit(InMemoryArgs),
     NonSpatial(NonSpatialArgsRaw),
-    SpatiallyImplicit(SpatiallyImplicitArgs),
-    AlmostInfinite(AlmostInfiniteArgs),
+    SpatiallyImplicit(SpatiallyImplicitArguments),
+    AlmostInfinite(AlmostInfiniteArguments),
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(clippy::module_name_repetitions)]
-#[serde(rename = "InMemory")]
 #[serde(try_from = "InMemoryArgsRaw")]
-pub struct InMemoryArgs {
-    pub habitat_map: Array2D<u32>,
-    pub dispersal_map: Array2D<f64>,
+struct InMemoryArgs {
+    habitat_map: Array2D<u32>,
+    dispersal_map: Array2D<f64>,
 }
 
 impl TryFrom<InMemoryArgsRaw> for InMemoryArgs {
@@ -248,7 +268,7 @@ impl TryFrom<InMemoryArgsRaw> for InMemoryArgs {
             habitat_map.num_rows()
         );
 
-        Ok(Self {
+        Ok(InMemoryArgs {
             habitat_map,
             dispersal_map,
         })
@@ -257,7 +277,7 @@ impl TryFrom<InMemoryArgsRaw> for InMemoryArgs {
 
 #[derive(Debug, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
-#[serde(rename = "InMemory")]
+#[serde(rename = "SpatiallyExplicit")]
 #[serde(deny_unknown_fields)]
 struct InMemoryArgsRaw {
     #[serde(alias = "habitat")]
@@ -271,46 +291,16 @@ struct InMemoryArgsRaw {
     strict_load: bool,
 }
 
-#[derive(Debug)]
-#[allow(clippy::module_name_repetitions)]
-pub struct NonSpatialArgs {
-    pub area: (u32, u32),
-    pub deme: u32,
-}
-
 #[derive(Debug, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
 #[serde(deny_unknown_fields)]
+#[serde(rename = "NonSpatial")]
 struct NonSpatialArgsRaw {
     pub area: (u32, u32),
     pub deme: u32,
 
     #[serde(default)]
     pub spatial: bool,
-}
-
-#[derive(Debug, Deserialize)]
-#[allow(clippy::module_name_repetitions)]
-#[serde(deny_unknown_fields)]
-pub struct SpatiallyImplicitArgs {
-    pub local_area: (u32, u32),
-    pub local_deme: u32,
-    pub meta_area: (u32, u32),
-    pub meta_deme: u32,
-
-    #[serde(alias = "migration")]
-    pub migration_probability_per_generation: ZeroExclOneInclF64,
-
-    #[serde(default)]
-    pub dynamic_meta: bool,
-}
-
-#[derive(Debug, Deserialize)]
-#[allow(clippy::module_name_repetitions)]
-#[serde(deny_unknown_fields)]
-pub struct AlmostInfiniteArgs {
-    pub radius: u32,
-    pub sigma: NonNegativeF64,
 }
 
 #[derive(Debug)]

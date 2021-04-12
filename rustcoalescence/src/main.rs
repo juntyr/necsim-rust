@@ -1,5 +1,6 @@
 #![deny(clippy::pedantic)]
 #![feature(associated_type_bounds)]
+#![feature(unwrap_infallible)]
 
 #[macro_use]
 extern crate serde_derive_state;
@@ -17,7 +18,7 @@ mod maps;
 mod minimal_logger;
 mod plugins;
 mod reporter;
-mod simulation;
+// mod simulation;
 mod tiff;
 
 use args::RustcoalescenceArgs;

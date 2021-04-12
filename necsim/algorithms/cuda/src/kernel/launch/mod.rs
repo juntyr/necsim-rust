@@ -16,7 +16,9 @@ use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 use rustacuda::{error::CudaResult, function::Function, memory::DeviceBox, module::Module};
 use rustacuda_core::DeviceCopy;
 
-use ptx_jit::{compilePtxJITwithArguments, host::compiler::PtxJITResult};
+use necsim_algorithms_cuda_kernel_ptx_jit::{
+    compilePtxJITwithArguments, host::compiler::PtxJITResult,
+};
 use rust_cuda::{
     common::{DeviceBoxMut, RustToCuda},
     host::{CudaDropWrapper, HostDeviceBoxMut},
