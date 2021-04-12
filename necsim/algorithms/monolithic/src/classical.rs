@@ -1,7 +1,7 @@
 use std::{hint::unreachable_unchecked, marker::PhantomData};
 
 use necsim_core::{
-    cogs::{Habitat, LineageStore, LocallyCoherentLineageStore, RngCore, SplittableRng},
+    cogs::{LineageStore, LocallyCoherentLineageStore, RngCore, SplittableRng},
     simulation::Simulation,
 };
 
@@ -9,6 +9,7 @@ use necsim_impls_no_std::{
     cogs::{
         active_lineage_sampler::classical::ClassicalActiveLineageSampler,
         coalescence_sampler::unconditional::UnconditionalCoalescenceSampler,
+        dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
         emigration_exit::{domain::DomainEmigrationExit, never::NeverEmigrationExit},
         event_sampler::unconditional::UnconditionalEventSampler,
         immigration_entry::{buffered::BufferedImmigrationEntry, never::NeverImmigrationEntry},
@@ -43,21 +44,19 @@ impl AlgorithmArguments for ClassicalAlgorithm {
 
 #[allow(clippy::type_complexity)]
 impl<
-        H: Habitat,
         O: Scenario<
             Pcg,
-            ClassicalLineageStore<H>,
-            Habitat = H,
             LineageReference = InMemoryLineageReference,
             TurnoverRate = UniformTurnoverRate,
         >,
-    > Algorithm<ClassicalLineageStore<H>, O> for ClassicalAlgorithm
+    > Algorithm<O> for ClassicalAlgorithm
 where
-    O::LineageStore: LocallyCoherentLineageStore<H, InMemoryLineageReference>,
+    O::LineageStore<ClassicalLineageStore<O::Habitat>>:
+        LocallyCoherentLineageStore<O::Habitat, InMemoryLineageReference>,
 {
     type Error = !;
     type LineageReference = InMemoryLineageReference;
-    type LineageStore = O::LineageStore;
+    type LineageStore = O::LineageStore<ClassicalLineageStore<O::Habitat>>;
     type Rng = Pcg;
 
     fn initialise_and_simulate<
@@ -92,7 +91,8 @@ where
             )),
         };
 
-        let (habitat, dispersal_sampler, turnover_rate, speciation_probability) = scenario.build();
+        let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
+            scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, Pcg>>();
 
         let coalescence_sampler = UnconditionalCoalescenceSampler::default();
 

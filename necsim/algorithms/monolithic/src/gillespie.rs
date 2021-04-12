@@ -1,13 +1,14 @@
 use std::{hint::unreachable_unchecked, marker::PhantomData};
 
 use necsim_core::{
-    cogs::{GloballyCoherentLineageStore, Habitat, LineageStore, RngCore, SplittableRng},
+    cogs::{GloballyCoherentLineageStore, LineageStore, RngCore, SplittableRng},
     simulation::Simulation,
 };
 
 use necsim_impls_no_std::{
     cogs::{
         coalescence_sampler::unconditional::UnconditionalCoalescenceSampler,
+        dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
         emigration_exit::{domain::DomainEmigrationExit, never::NeverEmigrationExit},
         event_sampler::gillespie::{
             unconditional::UnconditionalGillespieEventSampler, GillespiePartialSimulation,
@@ -44,21 +45,15 @@ impl AlgorithmArguments for GillespieAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<
-        H: Habitat,
-        O: Scenario<
-            Pcg,
-            GillespieLineageStore<H>,
-            Habitat = H,
-            LineageReference = InMemoryLineageReference,
-        >,
-    > Algorithm<GillespieLineageStore<H>, O> for GillespieAlgorithm
+impl<O: Scenario<Pcg, LineageReference = InMemoryLineageReference>> Algorithm<O>
+    for GillespieAlgorithm
 where
-    O::LineageStore: GloballyCoherentLineageStore<H, InMemoryLineageReference>,
+    O::LineageStore<GillespieLineageStore<O::Habitat>>:
+        GloballyCoherentLineageStore<O::Habitat, InMemoryLineageReference>,
 {
     type Error = !;
     type LineageReference = InMemoryLineageReference;
-    type LineageStore = O::LineageStore;
+    type LineageStore = O::LineageStore<GillespieLineageStore<O::Habitat>>;
     type Rng = Pcg;
 
     #[allow(clippy::shadow_unrelated, clippy::too_many_lines)]
@@ -94,7 +89,8 @@ where
             )),
         };
 
-        let (habitat, dispersal_sampler, turnover_rate, speciation_probability) = scenario.build();
+        let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
+            scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, Pcg>>();
 
         let coalescence_sampler = UnconditionalCoalescenceSampler::default();
 

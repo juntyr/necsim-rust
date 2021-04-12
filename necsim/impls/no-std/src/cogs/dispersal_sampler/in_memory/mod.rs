@@ -1,4 +1,4 @@
-use array2d::{Array2D, Error};
+use array2d::Array2D;
 
 use necsim_core::cogs::{DispersalSampler, Habitat, RngCore};
 
@@ -26,5 +26,5 @@ pub trait InMemoryDispersalSampler<H: Habitat, G: RngCore>: DispersalSampler<H, 
         explicit_in_memory_dispersal_check_contract(dispersal, habitat),
         "dispersal probabilities are consistent"
     )]
-    fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Result<Self, Error>;
+    fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Self;
 }

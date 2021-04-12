@@ -67,8 +67,6 @@ impl<H: Habitat, G: RngCore, T: InMemoryDispersalSamplerNoError<H, G>>
             return Err(InMemoryDispersalSamplerError::InconsistentDispersalProbabilities);
         }
 
-        #[allow(clippy::map_err_ignore)]
-        Self::unchecked_new(dispersal, habitat)
-            .map_err(|_| InMemoryDispersalSamplerError::InconsistentDispersalMapSize)
+        Ok(Self::unchecked_new(dispersal, habitat))
     }
 }

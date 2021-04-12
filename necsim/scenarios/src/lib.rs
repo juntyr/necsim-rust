@@ -14,7 +14,11 @@ use necsim_core::cogs::{
 };
 
 use necsim_impls_no_std::{
-    cogs::origin_sampler::pre_sampler::OriginPreSampler, decomposition::Decomposition,
+    cogs::{
+        dispersal_sampler::in_memory::InMemoryDispersalSampler,
+        origin_sampler::pre_sampler::OriginPreSampler,
+    },
+    decomposition::Decomposition,
 };
 
 use necsim_impls_std::bounded::ZeroExclOneInclF64;
@@ -28,17 +32,18 @@ pub trait ScenarioArguments {
     type Arguments;
 }
 
-pub trait Scenario<G: RngCore, L: LineageStore<Self::Habitat, Self::LineageReference>>:
-    Sized + ScenarioArguments
-{
+pub trait Scenario<G: RngCore>: Sized + ScenarioArguments {
     type Error;
 
     type Habitat: Habitat;
     type OriginSampler<'h, I: Iterator<Item = u64>>: OriginSampler<'h, Habitat = Self::Habitat>;
     type Decomposition: Decomposition<Self::Habitat>;
     type LineageReference: LineageReference<Self::Habitat>;
-    type LineageStore: LineageStore<Self::Habitat, Self::LineageReference>;
-    type DispersalSampler: DispersalSampler<Self::Habitat, G>;
+    type LineageStore<L: LineageStore<Self::Habitat, Self::LineageReference>>: LineageStore<
+        Self::Habitat,
+        Self::LineageReference,
+    >;
+    type DispersalSampler<D: DispersalSampler<Self::Habitat, G>>: DispersalSampler<Self::Habitat, G>;
     type TurnoverRate: TurnoverRate<Self::Habitat>;
     type SpeciationProbability: SpeciationProbability<Self::Habitat>;
 
@@ -50,11 +55,11 @@ pub trait Scenario<G: RngCore, L: LineageStore<Self::Habitat, Self::LineageRefer
         speciation_probability_per_generation: ZeroExclOneInclF64,
     ) -> Result<Self, Self::Error>;
 
-    fn build(
+    fn build<D: InMemoryDispersalSampler<Self::Habitat, G>>(
         self,
     ) -> (
         Self::Habitat,
-        Self::DispersalSampler,
+        Self::DispersalSampler<D>,
         Self::TurnoverRate,
         Self::SpeciationProbability,
     );

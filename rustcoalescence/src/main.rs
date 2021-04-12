@@ -35,11 +35,11 @@ fn main() -> Result<()> {
 
     let result = match args {
         RustcoalescenceArgs::Simulate(simulate_args) => {
-            #[cfg(feature = "necsim-mpi")]
+            #[cfg(feature = "necsim-partitioning-mpi")]
             {
                 cli::simulate::mpi::simulate_with_logger_mpi(simulate_args)
             }
-            #[cfg(not(feature = "necsim-mpi"))]
+            #[cfg(not(feature = "necsim-partitioning-mpi"))]
             {
                 cli::simulate::monolithic::simulate_with_logger_monolithic(simulate_args)
             }

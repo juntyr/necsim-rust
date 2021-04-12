@@ -1,4 +1,4 @@
-use array2d::{Array2D, Error};
+use array2d::Array2D;
 
 use alloc::{boxed::Box, vec};
 
@@ -23,20 +23,11 @@ pub struct InMemoryCumulativeDispersalSampler {
 impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G> for InMemoryCumulativeDispersalSampler {
     /// Creates a new `InMemoryCumulativeDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
-    ///
-    /// # Errors
-    ///
-    /// `Err(_)` is returned iff the dispersal `Array2D` cannot
-    /// be constructed successfully.
-    #[debug_ensures(ret.is_ok() -> ret.as_ref().unwrap()
+    #[debug_ensures(ret
         .explicit_only_valid_targets_dispersal_contract(old(habitat)),
         "valid_dispersal_targets only allows dispersal to habitat"
     )]
-    //#[debug_ensures(
-    //    ...,
-    //    "cumulative_dispersal stores the cumulative distribution function"
-    //)]
-    fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Result<Self, Error> {
+    fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Self {
         let habitat_extent = habitat.get_extent();
 
         let mut cumulative_dispersal = vec![0.0_f64; dispersal.num_elements()].into_boxed_slice();
@@ -87,10 +78,10 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G> for InMemoryCumulati
             }
         }
 
-        Ok(InMemoryCumulativeDispersalSampler {
+        InMemoryCumulativeDispersalSampler {
             cumulative_dispersal,
             valid_dispersal_targets,
-        })
+        }
     }
 }
 

@@ -15,7 +15,8 @@ use tempfile::NamedTempFile;
 
 use quote::quote;
 
-const SIMULATION_SPECIALISATION_HINT: &str = "necsim_cuda::kernel::specialiser::get_ptx_cstr";
+const SIMULATION_SPECIALISATION_HINT: &str =
+    "necsim_algorithms_cuda::kernel::specialiser::get_ptx_cstr";
 const SIMULATION_SPECIALISATION_ENV: &str = "NECSIM_CUDA_KERNEL_SPECIALISATION";
 
 fn extract_specialisation(input: &str) -> Option<&str> {
@@ -99,11 +100,6 @@ fn main() -> ! {
                     file.read_to_string(&mut kernel_ptx).unwrap_or_else(|_| {
                         panic!("Failed to read kernel file at {:?}.", &kernel_path)
                     });
-
-                    // let kernel_index = kernel_ptx.find(".visible .entry").unwrap();
-                    // let body_index = kernel_ptx[kernel_index..].find("{").unwrap();
-
-                    // kernel_ptx.insert_str(kernel_index + body_index, ".maxnreg 128 ");
 
                     specialised_kernels.push(kernel_ptx);
                 },

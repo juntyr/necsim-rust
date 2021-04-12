@@ -7,7 +7,7 @@ use std::{collections::VecDeque, convert::TryInto};
 
 use arguments::{CudaArguments, IsolatedParallelismMode, ParallelismMode};
 use necsim_core::{
-    cogs::{Habitat, RngCore},
+    cogs::RngCore,
     lineage::{GlobalLineageReference, Lineage},
     reporter::Reporter,
     simulation::Simulation,
@@ -20,14 +20,11 @@ use necsim_impls_no_std::{
             event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
         },
         coalescence_sampler::independent::IndependentCoalescenceSampler,
+        dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
         emigration_exit::never::NeverEmigrationExit,
         event_sampler::independent::IndependentEventSampler,
         immigration_entry::never::NeverImmigrationEntry,
-        lineage_reference::in_memory::InMemoryLineageReference,
-        lineage_store::{
-            coherent::locally::classical::ClassicalLineageStore,
-            independent::IndependentLineageStore,
-        },
+        lineage_store::independent::IndependentLineageStore,
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
         },
@@ -64,24 +61,17 @@ impl AlgorithmArguments for CudaAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<
-        H: Habitat,
-        O: Scenario<
-            CudaRng<FixedSeaHash>,
-            ClassicalLineageStore<H>, // Meaningless
-            Habitat = H,
-            LineageReference = InMemoryLineageReference, // Meaningless
-        >,
-    > Algorithm<ClassicalLineageStore<H>, O> for CudaAlgorithm
+impl<O: Scenario<CudaRng<FixedSeaHash>>> Algorithm<O> for CudaAlgorithm
 where
     O::Habitat: RustToCuda,
-    O::DispersalSampler: RustToCuda,
+    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<FixedSeaHash>>>:
+        RustToCuda,
     O::TurnoverRate: RustToCuda,
     O::SpeciationProbability: RustToCuda,
 {
     type Error = anyhow::Error;
     type LineageReference = GlobalLineageReference;
-    type LineageStore = IndependentLineageStore<H>;
+    type LineageStore = IndependentLineageStore<O::Habitat>;
     type Rng = CudaRng<FixedSeaHash>;
 
     fn initialise_and_simulate<
@@ -129,7 +119,9 @@ where
             .collect(),
         };
 
-        let (habitat, dispersal_sampler, turnover_rate, speciation_probability) = scenario.build();
+        let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
+            scenario
+                .build::<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<FixedSeaHash>>>();
         let rng = CudaRng::from(FixedSeaHash::seed_from_u64(seed));
         let lineage_store = IndependentLineageStore::default();
         let emigration_exit = NeverEmigrationExit::default();
