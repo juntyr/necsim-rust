@@ -2,7 +2,7 @@ use std::{hint::unreachable_unchecked, marker::PhantomData};
 
 use necsim_core::{
     cogs::{
-        GloballyCoherentLineageStore, Habitat, LineageStore, RngCore, SeparableDispersalSampler,
+        GloballyCoherentLineageStore, LineageStore, RngCore, SeparableDispersalSampler,
         SplittableRng,
     },
     simulation::Simulation,
@@ -11,6 +11,7 @@ use necsim_core::{
 use necsim_impls_no_std::{
     cogs::{
         coalescence_sampler::conditional::ConditionalCoalescenceSampler,
+        dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
         emigration_exit::{domain::DomainEmigrationExit, never::NeverEmigrationExit},
         event_sampler::gillespie::{
             conditional::ConditionalGillespieEventSampler, GillespiePartialSimulation,
@@ -47,22 +48,17 @@ impl AlgorithmArguments for SkippingGillespieAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<
-        H: Habitat,
-        O: Scenario<
-            Pcg,
-            GillespieLineageStore<H>,
-            Habitat = H,
-            LineageReference = InMemoryLineageReference,
-        >,
-    > Algorithm<GillespieLineageStore<H>, O> for SkippingGillespieAlgorithm
+impl<O: Scenario<Pcg, LineageReference = InMemoryLineageReference>> Algorithm<O>
+    for SkippingGillespieAlgorithm
 where
-    O::LineageStore: GloballyCoherentLineageStore<H, InMemoryLineageReference>,
-    O::DispersalSampler: SeparableDispersalSampler<H, Pcg>,
+    O::LineageStore<GillespieLineageStore<O::Habitat>>:
+        GloballyCoherentLineageStore<O::Habitat, InMemoryLineageReference>,
+    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<O::Habitat, Pcg>>:
+        SeparableDispersalSampler<O::Habitat, Pcg>,
 {
     type Error = !;
     type LineageReference = InMemoryLineageReference;
-    type LineageStore = O::LineageStore;
+    type LineageStore = O::LineageStore<GillespieLineageStore<O::Habitat>>;
     type Rng = Pcg;
 
     #[allow(clippy::shadow_unrelated, clippy::too_many_lines)]

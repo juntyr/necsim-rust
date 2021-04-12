@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, vec::Vec};
 use core::{marker::PhantomData, ops::Range};
 
-use array2d::{Array2D, Error};
+use array2d::Array2D;
 
 use necsim_core::{
     cogs::{Backup, Habitat, RngCore},
@@ -52,12 +52,7 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G>
 {
     /// Creates a new `InMemoryPackedAliasDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
-    ///
-    /// # Errors
-    ///
-    /// `Err(_)` is returned iff the dispersal `Array2D` cannot
-    /// be constructed successfully.
-    fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Result<Self, Error> {
+    fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Self {
         let habitat_extent = habitat.get_extent();
 
         let mut event_weights: Vec<(usize, f64)> = Vec::with_capacity(dispersal.row_len());
@@ -97,13 +92,14 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G>
             }),
             habitat_extent.height() as usize,
             habitat_extent.width() as usize,
-        )?;
+        )
+        .unwrap(); // infallible by PRE;
 
-        Ok(Self {
+        Self {
             alias_dispersal_ranges,
             alias_dispersal_buffer: alias_dispersal_buffer.into_boxed_slice(),
             marker: PhantomData::<(H, G)>,
-        })
+        }
     }
 }
 

@@ -1,12 +1,14 @@
-use std::num::NonZeroU32;
+use std::{marker::PhantomData, num::NonZeroU32};
 
 use array2d::Array2D;
-use necsim_core::cogs::{Habitat, LineageStore, RngCore};
+use necsim_core::cogs::{DispersalSampler, Habitat, LineageStore, RngCore};
 use thiserror::Error;
 
 use necsim_impls_no_std::{
     cogs::{
-        dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
+        dispersal_sampler::in_memory::{
+            contract::explicit_in_memory_dispersal_check_contract, InMemoryDispersalSampler,
+        },
         habitat::in_memory::InMemoryHabitat,
         lineage_reference::in_memory::InMemoryLineageReference,
         origin_sampler::{in_memory::InMemoryOriginSampler, pre_sampler::OriginPreSampler},
@@ -18,9 +20,7 @@ use necsim_impls_no_std::{
 
 use necsim_impls_std::{
     bounded::ZeroExclOneInclF64,
-    cogs::dispersal_sampler::in_memory::{
-        error::InMemoryDispersalSamplerError, InMemoryDispersalSampler,
-    },
+    cogs::dispersal_sampler::in_memory::error::InMemoryDispersalSamplerError,
 };
 
 use crate::{Scenario, ScenarioArguments};
@@ -28,9 +28,10 @@ use crate::{Scenario, ScenarioArguments};
 #[allow(clippy::module_name_repetitions)]
 pub struct SpatiallyExplicitScenario<G: RngCore> {
     habitat: InMemoryHabitat,
-    dispersal_sampler: InMemoryPackedAliasDispersalSampler<InMemoryHabitat, G>,
+    dispersal_map: Array2D<f64>,
     turnover_rate: UniformTurnoverRate,
     speciation_probability: UniformSpeciationProbability,
+    _marker: PhantomData<G>,
 }
 
 #[derive(Debug)]
@@ -49,15 +50,13 @@ impl<G: RngCore> ScenarioArguments for SpatiallyExplicitScenario<G> {
     type Arguments = InMemoryArguments;
 }
 
-impl<G: RngCore, L: LineageStore<InMemoryHabitat, InMemoryLineageReference>> Scenario<G, L>
-    for SpatiallyExplicitScenario<G>
-{
+impl<G: RngCore> Scenario<G> for SpatiallyExplicitScenario<G> {
     type Decomposition = EqualAreaDecomposition<Self::Habitat>;
-    type DispersalSampler = InMemoryPackedAliasDispersalSampler<Self::Habitat, G>;
+    type DispersalSampler<D: DispersalSampler<Self::Habitat, G>> = D;
     type Error = InMemoryDispersalSamplerError;
     type Habitat = InMemoryHabitat;
     type LineageReference = InMemoryLineageReference;
-    type LineageStore = L;
+    type LineageStore<L: LineageStore<Self::Habitat, Self::LineageReference>> = L;
     type OriginSampler<'h, I: Iterator<Item = u64>> = InMemoryOriginSampler<'h, I>;
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
@@ -67,31 +66,45 @@ impl<G: RngCore, L: LineageStore<InMemoryHabitat, InMemoryLineageReference>> Sce
         speciation_probability_per_generation: ZeroExclOneInclF64,
     ) -> Result<Self, Self::Error> {
         let habitat = InMemoryHabitat::new(args.habitat_map);
-        let dispersal_sampler =
-            InMemoryPackedAliasDispersalSampler::new(&args.dispersal_map, &habitat)?;
         let turnover_rate = UniformTurnoverRate::default();
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation.get());
 
+        let habitat_extent = habitat.get_extent();
+        let habitat_area = (habitat_extent.width() as usize) * (habitat_extent.height() as usize);
+
+        if args.dispersal_map.num_rows() != habitat_area
+            || args.dispersal_map.num_columns() != habitat_area
+        {
+            return Err(InMemoryDispersalSamplerError::InconsistentDispersalMapSize);
+        }
+
+        if !explicit_in_memory_dispersal_check_contract(&args.dispersal_map, &habitat) {
+            return Err(InMemoryDispersalSamplerError::InconsistentDispersalProbabilities);
+        }
+
         Ok(Self {
             habitat,
-            dispersal_sampler,
+            dispersal_map: args.dispersal_map,
             turnover_rate,
             speciation_probability,
+            _marker: PhantomData::<G>,
         })
     }
 
-    fn build(
+    fn build<D: InMemoryDispersalSampler<Self::Habitat, G>>(
         self,
     ) -> (
         Self::Habitat,
-        Self::DispersalSampler,
+        Self::DispersalSampler<D>,
         Self::TurnoverRate,
         Self::SpeciationProbability,
     ) {
+        let dispersal_sampler = D::unchecked_new(&self.dispersal_map, &self.habitat);
+
         (
             self.habitat,
-            self.dispersal_sampler,
+            dispersal_sampler,
             self.turnover_rate,
             self.speciation_probability,
         )

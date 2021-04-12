@@ -12,7 +12,7 @@ use arguments::{
     MonolithicParallelismMode, ParallelismMode, RelativeDedupCache,
 };
 use necsim_core::{
-    cogs::{Habitat, RngCore, SpeciationSample},
+    cogs::{RngCore, SpeciationSample},
     lineage::{GlobalLineageReference, Lineage},
     simulation::Simulation,
 };
@@ -24,6 +24,7 @@ use necsim_impls_no_std::{
             event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
         },
         coalescence_sampler::independent::IndependentCoalescenceSampler,
+        dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
         emigration_exit::{
             independent::{
                 choice::{
@@ -35,11 +36,7 @@ use necsim_impls_no_std::{
         },
         event_sampler::independent::IndependentEventSampler,
         immigration_entry::never::NeverImmigrationEntry,
-        lineage_reference::in_memory::InMemoryLineageReference,
-        lineage_store::{
-            coherent::locally::classical::ClassicalLineageStore,
-            independent::IndependentLineageStore,
-        },
+        lineage_store::independent::IndependentLineageStore,
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
         },
@@ -65,19 +62,10 @@ impl AlgorithmArguments for IndependentAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<
-        H: Habitat,
-        O: Scenario<
-            SeaHash,
-            ClassicalLineageStore<H>, // Meaningless
-            Habitat = H,
-            LineageReference = InMemoryLineageReference, // Meaningless
-        >,
-    > Algorithm<ClassicalLineageStore<H>, O> for IndependentAlgorithm
-{
+impl<O: Scenario<SeaHash>> Algorithm<O> for IndependentAlgorithm {
     type Error = !;
     type LineageReference = GlobalLineageReference;
-    type LineageStore = IndependentLineageStore<H>;
+    type LineageStore = IndependentLineageStore<O::Habitat>;
     type Rng = SeaHash;
 
     #[allow(clippy::too_many_lines)]
@@ -143,7 +131,8 @@ impl<
             },
         };
 
-        let (habitat, dispersal_sampler, turnover_rate, speciation_probability) = scenario.build();
+        let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
+            scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, SeaHash>>();
         let rng = SeaHash::seed_from_u64(seed);
         let lineage_store = IndependentLineageStore::default();
         let coalescence_sampler = IndependentCoalescenceSampler::default();

@@ -2,7 +2,7 @@ use std::num::NonZeroU32;
 
 use serde::Deserialize;
 
-use necsim_core::cogs::{LineageStore, RngCore};
+use necsim_core::cogs::{DispersalSampler, LineageStore, RngCore};
 
 use necsim_impls_no_std::{
     cogs::{
@@ -45,15 +45,15 @@ impl<G: RngCore> ScenarioArguments for AlmostInfiniteScenario<G> {
     type Arguments = AlmostInfiniteArguments;
 }
 
-impl<G: RngCore, L: LineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>> Scenario<G, L>
-    for AlmostInfiniteScenario<G>
-{
+impl<G: RngCore> Scenario<G> for AlmostInfiniteScenario<G> {
     type Decomposition = RadialDecomposition;
-    type DispersalSampler = AlmostInfiniteNormalDispersalSampler<G>;
+    type DispersalSampler<D: DispersalSampler<Self::Habitat, G>> =
+        AlmostInfiniteNormalDispersalSampler<G>;
     type Error = !;
     type Habitat = AlmostInfiniteHabitat;
     type LineageReference = InMemoryLineageReference;
-    type LineageStore = AlmostInfiniteLineageStore;
+    type LineageStore<L: LineageStore<Self::Habitat, Self::LineageReference>> =
+        AlmostInfiniteLineageStore;
     type OriginSampler<'h, I: Iterator<Item = u64>> = AlmostInfiniteOriginSampler<'h, I>;
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
@@ -78,11 +78,11 @@ impl<G: RngCore, L: LineageStore<AlmostInfiniteHabitat, InMemoryLineageReference
         })
     }
 
-    fn build(
+    fn build<D: DispersalSampler<Self::Habitat, G>>(
         self,
     ) -> (
         Self::Habitat,
-        Self::DispersalSampler,
+        Self::DispersalSampler<D>,
         Self::TurnoverRate,
         Self::SpeciationProbability,
     ) {
