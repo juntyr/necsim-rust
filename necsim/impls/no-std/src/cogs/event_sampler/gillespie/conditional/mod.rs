@@ -13,7 +13,7 @@ use necsim_core::{
 
 use crate::cogs::{
     coalescence_sampler::conditional::ConditionalCoalescenceSampler,
-    event_sampler::gillespie::GillespieEventSampler,
+    event_sampler::gillespie::{GillespieEventSampler, GillespiePartialSimulation},
 };
 
 mod probability;
@@ -122,7 +122,9 @@ impl<
         // The event is sampled after the active lineage has been removed from
         //  the lineage store, but it must be included in the calculation
         let probability_at_location =
-            ProbabilityAtLocation::new(dispersal_origin.location(), simulation, false);
+            GillespiePartialSimulation::without_emigration_exit(simulation, |simulation| {
+                ProbabilityAtLocation::new(dispersal_origin.location(), simulation, false)
+            });
 
         let event_sample = probability_at_location.total() * rng.sample_uniform();
 
@@ -228,12 +230,11 @@ impl<
     fn get_event_rate_at_location(
         &self,
         location: &Location,
-        simulation: &PartialSimulation<
+        simulation: &GillespiePartialSimulation<
             H,
             G,
             R,
             S,
-            X,
             D,
             ConditionalCoalescenceSampler<H, R, S>,
             T,

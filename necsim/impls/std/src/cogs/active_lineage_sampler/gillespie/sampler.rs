@@ -12,7 +12,9 @@ use necsim_core::{
     simulation::partial::active_lineager_sampler::PartialSimulation,
 };
 
-use necsim_impls_no_std::cogs::event_sampler::gillespie::GillespieEventSampler;
+use necsim_impls_no_std::cogs::event_sampler::gillespie::{
+    GillespieEventSampler, GillespiePartialSimulation,
+};
 
 use super::{EventTime, GillespieActiveLineageSampler};
 
@@ -87,9 +89,12 @@ impl<
         if number_lineages_left_at_location > 0 {
             let event_rate_at_location =
                 simulation.with_split_event_sampler(|event_sampler, simulation| {
-                    // All active lineages which are left, which now excludes
-                    //  chosen_lineage_reference, are still in the lineage store
-                    event_sampler.get_event_rate_at_location(&chosen_active_location, simulation)
+                    GillespiePartialSimulation::without_emigration_exit(simulation, |simulation| {
+                        // All active lineages which are left, which now excludes
+                        //  chosen_lineage_reference, are still in the lineage store
+                        event_sampler
+                            .get_event_rate_at_location(&chosen_active_location, simulation)
+                    })
                 });
 
             self.active_locations.push(
@@ -136,9 +141,11 @@ impl<
 
         let event_rate_at_location =
             simulation.with_split_event_sampler(|event_sampler, simulation| {
-                // All active lineage references, including lineage_reference,
-                //  are now (back) in the lineage store
-                event_sampler.get_event_rate_at_location(&location, simulation)
+                GillespiePartialSimulation::without_emigration_exit(simulation, |simulation| {
+                    // All active lineage references, including lineage_reference,
+                    //  are now (back) in the lineage store
+                    event_sampler.get_event_rate_at_location(&location, simulation)
+                })
             });
 
         self.active_locations.push(
@@ -172,9 +179,11 @@ impl<
 
         let event_rate_at_location =
             simulation.with_split_event_sampler(|event_sampler, simulation| {
-                // All active lineages, including _immigrant_lineage_reference,
-                //  are now in the lineage store
-                event_sampler.get_event_rate_at_location(&location, simulation)
+                GillespiePartialSimulation::without_emigration_exit(simulation, |simulation| {
+                    // All active lineages, including _immigrant_lineage_reference,
+                    //  are now in the lineage store
+                    event_sampler.get_event_rate_at_location(&location, simulation)
+                })
             });
 
         self.active_locations.push(
@@ -185,6 +194,45 @@ impl<
         self.last_event_time = time;
 
         self.number_active_lineages += 1;
+    }
+
+    fn with_next_active_lineage_indexed_location_event_time<
+        F: FnOnce(
+            &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
+            &mut G,
+            R,
+            IndexedLocation,
+            f64,
+        ) -> Option<IndexedLocation>,
+    >(
+        &mut self,
+        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
+        rng: &mut G,
+        inner: F,
+    ) -> bool {
+        if let Some((chosen_lineage, dispersal_origin, event_time)) =
+            self.pop_active_lineage_indexed_location_event_time(simulation, rng)
+        {
+            if let Some(dispersal_target) = inner(
+                simulation,
+                rng,
+                chosen_lineage.clone(),
+                dispersal_origin,
+                event_time,
+            ) {
+                self.push_active_lineage_to_indexed_location(
+                    chosen_lineage,
+                    dispersal_target,
+                    event_time,
+                    simulation,
+                    rng,
+                );
+            }
+
+            true
+        } else {
+            false
+        }
     }
 }
 

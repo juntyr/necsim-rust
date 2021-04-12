@@ -44,8 +44,6 @@ pub struct Simulation<
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) lineage_store: S,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
-    pub(super) emigration_exit: X,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) dispersal_sampler: D,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) coalescence_sampler: C,
@@ -53,6 +51,8 @@ pub struct Simulation<
     pub(super) turnover_rate: T,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) speciation_probability: N,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    pub(super) emigration_exit: X,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) event_sampler: E,
     #[cfg_attr(feature = "cuda", r2cEmbed)]

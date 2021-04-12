@@ -8,10 +8,11 @@ use necsim_core::{
         Habitat, ImmigrationEntry, LineageReference, RngCore, SpeciationProbability, TurnoverRate,
     },
     landscape::Location,
-    simulation::partial::event_sampler::PartialSimulation,
 };
 
-use necsim_impls_no_std::cogs::event_sampler::gillespie::GillespieEventSampler;
+use necsim_impls_no_std::cogs::event_sampler::gillespie::{
+    GillespieEventSampler, GillespiePartialSimulation,
+};
 
 mod event_time;
 mod sampler;
@@ -55,7 +56,7 @@ impl<
 {
     #[must_use]
     pub fn new(
-        partial_simulation: &PartialSimulation<H, G, R, S, X, D, C, T, N>,
+        partial_simulation: &GillespiePartialSimulation<H, G, R, S, D, C, T, N>,
         event_sampler: &E,
         rng: &mut G,
     ) -> Self {

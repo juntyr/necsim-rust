@@ -14,7 +14,7 @@ use necsim_core::{
 use rustacuda::{function::Function, module::Module};
 use rustacuda_core::DeviceCopy;
 
-use ptx_jit::host::compiler::PtxJITCompiler;
+use necsim_algorithms_cuda_kernel_ptx_jit::host::compiler::PtxJITCompiler;
 use rust_cuda::{common::RustToCuda, host::CudaDropWrapper};
 
 use super::{specialiser, SimulationKernel};

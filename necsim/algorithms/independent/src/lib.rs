@@ -1,253 +1,307 @@
 #![deny(clippy::pedantic)]
 #![feature(never_type)]
-#![allow(incomplete_features)]
-#![feature(stmt_expr_attributes)]
 #![feature(drain_filter)]
 
 #[macro_use]
-extern crate contracts;
+extern crate serde_derive_state;
 
-use std::num::{NonZeroU64, NonZeroUsize};
+use std::collections::VecDeque;
 
-use serde::Deserialize;
-use serde_state::DeserializeState;
-
+use arguments::{
+    AbsoluteDedupCache, DedupCache, IndependentArguments, IsolatedParallelismMode,
+    MonolithicParallelismMode, ParallelismMode, RelativeDedupCache,
+};
 use necsim_core::{
-    cogs::{DispersalSampler, Habitat, RngCore, SpeciationProbability, SpeciationSample},
-    lineage::Lineage,
+    cogs::{Habitat, RngCore, SpeciationSample},
+    lineage::{GlobalLineageReference, Lineage},
+    simulation::Simulation,
 };
 
 use necsim_impls_no_std::{
     cache::DirectMappedCache as LruCache,
     cogs::{
-        emigration_exit::independent::choice::{
-            always::AlwaysEmigrationChoice, probabilistic::ProbabilisticEmigrationChoice,
+        active_lineage_sampler::independent::{
+            event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
         },
-        lineage_store::independent::IndependentLineageStore,
+        coalescence_sampler::independent::IndependentCoalescenceSampler,
+        emigration_exit::{
+            independent::{
+                choice::{
+                    always::AlwaysEmigrationChoice, probabilistic::ProbabilisticEmigrationChoice,
+                },
+                IndependentEmigrationExit,
+            },
+            never::NeverEmigrationExit,
+        },
+        event_sampler::independent::IndependentEventSampler,
+        immigration_entry::never::NeverImmigrationEntry,
+        lineage_reference::in_memory::InMemoryLineageReference,
+        lineage_store::{
+            coherent::locally::classical::ClassicalLineageStore,
+            independent::IndependentLineageStore,
+        },
+        origin_sampler::{
+            decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
+        },
         rng::seahash::SeaHash,
     },
-    decomposition::Decomposition,
     partitioning::LocalPartition,
     reporter::ReporterContext,
 };
 
-use necsim_impls_std::bounded::{Partition, PositiveF64};
+use necsim_algorithms::{Algorithm, AlgorithmArguments};
+use necsim_scenarios::Scenario;
+use reporter::IgnoreProgressReporterProxy;
 
-mod almost_infinite;
-mod in_memory;
-mod non_spatial;
-
-mod partitioned;
-
+mod arguments;
+mod parallelism;
 mod reporter;
-use reporter::PartitionReporterProxy;
 
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct AbsoluteDedupCache {
-    capacity: NonZeroUsize,
+#[allow(clippy::module_name_repetitions, clippy::empty_enum)]
+pub enum IndependentAlgorithm {}
+
+impl AlgorithmArguments for IndependentAlgorithm {
+    type Arguments = IndependentArguments;
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RelativeDedupCache {
-    factor: PositiveF64,
-}
-
-#[derive(Debug, Deserialize)]
-pub enum DedupCache {
-    Absolute(AbsoluteDedupCache),
-    Relative(RelativeDedupCache),
-    None,
-}
-
-#[derive(Debug, Deserialize)]
-pub enum PartitionMode {
-    Monolithic,
-    Individuals,
-    #[serde(alias = "Isolated")]
-    IsolatedIndividuals(Partition),
-    Landscape,
-    Probabilistic,
-}
-
-#[derive(Debug)]
-pub struct IndependentArguments {
-    delta_t: PositiveF64,
-    step_slice: NonZeroU64,
-    dedup_cache: DedupCache,
-    partition_mode: PartitionMode,
-}
-
-impl<'de> DeserializeState<'de, Partition> for IndependentArguments {
-    fn deserialize_state<D>(seed: &mut Partition, deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::de::Deserializer<'de>,
-    {
-        use serde::de::Error;
-
-        let raw = IndependentArgumentsRaw::deserialize(deserializer)?;
-
-        let partition_mode = match raw.partition_mode {
-            Some(partition_mode) => match partition_mode {
-                PartitionMode::Monolithic | PartitionMode::IsolatedIndividuals(_)
-                    if seed.partitions().get() > 1 =>
-                {
-                    return Err(D::Error::custom(format!(
-                        "partition_mode {:?} is incompatible with non-monolithic partitioning.",
-                        partition_mode
-                    )))
-                },
-                PartitionMode::Individuals
-                | PartitionMode::Landscape
-                | PartitionMode::Probabilistic
-                    if seed.partitions().get() == 1 =>
-                {
-                    return Err(D::Error::custom(format!(
-                        "partition_mode {:?} is incompatible with monolithic partitioning.",
-                        partition_mode
-                    )))
-                },
-                partition_mode => partition_mode,
-            },
-            None => {
-                if seed.partitions().get() > 1 {
-                    PartitionMode::Individuals
-                } else {
-                    PartitionMode::Monolithic
-                }
-            },
-        };
-
-        Ok(IndependentArguments {
-            delta_t: raw.delta_t,
-            step_slice: raw.step_slice,
-            dedup_cache: raw.dedup_cache,
-            partition_mode,
-        })
-    }
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-struct IndependentArgumentsRaw {
-    delta_t: PositiveF64,
-    step_slice: NonZeroU64,
-    dedup_cache: DedupCache,
-    partition_mode: Option<PartitionMode>,
-}
-
-impl Default for IndependentArgumentsRaw {
-    fn default() -> Self {
-        Self {
-            delta_t: PositiveF64::new(1.0_f64).unwrap(),
-            step_slice: NonZeroU64::new(10_u64).unwrap(),
-            dedup_cache: DedupCache::Relative(RelativeDedupCache {
-                factor: PositiveF64::new(2.0_f64).unwrap(),
-            }),
-            partition_mode: None,
-        }
-    }
-}
-
-pub struct IndependentSimulation;
-
-impl IndependentSimulation {
-    /// Simulates the independent coalescence algorithm on the `habitat` with
-    /// `dispersal` and lineages from `lineage_store`.
-    #[allow(clippy::too_many_arguments)]
-    fn simulate<
+#[allow(clippy::type_complexity)]
+impl<
         H: Habitat,
-        C: Decomposition<H>,
-        N: SpeciationProbability<H>,
-        D: DispersalSampler<H, SeaHash>,
+        O: Scenario<
+            SeaHash,
+            ClassicalLineageStore<H>, // Meaningless
+            Habitat = H,
+            LineageReference = InMemoryLineageReference, // Meaningless
+        >,
+    > Algorithm<ClassicalLineageStore<H>, O> for IndependentAlgorithm
+{
+    type Error = !;
+    type LineageReference = GlobalLineageReference;
+    type LineageStore = IndependentLineageStore<H>;
+    type Rng = SeaHash;
+
+    #[allow(clippy::too_many_lines)]
+    fn initialise_and_simulate<
+        I: Iterator<Item = u64>,
         R: ReporterContext,
         P: LocalPartition<R>,
     >(
-        habitat: H,
-        speciation_probability: N,
-        dispersal_sampler: D,
-        lineages: Vec<Lineage>,
+        args: Self::Arguments,
         seed: u64,
+        scenario: O,
+        pre_sampler: OriginPreSampler<I>,
         local_partition: &mut P,
-        decomposition: C,
-        auxiliary: IndependentArguments,
-    ) -> (f64, u64) {
-        let mut proxy = PartitionReporterProxy::from(local_partition);
-
-        let rng = SeaHash::seed_from_u64(seed);
-        let lineage_store = IndependentLineageStore::default();
-
-        let min_spec_samples: LruCache<SpeciationSample> =
-            LruCache::with_capacity(match auxiliary.dedup_cache {
-                DedupCache::Absolute(AbsoluteDedupCache { capacity }) => capacity.get(),
-                DedupCache::Relative(RelativeDedupCache { factor }) =>
-                #[allow(
-                    clippy::cast_precision_loss,
-                    clippy::cast_sign_loss,
-                    clippy::cast_possible_truncation
-                )]
-                {
-                    ((lineages.len() as f64) * factor.get()) as usize
-                }
-                DedupCache::None => 0_usize,
-            });
-
-        let (time, steps) = match auxiliary.partition_mode {
-            PartitionMode::Monolithic | PartitionMode::IsolatedIndividuals(..) => {
-                partitioned::monolithic::simulate(
-                    habitat,
-                    rng,
-                    speciation_probability,
-                    dispersal_sampler,
-                    lineage_store,
-                    lineages.into(),
-                    &mut proxy,
-                    min_spec_samples,
-                    auxiliary,
-                )
+    ) -> Result<(f64, u64), Self::Error> {
+        let decomposition = match args.parallelism_mode {
+            ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { partition, .. }) => {
+                scenario.decompose(partition.rank(), partition.partitions())
             },
-            PartitionMode::Individuals => partitioned::individuals::simulate(
-                habitat,
-                rng,
-                speciation_probability,
-                dispersal_sampler,
-                lineage_store,
-                lineages.into(),
-                &mut proxy,
-                min_spec_samples,
-                auxiliary,
-            ),
-            PartitionMode::Landscape => partitioned::landscape::simulate(
-                habitat,
-                rng,
-                speciation_probability,
-                dispersal_sampler,
-                lineage_store,
-                lineages.into(),
-                &mut proxy,
-                decomposition,
-                AlwaysEmigrationChoice::default(),
-                min_spec_samples,
-                auxiliary,
-            ),
-            PartitionMode::Probabilistic => partitioned::landscape::simulate(
-                habitat,
-                rng,
-                speciation_probability,
-                dispersal_sampler,
-                lineage_store,
-                lineages.into(),
-                &mut proxy,
-                decomposition,
-                ProbabilisticEmigrationChoice::default(),
-                min_spec_samples,
-                auxiliary,
+            _ => scenario.decompose(
+                local_partition.get_partition_rank(),
+                local_partition.get_number_of_partitions(),
             ),
         };
 
-        proxy.local_partition().report_progress_sync(0_u64);
+        let lineages: VecDeque<Lineage> = match args.parallelism_mode {
+            // Apply no lineage origin partitioning in the `Monolithic` mode
+            ParallelismMode::Monolithic(..) => scenario
+                .sample_habitat(pre_sampler)
+                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                .collect(),
+            // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
+            ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { partition, .. }) => {
+                scenario
+                    .sample_habitat(
+                        pre_sampler.partition(partition.rank(), partition.partitions().get()),
+                    )
+                    .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                    .collect()
+            },
+            // Apply lineage origin partitioning in the `IsolatedLandscape` mode
+            ParallelismMode::IsolatedLandscape(..) => DecompositionOriginSampler::new(
+                scenario.sample_habitat(pre_sampler),
+                &decomposition,
+            )
+            .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+            .collect(),
+            // Apply lineage origin partitioning in the `Individuals` mode
+            ParallelismMode::Individuals => scenario
+                .sample_habitat(pre_sampler.partition(
+                    local_partition.get_partition_rank(),
+                    local_partition.get_number_of_partitions().get(),
+                ))
+                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                .collect(),
+            // Apply lineage origin decomposition in the `Landscape` mode
+            ParallelismMode::Landscape | ParallelismMode::Probabilistic => {
+                DecompositionOriginSampler::new(
+                    scenario.sample_habitat(pre_sampler),
+                    &decomposition,
+                )
+                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                .collect()
+            },
+        };
 
-        (time, steps)
+        let (habitat, dispersal_sampler, turnover_rate, speciation_probability) = scenario.build();
+        let rng = SeaHash::seed_from_u64(seed);
+        let lineage_store = IndependentLineageStore::default();
+        let coalescence_sampler = IndependentCoalescenceSampler::default();
+
+        let min_spec_samples: LruCache<SpeciationSample> =
+            LruCache::with_capacity(match args.dedup_cache {
+                DedupCache::Absolute(AbsoluteDedupCache { capacity }) => capacity.get(),
+                DedupCache::Relative(RelativeDedupCache { factor }) => {
+                    #[allow(
+                        clippy::cast_precision_loss,
+                        clippy::cast_sign_loss,
+                        clippy::cast_possible_truncation
+                    )]
+                    let capacity = ((lineages.len() as f64) * factor.get()) as usize;
+
+                    capacity
+                },
+                DedupCache::None => 0_usize,
+            });
+
+        let mut proxy = IgnoreProgressReporterProxy::from(local_partition);
+
+        match args.parallelism_mode {
+            ParallelismMode::Monolithic(MonolithicParallelismMode { event_slice })
+            | ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode {
+                event_slice, ..
+            })
+            | ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { event_slice, .. }) => {
+                let emigration_exit = NeverEmigrationExit::default();
+                let event_sampler = IndependentEventSampler::default();
+                let immigration_entry = NeverImmigrationEntry::default();
+                let active_lineage_sampler = IndependentActiveLineageSampler::empty(
+                    ExpEventTimeSampler::new(args.delta_t.get()),
+                );
+
+                let simulation = Simulation::builder()
+                    .habitat(habitat)
+                    .rng(rng)
+                    .speciation_probability(speciation_probability)
+                    .dispersal_sampler(dispersal_sampler)
+                    .lineage_reference(std::marker::PhantomData::<GlobalLineageReference>)
+                    .lineage_store(lineage_store)
+                    .emigration_exit(emigration_exit)
+                    .coalescence_sampler(coalescence_sampler)
+                    .turnover_rate(turnover_rate)
+                    .event_sampler(event_sampler)
+                    .immigration_entry(immigration_entry)
+                    .active_lineage_sampler(active_lineage_sampler)
+                    .build();
+
+                Ok(parallelism::monolithic::simulate(
+                    simulation,
+                    lineages,
+                    min_spec_samples,
+                    args.step_slice,
+                    event_slice,
+                    &mut proxy,
+                ))
+            },
+            ParallelismMode::Individuals => {
+                let emigration_exit = NeverEmigrationExit::default();
+                let event_sampler = IndependentEventSampler::default();
+                let immigration_entry = NeverImmigrationEntry::default();
+                let active_lineage_sampler = IndependentActiveLineageSampler::empty(
+                    ExpEventTimeSampler::new(args.delta_t.get()),
+                );
+
+                let simulation = Simulation::builder()
+                    .habitat(habitat)
+                    .rng(rng)
+                    .speciation_probability(speciation_probability)
+                    .dispersal_sampler(dispersal_sampler)
+                    .lineage_reference(std::marker::PhantomData::<GlobalLineageReference>)
+                    .lineage_store(lineage_store)
+                    .emigration_exit(emigration_exit)
+                    .coalescence_sampler(coalescence_sampler)
+                    .turnover_rate(turnover_rate)
+                    .event_sampler(event_sampler)
+                    .immigration_entry(immigration_entry)
+                    .active_lineage_sampler(active_lineage_sampler)
+                    .build();
+
+                Ok(parallelism::individuals::simulate(
+                    simulation,
+                    lineages,
+                    min_spec_samples,
+                    args.step_slice,
+                    &mut proxy,
+                ))
+            },
+            ParallelismMode::Landscape => {
+                let emigration_exit = IndependentEmigrationExit::new(
+                    decomposition,
+                    AlwaysEmigrationChoice::default(),
+                );
+                let event_sampler = IndependentEventSampler::default();
+                let immigration_entry = NeverImmigrationEntry::default();
+                let active_lineage_sampler = IndependentActiveLineageSampler::empty(
+                    ExpEventTimeSampler::new(args.delta_t.get()),
+                );
+
+                let simulation = Simulation::builder()
+                    .habitat(habitat)
+                    .rng(rng)
+                    .speciation_probability(speciation_probability)
+                    .dispersal_sampler(dispersal_sampler)
+                    .lineage_reference(std::marker::PhantomData::<GlobalLineageReference>)
+                    .lineage_store(lineage_store)
+                    .emigration_exit(emigration_exit)
+                    .coalescence_sampler(coalescence_sampler)
+                    .turnover_rate(turnover_rate)
+                    .event_sampler(event_sampler)
+                    .immigration_entry(immigration_entry)
+                    .active_lineage_sampler(active_lineage_sampler)
+                    .build();
+
+                Ok(parallelism::landscape::simulate(
+                    simulation,
+                    lineages,
+                    min_spec_samples,
+                    args.step_slice,
+                    &mut proxy,
+                ))
+            },
+            ParallelismMode::Probabilistic => {
+                let emigration_exit = IndependentEmigrationExit::new(
+                    decomposition,
+                    ProbabilisticEmigrationChoice::default(),
+                );
+                let event_sampler = IndependentEventSampler::default();
+                let immigration_entry = NeverImmigrationEntry::default();
+                let active_lineage_sampler = IndependentActiveLineageSampler::empty(
+                    ExpEventTimeSampler::new(args.delta_t.get()),
+                );
+
+                let simulation = Simulation::builder()
+                    .habitat(habitat)
+                    .rng(rng)
+                    .speciation_probability(speciation_probability)
+                    .dispersal_sampler(dispersal_sampler)
+                    .lineage_reference(std::marker::PhantomData::<GlobalLineageReference>)
+                    .lineage_store(lineage_store)
+                    .emigration_exit(emigration_exit)
+                    .coalescence_sampler(coalescence_sampler)
+                    .turnover_rate(turnover_rate)
+                    .event_sampler(event_sampler)
+                    .immigration_entry(immigration_entry)
+                    .active_lineage_sampler(active_lineage_sampler)
+                    .build();
+
+                Ok(parallelism::landscape::simulate(
+                    simulation,
+                    lineages,
+                    min_spec_samples,
+                    args.step_slice,
+                    &mut proxy,
+                ))
+            },
+        }
     }
 }

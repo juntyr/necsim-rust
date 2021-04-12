@@ -9,12 +9,12 @@ use necsim_core::{
     reporter::boolean::Boolean,
 };
 
+use necsim_algorithms_cuda_kernel_ptx_jit::host::compiler::PtxJITCompiler;
+
 use rustacuda::{function::Function, module::Module};
 use rustacuda_core::DeviceCopy;
 
 use rust_cuda::common::RustToCuda;
-
-use ptx_jit::host::compiler::PtxJITCompiler;
 
 mod r#impl;
 mod launch;
