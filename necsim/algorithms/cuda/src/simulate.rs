@@ -1,8 +1,6 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, num::NonZeroU64};
 
 use anyhow::Result;
-
-use lru_set::LruSet;
 
 use rustacuda::{
     function::{BlockSize, GridSize},
@@ -26,9 +24,14 @@ use necsim_core::{
     simulation::Simulation,
 };
 
+use necsim_impls_no_std::cache::DirectMappedCache as LruCache;
+
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
-use crate::{kernel::SimulationKernel, AbsoluteDedupCache, DedupCache, RelativeDedupCache};
+use crate::{
+    arguments::{AbsoluteDedupCache, DedupCache, RelativeDedupCache},
+    kernel::SimulationKernel,
+};
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn simulate<
@@ -72,7 +75,7 @@ pub fn simulate<
     event_buffer: EventBuffer<P::ReportSpeciation, P::ReportDispersal>,
     min_spec_sample_buffer: ValueBuffer<SpeciationSample>,
     reporter: &mut P,
-    max_steps: u64,
+    max_steps: NonZeroU64,
 ) -> Result<(f64, u64)> {
     // Allocate and initialise the total_time_max and total_steps_sum atomics
     let mut total_time_max = DeviceBox::new(&0.0_f64.to_bits())?;
@@ -84,21 +87,23 @@ pub fn simulate<
         .with_dimensions(grid_size, block_size, 0_u32)
         .with_stream(stream);
 
-    let mut min_spec_samples: LruSet<SpeciationSample> = LruSet::with_capacity(match dedup_mode {
-        DedupCache::Absolute(AbsoluteDedupCache { capacity }) => capacity.get(),
-        DedupCache::Relative(RelativeDedupCache { factor }) =>
-        #[allow(
-            clippy::cast_precision_loss,
-            clippy::cast_sign_loss,
-            clippy::cast_possible_truncation
-        )]
-        {
-            ((individual_tasks.len() as f64) * factor.get()) as usize
-        }
-        DedupCache::None => 0_usize,
-    });
+    let mut min_spec_samples: LruCache<SpeciationSample> =
+        LruCache::with_capacity(match dedup_mode {
+            DedupCache::Absolute(AbsoluteDedupCache { capacity }) => capacity.get(),
+            DedupCache::Relative(RelativeDedupCache { factor }) => {
+                #[allow(
+                    clippy::cast_precision_loss,
+                    clippy::cast_sign_loss,
+                    clippy::cast_possible_truncation
+                )]
+                let capacity = ((individual_tasks.len() as f64) * factor.get()) as usize;
 
-    let mut duplicate_individuals = bitbox![0; min_spec_sample_buffer.len()];
+                capacity
+            },
+            DedupCache::None => 0_usize,
+        });
+
+    let mut duplicate_individuals = bitvec::bitbox![0; min_spec_sample_buffer.len()];
 
     let mut task_list = ExchangeWithCudaWrapper::new(task_list)?;
     let mut event_buffer = ExchangeWithCudaWrapper::new(event_buffer)?;
@@ -132,7 +137,7 @@ pub fn simulate<
                     &mut min_spec_sample_buffer_cuda.as_mut(),
                     &mut total_time_max,
                     &mut total_steps_sum,
-                    max_steps,
+                    max_steps.get(),
                 )?;
             }
 
@@ -156,7 +161,9 @@ pub fn simulate<
                 }
             }
 
+            // TODO: implement water level algorithm for CUDA
             event_buffer.report_events(reporter);
+
             // TODO: balance with migration
             reporter.report_progress(Unused::new(&(individual_tasks.len() as u64)));
         }

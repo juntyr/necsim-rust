@@ -1,13 +1,15 @@
 use necsim_core::{
     cogs::{
-        EmigrationExit, GloballyCoherentLineageStore, Habitat, LineageReference, RngCore,
+        GloballyCoherentLineageStore, Habitat, LineageReference, RngCore,
         SeparableDispersalSampler, SpeciationProbability, TurnoverRate,
     },
     landscape::Location,
-    simulation::partial::event_sampler::PartialSimulation,
 };
 
-use crate::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
+use crate::cogs::{
+    coalescence_sampler::conditional::ConditionalCoalescenceSampler,
+    event_sampler::gillespie::GillespiePartialSimulation,
+};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ProbabilityAtLocation {
@@ -23,18 +25,16 @@ impl ProbabilityAtLocation {
         G: RngCore,
         R: LineageReference<H>,
         S: GloballyCoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
         D: SeparableDispersalSampler<H, G>,
         T: TurnoverRate<H>,
         N: SpeciationProbability<H>,
     >(
         location: &Location,
-        simulation: &PartialSimulation<
+        simulation: &GillespiePartialSimulation<
             H,
             G,
             R,
             S,
-            X,
             D,
             ConditionalCoalescenceSampler<H, R, S>,
             T,

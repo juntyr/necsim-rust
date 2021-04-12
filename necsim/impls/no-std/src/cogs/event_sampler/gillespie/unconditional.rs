@@ -11,7 +11,7 @@ use necsim_core::{
     simulation::partial::event_sampler::PartialSimulation,
 };
 
-use super::GillespieEventSampler;
+use super::{GillespieEventSampler, GillespiePartialSimulation};
 
 #[allow(clippy::module_name_repetitions, clippy::type_complexity)]
 #[derive(Debug)]
@@ -177,7 +177,7 @@ impl<
     fn get_event_rate_at_location(
         &self,
         location: &Location,
-        simulation: &PartialSimulation<H, G, R, S, X, D, C, T, N>,
+        simulation: &GillespiePartialSimulation<H, G, R, S, D, C, T, N>,
     ) -> f64 {
         #[allow(clippy::cast_precision_loss)]
         let population = simulation

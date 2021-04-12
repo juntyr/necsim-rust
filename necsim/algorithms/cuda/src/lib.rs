@@ -1,146 +1,144 @@
 #![deny(clippy::pedantic)]
-#![feature(stmt_expr_attributes)]
 
 #[macro_use]
-extern crate contracts;
+extern crate serde_derive_state;
 
-#[macro_use]
-extern crate bitvec;
+use std::{collections::VecDeque, convert::TryInto};
 
-use std::{
-    convert::TryInto,
-    num::{NonZeroU64, NonZeroUsize},
-};
-
-use anyhow::Result;
-use serde::Deserialize;
-
-use rustacuda::{
-    function::{BlockSize, FunctionAttribute, GridSize},
-    stream::{Stream, StreamFlags},
-};
-
+use arguments::{CudaArguments, IsolatedParallelismMode, ParallelismMode};
 use necsim_core::{
-    cogs::{DispersalSampler, Habitat, RngCore},
+    cogs::{Habitat, RngCore},
     lineage::{GlobalLineageReference, Lineage},
     reporter::Reporter,
     simulation::Simulation,
 };
 
+use necsim_impls_cuda::{cogs::rng::CudaRng, event_buffer::EventBuffer, value_buffer::ValueBuffer};
 use necsim_impls_no_std::{
     cogs::{
         active_lineage_sampler::independent::{
-            event_time_sampler::exp::ExpEventTimeSampler,
-            IndependentActiveLineageSampler as ActiveLineageSampler,
+            event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
         },
-        coalescence_sampler::independent::IndependentCoalescenceSampler as CoalescenceSampler,
+        coalescence_sampler::independent::IndependentCoalescenceSampler,
         emigration_exit::never::NeverEmigrationExit,
-        event_sampler::independent::IndependentEventSampler as EventSampler,
+        event_sampler::independent::IndependentEventSampler,
         immigration_entry::never::NeverImmigrationEntry,
-        lineage_store::independent::IndependentLineageStore,
-        rng::fixedseahash::FixedSeaHash as Rng,
-        speciation_probability::uniform::UniformSpeciationProbability,
-        turnover_rate::uniform::UniformTurnoverRate,
+        lineage_reference::in_memory::InMemoryLineageReference,
+        lineage_store::{
+            coherent::locally::classical::ClassicalLineageStore,
+            independent::IndependentLineageStore,
+        },
+        origin_sampler::{
+            decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
+        },
+        rng::fixedseahash::FixedSeaHash,
     },
     partitioning::LocalPartition,
     reporter::ReporterContext,
 };
 
-use necsim_impls_std::bounded::PositiveF64;
-
-use necsim_impls_cuda::{cogs::rng::CudaRng, event_buffer::EventBuffer, value_buffer::ValueBuffer};
+use necsim_algorithms::{Algorithm, AlgorithmArguments};
+use necsim_scenarios::Scenario;
 
 use rust_cuda::{common::RustToCuda, host::CudaDropWrapper};
+use rustacuda::{
+    function::{BlockSize, FunctionAttribute, GridSize},
+    prelude::{Stream, StreamFlags},
+};
 
+mod arguments;
 mod cuda;
 mod info;
 mod kernel;
 mod simulate;
 
-mod almost_infinite;
-mod in_memory;
-mod non_spatial;
-
 use crate::kernel::SimulationKernel;
 use cuda::with_initialised_cuda;
 use simulate::simulate;
 
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct AbsoluteDedupCache {
-    capacity: NonZeroUsize,
+#[allow(clippy::module_name_repetitions, clippy::empty_enum)]
+pub enum CudaAlgorithm {}
+
+impl AlgorithmArguments for CudaAlgorithm {
+    type Arguments = CudaArguments;
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RelativeDedupCache {
-    factor: PositiveF64,
-}
+#[allow(clippy::type_complexity)]
+impl<
+        H: Habitat,
+        O: Scenario<
+            CudaRng<FixedSeaHash>,
+            ClassicalLineageStore<H>, // Meaningless
+            Habitat = H,
+            LineageReference = InMemoryLineageReference, // Meaningless
+        >,
+    > Algorithm<ClassicalLineageStore<H>, O> for CudaAlgorithm
+where
+    O::Habitat: RustToCuda,
+    O::DispersalSampler: RustToCuda,
+    O::TurnoverRate: RustToCuda,
+    O::SpeciationProbability: RustToCuda,
+{
+    type Error = anyhow::Error;
+    type LineageReference = GlobalLineageReference;
+    type LineageStore = IndependentLineageStore<H>;
+    type Rng = CudaRng<FixedSeaHash>;
 
-#[derive(Debug, Deserialize)]
-pub enum DedupCache {
-    Absolute(AbsoluteDedupCache),
-    Relative(RelativeDedupCache),
-    None,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct CudaArguments {
-    ptx_jit: bool,
-    delta_t: PositiveF64,
-    block_size: u32,
-    grid_size: u32,
-    step_slice: NonZeroU64,
-    dedup_cache: DedupCache,
-}
-
-impl Default for CudaArguments {
-    fn default() -> Self {
-        Self {
-            ptx_jit: false,
-            delta_t: PositiveF64::new(1.0_f64).unwrap(),
-            block_size: 32_u32,
-            grid_size: 256_u32,
-            step_slice: NonZeroU64::new(200_u64).unwrap(),
-            dedup_cache: DedupCache::Relative(RelativeDedupCache {
-                factor: PositiveF64::new(2.0_f64).unwrap(),
-            }),
-        }
-    }
-}
-
-pub struct CudaSimulation;
-
-impl CudaSimulation {
-    /// Simulates the coalescence algorithm on a CUDA-capable GPU on
-    /// `habitat` with `dispersal` and lineages from `lineage_store`.
-    fn simulate<
-        H: Habitat + RustToCuda,
-        D: DispersalSampler<H, CudaRng<Rng>> + RustToCuda,
+    fn initialise_and_simulate<
+        I: Iterator<Item = u64>,
         R: ReporterContext,
         P: LocalPartition<R>,
     >(
-        habitat: H,
-        dispersal_sampler: D,
-        lineages: Vec<Lineage>,
-        speciation_probability_per_generation: f64,
+        args: Self::Arguments,
         seed: u64,
+        scenario: O,
+        pre_sampler: OriginPreSampler<I>,
         local_partition: &mut P,
-        auxiliary: CudaArguments,
-    ) -> Result<(f64, u64)> {
-        let rng = CudaRng::<Rng>::seed_from_u64(seed);
-        let speciation_probability =
-            UniformSpeciationProbability::new(speciation_probability_per_generation);
+    ) -> Result<(f64, u64), Self::Error> {
+        let decomposition = match args.parallelism_mode {
+            ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { partition, .. }) => {
+                scenario.decompose(partition.rank(), partition.partitions())
+            },
+            _ => scenario.decompose(
+                local_partition.get_partition_rank(),
+                local_partition.get_number_of_partitions(),
+            ),
+        };
+
+        let lineages: VecDeque<Lineage> = match args.parallelism_mode {
+            // Apply no lineage origin partitioning in the `Monolithic` mode
+            ParallelismMode::Monolithic(..) => scenario
+                .sample_habitat(pre_sampler)
+                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                .collect(),
+            // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
+            ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { partition, .. }) => {
+                scenario
+                    .sample_habitat(
+                        pre_sampler.partition(partition.rank(), partition.partitions().get()),
+                    )
+                    .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                    .collect()
+            },
+            // Apply lineage origin partitioning in the `IsolatedLandscape` mode
+            ParallelismMode::IsolatedLandscape(..) => DecompositionOriginSampler::new(
+                scenario.sample_habitat(pre_sampler),
+                &decomposition,
+            )
+            .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+            .collect(),
+        };
+
+        let (habitat, dispersal_sampler, turnover_rate, speciation_probability) = scenario.build();
+        let rng = CudaRng::from(FixedSeaHash::seed_from_u64(seed));
         let lineage_store = IndependentLineageStore::default();
         let emigration_exit = NeverEmigrationExit::default();
-        let coalescence_sampler = CoalescenceSampler::default();
-        let turnover_rate = UniformTurnoverRate::default();
-        let event_sampler = EventSampler::default();
+        let coalescence_sampler = IndependentCoalescenceSampler::default();
+        let event_sampler = IndependentEventSampler::default();
         let immigration_entry = NeverImmigrationEntry::default();
 
         let active_lineage_sampler =
-            ActiveLineageSampler::empty(ExpEventTimeSampler::new(auxiliary.delta_t.get()));
+            IndependentActiveLineageSampler::empty(ExpEventTimeSampler::new(args.delta_t.get()));
 
         let simulation = Simulation::builder()
             .habitat(habitat)
@@ -157,13 +155,13 @@ impl CudaSimulation {
             .active_lineage_sampler(active_lineage_sampler)
             .build();
 
-        let block_size = BlockSize::x(auxiliary.block_size);
-        let grid_size = GridSize::x(auxiliary.grid_size);
+        let block_size = BlockSize::x(args.block_size);
+        let grid_size = GridSize::x(args.grid_size);
 
         with_initialised_cuda(|| {
             let stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
 
-            SimulationKernel::with_kernel(auxiliary.ptx_jit, |kernel| {
+            SimulationKernel::with_kernel(args.ptx_jit, |kernel| {
                 info::print_kernel_function_attributes(kernel.function());
 
                 // TODO: It seems to be more performant to spawn smaller tasks than to use
@@ -183,23 +181,19 @@ impl CudaSimulation {
                 let event_buffer: EventBuffer<
                     <<P as LocalPartition<R>>::Reporter as Reporter>::ReportSpeciation,
                     <<P as LocalPartition<R>>::Reporter as Reporter>::ReportDispersal,
-                > = EventBuffer::new(
-                    &block_size,
-                    &grid_size,
-                    auxiliary.step_slice.get().try_into()?,
-                )?;
+                > = EventBuffer::new(&block_size, &grid_size, args.step_slice.get().try_into()?)?;
 
                 simulate(
                     &stream,
                     kernel,
-                    (grid_size, block_size, auxiliary.dedup_cache),
+                    (grid_size, block_size, args.dedup_cache),
                     simulation,
-                    lineages.into(),
+                    lineages,
                     task_list,
                     event_buffer,
                     min_spec_sample_buffer,
                     local_partition.get_reporter(),
-                    auxiliary.step_slice.get(),
+                    args.step_slice,
                 )
             })
         })

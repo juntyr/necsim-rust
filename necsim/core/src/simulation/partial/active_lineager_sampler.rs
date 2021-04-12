@@ -21,11 +21,11 @@ pub struct PartialSimulation<
     pub habitat: H,
     pub lineage_reference: PhantomData<R>,
     pub lineage_store: S,
-    pub emigration_exit: X,
     pub dispersal_sampler: D,
     pub coalescence_sampler: C,
     pub turnover_rate: T,
     pub speciation_probability: N,
+    pub emigration_exit: X,
     pub event_sampler: E,
     // priv
     _rng: PhantomData<G>,

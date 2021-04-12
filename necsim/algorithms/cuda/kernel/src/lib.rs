@@ -10,7 +10,7 @@
 extern crate alloc;
 
 #[macro_use]
-extern crate specialiser;
+extern crate necsim_algorithms_cuda_kernel_specialiser;
 
 use core::sync::atomic::{AtomicU64, Ordering};
 

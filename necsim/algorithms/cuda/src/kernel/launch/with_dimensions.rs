@@ -15,7 +15,7 @@ use rustacuda::{
 };
 use rustacuda_core::DeviceCopy;
 
-use ptx_jit::host::compiler::PtxJITCompiler;
+use necsim_algorithms_cuda_kernel_ptx_jit::host::compiler::PtxJITCompiler;
 use rust_cuda::common::RustToCuda;
 
 use super::SimulationKernel;
