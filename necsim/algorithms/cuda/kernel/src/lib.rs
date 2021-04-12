@@ -29,7 +29,7 @@ use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
 use rustacuda_core::DeviceCopy;
 
-use ptx_jit::PtxJITConstLoad;
+use necsim_algorithms_cuda_kernel_ptx_jit::PtxJITConstLoad;
 
 use rust_cuda::{
     common::{DeviceBoxMut, RustToCuda},

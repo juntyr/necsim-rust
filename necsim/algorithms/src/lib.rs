@@ -13,9 +13,7 @@ pub trait AlgorithmArguments {
     type Arguments;
 }
 
-pub trait Algorithm<L: LineageStore<O::Habitat, O::LineageReference>, O: Scenario<Self::Rng, L>>:
-    Sized + AlgorithmArguments
-{
+pub trait Algorithm<O: Scenario<Self::Rng>>: Sized + AlgorithmArguments {
     type Error;
 
     type Rng: RngCore;

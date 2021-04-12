@@ -2,7 +2,7 @@ use std::num::NonZeroU32;
 
 use serde::Deserialize;
 
-use necsim_core::cogs::{LineageStore, RngCore};
+use necsim_core::cogs::{DispersalSampler, LineageStore, RngCore};
 
 use necsim_impls_no_std::{
     cogs::{
@@ -47,15 +47,14 @@ impl<G: RngCore> ScenarioArguments for SpatiallyImplicitScenario<G> {
     type Arguments = SpatiallyImplicitArguments;
 }
 
-impl<G: RngCore, L: LineageStore<SpatiallyImplicitHabitat, InMemoryLineageReference>> Scenario<G, L>
-    for SpatiallyImplicitScenario<G>
-{
+impl<G: RngCore> Scenario<G> for SpatiallyImplicitScenario<G> {
     type Decomposition = ModuloDecomposition;
-    type DispersalSampler = SpatiallyImplicitDispersalSampler<G>;
+    type DispersalSampler<D: DispersalSampler<Self::Habitat, G>> =
+        SpatiallyImplicitDispersalSampler<G>;
     type Error = !;
     type Habitat = SpatiallyImplicitHabitat;
     type LineageReference = InMemoryLineageReference;
-    type LineageStore = L;
+    type LineageStore<L: LineageStore<Self::Habitat, Self::LineageReference>> = L;
     type OriginSampler<'h, I: Iterator<Item = u64>> = SpatiallyImplicitOriginSampler<'h, I>;
     type SpeciationProbability = SpatiallyImplicitSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
@@ -85,11 +84,11 @@ impl<G: RngCore, L: LineageStore<SpatiallyImplicitHabitat, InMemoryLineageRefere
         })
     }
 
-    fn build(
+    fn build<D: DispersalSampler<Self::Habitat, G>>(
         self,
     ) -> (
         Self::Habitat,
-        Self::DispersalSampler,
+        Self::DispersalSampler<D>,
         Self::TurnoverRate,
         Self::SpeciationProbability,
     ) {

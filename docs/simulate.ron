@@ -10,13 +10,99 @@
     /* selection of the coalescence algorithm which is used */
     algorithm: (
         /* monolithic; picks a random individual for the next event; CPU-based */
-      | Classical
+      | Classical(
+            /* selection of how the algorithm should be parallelised across partitions */
+            /* optional, dynamic default = Monolithic / OptimisticLockstep */
+            parallelism_mode: (
+                /* no parallelisation, the algorithm runs on a single partition only
+                 * invalid when the simulation is internally parallelised */
+              | Monolithic
+                /* (1) simulate each partition independently for some delta_sync
+                 * (2) check if any (unknown) migrations between partitions occured
+                 *     (a) if yes, roll back and try again with >= 1 more known migration
+                 *     (b) if no, exit the repetition
+                 * (3) designate the past delta_sync as the last safe point
+                 * (4) repeat with the next delta_sync until finished
+                 *
+                 * invalid when the simulation is NOT internally parallelised */
+              | Optimistic(
+                    /* simulation time between safe points */
+                    delta_sync: (0.0 < f64),
+                )
+                /* (1) vote on which partition has the earliest next event
+                 * (2) advance this partition by one step
+                 * (3) repeat until finished
+                 *
+                 * invalid when the simulation is NOT internally parallelised */
+              | Lockstep
+                /* (1) simulate each partition independently until their next emigration
+                 * (2) vote on which partition has the earliest emigration event
+                 * (3) roll back and simulate exactly until and including this first migration
+                 * (4) repeat until finished
+                 *
+                 * invalid when the simulation is NOT internally parallelised */
+              | OptimisticLockstep
+                /* WARNING: may produce inaccurate results
+                 *
+                 * (1) simulate each partition independently for some delta_sync
+                 * (2) perform all migrations simultaneously at this synchronisation point
+                 * (3) repeat until finished
+                 *
+                 * invalid when the simulation is NOT internally parallelised */
+              | Averaging(
+                    delta_sync: (0.0 < f64),
+                )
+            )
+        )
         /* monolithic; has a queue of the next events for all locations; CPU-based */
-      | Gillespie
+      | Gillespie(
+            /* selection of how the algorithm should be parallelised across partitions */
+            /* optional, dynamic default = Monolithic / OptimisticLockstep */
+            parallelism_mode: (
+                /* no parallelisation, the algorithm runs on a single partition only
+                 * invalid when the simulation is internally parallelised */
+              | Monolithic
+                /* (1) simulate each partition independently for some delta_sync
+                 * (2) check if any (unknown) migrations between partitions occured
+                 *     (a) if yes, roll back and try again with >= 1 more known migration
+                 *     (b) if no, exit the repetition
+                 * (3) designate the past delta_sync as the last safe point
+                 * (4) repeat with the next delta_sync until finished
+                 *
+                 * invalid when the simulation is NOT internally parallelised */
+              | Optimistic(
+                    /* simulation time between safe points */
+                    delta_sync: (0.0 < f64),
+                )
+                /* (1) vote on which partition has the earliest next event
+                 * (2) advance this partition by one step
+                 * (3) repeat until finished
+                 *
+                 * invalid when the simulation is NOT internally parallelised */
+              | Lockstep
+                /* (1) simulate each partition independently until their next emigration
+                 * (2) vote on which partition has the earliest emigration event
+                 * (3) roll back and simulate exactly until and including this first migration
+                 * (4) repeat until finished
+                 *
+                 * invalid when the simulation is NOT internally parallelised */
+              | OptimisticLockstep
+                /* WARNING: may produce inaccurate results
+                 *
+                 * (1) simulate each partition independently for some delta_sync
+                 * (2) perform all migrations simultaneously at this synchronisation point
+                 * (3) repeat until finished
+                 *
+                 * invalid when the simulation is NOT internally parallelised */
+              | Averaging(
+                    delta_sync: (0.0 < f64),
+                )
+            )
+        )
         /* monolithic; like Gillespie but skips no-coalescence self-dispersal events; CPU-based */
       | SkippingGillespie(
             /* selection of how the algorithm should be parallelised across partitions */
-            /* optional, default = OptimisticLockstep */
+            /* optional, dynamic default = Monolithic / OptimisticLockstep */
             parallelism_mode: (
                 /* no parallelisation, the algorithm runs on a single partition only
                  * invalid when the simulation is internally parallelised */
@@ -96,6 +182,45 @@
                 /* individual deduplication is disabled */
               | None
             ),
+            /* selection of the mode in which the simulation is parallelised
+             * optional, default = Monolithic */
+            parallelism_mode: (
+                /* no partitioning occurs
+                 * invalid when the simulation is internally parallelised */
+              | Monolithic(
+                    /* average number of events between flushing the event buffer */
+                    event_slice: (0 < u32),
+                )
+                /* partition the initial set of individuals
+                 * no individuals are migrated between partitions
+                 * does not coordinate with other partitions
+                 * only simulates a single partition which does not communicate at all
+                 * invalid when the simulation is internally parallelised */
+              | IsolatedIndividuals(
+                    /* selection of the single partition that will be simulated */
+                    partition: (
+                        rank: (u32 < partitions),
+                        partitions: (0 < u32),
+                    ),
+                    /* average number of events between flushing the event buffer */
+                    event_slice: (0 < u32),
+                )
+                /* partition the original set of individuals
+                 * optimised for intra-partition spatial locality
+                 * no individuals are migrated between partitions
+                 * does not coordinate with other partitions
+                 * only simulates a single partition which does not communicate at all
+                 * invalid when the simulation is internally parallelised */
+              | IsolatedLandscape(
+                    /* selection of the single partition that will be simulated */
+                    partition: (
+                        rank: (u32 < partitions),
+                        partitions: (0 < u32),
+                    ),
+                    /* average number of events between flushing the event buffer */
+                    event_slice: (0 < u32),
+                )
+            )
         )
         /* independent; simulates each individual without knowledge of others; CPU-based */
       | Independent(
@@ -124,12 +249,44 @@
                 /* individual deduplication is disabled */
               | None
             ),
-            /* selection of the mode in which the simulation is partitioned
-             * optional, default = Individuals */
-            partition_mode: (
+            /* selection of the mode in which the simulation is parallelised
+             * optional, dynamic default = Monolithic / Individuals */
+            parallelism_mode: (
                 /* no partitioning occurs
                  * invalid when the simulation is internally parallelised */
-              | Monolithic
+              | Monolithic(
+                    /* average number of events between flushing the event buffer */
+                    event_slice: (0 < u32),
+                )
+                /* partition the initial set of individuals
+                 * no individuals are migrated between partitions
+                 * does not coordinate with other partitions
+                 * only simulates a single partition which does not communicate at all
+                 * invalid when the simulation is internally parallelised */
+              | IsolatedIndividuals(
+                    /* selection of the single partition that will be simulated */
+                    partition: (
+                        rank: (u32 < partitions),
+                        partitions: (0 < u32),
+                    ),
+                    /* average number of events between flushing the event buffer */
+                    event_slice: (0 < u32),
+                )
+                /* partition the original set of individuals
+                 * optimised for intra-partition spatial locality
+                 * no individuals are migrated between partitions
+                 * does not coordinate with other partitions
+                 * only simulates a single partition which does not communicate at all
+                 * invalid when the simulation is internally parallelised */
+              | IsolatedLandscape(
+                    /* selection of the single partition that will be simulated */
+                    partition: (
+                        rank: (u32 < partitions),
+                        partitions: (0 < u32),
+                    ),
+                    /* average number of events between flushing the event buffer */
+                    event_slice: (0 < u32),
+                )
                 /* partition the initial set of individuals
                  * no individuals are migrated between partitions
                  * automatically coordinates between partitions
