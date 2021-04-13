@@ -24,14 +24,11 @@ use necsim_core::{
     simulation::Simulation,
 };
 
-use necsim_impls_no_std::cache::DirectMappedCache as LruCache;
+use necsim_impls_no_std::parallelisation::independent::DedupCache;
 
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
-use crate::{
-    arguments::{AbsoluteDedupCache, DedupCache, RelativeDedupCache},
-    kernel::SimulationKernel,
-};
+use crate::kernel::SimulationKernel;
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn simulate<
@@ -81,27 +78,13 @@ pub fn simulate<
     let mut total_time_max = DeviceBox::new(&0.0_f64.to_bits())?;
     let mut total_steps_sum = DeviceBox::new(&0_u64)?;
 
-    let (grid_size, block_size, dedup_mode) = config;
+    let (grid_size, block_size, dedup_cache) = config;
 
     let mut kernel = kernel
         .with_dimensions(grid_size, block_size, 0_u32)
         .with_stream(stream);
 
-    let mut min_spec_samples: LruCache<SpeciationSample> =
-        LruCache::with_capacity(match dedup_mode {
-            DedupCache::Absolute(AbsoluteDedupCache { capacity }) => capacity.get(),
-            DedupCache::Relative(RelativeDedupCache { factor }) => {
-                #[allow(
-                    clippy::cast_precision_loss,
-                    clippy::cast_sign_loss,
-                    clippy::cast_possible_truncation
-                )]
-                let capacity = ((individual_tasks.len() as f64) * factor.get()) as usize;
-
-                capacity
-            },
-            DedupCache::None => 0_usize,
-        });
+    let mut min_spec_samples = dedup_cache.construct(individual_tasks.len());
 
     let mut duplicate_individuals = bitvec::bitbox![0; min_spec_sample_buffer.len()];
 

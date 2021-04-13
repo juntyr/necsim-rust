@@ -66,36 +66,17 @@ where
         pre_sampler: OriginPreSampler<I>,
         local_partition: &mut P,
     ) -> Result<(f64, u64), Self::Error> {
-        let mut rng = match args.parallelism_mode {
-            ParallelismMode::Monolithic => Pcg::seed_from_u64(seed),
-            _ => Pcg::seed_from_u64(seed)
-                .split_to_stream(u64::from(local_partition.get_partition_rank())),
-        };
-
-        let origin_sampler = scenario.sample_habitat(pre_sampler);
-
-        let decomposition = scenario.decompose(
-            local_partition.get_partition_rank(),
-            local_partition.get_number_of_partitions(),
-        );
-
-        let lineage_store = match args.parallelism_mode {
-            ParallelismMode::Monolithic => Self::LineageStore::from_origin_sampler(origin_sampler),
-            _ => Self::LineageStore::from_origin_sampler(DecompositionOriginSampler::new(
-                origin_sampler,
-                &decomposition,
-            )),
-        };
-
-        let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-            scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, Pcg>>();
-
-        let coalescence_sampler = UnconditionalCoalescenceSampler::default();
-
         match args.parallelism_mode {
             ParallelismMode::Monolithic => {
+                let mut rng = Pcg::seed_from_u64(seed);
+                let lineage_store =
+                    Self::LineageStore::from_origin_sampler(scenario.sample_habitat(pre_sampler));
+                let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
+                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, Pcg>>();
+                let coalescence_sampler = UnconditionalCoalescenceSampler::default();
                 let emigration_exit = NeverEmigrationExit::default();
                 let event_sampler = UnconditionalGillespieEventSampler::default();
+                let immigration_entry = NeverImmigrationEntry::default();
 
                 // Pack a PartialSimulation to initialise the GillespieActiveLineageSampler
                 let partial_simulation = GillespiePartialSimulation {
@@ -109,7 +90,6 @@ where
                     _rng: PhantomData::<Pcg>,
                 };
 
-                let immigration_entry = NeverImmigrationEntry::default();
                 let active_lineage_sampler = GillespieActiveLineageSampler::new(
                     &partial_simulation,
                     &event_sampler,
@@ -149,8 +129,25 @@ where
                 ))
             },
             non_monolithic_parallelism_mode => {
+                let decomposition = O::decompose(
+                    scenario.habitat(),
+                    local_partition.get_partition_rank(),
+                    local_partition.get_number_of_partitions(),
+                );
+
+                let mut rng = Pcg::seed_from_u64(seed)
+                    .split_to_stream(u64::from(local_partition.get_partition_rank()));
+                let lineage_store =
+                    Self::LineageStore::from_origin_sampler(DecompositionOriginSampler::new(
+                        scenario.sample_habitat(pre_sampler),
+                        &decomposition,
+                    ));
+                let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
+                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, Pcg>>();
+                let coalescence_sampler = UnconditionalCoalescenceSampler::default();
                 let emigration_exit = DomainEmigrationExit::new(decomposition);
                 let event_sampler = UnconditionalGillespieEventSampler::default();
+                let immigration_entry = BufferedImmigrationEntry::default();
 
                 // Pack a PartialSimulation to initialise the GillespieActiveLineageSampler
                 let partial_simulation = GillespiePartialSimulation {
@@ -164,7 +161,6 @@ where
                     _rng: PhantomData::<Pcg>,
                 };
 
-                let immigration_entry = BufferedImmigrationEntry::default();
                 let active_lineage_sampler = GillespieActiveLineageSampler::new(
                     &partial_simulation,
                     &event_sampler,
