@@ -5,20 +5,18 @@
 #[macro_use]
 extern crate serde_derive_state;
 
-use std::collections::VecDeque;
+use std::{collections::VecDeque, hint::unreachable_unchecked};
 
 use arguments::{
-    AbsoluteDedupCache, DedupCache, IndependentArguments, IsolatedParallelismMode,
-    MonolithicParallelismMode, ParallelismMode, RelativeDedupCache,
+    IndependentArguments, IsolatedParallelismMode, MonolithicParallelismMode, ParallelismMode,
 };
 use necsim_core::{
-    cogs::{RngCore, SpeciationSample},
+    cogs::RngCore,
     lineage::{GlobalLineageReference, Lineage},
     simulation::Simulation,
 };
 
 use necsim_impls_no_std::{
-    cache::DirectMappedCache as LruCache,
     cogs::{
         active_lineage_sampler::independent::{
             event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
@@ -78,85 +76,47 @@ impl<O: Scenario<SeaHash>> Algorithm<O> for IndependentAlgorithm {
         pre_sampler: OriginPreSampler<I>,
         local_partition: &mut P,
     ) -> Result<(f64, u64), Self::Error> {
-        let decomposition = match args.parallelism_mode {
-            ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { partition, .. }) => {
-                scenario.decompose(partition.rank(), partition.partitions())
-            },
-            _ => scenario.decompose(
-                local_partition.get_partition_rank(),
-                local_partition.get_number_of_partitions(),
-            ),
-        };
-
-        let lineages: VecDeque<Lineage> = match args.parallelism_mode {
-            // Apply no lineage origin partitioning in the `Monolithic` mode
-            ParallelismMode::Monolithic(..) => scenario
-                .sample_habitat(pre_sampler)
-                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
-                .collect(),
-            // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
-            ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { partition, .. }) => {
-                scenario
-                    .sample_habitat(
-                        pre_sampler.partition(partition.rank(), partition.partitions().get()),
-                    )
-                    .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
-                    .collect()
-            },
-            // Apply lineage origin partitioning in the `IsolatedLandscape` mode
-            ParallelismMode::IsolatedLandscape(..) => DecompositionOriginSampler::new(
-                scenario.sample_habitat(pre_sampler),
-                &decomposition,
-            )
-            .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
-            .collect(),
-            // Apply lineage origin partitioning in the `Individuals` mode
-            ParallelismMode::Individuals => scenario
-                .sample_habitat(pre_sampler.partition(
-                    local_partition.get_partition_rank(),
-                    local_partition.get_number_of_partitions().get(),
-                ))
-                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
-                .collect(),
-            // Apply lineage origin decomposition in the `Landscape` mode
-            ParallelismMode::Landscape | ParallelismMode::Probabilistic => {
-                DecompositionOriginSampler::new(
-                    scenario.sample_habitat(pre_sampler),
-                    &decomposition,
-                )
-                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
-                .collect()
-            },
-        };
-
-        let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-            scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, SeaHash>>();
-        let rng = SeaHash::seed_from_u64(seed);
-        let lineage_store = IndependentLineageStore::default();
-        let coalescence_sampler = IndependentCoalescenceSampler::default();
-
-        let min_spec_samples: LruCache<SpeciationSample> =
-            LruCache::with_capacity(match args.dedup_cache {
-                DedupCache::Absolute(AbsoluteDedupCache { capacity }) => capacity.get(),
-                DedupCache::Relative(RelativeDedupCache { factor }) => {
-                    #[allow(
-                        clippy::cast_precision_loss,
-                        clippy::cast_sign_loss,
-                        clippy::cast_possible_truncation
-                    )]
-                    let capacity = ((lineages.len() as f64) * factor.get()) as usize;
-
-                    capacity
-                },
-                DedupCache::None => 0_usize,
-            });
-
         match args.parallelism_mode {
             ParallelismMode::Monolithic(MonolithicParallelismMode { event_slice })
             | ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode {
                 event_slice, ..
             })
             | ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { event_slice, .. }) => {
+                let lineages: VecDeque<Lineage> = match args.parallelism_mode {
+                    // Apply no lineage origin partitioning in the `Monolithic` mode
+                    ParallelismMode::Monolithic(..) => scenario
+                        .sample_habitat(pre_sampler)
+                        .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                        .collect(),
+                    // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
+                    ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode {
+                        partition,
+                        ..
+                    }) => scenario
+                        .sample_habitat(
+                            pre_sampler.partition(partition.rank(), partition.partitions().get()),
+                        )
+                        .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                        .collect(),
+                    // Apply lineage origin partitioning in the `IsolatedLandscape` mode
+                    ParallelismMode::IsolatedLandscape(IsolatedParallelismMode {
+                        partition,
+                        ..
+                    }) => DecompositionOriginSampler::new(
+                        scenario.sample_habitat(pre_sampler),
+                        &O::decompose(scenario.habitat(), partition.rank(), partition.partitions()),
+                    )
+                    .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                    .collect(),
+                    _ => unsafe { unreachable_unchecked() },
+                };
+
+                let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
+                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, SeaHash>>();
+                let rng = SeaHash::seed_from_u64(seed);
+                let lineage_store = IndependentLineageStore::default();
+                let coalescence_sampler = IndependentCoalescenceSampler::default();
+
                 let emigration_exit = NeverEmigrationExit::default();
                 let event_sampler = IndependentEventSampler::default();
                 let immigration_entry = NeverImmigrationEntry::default();
@@ -182,13 +142,26 @@ impl<O: Scenario<SeaHash>> Algorithm<O> for IndependentAlgorithm {
                 Ok(parallelisation::independent::monolithic::simulate(
                     simulation,
                     lineages,
-                    min_spec_samples,
+                    args.dedup_cache,
                     args.step_slice,
                     event_slice,
                     local_partition,
                 ))
             },
             ParallelismMode::Individuals => {
+                let lineages: VecDeque<Lineage> = scenario
+                    .sample_habitat(pre_sampler.partition(
+                        local_partition.get_partition_rank(),
+                        local_partition.get_number_of_partitions().get(),
+                    ))
+                    .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                    .collect();
+
+                let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
+                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, SeaHash>>();
+                let rng = SeaHash::seed_from_u64(seed);
+                let lineage_store = IndependentLineageStore::default();
+                let coalescence_sampler = IndependentCoalescenceSampler::default();
                 let emigration_exit = NeverEmigrationExit::default();
                 let event_sampler = IndependentEventSampler::default();
                 let immigration_entry = NeverImmigrationEntry::default();
@@ -214,12 +187,29 @@ impl<O: Scenario<SeaHash>> Algorithm<O> for IndependentAlgorithm {
                 Ok(parallelisation::independent::individuals::simulate(
                     simulation,
                     lineages,
-                    min_spec_samples,
+                    args.dedup_cache,
                     args.step_slice,
                     local_partition,
                 ))
             },
             ParallelismMode::Landscape => {
+                let decomposition = O::decompose(
+                    scenario.habitat(),
+                    local_partition.get_partition_rank(),
+                    local_partition.get_number_of_partitions(),
+                );
+                let lineages: VecDeque<Lineage> = DecompositionOriginSampler::new(
+                    scenario.sample_habitat(pre_sampler),
+                    &decomposition,
+                )
+                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                .collect();
+
+                let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
+                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, SeaHash>>();
+                let rng = SeaHash::seed_from_u64(seed);
+                let lineage_store = IndependentLineageStore::default();
+                let coalescence_sampler = IndependentCoalescenceSampler::default();
                 let emigration_exit = IndependentEmigrationExit::new(
                     decomposition,
                     AlwaysEmigrationChoice::default(),
@@ -248,12 +238,29 @@ impl<O: Scenario<SeaHash>> Algorithm<O> for IndependentAlgorithm {
                 Ok(parallelisation::independent::landscape::simulate(
                     simulation,
                     lineages,
-                    min_spec_samples,
+                    args.dedup_cache,
                     args.step_slice,
                     local_partition,
                 ))
             },
             ParallelismMode::Probabilistic => {
+                let decomposition = O::decompose(
+                    scenario.habitat(),
+                    local_partition.get_partition_rank(),
+                    local_partition.get_number_of_partitions(),
+                );
+                let lineages: VecDeque<Lineage> = DecompositionOriginSampler::new(
+                    scenario.sample_habitat(pre_sampler),
+                    &decomposition,
+                )
+                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                .collect();
+
+                let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
+                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, SeaHash>>();
+                let rng = SeaHash::seed_from_u64(seed);
+                let lineage_store = IndependentLineageStore::default();
+                let coalescence_sampler = IndependentCoalescenceSampler::default();
                 let emigration_exit = IndependentEmigrationExit::new(
                     decomposition,
                     ProbabilisticEmigrationChoice::default(),
@@ -282,7 +289,7 @@ impl<O: Scenario<SeaHash>> Algorithm<O> for IndependentAlgorithm {
                 Ok(parallelisation::independent::landscape::simulate(
                     simulation,
                     lineages,
-                    min_spec_samples,
+                    args.dedup_cache,
                     args.step_slice,
                     local_partition,
                 ))

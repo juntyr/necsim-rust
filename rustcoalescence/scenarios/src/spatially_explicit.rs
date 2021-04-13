@@ -115,15 +115,19 @@ impl<G: RngCore> Scenario<G> for SpatiallyExplicitScenario<G> {
         InMemoryOriginSampler::new(pre_sampler, &self.habitat)
     }
 
-    fn decompose(&self, rank: u32, partitions: NonZeroU32) -> Self::Decomposition {
-        match EqualAreaDecomposition::new(&self.habitat, rank, partitions) {
+    fn decompose(
+        habitat: &Self::Habitat,
+        rank: u32,
+        partitions: NonZeroU32,
+    ) -> Self::Decomposition {
+        match EqualAreaDecomposition::new(habitat, rank, partitions) {
             Ok(decomposition) => decomposition,
             Err(decomposition) => {
                 warn!(
                     "Spatially explicit habitat of size {}x{} could not be partitioned into {} \
                      partition(s).",
-                    self.habitat.get_extent().width(),
-                    self.habitat.get_extent().height(),
+                    habitat.get_extent().width(),
+                    habitat.get_extent().height(),
                     partitions.get(),
                 );
 

@@ -85,16 +85,6 @@ where
         pre_sampler: OriginPreSampler<I>,
         local_partition: &mut P,
     ) -> Result<(f64, u64), Self::Error> {
-        let decomposition = match args.parallelism_mode {
-            ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { partition, .. }) => {
-                scenario.decompose(partition.rank(), partition.partitions())
-            },
-            _ => scenario.decompose(
-                local_partition.get_partition_rank(),
-                local_partition.get_number_of_partitions(),
-            ),
-        };
-
         let lineages: VecDeque<Lineage> = match args.parallelism_mode {
             // Apply no lineage origin partitioning in the `Monolithic` mode
             ParallelismMode::Monolithic(..) => scenario
@@ -111,12 +101,14 @@ where
                     .collect()
             },
             // Apply lineage origin partitioning in the `IsolatedLandscape` mode
-            ParallelismMode::IsolatedLandscape(..) => DecompositionOriginSampler::new(
-                scenario.sample_habitat(pre_sampler),
-                &decomposition,
-            )
-            .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
-            .collect(),
+            ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { partition, .. }) => {
+                DecompositionOriginSampler::new(
+                    scenario.sample_habitat(pre_sampler),
+                    &O::decompose(scenario.habitat(), partition.rank(), partition.partitions()),
+                )
+                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                .collect()
+            },
         };
 
         let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
