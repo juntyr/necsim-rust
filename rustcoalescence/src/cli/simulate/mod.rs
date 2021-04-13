@@ -1,13 +1,13 @@
 use anyhow::Result;
 
-use necsim_algorithms::Algorithm;
+use rustcoalescence_algorithms::Algorithm;
 
-#[cfg(feature = "necsim-algorithms-cuda")]
-use necsim_algorithms_cuda::CudaAlgorithm;
-#[cfg(feature = "necsim-algorithms-independent")]
-use necsim_algorithms_independent::IndependentAlgorithm;
-#[cfg(feature = "necsim-algorithms-monolithic")]
-use necsim_algorithms_monolithic::{
+#[cfg(feature = "rustcoalescence-algorithms-cuda")]
+use rustcoalescence_algorithms_cuda::CudaAlgorithm;
+#[cfg(feature = "rustcoalescence-algorithms-independent")]
+use rustcoalescence_algorithms_independent::IndependentAlgorithm;
+#[cfg(feature = "rustcoalescence-algorithms-monolithic")]
+use rustcoalescence_algorithms_monolithic::{
     classical::ClassicalAlgorithm, gillespie::GillespieAlgorithm,
     skipping_gillespie::SkippingGillespieAlgorithm,
 };
@@ -16,7 +16,7 @@ use necsim_impls_no_std::{
     cogs::origin_sampler::pre_sampler::OriginPreSampler, partitioning::LocalPartition,
     reporter::ReporterContext,
 };
-use necsim_scenarios::{
+use rustcoalescence_scenarios::{
     almost_infinite::AlmostInfiniteScenario, non_spatial::NonSpatialScenario,
     spatially_explicit::SpatiallyExplicitScenario, spatially_implicit::SpatiallyImplicitScenario,
     Scenario,
@@ -53,10 +53,10 @@ pub fn simulate_with_logger<R: ReporterContext, P: LocalPartition<R>>(
 
     let pre_sampler = OriginPreSampler::all().percentage(common_args.sample_percentage.get());
 
-    let (time, steps) = crate::match_scenario_algorithm!(
+    let (time, steps): (f64, u64) = crate::match_scenario_algorithm!(
         (common_args.algorithm, scenario => scenario)
     {
-        #[cfg(feature = "necsim-algorithms-monolithic")]
+        #[cfg(feature = "rustcoalescence-algorithms-monolithic")]
         AlgorithmArgs::Classical(algorithm_args) => {
             ClassicalAlgorithm::initialise_and_simulate(
                 algorithm_args,
@@ -67,7 +67,7 @@ pub fn simulate_with_logger<R: ReporterContext, P: LocalPartition<R>>(
             )
             .into_ok()
         },
-        #[cfg(feature = "necsim-algorithms-monolithic")]
+        #[cfg(feature = "rustcoalescence-algorithms-monolithic")]
         AlgorithmArgs::Gillespie(algorithm_args) => {
             GillespieAlgorithm::initialise_and_simulate(
                 algorithm_args,
@@ -78,7 +78,7 @@ pub fn simulate_with_logger<R: ReporterContext, P: LocalPartition<R>>(
             )
             .into_ok()
         },
-        #[cfg(feature = "necsim-algorithms-monolithic")]
+        #[cfg(feature = "rustcoalescence-algorithms-monolithic")]
         AlgorithmArgs::SkippingGillespie(algorithm_args) => {
             SkippingGillespieAlgorithm::initialise_and_simulate(
                 algorithm_args,
@@ -89,7 +89,7 @@ pub fn simulate_with_logger<R: ReporterContext, P: LocalPartition<R>>(
             )
             .into_ok()
         },
-        #[cfg(feature = "necsim-algorithms-independent")]
+        #[cfg(feature = "rustcoalescence-algorithms-independent")]
         AlgorithmArgs::Independent(algorithm_args) => {
             IndependentAlgorithm::initialise_and_simulate(
                 algorithm_args,
@@ -100,7 +100,7 @@ pub fn simulate_with_logger<R: ReporterContext, P: LocalPartition<R>>(
             )
             .into_ok()
         },
-        #[cfg(feature = "necsim-algorithms-cuda")]
+        #[cfg(feature = "rustcoalescence-algorithms-cuda")]
         AlgorithmArgs::Cuda(algorithm_args) => {
             CudaAlgorithm::initialise_and_simulate(
                 algorithm_args,

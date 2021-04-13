@@ -47,10 +47,10 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
     ) -> Self {
         let mut plugins: Vec<ReporterPlugin> = self.plugins.into_vec();
 
-        plugins.drain_filter(|plugin| {
-            !((plugin.filter.report_speciation && KeepSpeciation::VALUE)
+        plugins.retain(|plugin| {
+            (plugin.filter.report_speciation && KeepSpeciation::VALUE)
                 || (plugin.filter.report_dispersal && KeepDispersal::VALUE)
-                || (plugin.filter.report_progress && KeepProgress::VALUE))
+                || (plugin.filter.report_progress && KeepProgress::VALUE)
         });
 
         Self {

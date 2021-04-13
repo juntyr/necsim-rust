@@ -9,6 +9,7 @@
 #![feature(never_type)]
 #![feature(debug_non_exhaustive)]
 #![feature(option_result_unwrap_unchecked)]
+#![feature(drain_filter)]
 
 extern crate alloc;
 
@@ -20,9 +21,11 @@ extern crate rust_cuda_derive;
 extern crate contracts;
 
 pub mod alias;
+pub mod bounded;
 pub mod cache;
 pub mod cogs;
 pub mod decomposition;
+pub mod parallelisation;
 pub mod partitioning;
 pub mod reporter;
 pub mod simulation;
