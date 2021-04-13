@@ -1,20 +1,4 @@
-
-#.SUFFIXES:
-#
-#.SUFFIXES: .cpp .o .c .h
-
-
 .PHONY: clean cleandist
-#PROCESSOR:=$(shell uname -m)
-#ifeq ($(PROCESSOR), aarch64)
-#OPTIFLAG =
-#else
-#OPTIFLAG = -march=native
-#endif
-
-#CFLAGS = -fPIC -std=c99 -O3 $(OPTIFLAG) -Wall -Wextra -Wshadow -Wno-implicit-function-declaration
-
-#HEADERS=include/main.h
 
 all: RNG_test
 
