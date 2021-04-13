@@ -1,28 +1,12 @@
-use std::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
+use std::num::{NonZeroU32, NonZeroU64};
 
 use serde::Deserialize;
 use serde_state::DeserializeState;
 
-use necsim_impls_no_std::bounded::{Partition, PositiveF64};
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct AbsoluteDedupCache {
-    pub capacity: NonZeroUsize,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RelativeDedupCache {
-    pub factor: PositiveF64,
-}
-
-#[derive(Debug, Deserialize)]
-pub enum DedupCache {
-    Absolute(AbsoluteDedupCache),
-    Relative(RelativeDedupCache),
-    None,
-}
+use necsim_impls_no_std::{
+    bounded::{Partition, PositiveF64},
+    parallelisation::independent::{DedupCache, RelativeDedupCache},
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]

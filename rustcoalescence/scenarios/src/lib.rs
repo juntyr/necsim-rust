@@ -70,7 +70,8 @@ pub trait Scenario<G: RngCore>: Sized + ScenarioArguments {
         pre_sampler: OriginPreSampler<I>,
     ) -> Self::OriginSampler<'_, I>;
 
-    fn decompose(&self, rank: u32, partitions: NonZeroU32) -> Self::Decomposition;
-
     fn habitat(&self) -> &Self::Habitat;
+
+    fn decompose(habitat: &Self::Habitat, rank: u32, partitions: NonZeroU32)
+        -> Self::Decomposition;
 }

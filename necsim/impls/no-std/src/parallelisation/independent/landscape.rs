@@ -4,8 +4,7 @@ use core::num::{NonZeroU64, Wrapping};
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, DispersalSampler, Habitat, MinSpeciationTrackingEventSampler,
-        PrimeableRng, SingularActiveLineageSampler, SpeciationProbability, SpeciationSample,
-        TurnoverRate,
+        PrimeableRng, SingularActiveLineageSampler, SpeciationProbability, TurnoverRate,
     },
     event::DispersalEvent,
     landscape::IndexedLocation,
@@ -15,7 +14,6 @@ use necsim_core::{
 };
 
 use crate::{
-    cache::DirectMappedCache as LruCache,
     cogs::{
         active_lineage_sampler::independent::{
             event_time_sampler::EventTimeSampler, IndependentActiveLineageSampler,
@@ -31,7 +29,7 @@ use crate::{
     reporter::ReporterContext,
 };
 
-use super::reporter::IgnoreProgressReporterProxy;
+use super::{reporter::IgnoreProgressReporterProxy, DedupCache};
 
 #[allow(clippy::type_complexity)]
 pub fn simulate<
@@ -61,11 +59,12 @@ pub fn simulate<
         IndependentActiveLineageSampler<H, G, IndependentEmigrationExit<H, C, E>, D, T, N, J>,
     >,
     mut lineages: VecDeque<Lineage>,
-    mut min_spec_samples: LruCache<SpeciationSample>,
+    dedup_cache: DedupCache,
     step_slice: NonZeroU64,
     local_partition: &mut P,
 ) -> (f64, u64) {
     let mut proxy = IgnoreProgressReporterProxy::from(local_partition);
+    let mut min_spec_samples = dedup_cache.construct(lineages.len());
 
     // Ensure that the progress bar starts with the expected target
     proxy.local_partition().report_progress_sync(

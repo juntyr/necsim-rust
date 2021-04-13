@@ -91,7 +91,11 @@ impl<G: RngCore> Scenario<G> for NonSpatialScenario<G> {
         NonSpatialOriginSampler::new(pre_sampler, &self.habitat)
     }
 
-    fn decompose(&self, rank: u32, partitions: NonZeroU32) -> Self::Decomposition {
+    fn decompose(
+        _habitat: &Self::Habitat,
+        rank: u32,
+        partitions: NonZeroU32,
+    ) -> Self::Decomposition {
         ModuloDecomposition::new(rank, partitions)
     }
 

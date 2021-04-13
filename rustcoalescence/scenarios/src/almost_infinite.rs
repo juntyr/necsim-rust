@@ -100,7 +100,11 @@ impl<G: RngCore> Scenario<G> for AlmostInfiniteScenario<G> {
         AlmostInfiniteOriginSampler::new(pre_sampler, &self.habitat, self.radius)
     }
 
-    fn decompose(&self, rank: u32, partitions: NonZeroU32) -> Self::Decomposition {
+    fn decompose(
+        _habitat: &Self::Habitat,
+        rank: u32,
+        partitions: NonZeroU32,
+    ) -> Self::Decomposition {
         RadialDecomposition::new(rank, partitions)
     }
 
