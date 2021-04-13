@@ -18,7 +18,7 @@ First, you need to clone the necsim-rust GitHub repository:
 ```shell
 > git clone https://github.com/MomoLangenstein/necsim-rust.git
 ```
-necsim-rust is written in the [Rust language](https://www.rust-lang.org/tools/install), which must be installed in your `PATH` first. Next, please run the `setup.sh` command to compile and set up the custom `necsim-linker`:
+necsim-rust is written in the [Rust language](https://www.rust-lang.org/tools/install), which must be installed in your `PATH` first. Next, please run the `setup.sh` command to compile and set up the custom `rustcoalescence-linker`:
 ```shell
 > cd necsim-rust
 > ./setup.sh
@@ -38,29 +38,29 @@ If you also want to use the MPI-based parallelisation, it is *recommended* that 
 ## Project structure
 
 necsim-rust consists of the following crates:
-- rustcoalescence/: `rustcoalescence` provides the command-line interface.
-- necsim/:
-    - linker/: `necsim-linker` is a custom linker used during the compilation.
+- necsim/: this folder contains the core declaration of the simulation and implementation of its components
     - core/: `necsim-core` declares the core structs, simulation cogs traits, as well as the generic `Simulation`.
     - impls/:
         - no-std/: `necsim-impls-no-std` contains the implementations of cogs that **do not** require the Rust standard library
         - std/: `necsim-impls-std` contains the implementations of cogs that **do** require the Rust standard library
         - cuda/: `necsim-impls-cuda` contains the implementations of CUDA specific cogs
         - mpi/: `necsim-impls-mpi` contains the implementation of the MPI-based parallelisation backend
-    - scenarios/: `necsim-scenarios` contains the glue code to put together the cogs for the built-in scenarios. It is specifically built only for reducing code duplication in rustcoalescence, not for giving a minimal example of how to construct a simulation.
-    - algorithms/:
-        - monolithic/: `necsim-algorithms-monlithic` contains the glue code to put together the cogs for the three **monolithic** coalescence algorithms and their parallelisation. It is specifically built only for reducing code duplication in rustcoalescence, not for giving a minimal example of how to construct a simulation.
-            - src/classical: `ClassicalAlgorithm` is a good allrounder that approximates exponential inter-event times with a Geometric distribution and only supports uniform turnover rates
-            - src/gillespie: `GillespieAlgorithm` is a mathematically correct Gillespie-algorithm-based implementation
-            - src/skipping_gillespie: `SkippingGillespieAlgorithm` is a mathematically correct Gillespie-algorithm-based implementation which skips self-dispersal events without coalescence. Therefore, it is very fast on habitats with high self-dispersal probabilities.
-        - independent/: `necsim-algorithms-independent` contains the glue code to put together the cogs for the **independent** coalescence algorithm on the CPU. The algorithm treats the simulation as embarrassingly parallel problem and can be used to simulate subdomains of the simulation separately and piece the results back afterwards without loss of consistency.
-        - cuda/: `necsim-algorithms-cuda` contains the glue code to put together the cogs for the **independent** coalescence algorithm on a CUDA 3.5 capable GPU. The algorithm treats the simulation as embarrassingly parallel problem and can be used to simulate subdomains of the simulation separately and piece the results back afterwards without loss of consistency.
     - plugins/:
         - core/: `necsim-plugins-core` implements the reporter plugin system and provides the functionality to export and load plugins
         - common/: `necsim-plugins-common` implements common analysis reporters, e.g. to measure biodiversity, print a progress bar, etc.
         - metacommunity/: `necsim-plugins-metacommunity` implements a reporter which measures migrations to a static external metacommunity, which can be simulated separately using the non-spatial scenario
         - csv/: `necsim-plugins-csv` implements a reporter which records events in a CSV file
         - coalescence/: `necsim-plugins-coalescence` is **WORK IN PROGRESS**
+- rustcoalescence/: `rustcoalescence` provides the command-line interface.
+    - linker/: `rustcoalescence-linker` is a custom linker used during the compilation.
+    - scenarios/: `rustcoalescence-scenarios` contains the glue code to put together the cogs for the built-in scenarios. It is specifically built only for reducing code duplication in rustcoalescence, not for giving a minimal example of how to construct a simulation.
+    - algorithms/:
+        - monolithic/: `rustcoalescence-algorithms-monlithic` contains the glue code to put together the cogs for the three **monolithic** coalescence algorithms. It is specifically built only for reducing code duplication in rustcoalescence, not for giving a minimal example of how to construct a simulation.
+            - src/classical: `ClassicalAlgorithm` is a good allrounder that approximates exponential inter-event times with a Geometric distribution and only supports uniform turnover rates
+            - src/gillespie: `GillespieAlgorithm` is a mathematically correct Gillespie-algorithm-based implementation
+            - src/skipping_gillespie: `SkippingGillespieAlgorithm` is a mathematically correct Gillespie-algorithm-based implementation which skips self-dispersal events without coalescence. Therefore, it is very fast on habitats with high self-dispersal probabilities.
+        - independent/: `rustcoalescence-algorithms-independent` contains the glue code to put together the cogs for the **independent** coalescence algorithm on the CPU. The algorithm treats the simulation as embarrassingly parallel problem and can be used to simulate subdomains of the simulation separately and piece the results back afterwards without loss of consistency.
+        - cuda/: `rustcoalescence-algorithms-cuda` contains the glue code to put together the cogs for the **independent** coalescence algorithm on a CUDA 3.5 capable GPU. The algorithm treats the simulation as embarrassingly parallel problem and can be used to simulate subdomains of the simulation separately and piece the results back afterwards without loss of consistency.
 - rust-cuda/: `rust-cuda` provides automatically derivable traits to add more (but not full) type safety to sharing data structures between the CPU and GPU
 - third-party/: this folder contains multiple third-party crates which had to be modified (mostly to enable `no-std` support)
 
@@ -68,11 +68,11 @@ necsim-rust consists of the following crates:
 
 To compile `rustcoalescence`, you need to decide which algorithms you want to compile with it. You can enable any of the four provided algorithms by enabling its corresponding feature of the same name. For instance, to compile all CPU-based algorithms, you can use
 ```shell
-> cargo build --release --features necsim-algorithms-monolithic --features necsim-algorithms-independent
+> cargo build --release --features rustcoalescence-algorithms-monolithic --features rustcoalescence-algorithms-independent
 ```
 To compile with CUDA support, you first need to ensure that the dynamic CUDA libraries are in the `LD_LIBRARY_PATH` and enable the `necsim-cuda` feature:
 ```shell
-> LIBRARY_PATH="$LD_LIBRARY_PATH" cargo build --release [...] --features necsim-algorithms-cuda
+> LIBRARY_PATH="$LD_LIBRARY_PATH" cargo build --release [...] --features rustcoalescence-algorithms-cuda
 ```
 To compile with MPI support, you need to enable the `necsim-partitioning-mpi` feature:
 ```shell
