@@ -2,8 +2,7 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use serde_state::DeserializeState;
 
-use necsim_impls_no_std::partitioning::Partitioning;
-use necsim_impls_std::bounded::Partition;
+use necsim_impls_no_std::{bounded::Partition, partitioning::Partitioning};
 
 use super::{CommandArgs, ReplayArgs, SimulateArgs};
 
@@ -46,7 +45,8 @@ impl SimulateArgs {
         let mut partition = Partition::try_new(
             partitioning.get_rank(),
             partitioning.get_number_of_partitions(),
-        )?;
+        )
+        .map_err(anyhow::Error::msg)?;
 
         let args = match SimulateArgs::deserialize_state(&mut partition, de) {
             Ok(args) => Ok(args),

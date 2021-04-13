@@ -9,18 +9,16 @@ use structopt::StructOpt;
 
 mod parse;
 
-use necsim_impls_std::{
-    bounded::{Partition, ZeroExclOneInclF64, ZeroInclOneInclF64},
-    event_log::{recorder::EventLogRecorder, replay::EventLogReplay},
-};
+use necsim_impls_no_std::bounded::{Partition, ZeroExclOneInclF64, ZeroInclOneInclF64};
 
-use necsim_scenarios::{
+use necsim_impls_std::event_log::{recorder::EventLogRecorder, replay::EventLogReplay};
+
+use rustcoalescence_scenarios::{
     almost_infinite::AlmostInfiniteArguments, non_spatial::NonSpatialArguments,
     spatially_explicit::InMemoryArguments, spatially_implicit::SpatiallyImplicitArguments,
 };
 
-#[allow(unused_imports)]
-use necsim_algorithms::AlgorithmArguments;
+use rustcoalescence_algorithms::AlgorithmArguments;
 
 use necsim_plugins_core::import::{AnyReporterPluginVec, ReporterPluginLibrary};
 
@@ -129,31 +127,29 @@ pub struct CommonArgs {
 }
 
 #[derive(Debug, DeserializeState)]
-#[non_exhaustive]
-#[allow(clippy::empty_enum)]
 #[serde(deserialize_state = "Partition")]
 pub enum Algorithm {
-    #[cfg(feature = "necsim-algorithms-monolithic")]
+    #[cfg(feature = "rustcoalescence-algorithms-monolithic")]
     Classical(
         #[serde(deserialize_state)]
-        <necsim_algorithms_monolithic::classical::ClassicalAlgorithm as necsim_algorithms::AlgorithmArguments>::Arguments,
+        <rustcoalescence_algorithms_monolithic::classical::ClassicalAlgorithm as rustcoalescence_algorithms::AlgorithmArguments>::Arguments,
     ),
-    #[cfg(feature = "necsim-algorithms-monolithic")]
+    #[cfg(feature = "rustcoalescence-algorithms-monolithic")]
     Gillespie(
         #[serde(deserialize_state)]
-        <necsim_algorithms_monolithic::gillespie::GillespieAlgorithm as AlgorithmArguments>::Arguments,
+        <rustcoalescence_algorithms_monolithic::gillespie::GillespieAlgorithm as AlgorithmArguments>::Arguments,
     ),
-    #[cfg(feature = "necsim-algorithms-monolithic")]
+    #[cfg(feature = "rustcoalescence-algorithms-monolithic")]
     SkippingGillespie(
         #[serde(deserialize_state)]
-        <necsim_algorithms_monolithic::skipping_gillespie::SkippingGillespieAlgorithm as AlgorithmArguments>::Arguments,
+        <rustcoalescence_algorithms_monolithic::skipping_gillespie::SkippingGillespieAlgorithm as AlgorithmArguments>::Arguments,
     ),
-    #[cfg(feature = "necsim-algorithms-cuda")]
+    #[cfg(feature = "rustcoalescence-algorithms-cuda")]
     #[serde(alias = "CUDA")]
-    Cuda(#[serde(deserialize_state)] <necsim_algorithms_cuda::CudaAlgorithm as AlgorithmArguments>::Arguments),
-    #[cfg(feature = "necsim-algorithms-independent")]
+    Cuda(#[serde(deserialize_state)] <rustcoalescence_algorithms_cuda::CudaAlgorithm as AlgorithmArguments>::Arguments),
+    #[cfg(feature = "rustcoalescence-algorithms-independent")]
     Independent(
-        #[serde(deserialize_state)] <necsim_algorithms_independent::IndependentAlgorithm as AlgorithmArguments>::Arguments,
+        #[serde(deserialize_state)] <rustcoalescence_algorithms_independent::IndependentAlgorithm as AlgorithmArguments>::Arguments,
     ),
 }
 
