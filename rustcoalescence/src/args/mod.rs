@@ -306,11 +306,17 @@ pub struct ReplayArgs {
     pub reporters: AnyReporterPluginVec,
 }
 
-impl<'de> Deserialize<'de> for ReplayArgs {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+impl<'de> DeserializeState<'de, Partition> for ReplayArgs {
+    fn deserialize_state<D>(partition: &mut Partition, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
+        if partition.partitions().get() > 1 {
+            return Err(serde::de::Error::custom(
+                "Simulation replay mode is incompatible with external parallelisation",
+            ));
+        }
+
         let raw = ReplayArgsRaw::deserialize(deserializer)?;
 
         let log = raw.logs;
