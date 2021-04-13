@@ -18,7 +18,6 @@ mod maps;
 mod minimal_logger;
 mod plugins;
 mod reporter;
-// mod simulation;
 mod tiff;
 
 use args::RustcoalescenceArgs;
@@ -46,8 +45,20 @@ fn main() -> Result<()> {
         }
         .context("Failed to initialise or perform the simulation."),
         RustcoalescenceArgs::Replay(replay_args) => {
-            cli::replay::replay_with_logger(replay_args).context("Failed to replay the simulation.")
-        },
+            #[cfg(feature = "necsim-partitioning-mpi")]
+            {
+                use necsim_impls_mpi::MpiPartitioning;
+
+                cli::replay::replay_with_logger(replay_args, MpiPartitioning::initialise()?)
+            }
+            #[cfg(not(feature = "necsim-partitioning-mpi"))]
+            {
+                use necsim_impls_no_std::partitioning::monolithic::live::LiveMonolithicPartitioning;
+
+                cli::replay::replay_with_logger(replay_args, LiveMonolithicPartitioning::default())
+            }
+        }
+        .context("Failed to replay the simulation."),
     };
 
     // Hide non-root error messages
