@@ -1,4 +1,13 @@
+.SUFFIXES:
+#
+.SUFFIXES: .cpp .o .c .h
+
+
 .PHONY: clean cleandist
+
+
+CFLAGS = -fPIC -std=c99 -O3 -Wall -Wextra -Wshadow -Wno-implicit-function-declaration
+
 
 all: RNG_test
 
@@ -6,7 +15,7 @@ PractRand-pre0.95.zip:
 	(curl -OL https://downloads.sourceforge.net/project/pracrand/PractRand-pre0.95.zip)
 
 RNG_test: PractRand-pre0.95.zip
-	(unzip -qo PractRand-pre0.95.zip -d build && cd build && $(CXX) -std=c++14 -c src/*.cpp src/RNGs/*.cpp src/RNGs/other/*.cpp -O3 -Iinclude -pthread &&  ar rcs libPractRand.a *.o &&  $(CXX) -std=c++14 -o RNG_test tools/RNG_test.cpp libPractRand.a -O3 -Iinclude -pthread && cp RNG_test ..)
+	(unzip -qo PractRand-pre0.95.zip -d build && cd build && $(CXX) -std=c++14 -c src/*.cpp src/RNGs/*.cpp src/RNGs/other/*.cpp -O3 -Iinclude -pthread && ar rcs libPractRand.a *.o && $(CXX) -std=c++14 -o RNG_test tools/RNG_test.cpp libPractRand.a -O3 -Iinclude -pthread && cp RNG_test ..)
 
 clean:
 	rm -f RNG_test

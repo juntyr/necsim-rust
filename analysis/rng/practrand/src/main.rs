@@ -1,3 +1,5 @@
+#![deny(clippy::pedantic)]
+
 use std::{
     io::{self, Write},
     process::{Command, Stdio},
@@ -9,7 +11,7 @@ use necsim_impls_no_std::cogs::rng::fixedseahash::FixedSeaHash;
 const BUFFER_SIZE: usize = 1024;
 
 fn main() -> io::Result<()> {
-    let mut rng = FixedSeaHash::seed_from_u64(12345678);
+    let mut rng = FixedSeaHash::seed_from_u64(123_456_789);
 
     let mut buffer = vec![0_u64; BUFFER_SIZE].into_boxed_slice();
 
@@ -21,7 +23,7 @@ fn main() -> io::Result<()> {
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()?;
-    let mut stdin = command.stdin.take().ok_or(io::Error::new(
+    let mut stdin = command.stdin.take().ok_or_else(|| io::Error::new(
         io::ErrorKind::BrokenPipe,
         "Pipe to RNG_test could not be created.",
     ))?;
