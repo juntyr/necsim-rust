@@ -30,7 +30,7 @@ use crate::{
 use super::{reporter::IgnoreProgressReporterProxy, DedupCache};
 
 mod reporter;
-use reporter::WaterLevelReporter;
+pub use reporter::WaterLevelReporter;
 
 #[allow(clippy::type_complexity)]
 pub fn simulate<
@@ -63,6 +63,11 @@ pub fn simulate<
     event_slice: NonZeroU32,
     local_partition: &mut P,
 ) -> (f64, u64) {
+    // Ensure that the progress bar starts with the expected target
+    local_partition.report_progress_sync(
+        (Wrapping(lineages.len() as u64) + simulation.get_balanced_remaining_work()).0,
+    );
+
     let mut proxy = IgnoreProgressReporterProxy::from(local_partition);
     let mut min_spec_samples = dedup_cache.construct(lineages.len());
 
@@ -97,13 +102,6 @@ pub fn simulate<
         while !slow_lineages.is_empty()
             || simulation.active_lineage_sampler().number_active_lineages() > 0
         {
-            proxy.report_total_progress(
-                (Wrapping(slow_lineages.len() as u64)
-                    + Wrapping(fast_lineages.len() as u64)
-                    + simulation.get_balanced_remaining_work())
-                .0,
-            );
-
             let previous_task = simulation
                 .active_lineage_sampler_mut()
                 .replace_active_lineage(slow_lineages.pop_front());
@@ -130,6 +128,13 @@ pub fn simulate<
 
             total_steps += new_steps;
             max_time = max_time.max(new_time);
+
+            proxy.report_total_progress(
+                (Wrapping(slow_lineages.len() as u64)
+                    + Wrapping(fast_lineages.len() as u64)
+                    + simulation.get_balanced_remaining_work())
+                .0,
+            );
         }
 
         slow_events.sort();
@@ -147,5 +152,9 @@ pub fn simulate<
         core::mem::swap(&mut slow_lineages, &mut fast_lineages);
     }
 
-    (max_time, total_steps)
+    proxy.local_partition().report_progress_sync(0_u64);
+
+    proxy
+        .local_partition()
+        .reduce_global_time_steps(max_time, total_steps)
 }

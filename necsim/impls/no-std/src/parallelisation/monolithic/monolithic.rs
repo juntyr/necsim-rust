@@ -47,7 +47,12 @@ pub fn simulate<
     >,
     local_partition: &mut L,
 ) -> (f64, u64) {
+    // Ensure that the progress bar starts with the expected target
+    local_partition.report_progress_sync(simulation.get_balanced_remaining_work().0);
+
     let (time, steps, _rng) = simulation.simulate(local_partition.get_reporter());
 
-    (time, steps)
+    local_partition.report_progress_sync(0_u64);
+
+    local_partition.reduce_global_time_steps(time, steps)
 }
