@@ -15,18 +15,28 @@ fn main() -> io::Result<()> {
 
     let mut buffer = vec![0_u64; BUFFER_SIZE].into_boxed_slice();
 
-    let mut command = Command::new("./RNG_test")
-        .arg("stdin64")
-        // .arg("-tlmax")
+    let mut command = Command::new("dieharder")
+        .arg("-g")
+        .arg("200")
+        // .arg("-a")
         .args(std::env::args_os().skip(1))
         .stdin(Stdio::piped())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
-        .spawn()?;
-    let mut stdin = command.stdin.take().ok_or_else(|| io::Error::new(
-        io::ErrorKind::BrokenPipe,
-        "Pipe to RNG_test could not be created.",
-    ))?;
+        .spawn()
+        .map_err(|err| match err.kind() {
+            io::ErrorKind::NotFound => io::Error::new(
+                io::ErrorKind::NotFound,
+                "dieharder was not found - run `apt-get install dieharder`.",
+            ),
+            _ => err,
+        })?;
+    let mut stdin = command.stdin.take().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::BrokenPipe,
+            "Pipe to dieharder could not be created.",
+        )
+    })?;
 
     loop {
         buffer.fill_with(|| rng.sample_u64());
