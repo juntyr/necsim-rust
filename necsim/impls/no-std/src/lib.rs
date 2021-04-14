@@ -21,7 +21,6 @@ extern crate rust_cuda_derive;
 extern crate contracts;
 
 pub mod alias;
-pub mod bounded;
 pub mod cache;
 pub mod cogs;
 pub mod decomposition;

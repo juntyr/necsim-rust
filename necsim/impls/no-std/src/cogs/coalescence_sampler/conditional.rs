@@ -5,6 +5,7 @@ use necsim_core::{
         Backup, CoalescenceRngSample, CoalescenceSampler, GloballyCoherentLineageStore, Habitat,
         LineageReference,
     },
+    event::LineageInteraction,
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
 };
@@ -41,14 +42,14 @@ impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>>
     CoalescenceSampler<H, R, S> for ConditionalCoalescenceSampler<H, R, S>
 {
     #[must_use]
-    fn sample_optional_coalescence_at_location(
+    fn sample_interaction_at_location(
         &self,
         location: Location,
         habitat: &H,
         lineage_store: &S,
         coalescence_rng_sample: CoalescenceRngSample,
-    ) -> (IndexedLocation, Option<GlobalLineageReference>) {
-        optional_coalescence::sample_optional_coalescence_at_location(
+    ) -> (IndexedLocation, LineageInteraction) {
+        optional_coalescence::sample_interaction_at_location(
             location,
             habitat,
             lineage_store,

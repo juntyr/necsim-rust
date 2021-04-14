@@ -6,7 +6,7 @@ use necsim_core::{
         ActiveLineageSampler, DispersalSampler, Habitat, MinSpeciationTrackingEventSampler,
         PrimeableRng, SingularActiveLineageSampler, SpeciationProbability, TurnoverRate,
     },
-    event::DispersalEvent,
+    event::{DispersalEvent, LineageInteraction},
     landscape::IndexedLocation,
     lineage::{GlobalLineageReference, Lineage, MigratingLineage},
     reporter::{used::Unused, Reporter},
@@ -153,7 +153,7 @@ pub fn simulate<
                 time: event_time,
                 global_lineage_reference: global_reference.clone(),
                 target: dispersal_target.clone(),
-                coalescence: None,
+                interaction: LineageInteraction::Maybe,
             });
 
             // Append the new Lineage to the local task list

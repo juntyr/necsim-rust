@@ -1,23 +1,41 @@
 use core::{
     cmp::{Ord, Ordering},
     fmt,
-    num::NonZeroU64,
 };
 
-use serde::{Deserialize, Serialize};
+use necsim_core_bond::NonZeroOneU64;
+use rustacuda_core::DeviceCopy;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
     cogs::{BackedUp, Backup, CoalescenceRngSample, Habitat, LineageReference},
     landscape::{IndexedLocation, Location},
 };
 
-#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Serialize, Deserialize)]
-pub struct GlobalLineageReference(NonZeroU64);
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
+pub struct GlobalLineageReference(NonZeroOneU64);
+
+#[cfg(feature = "cuda")]
+unsafe impl DeviceCopy for GlobalLineageReference {}
 
 impl fmt::Display for GlobalLineageReference {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0.get())
+        write!(f, "{}", self.0.get() - 2)
+    }
+}
+
+impl<'de> Deserialize<'de> for GlobalLineageReference {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let inner = u64::deserialize(deserializer)?;
+
+        Ok(Self(unsafe { NonZeroOneU64::new_unchecked(inner + 2) }))
+    }
+}
+
+impl Serialize for GlobalLineageReference {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        (self.0.get() - 2).serialize(serializer)
     }
 }
 
@@ -59,8 +77,8 @@ impl Lineage {
     pub fn new<H: Habitat>(indexed_location: IndexedLocation, habitat: &H) -> Self {
         Self {
             global_reference: GlobalLineageReference(unsafe {
-                NonZeroU64::new_unchecked(
-                    habitat.map_indexed_location_to_u64_injective(&indexed_location) + 1,
+                NonZeroOneU64::new_unchecked(
+                    habitat.map_indexed_location_to_u64_injective(&indexed_location) + 2,
                 )
             }),
             indexed_location: Some(indexed_location),

@@ -4,8 +4,9 @@ use array2d::Array2D;
 use necsim_core::cogs::{DispersalSampler, Habitat, LineageStore, RngCore};
 use thiserror::Error;
 
+use necsim_core_bond::ZeroExclOneInclF64;
+
 use necsim_impls_no_std::{
-    bounded::ZeroExclOneInclF64,
     cogs::{
         dispersal_sampler::in_memory::{
             contract::explicit_in_memory_dispersal_check_contract, InMemoryDispersalSampler,

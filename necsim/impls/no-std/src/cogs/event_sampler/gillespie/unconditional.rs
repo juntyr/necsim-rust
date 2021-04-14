@@ -134,9 +134,9 @@ impl<
                     )
                 })?;
 
-            let (dispersal_target, optional_coalescence) = simulation
+            let (dispersal_target, interaction) = simulation
                 .coalescence_sampler
-                .sample_optional_coalescence_at_location(
+                .sample_interaction_at_location(
                     dispersal_target,
                     &simulation.habitat,
                     &simulation.lineage_store,
@@ -151,7 +151,7 @@ impl<
                         .global_reference()
                         .clone(),
                     target: dispersal_target,
-                    coalescence: optional_coalescence,
+                    interaction,
                 }
                 .into(),
             )

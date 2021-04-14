@@ -1,6 +1,6 @@
 use core::{convert::TryFrom, fmt};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
@@ -12,7 +12,8 @@ impl fmt::Display for NonNegativeF64Error {
     }
 }
 
-#[derive(Copy, Clone, Deserialize)]
+#[derive(Copy, Clone, Serialize, Deserialize)]
+#[repr(transparent)]
 #[serde(try_from = "f64")]
 pub struct NonNegativeF64(f64);
 

@@ -2,8 +2,8 @@ use core::cmp::{Ord, Ordering};
 
 use crate::{
     cogs::{Backup, RngCore},
+    event::LineageInteraction,
     landscape::{IndexedLocation, Location},
-    lineage::GlobalLineageReference,
 };
 
 use super::{Habitat, LineageReference, LineageStore};
@@ -15,13 +15,13 @@ pub trait CoalescenceSampler<H: Habitat, R: LineageReference<H>, S: LineageStore
 {
     #[must_use]
     #[debug_requires(habitat.get_habitat_at_location(&location) > 0, "location is habitable")]
-    fn sample_optional_coalescence_at_location(
+    fn sample_interaction_at_location(
         &self,
         location: Location,
         habitat: &H,
         lineage_store: &S,
         coalescence_rng_sample: CoalescenceRngSample,
-    ) -> (IndexedLocation, Option<GlobalLineageReference>);
+    ) -> (IndexedLocation, LineageInteraction);
 }
 
 #[derive(Debug, PartialEq)]

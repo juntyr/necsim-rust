@@ -3,9 +3,9 @@ use std::num::NonZeroU32;
 use serde::Deserialize;
 
 use necsim_core::cogs::{DispersalSampler, LineageStore, RngCore};
+use necsim_core_bond::{NonNegativeF64, ZeroExclOneInclF64};
 
 use necsim_impls_no_std::{
-    bounded::{NonNegativeF64, ZeroExclOneInclF64},
     cogs::{
         dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
         habitat::almost_infinite::AlmostInfiniteHabitat,

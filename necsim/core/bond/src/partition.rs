@@ -36,10 +36,6 @@ impl Partition {
         }
     }
 
-    #[debug_ensures(
-        ret < self.partitions().get(),
-        "rank is in range [0, partitions)"
-    )]
     #[must_use]
     pub fn rank(self) -> u32 {
         self.rank

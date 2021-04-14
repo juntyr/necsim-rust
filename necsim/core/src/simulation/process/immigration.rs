@@ -6,7 +6,7 @@ use crate::{
         EmigrationExit, EventSampler, Habitat, ImmigrationEntry, LineageReference, LineageStore,
         RngCore, SpeciationProbability, TurnoverRate,
     },
-    event::DispersalEvent,
+    event::{DispersalEvent, LineageInteraction},
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
     reporter::{used::Unused, Reporter},
@@ -45,9 +45,9 @@ pub fn simulate_and_report_immigration_step<
         |active_lineage_sampler, simulation, rng| {
             // Sample the missing coalescence using the random sample generated
             // in the remote sublandscape from where the lineage emigrated
-            let (dispersal_target, optional_coalescence) = simulation
+            let (dispersal_target, interaction) = simulation
                 .coalescence_sampler
-                .sample_optional_coalescence_at_location(
+                .sample_interaction_at_location(
                     dispersal_target,
                     &simulation.habitat,
                     &simulation.lineage_store,
@@ -68,8 +68,8 @@ pub fn simulate_and_report_immigration_step<
             //   executed first, i.e. random
 
             // In the event of migration without coalescence, the lineage has
-            // to be added to the active lineage sampler and lineage store
-            if optional_coalescence.is_none() {
+            //  to be added to the active lineage sampler and lineage store
+            if !matches!(interaction, LineageInteraction::Coalescence(_)) {
                 active_lineage_sampler.insert_new_lineage_to_indexed_location(
                     global_reference.clone(),
                     dispersal_target.clone(),
@@ -85,7 +85,7 @@ pub fn simulate_and_report_immigration_step<
                 time: migration_event_time,
                 global_lineage_reference: global_reference,
                 target: dispersal_target,
-                coalescence: optional_coalescence,
+                interaction,
             }));
         },
     )
