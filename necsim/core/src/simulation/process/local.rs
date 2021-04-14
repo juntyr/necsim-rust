@@ -6,7 +6,7 @@ use crate::{
         Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
         TurnoverRate,
     },
-    event::TypedEvent,
+    event::{LineageInteraction, TypedEvent},
     reporter::{used::Unused, Reporter},
     simulation::Simulation,
 };
@@ -70,10 +70,12 @@ pub fn simulate_and_report_local_step_or_finish<
                                         // Report the local dispersal event
                                         reporter.report_dispersal(Unused::new(&event));
 
-                                        if event.coalescence.is_none() {
-                                            Some(event.target)
-                                        } else {
+                                        if let LineageInteraction::Coalescence(_) =
+                                            event.interaction
+                                        {
                                             None
+                                        } else {
+                                            Some(event.target)
                                         }
                                     },
                                 }

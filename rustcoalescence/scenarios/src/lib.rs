@@ -12,9 +12,9 @@ use necsim_core::cogs::{
     DispersalSampler, Habitat, LineageReference, LineageStore, OriginSampler, RngCore,
     SpeciationProbability, TurnoverRate,
 };
+use necsim_core_bond::ZeroExclOneInclF64;
 
 use necsim_impls_no_std::{
-    bounded::ZeroExclOneInclF64,
     cogs::{
         dispersal_sampler::in_memory::InMemoryDispersalSampler,
         origin_sampler::pre_sampler::OriginPreSampler,

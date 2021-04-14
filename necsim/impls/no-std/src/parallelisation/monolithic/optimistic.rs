@@ -9,9 +9,9 @@ use necsim_core::{
     lineage::MigratingLineage,
     simulation::Simulation,
 };
+use necsim_core_bond::PositiveF64;
 
 use crate::{
-    bounded::PositiveF64,
     cogs::{
         emigration_exit::domain::DomainEmigrationExit,
         immigration_entry::buffered::BufferedImmigrationEntry,

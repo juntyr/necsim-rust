@@ -1,7 +1,9 @@
 use anyhow::{Context, Result};
 use serde_state::DeserializeState;
 
-use necsim_impls_no_std::{bounded::Partition, partitioning::Partitioning};
+use necsim_core_bond::Partition;
+
+use necsim_impls_no_std::partitioning::Partitioning;
 
 use super::{CommandArgs, ReplayArgs, SimulateArgs};
 

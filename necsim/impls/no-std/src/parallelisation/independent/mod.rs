@@ -2,7 +2,9 @@ use core::num::NonZeroUsize;
 
 use serde::Deserialize;
 
-use crate::{bounded::PositiveF64, cache::DirectMappedCache};
+use necsim_core_bond::PositiveF64;
+
+use crate::cache::DirectMappedCache;
 
 mod reporter;
 

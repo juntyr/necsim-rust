@@ -3,10 +3,9 @@ use std::num::{NonZeroU32, NonZeroU64};
 use serde::Deserialize;
 use serde_state::DeserializeState;
 
-use necsim_impls_no_std::{
-    bounded::{Partition, PositiveF64},
-    parallelisation::independent::{DedupCache, RelativeDedupCache},
-};
+use necsim_core_bond::{Partition, PositiveF64};
+
+use necsim_impls_no_std::parallelisation::independent::{DedupCache, RelativeDedupCache};
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]

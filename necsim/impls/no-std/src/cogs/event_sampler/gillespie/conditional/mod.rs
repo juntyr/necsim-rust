@@ -6,7 +6,9 @@ use necsim_core::{
         GloballyCoherentLineageStore, Habitat, LineageReference, RngCore, RngSampler,
         SeparableDispersalSampler, SpeciationProbability, TurnoverRate,
     },
-    event::{Dispersal, DispersalEvent, EventType, PackedEvent, SpeciationEvent},
+    event::{
+        Dispersal, DispersalEvent, EventType, LineageInteraction, PackedEvent, SpeciationEvent,
+    },
     landscape::{IndexedLocation, Location},
     simulation::partial::event_sampler::PartialSimulation,
 };
@@ -94,8 +96,10 @@ impl<
             EventType::Speciation => true,
             EventType::Dispersal(Dispersal {
                 target,
-                coalescence,
-            }) => (event.origin.eq(target) -> coalescence.is_some()),
+                interaction,
+            }) => (event.origin.eq(target) -> matches!(
+                interaction, LineageInteraction::Coalescence(_)
+            )),
         },
         None => true,
     }, "always coalesces on self-dispersal")]
@@ -165,9 +169,9 @@ impl<
                     )
                 })?;
 
-            let (dispersal_target, optional_coalescence) = simulation
+            let (dispersal_target, interaction) = simulation
                 .coalescence_sampler
-                .sample_optional_coalescence_at_location(
+                .sample_interaction_at_location(
                     dispersal_target,
                     &simulation.habitat,
                     &simulation.lineage_store,
@@ -182,7 +186,7 @@ impl<
                         .global_reference()
                         .clone(),
                     target: dispersal_target,
-                    coalescence: optional_coalescence,
+                    interaction,
                 }
                 .into(),
             )
@@ -204,7 +208,7 @@ impl<
                         .global_reference()
                         .clone(),
                     target: dispersal_target,
-                    coalescence: Some(coalescence),
+                    interaction: LineageInteraction::Coalescence(coalescence),
                 }
                 .into(),
             )

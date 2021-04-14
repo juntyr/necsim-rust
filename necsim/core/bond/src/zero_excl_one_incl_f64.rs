@@ -1,6 +1,6 @@
 use core::{convert::TryFrom, fmt};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
@@ -12,7 +12,8 @@ impl fmt::Display for ZeroExclOneInclF64Error {
     }
 }
 
-#[derive(Copy, Clone, Deserialize)]
+#[derive(Copy, Clone, Deserialize, Serialize)]
+#[repr(transparent)]
 #[serde(try_from = "f64")]
 pub struct ZeroExclOneInclF64(f64);
 
