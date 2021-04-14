@@ -79,8 +79,8 @@ impl<H: Habitat> LocallyCoherentLineageStore<H, InMemoryLineageReference>
         reference: InMemoryLineageReference,
         event_time: f64,
         _habitat: &H,
-    ) -> IndexedLocation {
-        let lineage_indexed_location = unsafe {
+    ) -> (IndexedLocation, f64) {
+        let (lineage_indexed_location, prior_time) = unsafe {
             self.lineages_store[Into::<usize>::into(reference)].remove_from_location(event_time)
         };
 
@@ -89,7 +89,7 @@ impl<H: Habitat> LocallyCoherentLineageStore<H, InMemoryLineageReference>
             .indexed_location_to_lineage_reference
             .remove(&lineage_indexed_location);
 
-        lineage_indexed_location
+        (lineage_indexed_location, prior_time)
     }
 
     fn emigrate(

@@ -41,22 +41,22 @@ pub trait ActiveLineageSampler<
         None => old(self.number_active_lineages()) == 0,
     }, "removes an active lineage if some left")]
     #[debug_ensures(
-        ret.is_some() -> ret.as_ref().unwrap().2 > old(self.get_last_event_time()),
+        ret.is_some() -> ret.as_ref().unwrap().3 > old(self.get_last_event_time()),
         "event occurs later than last event time"
     )]
-    #[debug_ensures(if let Some((ref reference, ref _location, event_time)) = ret {
+    #[debug_ensures(if let Some((ref reference, ref _location, _prior_time, event_time)) = ret {
         simulation.lineage_store.get(reference.clone()).map_or(true, |lineage| {
             lineage.last_event_time().to_bits() == event_time.to_bits()
         })
     } else { true } , "updates the time of the last event of the returned lineage to event time")]
-    #[debug_ensures(if let Some((ref _reference, ref _location, event_time)) = ret {
+    #[debug_ensures(if let Some((ref _reference, ref _location, _prior_time, event_time)) = ret {
         self.get_last_event_time().to_bits() == event_time.to_bits()
     } else { true }, "updates the time of the last event")]
-    fn pop_active_lineage_indexed_location_event_time(
+    fn pop_active_lineage_indexed_location_prior_event_time(
         &mut self,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
-    ) -> Option<(R, IndexedLocation, f64)>;
+    ) -> Option<(R, IndexedLocation, f64, f64)>;
 
     #[debug_requires(time >= 0.0_f64, "time is non-negative")]
     #[debug_ensures(
@@ -87,12 +87,13 @@ pub trait ActiveLineageSampler<
     );
 
     #[inline]
-    fn with_next_active_lineage_indexed_location_event_time<
+    fn with_next_active_lineage_indexed_location_prior_event_time<
         F: FnOnce(
             &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
             &mut G,
             R,
             IndexedLocation,
+            f64,
             f64,
         ) -> Option<IndexedLocation>,
     >(
@@ -101,14 +102,15 @@ pub trait ActiveLineageSampler<
         rng: &mut G,
         inner: F,
     ) -> bool {
-        if let Some((chosen_lineage, dispersal_origin, event_time)) =
-            self.pop_active_lineage_indexed_location_event_time(simulation, rng)
+        if let Some((chosen_lineage, dispersal_origin, prior_time, event_time)) =
+            self.pop_active_lineage_indexed_location_prior_event_time(simulation, rng)
         {
             if let Some(dispersal_target) = inner(
                 simulation,
                 rng,
                 chosen_lineage.clone(),
                 dispersal_origin,
+                prior_time,
                 event_time,
             ) {
                 self.push_active_lineage_to_indexed_location(

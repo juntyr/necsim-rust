@@ -72,16 +72,19 @@ pub trait LocallyCoherentLineageStore<H: Habitat, R: LineageReference<H>>:
     #[must_use]
     #[debug_requires(self.get(reference.clone()).is_some(), "lineage reference is valid")]
     #[debug_requires(self[reference.clone()].is_active(), "lineage is active")]
-    #[debug_ensures(old(habitat).contains(ret.location()), "prior location is inside habitat")]
+    #[debug_ensures(old(habitat).contains(ret.0.location()), "prior location is inside habitat")]
     #[debug_ensures(!self[old(reference.clone())].is_active(), "lineage was deactivated")]
     #[debug_ensures(
-        ret == old(self[reference.clone()].indexed_location().unwrap().clone()),
+        ret.0 == old(self[reference.clone()].indexed_location().unwrap().clone()),
         "returns the individual's prior IndexedLocation"
     )]
     #[debug_ensures(
-        self.get_active_global_lineage_reference_at_indexed_location(&ret, old(habitat)).is_none(),
-        "lineage is no longer indexed at its prior IndexedLocation"
+        ret.1.to_bits() == old(self[reference.clone()].last_event_time().to_bits()),
+        "returns the individual's prior last event time"
     )]
+    #[debug_ensures(self.get_active_global_lineage_reference_at_indexed_location(
+        &ret.0, old(habitat)
+    ).is_none(), "lineage is no longer indexed at its prior IndexedLocation")]
     #[debug_ensures(
         self[old(reference.clone())].last_event_time().to_bits() == old(event_time.to_bits()),
         "updates the time of the last event of the lineage reference"
@@ -91,7 +94,7 @@ pub trait LocallyCoherentLineageStore<H: Habitat, R: LineageReference<H>>:
         reference: R,
         event_time: f64,
         habitat: &H,
-    ) -> IndexedLocation;
+    ) -> (IndexedLocation, f64);
 
     #[debug_requires(
         self.get(local_lineage_reference.clone()).is_some(),
@@ -185,7 +188,7 @@ pub trait GloballyCoherentLineageStore<H: Habitat, R: LineageReference<H>>:
     #[must_use]
     #[debug_ensures(
         self.get_active_local_lineage_references_at_location_unordered(
-            &ret.location(),
+            &ret.0.location(),
             old(habitat),
         ).len() + 1 == old(self.get_active_local_lineage_references_at_location_unordered(
             self[reference.clone()].indexed_location().unwrap().location(),
@@ -196,7 +199,7 @@ pub trait GloballyCoherentLineageStore<H: Habitat, R: LineageReference<H>>:
         reference: R,
         event_time: f64,
         habitat: &H,
-    ) -> IndexedLocation {
+    ) -> (IndexedLocation, f64) {
         self.extract_lineage_from_its_location_locally_coherent(reference, event_time, habitat)
     }
 

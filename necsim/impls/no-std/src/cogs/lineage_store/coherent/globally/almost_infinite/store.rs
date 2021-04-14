@@ -88,7 +88,7 @@ impl LocallyCoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference
         reference: InMemoryLineageReference,
         event_time: f64,
         _habitat: &AlmostInfiniteHabitat,
-    ) -> IndexedLocation {
+    ) -> (IndexedLocation, f64) {
         let lineage: &Lineage = &self.lineages_store[Into::<usize>::into(reference)];
 
         let lineage_indexed_location = lineage.indexed_location().unwrap();

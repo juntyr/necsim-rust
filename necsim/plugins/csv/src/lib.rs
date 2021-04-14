@@ -59,13 +59,13 @@ impl TryFrom<CsvReporterArgs> for CsvReporter {
 impl Reporter for CsvReporter {
     impl_report!(speciation(&mut self, event: Unused) -> Used {
         event.use_in(|event| {
-            self.write_event(&event.global_lineage_reference, event.time, &event.origin, 's')
+            self.write_event(&event.global_lineage_reference, event.event_time, &event.origin, 's')
         })
     });
 
     impl_report!(dispersal(&mut self, event: Unused) -> Used {
         event.use_in(|event| {
-            self.write_event(&event.global_lineage_reference, event.time, &event.origin, 'd')
+            self.write_event(&event.global_lineage_reference, event.event_time, &event.origin, 'd')
         })
     });
 

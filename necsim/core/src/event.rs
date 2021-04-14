@@ -12,7 +12,8 @@ use crate::{landscape::IndexedLocation, lineage::GlobalLineageReference};
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub struct PackedEvent {
     pub origin: IndexedLocation,
-    pub time: f64,
+    pub prior_time: f64, // time of the previous event
+    pub event_time: f64, // time of this event
     pub global_lineage_reference: GlobalLineageReference,
     pub r#type: EventType,
 }
@@ -57,7 +58,8 @@ const EXCESSIVE_INTERACTION_ERROR: [(); 8] = [(); core::mem::size_of::<LineageIn
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub struct SpeciationEvent {
     pub origin: IndexedLocation,
-    pub time: f64,
+    pub prior_time: f64, // time of the previous event
+    pub event_time: f64, // time of this event
     pub global_lineage_reference: GlobalLineageReference,
 }
 
@@ -66,14 +68,15 @@ pub struct SpeciationEvent {
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub struct DispersalEvent {
     pub origin: IndexedLocation,
-    pub time: f64,
+    pub prior_time: f64, // time of the previous event
+    pub event_time: f64, // time of this event
     pub global_lineage_reference: GlobalLineageReference,
     pub target: IndexedLocation,
     pub interaction: LineageInteraction,
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug, Clone /* , PartialEq, Eq */)]
+//#[derive(Debug, Clone)]
 pub enum TypedEvent {
     Speciation(SpeciationEvent),
     Dispersal(DispersalEvent),
@@ -83,7 +86,8 @@ impl From<SpeciationEvent> for PackedEvent {
     fn from(event: SpeciationEvent) -> Self {
         Self {
             origin: event.origin,
-            time: event.time,
+            prior_time: event.prior_time,
+            event_time: event.event_time,
             global_lineage_reference: event.global_lineage_reference,
             r#type: EventType::Speciation,
         }
@@ -94,7 +98,8 @@ impl From<DispersalEvent> for PackedEvent {
     fn from(event: DispersalEvent) -> Self {
         Self {
             origin: event.origin,
-            time: event.time,
+            prior_time: event.prior_time,
+            event_time: event.event_time,
             global_lineage_reference: event.global_lineage_reference,
             r#type: EventType::Dispersal(Dispersal {
                 target: event.target,
@@ -118,7 +123,8 @@ impl From<PackedEvent> for TypedEvent {
         match event.r#type {
             EventType::Speciation => Self::Speciation(SpeciationEvent {
                 origin: event.origin,
-                time: event.time,
+                prior_time: event.prior_time,
+                event_time: event.event_time,
                 global_lineage_reference: event.global_lineage_reference,
             }),
             EventType::Dispersal(Dispersal {
@@ -126,7 +132,8 @@ impl From<PackedEvent> for TypedEvent {
                 interaction,
             }) => Self::Dispersal(DispersalEvent {
                 origin: event.origin,
-                time: event.time,
+                prior_time: event.prior_time,
+                event_time: event.event_time,
                 global_lineage_reference: event.global_lineage_reference,
                 target,
                 interaction,
@@ -138,25 +145,35 @@ impl From<PackedEvent> for TypedEvent {
 impl Eq for PackedEvent {}
 
 impl PartialEq for PackedEvent {
-    // `Event`s are equal when they have the same `origin`, `time` and `r#type`
-    // (`global_lineage_reference` is ignored)
+    // `Event`s are equal when they have the same `origin`, `event_time` and
+    //  `r#type` (`global_lineage_reference` and `prior_time` are ignored)
     fn eq(&self, other: &Self) -> bool {
-        self.origin == other.origin && self.time == other.time && self.r#type == other.r#type
+        self.origin == other.origin
+            && self.event_time == other.event_time
+            && self.r#type == other.r#type
     }
 }
 
 impl Ord for PackedEvent {
     fn cmp(&self, other: &Self) -> Ordering {
         // Order `Event`s in lexicographical order:
-        //  (1) time
-        //  (2) origin
-        //  (3) r#type (target)
-        match self.time.total_cmp(&other.time) {
-            Ordering::Equal => (&self.origin, &self.r#type, &self.global_lineage_reference).cmp(&(
-                &other.origin,
-                &other.r#type,
-                &other.global_lineage_reference,
-            )),
+        //  (1) event_time                       /=\
+        //  (2) origin                  different | events
+        //  (3) r#type (target and interaction)  \=/
+        //  (4) prior_time              parent + offspring
+        //  (5) global_lineage_reference
+        match self.event_time.total_cmp(&other.event_time) {
+            Ordering::Equal => {
+                match (&self.origin, &self.r#type).cmp(&(&other.origin, &other.r#type)) {
+                    Ordering::Equal => match self.prior_time.total_cmp(&other.prior_time) {
+                        Ordering::Equal => self
+                            .global_lineage_reference
+                            .cmp(&other.global_lineage_reference),
+                        ordering => ordering,
+                    },
+                    ordering => ordering,
+                }
+            },
             ordering => ordering,
         }
     }
@@ -169,11 +186,11 @@ impl PartialOrd for PackedEvent {
 }
 
 impl Hash for PackedEvent {
-    // `Event`s are equal when they have the same `origin`, `time` and `r#type`
-    // (`global_lineage_reference` is ignored)
+    // `Event`s are equal when they have the same `origin`, `event_time` and
+    //  `r#type` (`global_lineage_reference` and `prior_time` are ignored)
     fn hash<S: Hasher>(&self, state: &mut S) {
         self.origin.hash(state);
-        self.time.to_bits().hash(state);
+        self.event_time.to_bits().hash(state);
         self.r#type.hash(state);
     }
 }
@@ -181,21 +198,22 @@ impl Hash for PackedEvent {
 impl Eq for SpeciationEvent {}
 
 impl PartialEq for SpeciationEvent {
-    // `SpeciationEvent`s are equal when they have the same `origin` and `time`
-    // (`global_lineage_reference` is ignored)
+    // `SpeciationEvent`s are equal when they have the same `origin` and
+    //  `event_time` (`global_lineage_reference` and `prior_time` are ignored)
     fn eq(&self, other: &Self) -> bool {
-        self.origin == other.origin && self.time == other.time
+        self.origin == other.origin && self.event_time == other.event_time
     }
 }
 
 impl Eq for DispersalEvent {}
 
 impl PartialEq for DispersalEvent {
-    // `SpeciationEvent`s are equal when they have the same `origin`, `time`,
-    // `target` and `interaction` (`global_lineage_reference` is ignored)
+    // `SpeciationEvent`s are equal when they have the same `origin`,
+    //  `event_time`, `target` and `interaction`
+    //  (`global_lineage_reference` and `prior_time` are ignored)
     fn eq(&self, other: &Self) -> bool {
         self.origin == other.origin
-            && self.time == other.time
+            && self.event_time == other.event_time
             && self.target == other.target
             && self.interaction == other.interaction
     }

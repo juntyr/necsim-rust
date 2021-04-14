@@ -63,8 +63,8 @@ impl Reporter for ProgressReporter {
 
                 display_progress(total, self.last_remaining.load(Ordering::Acquire).min(total));
 
-                // Flush stderr to update the progress bar
-                std::mem::drop(io::stderr().flush());
+                // Flush stdout to update the progress bar
+                std::mem::drop(io::stdout().flush());
             }
         })
     });
@@ -97,8 +97,8 @@ impl Reporter for ProgressReporter {
                 if total > 0 {
                     display_progress(total, remaining.load(Ordering::Acquire).min(total));
 
-                    // Flush stderr to update the progress bar
-                    std::mem::drop(io::stderr().flush());
+                    // Flush stdout to update the progress bar
+                    std::mem::drop(io::stdout().flush());
                 }
             }
         });
@@ -139,12 +139,12 @@ fn display_progress(total: u64, remaining: u64) {
     let display_progress =
         ((total - remaining) * (UPDATE_PRECISION as u64) / total.max(1)) as usize;
 
-    // Display a simple progress bar to stderr
-    eprint!("\r{:>13} [", total - remaining);
+    // Display a simple progress bar to stdout
+    print!("\r{:>13} [", total - remaining);
     if display_progress == 0 {
-        eprint!("{:>rest$}", "", rest = (UPDATE_PRECISION));
+        print!("{:>rest$}", "", rest = (UPDATE_PRECISION));
     } else if remaining > 0 {
-        eprint!(
+        print!(
             "{:=<progress$}>{:>rest$}",
             "",
             "",
@@ -152,7 +152,7 @@ fn display_progress(total: u64, remaining: u64) {
             rest = (UPDATE_PRECISION - display_progress)
         );
     } else {
-        eprint!("{:=<progress$}", "", progress = (UPDATE_PRECISION));
+        print!("{:=<progress$}", "", progress = (UPDATE_PRECISION));
     }
-    eprint!("] {:<13}", total);
+    print!("] {:<13}", total);
 }

@@ -89,7 +89,7 @@ pub fn simulate<
             .sum();
         level_time += f64::from(event_slice.get()) / total_event_rate;
 
-        slow_events.extend(fast_events.drain_filter(|event| event.time < level_time));
+        slow_events.extend(fast_events.drain_filter(|event| event.event_time < level_time));
 
         let mut reporter: WaterLevelReporter<R> =
             WaterLevelReporter::new(level_time, &mut slow_events, &mut fast_events);

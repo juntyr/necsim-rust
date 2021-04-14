@@ -45,11 +45,11 @@ impl<
     }
 
     #[must_use]
-    fn pop_active_lineage_indexed_location_event_time(
+    fn pop_active_lineage_indexed_location_prior_event_time(
         &mut self,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
-    ) -> Option<(R, IndexedLocation, f64)> {
+    ) -> Option<(R, IndexedLocation, f64, f64)> {
         use necsim_core::cogs::RngSampler;
 
         let (chosen_active_location, chosen_event_time) = match self.active_locations.pop() {
@@ -77,7 +77,7 @@ impl<
         let chosen_lineage_reference =
             lineages_at_location[chosen_lineage_index_at_location].clone();
 
-        let lineage_indexed_location = simulation
+        let (lineage_indexed_location, prior_event_time) = simulation
             .lineage_store
             .extract_lineage_from_its_location_globally_coherent(
                 chosen_lineage_reference.clone(),
@@ -108,6 +108,7 @@ impl<
         Some((
             chosen_lineage_reference,
             lineage_indexed_location,
+            prior_event_time,
             unique_event_time,
         ))
     }
@@ -194,45 +195,6 @@ impl<
         self.last_event_time = time;
 
         self.number_active_lineages += 1;
-    }
-
-    fn with_next_active_lineage_indexed_location_event_time<
-        F: FnOnce(
-            &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
-            &mut G,
-            R,
-            IndexedLocation,
-            f64,
-        ) -> Option<IndexedLocation>,
-    >(
-        &mut self,
-        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
-        rng: &mut G,
-        inner: F,
-    ) -> bool {
-        if let Some((chosen_lineage, dispersal_origin, event_time)) =
-            self.pop_active_lineage_indexed_location_event_time(simulation, rng)
-        {
-            if let Some(dispersal_target) = inner(
-                simulation,
-                rng,
-                chosen_lineage.clone(),
-                dispersal_origin,
-                event_time,
-            ) {
-                self.push_active_lineage_to_indexed_location(
-                    chosen_lineage,
-                    dispersal_target,
-                    event_time,
-                    simulation,
-                    rng,
-                );
-            }
-
-            true
-        } else {
-            false
-        }
     }
 }
 
