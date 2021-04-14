@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use serde_state::DeserializeState;
 
-use necsim_impls_no_std::bounded::{Partition, PositiveF64};
+use necsim_core_bond::{Partition, PositiveF64};
 
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]

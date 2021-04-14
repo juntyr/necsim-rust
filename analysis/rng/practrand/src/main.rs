@@ -23,10 +23,12 @@ fn main() -> io::Result<()> {
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()?;
-    let mut stdin = command.stdin.take().ok_or_else(|| io::Error::new(
-        io::ErrorKind::BrokenPipe,
-        "Pipe to RNG_test could not be created.",
-    ))?;
+    let mut stdin = command.stdin.take().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::BrokenPipe,
+            "Pipe to RNG_test could not be created.",
+        )
+    })?;
 
     loop {
         buffer.fill_with(|| rng.sample_u64());

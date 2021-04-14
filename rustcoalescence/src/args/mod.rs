@@ -9,7 +9,7 @@ use structopt::StructOpt;
 
 mod parse;
 
-use necsim_impls_no_std::bounded::{Partition, ZeroExclOneInclF64, ZeroInclOneInclF64};
+use necsim_core_bond::{Partition, ZeroExclOneInclF64, ZeroInclOneInclF64};
 
 use necsim_impls_std::event_log::{recorder::EventLogRecorder, replay::EventLogReplay};
 

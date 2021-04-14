@@ -1,7 +1,7 @@
 use std::{fmt, fmt::Write};
 
 use necsim_core::{
-    event::{DispersalEvent, SpeciationEvent},
+    event::{DispersalEvent, LineageInteraction, SpeciationEvent},
     impl_finalise, impl_report,
     reporter::Reporter,
 };
@@ -56,7 +56,7 @@ impl Reporter for EventCounterReporter {
             self.last_dispersal_event = Some(event.clone());
 
             let self_dispersal = event.origin == event.target;
-            let coalescence = event.coalescence.is_some();
+            let coalescence = matches!(event.interaction, LineageInteraction::Coalescence(_));
 
             match (self_dispersal, coalescence) {
                 (true, true) => {
