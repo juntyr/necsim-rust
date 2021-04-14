@@ -66,6 +66,7 @@ impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>, G: RngCore>
         lineage_reference: GlobalLineageReference,
         dispersal_origin: IndexedLocation,
         dispersal_target: Location,
+        prior_time: f64,
         event_time: f64,
         simulation: &mut PartialSimulation<
             H,
@@ -74,7 +75,7 @@ impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>, G: RngCore>
             IndependentLineageStore<H>,
         >,
         rng: &mut G,
-    ) -> Option<(GlobalLineageReference, IndexedLocation, Location, f64)> {
+    ) -> Option<(GlobalLineageReference, IndexedLocation, Location, f64, f64)> {
         let target_subdomain = self
             .decomposition
             .map_location_to_subdomain_rank(&dispersal_target, &simulation.habitat);
@@ -90,6 +91,7 @@ impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>, G: RngCore>
                 lineage_reference,
                 dispersal_origin,
                 dispersal_target,
+                prior_time,
                 event_time,
             ));
         }
@@ -100,6 +102,7 @@ impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>, G: RngCore>
                 global_reference: lineage_reference,
                 dispersal_origin,
                 dispersal_target,
+                prior_time,
                 event_time,
                 coalescence_rng_sample: CoalescenceRngSample::new(rng),
             },

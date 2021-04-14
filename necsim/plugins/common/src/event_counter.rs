@@ -8,6 +8,7 @@ use necsim_core::{
 
 #[allow(clippy::module_name_repetitions)]
 pub struct EventCounterReporter {
+    last_parent_prior_time: Option<u64>,
     last_speciation_event: Option<SpeciationEvent>,
     last_dispersal_event: Option<DispersalEvent>,
 
@@ -16,6 +17,7 @@ pub struct EventCounterReporter {
     self_dispersal: usize,
     out_coalescence: usize,
     self_coalescence: usize,
+    late_coalescence: usize,
 }
 
 impl fmt::Debug for EventCounterReporter {
@@ -26,6 +28,7 @@ impl fmt::Debug for EventCounterReporter {
             .field("self_dispersal", &self.self_dispersal)
             .field("out_coalescence", &self.out_coalescence)
             .field("self_coalescence", &self.self_coalescence)
+            .field("late_coalescence", &self.late_coalescence)
             .finish()
     }
 }
@@ -40,9 +43,15 @@ impl Reporter for EventCounterReporter {
     impl_report!(speciation(&mut self, event: Unused) -> Used {
         event.use_in(|event| {
             if Some(event) == self.last_speciation_event.as_ref() {
+                if Some(event.prior_time.to_bits()) != self.last_parent_prior_time {
+                    self.late_coalescence += 1;
+                }
+                self.last_parent_prior_time = Some(event.prior_time.to_bits());
+
                 return;
             }
             self.last_speciation_event = Some(event.clone());
+            self.last_parent_prior_time = Some(event.prior_time.to_bits());
 
             self.speciation += 1;
         })
@@ -51,9 +60,15 @@ impl Reporter for EventCounterReporter {
     impl_report!(dispersal(&mut self, event: Unused) -> Used {
         event.use_in(|event| {
             if Some(event) == self.last_dispersal_event.as_ref() {
+                if Some(event.prior_time.to_bits()) != self.last_parent_prior_time {
+                    self.late_coalescence += 1;
+                }
+                self.last_parent_prior_time = Some(event.prior_time.to_bits());
+
                 return;
             }
             self.last_dispersal_event = Some(event.clone());
+            self.last_parent_prior_time = Some(event.prior_time.to_bits());
 
             let self_dispersal = event.origin == event.target;
             let coalescence = matches!(event.interaction, LineageInteraction::Coalescence(_));
@@ -91,7 +106,7 @@ impl Reporter for EventCounterReporter {
         let _ = writeln!(
             &mut event_summary,
             " - Total #individuals:\n     {}",
-            self.speciation + self.self_coalescence + self.out_coalescence
+            self.speciation + self.self_coalescence + self.out_coalescence + self.late_coalescence
         );
         let _ = writeln!(
             &mut event_summary,
@@ -123,10 +138,15 @@ impl Reporter for EventCounterReporter {
             " - Coalescence outside cell:\n     {}",
             self.out_coalescence
         );
-        let _ = write!(
+        let _ = writeln!(
             &mut event_summary,
             " - Coalescence inside cell:\n     {}",
             self.self_coalescence
+        );
+        let _ = write!(
+            &mut event_summary,
+            " - Coalescence detected late:\n     {}",
+            self.late_coalescence
         );
 
         log::info!("{}", event_summary)
@@ -134,16 +154,9 @@ impl Reporter for EventCounterReporter {
 }
 
 impl Default for EventCounterReporter {
-    #[debug_ensures(
-        ret.speciation == 0 &&
-        ret.out_dispersal == 0 &&
-        ret.self_dispersal == 0 &&
-        ret.out_coalescence == 0 &&
-        ret.self_coalescence == 0,
-        "initialises all events to 0"
-    )]
     fn default() -> Self {
         Self {
+            last_parent_prior_time: None,
             last_speciation_event: None,
             last_dispersal_event: None,
 
@@ -152,6 +165,7 @@ impl Default for EventCounterReporter {
             self_dispersal: 0,
             out_coalescence: 0,
             self_coalescence: 0,
+            late_coalescence: 0,
         }
     }
 }

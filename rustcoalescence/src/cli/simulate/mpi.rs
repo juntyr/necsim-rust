@@ -16,7 +16,7 @@ pub fn simulate_with_logger_mpi(simulate_args: CommandArgs) -> Result<()> {
     let partitioning =
         MpiPartitioning::initialise().with_context(|| "Failed to initialise MPI.")?;
 
-    // Only log to stderr if the partition is the root partition
+    // Only log to stdout/stderr if the partition is the root partition
     log::set_max_level(if partitioning.is_root() {
         LevelFilter::Info
     } else {

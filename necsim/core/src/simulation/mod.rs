@@ -13,7 +13,6 @@ use crate::{
         OptionallyPeekableActiveLineageSampler, PeekableActiveLineageSampler, RngCore,
         SpeciationProbability, TurnoverRate,
     },
-    lineage::MigratingLineage,
     reporter::{used::Unused, Reporter},
 };
 
@@ -130,24 +129,14 @@ impl<
             );
 
             // Check if an immigration event has to be processed before the next local event
-            if let Some(MigratingLineage {
-                global_reference,
-                dispersal_origin,
-                dispersal_target,
-                event_time: migration_event_time,
-                coalescence_rng_sample,
-            }) = self
+            if let Some(migrating_lineage) = self
                 .immigration_entry_mut()
                 .next_optional_immigration(optional_next_event_time)
             {
                 process::immigration::simulate_and_report_immigration_step(
                     self,
                     reporter,
-                    global_reference,
-                    dispersal_origin,
-                    dispersal_target,
-                    migration_event_time,
-                    coalescence_rng_sample,
+                    migrating_lineage,
                 );
             } else if !process::local::simulate_and_report_local_step_or_finish(self, reporter) {
                 reporter.report_progress(Unused::new(&self.get_balanced_remaining_work().0));

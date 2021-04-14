@@ -57,7 +57,7 @@ impl<
     #[must_use]
     #[allow(clippy::type_complexity)]
     #[inline]
-    fn pop_active_lineage_indexed_location_event_time(
+    fn pop_active_lineage_indexed_location_prior_event_time(
         &mut self,
         simulation: &mut PartialSimulation<
             H,
@@ -72,7 +72,7 @@ impl<
             IndependentEventSampler<H, G, X, D, T, N>,
         >,
         rng: &mut G,
-    ) -> Option<(GlobalLineageReference, IndexedLocation, f64)> {
+    ) -> Option<(GlobalLineageReference, IndexedLocation, f64, f64)> {
         let chosen_lineage = match self.active_lineage {
             Some(ref mut chosen_lineage) => chosen_lineage,
             None => return None,
@@ -91,12 +91,13 @@ impl<
                 &simulation.turnover_rate,
             );
 
-        let lineage_indexed_location =
+        let (lineage_indexed_location, prior_event_time) =
             unsafe { chosen_lineage.remove_from_location(next_event_time) };
 
         Some((
             chosen_lineage.global_reference().clone(),
             lineage_indexed_location,
+            prior_event_time,
             next_event_time,
         ))
     }

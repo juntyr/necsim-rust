@@ -107,6 +107,7 @@ impl<
         &mut self,
         lineage_reference: R,
         indexed_location: IndexedLocation,
+        prior_time: f64,
         event_time: f64,
         simulation: &mut PartialSimulation<
             H,
@@ -137,7 +138,8 @@ impl<
             Some(
                 SpeciationEvent {
                     origin: dispersal_origin,
-                    time: event_time,
+                    prior_time,
+                    event_time,
                     global_lineage_reference: simulation.lineage_store[lineage_reference]
                         .global_reference()
                         .clone(),
@@ -157,12 +159,13 @@ impl<
                 );
 
             // Check for emigration and return None iff lineage emigrated
-            let (lineage_reference, dispersal_origin, dispersal_target, event_time) = simulation
-                .with_mut_split_emigration_exit(|emigration_exit, simulation| {
+            let (lineage_reference, dispersal_origin, dispersal_target, prior_time, event_time) =
+                simulation.with_mut_split_emigration_exit(|emigration_exit, simulation| {
                     emigration_exit.optionally_emigrate(
                         lineage_reference,
                         dispersal_origin,
                         dispersal_target,
+                        prior_time,
                         event_time,
                         simulation,
                         rng,
@@ -181,7 +184,8 @@ impl<
             Some(
                 DispersalEvent {
                     origin: dispersal_origin,
-                    time: event_time,
+                    prior_time,
+                    event_time,
                     global_lineage_reference: simulation.lineage_store[lineage_reference]
                         .global_reference()
                         .clone(),
@@ -203,7 +207,8 @@ impl<
             Some(
                 DispersalEvent {
                     origin: dispersal_origin,
-                    time: event_time,
+                    prior_time,
+                    event_time,
                     global_lineage_reference: simulation.lineage_store[lineage_reference]
                         .global_reference()
                         .clone(),

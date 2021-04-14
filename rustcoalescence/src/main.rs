@@ -26,7 +26,7 @@ use minimal_logger::MinimalLogger;
 static MINIMAL_LOGGER: MinimalLogger = MinimalLogger;
 
 fn main() -> Result<()> {
-    // Set up the minimal logger to stderr
+    // Set up the minimal logger to stdout/stderr
     log::set_logger(&MINIMAL_LOGGER)?;
 
     // Parse and validate all command line arguments

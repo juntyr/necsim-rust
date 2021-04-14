@@ -45,15 +45,15 @@ pub fn replay_with_logger<P: Partitioning>(
         }
 
         if log::log_enabled!(log::Level::Info) {
-            eprintln!("\n");
-            eprintln!("{:=^80}", " Reporter Summary ");
-            eprintln!();
+            println!("\n");
+            println!("{:=^80}", " Reporter Summary ");
+            println!();
         }
         reporter.finalise();
         if log::log_enabled!(log::Level::Info) {
-            eprintln!();
-            eprintln!("{:=^80}", " Reporter Summary ");
-            eprintln!();
+            println!();
+            println!("{:=^80}", " Reporter Summary ");
+            println!();
         }
     });
 

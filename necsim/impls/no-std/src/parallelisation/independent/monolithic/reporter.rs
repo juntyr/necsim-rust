@@ -36,7 +36,7 @@ impl<'e, R: ReporterContext> Reporter for WaterLevelReporter<'e, R> {
         <<R as ReporterContext>::Reporter as Reporter
     >::ReportSpeciation> {
         event.maybe_use_in(|event| {
-            if event.time < self.water_level {
+            if event.event_time < self.water_level {
                 self.slow_events.push(event.clone().into())
             } else {
                 self.fast_events.push(event.clone().into())
@@ -48,7 +48,7 @@ impl<'e, R: ReporterContext> Reporter for WaterLevelReporter<'e, R> {
             <<R as ReporterContext>::Reporter as Reporter
         >::ReportDispersal> {
         event.maybe_use_in(|event| {
-            if event.time < self.water_level {
+            if event.event_time < self.water_level {
                 self.slow_events.push(event.clone().into())
             } else {
                 self.fast_events.push(event.clone().into())
