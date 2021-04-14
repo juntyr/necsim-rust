@@ -1,19 +1,22 @@
 #![deny(clippy::pedantic)]
+#![feature(option_result_unwrap_unchecked)]
+#![feature(drain_filter)]
 
 #[macro_use]
 extern crate serde_derive_state;
 
-use std::{collections::VecDeque, convert::TryInto};
+use std::collections::VecDeque;
 
-use arguments::{CudaArguments, IsolatedParallelismMode, ParallelismMode};
+use arguments::{
+    CudaArguments, IsolatedParallelismMode, MonolithicParallelismMode, ParallelismMode,
+};
 use necsim_core::{
     cogs::RngCore,
     lineage::{GlobalLineageReference, Lineage},
-    reporter::Reporter,
     simulation::Simulation,
 };
 
-use necsim_impls_cuda::{cogs::rng::CudaRng, event_buffer::EventBuffer, value_buffer::ValueBuffer};
+use necsim_impls_cuda::cogs::rng::CudaRng;
 use necsim_impls_no_std::{
     cogs::{
         active_lineage_sampler::independent::{
@@ -39,7 +42,7 @@ use rustcoalescence_scenarios::Scenario;
 
 use rust_cuda::{common::RustToCuda, host::CudaDropWrapper};
 use rustacuda::{
-    function::{BlockSize, FunctionAttribute, GridSize},
+    function::{BlockSize, GridSize},
     prelude::{Stream, StreamFlags},
 };
 
@@ -47,11 +50,10 @@ mod arguments;
 mod cuda;
 mod info;
 mod kernel;
-mod simulate;
+mod parallelisation;
 
 use crate::kernel::SimulationKernel;
 use cuda::with_initialised_cuda;
-use simulate::simulate;
 
 #[allow(clippy::module_name_repetitions, clippy::empty_enum)]
 pub enum CudaAlgorithm {}
@@ -139,8 +141,22 @@ where
             .active_lineage_sampler(active_lineage_sampler)
             .build();
 
+        // TODO: It seems to be more performant to spawn smaller tasks than to use
+        //        the full parallelism - why?
+        //       Does it have to do with detecting duplication slower (we could increase
+        //        the step size bit by bit) or with bottlenecks on the GPU?
         let block_size = BlockSize::x(args.block_size);
         let grid_size = GridSize::x(args.grid_size);
+
+        let event_slice = match args.parallelism_mode {
+            ParallelismMode::Monolithic(MonolithicParallelismMode { event_slice })
+            | ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode {
+                event_slice, ..
+            })
+            | ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { event_slice, .. }) => {
+                event_slice
+            },
+        };
 
         with_initialised_cuda(|| {
             let stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
@@ -148,36 +164,14 @@ where
             SimulationKernel::with_kernel(args.ptx_jit, |kernel| {
                 info::print_kernel_function_attributes(kernel.function());
 
-                // TODO: It seems to be more performant to spawn smaller tasks than to use
-                //        the full parallelism - why?
-                //       Does it have to do with detecting duplication slower (we could increase
-                //        the step size bit by bit) or with bottlenecks on the GPU?
-                #[allow(clippy::cast_sign_loss)]
-                let _max_threads_per_block = kernel
-                    .function()
-                    .get_attribute(FunctionAttribute::MaxThreadsPerBlock)?
-                    as u32;
-
-                let task_list = ValueBuffer::new(&block_size, &grid_size)?;
-                let min_spec_sample_buffer = ValueBuffer::new(&block_size, &grid_size)?;
-
-                #[allow(clippy::type_complexity)]
-                let event_buffer: EventBuffer<
-                    <<P as LocalPartition<R>>::Reporter as Reporter>::ReportSpeciation,
-                    <<P as LocalPartition<R>>::Reporter as Reporter>::ReportDispersal,
-                > = EventBuffer::new(&block_size, &grid_size, args.step_slice.get().try_into()?)?;
-
-                simulate(
-                    &stream,
-                    kernel,
-                    (grid_size, block_size, args.dedup_cache),
+                parallelisation::monolithic::simulate(
                     simulation,
+                    kernel,
+                    &stream,
+                    (grid_size, block_size, args.dedup_cache, args.step_slice),
                     lineages,
-                    task_list,
-                    event_buffer,
-                    min_spec_sample_buffer,
-                    local_partition.get_reporter(),
-                    args.step_slice,
+                    event_slice,
+                    local_partition,
                 )
             })
         })
