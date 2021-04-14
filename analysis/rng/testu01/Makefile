@@ -23,11 +23,11 @@ TestU01-1.2.3: TestU01.zip
 $(LIBTARGET): TestU01-1.2.3
 	(cd TestU01-1.2.3 && ./configure --prefix="$$(dirname "$$(pwd)")/build" && make -j 6 && make -j 6 install)
 
-testu01: $(LIBTARGET) main.c
-	$(CC) $(CFLAGS) -o testu01 main.c $(LIBSCMD) ../../../target/release/libtestu01.a -Ibuild/include/ -Iinclude
+testu01: $(LIBTARGET) src/main.c
+	$(CC) $(CFLAGS) -o testu01 src/main.c $(LIBSCMD) $(LIB_NECSIM_RNG) -Ibuild/include/ -Iinclude
 
 clean:
-	rm -f RNG_test
+	rm -f testu01
 
 cleandist: clean
 	rm -r -f build
