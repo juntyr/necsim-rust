@@ -135,6 +135,7 @@ pub fn simulate<
                 global_reference,
                 dispersal_origin,
                 dispersal_target,
+                prior_time,
                 event_time,
                 coalescence_rng_sample,
             } = immigrant;
@@ -150,7 +151,8 @@ pub fn simulate<
             // Cache the immigration event
             immigration_events.push(DispersalEvent {
                 origin: dispersal_origin,
-                time: event_time,
+                prior_time,
+                event_time,
                 global_lineage_reference: global_reference.clone(),
                 target: dispersal_target.clone(),
                 interaction: LineageInteraction::Maybe,

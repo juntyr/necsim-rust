@@ -2,13 +2,12 @@ use core::num::Wrapping;
 
 use crate::{
     cogs::{
-        ActiveLineageSampler, CoalescenceRngSample, CoalescenceSampler, DispersalSampler,
-        EmigrationExit, EventSampler, Habitat, ImmigrationEntry, LineageReference, LineageStore,
-        RngCore, SpeciationProbability, TurnoverRate,
+        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
+        Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
+        TurnoverRate,
     },
     event::{DispersalEvent, LineageInteraction},
-    landscape::{IndexedLocation, Location},
-    lineage::GlobalLineageReference,
+    lineage::MigratingLineage,
     reporter::{used::Unused, Reporter},
     simulation::Simulation,
 };
@@ -32,11 +31,7 @@ pub fn simulate_and_report_immigration_step<
     simulation: &mut Simulation<H, G, R, S, X, D, C, T, N, E, I, A>,
     reporter: &mut P,
 
-    global_reference: GlobalLineageReference,
-    dispersal_origin: IndexedLocation,
-    dispersal_target: Location,
-    migration_event_time: f64,
-    coalescence_rng_sample: CoalescenceRngSample,
+    migrating_lineage: MigratingLineage,
 ) {
     // Immigration decrements the migration balance (extra external work)
     simulation.migration_balance -= Wrapping(1_u64);
@@ -48,10 +43,10 @@ pub fn simulate_and_report_immigration_step<
             let (dispersal_target, interaction) = simulation
                 .coalescence_sampler
                 .sample_interaction_at_location(
-                    dispersal_target,
+                    migrating_lineage.dispersal_target,
                     &simulation.habitat,
                     &simulation.lineage_store,
-                    coalescence_rng_sample,
+                    migrating_lineage.coalescence_rng_sample,
                 );
 
             // NOTE: event time rules
@@ -71,9 +66,9 @@ pub fn simulate_and_report_immigration_step<
             //  to be added to the active lineage sampler and lineage store
             if !matches!(interaction, LineageInteraction::Coalescence(_)) {
                 active_lineage_sampler.insert_new_lineage_to_indexed_location(
-                    global_reference.clone(),
+                    migrating_lineage.global_reference.clone(),
                     dispersal_target.clone(),
-                    migration_event_time,
+                    migrating_lineage.event_time,
                     simulation,
                     rng,
                 );
@@ -81,9 +76,10 @@ pub fn simulate_and_report_immigration_step<
 
             // Report the migration dispersal event
             reporter.report_dispersal(Unused::new(&DispersalEvent {
-                origin: dispersal_origin,
-                time: migration_event_time,
-                global_lineage_reference: global_reference,
+                origin: migrating_lineage.dispersal_origin,
+                prior_time: migrating_lineage.prior_time,
+                event_time: migrating_lineage.event_time,
+                global_lineage_reference: migrating_lineage.global_reference,
                 target: dispersal_target,
                 interaction,
             }));

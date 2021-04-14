@@ -65,7 +65,7 @@ impl<
 
     #[must_use]
     #[allow(clippy::type_complexity)]
-    fn pop_active_lineage_indexed_location_event_time(
+    fn pop_active_lineage_indexed_location_prior_event_time(
         &mut self,
         simulation: &mut PartialSimulation<
             H,
@@ -90,7 +90,7 @@ impl<
             >,
         >,
         rng: &mut G,
-    ) -> Option<(R, IndexedLocation, f64)> {
+    ) -> Option<(R, IndexedLocation, f64, f64)> {
         use necsim_core::cogs::RngSampler;
 
         // The next event time must be calculated before the next active lineage is
@@ -121,7 +121,7 @@ impl<
                 chosen_lineage_reference
             };
 
-        let lineage_indexed_location = simulation
+        let (lineage_indexed_location, prior_event_time) = simulation
             .lineage_store
             .extract_lineage_from_its_location_locally_coherent(
                 chosen_lineage_reference.clone(),
@@ -137,6 +137,7 @@ impl<
         Some((
             chosen_lineage_reference,
             lineage_indexed_location,
+            prior_event_time,
             next_event_time,
         ))
     }

@@ -11,6 +11,6 @@
 //    y_original,
 //    index_original,
 //    parent, /* forwards in time, =self.individual_id if speciation source */
-//    birth_time,
+//    event_time,
 //    speciation_draw, /* U(0, 1) - speciation if < s */
 // )

@@ -33,12 +33,16 @@ pub trait EventSampler<
         old(lineage_reference.clone())
     ).is_none() } else { true }, "lineage emigrated if no event is returned")]
     #[debug_ensures(ret.as_ref().map_or(true, |event: &PackedEvent| {
-        event.time.to_bits() == event_time.to_bits()
+        event.event_time.to_bits() == event_time.to_bits()
     }), "event occurs at event_time")]
+    #[debug_ensures(ret.as_ref().map_or(true, |event: &PackedEvent| {
+        event.prior_time.to_bits() == prior_time.to_bits()
+    }), "event's prior time is prior_time")]
     fn sample_event_for_lineage_at_indexed_location_time_or_emigrate(
         &mut self,
         lineage_reference: R,
         indexed_location: IndexedLocation,
+        prior_time: f64,
         event_time: f64,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N>,
         rng: &mut G,
