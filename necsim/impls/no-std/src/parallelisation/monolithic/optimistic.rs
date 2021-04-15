@@ -7,6 +7,7 @@ use necsim_core::{
         SpeciationProbability, TurnoverRate,
     },
     lineage::MigratingLineage,
+    reporter::Reporter,
     simulation::Simulation,
 };
 use necsim_core_bond::PositiveF64;
@@ -18,7 +19,6 @@ use crate::{
     },
     decomposition::Decomposition,
     partitioning::{LocalPartition, MigrationMode},
-    reporter::ReporterContext,
 };
 
 use super::reporter::BufferingReporterProxy;
@@ -48,7 +48,7 @@ pub fn simulate<
         E,
         BufferedImmigrationEntry,
     >,
-    P: ReporterContext,
+    P: Reporter,
     L: LocalPartition<P>,
 >(
     mut simulation: Simulation<

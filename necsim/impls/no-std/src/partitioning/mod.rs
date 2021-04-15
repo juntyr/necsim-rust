@@ -10,7 +10,7 @@ pub mod monolithic;
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait Partitioning: Sized {
-    type LocalPartition<P: ReporterContext>: LocalPartition<P>;
+    type LocalPartition<R: Reporter>: LocalPartition<R>;
     type Auxiliary;
 
     fn is_monolithic(&self) -> bool;
@@ -33,11 +33,11 @@ pub trait Partitioning: Sized {
     )]
     fn get_rank(&self) -> u32;
 
-    fn into_local_partition<P: ReporterContext>(
+    fn into_local_partition<R: Reporter, P: ReporterContext<Reporter = R>>(
         self,
         reporter_context: P,
         auxiliary: Self::Auxiliary,
-    ) -> anyhow::Result<Self::LocalPartition<P>>;
+    ) -> anyhow::Result<Self::LocalPartition<R>>;
 }
 
 #[derive(Copy, Clone)]
@@ -49,7 +49,7 @@ pub enum MigrationMode {
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait LocalPartition<P: ReporterContext>: Sized {
+pub trait LocalPartition<R: Reporter>: Sized {
     type Reporter: Reporter;
     type ImmigrantIterator<'a>: Iterator<Item = MigratingLineage>;
 

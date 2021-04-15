@@ -12,9 +12,9 @@ use rustcoalescence_algorithms_monolithic::{
     skipping_gillespie::SkippingGillespieAlgorithm,
 };
 
+use necsim_core::reporter::Reporter;
 use necsim_impls_no_std::{
     cogs::origin_sampler::pre_sampler::OriginPreSampler, partitioning::LocalPartition,
-    reporter::ReporterContext,
 };
 use rustcoalescence_scenarios::{
     almost_infinite::AlmostInfiniteScenario, non_spatial::NonSpatialScenario,
@@ -37,7 +37,7 @@ mod r#impl;
     clippy::too_many_lines,
     clippy::boxed_local
 )]
-pub fn simulate_with_logger<R: ReporterContext, P: LocalPartition<R>>(
+pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>>(
     mut local_partition: Box<P>,
     common_args: CommonArgs,
     scenario: ScenarioArgs,
