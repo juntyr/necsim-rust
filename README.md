@@ -40,6 +40,7 @@ If you also want to use the MPI-based parallelisation, it is *recommended* that 
 necsim-rust consists of the following crates:
 - necsim/: this folder contains the core declaration of the simulation and implementation of its components
     - core/: `necsim-core` declares the core structs, simulation cogs traits, as well as the generic `Simulation`.
+        - bond/: `necsim-core-bond` declares helper data types which guarantee a limited value range and are used for encoding preconditions through data types.
     - impls/:
         - no-std/: `necsim-impls-no-std` contains the implementations of cogs that **do not** require the Rust standard library
         - std/: `necsim-impls-std` contains the implementations of cogs that **do** require the Rust standard library
