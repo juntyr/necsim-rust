@@ -3,9 +3,9 @@ use core::{
     fmt,
 };
 
-use necsim_core_bond::NonZeroOneU64;
-use rustacuda_core::DeviceCopy;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+use necsim_core_bond::NonZeroOneU64;
 
 use crate::{
     cogs::{BackedUp, Backup, CoalescenceRngSample, Habitat, LineageReference},
@@ -17,7 +17,7 @@ use crate::{
 pub struct GlobalLineageReference(NonZeroOneU64);
 
 #[cfg(feature = "cuda")]
-unsafe impl DeviceCopy for GlobalLineageReference {}
+unsafe impl rustacuda_core::DeviceCopy for GlobalLineageReference {}
 
 impl fmt::Display for GlobalLineageReference {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
