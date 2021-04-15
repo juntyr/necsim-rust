@@ -24,9 +24,8 @@ use necsim_core::{
     },
 };
 
-use necsim_impls_no_std::{
-    partitioning::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode},
-    reporter::ReporterContext,
+use necsim_impls_no_std::partitioning::{
+    iterator::ImmigrantPopIterator, LocalPartition, MigrationMode,
 };
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 
@@ -37,7 +36,7 @@ static mut MPI_GLOBAL_CONTINUE: bool = false;
 
 static mut MPI_MIGRATION_BUFFERS: Vec<Vec<MigratingLineage>> = Vec::new();
 
-pub struct MpiRootPartition<P: ReporterContext> {
+pub struct MpiRootPartition<R: Reporter> {
     _universe: Universe,
     world: SystemCommunicator,
     last_report_time: Instant,
@@ -45,20 +44,20 @@ pub struct MpiRootPartition<P: ReporterContext> {
     migration_buffers: Box<[Vec<MigratingLineage>]>,
     last_migration_times: Box<[Instant]>,
     emigration_requests: Box<[Option<Request<'static, StaticScope>>]>,
-    reporter: ManuallyDrop<FilteredReporter<P::Reporter, False, False, True>>,
+    reporter: ManuallyDrop<FilteredReporter<R, False, False, True>>,
     recorder: EventLogRecorder,
     barrier: Option<Request<'static, StaticScope>>,
     communicated_since_last_barrier: bool,
     finalised: bool,
 }
 
-impl<P: ReporterContext> fmt::Debug for MpiRootPartition<P> {
+impl<R: Reporter> fmt::Debug for MpiRootPartition<R> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("MpiRootPartition").finish()
     }
 }
 
-impl<P: ReporterContext> Drop for MpiRootPartition<P> {
+impl<R: Reporter> Drop for MpiRootPartition<R> {
     fn drop(&mut self) {
         if self.finalised {
             unsafe { ManuallyDrop::take(&mut self.reporter) }.finalise()
@@ -78,7 +77,7 @@ impl<P: ReporterContext> Drop for MpiRootPartition<P> {
     }
 }
 
-impl<P: ReporterContext> MpiRootPartition<P> {
+impl<R: Reporter> MpiRootPartition<R> {
     const MPI_MIGRATION_WAIT_TIME: Duration = Duration::from_millis(100_u64);
     const MPI_PROGRESS_WAIT_TIME: Duration = Duration::from_millis(100_u64);
 
@@ -86,13 +85,10 @@ impl<P: ReporterContext> MpiRootPartition<P> {
     pub fn new(
         universe: Universe,
         world: SystemCommunicator,
-        reporter: FilteredReporter<P::Reporter, False, False, True>,
+        reporter: FilteredReporter<R, False, False, True>,
         mut recorder: EventLogRecorder,
     ) -> Self {
-        recorder.set_event_filter(
-            <<P as ReporterContext>::Reporter as Reporter>::ReportSpeciation::VALUE,
-            <<P as ReporterContext>::Reporter as Reporter>::ReportDispersal::VALUE,
-        );
+        recorder.set_event_filter(R::ReportSpeciation::VALUE, R::ReportDispersal::VALUE);
 
         #[allow(clippy::cast_sign_loss)]
         let world_size = world.size() as usize;
@@ -128,7 +124,7 @@ impl<P: ReporterContext> MpiRootPartition<P> {
 }
 
 #[contract_trait]
-impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
+impl<R: Reporter> LocalPartition<R> for MpiRootPartition<R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
     type Reporter = Self;
 
@@ -386,26 +382,20 @@ impl<P: ReporterContext> LocalPartition<P> for MpiRootPartition<P> {
     }
 }
 
-impl<P: ReporterContext> Reporter for MpiRootPartition<P> {
-    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<
-        <<P as ReporterContext>::Reporter as Reporter
-    >::ReportSpeciation> {
+impl<R: Reporter> Reporter for MpiRootPartition<R> {
+    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<R::ReportSpeciation> {
         event.maybe_use_in(|event| {
             self.recorder.record_speciation(event)
         })
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<
-        <<P as ReporterContext>::Reporter as Reporter
-    >::ReportDispersal> {
+    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<R::ReportDispersal> {
         event.maybe_use_in(|event| {
             self.recorder.record_dispersal(event)
         })
     });
 
-    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<
-        <<P as ReporterContext>::Reporter as Reporter
-    >::ReportProgress> {
+    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<R::ReportProgress> {
         remaining.maybe_use_in(|remaining| {
             let now = Instant::now();
 

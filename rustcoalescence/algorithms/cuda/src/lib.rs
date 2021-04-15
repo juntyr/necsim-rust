@@ -13,6 +13,7 @@ use arguments::{
 use necsim_core::{
     cogs::RngCore,
     lineage::{GlobalLineageReference, Lineage},
+    reporter::Reporter,
     simulation::Simulation,
 };
 
@@ -34,7 +35,6 @@ use necsim_impls_no_std::{
         rng::fixedseahash::FixedSeaHash,
     },
     partitioning::LocalPartition,
-    reporter::ReporterContext,
 };
 
 use rustcoalescence_algorithms::{Algorithm, AlgorithmArguments};
@@ -76,11 +76,7 @@ where
     type LineageStore = IndependentLineageStore<O::Habitat>;
     type Rng = CudaRng<FixedSeaHash>;
 
-    fn initialise_and_simulate<
-        I: Iterator<Item = u64>,
-        R: ReporterContext,
-        P: LocalPartition<R>,
-    >(
+    fn initialise_and_simulate<I: Iterator<Item = u64>, R: Reporter, P: LocalPartition<R>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,

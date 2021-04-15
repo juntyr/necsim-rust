@@ -2,6 +2,7 @@ use std::{hint::unreachable_unchecked, marker::PhantomData};
 
 use necsim_core::{
     cogs::{LineageStore, LocallyCoherentLineageStore, RngCore, SplittableRng},
+    reporter::Reporter,
     simulation::Simulation,
 };
 
@@ -22,7 +23,6 @@ use necsim_impls_no_std::{
     },
     parallelisation,
     partitioning::LocalPartition,
-    reporter::ReporterContext,
 };
 use necsim_impls_std::cogs::rng::pcg::Pcg;
 
@@ -57,11 +57,7 @@ where
     type LineageStore = O::LineageStore<ClassicalLineageStore<O::Habitat>>;
     type Rng = Pcg;
 
-    fn initialise_and_simulate<
-        I: Iterator<Item = u64>,
-        R: ReporterContext,
-        P: LocalPartition<R>,
-    >(
+    fn initialise_and_simulate<I: Iterator<Item = u64>, R: Reporter, P: LocalPartition<R>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,

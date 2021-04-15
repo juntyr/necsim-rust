@@ -20,13 +20,13 @@ use crate::event_log::recorder::EventLogRecorder;
 use anyhow::Result;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct RecordedMonolithicLocalPartition<P: ReporterContext> {
-    reporter: FilteredReporter<P::Reporter, False, False, True>,
+pub struct RecordedMonolithicLocalPartition<R: Reporter> {
+    reporter: FilteredReporter<R, False, False, True>,
     recorder: EventLogRecorder,
     loopback: Vec<MigratingLineage>,
 }
 
-impl<P: ReporterContext> fmt::Debug for RecordedMonolithicLocalPartition<P> {
+impl<R: Reporter> fmt::Debug for RecordedMonolithicLocalPartition<R> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         struct LoopbackLen(usize);
 
@@ -45,7 +45,7 @@ impl<P: ReporterContext> fmt::Debug for RecordedMonolithicLocalPartition<P> {
 }
 
 #[contract_trait]
-impl<P: ReporterContext> LocalPartition<P> for RecordedMonolithicLocalPartition<P> {
+impl<R: Reporter> LocalPartition<R> for RecordedMonolithicLocalPartition<R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
     type Reporter = Self;
 
@@ -103,18 +103,15 @@ impl<P: ReporterContext> LocalPartition<P> for RecordedMonolithicLocalPartition<
     }
 }
 
-impl<P: ReporterContext> RecordedMonolithicLocalPartition<P> {
+impl<R: Reporter> RecordedMonolithicLocalPartition<R> {
     /// # Errors
     ///
     /// Returns any error which occured while building the context's reporter
-    pub fn try_from_context_and_recorder(
+    pub fn try_from_context_and_recorder<P: ReporterContext<Reporter = R>>(
         context: P,
         mut recorder: EventLogRecorder,
     ) -> anyhow::Result<Self> {
-        recorder.set_event_filter(
-            <<P as ReporterContext>::Reporter as Reporter>::ReportSpeciation::VALUE,
-            <<P as ReporterContext>::Reporter as Reporter>::ReportDispersal::VALUE,
-        );
+        recorder.set_event_filter(R::ReportSpeciation::VALUE, R::ReportDispersal::VALUE);
 
         Ok(Self {
             reporter: context.try_build()?,
@@ -124,26 +121,20 @@ impl<P: ReporterContext> RecordedMonolithicLocalPartition<P> {
     }
 }
 
-impl<P: ReporterContext> Reporter for RecordedMonolithicLocalPartition<P> {
-    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<
-            <<P as ReporterContext>::Reporter as Reporter>::ReportSpeciation
-    > {
+impl<R: Reporter> Reporter for RecordedMonolithicLocalPartition<R> {
+    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<R::ReportSpeciation> {
         event.maybe_use_in(|event| {
             self.recorder.record_speciation(event)
         })
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<
-        <<P as ReporterContext>::Reporter as Reporter>::ReportDispersal
-    > {
+    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<R::ReportDispersal> {
         event.maybe_use_in(|event| {
             self.recorder.record_dispersal(event)
         })
     });
 
-    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<
-        <<P as ReporterContext>::Reporter as Reporter>::ReportProgress
-    > {
+    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<R::ReportProgress> {
         self.reporter.report_progress(remaining)
     });
 }
