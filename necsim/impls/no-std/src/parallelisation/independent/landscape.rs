@@ -26,7 +26,6 @@ use crate::{
     },
     decomposition::Decomposition,
     partitioning::{LocalPartition, MigrationMode},
-    reporter::ReporterContext,
 };
 
 use super::{reporter::IgnoreProgressReporterProxy, DedupCache};
@@ -41,7 +40,7 @@ pub fn simulate<
     T: TurnoverRate<H>,
     N: SpeciationProbability<H>,
     J: EventTimeSampler<H, G, T>,
-    R: ReporterContext,
+    R: Reporter,
     P: LocalPartition<R>,
 >(
     mut simulation: Simulation<

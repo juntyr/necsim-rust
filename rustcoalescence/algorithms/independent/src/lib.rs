@@ -13,6 +13,7 @@ use arguments::{
 use necsim_core::{
     cogs::RngCore,
     lineage::{GlobalLineageReference, Lineage},
+    reporter::Reporter,
     simulation::Simulation,
 };
 
@@ -42,7 +43,6 @@ use necsim_impls_no_std::{
     },
     parallelisation,
     partitioning::LocalPartition,
-    reporter::ReporterContext,
 };
 
 mod arguments;
@@ -65,11 +65,7 @@ impl<O: Scenario<SeaHash>> Algorithm<O> for IndependentAlgorithm {
     type Rng = SeaHash;
 
     #[allow(clippy::too_many_lines)]
-    fn initialise_and_simulate<
-        I: Iterator<Item = u64>,
-        R: ReporterContext,
-        P: LocalPartition<R>,
-    >(
+    fn initialise_and_simulate<I: Iterator<Item = u64>, R: Reporter, P: LocalPartition<R>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,

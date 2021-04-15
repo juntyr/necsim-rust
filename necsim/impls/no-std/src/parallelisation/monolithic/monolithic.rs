@@ -4,6 +4,7 @@ use necsim_core::{
         LineageReference, LocallyCoherentLineageStore, RngCore, SpeciationProbability,
         TurnoverRate,
     },
+    reporter::Reporter,
     simulation::Simulation,
 };
 
@@ -13,7 +14,6 @@ use crate::{
         immigration_entry::never::NeverImmigrationEntry,
     },
     partitioning::LocalPartition,
-    reporter::ReporterContext,
 };
 
 #[allow(clippy::type_complexity)]
@@ -28,7 +28,7 @@ pub fn simulate<
     N: SpeciationProbability<H>,
     E: EventSampler<H, G, R, S, NeverEmigrationExit, D, C, T, N>,
     A: ActiveLineageSampler<H, G, R, S, NeverEmigrationExit, D, C, T, N, E, NeverImmigrationEntry>,
-    P: ReporterContext,
+    P: Reporter,
     L: LocalPartition<P>,
 >(
     simulation: Simulation<

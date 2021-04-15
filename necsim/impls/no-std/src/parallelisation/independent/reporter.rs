@@ -5,24 +5,20 @@ use necsim_core::{
     reporter::{used::Unused, Reporter},
 };
 
-use crate::{partitioning::LocalPartition, reporter::ReporterContext};
+use crate::partitioning::LocalPartition;
 
-pub struct IgnoreProgressReporterProxy<'p, R: ReporterContext, P: LocalPartition<R>> {
+pub struct IgnoreProgressReporterProxy<'p, R: Reporter, P: LocalPartition<R>> {
     local_partition: &'p mut P,
     _marker: PhantomData<R>,
 }
 
-impl<'p, R: ReporterContext, P: LocalPartition<R>> fmt::Debug
-    for IgnoreProgressReporterProxy<'p, R, P>
-{
+impl<'p, R: Reporter, P: LocalPartition<R>> fmt::Debug for IgnoreProgressReporterProxy<'p, R, P> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("PartitionReporterProxy").finish()
     }
 }
 
-impl<'p, R: ReporterContext, P: LocalPartition<R>> Reporter
-    for IgnoreProgressReporterProxy<'p, R, P>
-{
+impl<'p, R: Reporter, P: LocalPartition<R>> Reporter for IgnoreProgressReporterProxy<'p, R, P> {
     impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<
         <<P as LocalPartition<R>>::Reporter as Reporter
     >::ReportSpeciation> {
@@ -40,7 +36,7 @@ impl<'p, R: ReporterContext, P: LocalPartition<R>> Reporter
     });
 }
 
-impl<'p, R: ReporterContext, P: LocalPartition<R>> IgnoreProgressReporterProxy<'p, R, P> {
+impl<'p, R: Reporter, P: LocalPartition<R>> IgnoreProgressReporterProxy<'p, R, P> {
     pub fn from(local_partition: &'p mut P) -> Self {
         Self {
             local_partition,

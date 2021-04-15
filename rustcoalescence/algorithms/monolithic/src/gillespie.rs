@@ -2,6 +2,7 @@ use std::{hint::unreachable_unchecked, marker::PhantomData};
 
 use necsim_core::{
     cogs::{GloballyCoherentLineageStore, LineageStore, RngCore, SplittableRng},
+    reporter::Reporter,
     simulation::Simulation,
 };
 
@@ -22,7 +23,6 @@ use necsim_impls_no_std::{
     },
     parallelisation,
     partitioning::LocalPartition,
-    reporter::ReporterContext,
 };
 use necsim_impls_std::cogs::{
     active_lineage_sampler::gillespie::GillespieActiveLineageSampler, rng::pcg::Pcg,
@@ -55,11 +55,7 @@ where
     type Rng = Pcg;
 
     #[allow(clippy::shadow_unrelated, clippy::too_many_lines)]
-    fn initialise_and_simulate<
-        I: Iterator<Item = u64>,
-        R: ReporterContext,
-        P: LocalPartition<R>,
-    >(
+    fn initialise_and_simulate<I: Iterator<Item = u64>, R: Reporter, P: LocalPartition<R>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,

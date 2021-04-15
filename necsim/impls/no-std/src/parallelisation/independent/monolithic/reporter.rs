@@ -3,17 +3,15 @@ use core::{fmt, marker::PhantomData};
 
 use necsim_core::{event::PackedEvent, impl_report, reporter::Reporter};
 
-use crate::reporter::ReporterContext;
-
 #[allow(clippy::module_name_repetitions)]
-pub struct WaterLevelReporter<'e, R: ReporterContext> {
+pub struct WaterLevelReporter<'e, R: Reporter> {
     water_level: f64,
     slow_events: &'e mut Vec<PackedEvent>,
     fast_events: &'e mut Vec<PackedEvent>,
     _marker: PhantomData<R>,
 }
 
-impl<'e, R: ReporterContext> fmt::Debug for WaterLevelReporter<'e, R> {
+impl<'e, R: Reporter> fmt::Debug for WaterLevelReporter<'e, R> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         struct EventBufferLen(usize);
 
@@ -31,10 +29,8 @@ impl<'e, R: ReporterContext> fmt::Debug for WaterLevelReporter<'e, R> {
     }
 }
 
-impl<'e, R: ReporterContext> Reporter for WaterLevelReporter<'e, R> {
-    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<
-        <<R as ReporterContext>::Reporter as Reporter
-    >::ReportSpeciation> {
+impl<'e, R: Reporter> Reporter for WaterLevelReporter<'e, R> {
+    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<R::ReportSpeciation> {
         event.maybe_use_in(|event| {
             if event.event_time < self.water_level {
                 self.slow_events.push(event.clone().into())
@@ -44,9 +40,7 @@ impl<'e, R: ReporterContext> Reporter for WaterLevelReporter<'e, R> {
         })
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<
-            <<R as ReporterContext>::Reporter as Reporter
-        >::ReportDispersal> {
+    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<R::ReportDispersal> {
         event.maybe_use_in(|event| {
             if event.event_time < self.water_level {
                 self.slow_events.push(event.clone().into())
@@ -61,7 +55,7 @@ impl<'e, R: ReporterContext> Reporter for WaterLevelReporter<'e, R> {
     });
 }
 
-impl<'e, R: ReporterContext> WaterLevelReporter<'e, R> {
+impl<'e, R: Reporter> WaterLevelReporter<'e, R> {
     pub fn new(
         water_level: f64,
         slow_events: &'e mut Vec<PackedEvent>,

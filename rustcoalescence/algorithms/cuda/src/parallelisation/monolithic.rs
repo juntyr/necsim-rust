@@ -32,7 +32,6 @@ use necsim_core::{
 use necsim_impls_no_std::{
     parallelisation::independent::{monolithic::WaterLevelReporter, DedupCache},
     partitioning::LocalPartition,
-    reporter::ReporterContext,
 };
 
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
@@ -54,7 +53,7 @@ pub fn simulate<
     E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
     I: ImmigrationEntry + RustToCuda,
     A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
-    P: ReporterContext,
+    P: Reporter,
     L: LocalPartition<P>,
 >(
     mut simulation: Simulation<H, G, R, S, X, D, C, T, N, E, I, A>,

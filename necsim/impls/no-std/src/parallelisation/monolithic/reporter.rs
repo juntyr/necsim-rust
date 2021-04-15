@@ -7,15 +7,15 @@ use necsim_core::{
     reporter::{used::Unused, Reporter},
 };
 
-use crate::{partitioning::LocalPartition, reporter::ReporterContext};
+use crate::partitioning::LocalPartition;
 
-pub struct BufferingReporterProxy<'p, R: ReporterContext, P: LocalPartition<R>> {
+pub struct BufferingReporterProxy<'p, R: Reporter, P: LocalPartition<R>> {
     local_partition: &'p mut P,
     event_buffer: Vec<PackedEvent>,
     _marker: PhantomData<R>,
 }
 
-impl<'p, R: ReporterContext, P: LocalPartition<R>> fmt::Debug for BufferingReporterProxy<'p, R, P> {
+impl<'p, R: Reporter, P: LocalPartition<R>> fmt::Debug for BufferingReporterProxy<'p, R, P> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         struct EventBufferLen(usize);
 
@@ -31,7 +31,7 @@ impl<'p, R: ReporterContext, P: LocalPartition<R>> fmt::Debug for BufferingRepor
     }
 }
 
-impl<'p, R: ReporterContext, P: LocalPartition<R>> Reporter for BufferingReporterProxy<'p, R, P> {
+impl<'p, R: Reporter, P: LocalPartition<R>> Reporter for BufferingReporterProxy<'p, R, P> {
     impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<
         <<P as LocalPartition<R>>::Reporter as Reporter
     >::ReportSpeciation> {
@@ -55,7 +55,7 @@ impl<'p, R: ReporterContext, P: LocalPartition<R>> Reporter for BufferingReporte
     });
 }
 
-impl<'p, R: ReporterContext, P: LocalPartition<R>> BufferingReporterProxy<'p, R, P> {
+impl<'p, R: Reporter, P: LocalPartition<R>> BufferingReporterProxy<'p, R, P> {
     pub fn from(local_partition: &'p mut P) -> Self {
         Self {
             local_partition,

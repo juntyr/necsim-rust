@@ -4,7 +4,7 @@ use necsim_core::{
         LocallyCoherentLineageStore, PeekableActiveLineageSampler, RngCore, SpeciationProbability,
         TurnoverRate,
     },
-    reporter::NullReporter,
+    reporter::{NullReporter, Reporter},
     simulation::Simulation,
 };
 
@@ -15,7 +15,6 @@ use crate::{
     },
     decomposition::Decomposition,
     partitioning::{LocalPartition, MigrationMode},
-    reporter::ReporterContext,
 };
 
 #[allow(clippy::type_complexity)]
@@ -43,7 +42,7 @@ pub fn simulate<
         E,
         BufferedImmigrationEntry,
     >,
-    P: ReporterContext,
+    P: Reporter,
     L: LocalPartition<P>,
 >(
     mut simulation: Simulation<

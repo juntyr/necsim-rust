@@ -27,4 +27,3 @@ pub mod decomposition;
 pub mod parallelisation;
 pub mod partitioning;
 pub mod reporter;
-pub mod simulation;

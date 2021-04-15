@@ -20,9 +20,8 @@ use necsim_core::{
     reporter::{boolean::Boolean, Reporter},
 };
 
-use necsim_impls_no_std::{
-    partitioning::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode},
-    reporter::ReporterContext,
+use necsim_impls_no_std::partitioning::{
+    iterator::ImmigrantPopIterator, LocalPartition, MigrationMode,
 };
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 
@@ -35,7 +34,7 @@ static mut MPI_LOCAL_REMAINING: u64 = 0_u64;
 
 static mut MPI_MIGRATION_BUFFERS: Vec<Vec<MigratingLineage>> = Vec::new();
 
-pub struct MpiParallelPartition<P: ReporterContext> {
+pub struct MpiParallelPartition<R: Reporter> {
     _universe: Universe,
     world: SystemCommunicator,
     last_report_time: Instant,
@@ -46,16 +45,16 @@ pub struct MpiParallelPartition<P: ReporterContext> {
     barrier: Option<Request<'static, StaticScope>>,
     communicated_since_last_barrier: bool,
     recorder: EventLogRecorder,
-    _marker: PhantomData<P>,
+    _marker: PhantomData<R>,
 }
 
-impl<P: ReporterContext> fmt::Debug for MpiParallelPartition<P> {
+impl<R: Reporter> fmt::Debug for MpiParallelPartition<R> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("MpiParallelPartition").finish()
     }
 }
 
-impl<P: ReporterContext> Drop for MpiParallelPartition<P> {
+impl<R: Reporter> Drop for MpiParallelPartition<R> {
     fn drop(&mut self) {
         if let Some(progress) = self.progress.take() {
             CancelGuard::from(progress);
@@ -73,7 +72,7 @@ impl<P: ReporterContext> Drop for MpiParallelPartition<P> {
     }
 }
 
-impl<P: ReporterContext> MpiParallelPartition<P> {
+impl<R: Reporter> MpiParallelPartition<R> {
     const MPI_MIGRATION_WAIT_TIME: Duration = Duration::from_millis(100_u64);
     const MPI_PROGRESS_WAIT_TIME: Duration = Duration::from_millis(100_u64);
 
@@ -83,10 +82,7 @@ impl<P: ReporterContext> MpiParallelPartition<P> {
         world: SystemCommunicator,
         mut recorder: EventLogRecorder,
     ) -> Self {
-        recorder.set_event_filter(
-            <<P as ReporterContext>::Reporter as Reporter>::ReportSpeciation::VALUE,
-            <<P as ReporterContext>::Reporter as Reporter>::ReportDispersal::VALUE,
-        );
+        recorder.set_event_filter(R::ReportSpeciation::VALUE, R::ReportDispersal::VALUE);
 
         #[allow(clippy::cast_sign_loss)]
         let world_size = world.size() as usize;
@@ -115,13 +111,13 @@ impl<P: ReporterContext> MpiParallelPartition<P> {
             barrier: None,
             communicated_since_last_barrier: false,
             recorder,
-            _marker: PhantomData::<P>,
+            _marker: PhantomData::<R>,
         }
     }
 }
 
 #[contract_trait]
-impl<P: ReporterContext> LocalPartition<P> for MpiParallelPartition<P> {
+impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
     type Reporter = Self;
 
@@ -361,26 +357,20 @@ impl<P: ReporterContext> LocalPartition<P> for MpiParallelPartition<P> {
     }
 }
 
-impl<P: ReporterContext> Reporter for MpiParallelPartition<P> {
-    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<
-        <<P as ReporterContext>::Reporter as Reporter
-    >::ReportSpeciation> {
+impl<R: Reporter> Reporter for MpiParallelPartition<R> {
+    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<R::ReportSpeciation> {
         event.maybe_use_in(|event| {
             self.recorder.record_speciation(event)
         })
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<
-        <<P as ReporterContext>::Reporter as Reporter
-    >::ReportDispersal> {
+    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<R::ReportDispersal> {
         event.maybe_use_in(|event| {
             self.recorder.record_dispersal(event)
         })
     });
 
-    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<
-        <<P as ReporterContext>::Reporter as Reporter
-    >::ReportProgress> {
+    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<R::ReportProgress> {
         remaining.maybe_use_in(|remaining| {
             if unsafe { MPI_LOCAL_REMAINING } == *remaining {
                 return;

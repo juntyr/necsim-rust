@@ -23,7 +23,7 @@ impl Default for LiveMonolithicPartitioning {
 #[contract_trait]
 impl Partitioning for LiveMonolithicPartitioning {
     type Auxiliary = ();
-    type LocalPartition<P: ReporterContext> = LiveMonolithicLocalPartition<P>;
+    type LocalPartition<R: Reporter> = LiveMonolithicLocalPartition<R>;
 
     fn is_monolithic(&self) -> bool {
         true
@@ -41,22 +41,22 @@ impl Partitioning for LiveMonolithicPartitioning {
         0
     }
 
-    fn into_local_partition<P: ReporterContext>(
+    fn into_local_partition<R: Reporter, P: ReporterContext<Reporter = R>>(
         self,
         reporter_context: P,
         _auxiliary: Self::Auxiliary,
-    ) -> anyhow::Result<Self::LocalPartition<P>> {
+    ) -> anyhow::Result<Self::LocalPartition<R>> {
         LiveMonolithicLocalPartition::try_from_context(reporter_context)
     }
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct LiveMonolithicLocalPartition<P: ReporterContext> {
-    reporter: FilteredReporter<P::Reporter, True, True, True>,
+pub struct LiveMonolithicLocalPartition<R: Reporter> {
+    reporter: FilteredReporter<R, True, True, True>,
     loopback: Vec<MigratingLineage>,
 }
 
-impl<P: ReporterContext> fmt::Debug for LiveMonolithicLocalPartition<P> {
+impl<R: Reporter> fmt::Debug for LiveMonolithicLocalPartition<R> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         struct LoopbackLen(usize);
 
@@ -74,9 +74,9 @@ impl<P: ReporterContext> fmt::Debug for LiveMonolithicLocalPartition<P> {
 }
 
 #[contract_trait]
-impl<P: ReporterContext> LocalPartition<P> for LiveMonolithicLocalPartition<P> {
+impl<R: Reporter> LocalPartition<R> for LiveMonolithicLocalPartition<R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
-    type Reporter = FilteredReporter<P::Reporter, True, True, True>;
+    type Reporter = FilteredReporter<R, True, True, True>;
 
     fn get_reporter(&mut self) -> &mut Self::Reporter {
         &mut self.reporter
@@ -132,8 +132,8 @@ impl<P: ReporterContext> LocalPartition<P> for LiveMonolithicLocalPartition<P> {
     }
 }
 
-impl<P: ReporterContext> LiveMonolithicLocalPartition<P> {
-    pub fn from_reporter(reporter: FilteredReporter<P::Reporter, True, True, True>) -> Self {
+impl<R: Reporter> LiveMonolithicLocalPartition<R> {
+    pub fn from_reporter(reporter: FilteredReporter<R, True, True, True>) -> Self {
         Self {
             reporter,
             loopback: Vec::new(),
@@ -143,7 +143,7 @@ impl<P: ReporterContext> LiveMonolithicLocalPartition<P> {
     /// # Errors
     ///
     /// Returns any error which occured while building the context's reporter
-    pub fn try_from_context(context: P) -> anyhow::Result<Self> {
+    pub fn try_from_context<P: ReporterContext<Reporter = R>>(context: P) -> anyhow::Result<Self> {
         Ok(Self::from_reporter(context.try_build()?))
     }
 }

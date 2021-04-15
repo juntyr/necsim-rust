@@ -16,11 +16,12 @@ use mpi::{
 
 use thiserror::Error;
 
+use necsim_core::reporter::Reporter;
+
 use necsim_impls_no_std::{
     partitioning::{monolithic::live::LiveMonolithicLocalPartition, Partitioning},
     reporter::ReporterContext,
 };
-
 use necsim_impls_std::{
     event_log::recorder::EventLogRecorder,
     partitioning::monolithic::recorded::RecordedMonolithicLocalPartition,
@@ -74,7 +75,7 @@ impl MpiPartitioning {
 #[contract_trait]
 impl Partitioning for MpiPartitioning {
     type Auxiliary = Option<EventLogRecorder>;
-    type LocalPartition<P: ReporterContext> = MpiLocalPartition<P>;
+    type LocalPartition<R: Reporter> = MpiLocalPartition<R>;
 
     fn is_monolithic(&self) -> bool {
         self.world.size() <= 1
@@ -98,11 +99,11 @@ impl Partitioning for MpiPartitioning {
     ///
     /// Returns `MissingEventLog` if the local partition is non-monolithic and
     /// the `auxiliary` event log is `None`.
-    fn into_local_partition<P: ReporterContext>(
+    fn into_local_partition<R: Reporter, P: ReporterContext<Reporter = R>>(
         self,
         reporter_context: P,
         auxiliary: Self::Auxiliary,
-    ) -> anyhow::Result<Self::LocalPartition<P>> {
+    ) -> anyhow::Result<Self::LocalPartition<R>> {
         #[allow(clippy::option_if_let_else)]
         if let Some(event_log) = auxiliary {
             Ok(if self.world.size() <= 1 {
