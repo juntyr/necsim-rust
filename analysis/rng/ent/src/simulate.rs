@@ -16,10 +16,13 @@ use necsim_impls_no_std::{
             event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
         },
         coalescence_sampler::independent::IndependentCoalescenceSampler,
-        dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
+        dispersal_sampler::{
+            almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
+            non_spatial::NonSpatialDispersalSampler,
+        },
         emigration_exit::never::NeverEmigrationExit,
         event_sampler::independent::IndependentEventSampler,
-        habitat::non_spatial::NonSpatialHabitat,
+        habitat::{almost_infinite::AlmostInfiniteHabitat, non_spatial::NonSpatialHabitat},
         immigration_entry::never::NeverImmigrationEntry,
         lineage_store::independent::IndependentLineageStore,
         speciation_probability::uniform::UniformSpeciationProbability,
@@ -30,9 +33,11 @@ use necsim_impls_no_std::{
 };
 use parallelisation::independent::DedupCache;
 
-pub fn simulate<R: PrimeableRng<NonSpatialHabitat>>(rng: R, speciation_probability: f64) {
-    let habitat = NonSpatialHabitat::new((100, 100), 100);
-    let dispersal_sampler = NonSpatialDispersalSampler::default();
+pub fn simulate<R: PrimeableRng<AlmostInfiniteHabitat>>(rng: R, speciation_probability: f64) {
+    // let habitat = NonSpatialHabitat::new((100, 100), 100);
+    // let dispersal_sampler = NonSpatialDispersalSampler::default();
+    let habitat = AlmostInfiniteHabitat::default();
+    let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(0.0);
     let turnover_rate = UniformTurnoverRate::default();
     let speciation_probability = UniformSpeciationProbability::new(speciation_probability);
     let lineage_store = IndependentLineageStore::default();

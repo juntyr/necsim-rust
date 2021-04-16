@@ -8,40 +8,35 @@ use std::{
 
 use serde::Deserialize;
 
-use necsim_core::{
-    event::{DispersalEvent, SpeciationEvent},
-    impl_finalise, impl_report,
-    reporter::Reporter,
-};
+use necsim_core::{event::DispersalEvent, impl_finalise, impl_report, reporter::Reporter};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Deserialize)]
-#[serde(try_from = "GlobalTurnoverReporterArgs")]
-pub struct GlobalTurnoverReporter {
-    last_speciation_event: Option<SpeciationEvent>,
+#[serde(try_from = "GlobalCoverageReporterArgs")]
+pub struct GlobalCoverageReporter {
     last_dispersal_event: Option<DispersalEvent>,
 
     output: PathBuf,
     writer: Option<BufWriter<File>>,
 }
 
-impl fmt::Debug for GlobalTurnoverReporter {
+impl fmt::Debug for GlobalCoverageReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("GlobalTurnoverReporter")
+        fmt.debug_struct("GlobalCoverageReporter")
             .field("output", &self.output)
             .finish()
     }
 }
 
 #[derive(Deserialize)]
-struct GlobalTurnoverReporterArgs {
+struct GlobalCoverageReporterArgs {
     output: PathBuf,
 }
 
-impl TryFrom<GlobalTurnoverReporterArgs> for GlobalTurnoverReporter {
+impl TryFrom<GlobalCoverageReporterArgs> for GlobalCoverageReporter {
     type Error = io::Error;
 
-    fn try_from(args: GlobalTurnoverReporterArgs) -> Result<Self, Self::Error> {
+    fn try_from(args: GlobalCoverageReporterArgs) -> Result<Self, Self::Error> {
         // Preliminary argument parsing check if the output is a writable file
         let file = OpenOptions::new()
             .create(true)
@@ -50,7 +45,6 @@ impl TryFrom<GlobalTurnoverReporterArgs> for GlobalTurnoverReporter {
         std::mem::drop(file);
 
         Ok(Self {
-            last_speciation_event: None,
             last_dispersal_event: None,
 
             output: args.output,
@@ -59,25 +53,9 @@ impl TryFrom<GlobalTurnoverReporterArgs> for GlobalTurnoverReporter {
     }
 }
 
-impl GlobalTurnoverReporter {
-    fn write_turnover(&mut self, turnover: f64) {
-        if let Some(writer) = &mut self.writer {
-            std::mem::drop(writeln!(writer, "{}", turnover));
-        }
-    }
-}
-
-impl Reporter for GlobalTurnoverReporter {
-    impl_report!(speciation(&mut self, event: Unused) -> Used {
-        event.use_in(|event| {
-            if Some(event) == self.last_speciation_event.as_ref() {
-                return;
-            }
-
-            self.last_speciation_event = Some(event.clone());
-
-            self.write_turnover(event.event_time - event.prior_time);
-        })
+impl Reporter for GlobalCoverageReporter {
+    impl_report!(speciation(&mut self, event: Unused) -> Unused {
+        event.ignore()
     });
 
     impl_report!(dispersal(&mut self, event: Unused) -> Used {
@@ -88,7 +66,9 @@ impl Reporter for GlobalTurnoverReporter {
 
             self.last_dispersal_event = Some(event.clone());
 
-            self.write_turnover(event.event_time - event.prior_time);
+            if let Some(writer) = &mut self.writer {
+                std::mem::drop(writeln!(writer, "{},{},{}", event.target.location().x(), event.target.location().y(), event.target.index()));
+            }
         })
     });
 
@@ -116,7 +96,7 @@ impl Reporter for GlobalTurnoverReporter {
 
             let mut writer = BufWriter::new(file);
 
-            writeln!(writer, "turnover")?;
+            writeln!(writer, "x,y,index")?;
 
             Ok(writer)
         })();

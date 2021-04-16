@@ -83,6 +83,7 @@ macro_rules! export_plugin {
             ::std::mem::ManuallyDrop<$crate::export::UnsafeReporterPlugin>,
             $crate::erased_serde::Error,
         > {
+            #[allow(clippy::enum_variant_names)]
             #[derive($crate::serde::Deserialize)]
             #[serde(crate = "::necsim_plugins_core::serde")]
             enum Reporters {

@@ -39,7 +39,7 @@ use necsim_impls_no_std::{
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
         },
-        rng::seahash::SeaHash,
+        rng::wyhash::WyHash,
     },
     parallelisation,
     partitioning::LocalPartition,
@@ -58,11 +58,11 @@ impl AlgorithmArguments for IndependentAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<O: Scenario<SeaHash>> Algorithm<O> for IndependentAlgorithm {
+impl<O: Scenario<WyHash>> Algorithm<O> for IndependentAlgorithm {
     type Error = !;
     type LineageReference = GlobalLineageReference;
     type LineageStore = IndependentLineageStore<O::Habitat>;
-    type Rng = SeaHash;
+    type Rng = WyHash;
 
     #[allow(clippy::too_many_lines)]
     fn initialise_and_simulate<I: Iterator<Item = u64>, R: Reporter, P: LocalPartition<R>>(
@@ -108,8 +108,8 @@ impl<O: Scenario<SeaHash>> Algorithm<O> for IndependentAlgorithm {
                 };
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, SeaHash>>();
-                let rng = SeaHash::seed_from_u64(seed);
+                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, WyHash>>();
+                let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
 
@@ -154,8 +154,8 @@ impl<O: Scenario<SeaHash>> Algorithm<O> for IndependentAlgorithm {
                     .collect();
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, SeaHash>>();
-                let rng = SeaHash::seed_from_u64(seed);
+                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, WyHash>>();
+                let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
                 let emigration_exit = NeverEmigrationExit::default();
@@ -202,8 +202,8 @@ impl<O: Scenario<SeaHash>> Algorithm<O> for IndependentAlgorithm {
                 .collect();
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, SeaHash>>();
-                let rng = SeaHash::seed_from_u64(seed);
+                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, WyHash>>();
+                let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
                 let emigration_exit = IndependentEmigrationExit::new(
@@ -253,8 +253,8 @@ impl<O: Scenario<SeaHash>> Algorithm<O> for IndependentAlgorithm {
                 .collect();
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, SeaHash>>();
-                let rng = SeaHash::seed_from_u64(seed);
+                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, WyHash>>();
+                let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
                 let emigration_exit = IndependentEmigrationExit::new(

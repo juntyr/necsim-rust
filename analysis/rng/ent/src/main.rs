@@ -9,7 +9,7 @@ use std::{
 };
 
 use necsim_core::cogs::RngCore;
-use necsim_impls_no_std::cogs::rng::fixedseahash::FixedSeaHash;
+use necsim_impls_no_std::cogs::rng::wyhash::WyHash;
 use rng::WriteInterceptingReporter;
 
 mod rng;
@@ -28,7 +28,7 @@ fn main() -> io::Result<()> {
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?
         .get_bytes();
 
-    let rng = FixedSeaHash::seed_from_u64(123_456_789);
+    let rng = WyHash::seed_from_u64(823789433274912);
 
     let mut command = Command::new("./ent")
         .args(std::env::args_os().skip(2))
