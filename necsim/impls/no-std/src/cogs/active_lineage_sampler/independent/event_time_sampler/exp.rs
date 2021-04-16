@@ -1,5 +1,3 @@
-use float_next_after::NextAfter;
-
 use necsim_core::{
     cogs::{Habitat, PrimeableRng, RngSampler, TurnoverRate},
     intrinsics::floor,
@@ -41,22 +39,43 @@ impl<H: Habitat, G: PrimeableRng<H>, T: TurnoverRate<H>> EventTimeSampler<H, G, 
         let mut event_time: f64 = floor(time / self.delta_t) * self.delta_t;
         let mut time_slice_end: f64 = event_time + self.delta_t;
 
-        loop {
-            rng.prime_with_habitat(habitat, indexed_location, event_time.to_bits());
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        rng.prime_with_habitat(
+            habitat,
+            indexed_location,
+            floor(event_time / self.delta_t) as u64,
+        );
 
-            // next_after is required on every iteration to ensure progress
-            event_time = (event_time + rng.sample_exponential(lambda)).next_after(f64::INFINITY);
+        let mut sub_index: u64 = u64::MAX;
+
+        loop {
+            event_time += rng.sample_exponential(lambda);
+
+            sub_index >>= 1;
 
             // The time slice is exclusive at time_slice_end
             if event_time >= time_slice_end {
                 event_time = time_slice_end;
                 time_slice_end = event_time + self.delta_t;
+                sub_index = u64::MAX;
+
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                rng.prime_with_habitat(
+                    habitat,
+                    indexed_location,
+                    floor(event_time / self.delta_t) as u64,
+                );
             } else if event_time > time {
                 break;
             }
         }
 
-        rng.prime_with_habitat(habitat, indexed_location, event_time.to_bits());
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        rng.prime_with_habitat(
+            habitat,
+            indexed_location,
+            (floor(event_time / self.delta_t) as u64) + sub_index,
+        );
 
         event_time
     }
