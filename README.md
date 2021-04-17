@@ -1,5 +1,7 @@
 # necsim-rust
 
+[![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/MomoLangenstein/necsim-rust)
+
 ## Introduction
 
 necsim-rust is a Rust reimplementation of the C++ library [necsim](https://bitbucket.org/thompsonsed/necsim) and its Python wrapper [pycoalescence](https://bitbucket.org/thompsonsed/pycoalescence), which are used to run neutral coalescence biodiversity simulations.
