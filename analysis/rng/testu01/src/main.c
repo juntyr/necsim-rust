@@ -10,7 +10,37 @@
 #include "TestU01.h"
 #include "util64bits32bits.h"
 
-extern const char *name;
+// GENERATOR SECTION
+
+const char *name = "stdin64";
+
+static inline void thisrng_seed(uint64_t seed) {
+  // cannot seed external RNG exposed through stdin
+  (void)(seed);
+}
+
+static inline uint64_t thisrng() {
+  // adapted from practrand/tools/RNG_from_name.h
+  enum { BUFF_SIZE = 4096 / sizeof(uint64_t) };
+  static uint64_t buffer[BUFF_SIZE];
+  static uint64_t *pos = NULL, *end = NULL;
+
+  if (pos == end) {
+    size_t n = fread(buffer, sizeof(uint64_t), BUFF_SIZE, stdin);
+
+    if (!n) {
+      fprintf(stderr, "error reading standard input\n");
+      exit(0);
+    }
+
+    pos = &buffer[0];
+    end = &buffer[n];
+  }
+
+  return *(pos++);
+}
+
+// END OF GENERATOR SECTION
 
 static unsigned int rng_lsb(void) { return lsb64(thisrng()); }
 static unsigned int rng_lsb_reverse(void) { return bytereverse32(lsb64(thisrng())); }
