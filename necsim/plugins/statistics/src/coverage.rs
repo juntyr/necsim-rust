@@ -67,7 +67,11 @@ impl Reporter for GlobalCoverageReporter {
             self.last_dispersal_event = Some(event.clone());
 
             if let Some(writer) = &mut self.writer {
-                std::mem::drop(writeln!(writer, "{},{},{}", event.target.location().x(), event.target.location().y(), event.target.index()));
+                std::mem::drop(writeln!(
+                    writer, "{},{},{},{},{},{}",
+                    event.origin.location().x(), event.origin.location().y(), event.origin.index(),
+                    event.target.location().x(), event.target.location().y(), event.target.index(),
+                ));
             }
         })
     });
@@ -96,7 +100,7 @@ impl Reporter for GlobalCoverageReporter {
 
             let mut writer = BufWriter::new(file);
 
-            writeln!(writer, "x,y,index")?;
+            writeln!(writer, "x-from,y-from,index-from,x-to,y-to,index-to")?;
 
             Ok(writer)
         })();
