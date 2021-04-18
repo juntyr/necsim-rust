@@ -1,4 +1,4 @@
-use necsim_core::cogs::{Backup, Habitat, PrimeableRng, RngCore};
+use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
@@ -33,7 +33,7 @@ impl RngCore for XxHash {
     }
 }
 
-impl<H: Habitat> PrimeableRng<H> for XxHash {
+impl PrimeableRng for XxHash {
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         let location_bytes = location_index.to_le_bytes();
 

@@ -11,7 +11,7 @@ mod speciation_probability;
 pub use speciation_probability::SpeciationProbability;
 
 mod rng;
-pub use rng::{PrimeableRng, RngCore, RngSampler, SplittableRng};
+pub use rng::{HabitatPrimeableRng, PrimeableRng, RngCore, RngSampler, SplittableRng};
 
 mod dispersal_sampler;
 pub use dispersal_sampler::{DispersalSampler, SeparableDispersalSampler};

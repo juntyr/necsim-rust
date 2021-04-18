@@ -25,7 +25,7 @@ use rng::InterceptingReporter;
 
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions, clippy::type_complexity)]
-pub struct SimulationRng<G: RngCore + PrimeableRng<NonSpatialHabitat>, const SIZE: u32> {
+pub struct SimulationRng<G: RngCore + PrimeableRng, const SIZE: u32> {
     simulation: Simulation<
         NonSpatialHabitat,
         InterceptingReporter<G>,
@@ -57,9 +57,7 @@ pub struct SimulationRng<G: RngCore + PrimeableRng<NonSpatialHabitat>, const SIZ
     >,
 }
 
-impl<G: RngCore + PrimeableRng<NonSpatialHabitat>, const SIZE: u32> RngCore
-    for SimulationRng<G, SIZE>
-{
+impl<G: RngCore + PrimeableRng, const SIZE: u32> RngCore for SimulationRng<G, SIZE> {
     type Seed = G::Seed;
 
     fn from_seed(seed: Self::Seed) -> Self {
@@ -105,9 +103,7 @@ impl<G: RngCore + PrimeableRng<NonSpatialHabitat>, const SIZE: u32> RngCore
 }
 
 #[contract_trait]
-impl<G: RngCore + PrimeableRng<NonSpatialHabitat>, const SIZE: u32> Backup
-    for SimulationRng<G, SIZE>
-{
+impl<G: RngCore + PrimeableRng, const SIZE: u32> Backup for SimulationRng<G, SIZE> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             simulation: self.simulation.backup_unchecked(),
@@ -115,9 +111,7 @@ impl<G: RngCore + PrimeableRng<NonSpatialHabitat>, const SIZE: u32> Backup
     }
 }
 
-impl<G: RngCore + PrimeableRng<NonSpatialHabitat>, const SIZE: u32> Clone
-    for SimulationRng<G, SIZE>
-{
+impl<G: RngCore + PrimeableRng, const SIZE: u32> Clone for SimulationRng<G, SIZE> {
     fn clone(&self) -> Self {
         unsafe { self.backup_unchecked() }
     }

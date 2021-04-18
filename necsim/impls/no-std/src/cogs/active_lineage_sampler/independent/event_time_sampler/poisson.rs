@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Habitat, PrimeableRng, RngSampler, TurnoverRate},
+    cogs::{Habitat, HabitatPrimeableRng, PrimeableRng, RngSampler, TurnoverRate},
     intrinsics::{exp, floor},
     landscape::IndexedLocation,
 };
@@ -21,7 +21,7 @@ impl PoissonEventTimeSampler {
 }
 
 #[contract_trait]
-impl<H: Habitat, G: PrimeableRng<H>, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
+impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
     for PoissonEventTimeSampler
 {
     #[inline]

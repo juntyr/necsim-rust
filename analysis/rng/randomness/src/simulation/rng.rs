@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, fmt};
 
-use necsim_core::cogs::{Backup, Habitat, PrimeableRng, RngCore};
+use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
 
 #[derive(Clone)]
 pub struct InterceptingReporter<G: RngCore> {
@@ -67,7 +67,7 @@ impl<G: RngCore> RngCore for InterceptingReporter<G> {
     }
 }
 
-impl<H: Habitat, G: PrimeableRng<H>> PrimeableRng<H> for InterceptingReporter<G> {
+impl<G: PrimeableRng> PrimeableRng for InterceptingReporter<G> {
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         if Some((location_index, time_index)) == self.snd_last_reprime {
             self.cmp_sequence_length = self.snd_last_sequence_length;

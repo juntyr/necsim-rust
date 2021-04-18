@@ -22,7 +22,7 @@ use super::{specialiser, SimulationKernel};
 impl<
         'k,
         H: Habitat + RustToCuda,
-        G: PrimeableRng<H> + RustToCuda,
+        G: PrimeableRng + RustToCuda,
         R: LineageReference<H> + DeviceCopy,
         S: LineageStore<H, R> + RustToCuda,
         X: EmigrationExit<H, G, R, S> + RustToCuda,
@@ -126,7 +126,7 @@ impl<
 impl<
         'k,
         H: Habitat + RustToCuda,
-        G: PrimeableRng<H> + RustToCuda,
+        G: PrimeableRng + RustToCuda,
         R: LineageReference<H> + DeviceCopy,
         S: LineageStore<H, R> + RustToCuda,
         X: EmigrationExit<H, G, R, S> + RustToCuda,

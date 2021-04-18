@@ -1,4 +1,4 @@
-use necsim_core::cogs::{Backup, Habitat, PrimeableRng, RngCore};
+use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, RustToCuda, LendToCuda)]
@@ -35,7 +35,7 @@ impl<R: RngCore> RngCore for CudaRng<R> {
     }
 }
 
-impl<H: Habitat, R: PrimeableRng<H>> PrimeableRng<H> for CudaRng<R> {
+impl<R: PrimeableRng> PrimeableRng for CudaRng<R> {
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         self.0.prime_with(location_index, time_index)
     }

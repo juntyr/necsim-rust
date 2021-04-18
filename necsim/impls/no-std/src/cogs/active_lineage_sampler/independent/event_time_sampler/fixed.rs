@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Habitat, PrimeableRng, TurnoverRate},
+    cogs::{Habitat, HabitatPrimeableRng, PrimeableRng, TurnoverRate},
     intrinsics::floor,
     landscape::IndexedLocation,
 };
@@ -18,7 +18,7 @@ impl Default for FixedEventTimeSampler {
 }
 
 #[contract_trait]
-impl<H: Habitat, G: PrimeableRng<H>, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
+impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
     for FixedEventTimeSampler
 {
     #[inline]
@@ -40,7 +40,7 @@ impl<H: Habitat, G: PrimeableRng<H>, T: TurnoverRate<H>> EventTimeSampler<H, G, 
         rng.prime_with_habitat(habitat, indexed_location, time_step);
 
         #[allow(clippy::cast_precision_loss)]
-        (time_step as f64)
-            / lambda
+        let next_event_time = (time_step as f64) / lambda;
+        next_event_time
     }
 }

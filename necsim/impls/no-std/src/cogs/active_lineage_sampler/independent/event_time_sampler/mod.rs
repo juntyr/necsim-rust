@@ -13,7 +13,7 @@ pub mod poisson;
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait EventTimeSampler<H: Habitat, G: PrimeableRng<H>, T: TurnoverRate<H>>:
+pub trait EventTimeSampler<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>>:
     Clone + core::fmt::Debug
 {
     #[debug_requires(time >= 0.0_f64, "event times must be non-negative")]
