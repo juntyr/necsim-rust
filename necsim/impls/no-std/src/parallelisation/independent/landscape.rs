@@ -35,7 +35,7 @@ pub fn simulate<
     H: Habitat,
     C: Decomposition<H>,
     E: EmigrationChoice<H>,
-    G: PrimeableRng<H>,
+    G: PrimeableRng,
     D: DispersalSampler<H, G>,
     T: TurnoverRate<H>,
     N: SpeciationProbability<H>,

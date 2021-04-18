@@ -58,8 +58,8 @@ pub trait RngSampler: RngCore {
     fn sample_uniform(&mut self) -> f64 {
         // http://prng.di.unimi.it -> Generating uniform doubles in the unit interval
         #[allow(clippy::cast_precision_loss)]
-        ((self.sample_u64() >> 11) as f64)
-            * f64::from_bits(0x3CA0_0000_0000_0000_u64) // 0x1.0p-53
+        let u01 = ((self.sample_u64() >> 11) as f64) * f64::from_bits(0x3CA0_0000_0000_0000_u64); // 0x1.0p-53
+        u01
     }
 
     #[must_use]
@@ -136,7 +136,12 @@ pub trait RngSampler: RngCore {
 impl<R: RngCore> RngSampler for R {}
 
 #[allow(clippy::module_name_repetitions)]
-pub trait PrimeableRng<H: Habitat>: RngCore {
+pub trait PrimeableRng: RngCore {
+    fn prime_with(&mut self, location_index: u64, time_index: u64);
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub trait HabitatPrimeableRng<H: Habitat>: PrimeableRng {
     fn prime_with_habitat(
         &mut self,
         habitat: &H,
@@ -148,9 +153,9 @@ pub trait PrimeableRng<H: Habitat>: RngCore {
             time_index,
         )
     }
-
-    fn prime_with(&mut self, location_index: u64, time_index: u64);
 }
+
+impl<R: PrimeableRng, H: Habitat> HabitatPrimeableRng<H> for R {}
 
 #[allow(clippy::module_name_repetitions)]
 pub trait SplittableRng: RngCore {

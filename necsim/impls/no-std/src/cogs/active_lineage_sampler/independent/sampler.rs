@@ -20,7 +20,7 @@ use super::{EventTimeSampler, IndependentActiveLineageSampler};
 #[contract_trait]
 impl<
         H: Habitat,
-        G: PrimeableRng<H>,
+        G: PrimeableRng,
         X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
         D: DispersalSampler<H, G>,
         T: TurnoverRate<H>,

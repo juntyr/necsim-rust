@@ -1,4 +1,4 @@
-use necsim_core::cogs::{Backup, Habitat, PrimeableRng, RngCore};
+use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
 
 use aes_soft::{
     cipher::{generic_array::GenericArray, BlockCipher, NewBlockCipher},
@@ -73,7 +73,7 @@ impl RngCore for AesRng {
     }
 }
 
-impl<H: Habitat> PrimeableRng<H> for AesRng {
+impl PrimeableRng for AesRng {
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         let location_bytes = location_index.to_le_bytes();
 

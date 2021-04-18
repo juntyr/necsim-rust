@@ -36,7 +36,7 @@ impl<
         'k,
         's,
         H: Habitat + RustToCuda,
-        G: PrimeableRng<H> + RustToCuda,
+        G: PrimeableRng + RustToCuda,
         R: LineageReference<H> + DeviceCopy,
         S: LineageStore<H, R> + RustToCuda,
         X: EmigrationExit<H, G, R, S> + RustToCuda,

@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Habitat, PrimeableRng, RngSampler, TurnoverRate},
+    cogs::{Habitat, HabitatPrimeableRng, PrimeableRng, RngSampler, TurnoverRate},
     intrinsics::{exp, floor},
     landscape::IndexedLocation,
 };
@@ -21,7 +21,7 @@ impl GeometricEventTimeSampler {
 }
 
 #[contract_trait]
-impl<H: Habitat, G: PrimeableRng<H>, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
+impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
     for GeometricEventTimeSampler
 {
     #[inline]
@@ -53,7 +53,7 @@ impl<H: Habitat, G: PrimeableRng<H>, T: TurnoverRate<H>> EventTimeSampler<H, G, 
         }
 
         #[allow(clippy::cast_precision_loss)]
-        (time_step as f64)
-            * self.delta_t
+        let next_event_time = (time_step as f64) * self.delta_t;
+        next_event_time
     }
 }
