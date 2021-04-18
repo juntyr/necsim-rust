@@ -25,7 +25,7 @@ use super::SimulationKernel;
 pub struct SimulationKernelWithDimensions<
     'k,
     H: Habitat + RustToCuda,
-    G: PrimeableRng<H> + RustToCuda,
+    G: PrimeableRng + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
     S: LineageStore<H, R> + RustToCuda,
     X: EmigrationExit<H, G, R, S> + RustToCuda,
@@ -67,7 +67,7 @@ pub struct SimulationKernelWithDimensions<
 impl<
         'k,
         H: Habitat + RustToCuda,
-        G: PrimeableRng<H> + RustToCuda,
+        G: PrimeableRng + RustToCuda,
         R: LineageReference<H> + DeviceCopy,
         S: LineageStore<H, R> + RustToCuda,
         X: EmigrationExit<H, G, R, S> + RustToCuda,

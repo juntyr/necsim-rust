@@ -29,7 +29,7 @@ use event_time_sampler::EventTimeSampler;
 #[derive(Debug)]
 pub struct IndependentActiveLineageSampler<
     H: Habitat,
-    G: PrimeableRng<H>,
+    G: PrimeableRng,
     X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
     D: DispersalSampler<H, G>,
     T: TurnoverRate<H>,
@@ -43,7 +43,7 @@ pub struct IndependentActiveLineageSampler<
 
 impl<
         H: Habitat,
-        G: PrimeableRng<H>,
+        G: PrimeableRng,
         X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
         D: DispersalSampler<H, G>,
         T: TurnoverRate<H>,
@@ -64,7 +64,7 @@ impl<
 #[contract_trait]
 impl<
         H: Habitat,
-        G: PrimeableRng<H>,
+        G: PrimeableRng,
         X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
         D: DispersalSampler<H, G>,
         T: TurnoverRate<H>,

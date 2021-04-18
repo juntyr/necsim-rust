@@ -1,4 +1,4 @@
-use necsim_core::cogs::{Backup, Habitat, PrimeableRng, RngCore};
+use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
@@ -41,7 +41,7 @@ impl RngCore for SeaHash {
     }
 }
 
-impl<H: Habitat> PrimeableRng<H> for SeaHash {
+impl PrimeableRng for SeaHash {
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         self.location = location_index;
         self.time = time_index;

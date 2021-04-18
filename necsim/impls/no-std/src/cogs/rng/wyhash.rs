@@ -1,4 +1,4 @@
-use necsim_core::cogs::{Backup, Habitat, RngCore};
+use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
@@ -28,11 +28,12 @@ impl RngCore for WyHash {
     #[must_use]
     #[inline]
     fn sample_u64(&mut self) -> u64 {
-        wyhash::wyrng(&mut self.state)
+        // Added SeaHash diffuse for better avalanching
+        diffuse(wyhash::wyrng(&mut self.state))
     }
 }
 
-impl<H: Habitat> necsim_core::cogs::PrimeableRng<H> for WyHash {
+impl PrimeableRng for WyHash {
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         let location_bytes = location_index.to_le_bytes();
         let time_index_bytes = time_index.to_le_bytes();
@@ -64,4 +65,23 @@ impl<H: Habitat> necsim_core::cogs::PrimeableRng<H> for WyHash {
             self.seed,
         );
     }
+}
+
+const fn diffuse(mut x: u64) -> u64 {
+    // These are derived from the PCG RNG's round. Thanks to @Veedrac for proposing
+    // this. The basic idea is that we use dynamic shifts, which are determined
+    // by the input itself. The shift is chosen by the higher bits, which means
+    // that changing those flips the lower bits, which scatters upwards because
+    // of the multiplication.
+
+    x = x.wrapping_mul(0x6eed_0e9d_a4d9_4a4f);
+
+    let a = x >> 32;
+    let b = x >> 60;
+
+    x ^= a >> b;
+
+    x = x.wrapping_mul(0x6eed_0e9d_a4d9_4a4f);
+
+    x
 }

@@ -30,7 +30,7 @@ use super::{reporter::IgnoreProgressReporterProxy, DedupCache};
 #[allow(clippy::type_complexity)]
 pub fn simulate<
     H: Habitat,
-    G: PrimeableRng<H>,
+    G: PrimeableRng,
     D: DispersalSampler<H, G>,
     T: TurnoverRate<H>,
     N: SpeciationProbability<H>,

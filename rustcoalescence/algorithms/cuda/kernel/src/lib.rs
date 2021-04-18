@@ -92,7 +92,7 @@ pub unsafe extern "ptx-kernel" fn simulate(
 #[inline]
 unsafe fn simulate_generic<
     H: Habitat + RustToCuda,
-    G: PrimeableRng<H> + RustToCuda,
+    G: PrimeableRng + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
     S: LineageStore<H, R> + RustToCuda,
     X: EmigrationExit<H, G, R, S> + RustToCuda,
