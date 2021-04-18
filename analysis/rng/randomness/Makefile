@@ -1,6 +1,8 @@
 .PHONY: clean
 
+
 all: dieharder.nbconvert.ipynb ent.nbconvert.ipynb practrand.nbconvert.ipynb testu01.nbconvert.ipynb
+
 
 dieharder.nbconvert.ipynb: dieharder.ipynb
 	jupyter nbconvert --to notebook --execute dieharder.ipynb
