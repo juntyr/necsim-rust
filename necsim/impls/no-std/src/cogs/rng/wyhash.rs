@@ -35,8 +35,8 @@ impl RngCore for WyHash {
 
 impl PrimeableRng for WyHash {
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
-        let location_bytes = location_index.to_le_bytes();
-        let time_index_bytes = time_index.to_le_bytes();
+        let location_bytes = diffuse(location_index).to_le_bytes();
+        let time_index_bytes = diffuse(time_index).to_le_bytes();
 
         // TODO: Check if the byte ordering affects the quality of the RNG
         //       priming -> in order would be closer to CPRNG
