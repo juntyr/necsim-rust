@@ -116,6 +116,7 @@ impl Reporter for EventCounterReporter {
                 + self.out_coalescence
                 + self.self_dispersal
                 + self.out_dispersal
+                + self.late_coalescence
         );
 
         let _ = writeln!(
