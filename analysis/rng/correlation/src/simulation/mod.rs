@@ -27,7 +27,7 @@ use rng::InterceptingReporter;
 
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions, clippy::type_complexity)]
-pub struct CorrelationSimulationRng<G: RngCore + PrimeableRng> {
+pub struct CorrelationSimulationRng<G: RngCore + PrimeableRng, const SIGMA: f64> {
     simulation: Simulation<
         AlmostInfiniteHabitat,
         InterceptingReporter<G>,
@@ -60,7 +60,9 @@ pub struct CorrelationSimulationRng<G: RngCore + PrimeableRng> {
     other_rngs_lineages: VecDeque<(InterceptingReporter<G>, Lineage)>,
 }
 
-impl<G: RngCore<Seed: Clone> + PrimeableRng> RngCore for CorrelationSimulationRng<G> {
+impl<G: RngCore<Seed: Clone> + PrimeableRng, const SIGMA: f64> RngCore
+    for CorrelationSimulationRng<G, SIGMA>
+{
     type Seed = G::Seed;
 
     fn from_seed(seed: Self::Seed) -> Self {
@@ -68,7 +70,7 @@ impl<G: RngCore<Seed: Clone> + PrimeableRng> RngCore for CorrelationSimulationRn
             .habitat(AlmostInfiniteHabitat::default())
             .rng(InterceptingReporter::<G>::from_seed(seed.clone()))
             .speciation_probability(UniformSpeciationProbability::new(0.0))
-            .dispersal_sampler(AlmostInfiniteNormalDispersalSampler::new(0.0))
+            .dispersal_sampler(AlmostInfiniteNormalDispersalSampler::new(SIGMA))
             .lineage_reference(std::marker::PhantomData::<GlobalLineageReference>)
             .lineage_store(IndependentLineageStore::default())
             .emigration_exit(NeverEmigrationExit::default())
@@ -149,7 +151,7 @@ impl<G: RngCore<Seed: Clone> + PrimeableRng> RngCore for CorrelationSimulationRn
 }
 
 #[contract_trait]
-impl<G: RngCore + PrimeableRng> Backup for CorrelationSimulationRng<G> {
+impl<G: RngCore + PrimeableRng, const SIGMA: f64> Backup for CorrelationSimulationRng<G, SIGMA> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             simulation: self.simulation.backup_unchecked(),
@@ -162,7 +164,7 @@ impl<G: RngCore + PrimeableRng> Backup for CorrelationSimulationRng<G> {
     }
 }
 
-impl<G: RngCore + PrimeableRng> Clone for CorrelationSimulationRng<G> {
+impl<G: RngCore + PrimeableRng, const SIGMA: f64> Clone for CorrelationSimulationRng<G, SIGMA> {
     fn clone(&self) -> Self {
         unsafe { self.backup_unchecked() }
     }
