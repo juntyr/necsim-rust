@@ -293,15 +293,6 @@
                  * communication between partitions only occurs for progress measuring
                  * invalid when the simulation is NOT internally parallelised */
               | Individuals
-                /* partition the initial set of individuals
-                 * no individuals are migrated between partitions
-                 * does not coordinate with other partitions
-                 * only simulates a single partition which does not communicate at all
-                 * invalid when the simulation is internally parallelised */
-              | Isolated(
-                    rank: (u32 < partitions),
-                    partitions: (0 < u32),
-                )
                 /* partition the landscape
                  * individuals naturally migrate between partitions
                  * automatically coordinates between partitions
@@ -333,7 +324,7 @@
     /* selection of the scenario which will be simulated */
     scenario: (
         /* spatially explicit scenario using habitat and dispersal maps */
-      | InMemory(
+      | SpatiallyExplicit(
           /* file path to a (WxH) TIFF file storing grayscale u32 habitat values */
           habitat: (PathBuf),
           /* file path to a (WxH x WxH) TIFF file storing grayscale f64 dispersal weights
