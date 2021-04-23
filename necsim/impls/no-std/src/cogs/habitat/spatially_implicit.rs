@@ -97,6 +97,7 @@ impl Habitat for SpatiallyImplicitHabitat {
     }
 
     #[must_use]
+    #[inline]
     fn map_indexed_location_to_u64_injective(&self, indexed_location: &IndexedLocation) -> u64 {
         if self
             .local

@@ -18,13 +18,22 @@ impl<H: Habitat, G: RngCore> DispersalSampler<H, G> for InMemoryPackedAliasDispe
         habitat: &H,
         rng: &mut G,
     ) -> Location {
-        let location_index = (
-            (location.y() - habitat.get_extent().y()) as usize,
-            (location.x() - habitat.get_extent().x()) as usize,
-        );
+        let location_row = (location.y() - habitat.get_extent().y()) as usize;
+        let location_column = (location.x() - habitat.get_extent().x()) as usize;
 
-        let alias_dispersals_at_location = &self.alias_dispersal_buffer
-            [Into::<Range<usize>>::into(self.alias_dispersal_ranges[location_index].clone())];
+        // Only safe as trait precondition that `location` is inside `habitat`
+        let alias_range = unsafe {
+            Into::<Range<usize>>::into(
+                self.alias_dispersal_ranges
+                    .get(location_row, location_column)
+                    .unwrap_unchecked()
+                    .clone(),
+            )
+        };
+
+        // Safe by the construction of `InMemoryPackedAliasDispersalSampler`
+        let alias_dispersals_at_location =
+            unsafe { &self.alias_dispersal_buffer.get_unchecked(alias_range) };
 
         let dispersal_target_index: usize =
             AliasMethodSamplerAtom::sample_event(alias_dispersals_at_location, rng);

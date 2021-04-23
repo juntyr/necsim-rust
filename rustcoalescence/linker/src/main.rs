@@ -41,7 +41,35 @@ fn build_kernel_with_specialisation(specialisation: &str) -> Result<PathBuf> {
     env::set_var(SIMULATION_SPECIALISATION_ENV, specialisation);
 
     match Builder::new("rustcoalescence/algorithms/cuda/kernel")?.build()? {
-        BuildStatus::Success(output) => Ok(output.get_assembly_path()),
+        BuildStatus::Success(output) => {
+            let ptx_path = output.get_assembly_path();
+
+            let mut specialised_ptx_path = ptx_path.clone();
+            specialised_ptx_path.set_extension(&format!(
+                "{:016x}.ptx",
+                seahash::hash(specialisation.as_bytes())
+            ));
+
+            fs::copy(&ptx_path, &specialised_ptx_path).map_err(|err| {
+                Error::from(BuildErrorKind::BuildFailed(vec![format!(
+                    "Failed to copy kernel from {:?} to {:?}: {}",
+                    ptx_path, specialised_ptx_path, err,
+                )]))
+            })?;
+
+            fs::OpenOptions::new()
+                .append(true)
+                .open(&specialised_ptx_path)
+                .and_then(|mut file| writeln!(file, "\n// {}", specialisation))
+                .map_err(|err| {
+                    Error::from(BuildErrorKind::BuildFailed(vec![format!(
+                        "Failed to write specialisation to {:?}: {}",
+                        specialised_ptx_path, err,
+                    )]))
+                })?;
+
+            Ok(specialised_ptx_path)
+        },
         BuildStatus::NotNeeded => Err(Error::from(BuildErrorKind::BuildFailed(vec![format!(
             "Kernel build for specialisation `{}` was not needed.",
             &specialisation
