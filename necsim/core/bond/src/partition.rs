@@ -57,6 +57,7 @@ impl TryFrom<PartitionRaw> for Partition {
 
 #[derive(Copy, Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[serde(rename = "Partition")]
 struct PartitionRaw {
     rank: u32,
     partitions: NonZeroU32,

@@ -82,6 +82,7 @@ pub fn simulate<
     let mut level_time = 0.0_f64;
 
     while !slow_lineages.is_empty() {
+        // Calculate a new water-level time which all individuals should reach
         let total_event_rate: f64 = slow_lineages
             .iter()
             .map(|lineage| {
@@ -93,11 +94,14 @@ pub fn simulate<
             .sum();
         level_time += f64::from(event_slice.get()) / total_event_rate;
 
+        // Move fast events below the new level into slow events
         slow_events.extend(fast_events.drain_filter(|event| event.event_time < level_time));
 
         let mut reporter: WaterLevelReporter<R> =
             WaterLevelReporter::new(level_time, &mut slow_events, &mut fast_events);
 
+        // Simulate all slow lineages until they have finished or exceeded the new water
+        //  level
         while !slow_lineages.is_empty()
             || simulation.active_lineage_sampler().number_active_lineages() > 0
         {
@@ -112,6 +116,7 @@ pub fn simulate<
                 if min_spec_samples.insert(previous_speciation_sample) {
                     if let Some(previous_task) = previous_task {
                         if previous_task.is_active() {
+                            // Reclassify lineages as either slow (still below water) or fast
                             if previous_task.last_event_time() < level_time {
                                 slow_lineages.push_back(previous_task);
                             } else {
@@ -136,6 +141,7 @@ pub fn simulate<
             );
         }
 
+        // Report all events below the water level
         slow_events.sort();
         for event in slow_events.drain(..) {
             match event.into() {
@@ -148,7 +154,21 @@ pub fn simulate<
             }
         }
 
+        // Fast lineages are now slow again
         core::mem::swap(&mut slow_lineages, &mut fast_lineages);
+    }
+
+    // Report all remaining events above the water level
+    fast_events.sort();
+    for event in fast_events.drain(..) {
+        match event.into() {
+            TypedEvent::Speciation(event) => {
+                proxy.report_speciation(Unused::new(&event));
+            },
+            TypedEvent::Dispersal(event) => {
+                proxy.report_dispersal(Unused::new(&event));
+            },
+        }
     }
 
     proxy.local_partition().report_progress_sync(0_u64);

@@ -127,6 +127,7 @@ pub fn simulate<
     simulation
         .lend_to_cuda_mut(|mut simulation_cuda_repr| {
             while !slow_lineages.is_empty() {
+                // Calculate a new water-level time which all individuals should reach
                 let total_event_rate: f64 = slow_lineages
                     .iter()
                     .map(|lineage| {
@@ -138,11 +139,14 @@ pub fn simulate<
                     .sum();
                 level_time += f64::from(event_slice.get()) / total_event_rate;
 
+                // Move fast events below the new level into slow events
                 slow_events.extend(fast_events.drain_filter(|event| event.event_time < level_time));
 
                 let mut reporter: WaterLevelReporter<P> =
                     WaterLevelReporter::new(level_time, &mut slow_events, &mut fast_events);
 
+                // Simulate all slow lineages until they have finished or exceeded the new water
+                //  level
                 while !slow_lineages.is_empty() {
                     // Upload the new tasks from the front of the task queue
                     for task in task_list.iter_mut() {
@@ -187,6 +191,7 @@ pub fn simulate<
                     for (i, task) in task_list.iter_mut().enumerate() {
                         if let Some(task) = task.take() {
                             if task.is_active() && !duplicate_individuals[i] {
+                                // Reclassify lineages as either slow (still below water) or fast
                                 if task.last_event_time() < level_time {
                                     slow_lineages.push_back(task);
                                 } else {
@@ -203,6 +208,7 @@ pub fn simulate<
                     ));
                 }
 
+                // Report all events below the water level
                 slow_events.sort();
                 for event in slow_events.drain(..) {
                     match event.into() {
@@ -219,12 +225,30 @@ pub fn simulate<
                     }
                 }
 
+                // Fast lineages are now slow again
                 core::mem::swap(&mut slow_lineages, &mut fast_lineages);
             }
 
             Ok(())
         })
         .with_context(|| "Running the CUDA kernel failed.")?;
+
+    // Report all remaining events above the water level
+    fast_events.sort();
+    for event in fast_events.drain(..) {
+        match event.into() {
+            TypedEvent::Speciation(event) => {
+                local_partition
+                    .get_reporter()
+                    .report_speciation(Unused::new(&event));
+            },
+            TypedEvent::Dispersal(event) => {
+                local_partition
+                    .get_reporter()
+                    .report_dispersal(Unused::new(&event));
+            },
+        }
+    }
 
     let (total_time_max, total_steps_sum) = {
         let mut total_time_max_result = 0_u64;
