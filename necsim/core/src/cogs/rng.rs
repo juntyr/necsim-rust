@@ -142,6 +142,7 @@ pub trait PrimeableRng: RngCore {
 
 #[allow(clippy::module_name_repetitions)]
 pub trait HabitatPrimeableRng<H: Habitat>: PrimeableRng {
+    #[inline]
     fn prime_with_habitat(
         &mut self,
         habitat: &H,
