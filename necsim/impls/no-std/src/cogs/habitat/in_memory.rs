@@ -44,14 +44,20 @@ impl Habitat for InMemoryHabitat {
     #[must_use]
     fn get_habitat_at_location(&self, location: &Location) -> u32 {
         self.habitat
-            [(location.y() as usize) * (self.extent.width() as usize) + (location.x() as usize)]
+            .get((location.y() as usize) * (self.extent.width() as usize) + (location.x() as usize))
+            .copied()
+            .unwrap_or(0)
     }
 
     #[must_use]
     fn map_indexed_location_to_u64_injective(&self, indexed_location: &IndexedLocation) -> u64 {
-        self.u64_injection[(indexed_location.location().y() as usize)
-            * (self.extent.width() as usize)
-            + (indexed_location.location().x() as usize)]
+        self.u64_injection
+            .get(
+                (indexed_location.location().y() as usize) * (self.extent.width() as usize)
+                    + (indexed_location.location().x() as usize),
+            )
+            .copied()
+            .unwrap_or(0)
             + u64::from(indexed_location.index())
     }
 }

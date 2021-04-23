@@ -35,6 +35,7 @@ impl<G: RngCore> Backup for NonSpatialDispersalSampler<G> {
 #[contract_trait]
 impl<G: RngCore> DispersalSampler<NonSpatialHabitat, G> for NonSpatialDispersalSampler<G> {
     #[must_use]
+    #[inline]
     fn sample_dispersal_from_location(
         &self,
         _location: &Location,
