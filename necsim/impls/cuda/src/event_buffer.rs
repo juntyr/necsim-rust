@@ -67,12 +67,12 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
         let speciation_capacity = if ReportSpeciation::VALUE {
             block_size * grid_size
         } else {
-            0_usize
+            1_usize // Caching space used to eliminate local memory usage
         };
         let dispersal_capacity = if ReportDispersal::VALUE {
             max_events * block_size * grid_size
         } else {
-            0_usize
+            1_usize // Caching space used to eliminate local memory usage
         };
 
         Ok(Self {
@@ -89,11 +89,15 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
         P: Reporter<ReportSpeciation = ReportSpeciation, ReportDispersal = ReportDispersal>,
     {
         for event in self.dispersal_buffer.iter_mut().filter_map(Option::take) {
-            reporter.report_dispersal(Unused::new(&event));
+            if ReportDispersal::VALUE {
+                reporter.report_dispersal(Unused::new(&event));
+            }
         }
 
         for event in self.speciation_buffer.iter_mut().filter_map(Option::take) {
-            reporter.report_speciation(Unused::new(&event));
+            if ReportSpeciation::VALUE {
+                reporter.report_speciation(Unused::new(&event));
+            }
         }
     }
 }
@@ -107,9 +111,14 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
             self.speciation_buffer[rust_cuda::device::utils::index()].is_none(),
             "does not report extraneous speciation event"
         )]
-        speciation(&mut self, event: Unused) -> MaybeUsed<ReportSpeciation> {
-            event.maybe_use_in(|event| {
-                self.speciation_buffer[rust_cuda::device::utils::index()] = Some(event.clone());
+        speciation(&mut self, event: Unused) -> Used {
+            event.use_in(|event| {
+                if ReportSpeciation::VALUE {
+                    self.speciation_buffer[rust_cuda::device::utils::index()] = Some(event.clone());
+                } else {
+                    // Note: Using this cache avoids the use of local storage
+                    self.speciation_buffer[0] = Some(event.clone());
+                }
             })
         }
     );
@@ -119,10 +128,14 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
             self.event_counter < self.max_events,
             "does not report extraneous dispersal events"
         )]
-        dispersal(&mut self, event: Unused) -> MaybeUsed<ReportDispersal> {
-            event.maybe_use_in(|event| {
-                self.dispersal_buffer[rust_cuda::device::utils::index() * self.max_events + self.event_counter] =
-                    Some(event.clone());
+        dispersal(&mut self, event: Unused) -> Used {
+            event.use_in(|event| {
+                if ReportDispersal::VALUE {
+                    self.dispersal_buffer[rust_cuda::device::utils::index() * self.max_events + self.event_counter] = Some(event.clone());
+                } else {
+                    // Note: Using this cache avoids the use of local storage
+                    self.dispersal_buffer[0] = Some(event.clone());
+                }
 
                 self.event_counter += 1;
             })
