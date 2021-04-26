@@ -240,7 +240,8 @@ impl TryFrom<InMemoryArgsRaw> for InMemoryArgs {
             &raw.dispersal_map
         );
 
-        let dispersal_map = crate::maps::load_dispersal_map(&raw.dispersal_map, raw.strict_load)?;
+        let mut dispersal_map =
+            crate::maps::load_dispersal_map(&raw.dispersal_map, raw.loading_mode)?;
 
         info!(
             "Successfully loaded the dispersal map {:?} with dimensions {}x{} [cols x rows].",
@@ -255,7 +256,7 @@ impl TryFrom<InMemoryArgsRaw> for InMemoryArgs {
         );
 
         let habitat_map =
-            crate::maps::load_habitat_map(&raw.habitat_map, &dispersal_map, raw.strict_load)?;
+            crate::maps::load_habitat_map(&raw.habitat_map, &mut dispersal_map, raw.loading_mode)?;
 
         info!(
             "Successfully loaded the habitat map {:?} with dimensions {}x{} [cols x rows].",
@@ -271,6 +272,19 @@ impl TryFrom<InMemoryArgsRaw> for InMemoryArgs {
     }
 }
 
+#[derive(Copy, Clone, Debug, Deserialize)]
+pub enum MapLoadingMode {
+    FixMe,
+    OffByOne,
+    Strict,
+}
+
+impl Default for MapLoadingMode {
+    fn default() -> Self {
+        Self::OffByOne
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
 #[serde(rename = "SpatiallyExplicit")]
@@ -283,8 +297,8 @@ struct InMemoryArgsRaw {
     dispersal_map: PathBuf,
 
     #[serde(default)]
-    #[serde(alias = "strict")]
-    strict_load: bool,
+    #[serde(alias = "mode")]
+    loading_mode: MapLoadingMode,
 }
 
 #[derive(Debug, Deserialize)]
