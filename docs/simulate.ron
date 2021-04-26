@@ -332,9 +332,17 @@
           /* file path to a (WxH x WxH) TIFF file storing grayscale f64 dispersal weights
            * the ith row of the image stores dispersal from the habitat cell (i % W, i / W) */
           dispersal: (PathBuf),
-          /* if true, does NOT fix off-by-one discrepancies between the habitat and dispersal maps
-           * optional, default = false */
-          strict: (bool),
+          /* selection of the map loading mode
+           * optional, default = OffByOne */
+          mode: (
+              /* Fixes GDAL no-data value, habitat 0/1 rounding errors
+               *  and dispersal from/to non-habitat */
+            | FixMe
+              /* Fixes GDAL no-data value and habitat 0/1 rounding errors */
+            | OffByOne
+              /* Does not fix any habitat-dispersal discrepancies */
+            | Strict
+          ),
       )
         /* non-spatial scenario with homogeneous dispersal and a community size of
          *  (area.0 * area.1 * deme) */
