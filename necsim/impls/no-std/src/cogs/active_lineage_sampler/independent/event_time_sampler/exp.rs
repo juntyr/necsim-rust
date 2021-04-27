@@ -6,6 +6,9 @@ use necsim_core::{
 
 use super::EventTimeSampler;
 
+// 2^64 / PHI
+const INV_PHI: u64 = 0x9e37_79b9_7f4a_7c15_u64;
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
@@ -46,18 +49,18 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
             floor(event_time / self.delta_t) as u64,
         );
 
-        let mut sub_index: u64 = u64::MAX;
+        let mut sub_index: u64 = 0;
 
         loop {
             event_time += rng.sample_exponential(lambda);
 
-            sub_index >>= 1;
+            sub_index += INV_PHI;
 
             // The time slice is exclusive at time_slice_end
             if event_time >= time_slice_end {
                 event_time = time_slice_end;
                 time_slice_end = event_time + self.delta_t;
-                sub_index = u64::MAX;
+                sub_index = 0;
 
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 rng.prime_with_habitat(

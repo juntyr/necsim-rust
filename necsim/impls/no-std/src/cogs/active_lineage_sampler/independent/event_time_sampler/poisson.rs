@@ -6,6 +6,9 @@ use necsim_core::{
 
 use super::EventTimeSampler;
 
+// 2^64 / PHI
+const INV_PHI: u64 = 0x9e37_79b9_7f4a_7c15_u64;
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
@@ -42,16 +45,16 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
         let mut time_step = floor(time / self.delta_t) as u64;
 
         let (event_time, event_index) = loop {
-            rng.prime_with_habitat(habitat, indexed_location, time_step << 8);
+            rng.prime_with_habitat(habitat, indexed_location, time_step);
 
             // https://en.wikipedia.org/wiki/Poisson_distribution#cite_ref-Devroye1986_54-0
-            let mut x = 0_u8;
+            let mut x = 0_u32;
             let mut p = no_event_probability_per_step;
             let mut s = p;
 
             let u = rng.sample_uniform();
 
-            while x < 254 && u > s {
+            while u > s {
                 x += 1;
                 p *= lambda / f64::from(x);
                 s += p;
@@ -85,7 +88,7 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
         rng.prime_with_habitat(
             habitat,
             indexed_location,
-            (time_step << 8) | u64::from(event_index + 1),
+            time_step + INV_PHI.wrapping_mul(u64::from(event_index + 1)),
         );
 
         event_time
