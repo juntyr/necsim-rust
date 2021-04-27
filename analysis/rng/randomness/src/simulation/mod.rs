@@ -7,7 +7,7 @@ use necsim_core::{
 };
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::independent::{
-        event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
+        event_time_sampler::poisson::PoissonEventTimeSampler, IndependentActiveLineageSampler,
     },
     coalescence_sampler::independent::IndependentCoalescenceSampler,
     dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
@@ -52,7 +52,7 @@ pub struct SimulationRng<G: RngCore + PrimeableRng, const SIZE: u32> {
             NonSpatialDispersalSampler<InterceptingReporter<G>>,
             UniformTurnoverRate,
             UniformSpeciationProbability,
-            ExpEventTimeSampler,
+            PoissonEventTimeSampler,
         >,
     >,
 }
@@ -74,7 +74,7 @@ impl<G: RngCore + PrimeableRng, const SIZE: u32> RngCore for SimulationRng<G, SI
             .event_sampler(IndependentEventSampler::default())
             .immigration_entry(NeverImmigrationEntry::default())
             .active_lineage_sampler(IndependentActiveLineageSampler::empty(
-                ExpEventTimeSampler::new(1.0),
+                PoissonEventTimeSampler::new(1.0),
             ))
             .build();
 
