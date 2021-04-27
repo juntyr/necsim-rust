@@ -20,7 +20,7 @@ use necsim_core::{
 use necsim_impls_no_std::{
     cogs::{
         active_lineage_sampler::independent::{
-            event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
+            event_time_sampler::poisson::PoissonEventTimeSampler, IndependentActiveLineageSampler,
         },
         coalescence_sampler::independent::IndependentCoalescenceSampler,
         dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
@@ -117,7 +117,7 @@ impl<O: Scenario<WyHash>> Algorithm<O> for IndependentAlgorithm {
                 let event_sampler = IndependentEventSampler::default();
                 let immigration_entry = NeverImmigrationEntry::default();
                 let active_lineage_sampler = IndependentActiveLineageSampler::empty(
-                    ExpEventTimeSampler::new(args.delta_t.get()),
+                    PoissonEventTimeSampler::new(args.delta_t.get()),
                 );
 
                 let simulation = Simulation::builder()
@@ -162,7 +162,7 @@ impl<O: Scenario<WyHash>> Algorithm<O> for IndependentAlgorithm {
                 let event_sampler = IndependentEventSampler::default();
                 let immigration_entry = NeverImmigrationEntry::default();
                 let active_lineage_sampler = IndependentActiveLineageSampler::empty(
-                    ExpEventTimeSampler::new(args.delta_t.get()),
+                    PoissonEventTimeSampler::new(args.delta_t.get()),
                 );
 
                 let simulation = Simulation::builder()
@@ -213,7 +213,7 @@ impl<O: Scenario<WyHash>> Algorithm<O> for IndependentAlgorithm {
                 let event_sampler = IndependentEventSampler::default();
                 let immigration_entry = NeverImmigrationEntry::default();
                 let active_lineage_sampler = IndependentActiveLineageSampler::empty(
-                    ExpEventTimeSampler::new(args.delta_t.get()),
+                    PoissonEventTimeSampler::new(args.delta_t.get()),
                 );
 
                 let simulation = Simulation::builder()
@@ -264,7 +264,7 @@ impl<O: Scenario<WyHash>> Algorithm<O> for IndependentAlgorithm {
                 let event_sampler = IndependentEventSampler::default();
                 let immigration_entry = NeverImmigrationEntry::default();
                 let active_lineage_sampler = IndependentActiveLineageSampler::empty(
-                    ExpEventTimeSampler::new(args.delta_t.get()),
+                    PoissonEventTimeSampler::new(args.delta_t.get()),
                 );
 
                 let simulation = Simulation::builder()

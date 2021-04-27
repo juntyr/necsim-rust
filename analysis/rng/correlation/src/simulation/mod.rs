@@ -9,7 +9,7 @@ use necsim_core::{
 };
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::independent::{
-        event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
+        event_time_sampler::poisson::PoissonEventTimeSampler, IndependentActiveLineageSampler,
     },
     coalescence_sampler::independent::IndependentCoalescenceSampler,
     dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
@@ -54,7 +54,7 @@ pub struct CorrelationSimulationRng<G: RngCore + PrimeableRng, const SIGMA: f64>
             AlmostInfiniteNormalDispersalSampler<InterceptingReporter<G>>,
             UniformTurnoverRate,
             UniformSpeciationProbability,
-            ExpEventTimeSampler,
+            PoissonEventTimeSampler,
         >,
     >,
     other_rngs_lineages: VecDeque<(InterceptingReporter<G>, Lineage)>,
@@ -79,7 +79,7 @@ impl<G: RngCore<Seed: Clone> + PrimeableRng, const SIGMA: f64> RngCore
             .event_sampler(IndependentEventSampler::default())
             .immigration_entry(NeverImmigrationEntry::default())
             .active_lineage_sampler(IndependentActiveLineageSampler::empty(
-                ExpEventTimeSampler::new(1.0),
+                PoissonEventTimeSampler::new(1.0),
             ))
             .build();
 
