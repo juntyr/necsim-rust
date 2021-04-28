@@ -17,7 +17,7 @@ use necsim_impls_no_std::{
         speciation_probability::uniform::UniformSpeciationProbability,
         turnover_rate::uniform::UniformTurnoverRate,
     },
-    decomposition::equal_area::EqualAreaDecomposition,
+    decomposition::equal::EqualDecomposition,
 };
 
 use necsim_impls_std::cogs::dispersal_sampler::in_memory::error::InMemoryDispersalSamplerError;
@@ -50,7 +50,7 @@ impl<G: RngCore> ScenarioArguments for SpatiallyExplicitScenario<G> {
 }
 
 impl<G: RngCore> Scenario<G> for SpatiallyExplicitScenario<G> {
-    type Decomposition = EqualAreaDecomposition<Self::Habitat>;
+    type Decomposition = EqualDecomposition<Self::Habitat>;
     type DispersalSampler<D: DispersalSampler<Self::Habitat, G>> = D;
     type Error = InMemoryDispersalSamplerError;
     type Habitat = InMemoryHabitat;
@@ -121,7 +121,7 @@ impl<G: RngCore> Scenario<G> for SpatiallyExplicitScenario<G> {
         rank: u32,
         partitions: NonZeroU32,
     ) -> Self::Decomposition {
-        match EqualAreaDecomposition::new(habitat, rank, partitions) {
+        match EqualDecomposition::weight(habitat, rank, partitions) {
             Ok(decomposition) => decomposition,
             Err(decomposition) => {
                 warn!(

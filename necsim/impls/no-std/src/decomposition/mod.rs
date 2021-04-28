@@ -5,7 +5,7 @@ use necsim_core::{
     landscape::Location,
 };
 
-pub mod equal_area;
+pub mod equal;
 pub mod modulo;
 pub mod monolithic;
 pub mod radial;
