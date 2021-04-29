@@ -9,6 +9,7 @@ use std::{collections::VecDeque, hint::unreachable_unchecked};
 
 use arguments::{
     IndependentArguments, IsolatedParallelismMode, MonolithicParallelismMode, ParallelismMode,
+    ProbabilisticParallelismMode,
 };
 use necsim_core::{
     cogs::RngCore,
@@ -239,7 +240,9 @@ impl<O: Scenario<WyHash>> Algorithm<O> for IndependentAlgorithm {
                     local_partition,
                 ))
             },
-            ParallelismMode::Probabilistic => {
+            ParallelismMode::Probabilistic(ProbabilisticParallelismMode {
+                communication_probability,
+            }) => {
                 let decomposition = O::decompose(
                     scenario.habitat(),
                     local_partition.get_partition_rank(),
@@ -259,7 +262,7 @@ impl<O: Scenario<WyHash>> Algorithm<O> for IndependentAlgorithm {
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
                 let emigration_exit = IndependentEmigrationExit::new(
                     decomposition,
-                    ProbabilisticEmigrationChoice::default(),
+                    ProbabilisticEmigrationChoice::new(communication_probability),
                 );
                 let event_sampler = IndependentEventSampler::default();
                 let immigration_entry = NeverImmigrationEntry::default();

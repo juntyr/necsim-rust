@@ -1,25 +1,30 @@
 use necsim_core::{
     cogs::{Backup, Habitat},
-    intrinsics::{log2, round},
     landscape::IndexedLocation,
 };
+use necsim_core_bond::ZeroInclOneInclF64;
 
 use super::EmigrationChoice;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct ProbabilisticEmigrationChoice(());
+pub struct ProbabilisticEmigrationChoice {
+    probability: ZeroInclOneInclF64,
+}
 
-impl Default for ProbabilisticEmigrationChoice {
-    fn default() -> Self {
-        Self(())
+impl ProbabilisticEmigrationChoice {
+    #[must_use]
+    pub fn new(probability: ZeroInclOneInclF64) -> Self {
+        Self { probability }
     }
 }
 
 #[contract_trait]
 impl Backup for ProbabilisticEmigrationChoice {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(())
+        Self {
+            probability: self.probability,
+        }
     }
 }
 
@@ -31,16 +36,13 @@ impl<H: Habitat> EmigrationChoice<H> for ProbabilisticEmigrationChoice {
         time: f64,
         _habitat: &H,
     ) -> bool {
-        if time < 2.0_f64 {
-            return true;
-        }
-
         let hash = diffuse(time.to_bits());
 
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let time_log2 = round(log2(time)) as u64;
+        // http://prng.di.unimi.it -> Generating uniform doubles in the unit interval
+        #[allow(clippy::cast_precision_loss)]
+        let u01 = ((hash >> 11) as f64) * f64::from_bits(0x3CA0_0000_0000_0000_u64); // 0x1.0p-53
 
-        hash <= (u64::MAX / time_log2)
+        u01 <= self.probability.get()
     }
 }
 
