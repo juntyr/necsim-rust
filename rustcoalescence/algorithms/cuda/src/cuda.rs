@@ -10,12 +10,12 @@ use rust_cuda::host::CudaDropWrapper;
 use crate::info;
 
 #[allow(clippy::module_name_repetitions)]
-pub fn with_initialised_cuda<O, F: FnOnce() -> Result<O>>(inner: F) -> Result<O> {
+pub fn with_initialised_cuda<O, F: FnOnce() -> Result<O>>(device: u32, inner: F) -> Result<O> {
     // Initialize the CUDA API
     rustacuda::init(CudaFlags::empty())?;
 
     // Get the first device
-    let device = Device::get_device(0)?;
+    let device = Device::get_device(device)?;
 
     // Create a context associated to this device
     let context = CudaDropWrapper::from(Context::create_and_push(

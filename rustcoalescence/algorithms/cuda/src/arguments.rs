@@ -55,6 +55,7 @@ impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
 pub struct CudaArguments {
+    pub device: u32,
     pub ptx_jit: bool,
     pub delta_t: PositiveF64,
     pub block_size: u32,
@@ -84,6 +85,7 @@ impl<'de> DeserializeState<'de, Partition> for CudaArguments {
         };
 
         Ok(CudaArguments {
+            device: raw.device,
             ptx_jit: raw.ptx_jit,
             delta_t: raw.delta_t,
             block_size: raw.block_size,
@@ -99,6 +101,7 @@ impl<'de> DeserializeState<'de, Partition> for CudaArguments {
 #[serde(default, deny_unknown_fields)]
 #[serde(deserialize_state = "Partition")]
 pub struct CudaArgumentsRaw {
+    pub device: u32,
     pub ptx_jit: bool,
     pub delta_t: PositiveF64,
     pub block_size: u32,
@@ -112,6 +115,7 @@ pub struct CudaArgumentsRaw {
 impl Default for CudaArgumentsRaw {
     fn default() -> Self {
         Self {
+            device: 0_u32,
             ptx_jit: false,
             delta_t: PositiveF64::new(1.0_f64).unwrap(),
             block_size: 32_u32,

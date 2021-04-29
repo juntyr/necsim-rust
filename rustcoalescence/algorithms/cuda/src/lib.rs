@@ -154,7 +154,7 @@ where
             },
         };
 
-        with_initialised_cuda(|| {
+        with_initialised_cuda(args.device, || {
             let stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
 
             SimulationKernel::with_kernel(args.ptx_jit, |kernel| {
