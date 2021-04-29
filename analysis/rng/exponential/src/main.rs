@@ -3,12 +3,12 @@
 #[macro_use]
 extern crate contracts;
 
-use std::time::Instant;
+use std::{cell::UnsafeCell, time::Instant};
 
 use structopt::StructOpt;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, PrimeableRng, RngCore, TurnoverRate},
+    cogs::{Backup, Habitat, PrimeableRng, RngCore, RngSampler, TurnoverRate},
     landscape::{IndexedLocation, Location},
 };
 use necsim_impls_no_std::cogs::{
@@ -50,6 +50,9 @@ fn main() {
     let rng = WyHash::seed_from_u64(options.seed);
     let turnover_rate = UniformTurnoverRate {
         turnover_rate: options.lambda,
+        noise: UnsafeCell::new(WyHash::seed_from_u64(
+            options.seed.wrapping_add(0x9e37_79b9_7f4a_7c15_u64),
+        )),
     };
     let indexed_location = IndexedLocation::new(Location::new(0, 0), 0);
 
@@ -117,6 +120,7 @@ fn sample_exponential_inter_event_times<
 #[derive(Debug)]
 pub struct UniformTurnoverRate {
     turnover_rate: f64,
+    noise: UnsafeCell<WyHash>,
 }
 
 #[contract_trait]
@@ -124,6 +128,7 @@ impl Backup for UniformTurnoverRate {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             turnover_rate: self.turnover_rate,
+            noise: UnsafeCell::new(Clone::clone(&*self.noise.get())),
         }
     }
 }
@@ -133,6 +138,12 @@ impl<H: Habitat> TurnoverRate<H> for UniformTurnoverRate {
     #[must_use]
     #[inline]
     fn get_turnover_rate_at_location(&self, _location: &Location, _habitat: &H) -> f64 {
-        self.turnover_rate
+        // A small bit of white noise on top so the turnover rate is not constant
+        //  and cannot be optimised out in this test
+        let white_noise = unsafe { &mut *self.noise.get() }
+            .sample_2d_standard_normal()
+            .0;
+
+        self.turnover_rate + self.turnover_rate * 0.001 * white_noise
     }
 }
