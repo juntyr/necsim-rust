@@ -3,7 +3,7 @@ use std::num::{NonZeroU32, NonZeroU64};
 use serde::Deserialize;
 use serde_state::DeserializeState;
 
-use necsim_core_bond::{Partition, PositiveF64};
+use necsim_core_bond::{Partition, PositiveF64, ZeroInclOneInclF64};
 
 use necsim_impls_no_std::parallelisation::independent::{DedupCache, RelativeDedupCache};
 
@@ -21,13 +21,20 @@ pub struct IsolatedParallelismMode {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProbabilisticParallelismMode {
+    #[serde(alias = "communication")]
+    pub communication_probability: ZeroInclOneInclF64,
+}
+
+#[derive(Debug, Deserialize)]
 pub enum ParallelismMode {
     Monolithic(MonolithicParallelismMode),
     IsolatedIndividuals(IsolatedParallelismMode),
     IsolatedLandscape(IsolatedParallelismMode),
     Individuals,
     Landscape,
-    Probabilistic,
+    Probabilistic(ProbabilisticParallelismMode),
 }
 
 impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
@@ -52,7 +59,7 @@ impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
             },
             ParallelismMode::Individuals
             | ParallelismMode::Landscape
-            | ParallelismMode::Probabilistic
+            | ParallelismMode::Probabilistic(..)
                 if partition.partitions().get() == 1 =>
             {
                 Err(D::Error::custom(format!(
