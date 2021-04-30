@@ -179,6 +179,7 @@ fn main() -> ! {
         Command::new("cc")
             .arg("-c")
             .arg("-xc")
+            .arg("-fPIC")
             .arg("-o")
             .arg(kernel_lookup_c_obj_file.path())
             .arg(kernel_lookup_c_source_file.path())

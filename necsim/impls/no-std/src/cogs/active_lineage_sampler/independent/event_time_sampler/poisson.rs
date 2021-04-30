@@ -38,7 +38,8 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
     ) -> f64 {
         let lambda =
             turnover_rate.get_turnover_rate_at_location(indexed_location.location(), habitat);
-        let no_event_probability_per_step = exp(-lambda * self.delta_t);
+        let lambda_per_step = lambda * self.delta_t;
+        let no_event_probability_per_step = exp(-lambda_per_step);
 
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
@@ -56,7 +57,7 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
 
             while u > s {
                 x += 1;
-                p *= lambda / f64::from(x);
+                p *= lambda_per_step / f64::from(x);
                 s += p;
             }
 
