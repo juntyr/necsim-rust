@@ -50,6 +50,9 @@ impl RngCore for WyHash {
 impl PrimeableRng for WyHash {
     #[inline]
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
+        let location_index = seahash_diffuse(location_index);
+        let time_index = seahash_diffuse(time_index);
+
         // wyhash state repriming
         // https://docs.rs/wyhash/0.5.0/src/wyhash/functions.rs.html#67-70
         let hash = wymum(
@@ -63,11 +66,17 @@ impl PrimeableRng for WyHash {
 
 #[inline]
 #[allow(clippy::cast_possible_truncation)]
-fn wymum(a: u64, b: u64) -> u64 {
+fn wymum(mut a: u64, mut b: u64) -> u64 {
     // WyHash diffusion function
     // https://docs.rs/wyhash/0.5.0/src/wyhash/functions.rs.html#8-12
     let r = u128::from(a) * u128::from(b);
-    ((r >> 64) ^ r) as u64
+
+    // WyHash condom
+    // https://github.com/wangyi-fudan/wyhash/blob/master/wyhash.h#L57
+    a ^= r as u64;
+    b ^= (r >> 64) as u64;
+
+    a ^ b
 }
 
 #[inline]

@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{Habitat, HabitatPrimeableRng, PrimeableRng, RngSampler, TurnoverRate},
-    intrinsics::{exp, floor},
+    intrinsics::{exp, floor, sqrt},
     landscape::IndexedLocation,
 };
 
@@ -48,20 +48,31 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
         let (event_time, event_index) = loop {
             rng.prime_with_habitat(habitat, indexed_location, time_step);
 
-            // https://en.wikipedia.org/wiki/Poisson_distribution#cite_ref-Devroye1986_54-0
-            let mut x = 0_u32;
-            let mut p = no_event_probability_per_step;
-            let mut s = p;
+            let number_events_at_time_steps = if no_event_probability_per_step > 0.0_f64 {
+                // https://en.wikipedia.org/wiki/Poisson_distribution#cite_ref-Devroye1986_54-0
+                let mut poisson = 0_u32;
+                let mut prod = no_event_probability_per_step;
+                let mut acc = no_event_probability_per_step;
 
-            let u = rng.sample_uniform();
+                let u = rng.sample_uniform();
 
-            while u > s {
-                x += 1;
-                p *= lambda_per_step / f64::from(x);
-                s += p;
-            }
+                while u > acc && prod > 0.0_f64 {
+                    poisson += 1;
+                    prod *= lambda_per_step / f64::from(poisson);
+                    acc += prod;
+                }
 
-            let number_events_at_time_steps = x;
+                poisson
+            } else {
+                // Fallback in case no_event_probability_per_step underflows
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let normal_as_poisson = rng
+                    .sample_2d_normal(lambda_per_step, sqrt(lambda_per_step))
+                    .0
+                    .max(0.0_f64) as u32;
+
+                normal_as_poisson
+            };
 
             let mut next_event = None;
 
