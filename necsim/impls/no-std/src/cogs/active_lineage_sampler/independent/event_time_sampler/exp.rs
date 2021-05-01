@@ -39,15 +39,16 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
         let lambda =
             turnover_rate.get_turnover_rate_at_location(indexed_location.location(), habitat);
 
-        let mut event_time: f64 = floor(time / self.delta_t) * self.delta_t;
-        let mut time_slice_end: f64 = event_time + self.delta_t;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let mut time_step = floor(time / self.delta_t) as u64;
+
+        #[allow(clippy::cast_precision_loss)]
+        let mut event_time: f64 = (time_step as f64) * self.delta_t;
+        #[allow(clippy::cast_precision_loss)]
+        let mut time_slice_end: f64 = ((time_step + 1) as f64) * self.delta_t;
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        rng.prime_with_habitat(
-            habitat,
-            indexed_location,
-            floor(event_time / self.delta_t) as u64,
-        );
+        rng.prime_with_habitat(habitat, indexed_location, time_step);
 
         let mut sub_index: u64 = 0;
 
@@ -58,27 +59,21 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
 
             // The time slice is exclusive at time_slice_end
             if event_time >= time_slice_end {
-                event_time = time_slice_end;
-                time_slice_end = event_time + self.delta_t;
+                time_step += 1;
                 sub_index = 0;
 
-                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-                rng.prime_with_habitat(
-                    habitat,
-                    indexed_location,
-                    floor(event_time / self.delta_t) as u64,
-                );
+                event_time = time_slice_end;
+                #[allow(clippy::cast_precision_loss)]
+                let next_time_slice_end = ((time_step + 1) as f64) * self.delta_t;
+                time_slice_end = next_time_slice_end;
+
+                rng.prime_with_habitat(habitat, indexed_location, time_step);
             } else if event_time > time {
                 break;
             }
         }
 
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        rng.prime_with_habitat(
-            habitat,
-            indexed_location,
-            (floor(event_time / self.delta_t) as u64) + sub_index,
-        );
+        rng.prime_with_habitat(habitat, indexed_location, time_step + sub_index);
 
         event_time
     }
