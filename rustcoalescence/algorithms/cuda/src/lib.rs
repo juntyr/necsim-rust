@@ -32,7 +32,7 @@ use necsim_impls_no_std::{
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
         },
-        rng::fixedseahash::FixedSeaHash,
+        rng::wyhash::WyHash,
     },
     partitioning::LocalPartition,
 };
@@ -63,10 +63,10 @@ impl AlgorithmArguments for CudaAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<O: Scenario<CudaRng<FixedSeaHash>>> Algorithm<O> for CudaAlgorithm
+impl<O: Scenario<CudaRng<WyHash>>> Algorithm<O> for CudaAlgorithm
 where
     O::Habitat: RustToCuda,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<FixedSeaHash>>>:
+    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>:
         RustToCuda,
     O::TurnoverRate: RustToCuda,
     O::SpeciationProbability: RustToCuda,
@@ -74,7 +74,7 @@ where
     type Error = anyhow::Error;
     type LineageReference = GlobalLineageReference;
     type LineageStore = IndependentLineageStore<O::Habitat>;
-    type Rng = CudaRng<FixedSeaHash>;
+    type Rng = CudaRng<WyHash>;
 
     fn initialise_and_simulate<I: Iterator<Item = u64>, R: Reporter, P: LocalPartition<R>>(
         args: Self::Arguments,
@@ -110,9 +110,8 @@ where
         };
 
         let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-            scenario
-                .build::<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<FixedSeaHash>>>();
-        let rng = CudaRng::from(FixedSeaHash::seed_from_u64(seed));
+            scenario.build::<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>();
+        let rng = CudaRng::from(WyHash::seed_from_u64(seed));
         let lineage_store = IndependentLineageStore::default();
         let emigration_exit = NeverEmigrationExit::default();
         let coalescence_sampler = IndependentCoalescenceSampler::default();
