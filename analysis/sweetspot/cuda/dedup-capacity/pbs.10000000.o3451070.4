@@ -1,0 +1,121 @@
+INFO  Starting to load the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" ...
+INFO  Used GDAL no data value -99.0 ...
+INFO  Successfully loaded the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" with dimensions 11700x11700 [cols x rows].
+INFO  Starting to load the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" ...
+INFO  Used GDAL no data value 0 ...
+INFO  Successfully loaded the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" with dimensions 180x65 [cols x rows].
+INFO  Parsed simulation arguments:
+SimulateArgs {
+    common: CommonArgs {
+        speciation_probability_per_generation: ZeroExclOneInclF64(
+            0.0 < 0.000001 <= 1.0,
+        ),
+        sample_percentage: ZeroInclOneInclF64(
+            0.0 <= 0.00025 <= 1.0,
+        ),
+        seed: 4455945629601449672,
+        algorithm: Cuda(
+            CudaArguments {
+                device: 0,
+                ptx_jit: true,
+                delta_t: PositiveF64(
+                    0.0 < 1,
+                ),
+                block_size: 32,
+                grid_size: 256,
+                step_slice: 200,
+                dedup_cache: Absolute(
+                    AbsoluteDedupCache {
+                        capacity: 10000000,
+                    },
+                ),
+                parallelism_mode: Monolithic(
+                    MonolithicParallelismMode {
+                        event_slice: 1000000,
+                    },
+                ),
+            },
+        ),
+    },
+    event_log: None,
+    scenario: SpatiallyExplicit(
+        InMemoryArguments {
+            habitat_map: Array2D {
+                array: Box [ 0x7fff077f0d18; 11700 ],
+                num_rows: 65,
+                num_columns: 180,
+            },
+            dispersal_map: Array2D {
+                array: Box [ 0x7fff077f0d38; 136890000 ],
+                num_rows: 11700,
+                num_columns: 11700,
+            },
+        },
+    ),
+    reporters: ReportSpeciationIgnoreDispersalReportProgress(
+        ReporterPluginVec {
+            plugins: [
+                ExecutionTimeReporter {
+                    start_time: None,
+                    end_time: None,
+                },
+                BiodiversityReporter {
+                    biodiversity: 0,
+                },
+            ],
+        },
+    ),
+}
+INFO  The simulation will be run in monolithic mode.
+=========================== Context Resource Limits ============================
+StackSize: Ok(4096)
+PrintfFifoSize: Ok(3670016)
+MallocHeapSize: Ok(8388608)
+DeviceRuntimeSynchronizeDepth: Ok(2)
+DeviceRuntimePendingLaunchCount: Ok(2048)
+MaxL2FetchGranularity: Ok(0)
+================================================================================
+========================== Kernel Function Attributes ==========================
+MaxThreadsPerBlock: Ok(640)
+SharedMemorySizeBytes: Ok(0)
+ConstSizeBytes: Ok(0)
+LocalSizeBytes: Ok(0)
+NumRegisters: Ok(90)
+PtxVersion: Ok(35)
+BinaryVersion: Ok(60)
+CacheModeCa: Ok(0)
+================================================================================
+========================== Kernel Function Attributes ==========================
+MaxThreadsPerBlock: Ok(1024)
+SharedMemorySizeBytes: Ok(0)
+ConstSizeBytes: Ok(0)
+LocalSizeBytes: Ok(0)
+NumRegisters: Ok(60)
+PtxVersion: Ok(35)
+BinaryVersion: Ok(60)
+CacheModeCa: Ok(0)
+================================================================================
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation took:
+ - initialisation: 1.615499044s
+ - execution: 117.481877235s
+ - cleanup: 58.08277ms
+INFO  The simulation resulted in a biodiversity of 14569 unique species.
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation finished at time 23588362.288966 after 14877784904 steps.
+
+
+============================================
+
+        Job resource usage summary 
+
+                 Memory (GB)    NCPUs
+ Requested  :        24             4
+ Used       :         0 (peak)   0.99 (ave)
+
+============================================
