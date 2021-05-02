@@ -40,6 +40,8 @@ impl<
     #[must_use]
     #[inline]
     fn replace_active_lineage(&mut self, active_lineage: Option<Lineage>) -> Option<Lineage> {
+        self.next_event_time = None;
+
         // `core::mem::replace()` would be semantically better
         //  - but `clone()` does not spill to local memory
         let old_active_lineage = self.active_lineage.clone();

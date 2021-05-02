@@ -3,8 +3,9 @@ use std::ffi::CString;
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
-        SingularActiveLineageSampler, SpeciationProbability, SpeciationSample, TurnoverRate,
+        LineageReference, LineageStore, MinSpeciationTrackingEventSampler,
+        PeekableActiveLineageSampler, PrimeableRng, SingularActiveLineageSampler,
+        SpeciationProbability, SpeciationSample, TurnoverRate,
     },
     lineage::Lineage,
     reporter::boolean::Boolean,
@@ -46,7 +47,9 @@ impl<
         N: SpeciationProbability<H> + RustToCuda,
         E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
         I: ImmigrationEntry + RustToCuda,
-        A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
+        A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+            + PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+            + RustToCuda,
         ReportSpeciation: Boolean,
         ReportDispersal: Boolean,
     >
@@ -84,9 +87,13 @@ impl<
         min_spec_sample_buffer_ptr: &mut HostDeviceBoxMut<
             <ValueBuffer<SpeciationSample> as RustToCuda>::CudaRepresentation,
         >,
+        next_event_time_buffer_ptr: &mut HostDeviceBoxMut<
+            <ValueBuffer<f64> as RustToCuda>::CudaRepresentation,
+        >,
         total_time_max: &mut DeviceBox<u64>,
         total_steps_sum: &mut DeviceBox<u64>,
         max_steps: u64,
+        max_next_event_time: f64,
     ) -> CudaResult<()> {
         if self.ptx_jit {
             let compiler = &mut *self.compiler;
@@ -137,7 +144,8 @@ impl<
             >>>(
                 simulation_ptr.for_device(), task_list_ptr.for_device(),
                 event_buffer_ptr.for_device(), min_spec_sample_buffer_ptr.for_device(),
-                DeviceBoxMut::from(total_time_max), DeviceBoxMut::from(total_steps_sum), max_steps
+                next_event_time_buffer_ptr.for_device(), DeviceBoxMut::from(total_time_max),
+                DeviceBoxMut::from(total_steps_sum), max_steps, max_next_event_time
             )
         )?;
 

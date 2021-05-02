@@ -17,8 +17,9 @@ use core::sync::atomic::{AtomicU64, Ordering};
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
-        SingularActiveLineageSampler, SpeciationProbability, SpeciationSample, TurnoverRate,
+        LineageReference, LineageStore, MinSpeciationTrackingEventSampler,
+        PeekableActiveLineageSampler, PrimeableRng, SingularActiveLineageSampler,
+        SpeciationProbability, SpeciationSample, TurnoverRate,
     },
     lineage::Lineage,
     reporter::boolean::Boolean,
@@ -74,18 +75,22 @@ pub unsafe extern "ptx-kernel" fn simulate(
     task_list_any: AnyDeviceBoxMut,
     event_buffer_any: AnyDeviceBoxMut,
     min_spec_sample_buffer_any: AnyDeviceBoxMut,
+    next_event_time_buffer_any: AnyDeviceBoxMut,
     total_time_max: AnyDeviceBoxMut,
     total_steps_sum: AnyDeviceBoxMut,
     max_steps: u64,
+    max_next_event_time: f64,
 ) {
     specialise!(simulate_generic)(
         simulation_any.into(),
         task_list_any.into(),
         event_buffer_any.into(),
         min_spec_sample_buffer_any.into(),
+        next_event_time_buffer_any.into(),
         total_time_max.into(),
         total_steps_sum.into(),
         max_steps,
+        max_next_event_time,
     )
 }
 
@@ -102,7 +107,9 @@ unsafe fn simulate_generic<
     N: SpeciationProbability<H> + RustToCuda,
     E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
     I: ImmigrationEntry + RustToCuda,
-    A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
+    A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+        + PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+        + RustToCuda,
     ReportSpeciation: Boolean,
     ReportDispersal: Boolean,
 >(
@@ -116,14 +123,19 @@ unsafe fn simulate_generic<
     min_spec_sample_buffer_cuda_repr: DeviceBoxMut<
         <ValueBuffer<SpeciationSample> as RustToCuda>::CudaRepresentation,
     >,
+    next_event_time_buffer_cuda_repr: DeviceBoxMut<
+        <ValueBuffer<f64> as RustToCuda>::CudaRepresentation,
+    >,
     mut total_time_max: DeviceBoxMut<u64>,
     mut total_steps_sum: DeviceBoxMut<u64>,
     max_steps: u64,
+    max_next_event_time: f64,
 ) {
     PtxJITConstLoad!([0] => simulation_cuda_repr.as_ref());
     PtxJITConstLoad!([1] => task_list_cuda_repr.as_ref());
     PtxJITConstLoad!([2] => event_buffer_cuda_repr.as_ref());
     PtxJITConstLoad!([3] => min_spec_sample_buffer_cuda_repr.as_ref());
+    PtxJITConstLoad!([4] => next_event_time_buffer_cuda_repr.as_ref());
 
     let total_time_max = AtomicU64::from_mut(total_time_max.as_mut());
     let total_steps_sum = AtomicU64::from_mut(total_steps_sum.as_mut());
@@ -148,8 +160,26 @@ unsafe fn simulate_generic<
                                         .event_sampler_mut()
                                         .replace_min_speciation(min_spec_sample);
 
-                                    let (time, steps) = simulation
-                                        .simulate_incremental_for(max_steps, event_buffer_reporter);
+                                    let (time, steps) = simulation.simulate_incremental_early_stop(
+                                        |simulation, steps| {
+                                            steps >= max_steps
+                                                || simulation
+                                                    .peek_time_of_next_event()
+                                                    .map_or(true, |next_time| {
+                                                        next_time >= max_next_event_time
+                                                    })
+                                        },
+                                        event_buffer_reporter,
+                                    );
+
+                                    ValueBuffer::with_borrow_from_rust_mut(
+                                        next_event_time_buffer_cuda_repr,
+                                        |next_event_time_buffer| {
+                                            next_event_time_buffer.with_value_for_core(|_| {
+                                                simulation.peek_time_of_next_event()
+                                            })
+                                        },
+                                    );
 
                                     if steps > 0 {
                                         total_time_max.fetch_max(time.to_bits(), Ordering::Relaxed);

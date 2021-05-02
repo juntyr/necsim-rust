@@ -95,7 +95,8 @@ impl<
 
         // The next event time must be calculated before the next active lineage is
         //  popped
-        let optional_next_event_time = self.peek_time_of_next_event(rng);
+        let optional_next_event_time =
+            self.peek_time_of_next_event(&simulation.habitat, &simulation.turnover_rate, rng);
 
         let (next_event_time, last_active_lineage_reference) = match (
             optional_next_event_time,
@@ -272,6 +273,8 @@ impl<
 {
     fn peek_time_of_next_event(
         &mut self,
+        _habitat: &H,
+        _turnover_rate: &UniformTurnoverRate,
         rng: &mut G,
     ) -> Result<f64, EmptyActiveLineageSamplerError> {
         use necsim_core::cogs::RngSampler;
@@ -279,7 +282,7 @@ impl<
         if self.next_event_time.is_none() && !self.active_lineage_references.is_empty() {
             // Assumption: This method is called before the next active lineage is popped
             #[allow(clippy::cast_precision_loss)]
-            let lambda = UniformTurnoverRate::get_uniform_turnover_rate_at_location()
+            let lambda = UniformTurnoverRate::get_uniform_turnover_rate()
                 * (self.number_active_lineages() as f64);
 
             let event_time = self.last_event_time + rng.sample_exponential(lambda);

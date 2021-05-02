@@ -86,8 +86,14 @@ pub fn simulate<
         .reduce_vote_continue(simulation.peek_time_of_next_event().is_some())
     {
         loop {
-            let (_, new_steps) = simulation.simulate_incremental_until_before(
-                global_safe_time + independent_time_slice.get(),
+            let next_safe_time = global_safe_time + independent_time_slice.get();
+
+            let (_, new_steps) = simulation.simulate_incremental_early_stop(
+                |simulation, _| {
+                    simulation
+                        .peek_time_of_next_event()
+                        .map_or(true, |next_time| next_time >= next_safe_time)
+                },
                 &mut proxy,
             );
             total_steps += new_steps;

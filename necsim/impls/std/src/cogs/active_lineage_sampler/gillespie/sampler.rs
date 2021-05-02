@@ -52,12 +52,8 @@ impl<
     ) -> Option<(R, IndexedLocation, f64, f64)> {
         use necsim_core::cogs::RngSampler;
 
-        let (chosen_active_location, chosen_event_time) = match self.active_locations.pop() {
-            Some((chosen_active_location, chosen_event_time)) => {
-                (chosen_active_location, chosen_event_time.into())
-            },
-            None => return None,
-        };
+        let (chosen_active_location, chosen_event_time) = self.active_locations.pop()?;
+        let chosen_event_time = chosen_event_time.into();
 
         let unique_event_time: f64 = if chosen_event_time > self.last_event_time {
             chosen_event_time
@@ -216,6 +212,8 @@ impl<
 {
     fn peek_time_of_next_event(
         &mut self,
+        _habitat: &H,
+        _turnover_rate: &T,
         _rng: &mut G,
     ) -> Result<f64, EmptyActiveLineageSamplerError> {
         self.active_locations

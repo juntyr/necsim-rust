@@ -20,8 +20,9 @@ use rustacuda_core::DeviceCopy;
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
-        SingularActiveLineageSampler, SpeciationProbability, TurnoverRate,
+        LineageReference, LineageStore, MinSpeciationTrackingEventSampler,
+        PeekableActiveLineageSampler, PrimeableRng, SingularActiveLineageSampler,
+        SpeciationProbability, TurnoverRate,
     },
     event::{PackedEvent, TypedEvent},
     lineage::Lineage,
@@ -52,7 +53,9 @@ pub fn simulate<
     N: SpeciationProbability<H> + RustToCuda,
     E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
     I: ImmigrationEntry + RustToCuda,
-    A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
+    A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+        + PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+        + RustToCuda,
     P: Reporter,
     L: LocalPartition<P>,
 >(
@@ -102,8 +105,8 @@ pub fn simulate<
     )?)?;
     let mut min_spec_sample_buffer =
         ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
-
-    let mut duplicate_individuals = bitvec::bitbox![0; min_spec_sample_buffer.len()];
+    let mut next_event_time_buffer =
+        ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
 
     let mut kernel = kernel
         .with_dimensions(grid_size, block_size, 0_u32)
@@ -153,12 +156,10 @@ pub fn simulate<
                         *task = slow_lineages.pop_front();
                     }
 
-                    // Reset the individual duplication check bitmask
-                    duplicate_individuals.set_all(false);
-
                     // Move the task list, event buffer and min speciation sample buffer to CUDA
                     let mut event_buffer_cuda = event_buffer.move_to_cuda()?;
                     let mut min_spec_sample_buffer_cuda = min_spec_sample_buffer.move_to_cuda()?;
+                    let mut next_event_time_buffer_cuda = next_event_time_buffer.move_to_cuda()?;
                     let mut task_list_cuda = task_list.move_to_cuda()?;
 
                     // Launching kernels is unsafe since Rust cannot
@@ -170,29 +171,35 @@ pub fn simulate<
                             &mut task_list_cuda.as_mut(),
                             &mut event_buffer_cuda.as_mut(),
                             &mut min_spec_sample_buffer_cuda.as_mut(),
+                            &mut next_event_time_buffer_cuda.as_mut(),
                             &mut total_time_max,
                             &mut total_steps_sum,
                             step_slice.get(),
+                            level_time,
                         )?;
                     }
 
                     min_spec_sample_buffer = min_spec_sample_buffer_cuda.move_to_host()?;
+                    next_event_time_buffer = next_event_time_buffer_cuda.move_to_host()?;
                     task_list = task_list_cuda.move_to_host()?;
                     event_buffer = event_buffer_cuda.move_to_host()?;
 
                     // Fetch the completion of the tasks
-                    for (i, spec_sample) in min_spec_sample_buffer.iter_mut().enumerate() {
-                        if let Some(spec_sample) = spec_sample.take() {
-                            duplicate_individuals.set(i, !min_spec_samples.insert(spec_sample));
-                        }
-                    }
+                    for ((spec_sample, next_event_time), task) in min_spec_sample_buffer
+                        .iter_mut()
+                        .zip(next_event_time_buffer.iter_mut())
+                        .zip(task_list.iter_mut())
+                    {
+                        let duplicate_individual = spec_sample
+                            .take()
+                            .map_or(false, |spec_sample| !min_spec_samples.insert(spec_sample));
 
-                    // Fetch the completion of the tasks
-                    for (i, task) in task_list.iter_mut().enumerate() {
-                        if let Some(task) = task.take() {
-                            if task.is_active() && !duplicate_individuals[i] {
+                        if let (Some(task), Some(next_event_time)) =
+                            (task.take(), next_event_time.take())
+                        {
+                            if !duplicate_individual {
                                 // Reclassify lineages as either slow (still below water) or fast
-                                if task.last_event_time() < level_time {
+                                if next_event_time < level_time {
                                     slow_lineages.push_back(task);
                                 } else {
                                     fast_lineages.push_back(task);
