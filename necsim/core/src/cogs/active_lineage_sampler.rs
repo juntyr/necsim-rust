@@ -181,6 +181,8 @@ pub trait PeekableActiveLineageSampler<
     }, "next event time is non-negative")]
     fn peek_time_of_next_event(
         &mut self,
+        habitat: &H,
+        turnover_rate: &T,
         rng: &mut G,
     ) -> Result<f64, EmptyActiveLineageSamplerError>;
 }
@@ -200,7 +202,12 @@ pub trait OptionallyPeekableActiveLineageSampler<
     I: ImmigrationEntry,
 >: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
 {
-    fn peek_optional_time_of_next_event(&mut self, rng: &mut G) -> Option<f64>;
+    fn peek_optional_time_of_next_event(
+        &mut self,
+        habitat: &H,
+        turnover_rate: &T,
+        rng: &mut G,
+    ) -> Option<f64>;
 }
 
 impl<
@@ -218,7 +225,12 @@ impl<
         A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
     > OptionallyPeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> for A
 {
-    default fn peek_optional_time_of_next_event(&mut self, _rng: &mut G) -> Option<f64> {
+    default fn peek_optional_time_of_next_event(
+        &mut self,
+        _habitat: &H,
+        _turnover_rate: &T,
+        _rng: &mut G,
+    ) -> Option<f64> {
         None
     }
 }
@@ -238,7 +250,13 @@ impl<
         A: PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
     > OptionallyPeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> for A
 {
-    fn peek_optional_time_of_next_event(&mut self, rng: &mut G) -> Option<f64> {
-        self.peek_time_of_next_event(rng).ok()
+    fn peek_optional_time_of_next_event(
+        &mut self,
+        habitat: &H,
+        turnover_rate: &T,
+        rng: &mut G,
+    ) -> Option<f64> {
+        self.peek_time_of_next_event(habitat, turnover_rate, rng)
+            .ok()
     }
 }

@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, EmigrationExit, Habitat, PrimeableRng,
-        SpeciationProbability, TurnoverRate,
+        ActiveLineageSampler, DispersalSampler, EmigrationExit, EmptyActiveLineageSamplerError,
+        Habitat, PeekableActiveLineageSampler, PrimeableRng, SpeciationProbability, TurnoverRate,
     },
     landscape::IndexedLocation,
     lineage::{GlobalLineageReference, Lineage},
@@ -73,23 +73,11 @@ impl<
         >,
         rng: &mut G,
     ) -> Option<(GlobalLineageReference, IndexedLocation, f64, f64)> {
-        let chosen_lineage = match self.active_lineage {
-            Some(ref mut chosen_lineage) => chosen_lineage,
-            None => return None,
-        };
-
-        // Check for extraneously simulated (inactive) lineages
-        let lineage_indexed_location = chosen_lineage.indexed_location()?;
-
         let next_event_time = self
-            .event_time_sampler
-            .next_event_time_at_indexed_location_after(
-                lineage_indexed_location,
-                chosen_lineage.last_event_time(),
-                &simulation.habitat,
-                rng,
-                &simulation.turnover_rate,
-            );
+            .peek_time_of_next_event(&simulation.habitat, &simulation.turnover_rate, rng)
+            .ok()?;
+
+        let chosen_lineage = self.active_lineage.as_mut()?;
 
         let (lineage_indexed_location, prior_event_time) =
             unsafe { chosen_lineage.remove_from_location(next_event_time) };
@@ -154,5 +142,60 @@ impl<
     ) {
         // Ignoring this call is only valid because there will never be any
         //  dynamic immigration in the independent algorithm
+    }
+}
+
+#[contract_trait]
+impl<
+        H: Habitat,
+        G: PrimeableRng,
+        X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
+        D: DispersalSampler<H, G>,
+        T: TurnoverRate<H>,
+        N: SpeciationProbability<H>,
+        J: EventTimeSampler<H, G, T>,
+    >
+    PeekableActiveLineageSampler<
+        H,
+        G,
+        GlobalLineageReference,
+        IndependentLineageStore<H>,
+        X,
+        D,
+        IndependentCoalescenceSampler<H>,
+        T,
+        N,
+        IndependentEventSampler<H, G, X, D, T, N>,
+        NeverImmigrationEntry,
+    > for IndependentActiveLineageSampler<H, G, X, D, T, N, J>
+{
+    fn peek_time_of_next_event(
+        &mut self,
+        habitat: &H,
+        turnover_rate: &T,
+        rng: &mut G,
+    ) -> Result<f64, EmptyActiveLineageSamplerError> {
+        if self.next_event_time.is_none() {
+            if let Some(active_lineage) = &self.active_lineage {
+                // Check for extraneously simulated (inactive) lineages
+                let lineage_indexed_location = active_lineage
+                    .indexed_location()
+                    .ok_or(EmptyActiveLineageSamplerError)?;
+
+                let next_event_time = self
+                    .event_time_sampler
+                    .next_event_time_at_indexed_location_after(
+                        lineage_indexed_location,
+                        active_lineage.last_event_time(),
+                        habitat,
+                        rng,
+                        turnover_rate,
+                    );
+
+                self.next_event_time = Some(next_event_time);
+            }
+        }
+
+        self.next_event_time.ok_or(EmptyActiveLineageSamplerError)
     }
 }

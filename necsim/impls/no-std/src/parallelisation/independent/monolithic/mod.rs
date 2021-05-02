@@ -105,6 +105,8 @@ pub fn simulate<
         while !slow_lineages.is_empty()
             || simulation.active_lineage_sampler().number_active_lineages() > 0
         {
+            let previous_next_event_time = simulation.peek_time_of_next_event();
+
             let previous_task = simulation
                 .active_lineage_sampler_mut()
                 .replace_active_lineage(slow_lineages.pop_front());
@@ -114,21 +116,28 @@ pub fn simulate<
 
             if let Some(previous_speciation_sample) = previous_speciation_sample {
                 if min_spec_samples.insert(previous_speciation_sample) {
-                    if let Some(previous_task) = previous_task {
-                        if previous_task.is_active() {
-                            // Reclassify lineages as either slow (still below water) or fast
-                            if previous_task.last_event_time() < level_time {
-                                slow_lineages.push_back(previous_task);
-                            } else {
-                                fast_lineages.push_back(previous_task);
-                            }
+                    if let (Some(previous_task), Some(previous_next_event_time)) =
+                        (previous_task, previous_next_event_time)
+                    {
+                        // Reclassify lineages as either slow (still below water) or fast
+                        if previous_next_event_time < level_time {
+                            slow_lineages.push_back(previous_task);
+                        } else {
+                            fast_lineages.push_back(previous_task);
                         }
                     }
                 }
             }
 
-            let (new_time, new_steps) =
-                simulation.simulate_incremental_for(step_slice.get(), &mut reporter);
+            let (new_time, new_steps) = simulation.simulate_incremental_early_stop(
+                |simulation, steps| {
+                    steps >= step_slice.get()
+                        || simulation
+                            .peek_time_of_next_event()
+                            .map_or(true, |next_time| next_time >= level_time)
+                },
+                &mut reporter,
+            );
 
             total_steps += new_steps;
             max_time = max_time.max(new_time);

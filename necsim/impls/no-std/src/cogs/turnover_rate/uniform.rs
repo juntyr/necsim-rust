@@ -26,14 +26,14 @@ impl<H: Habitat> TurnoverRate<H> for UniformTurnoverRate {
     #[must_use]
     #[inline]
     fn get_turnover_rate_at_location(&self, _location: &Location, _habitat: &H) -> f64 {
-        Self::get_uniform_turnover_rate_at_location()
+        Self::get_uniform_turnover_rate()
     }
 }
 
 impl UniformTurnoverRate {
     #[must_use]
     #[inline]
-    pub fn get_uniform_turnover_rate_at_location() -> f64 {
+    pub fn get_uniform_turnover_rate() -> f64 {
         0.5_f64
     }
 }

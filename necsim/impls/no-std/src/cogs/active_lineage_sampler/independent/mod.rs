@@ -37,6 +37,7 @@ pub struct IndependentActiveLineageSampler<
     J: EventTimeSampler<H, G, T>,
 > {
     active_lineage: Option<Lineage>,
+    next_event_time: Option<f64>,
     event_time_sampler: J,
     marker: PhantomData<(H, G, X, D, T, N)>,
 }
@@ -55,6 +56,7 @@ impl<
     pub fn empty(event_time_sampler: J) -> Self {
         Self {
             active_lineage: None,
+            next_event_time: None,
             event_time_sampler,
             marker: PhantomData::<(H, G, X, D, T, N)>,
         }
@@ -75,6 +77,7 @@ impl<
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             active_lineage: self.active_lineage.clone(),
+            next_event_time: self.next_event_time,
             event_time_sampler: self.event_time_sampler.clone(),
             marker: PhantomData::<(H, G, X, D, T, N)>,
         }

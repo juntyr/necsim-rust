@@ -40,7 +40,7 @@ impl<
             .map(|migrating_lineage| migrating_lineage.event_time);
         let next_local_time = self
             .active_lineage_sampler
-            .peek_time_of_next_event(&mut self.rng)
+            .peek_time_of_next_event(&self.habitat, &self.turnover_rate, &mut self.rng)
             .ok();
 
         match (next_immigration_time, next_local_time) {
@@ -50,40 +50,6 @@ impl<
             (Some(next_event_time), _) | (_, Some(next_event_time)) => Some(next_event_time),
             (None, None) => None,
         }
-    }
-
-    #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
-    #[inline]
-    pub fn simulate_incremental_until_before<P: Reporter>(
-        &mut self,
-        max_time_exclusive: f64,
-        reporter: &mut P,
-    ) -> (f64, u64) {
-        self.simulate_incremental_early_stop(
-            |simulation, _| {
-                simulation
-                    .peek_time_of_next_event()
-                    .map_or(true, |next_time| next_time >= max_time_exclusive)
-            },
-            reporter,
-        )
-    }
-
-    #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
-    #[inline]
-    pub fn simulate_incremental_until<P: Reporter>(
-        &mut self,
-        max_time_inclusive: f64,
-        reporter: &mut P,
-    ) -> (f64, u64) {
-        self.simulate_incremental_early_stop(
-            |simulation, _| {
-                simulation
-                    .peek_time_of_next_event()
-                    .map_or(true, |next_time| next_time > max_time_inclusive)
-            },
-            reporter,
-        )
     }
 }
 
@@ -111,7 +77,7 @@ impl<
 
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
     #[inline]
-    fn simulate_incremental_early_stop<F: FnMut(&mut Self, u64) -> bool, P: Reporter>(
+    pub fn simulate_incremental_early_stop<F: FnMut(&mut Self, u64) -> bool, P: Reporter>(
         &mut self,
         mut early_stop: F,
         reporter: &mut P,
@@ -123,8 +89,12 @@ impl<
         while !early_stop(self, steps) {
             // Peek the time of the next local event
             let optional_next_event_time = self.with_mut_split_active_lineage_sampler_and_rng(
-                |active_lineage_sampler, _simulation, rng| {
-                    active_lineage_sampler.peek_optional_time_of_next_event(rng)
+                |active_lineage_sampler, simulation, rng| {
+                    active_lineage_sampler.peek_optional_time_of_next_event(
+                        &simulation.habitat,
+                        &simulation.turnover_rate,
+                        rng,
+                    )
                 },
             );
 
@@ -150,31 +120,6 @@ impl<
         }
 
         (self.active_lineage_sampler.get_last_event_time(), steps)
-    }
-
-    #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
-    #[inline]
-    pub fn simulate_incremental_for<P: Reporter>(
-        &mut self,
-        max_steps: u64,
-        reporter: &mut P,
-    ) -> (f64, u64) {
-        self.simulate_incremental_early_stop(|_, steps| steps >= max_steps, reporter)
-    }
-
-    #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
-    #[inline]
-    pub fn simulate_incremental_until_after<P: Reporter>(
-        &mut self,
-        min_time_inclusive: f64,
-        reporter: &mut P,
-    ) -> (f64, u64) {
-        self.simulate_incremental_early_stop(
-            |simulation, _| {
-                simulation.active_lineage_sampler().get_last_event_time() >= min_time_inclusive
-            },
-            reporter,
-        )
     }
 
     #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]

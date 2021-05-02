@@ -97,7 +97,7 @@ impl<G: RngCore + PrimeableRng, const SIZE: u32> RngCore for SimulationRng<G, SI
             }
 
             self.simulation
-                .simulate_incremental_for(256, &mut NullReporter);
+                .simulate_incremental_early_stop(|_, steps| steps >= 256, &mut NullReporter);
         }
     }
 }

@@ -75,8 +75,14 @@ pub fn simulate<
 
         // The partition with the next event gets to simulate just the next step
         if let Ok(next_global_time) = local_partition.reduce_vote_min_time(next_local_time) {
-            let (_, new_steps) = simulation
-                .simulate_incremental_until(next_global_time, local_partition.get_reporter());
+            let (_, new_steps) = simulation.simulate_incremental_early_stop(
+                |simulation, _| {
+                    simulation
+                        .peek_time_of_next_event()
+                        .map_or(true, |next_time| next_time > next_global_time)
+                },
+                local_partition.get_reporter(),
+            );
 
             total_steps += new_steps;
 

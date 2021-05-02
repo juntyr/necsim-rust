@@ -3,8 +3,9 @@ use std::marker::PhantomData;
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LineageReference, LineageStore, MinSpeciationTrackingEventSampler, PrimeableRng,
-        SingularActiveLineageSampler, SpeciationProbability, TurnoverRate,
+        LineageReference, LineageStore, MinSpeciationTrackingEventSampler,
+        PeekableActiveLineageSampler, PrimeableRng, SingularActiveLineageSampler,
+        SpeciationProbability, TurnoverRate,
     },
     reporter::boolean::Boolean,
 };
@@ -35,7 +36,9 @@ pub struct SimulationKernelWithDimensions<
     N: SpeciationProbability<H> + RustToCuda,
     E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
     I: ImmigrationEntry + RustToCuda,
-    A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
+    A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+        + PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+        + RustToCuda,
     ReportSpeciation: Boolean,
     ReportDispersal: Boolean,
 > {
@@ -77,7 +80,9 @@ impl<
         N: SpeciationProbability<H> + RustToCuda,
         E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
         I: ImmigrationEntry + RustToCuda,
-        A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
+        A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+            + PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+            + RustToCuda,
         ReportSpeciation: Boolean,
         ReportDispersal: Boolean,
     > SimulationKernel<'k, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>

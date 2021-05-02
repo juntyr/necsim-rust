@@ -130,7 +130,7 @@ impl<G: RngCore<Seed: Clone> + PrimeableRng, const SIGMA: f64> RngCore
             }
 
             self.simulation
-                .simulate_incremental_for(256, &mut NullReporter);
+                .simulate_incremental_early_stop(|_, steps| steps >= 256, &mut NullReporter);
         };
 
         let (mut next_rng, next_lineage) = self.other_rngs_lineages.pop_front().unwrap();
