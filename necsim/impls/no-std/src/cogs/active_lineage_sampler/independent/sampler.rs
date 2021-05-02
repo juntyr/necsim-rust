@@ -169,6 +169,7 @@ impl<
         NeverImmigrationEntry,
     > for IndependentActiveLineageSampler<H, G, X, D, T, N, J>
 {
+    #[inline]
     fn peek_time_of_next_event(
         &mut self,
         habitat: &H,
