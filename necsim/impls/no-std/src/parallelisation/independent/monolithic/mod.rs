@@ -114,17 +114,18 @@ pub fn simulate<
             let previous_speciation_sample =
                 simulation.event_sampler_mut().replace_min_speciation(None);
 
-            if let Some(previous_speciation_sample) = previous_speciation_sample {
-                if min_spec_samples.insert(previous_speciation_sample) {
-                    if let (Some(previous_task), Some(previous_next_event_time)) =
-                        (previous_task, previous_next_event_time)
-                    {
-                        // Reclassify lineages as either slow (still below water) or fast
-                        if previous_next_event_time < level_time {
-                            slow_lineages.push_back(previous_task);
-                        } else {
-                            fast_lineages.push_back(previous_task);
-                        }
+            if let (Some(previous_task), Some(previous_next_event_time)) =
+                (previous_task, previous_next_event_time)
+            {
+                let duplicate_individual = previous_speciation_sample
+                    .map_or(false, |spec_sample| !min_spec_samples.insert(spec_sample));
+
+                if !duplicate_individual {
+                    // Reclassify lineages as either slow (still below water) or fast
+                    if previous_next_event_time < level_time {
+                        slow_lineages.push_back(previous_task);
+                    } else {
+                        fast_lineages.push_back(previous_task);
                     }
                 }
             }
