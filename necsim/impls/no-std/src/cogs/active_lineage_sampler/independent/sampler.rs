@@ -76,6 +76,7 @@ impl<
         let next_event_time = self
             .peek_time_of_next_event(&simulation.habitat, &simulation.turnover_rate, rng)
             .ok()?;
+        self.next_event_time = None;
 
         let chosen_lineage = self.active_lineage.as_mut()?;
 
