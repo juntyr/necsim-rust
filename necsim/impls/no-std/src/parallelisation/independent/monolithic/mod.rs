@@ -8,7 +8,7 @@ use necsim_core::{
     },
     event::{PackedEvent, TypedEvent},
     lineage::{GlobalLineageReference, Lineage},
-    reporter::{used::Unused, Reporter},
+    reporter::{boolean::Boolean, used::Unused, Reporter},
     simulation::Simulation,
 };
 
@@ -31,7 +31,7 @@ use super::{reporter::IgnoreProgressReporterProxy, DedupCache};
 mod reporter;
 pub use reporter::WaterLevelReporter;
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_lines)]
 pub fn simulate<
     H: Habitat,
     G: PrimeableRng,
@@ -83,15 +83,38 @@ pub fn simulate<
 
     while !slow_lineages.is_empty() {
         // Calculate a new water-level time which all individuals should reach
-        let total_event_rate: f64 = slow_lineages
-            .iter()
-            .map(|lineage| {
-                simulation.turnover_rate().get_turnover_rate_at_location(
-                    unsafe { lineage.indexed_location().unwrap_unchecked() }.location(),
-                    simulation.habitat(),
-                )
-            })
-            .sum();
+        let total_event_rate: f64 = if R::ReportDispersal::VALUE {
+            // Full event rate lambda with speciation
+            slow_lineages
+                .iter()
+                .map(|lineage| {
+                    simulation.turnover_rate().get_turnover_rate_at_location(
+                        unsafe { lineage.indexed_location().unwrap_unchecked() }.location(),
+                        simulation.habitat(),
+                    )
+                })
+                .sum()
+        } else if R::ReportSpeciation::VALUE {
+            // Only speciation event rate lambda * nu
+            slow_lineages
+                .iter()
+                .map(|lineage| {
+                    let location =
+                        unsafe { lineage.indexed_location().unwrap_unchecked() }.location();
+
+                    simulation
+                        .turnover_rate()
+                        .get_turnover_rate_at_location(location, simulation.habitat())
+                        * simulation
+                            .speciation_probability()
+                            .get_speciation_probability_at_location(location, simulation.habitat())
+                })
+                .sum()
+        } else {
+            // No events produced -> no restriction
+            f64::INFINITY
+        };
+
         level_time += f64::from(event_slice.get()) / total_event_rate;
 
         // Move fast events below the new level into slow events
