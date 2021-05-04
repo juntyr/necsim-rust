@@ -26,7 +26,7 @@ use necsim_core::{
     },
     event::{PackedEvent, TypedEvent},
     lineage::Lineage,
-    reporter::{used::Unused, Reporter},
+    reporter::{boolean::Boolean, used::Unused, Reporter},
     simulation::Simulation,
 };
 
@@ -124,22 +124,42 @@ pub fn simulate<
 
     let cpu_habitat = simulation.habitat().backup();
     let cpu_turnover_rate = simulation.turnover_rate().backup();
+    let cpu_speciation_probability = simulation.speciation_probability().backup();
 
     // TODO: We should use async launches and callbacks to rotate between
     // simulation, event analysis etc.
     simulation
         .lend_to_cuda_mut(|mut simulation_cuda_repr| {
             while !slow_lineages.is_empty() {
-                // Calculate a new water-level time which all individuals should reach
-                let total_event_rate: f64 = slow_lineages
-                    .iter()
-                    .map(|lineage| {
-                        cpu_turnover_rate.get_turnover_rate_at_location(
-                            unsafe { lineage.indexed_location().unwrap_unchecked() }.location(),
-                            &cpu_habitat,
-                        )
-                    })
-                    .sum();
+                let total_event_rate: f64 = if P::ReportDispersal::VALUE {
+                    // Full event rate lambda with speciation
+                    slow_lineages
+                        .iter()
+                        .map(|lineage| {
+                            cpu_turnover_rate.get_turnover_rate_at_location(
+                                unsafe { lineage.indexed_location().unwrap_unchecked() }.location(),
+                                &cpu_habitat,
+                            )
+                        })
+                        .sum()
+                } else if P::ReportSpeciation::VALUE {
+                    // Only speciation event rate lambda * nu
+                    slow_lineages
+                        .iter()
+                        .map(|lineage| {
+                            let location =
+                                unsafe { lineage.indexed_location().unwrap_unchecked() }.location();
+
+                            cpu_turnover_rate.get_turnover_rate_at_location(location, &cpu_habitat)
+                                * cpu_speciation_probability
+                                    .get_speciation_probability_at_location(location, &cpu_habitat)
+                        })
+                        .sum()
+                } else {
+                    // No events produced -> no restriction
+                    f64::INFINITY
+                };
+
                 level_time += f64::from(event_slice.get()) / total_event_rate;
 
                 // Move fast events below the new level into slow events
