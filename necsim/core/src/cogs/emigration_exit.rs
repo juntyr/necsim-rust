@@ -1,3 +1,5 @@
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
+
 use crate::{
     cogs::{Habitat, LineageReference, LineageStore, RngCore},
     landscape::{IndexedLocation, Location},
@@ -14,7 +16,6 @@ pub trait EmigrationExit<H: Habitat, G: RngCore, R: LineageReference<H>, S: Line
     crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
-    #[debug_requires(event_time >= 0.0_f64, "event time is non-negative")]
     #[debug_ensures(match &ret {
         Some((
             ret_lineage_reference,
@@ -26,8 +27,8 @@ pub trait EmigrationExit<H: Habitat, G: RngCore, R: LineageReference<H>, S: Line
             ret_lineage_reference == &old(lineage_reference.clone()) &&
             ret_dispersal_origin == &old(dispersal_origin.clone()) &&
             ret_dispersal_target == &old(dispersal_target.clone()) &&
-            ret_prior_time.to_bits() == old(prior_time.to_bits()) &&
-            ret_event_time.to_bits() == old(event_time.to_bits())
+            ret_prior_time == &old(prior_time) &&
+            ret_event_time == &old(event_time)
         },
         None => true,
     }, "if ret is Some, it returns the input parameters unchanged")]
@@ -39,9 +40,9 @@ pub trait EmigrationExit<H: Habitat, G: RngCore, R: LineageReference<H>, S: Line
         lineage_reference: R,
         dispersal_origin: IndexedLocation,
         dispersal_target: Location,
-        prior_time: f64,
-        event_time: f64,
+        prior_time: NonNegativeF64,
+        event_time: PositiveF64,
         simulation: &mut PartialSimulation<H, G, R, S>,
         rng: &mut G,
-    ) -> Option<(R, IndexedLocation, Location, f64, f64)>;
+    ) -> Option<(R, IndexedLocation, Location, NonNegativeF64, PositiveF64)>;
 }

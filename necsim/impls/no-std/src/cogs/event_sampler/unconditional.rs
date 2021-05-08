@@ -10,6 +10,7 @@ use necsim_core::{
     landscape::IndexedLocation,
     simulation::partial::event_sampler::PartialSimulation,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 #[allow(clippy::module_name_repetitions, clippy::type_complexity)]
 #[derive(Debug)]
@@ -86,8 +87,8 @@ impl<
         &mut self,
         lineage_reference: R,
         indexed_location: IndexedLocation,
-        prior_time: f64,
-        event_time: f64,
+        prior_time: NonNegativeF64,
+        event_time: PositiveF64,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N>,
         rng: &mut G,
     ) -> Option<PackedEvent> {

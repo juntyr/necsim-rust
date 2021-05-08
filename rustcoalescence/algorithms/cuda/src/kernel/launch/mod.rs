@@ -12,6 +12,7 @@ use necsim_core::{
     simulation::Simulation,
 };
 
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
 use rustacuda::{error::CudaResult, function::Function, memory::DeviceBox, module::Module};
@@ -88,12 +89,12 @@ impl<
             <ValueBuffer<SpeciationSample> as RustToCuda>::CudaRepresentation,
         >,
         next_event_time_buffer_ptr: &mut HostDeviceBoxMut<
-            <ValueBuffer<f64> as RustToCuda>::CudaRepresentation,
+            <ValueBuffer<PositiveF64> as RustToCuda>::CudaRepresentation,
         >,
         total_time_max: &mut DeviceBox<u64>,
         total_steps_sum: &mut DeviceBox<u64>,
         max_steps: u64,
-        max_next_event_time: f64,
+        max_next_event_time: NonNegativeF64,
     ) -> CudaResult<()> {
         if self.ptx_jit {
             let compiler = &mut *self.compiler;

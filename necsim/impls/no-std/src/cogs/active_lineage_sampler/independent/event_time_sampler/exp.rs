@@ -3,6 +3,7 @@ use necsim_core::{
     intrinsics::floor,
     landscape::IndexedLocation,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use super::EventTimeSampler;
 
@@ -13,12 +14,12 @@ const INV_PHI: u64 = 0x9e37_79b9_7f4a_7c15_u64;
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 pub struct ExpEventTimeSampler {
-    delta_t: f64,
+    delta_t: PositiveF64,
 }
 
 impl ExpEventTimeSampler {
-    #[debug_requires(delta_t > 0.0_f64, "delta_t is positive")]
-    pub fn new(delta_t: f64) -> Self {
+    #[must_use]
+    pub fn new(delta_t: PositiveF64) -> Self {
         Self { delta_t }
     }
 }
@@ -31,21 +32,28 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
     fn next_event_time_at_indexed_location_weakly_after(
         &self,
         indexed_location: &IndexedLocation,
-        time: f64,
+        time: NonNegativeF64,
         habitat: &H,
         rng: &mut G,
         turnover_rate: &T,
-    ) -> f64 {
-        let lambda =
-            turnover_rate.get_turnover_rate_at_location(indexed_location.location(), habitat);
+    ) -> NonNegativeF64 {
+        // Safety: The turnover rate is >= 0.0 and must actually be > 0.0 because
+        //  * `indexed_location` is habitable by this method's precondition
+        //  * Therefore, `turnover_rate` must return a positive value by its
+        //    postcondition
+        let lambda = unsafe {
+            PositiveF64::new_unchecked(
+                turnover_rate
+                    .get_turnover_rate_at_location(indexed_location.location(), habitat)
+                    .get(),
+            )
+        };
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let mut time_step = floor(time / self.delta_t) as u64;
+        let mut time_step = floor(time.get() / self.delta_t.get()) as u64;
 
-        #[allow(clippy::cast_precision_loss)]
-        let mut event_time: f64 = (time_step as f64) * self.delta_t;
-        #[allow(clippy::cast_precision_loss)]
-        let mut time_slice_end: f64 = ((time_step + 1) as f64) * self.delta_t;
+        let mut event_time = NonNegativeF64::from(time_step) * self.delta_t;
+        let mut time_slice_end = NonNegativeF64::from(time_step + 1) * self.delta_t;
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         rng.prime_with_habitat(habitat, indexed_location, time_step);
@@ -63,9 +71,7 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
                 sub_index = 0;
 
                 event_time = time_slice_end;
-                #[allow(clippy::cast_precision_loss)]
-                let next_time_slice_end = ((time_step + 1) as f64) * self.delta_t;
-                time_slice_end = next_time_slice_end;
+                time_slice_end = NonNegativeF64::from(time_step + 1) * self.delta_t;
 
                 rng.prime_with_habitat(habitat, indexed_location, time_step);
             } else if event_time > time {

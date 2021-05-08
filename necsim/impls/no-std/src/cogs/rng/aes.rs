@@ -1,7 +1,7 @@
 use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
 
-use aes_soft::{
-    cipher::{generic_array::GenericArray, BlockCipher, NewBlockCipher},
+use aes::{
+    cipher::{generic_array::GenericArray, BlockEncrypt, NewBlockCipher},
     Aes128,
 };
 

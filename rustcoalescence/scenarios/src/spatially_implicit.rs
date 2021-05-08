@@ -69,11 +69,10 @@ impl<G: RngCore> Scenario<G> for SpatiallyImplicitScenario<G> {
             args.meta_deme,
         );
         let dispersal_sampler =
-            SpatiallyImplicitDispersalSampler::new(args.migration_probability_per_generation.get());
+            SpatiallyImplicitDispersalSampler::new(args.migration_probability_per_generation);
         let turnover_rate = UniformTurnoverRate::default();
-        let speciation_probability = SpatiallyImplicitSpeciationProbability::new(
-            speciation_probability_per_generation.get(),
-        );
+        let speciation_probability =
+            SpatiallyImplicitSpeciationProbability::new(speciation_probability_per_generation);
 
         Ok(Self {
             habitat,

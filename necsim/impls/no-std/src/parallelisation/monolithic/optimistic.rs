@@ -10,7 +10,7 @@ use necsim_core::{
     reporter::Reporter,
     simulation::Simulation,
 };
-use necsim_core_bond::PositiveF64;
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::{
     cogs::{
@@ -67,11 +67,11 @@ pub fn simulate<
     >,
     independent_time_slice: PositiveF64,
     local_partition: &mut L,
-) -> (f64, u64) {
+) -> (NonNegativeF64, u64) {
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(simulation.get_balanced_remaining_work().0);
 
-    let mut global_safe_time = 0.0_f64;
+    let mut global_safe_time = NonNegativeF64::zero();
     let mut simulation_backup = simulation.backup();
 
     let mut last_immigrants: Vec<BackedUp<MigratingLineage>> = Vec::new();
@@ -86,7 +86,7 @@ pub fn simulate<
         .reduce_vote_continue(simulation.peek_time_of_next_event().is_some())
     {
         loop {
-            let next_safe_time = global_safe_time + independent_time_slice.get();
+            let next_safe_time = global_safe_time + independent_time_slice;
 
             let (_, new_steps) = simulation.simulate_incremental_early_stop(
                 |simulation, _| {
@@ -146,7 +146,7 @@ pub fn simulate<
         // Globally advance the simulation to the next safe point
         proxy.report_events();
         simulation_backup = simulation.backup();
-        global_safe_time += independent_time_slice.get();
+        global_safe_time += independent_time_slice.into();
     }
 
     proxy.local_partition().report_progress_sync(0_u64);

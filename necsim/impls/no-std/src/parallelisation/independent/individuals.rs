@@ -1,5 +1,6 @@
 use alloc::collections::VecDeque;
 use core::num::{NonZeroU64, Wrapping};
+use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::{
     cogs::{
@@ -56,7 +57,7 @@ pub fn simulate<
     dedup_cache: DedupCache,
     step_slice: NonZeroU64,
     local_partition: &mut P,
-) -> (f64, u64) {
+) -> (NonNegativeF64, u64) {
     let mut proxy = IgnoreProgressReporterProxy::from(local_partition);
     let mut min_spec_samples = dedup_cache.construct(lineages.len());
 
@@ -66,7 +67,7 @@ pub fn simulate<
     );
 
     let mut total_steps = 0_u64;
-    let mut max_time = 0.0_f64;
+    let mut max_time = NonNegativeF64::zero();
 
     while !lineages.is_empty()
         || simulation.active_lineage_sampler().number_active_lineages() > 0

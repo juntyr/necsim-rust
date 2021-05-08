@@ -58,7 +58,7 @@ impl<G: RngCore> Scenario<G> for NonSpatialScenario<G> {
         let dispersal_sampler = NonSpatialDispersalSampler::default();
         let turnover_rate = UniformTurnoverRate::default();
         let speciation_probability =
-            UniformSpeciationProbability::new(speciation_probability_per_generation.get());
+            UniformSpeciationProbability::new(speciation_probability_per_generation.into());
 
         Ok(Self {
             habitat,

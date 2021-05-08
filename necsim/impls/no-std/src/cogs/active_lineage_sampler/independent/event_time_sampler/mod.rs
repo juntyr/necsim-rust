@@ -1,9 +1,8 @@
-use float_next_after::NextAfter;
-
 use necsim_core::{
     cogs::{Habitat, PrimeableRng, TurnoverRate},
     landscape::IndexedLocation,
 };
+use necsim_core_bond::NonNegativeF64;
 
 pub mod exp;
 pub mod fixed;
@@ -16,42 +15,17 @@ pub mod poisson;
 pub trait EventTimeSampler<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>>:
     Clone + core::fmt::Debug
 {
-    #[debug_requires(time >= 0.0_f64, "event times must be non-negative")]
-    #[debug_ensures(ret > time, "the next event will happen after time")]
-    #[inline]
-    fn next_event_time_at_indexed_location_after(
-        &self,
-        indexed_location: &IndexedLocation,
-        time: f64,
-        habitat: &H,
-        rng: &mut G,
-        turnover_rate: &T,
-    ) -> f64 {
-        let next_event_time = self.next_event_time_at_indexed_location_weakly_after(
-            indexed_location,
-            time,
-            habitat,
-            rng,
-            turnover_rate,
-        );
-
-        let unique_next_event_time: f64 = if next_event_time > time {
-            next_event_time
-        } else {
-            time.next_after(f64::INFINITY)
-        };
-
-        unique_next_event_time
-    }
-
-    #[debug_requires(time >= 0.0_f64, "event times must be non-negative")]
+    #[debug_requires(
+        habitat.get_habitat_at_location(indexed_location.location()) > 0,
+        "indexed_location must be habitable"
+    )]
     #[debug_ensures(ret >= time, "the next event will happen weakly after time")]
     fn next_event_time_at_indexed_location_weakly_after(
         &self,
         indexed_location: &IndexedLocation,
-        time: f64,
+        time: NonNegativeF64,
         habitat: &H,
         rng: &mut G,
         turnover_rate: &T,
-    ) -> f64;
+    ) -> NonNegativeF64;
 }

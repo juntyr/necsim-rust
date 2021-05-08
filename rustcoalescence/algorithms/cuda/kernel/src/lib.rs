@@ -25,6 +25,7 @@ use necsim_core::{
     reporter::boolean::Boolean,
     simulation::Simulation,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
@@ -79,7 +80,7 @@ pub unsafe extern "ptx-kernel" fn simulate(
     total_time_max: AnyDeviceBoxMut,
     total_steps_sum: AnyDeviceBoxMut,
     max_steps: u64,
-    max_next_event_time: f64,
+    max_next_event_time: NonNegativeF64,
 ) {
     specialise!(simulate_generic)(
         simulation_any.into(),
@@ -124,12 +125,12 @@ unsafe fn simulate_generic<
         <ValueBuffer<SpeciationSample> as RustToCuda>::CudaRepresentation,
     >,
     next_event_time_buffer_cuda_repr: DeviceBoxMut<
-        <ValueBuffer<f64> as RustToCuda>::CudaRepresentation,
+        <ValueBuffer<PositiveF64> as RustToCuda>::CudaRepresentation,
     >,
     mut total_time_max: DeviceBoxMut<u64>,
     mut total_steps_sum: DeviceBoxMut<u64>,
     max_steps: u64,
-    max_next_event_time: f64,
+    max_next_event_time: NonNegativeF64,
 ) {
     PtxJITConstLoad!([0] => simulation_cuda_repr.as_ref());
     PtxJITConstLoad!([1] => task_list_cuda_repr.as_ref());
@@ -182,7 +183,8 @@ unsafe fn simulate_generic<
                                     );
 
                                     if steps > 0 {
-                                        total_time_max.fetch_max(time.to_bits(), Ordering::Relaxed);
+                                        total_time_max
+                                            .fetch_max(time.get().to_bits(), Ordering::Relaxed);
                                         total_steps_sum.fetch_add(steps, Ordering::Relaxed);
                                     }
 

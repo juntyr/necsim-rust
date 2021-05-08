@@ -1,4 +1,9 @@
-use core::{convert::TryFrom, fmt};
+use core::{
+    cmp::Ordering,
+    convert::TryFrom,
+    fmt,
+    hash::{Hash, Hasher},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -13,6 +18,8 @@ impl fmt::Display for ZeroExclOneInclF64Error {
 }
 
 #[derive(Copy, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
+#[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 #[repr(transparent)]
 #[serde(try_from = "f64")]
 pub struct ZeroExclOneInclF64(f64);
@@ -56,5 +63,43 @@ impl ZeroExclOneInclF64 {
     #[must_use]
     pub fn get(self) -> f64 {
         self.0
+    }
+}
+
+impl PartialEq for ZeroExclOneInclF64 {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq(&other.0)
+    }
+}
+
+impl Eq for ZeroExclOneInclF64 {}
+
+impl PartialOrd for ZeroExclOneInclF64 {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+
+impl Ord for ZeroExclOneInclF64 {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.total_cmp(&other.0)
+    }
+}
+
+impl Hash for ZeroExclOneInclF64 {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.to_bits().hash(state)
+    }
+}
+
+impl PartialEq<f64> for ZeroExclOneInclF64 {
+    fn eq(&self, other: &f64) -> bool {
+        self.0.eq(&other)
+    }
+}
+
+impl PartialOrd<f64> for ZeroExclOneInclF64 {
+    fn partial_cmp(&self, other: &f64) -> Option<Ordering> {
+        self.0.partial_cmp(&other)
     }
 }

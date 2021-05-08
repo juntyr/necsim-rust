@@ -9,6 +9,7 @@ use necsim_core::{
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
 };
+use necsim_core_bond::ZeroInclOneInclF64;
 
 use super::optional_coalescence;
 
@@ -89,13 +90,12 @@ impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>>
 
     #[must_use]
     #[debug_requires(habitat.get_habitat_at_location(location) > 0, "location is habitable")]
-    #[debug_ensures((0.0_f64..=1.0_f64).contains(&ret), "returns probability")]
     pub fn get_coalescence_probability_at_location(
         location: &Location,
         habitat: &H,
         lineage_store: &S,
         lineage_store_includes_self: bool,
-    ) -> f64 {
+    ) -> ZeroInclOneInclF64 {
         // If the lineage store includes self, the population must be decremented
         //  to avoid coalescence with the currently active lineage
 
@@ -106,6 +106,7 @@ impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>>
             - usize::from(lineage_store_includes_self)) as f64;
         let habitat = f64::from(habitat.get_habitat_at_location(location));
 
-        population / habitat
+        // Safety: Normalised probability in range [0.0; 1.0]
+        unsafe { ZeroInclOneInclF64::new_unchecked(population / habitat) }
     }
 }

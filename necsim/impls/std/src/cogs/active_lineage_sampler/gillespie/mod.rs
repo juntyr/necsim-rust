@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use priority_queue::PriorityQueue;
 
 use necsim_core::{
@@ -36,7 +37,7 @@ pub struct GillespieActiveLineageSampler<
 > {
     active_locations: PriorityQueue<Location, EventTime>,
     number_active_lineages: usize,
-    last_event_time: f64,
+    last_event_time: NonNegativeF64,
     marker: PhantomData<(H, G, R, S, X, D, C, T, N, E, I)>,
 }
 
@@ -81,22 +82,25 @@ impl<
                 if number_active_lineages_at_location > 0 {
                     // All lineages were just initially inserted into the lineage store,
                     //  so all active lineages are in the lineage store
-                    let event_rate_at_location =
-                        event_sampler.get_event_rate_at_location(&location, partial_simulation);
+                    if let Ok(event_rate_at_location) = PositiveF64::new(
+                        event_sampler
+                            .get_event_rate_at_location(&location, partial_simulation)
+                            .get(),
+                    ) {
+                        active_locations.push((
+                            location,
+                            EventTime::from(rng.sample_exponential(event_rate_at_location)),
+                        ));
 
-                    active_locations.push((
-                        location,
-                        EventTime::from(rng.sample_exponential(event_rate_at_location)),
-                    ));
-
-                    number_active_lineages += number_active_lineages_at_location;
+                        number_active_lineages += number_active_lineages_at_location;
+                    }
                 }
             });
 
         Self {
             active_locations: PriorityQueue::from(active_locations),
             number_active_lineages,
-            last_event_time: 0.0_f64,
+            last_event_time: NonNegativeF64::zero(),
             marker: PhantomData::<(H, G, R, S, X, D, C, T, N, E, I)>,
         }
     }

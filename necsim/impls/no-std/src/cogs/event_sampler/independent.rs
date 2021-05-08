@@ -11,6 +11,7 @@ use necsim_core::{
     lineage::GlobalLineageReference,
     simulation::partial::event_sampler::PartialSimulation,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::cogs::{
     coalescence_sampler::independent::IndependentCoalescenceSampler,
@@ -101,8 +102,8 @@ impl<
         &mut self,
         lineage_reference: GlobalLineageReference,
         indexed_location: IndexedLocation,
-        prior_time: f64,
-        event_time: f64,
+        prior_time: NonNegativeF64,
+        event_time: PositiveF64,
         simulation: &mut PartialSimulation<
             H,
             G,

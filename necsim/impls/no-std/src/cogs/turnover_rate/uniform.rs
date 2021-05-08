@@ -2,6 +2,7 @@ use necsim_core::{
     cogs::{Backup, Habitat, TurnoverRate},
     landscape::Location,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
@@ -25,15 +26,15 @@ impl Backup for UniformTurnoverRate {
 impl<H: Habitat> TurnoverRate<H> for UniformTurnoverRate {
     #[must_use]
     #[inline]
-    fn get_turnover_rate_at_location(&self, _location: &Location, _habitat: &H) -> f64 {
-        Self::get_uniform_turnover_rate()
+    fn get_turnover_rate_at_location(&self, _location: &Location, _habitat: &H) -> NonNegativeF64 {
+        Self::get_uniform_turnover_rate().into()
     }
 }
 
 impl UniformTurnoverRate {
     #[must_use]
     #[inline]
-    pub fn get_uniform_turnover_rate() -> f64 {
-        0.5_f64
+    pub fn get_uniform_turnover_rate() -> PositiveF64 {
+        unsafe { PositiveF64::new_unchecked(0.5_f64) }
     }
 }

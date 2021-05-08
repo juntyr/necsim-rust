@@ -7,6 +7,7 @@ use necsim_core::{
     reporter::Reporter,
     simulation::Simulation,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::{
     cogs::{
@@ -60,7 +61,7 @@ pub fn simulate<
         A,
     >,
     local_partition: &mut L,
-) -> (f64, u64) {
+) -> (NonNegativeF64, u64) {
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(simulation.get_balanced_remaining_work().0);
 
@@ -71,7 +72,7 @@ pub fn simulate<
         //  (we already know at least one partition has some next event time)
         let next_local_time = simulation
             .peek_time_of_next_event()
-            .unwrap_or(f64::INFINITY);
+            .unwrap_or_else(PositiveF64::infinity);
 
         // The partition with the next event gets to simulate just the next step
         if let Ok(next_global_time) = local_partition.reduce_vote_min_time(next_local_time) {

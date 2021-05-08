@@ -10,6 +10,7 @@ use necsim_core::{
     },
 };
 
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_impls_no_std::{
     partitioning::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode},
     reporter::ReporterContext,
@@ -82,7 +83,7 @@ impl<R: Reporter> LocalPartition<R> for RecordedMonolithicLocalPartition<R> {
         local_continue
     }
 
-    fn reduce_vote_min_time(&self, local_time: f64) -> Result<f64, f64> {
+    fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64> {
         Ok(local_time)
     }
 
@@ -90,7 +91,11 @@ impl<R: Reporter> LocalPartition<R> for RecordedMonolithicLocalPartition<R> {
         !self.loopback.is_empty()
     }
 
-    fn reduce_global_time_steps(&self, local_time: f64, local_steps: u64) -> (f64, u64) {
+    fn reduce_global_time_steps(
+        &self,
+        local_time: NonNegativeF64,
+        local_steps: u64,
+    ) -> (NonNegativeF64, u64) {
         (local_time, local_steps)
     }
 

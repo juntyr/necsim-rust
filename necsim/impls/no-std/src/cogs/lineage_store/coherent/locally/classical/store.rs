@@ -3,6 +3,7 @@ use necsim_core::{
     landscape::IndexedLocation,
     lineage::{GlobalLineageReference, Lineage},
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 
@@ -39,7 +40,7 @@ impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for ClassicalLineageS
 
     #[must_use]
     fn get(&self, reference: InMemoryLineageReference) -> Option<&Lineage> {
-        self.lineages_store.get(Into::<usize>::into(reference))
+        self.lineages_store.get(usize::from(reference))
     }
 }
 
@@ -68,8 +69,7 @@ impl<H: Habitat> LocallyCoherentLineageStore<H, InMemoryLineageReference>
             .insert(indexed_location.clone(), reference);
 
         unsafe {
-            self.lineages_store[Into::<usize>::into(reference)]
-                .move_to_indexed_location(indexed_location)
+            self.lineages_store[usize::from(reference)].move_to_indexed_location(indexed_location)
         };
     }
 
@@ -77,12 +77,11 @@ impl<H: Habitat> LocallyCoherentLineageStore<H, InMemoryLineageReference>
     fn extract_lineage_from_its_location_locally_coherent(
         &mut self,
         reference: InMemoryLineageReference,
-        event_time: f64,
+        event_time: PositiveF64,
         _habitat: &H,
-    ) -> (IndexedLocation, f64) {
-        let (lineage_indexed_location, prior_time) = unsafe {
-            self.lineages_store[Into::<usize>::into(reference)].remove_from_location(event_time)
-        };
+    ) -> (IndexedLocation, NonNegativeF64) {
+        let (lineage_indexed_location, prior_time) =
+            unsafe { self.lineages_store[usize::from(reference)].remove_from_location(event_time) };
 
         // We know from the trait preconditions that this value exists
         let _global_reference = self
@@ -106,7 +105,7 @@ impl<H: Habitat> LocallyCoherentLineageStore<H, InMemoryLineageReference>
         _habitat: &H,
         global_reference: GlobalLineageReference,
         indexed_location: IndexedLocation,
-        time_of_emigration: f64,
+        time_of_emigration: PositiveF64,
     ) -> InMemoryLineageReference {
         let lineage = Lineage::immigrate(
             global_reference,

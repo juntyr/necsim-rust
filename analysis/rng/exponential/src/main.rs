@@ -1,11 +1,16 @@
 #![deny(clippy::pedantic)]
+#![feature(associated_type_bounds)]
 
 #[macro_use]
 extern crate contracts;
 
-use std::time::Instant;
+use std::{convert::TryFrom, time::Instant};
 
-use structopt::StructOpt;
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use structopt::{
+    clap::{Error, ErrorKind},
+    StructOpt,
+};
 
 use necsim_core::{
     cogs::{Backup, Habitat, PrimeableRng, RngCore, TurnoverRate},
@@ -35,12 +40,21 @@ struct Options {
     seed: u64,
     #[structopt(long)]
     limit: u128,
-    #[structopt(long)]
-    delta_t: f64,
-    #[structopt(long)]
-    lambda: f64,
+    #[structopt(long, parse(try_from_str = try_from_str))]
+    delta_t: PositiveF64,
+    #[structopt(long, parse(try_from_str = try_from_str))]
+    lambda: NonNegativeF64,
     #[structopt(subcommand)]
     mode: SamplingMode,
+}
+
+fn try_from_str<T: TryFrom<f64, Error: std::fmt::Display>>(input: &str) -> Result<T, Error> {
+    let value: f64 = input
+        .parse()
+        .map_err(|err| Error::with_description(&format!("{}", err), ErrorKind::ValueValidation))?;
+
+    T::try_from(value)
+        .map_err(|err| Error::with_description(&format!("{}", err), ErrorKind::ValueValidation))
 }
 
 fn main() {
@@ -87,12 +101,12 @@ fn sample_exponential_inter_event_times<
     indexed_location: IndexedLocation,
     limit: u128,
 ) {
-    let mut last_event_time = 0.0_f64;
+    let mut last_event_time = NonNegativeF64::zero();
 
     let start = Instant::now();
 
     for _ in 0..limit {
-        let next_event_time = event_time_sampler.next_event_time_at_indexed_location_after(
+        let next_event_time = event_time_sampler.next_event_time_at_indexed_location_weakly_after(
             &indexed_location,
             last_event_time,
             &habitat,
@@ -116,7 +130,7 @@ fn sample_exponential_inter_event_times<
 
 #[derive(Debug)]
 pub struct UniformTurnoverRate {
-    turnover_rate: f64,
+    turnover_rate: NonNegativeF64,
 }
 
 #[contract_trait]
@@ -132,7 +146,7 @@ impl Backup for UniformTurnoverRate {
 impl<H: Habitat> TurnoverRate<H> for UniformTurnoverRate {
     #[must_use]
     #[inline]
-    fn get_turnover_rate_at_location(&self, _location: &Location, _habitat: &H) -> f64 {
+    fn get_turnover_rate_at_location(&self, _location: &Location, _habitat: &H) -> NonNegativeF64 {
         // Use a volatile read to ensure that the turnover rate cannot be
         //  optimised out of this benchmark test
 

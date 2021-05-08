@@ -1,4 +1,4 @@
-use float_next_after::NextAfter;
+use core::num::NonZeroU64;
 
 use necsim_core::{
     cogs::{
@@ -10,6 +10,7 @@ use necsim_core::{
     lineage::GlobalLineageReference,
     simulation::partial::active_lineager_sampler::PartialSimulation,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::cogs::{
     coalescence_sampler::unconditional::UnconditionalCoalescenceSampler,
@@ -59,7 +60,7 @@ impl<
         self.active_lineage_references.len()
     }
 
-    fn get_last_event_time(&self) -> f64 {
+    fn get_last_event_time(&self) -> NonNegativeF64 {
         self.last_event_time
     }
 
@@ -90,7 +91,7 @@ impl<
             >,
         >,
         rng: &mut G,
-    ) -> Option<(R, IndexedLocation, f64, f64)> {
+    ) -> Option<(R, IndexedLocation, NonNegativeF64, PositiveF64)> {
         use necsim_core::cogs::RngSampler;
 
         // The next event time must be calculated before the next active lineage is
@@ -130,7 +131,7 @@ impl<
                 &simulation.habitat,
             );
 
-        self.last_event_time = next_event_time;
+        self.last_event_time = next_event_time.into();
 
         // Reset the next event time because the internal state has changed
         self.next_event_time = None;
@@ -148,7 +149,7 @@ impl<
         &mut self,
         lineage_reference: R,
         indexed_location: IndexedLocation,
-        time: f64,
+        time: PositiveF64,
         simulation: &mut PartialSimulation<
             H,
             G,
@@ -183,7 +184,7 @@ impl<
 
         self.active_lineage_references.push(lineage_reference);
 
-        self.last_event_time = time;
+        self.last_event_time = time.into();
 
         // Reset the next event time because the internal state has changed
         self.next_event_time = None;
@@ -194,7 +195,7 @@ impl<
         &mut self,
         global_reference: GlobalLineageReference,
         indexed_location: IndexedLocation,
-        time: f64,
+        time: PositiveF64,
         simulation: &mut PartialSimulation<
             H,
             G,
@@ -229,7 +230,7 @@ impl<
         self.active_lineage_references
             .push(immigrant_lineage_reference);
 
-        self.last_event_time = time;
+        self.last_event_time = time.into();
 
         // Reset the next event time because the internal state has changed
         self.next_event_time = None;
@@ -276,24 +277,22 @@ impl<
         _habitat: &H,
         _turnover_rate: &UniformTurnoverRate,
         rng: &mut G,
-    ) -> Result<f64, EmptyActiveLineageSamplerError> {
+    ) -> Result<PositiveF64, EmptyActiveLineageSamplerError> {
         use necsim_core::cogs::RngSampler;
 
-        if self.next_event_time.is_none() && !self.active_lineage_references.is_empty() {
-            // Assumption: This method is called before the next active lineage is popped
-            #[allow(clippy::cast_precision_loss)]
-            let lambda = UniformTurnoverRate::get_uniform_turnover_rate()
-                * (self.number_active_lineages() as f64);
+        if self.next_event_time.is_none() {
+            if let Some(number_active_lineages) =
+                NonZeroU64::new(self.number_active_lineages() as u64)
+            {
+                let lambda = UniformTurnoverRate::get_uniform_turnover_rate()
+                    * PositiveF64::from(number_active_lineages);
 
-            let event_time = self.last_event_time + rng.sample_exponential(lambda);
+                let event_time = self.last_event_time + rng.sample_exponential(lambda);
 
-            let unique_event_time: f64 = if event_time > self.last_event_time {
-                event_time
-            } else {
-                self.last_event_time.next_after(f64::INFINITY)
-            };
+                let unique_event_time = PositiveF64::max_after(self.last_event_time, event_time);
 
-            self.next_event_time = Some(unique_event_time);
+                self.next_event_time = Some(unique_event_time);
+            }
         }
 
         self.next_event_time.ok_or(EmptyActiveLineageSamplerError)

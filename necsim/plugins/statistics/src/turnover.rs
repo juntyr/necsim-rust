@@ -76,7 +76,7 @@ impl Reporter for GlobalTurnoverReporter {
 
             self.last_speciation_event = Some(event.clone());
 
-            self.write_turnover(event.event_time - event.prior_time);
+            self.write_turnover(event.event_time.get() - event.prior_time.get());
         })
     });
 
@@ -88,7 +88,7 @@ impl Reporter for GlobalTurnoverReporter {
 
             self.last_dispersal_event = Some(event.clone());
 
-            self.write_turnover(event.event_time - event.prior_time);
+            self.write_turnover(event.event_time.get() - event.prior_time.get());
         })
     });
 

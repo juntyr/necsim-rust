@@ -1,3 +1,5 @@
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
+
 use super::{
     CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, ImmigrationEntry,
     LineageReference, LineageStore, RngCore, SpeciationProbability, TurnoverRate,
@@ -29,8 +31,7 @@ pub trait ActiveLineageSampler<
     fn number_active_lineages(&self) -> usize;
 
     #[must_use]
-    #[debug_ensures(ret >= 0.0_f64, "last event time is non-negative")]
-    fn get_last_event_time(&self) -> f64;
+    fn get_last_event_time(&self) -> NonNegativeF64;
 
     #[must_use]
     #[debug_ensures(match ret {
@@ -46,19 +47,18 @@ pub trait ActiveLineageSampler<
     )]
     #[debug_ensures(if let Some((ref reference, ref _location, _prior_time, event_time)) = ret {
         simulation.lineage_store.get(reference.clone()).map_or(true, |lineage| {
-            lineage.last_event_time().to_bits() == event_time.to_bits()
+            lineage.last_event_time() == event_time
         })
     } else { true } , "updates the time of the last event of the returned lineage to event time")]
     #[debug_ensures(if let Some((ref _reference, ref _location, _prior_time, event_time)) = ret {
-        self.get_last_event_time().to_bits() == event_time.to_bits()
+        self.get_last_event_time() == event_time
     } else { true }, "updates the time of the last event")]
     fn pop_active_lineage_indexed_location_prior_event_time(
         &mut self,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
-    ) -> Option<(R, IndexedLocation, f64, f64)>;
+    ) -> Option<(R, IndexedLocation, NonNegativeF64, PositiveF64)>;
 
-    #[debug_requires(time >= 0.0_f64, "time is non-negative")]
     #[debug_ensures(
         self.number_active_lineages() == old(self.number_active_lineages()) + 1,
         "adds an active lineage"
@@ -67,12 +67,11 @@ pub trait ActiveLineageSampler<
         &mut self,
         lineage_reference: R,
         indexed_location: IndexedLocation,
-        time: f64,
+        time: PositiveF64,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
     );
 
-    #[debug_requires(time >= 0.0_f64, "time is non-negative")]
     #[debug_ensures(
         self.number_active_lineages() == old(self.number_active_lineages()) + 1,
         "adds an active lineage"
@@ -81,7 +80,7 @@ pub trait ActiveLineageSampler<
         &mut self,
         global_reference: GlobalLineageReference,
         indexed_location: IndexedLocation,
-        time: f64,
+        time: PositiveF64,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
     );
@@ -93,8 +92,8 @@ pub trait ActiveLineageSampler<
             &mut G,
             R,
             IndexedLocation,
-            f64,
-            f64,
+            NonNegativeF64,
+            PositiveF64,
         ) -> Option<IndexedLocation>,
     >(
         &mut self,
@@ -175,16 +174,12 @@ pub trait PeekableActiveLineageSampler<
         ret.is_err() == (self.number_active_lineages() == 0),
         "only returns Err when no more lineages remain"
     )]
-    #[debug_ensures(match ret {
-        Ok(event_time) => event_time >= 0.0_f64,
-        Err(_) => true,
-    }, "next event time is non-negative")]
     fn peek_time_of_next_event(
         &mut self,
         habitat: &H,
         turnover_rate: &T,
         rng: &mut G,
-    ) -> Result<f64, EmptyActiveLineageSamplerError>;
+    ) -> Result<PositiveF64, EmptyActiveLineageSamplerError>;
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -207,7 +202,7 @@ pub trait OptionallyPeekableActiveLineageSampler<
         habitat: &H,
         turnover_rate: &T,
         rng: &mut G,
-    ) -> Option<f64>;
+    ) -> Option<PositiveF64>;
 }
 
 impl<
@@ -230,7 +225,7 @@ impl<
         _habitat: &H,
         _turnover_rate: &T,
         _rng: &mut G,
-    ) -> Option<f64> {
+    ) -> Option<PositiveF64> {
         None
     }
 }
@@ -255,7 +250,7 @@ impl<
         habitat: &H,
         turnover_rate: &T,
         rng: &mut G,
-    ) -> Option<f64> {
+    ) -> Option<PositiveF64> {
         self.peek_time_of_next_event(habitat, turnover_rate, rng)
             .ok()
     }

@@ -1,6 +1,7 @@
 #![deny(clippy::pedantic)]
 #![no_std]
 #![feature(rustc_attrs)]
+#![feature(total_cmp)]
 
 mod non_negative_f64;
 mod non_zero_one_u64;

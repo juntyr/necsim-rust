@@ -5,6 +5,7 @@ use necsim_core::{
 
 use alloc::collections::BinaryHeap;
 use core::cmp::Reverse;
+use necsim_core_bond::PositiveF64;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
@@ -30,7 +31,7 @@ impl ImmigrationEntry for BufferedImmigrationEntry {
     #[must_use]
     fn next_optional_immigration(
         &mut self,
-        optional_next_event_time: Option<f64>,
+        optional_next_event_time: Option<PositiveF64>,
     ) -> Option<MigratingLineage> {
         let next_immigration = self.immigrants.peek()?;
 

@@ -5,6 +5,7 @@ use necsim_core::{
     },
     landscape::Location,
 };
+use necsim_core_bond::ZeroInclOneInclF64;
 
 use crate::cogs::{
     coalescence_sampler::conditional::ConditionalCoalescenceSampler,
@@ -13,9 +14,9 @@ use crate::cogs::{
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ProbabilityAtLocation {
-    speciation: f64,
-    out_dispersal: f64,
-    self_coalescence: f64,
+    speciation: ZeroInclOneInclF64,
+    out_dispersal: ZeroInclOneInclF64,
+    self_coalescence: ZeroInclOneInclF64,
 }
 
 impl ProbabilityAtLocation {
@@ -58,27 +59,31 @@ impl ProbabilityAtLocation {
 
         Self {
             speciation: speciation_probability,
-            out_dispersal: (1.0_f64 - speciation_probability)
-                * (1.0_f64 - self_dispersal_probability),
-            self_coalescence: (1.0_f64 - speciation_probability)
+            out_dispersal: speciation_probability.one_minus()
+                * self_dispersal_probability.one_minus(),
+            self_coalescence: speciation_probability.one_minus()
                 * self_dispersal_probability
                 * coalescence_probability_at_location,
         }
     }
 
-    pub fn speciation(&self) -> f64 {
+    pub fn speciation(&self) -> ZeroInclOneInclF64 {
         self.speciation
     }
 
-    pub fn out_dispersal(&self) -> f64 {
+    pub fn out_dispersal(&self) -> ZeroInclOneInclF64 {
         self.out_dispersal
     }
 
-    pub fn self_coalescence(&self) -> f64 {
+    pub fn self_coalescence(&self) -> ZeroInclOneInclF64 {
         self.self_coalescence
     }
 
-    pub fn total(&self) -> f64 {
-        self.speciation() + self.out_dispersal() + self.self_coalescence()
+    pub fn total(&self) -> ZeroInclOneInclF64 {
+        let total =
+            self.speciation().get() + self.out_dispersal().get() + self.self_coalescence().get();
+
+        // Safety: Sum of disjoint event probabilities is in [0.0; 1.0]
+        unsafe { ZeroInclOneInclF64::new_unchecked(total) }
     }
 }

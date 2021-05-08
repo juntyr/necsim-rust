@@ -23,7 +23,7 @@ impl<H: Habitat, G: RngCore> DispersalSampler<H, G> for InMemoryPackedAliasDispe
 
         // Only safe as trait precondition that `location` is inside `habitat`
         let alias_range = unsafe {
-            Into::<Range<usize>>::into(
+            Range::<usize>::from(
                 self.alias_dispersal_ranges
                     .get(location_row, location_column)
                     .unwrap_unchecked()

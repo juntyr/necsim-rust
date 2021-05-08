@@ -1,3 +1,4 @@
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use serde::{Deserialize, Serialize};
 
 use core::{
@@ -8,12 +9,12 @@ use core::{
 use crate::{landscape::IndexedLocation, lineage::GlobalLineageReference};
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug, TypeLayout, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub struct PackedEvent {
     pub origin: IndexedLocation,
-    pub prior_time: f64, // time of the previous event
-    pub event_time: f64, // time of this event
+    pub prior_time: NonNegativeF64, // time of the previous event
+    pub event_time: PositiveF64,    // time of this event
     pub global_lineage_reference: GlobalLineageReference,
     pub r#type: EventType,
 }
@@ -58,8 +59,8 @@ const EXCESSIVE_INTERACTION_ERROR: [(); 8] = [(); core::mem::size_of::<LineageIn
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub struct SpeciationEvent {
     pub origin: IndexedLocation,
-    pub prior_time: f64, // time of the previous event
-    pub event_time: f64, // time of this event
+    pub prior_time: NonNegativeF64, // time of the previous event
+    pub event_time: PositiveF64,    // time of this event
     pub global_lineage_reference: GlobalLineageReference,
 }
 
@@ -68,8 +69,8 @@ pub struct SpeciationEvent {
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
 pub struct DispersalEvent {
     pub origin: IndexedLocation,
-    pub prior_time: f64, // time of the previous event
-    pub event_time: f64, // time of this event
+    pub prior_time: NonNegativeF64, // time of the previous event
+    pub event_time: PositiveF64,    // time of this event
     pub global_lineage_reference: GlobalLineageReference,
     pub target: IndexedLocation,
     pub interaction: LineageInteraction,
@@ -162,10 +163,10 @@ impl Ord for PackedEvent {
         //  (3) r#type (target and interaction)  \=/
         //  (4) prior_time              parent + offspring
         //  (5) global_lineage_reference
-        match self.event_time.total_cmp(&other.event_time) {
+        match self.event_time.cmp(&other.event_time) {
             Ordering::Equal => {
                 match (&self.origin, &self.r#type).cmp(&(&other.origin, &other.r#type)) {
-                    Ordering::Equal => match self.prior_time.total_cmp(&other.prior_time) {
+                    Ordering::Equal => match self.prior_time.cmp(&other.prior_time) {
                         Ordering::Equal => self
                             .global_lineage_reference
                             .cmp(&other.global_lineage_reference),
@@ -190,7 +191,7 @@ impl Hash for PackedEvent {
     //  `r#type` (`global_lineage_reference` and `prior_time` are ignored)
     fn hash<S: Hasher>(&self, state: &mut S) {
         self.origin.hash(state);
-        self.event_time.to_bits().hash(state);
+        self.event_time.hash(state);
         self.r#type.hash(state);
     }
 }

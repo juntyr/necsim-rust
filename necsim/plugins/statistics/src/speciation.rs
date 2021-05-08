@@ -63,7 +63,7 @@ impl Reporter for GlobalSpeciationReporter {
             self.last_speciation_event = Some(event.clone());
 
             if let Some(writer) = &mut self.writer {
-                std::mem::drop(writeln!(writer, "{}", event.event_time));
+                std::mem::drop(writeln!(writer, "{}", event.event_time.get()));
             }
         })
     });

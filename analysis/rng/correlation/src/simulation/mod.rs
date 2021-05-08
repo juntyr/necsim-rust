@@ -7,6 +7,7 @@ use necsim_core::{
     reporter::NullReporter,
     simulation::Simulation,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64, ZeroInclOneInclF64};
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::independent::{
         event_time_sampler::poisson::PoissonEventTimeSampler, IndependentActiveLineageSampler,
@@ -69,8 +70,12 @@ impl<G: RngCore<Seed: Clone> + PrimeableRng, const SIGMA: f64> RngCore
         let mut simulation = Simulation::builder()
             .habitat(AlmostInfiniteHabitat::default())
             .rng(InterceptingReporter::<G>::from_seed(seed.clone()))
-            .speciation_probability(UniformSpeciationProbability::new(0.0))
-            .dispersal_sampler(AlmostInfiniteNormalDispersalSampler::new(SIGMA))
+            .speciation_probability(UniformSpeciationProbability::new(
+                ZeroInclOneInclF64::new(0.0_f64).unwrap(),
+            ))
+            .dispersal_sampler(AlmostInfiniteNormalDispersalSampler::new(
+                NonNegativeF64::new(SIGMA).unwrap(),
+            ))
             .lineage_reference(std::marker::PhantomData::<GlobalLineageReference>)
             .lineage_store(IndependentLineageStore::default())
             .emigration_exit(NeverEmigrationExit::default())
@@ -79,7 +84,7 @@ impl<G: RngCore<Seed: Clone> + PrimeableRng, const SIGMA: f64> RngCore
             .event_sampler(IndependentEventSampler::default())
             .immigration_entry(NeverImmigrationEntry::default())
             .active_lineage_sampler(IndependentActiveLineageSampler::empty(
-                PoissonEventTimeSampler::new(1.0),
+                PoissonEventTimeSampler::new(PositiveF64::new(1.0_f64).unwrap()),
             ))
             .build();
 

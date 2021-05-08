@@ -7,6 +7,7 @@ use necsim_core::{
     reporter::Reporter,
     simulation::Simulation,
 };
+use necsim_core_bond::NonNegativeF64;
 
 use crate::{
     cogs::{
@@ -46,7 +47,7 @@ pub fn simulate<
         A,
     >,
     local_partition: &mut L,
-) -> (f64, u64) {
+) -> (NonNegativeF64, u64) {
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(simulation.get_balanced_remaining_work().0);
 

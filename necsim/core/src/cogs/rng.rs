@@ -1,5 +1,7 @@
 use core::{convert::AsMut, default::Default, ptr::copy_nonoverlapping};
 
+use necsim_core_bond::{NonNegativeF64, PositiveF64, ZeroInclOneInclF64};
+
 use crate::{
     cogs::Habitat,
     intrinsics::{cos, floor, ln, sin, sqrt},
@@ -54,12 +56,12 @@ pub trait RngCore: crate::cogs::Backup + Sized + Clone + core::fmt::Debug {
 pub trait RngSampler: RngCore {
     #[must_use]
     #[inline]
-    #[debug_ensures((0.0_f64..=1.0_f64).contains(&ret), "samples U(0.0, 1.0)")]
-    fn sample_uniform(&mut self) -> f64 {
+    fn sample_uniform(&mut self) -> ZeroInclOneInclF64 {
         // http://prng.di.unimi.it -> Generating uniform doubles in the unit interval
         #[allow(clippy::cast_precision_loss)]
         let u01 = ((self.sample_u64() >> 11) as f64) * f64::from_bits(0x3CA0_0000_0000_0000_u64); // 0x1.0p-53
-        u01
+
+        unsafe { ZeroInclOneInclF64::new_unchecked(u01) }
     }
 
     #[must_use]
@@ -73,7 +75,7 @@ pub trait RngSampler: RngCore {
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let index = floor(self.sample_uniform() * (length as f64)) as usize;
+        let index = floor(self.sample_uniform().get() * (length as f64)) as usize;
         index
     }
 
@@ -88,26 +90,22 @@ pub trait RngSampler: RngCore {
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let index = floor(self.sample_uniform() * f64::from(length)) as u32;
+        let index = floor(self.sample_uniform().get() * f64::from(length)) as u32;
         index
     }
 
     #[must_use]
     #[inline]
-    #[debug_requires(lambda > 0.0, "lambda > 0.0")]
-    #[debug_ensures(ret >= 0.0, "samples Exp(lambda)")]
-    fn sample_exponential(&mut self, lambda: f64) -> f64 {
-        -ln(self.sample_uniform()) / lambda
+    fn sample_exponential(&mut self, lambda: PositiveF64) -> NonNegativeF64 {
+        let exp = -ln(self.sample_uniform().get()) / lambda.get();
+
+        unsafe { NonNegativeF64::new_unchecked(exp) }
     }
 
     #[must_use]
     #[inline]
-    #[debug_requires(
-        (0.0_f64..=1.0_f64).contains(&probability),
-        "0.0 <= probability <= 1.0"
-    )]
-    fn sample_event(&mut self, probability: f64) -> bool {
-        self.sample_uniform() < probability
+    fn sample_event(&mut self, probability: ZeroInclOneInclF64) -> bool {
+        self.sample_uniform().get() < probability.get()
     }
 
     #[must_use]
@@ -117,19 +115,18 @@ pub trait RngSampler: RngCore {
         let u0 = self.sample_uniform();
         let u1 = self.sample_uniform();
 
-        let r = sqrt(-2.0_f64 * ln(u0));
-        let theta = -core::f64::consts::TAU * u1;
+        let r = sqrt(-2.0_f64 * ln(u0.get()));
+        let theta = -core::f64::consts::TAU * u1.get();
 
         (r * sin(theta), r * cos(theta))
     }
 
     #[must_use]
     #[inline]
-    #[debug_requires(sigma >= 0.0_f64, "standard deviation sigma must be non-negative")]
-    fn sample_2d_normal(&mut self, mu: f64, sigma: f64) -> (f64, f64) {
+    fn sample_2d_normal(&mut self, mu: f64, sigma: NonNegativeF64) -> (f64, f64) {
         let (z0, z1) = self.sample_2d_standard_normal();
 
-        (z0 * sigma + mu, z1 * sigma + mu)
+        (z0 * sigma.get() + mu, z1 * sigma.get() + mu)
     }
 }
 

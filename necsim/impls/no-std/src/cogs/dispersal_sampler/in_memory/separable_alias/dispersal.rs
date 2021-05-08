@@ -2,6 +2,7 @@ use necsim_core::{
     cogs::{DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
+use necsim_core_bond::ZeroInclOneInclF64;
 
 use super::InMemorySeparableAliasDispersalSampler;
 
@@ -64,7 +65,11 @@ impl<H: Habitat, G: RngCore> SeparableDispersalSampler<H, G>
 
     #[must_use]
     #[debug_requires(habitat.get_extent().contains(location), "location is inside habitat extent")]
-    fn get_self_dispersal_probability_at_location(&self, location: &Location, habitat: &H) -> f64 {
+    fn get_self_dispersal_probability_at_location(
+        &self,
+        location: &Location,
+        habitat: &H,
+    ) -> ZeroInclOneInclF64 {
         self.self_dispersal[(
             (location.y() - habitat.get_extent().y()) as usize,
             (location.x() - habitat.get_extent().x()) as usize,

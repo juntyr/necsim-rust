@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
 use core::marker::PhantomData;
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::{
     cogs::{
@@ -58,11 +59,11 @@ impl<
         lineage_reference: R,
         dispersal_origin: IndexedLocation,
         dispersal_target: Location,
-        prior_time: f64,
-        event_time: f64,
+        prior_time: NonNegativeF64,
+        event_time: PositiveF64,
         simulation: &mut PartialSimulation<H, G, R, S>,
         rng: &mut G,
-    ) -> Option<(R, IndexedLocation, Location, f64, f64)> {
+    ) -> Option<(R, IndexedLocation, Location, NonNegativeF64, PositiveF64)> {
         let target_subdomain = self
             .decomposition
             .map_location_to_subdomain_rank(&dispersal_target, &simulation.habitat);

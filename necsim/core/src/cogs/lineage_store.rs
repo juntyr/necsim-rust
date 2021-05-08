@@ -1,5 +1,7 @@
 use core::ops::Index;
 
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
+
 use super::{Habitat, LineageReference, OriginSampler};
 use crate::{
     landscape::{IndexedLocation, Location},
@@ -79,22 +81,22 @@ pub trait LocallyCoherentLineageStore<H: Habitat, R: LineageReference<H>>:
         "returns the individual's prior IndexedLocation"
     )]
     #[debug_ensures(
-        ret.1.to_bits() == old(self[reference.clone()].last_event_time().to_bits()),
+        ret.1 == old(self[reference.clone()].last_event_time()),
         "returns the individual's prior last event time"
     )]
     #[debug_ensures(self.get_active_global_lineage_reference_at_indexed_location(
         &ret.0, old(habitat)
     ).is_none(), "lineage is no longer indexed at its prior IndexedLocation")]
     #[debug_ensures(
-        self[old(reference.clone())].last_event_time().to_bits() == old(event_time.to_bits()),
+        self[old(reference.clone())].last_event_time() == old(event_time),
         "updates the time of the last event of the lineage reference"
     )]
     fn extract_lineage_from_its_location_locally_coherent(
         &mut self,
         reference: R,
-        event_time: f64,
+        event_time: PositiveF64,
         habitat: &H,
-    ) -> (IndexedLocation, f64);
+    ) -> (IndexedLocation, NonNegativeF64);
 
     #[debug_requires(
         self.get(local_lineage_reference.clone()).is_some(),
@@ -135,7 +137,7 @@ pub trait LocallyCoherentLineageStore<H: Habitat, R: LineageReference<H>>:
         habitat: &H,
         global_reference: GlobalLineageReference,
         indexed_location: IndexedLocation,
-        time_of_emigration: f64,
+        time_of_emigration: PositiveF64,
     ) -> R;
 }
 
@@ -197,9 +199,9 @@ pub trait GloballyCoherentLineageStore<H: Habitat, R: LineageReference<H>>:
     fn extract_lineage_from_its_location_globally_coherent(
         &mut self,
         reference: R,
-        event_time: f64,
+        event_time: PositiveF64,
         habitat: &H,
-    ) -> (IndexedLocation, f64) {
+    ) -> (IndexedLocation, NonNegativeF64) {
         self.extract_lineage_from_its_location_locally_coherent(reference, event_time, habitat)
     }
 
@@ -223,7 +225,7 @@ pub trait GloballyCoherentLineageStore<H: Habitat, R: LineageReference<H>>:
         habitat: &H,
         global_reference: GlobalLineageReference,
         indexed_location: IndexedLocation,
-        time_of_emigration: f64,
+        time_of_emigration: PositiveF64,
     ) -> R {
         self.immigrate_locally_coherent(
             habitat,

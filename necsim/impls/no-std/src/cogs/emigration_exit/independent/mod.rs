@@ -6,6 +6,7 @@ use necsim_core::{
     lineage::{GlobalLineageReference, MigratingLineage},
     simulation::partial::emigration_exit::PartialSimulation,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::{
     cogs::lineage_store::independent::IndependentLineageStore, decomposition::Decomposition,
@@ -66,8 +67,8 @@ impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>, G: RngCore>
         lineage_reference: GlobalLineageReference,
         dispersal_origin: IndexedLocation,
         dispersal_target: Location,
-        prior_time: f64,
-        event_time: f64,
+        prior_time: NonNegativeF64,
+        event_time: PositiveF64,
         simulation: &mut PartialSimulation<
             H,
             G,
@@ -75,7 +76,13 @@ impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>, G: RngCore>
             IndependentLineageStore<H>,
         >,
         rng: &mut G,
-    ) -> Option<(GlobalLineageReference, IndexedLocation, Location, f64, f64)> {
+    ) -> Option<(
+        GlobalLineageReference,
+        IndexedLocation,
+        Location,
+        NonNegativeF64,
+        PositiveF64,
+    )> {
         let target_subdomain = self
             .decomposition
             .map_location_to_subdomain_rank(&dispersal_target, &simulation.habitat);
