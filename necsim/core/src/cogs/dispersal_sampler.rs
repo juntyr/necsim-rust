@@ -1,3 +1,5 @@
+use necsim_core_bond::ZeroInclOneInclF64;
+
 use crate::{cogs::RngCore, landscape::Location};
 
 use super::Habitat;
@@ -34,6 +36,9 @@ pub trait SeparableDispersalSampler<H: Habitat, G: RngCore>: DispersalSampler<H,
 
     #[must_use]
     #[debug_requires(habitat.contains(location), "location is inside habitat")]
-    #[debug_ensures((0.0_f64..=1.0_f64).contains(&ret), "returns probability")]
-    fn get_self_dispersal_probability_at_location(&self, location: &Location, habitat: &H) -> f64;
+    fn get_self_dispersal_probability_at_location(
+        &self,
+        location: &Location,
+        habitat: &H,
+    ) -> ZeroInclOneInclF64;
 }

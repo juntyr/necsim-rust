@@ -9,6 +9,7 @@ use necsim_core::{
     simulation::Simulation,
 };
 
+use necsim_core_bond::NonNegativeF64;
 use necsim_impls_no_std::{
     cogs::{
         coalescence_sampler::conditional::ConditionalCoalescenceSampler,
@@ -66,7 +67,7 @@ where
         scenario: O,
         pre_sampler: OriginPreSampler<I>,
         local_partition: &mut P,
-    ) -> Result<(f64, u64), Self::Error> {
+    ) -> Result<(NonNegativeF64, u64), Self::Error> {
         match args.parallelism_mode {
             ParallelismMode::Monolithic => {
                 let mut rng = Pcg::seed_from_u64(seed);

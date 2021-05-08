@@ -7,6 +7,7 @@ use necsim_core::{
     },
     landscape::Location,
 };
+use necsim_core_bond::NonNegativeF64;
 
 pub mod conditional;
 pub mod unconditional;
@@ -28,12 +29,11 @@ pub trait GillespieEventSampler<
 {
     /// Pre: all lineages must be active in the lineage store
     #[must_use]
-    #[debug_ensures(ret >= 0.0_f64, "returns a rate")]
     fn get_event_rate_at_location(
         &self,
         location: &Location,
         simulation: &GillespiePartialSimulation<H, G, R, S, D, C, T, N>,
-    ) -> f64;
+    ) -> NonNegativeF64;
 }
 
 #[repr(C)]

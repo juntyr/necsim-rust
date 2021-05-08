@@ -1,5 +1,6 @@
 use alloc::{collections::VecDeque, vec::Vec};
 use core::num::{NonZeroU32, NonZeroU64, Wrapping};
+use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::{
     cogs::{
@@ -61,7 +62,7 @@ pub fn simulate<
     step_slice: NonZeroU64,
     event_slice: NonZeroU32,
     local_partition: &mut P,
-) -> (f64, u64) {
+) -> (NonNegativeF64, u64) {
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(
         (Wrapping(lineages.len() as u64) + simulation.get_balanced_remaining_work()).0,
@@ -71,7 +72,7 @@ pub fn simulate<
     let mut min_spec_samples = dedup_cache.construct(lineages.len());
 
     let mut total_steps = 0_u64;
-    let mut max_time = 0.0_f64;
+    let mut max_time = NonNegativeF64::zero();
 
     let mut slow_lineages = lineages;
     let mut fast_lineages = VecDeque::new();
@@ -79,11 +80,11 @@ pub fn simulate<
     let mut slow_events: Vec<PackedEvent> = Vec::with_capacity(event_slice.get() as usize);
     let mut fast_events: Vec<PackedEvent> = Vec::with_capacity(event_slice.get() as usize);
 
-    let mut level_time = 0.0_f64;
+    let mut level_time = NonNegativeF64::zero();
 
     while !slow_lineages.is_empty() {
         // Calculate a new water-level time which all individuals should reach
-        let total_event_rate: f64 = if R::ReportDispersal::VALUE {
+        let total_event_rate: NonNegativeF64 = if R::ReportDispersal::VALUE {
             // Full event rate lambda with speciation
             slow_lineages
                 .iter()
@@ -112,10 +113,10 @@ pub fn simulate<
                 .sum()
         } else {
             // No events produced -> no restriction
-            f64::INFINITY
+            NonNegativeF64::infinity()
         };
 
-        level_time += f64::from(event_slice.get()) / total_event_rate;
+        level_time += NonNegativeF64::from(event_slice.get()) / total_event_rate;
 
         // Move fast events below the new level into slow events
         slow_events.extend(fast_events.drain_filter(|event| event.event_time < level_time));

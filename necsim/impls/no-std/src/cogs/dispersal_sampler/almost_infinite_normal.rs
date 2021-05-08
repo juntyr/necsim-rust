@@ -5,6 +5,7 @@ use necsim_core::{
     intrinsics::round,
     landscape::Location,
 };
+use necsim_core_bond::{NonNegativeF64, ZeroInclOneInclF64};
 
 use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 
@@ -12,18 +13,22 @@ use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 pub struct AlmostInfiniteNormalDispersalSampler<G: RngCore> {
-    sigma: f64,
-    self_dispersal: f64,
+    sigma: NonNegativeF64,
+    self_dispersal: ZeroInclOneInclF64,
     marker: PhantomData<G>,
 }
 
 impl<G: RngCore> AlmostInfiniteNormalDispersalSampler<G> {
     #[must_use]
-    pub fn new(sigma: f64) -> Self {
+    pub fn new(sigma: NonNegativeF64) -> Self {
         let self_dispersal_1d = if sigma > 0.0_f64 {
-            libm::erf(0.5) / (sigma * core::f64::consts::SQRT_2)
+            let probability = libm::erf(0.5 / (sigma.get() * core::f64::consts::SQRT_2));
+
+            // Safety: For non-negative values x (as both sigma and sqrt(2.0) are),
+            //         erf(0.5 / x) in [0.0; 1.0]
+            unsafe { ZeroInclOneInclF64::new_unchecked(probability) }
         } else {
-            1.0_f64
+            ZeroInclOneInclF64::one()
         };
 
         Self {
@@ -108,7 +113,7 @@ impl<G: RngCore> SeparableDispersalSampler<AlmostInfiniteHabitat, G>
         &self,
         _location: &Location,
         _habitat: &AlmostInfiniteHabitat,
-    ) -> f64 {
+    ) -> ZeroInclOneInclF64 {
         self.self_dispersal
     }
 }

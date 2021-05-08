@@ -13,6 +13,8 @@ impl fmt::Display for NonZeroOneU64Error {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+#[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
+#[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 #[repr(transparent)]
 #[rustc_layout_scalar_valid_range_start(2)]
 #[rustc_nonnull_optimization_guaranteed]

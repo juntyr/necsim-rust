@@ -1,6 +1,14 @@
-use core::{convert::TryFrom, fmt};
+use core::{
+    cmp::Ordering,
+    convert::TryFrom,
+    fmt,
+    hash::{Hash, Hasher},
+    ops::Mul,
+};
 
 use serde::{Deserialize, Serialize};
+
+use crate::ZeroExclOneInclF64;
 
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
@@ -12,7 +20,10 @@ impl fmt::Display for ZeroInclOneInclF64Error {
     }
 }
 
+#[allow(clippy::unsafe_derive_deserialize)]
 #[derive(Copy, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
+#[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 #[repr(transparent)]
 #[serde(try_from = "f64")]
 pub struct ZeroInclOneInclF64(f64);
@@ -53,8 +64,83 @@ impl ZeroInclOneInclF64 {
         }
     }
 
+    /// # Safety
+    ///
+    /// Only safe iff `0.0 <= value <= 1.0`
+    #[must_use]
+    pub unsafe fn new_unchecked(value: f64) -> Self {
+        Self(value)
+    }
+
+    #[must_use]
+    pub fn zero() -> Self {
+        Self(0.0_f64)
+    }
+
+    #[must_use]
+    pub fn one() -> Self {
+        Self(1.0_f64)
+    }
+
     #[must_use]
     pub fn get(self) -> f64 {
         self.0
+    }
+
+    #[must_use]
+    pub fn one_minus(self) -> Self {
+        Self(1.0_f64 - self.0)
+    }
+}
+
+impl From<ZeroExclOneInclF64> for ZeroInclOneInclF64 {
+    fn from(value: ZeroExclOneInclF64) -> Self {
+        Self(value.get())
+    }
+}
+
+impl PartialEq for ZeroInclOneInclF64 {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq(&other.0)
+    }
+}
+
+impl Eq for ZeroInclOneInclF64 {}
+
+impl PartialOrd for ZeroInclOneInclF64 {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+
+impl Ord for ZeroInclOneInclF64 {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.total_cmp(&other.0)
+    }
+}
+
+impl Hash for ZeroInclOneInclF64 {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.to_bits().hash(state)
+    }
+}
+
+impl PartialEq<f64> for ZeroInclOneInclF64 {
+    fn eq(&self, other: &f64) -> bool {
+        self.0.eq(&other)
+    }
+}
+
+impl PartialOrd<f64> for ZeroInclOneInclF64 {
+    fn partial_cmp(&self, other: &f64) -> Option<Ordering> {
+        self.0.partial_cmp(&other)
+    }
+}
+
+impl Mul for ZeroInclOneInclF64 {
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self {
+        Self(self.0 * other.0)
     }
 }

@@ -18,6 +18,11 @@ use rustcoalescence_scenarios::{
     spatially_explicit::InMemoryArguments, spatially_implicit::SpatiallyImplicitArguments,
 };
 
+#[cfg(any(
+    feature = "rustcoalescence-algorithms-monolithic",
+    feature = "rustcoalescence-algorithms-independent",
+    feature = "rustcoalescence-algorithms-cuda"
+))]
 use rustcoalescence_algorithms::AlgorithmArguments;
 
 use necsim_plugins_core::import::{AnyReporterPluginVec, ReporterPluginLibrary};

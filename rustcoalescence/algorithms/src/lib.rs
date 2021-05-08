@@ -5,6 +5,7 @@ use necsim_core::{
     reporter::Reporter,
 };
 
+use necsim_core_bond::NonNegativeF64;
 use necsim_impls_no_std::{
     cogs::origin_sampler::pre_sampler::OriginPreSampler, partitioning::LocalPartition,
 };
@@ -31,5 +32,5 @@ pub trait Algorithm<O: Scenario<Self::Rng>>: Sized + AlgorithmArguments {
         scenario: O,
         pre_sampler: OriginPreSampler<I>,
         local_partition: &mut P,
-    ) -> Result<(f64, u64), Self::Error>;
+    ) -> Result<(NonNegativeF64, u64), Self::Error>;
 }

@@ -20,6 +20,7 @@ use necsim_core::{
     reporter::{boolean::Boolean, Reporter},
 };
 
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_impls_no_std::partitioning::{
     iterator::ImmigrantPopIterator, LocalPartition, MigrationMode,
 };
@@ -255,9 +256,9 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
         global_continue
     }
 
-    fn reduce_vote_min_time(&self, local_time: f64) -> Result<f64, f64> {
+    fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64> {
         #[derive(mpi::traits::Equivalence, PartialEq, Copy, Clone)]
-        struct TimePartition(f64, u32);
+        struct TimePartition(PositiveF64, u32);
 
         let local_time_partition = TimePartition(local_time, self.get_partition_rank());
         let mut global_min_time_partition = local_time_partition;
@@ -334,9 +335,13 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
         }
     }
 
-    fn reduce_global_time_steps(&self, local_time: f64, local_steps: u64) -> (f64, u64) {
-        let mut global_time_max: f64 = 0.0_f64;
-        let mut global_steps_sum: u64 = 0_u64;
+    fn reduce_global_time_steps(
+        &self,
+        local_time: NonNegativeF64,
+        local_steps: u64,
+    ) -> (NonNegativeF64, u64) {
+        let mut global_time_max = NonNegativeF64::zero();
+        let mut global_steps_sum = 0_u64;
 
         self.world
             .all_reduce_into(&local_time, &mut global_time_max, SystemOperation::max());

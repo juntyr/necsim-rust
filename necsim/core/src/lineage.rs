@@ -5,7 +5,7 @@ use core::{
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use necsim_core_bond::NonZeroOneU64;
+use necsim_core_bond::{NonNegativeF64, NonZeroOneU64, PositiveF64};
 
 use crate::{
     cogs::{BackedUp, Backup, CoalescenceRngSample, Habitat, LineageReference},
@@ -40,13 +40,13 @@ impl Serialize for GlobalLineageReference {
 }
 
 #[cfg(feature = "mpi")]
-unsafe impl mpi::traits::Equivalence for GlobalLineageReference {
-    type Out = mpi::datatype::SystemDatatype;
+unsafe impl rsmpi::traits::Equivalence for GlobalLineageReference {
+    type Out = rsmpi::datatype::SystemDatatype;
 
     fn equivalent_datatype() -> Self::Out {
-        use mpi::raw::FromRaw;
+        use rsmpi::raw::FromRaw;
 
-        unsafe { mpi::datatype::DatatypeRef::from_raw(mpi::ffi::RSMPI_UINT64_T) }
+        unsafe { rsmpi::datatype::DatatypeRef::from_raw(rsmpi::ffi::RSMPI_UINT64_T) }
     }
 }
 
@@ -64,7 +64,7 @@ impl<H: Habitat> LineageReference<H> for GlobalLineageReference {}
 pub struct Lineage {
     global_reference: GlobalLineageReference,
     indexed_location: Option<IndexedLocation>,
-    last_event_time: f64,
+    last_event_time: NonNegativeF64,
 }
 
 impl Lineage {
@@ -82,7 +82,7 @@ impl Lineage {
                 )
             }),
             indexed_location: Some(indexed_location),
-            last_event_time: 0.0_f64,
+            last_event_time: NonNegativeF64::zero(),
         }
     }
 
@@ -90,12 +90,12 @@ impl Lineage {
     pub fn immigrate(
         global_reference: GlobalLineageReference,
         indexed_location: IndexedLocation,
-        time_of_emigration: f64,
+        time_of_emigration: PositiveF64,
     ) -> Self {
         Self {
             global_reference,
             indexed_location: Some(indexed_location),
-            last_event_time: time_of_emigration,
+            last_event_time: time_of_emigration.into(),
         }
     }
 
@@ -115,7 +115,7 @@ impl Lineage {
     }
 
     #[must_use]
-    pub fn last_event_time(&self) -> f64 {
+    pub fn last_event_time(&self) -> NonNegativeF64 {
         self.last_event_time
     }
 
@@ -130,14 +130,17 @@ impl Lineage {
     #[debug_requires(self.is_active(), "lineage must be active to be deactivated")]
     #[debug_requires(event_time > self.last_event_time(), "event_time is after the last event")]
     #[debug_ensures(!self.is_active(), "lineages has been deactivated")]
-    #[debug_ensures(self.last_event_time().to_bits() == old(event_time.to_bits()), "updates the last_event_time")]
+    #[debug_ensures(self.last_event_time() == old(event_time), "updates the last_event_time")]
     #[debug_ensures(
         ret == old((self.indexed_location.as_ref().unwrap().clone(), self.last_event_time())),
         "returns the individual's prior indexed_location and last event time"
     )]
-    pub unsafe fn remove_from_location(&mut self, event_time: f64) -> (IndexedLocation, f64) {
+    pub unsafe fn remove_from_location(
+        &mut self,
+        event_time: PositiveF64,
+    ) -> (IndexedLocation, NonNegativeF64) {
         let prior_time = self.last_event_time;
-        self.last_event_time = event_time;
+        self.last_event_time = event_time.into();
 
         (self.indexed_location.take().unwrap_unchecked(), prior_time)
     }
@@ -157,13 +160,13 @@ impl Lineage {
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
+#[cfg_attr(feature = "mpi", derive(rsmpi::traits::Equivalence))]
 pub struct MigratingLineage {
     pub global_reference: GlobalLineageReference,
     pub dispersal_origin: IndexedLocation,
     pub dispersal_target: Location,
-    pub prior_time: f64,
-    pub event_time: f64,
+    pub prior_time: NonNegativeF64,
+    pub event_time: PositiveF64,
     pub coalescence_rng_sample: CoalescenceRngSample,
 }
 
@@ -190,11 +193,11 @@ impl Ord for MigratingLineage {
         //  (4) prior_time              parent + offspring
         //  (5) global_lineage_reference
         //  (6) coalescence_rng_sample
-        match self.event_time.total_cmp(&other.event_time) {
+        match self.event_time.cmp(&other.event_time) {
             Ordering::Equal => match (&self.dispersal_origin, &self.dispersal_target)
                 .cmp(&(&other.dispersal_origin, &other.dispersal_target))
             {
-                Ordering::Equal => match self.prior_time.total_cmp(&other.prior_time) {
+                Ordering::Equal => match self.prior_time.cmp(&other.prior_time) {
                     Ordering::Equal => (&self.global_reference, &self.coalescence_rng_sample)
                         .cmp(&(&other.global_reference, &other.coalescence_rng_sample)),
                     ordering => ordering,

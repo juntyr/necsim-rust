@@ -7,6 +7,7 @@ use necsim_core::{
     },
     lineage::{GlobalLineageReference, Lineage},
 };
+use necsim_core_bond::PositiveF64;
 
 use crate::cogs::lineage_store::independent::IndependentLineageStore;
 
@@ -37,7 +38,7 @@ pub struct IndependentActiveLineageSampler<
     J: EventTimeSampler<H, G, T>,
 > {
     active_lineage: Option<Lineage>,
-    next_event_time: Option<f64>,
+    next_event_time: Option<PositiveF64>,
     event_time_sampler: J,
     marker: PhantomData<(H, G, X, D, T, N)>,
 }

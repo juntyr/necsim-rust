@@ -17,6 +17,7 @@ use crate::{
 };
 
 pub use builder::Simulation;
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 impl<
         H: Habitat,
@@ -34,7 +35,7 @@ impl<
     > Simulation<H, G, R, S, X, D, C, T, N, E, I, A>
 {
     #[inline]
-    pub fn peek_time_of_next_event(&mut self) -> Option<f64> {
+    pub fn peek_time_of_next_event(&mut self) -> Option<PositiveF64> {
         let next_immigration_time = self
             .immigration_entry
             .peek_next_immigration()
@@ -76,13 +77,12 @@ impl<
         local_remaining + self.migration_balance
     }
 
-    #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
     #[inline]
     pub fn simulate_incremental_early_stop<F: FnMut(&mut Self, u64) -> bool, P: Reporter>(
         &mut self,
         mut early_stop: F,
         reporter: &mut P,
-    ) -> (f64, u64) {
+    ) -> (NonNegativeF64, u64) {
         let mut steps = 0_u64;
 
         reporter.report_progress(Unused::new(&self.get_balanced_remaining_work().0));
@@ -123,9 +123,8 @@ impl<
         (self.active_lineage_sampler.get_last_event_time(), steps)
     }
 
-    #[debug_ensures(ret.0 >= 0.0_f64, "returned time is non-negative")]
     #[inline]
-    pub fn simulate<P: Reporter>(mut self, reporter: &mut P) -> (f64, u64, G) {
+    pub fn simulate<P: Reporter>(mut self, reporter: &mut P) -> (NonNegativeF64, u64, G) {
         let (time, steps) = self.simulate_incremental_early_stop(|_, _| false, reporter);
 
         (time, steps, self.rng)

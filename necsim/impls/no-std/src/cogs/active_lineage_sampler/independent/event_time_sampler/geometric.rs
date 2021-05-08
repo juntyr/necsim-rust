@@ -1,8 +1,9 @@
 use necsim_core::{
     cogs::{Habitat, HabitatPrimeableRng, PrimeableRng, RngSampler, TurnoverRate},
-    intrinsics::{exp, floor},
+    intrinsics::{floor, neg_exp},
     landscape::IndexedLocation,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use super::EventTimeSampler;
 
@@ -10,12 +11,12 @@ use super::EventTimeSampler;
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 pub struct GeometricEventTimeSampler {
-    delta_t: f64,
+    delta_t: PositiveF64,
 }
 
 impl GeometricEventTimeSampler {
-    #[debug_requires(delta_t > 0.0_f64, "delta_t is positive")]
-    pub fn new(delta_t: f64) -> Self {
+    #[must_use]
+    pub fn new(delta_t: PositiveF64) -> Self {
         Self { delta_t }
     }
 }
@@ -28,19 +29,20 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
     fn next_event_time_at_indexed_location_weakly_after(
         &self,
         indexed_location: &IndexedLocation,
-        time: f64,
+        time: NonNegativeF64,
         habitat: &H,
         rng: &mut G,
         turnover_rate: &T,
-    ) -> f64 {
-        let event_probability_per_step = 1.0_f64
-            - exp(-turnover_rate
-                .get_turnover_rate_at_location(indexed_location.location(), habitat)
-                * self.delta_t);
+    ) -> NonNegativeF64 {
+        let event_probability_per_step = neg_exp(
+            turnover_rate.get_turnover_rate_at_location(indexed_location.location(), habitat)
+                * self.delta_t,
+        )
+        .one_minus();
 
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
-        let mut time_step = floor(time / self.delta_t) as u64 + 1;
+        let mut time_step = floor(time.get() / self.delta_t.get()) as u64 + 1;
 
         loop {
             rng.prime_with_habitat(habitat, indexed_location, time_step);
@@ -52,8 +54,6 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
             time_step += 1;
         }
 
-        #[allow(clippy::cast_precision_loss)]
-        let next_event_time = (time_step as f64) * self.delta_t;
-        next_event_time
+        NonNegativeF64::from(time_step) * self.delta_t
     }
 }

@@ -3,6 +3,7 @@ use necsim_core::{
     intrinsics::floor,
     landscape::IndexedLocation,
 };
+use necsim_core_bond::NonNegativeF64;
 
 use super::EventTimeSampler;
 
@@ -25,22 +26,20 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
     fn next_event_time_at_indexed_location_weakly_after(
         &self,
         indexed_location: &IndexedLocation,
-        time: f64,
+        time: NonNegativeF64,
         habitat: &H,
         rng: &mut G,
         turnover_rate: &T,
-    ) -> f64 {
+    ) -> NonNegativeF64 {
         let lambda =
             turnover_rate.get_turnover_rate_at_location(indexed_location.location(), habitat);
 
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
-        let time_step = floor(time * lambda) as u64 + 1;
+        let time_step = floor(time.get() * lambda.get()) as u64 + 1;
 
         rng.prime_with_habitat(habitat, indexed_location, time_step);
 
-        #[allow(clippy::cast_precision_loss)]
-        let next_event_time = (time_step as f64) / lambda;
-        next_event_time
+        NonNegativeF64::from(time_step) / lambda
     }
 }

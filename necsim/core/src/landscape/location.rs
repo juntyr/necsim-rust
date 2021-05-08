@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "cuda", derive(DeviceCopy))]
-#[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
+#[cfg_attr(feature = "mpi", derive(rsmpi::traits::Equivalence))]
 pub struct Location {
     x: u32,
     y: u32,
@@ -40,13 +40,13 @@ impl From<IndexedLocation> for Location {
 struct LocationIndex(NonZeroU32);
 
 #[cfg(feature = "mpi")]
-unsafe impl mpi::traits::Equivalence for LocationIndex {
-    type Out = mpi::datatype::SystemDatatype;
+unsafe impl rsmpi::traits::Equivalence for LocationIndex {
+    type Out = rsmpi::datatype::SystemDatatype;
 
     fn equivalent_datatype() -> Self::Out {
-        use mpi::raw::FromRaw;
+        use rsmpi::raw::FromRaw;
 
-        unsafe { mpi::datatype::DatatypeRef::from_raw(mpi::ffi::RSMPI_UINT32_T) }
+        unsafe { rsmpi::datatype::DatatypeRef::from_raw(rsmpi::ffi::RSMPI_UINT32_T) }
     }
 }
 

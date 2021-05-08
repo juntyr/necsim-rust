@@ -32,7 +32,7 @@ impl Index<InMemoryLineageReference> for AlmostInfiniteLineageStore {
         "lineage reference is valid in the lineage store"
     )]
     fn index(&self, reference: InMemoryLineageReference) -> &Self::Output {
-        &self.lineages_store[Into::<usize>::into(reference)]
+        &self.lineages_store[usize::from(reference)]
     }
 }
 

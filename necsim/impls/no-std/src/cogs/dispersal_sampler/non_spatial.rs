@@ -4,6 +4,7 @@ use necsim_core::{
     cogs::{Backup, DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
+use necsim_core_bond::ZeroInclOneInclF64;
 
 use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 
@@ -103,8 +104,13 @@ impl<G: RngCore> SeparableDispersalSampler<NonSpatialHabitat, G> for NonSpatialD
         &self,
         _location: &Location,
         habitat: &NonSpatialHabitat,
-    ) -> f64 {
-        1.0_f64
-            / (f64::from(habitat.get_extent().width()) * f64::from(habitat.get_extent().height()))
+    ) -> ZeroInclOneInclF64 {
+        let self_dispersal = 1.0_f64
+            / (f64::from(habitat.get_extent().width()) * f64::from(habitat.get_extent().height()));
+
+        // Safety: Since the method is only called for a valid location,
+        //          width >= 1 and height >= 1
+        //         => 1.0/(width*height) in [0.0; 1.0]
+        unsafe { ZeroInclOneInclF64::new_unchecked(self_dispersal) }
     }
 }

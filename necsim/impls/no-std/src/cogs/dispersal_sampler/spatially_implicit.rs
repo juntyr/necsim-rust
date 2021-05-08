@@ -2,6 +2,7 @@ use necsim_core::{
     cogs::{Backup, DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
+use necsim_core_bond::{ZeroExclOneInclF64, ZeroInclOneInclF64};
 
 use crate::cogs::{
     dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
@@ -16,12 +17,12 @@ pub struct SpatiallyImplicitDispersalSampler<G: RngCore> {
     local: NonSpatialDispersalSampler<G>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     meta: NonSpatialDispersalSampler<G>,
-    local_migration_probability_per_generation: f64,
+    local_migration_probability_per_generation: ZeroExclOneInclF64,
 }
 
 impl<G: RngCore> SpatiallyImplicitDispersalSampler<G> {
     #[must_use]
-    pub fn new(local_migration_probability_per_generation: f64) -> Self {
+    pub fn new(local_migration_probability_per_generation: ZeroExclOneInclF64) -> Self {
         Self {
             local: NonSpatialDispersalSampler::default(),
             meta: NonSpatialDispersalSampler::default(),
@@ -65,7 +66,7 @@ impl<G: RngCore> DispersalSampler<SpatiallyImplicitHabitat, G>
         use necsim_core::cogs::RngSampler;
 
         if habitat.local().contains(location) {
-            if rng.sample_event(self.local_migration_probability_per_generation) {
+            if rng.sample_event(self.local_migration_probability_per_generation.into()) {
                 // Provide a dummpy Location in the meta community to disperse from
                 self.meta.sample_dispersal_from_location(
                     &Location::new(
@@ -109,7 +110,7 @@ impl<G: RngCore> SeparableDispersalSampler<SpatiallyImplicitHabitat, G>
         use necsim_core::cogs::RngSampler;
 
         if habitat.local().contains(location) {
-            if rng.sample_event(self.local_migration_probability_per_generation) {
+            if rng.sample_event(self.local_migration_probability_per_generation.into()) {
                 // Provide a dummpy Location in the meta community to disperse from
                 // As the individual is dispersing to a different community,
                 //  we can use standard dispersal in the meta community
@@ -140,11 +141,12 @@ impl<G: RngCore> SeparableDispersalSampler<SpatiallyImplicitHabitat, G>
         &self,
         location: &Location,
         habitat: &SpatiallyImplicitHabitat,
-    ) -> f64 {
+    ) -> ZeroInclOneInclF64 {
         if habitat.local().contains(location) {
             self.local
                 .get_self_dispersal_probability_at_location(location, habitat.local())
-                * (1.0_f64 - self.local_migration_probability_per_generation)
+                * ZeroInclOneInclF64::from(self.local_migration_probability_per_generation)
+                    .one_minus()
         } else {
             self.meta
                 .get_self_dispersal_probability_at_location(location, habitat.meta())

@@ -2,7 +2,7 @@ use necsim_core::{
     cogs::{Backup, Habitat},
     landscape::IndexedLocation,
 };
-use necsim_core_bond::ZeroInclOneInclF64;
+use necsim_core_bond::{PositiveF64, ZeroInclOneInclF64};
 
 use super::EmigrationChoice;
 
@@ -33,10 +33,10 @@ impl<H: Habitat> EmigrationChoice<H> for ProbabilisticEmigrationChoice {
     fn should_lineage_emigrate(
         &self,
         _indexed_location: &IndexedLocation,
-        time: f64,
+        time: PositiveF64,
         _habitat: &H,
     ) -> bool {
-        let hash = diffuse(time.to_bits());
+        let hash = diffuse(time.get().to_bits());
 
         // http://prng.di.unimi.it -> Generating uniform doubles in the unit interval
         #[allow(clippy::cast_precision_loss)]

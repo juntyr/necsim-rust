@@ -1,5 +1,7 @@
 use core::cmp::{Ord, Ordering};
 
+use necsim_core_bond::ZeroInclOneInclF64;
+
 use crate::{
     cogs::{Backup, RngCore},
     event::LineageInteraction,
@@ -26,7 +28,7 @@ pub trait CoalescenceSampler<H: Habitat, R: LineageReference<H>, S: LineageStore
 
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
-pub struct CoalescenceRngSample(f64);
+pub struct CoalescenceRngSample(ZeroInclOneInclF64);
 
 #[contract_trait]
 impl Backup for CoalescenceRngSample {
@@ -37,7 +39,7 @@ impl Backup for CoalescenceRngSample {
 
 impl Ord for CoalescenceRngSample {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.0.total_cmp(&other.0)
+        self.0.cmp(&other.0)
     }
 }
 
@@ -71,7 +73,7 @@ impl CoalescenceRngSample {
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let index = floor(self.0 * f64::from(length)) as u32;
+        let index = floor(self.0.get() * f64::from(length)) as u32;
         index
     }
 }

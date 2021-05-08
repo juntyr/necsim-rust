@@ -1,6 +1,7 @@
 use core::num::NonZeroU32;
 
 use necsim_core::{lineage::MigratingLineage, reporter::Reporter};
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::reporter::ReporterContext;
 
@@ -74,11 +75,15 @@ pub trait LocalPartition<R: Reporter>: Sized {
 
     fn reduce_vote_continue(&self, local_continue: bool) -> bool;
 
-    fn reduce_vote_min_time(&self, local_time: f64) -> Result<f64, f64>;
+    fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64>;
 
     fn wait_for_termination(&mut self) -> bool;
 
-    fn reduce_global_time_steps(&self, local_time: f64, local_steps: u64) -> (f64, u64);
+    fn reduce_global_time_steps(
+        &self,
+        local_time: NonNegativeF64,
+        local_steps: u64,
+    ) -> (NonNegativeF64, u64);
 
     fn report_progress_sync(&mut self, remaining: u64);
 

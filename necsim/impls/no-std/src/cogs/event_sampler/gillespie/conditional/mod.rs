@@ -12,6 +12,7 @@ use necsim_core::{
     landscape::{IndexedLocation, Location},
     simulation::partial::event_sampler::PartialSimulation,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::cogs::{
     coalescence_sampler::conditional::ConditionalCoalescenceSampler,
@@ -107,8 +108,8 @@ impl<
         &mut self,
         lineage_reference: R,
         indexed_location: IndexedLocation,
-        prior_time: f64,
-        event_time: f64,
+        prior_time: NonNegativeF64,
+        event_time: PositiveF64,
         simulation: &mut PartialSimulation<
             H,
             G,
@@ -147,7 +148,8 @@ impl<
                 .into(),
             )
         } else if event_sample
-            < (probability_at_location.speciation() + probability_at_location.out_dispersal())
+            < (probability_at_location.speciation().get()
+                + probability_at_location.out_dispersal().get())
         {
             // Out-Dispersal Event
             let dispersal_target = simulation
@@ -249,20 +251,21 @@ impl<
             T,
             N,
         >,
-    ) -> f64 {
+    ) -> NonNegativeF64 {
         // By PRE, all active lineages, including self, are in the lineage store
         let probability_at_location = ProbabilityAtLocation::new(location, simulation, true);
 
-        #[allow(clippy::cast_precision_loss)]
-        let population = simulation
-            .lineage_store
-            .get_active_local_lineage_references_at_location_unordered(
-                location,
-                &simulation.habitat,
-            )
-            .len() as f64;
+        let population = NonNegativeF64::from(
+            simulation
+                .lineage_store
+                .get_active_local_lineage_references_at_location_unordered(
+                    location,
+                    &simulation.habitat,
+                )
+                .len(),
+        );
 
-        probability_at_location.total()
+        NonNegativeF64::from(probability_at_location.total())
             * population
             * simulation
                 .turnover_rate

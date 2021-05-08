@@ -10,6 +10,7 @@ use necsim_core::{
     landscape::{IndexedLocation, Location},
     simulation::partial::event_sampler::PartialSimulation,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use super::{GillespieEventSampler, GillespiePartialSimulation};
 
@@ -88,8 +89,8 @@ impl<
         &mut self,
         lineage_reference: R,
         indexed_location: IndexedLocation,
-        prior_time: f64,
-        event_time: f64,
+        prior_time: NonNegativeF64,
+        event_time: PositiveF64,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N>,
         rng: &mut G,
     ) -> Option<PackedEvent> {
@@ -182,15 +183,16 @@ impl<
         &self,
         location: &Location,
         simulation: &GillespiePartialSimulation<H, G, R, S, D, C, T, N>,
-    ) -> f64 {
-        #[allow(clippy::cast_precision_loss)]
-        let population = simulation
-            .lineage_store
-            .get_active_local_lineage_references_at_location_unordered(
-                location,
-                &simulation.habitat,
-            )
-            .len() as f64;
+    ) -> NonNegativeF64 {
+        let population = NonNegativeF64::from(
+            simulation
+                .lineage_store
+                .get_active_local_lineage_references_at_location_unordered(
+                    location,
+                    &simulation.habitat,
+                )
+                .len(),
+        );
 
         population
             * simulation

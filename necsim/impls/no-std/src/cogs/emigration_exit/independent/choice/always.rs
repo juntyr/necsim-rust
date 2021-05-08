@@ -2,6 +2,7 @@ use necsim_core::{
     cogs::{Backup, Habitat},
     landscape::IndexedLocation,
 };
+use necsim_core_bond::PositiveF64;
 
 use super::EmigrationChoice;
 
@@ -27,7 +28,7 @@ impl<H: Habitat> EmigrationChoice<H> for AlwaysEmigrationChoice {
     fn should_lineage_emigrate(
         &self,
         _indexed_location: &IndexedLocation,
-        _time: f64,
+        _time: PositiveF64,
         _habitat: &H,
     ) -> bool {
         true

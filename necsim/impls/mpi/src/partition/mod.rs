@@ -2,6 +2,7 @@ use std::num::NonZeroU32;
 
 use necsim_core::{impl_report, lineage::MigratingLineage, reporter::Reporter};
 
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_impls_no_std::partitioning::{
     iterator::ImmigrantPopIterator, monolithic::live::LiveMonolithicLocalPartition, LocalPartition,
     MigrationMode,
@@ -91,7 +92,7 @@ impl<R: Reporter> LocalPartition<R> for MpiLocalPartition<R> {
         }
     }
 
-    fn reduce_vote_min_time(&self, local_time: f64) -> Result<f64, f64> {
+    fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64> {
         match self {
             Self::LiveMonolithic(partition) => partition.reduce_vote_min_time(local_time),
             Self::RecordedMonolithic(partition) => partition.reduce_vote_min_time(local_time),
@@ -109,7 +110,11 @@ impl<R: Reporter> LocalPartition<R> for MpiLocalPartition<R> {
         }
     }
 
-    fn reduce_global_time_steps(&self, local_time: f64, local_steps: u64) -> (f64, u64) {
+    fn reduce_global_time_steps(
+        &self,
+        local_time: NonNegativeF64,
+        local_steps: u64,
+    ) -> (NonNegativeF64, u64) {
         match self {
             Self::LiveMonolithic(partition) => {
                 partition.reduce_global_time_steps(local_time, local_steps)

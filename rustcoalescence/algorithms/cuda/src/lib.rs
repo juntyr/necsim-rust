@@ -17,6 +17,7 @@ use necsim_core::{
     simulation::Simulation,
 };
 
+use necsim_core_bond::NonNegativeF64;
 use necsim_impls_cuda::cogs::rng::CudaRng;
 use necsim_impls_no_std::{
     cogs::{
@@ -82,7 +83,7 @@ where
         scenario: O,
         pre_sampler: OriginPreSampler<I>,
         local_partition: &mut P,
-    ) -> Result<(f64, u64), Self::Error> {
+    ) -> Result<(NonNegativeF64, u64), Self::Error> {
         let lineages: VecDeque<Lineage> = match args.parallelism_mode {
             // Apply no lineage origin partitioning in the `Monolithic` mode
             ParallelismMode::Monolithic(..) => scenario
@@ -119,7 +120,7 @@ where
         let immigration_entry = NeverImmigrationEntry::default();
 
         let active_lineage_sampler =
-            IndependentActiveLineageSampler::empty(ExpEventTimeSampler::new(args.delta_t.get()));
+            IndependentActiveLineageSampler::empty(ExpEventTimeSampler::new(args.delta_t));
 
         let simulation = Simulation::builder()
             .habitat(habitat)

@@ -6,6 +6,7 @@ use std::{
 
 use anyhow::{Context, Result};
 
+use necsim_core_bond::NonNegativeF64;
 use rustacuda::{
     function::{BlockSize, GridSize},
     memory::{CopyDestination, DeviceBox},
@@ -82,7 +83,7 @@ pub fn simulate<
     lineages: VecDeque<Lineage>,
     event_slice: NonZeroU32,
     local_partition: &mut L,
-) -> Result<(f64, u64)> {
+) -> Result<(NonNegativeF64, u64)> {
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(lineages.len() as u64);
 
@@ -120,7 +121,7 @@ pub fn simulate<
     let mut slow_events: Vec<PackedEvent> = Vec::with_capacity(event_slice.get() as usize);
     let mut fast_events: Vec<PackedEvent> = Vec::with_capacity(event_slice.get() as usize);
 
-    let mut level_time = 0.0_f64;
+    let mut level_time = NonNegativeF64::zero();
 
     let cpu_habitat = simulation.habitat().backup();
     let cpu_turnover_rate = simulation.turnover_rate().backup();
@@ -131,7 +132,7 @@ pub fn simulate<
     simulation
         .lend_to_cuda_mut(|mut simulation_cuda_repr| {
             while !slow_lineages.is_empty() {
-                let total_event_rate: f64 = if P::ReportDispersal::VALUE {
+                let total_event_rate: NonNegativeF64 = if P::ReportDispersal::VALUE {
                     // Full event rate lambda with speciation
                     slow_lineages
                         .iter()
@@ -157,10 +158,10 @@ pub fn simulate<
                         .sum()
                 } else {
                     // No events produced -> no restriction
-                    f64::INFINITY
+                    NonNegativeF64::infinity()
                 };
 
-                level_time += f64::from(event_slice.get()) / total_event_rate;
+                level_time += NonNegativeF64::from(event_slice.get()) / total_event_rate;
 
                 // Move fast events below the new level into slow events
                 slow_events.extend(fast_events.drain_filter(|event| event.event_time < level_time));
@@ -285,7 +286,8 @@ pub fn simulate<
         total_steps_sum.copy_to(&mut total_steps_sum_result)?;
 
         (
-            f64::from_bits(total_time_max_result),
+            // Safety: Max of NonNegativeF64 values from the GPU
+            unsafe { NonNegativeF64::new_unchecked(f64::from_bits(total_time_max_result)) },
             total_steps_sum_result,
         )
     };

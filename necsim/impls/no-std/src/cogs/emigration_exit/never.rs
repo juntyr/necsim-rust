@@ -3,6 +3,7 @@ use necsim_core::{
     landscape::{IndexedLocation, Location},
     simulation::partial::emigration_exit::PartialSimulation,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
@@ -34,11 +35,11 @@ impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: LineageStore<H, R>>
         lineage_reference: R,
         dispersal_origin: IndexedLocation,
         dispersal_target: Location,
-        prior_time: f64,
-        event_time: f64,
+        prior_time: NonNegativeF64,
+        event_time: PositiveF64,
         _simulation: &mut PartialSimulation<H, G, R, S>,
         _rng: &mut G,
-    ) -> Option<(R, IndexedLocation, Location, f64, f64)> {
+    ) -> Option<(R, IndexedLocation, Location, NonNegativeF64, PositiveF64)> {
         Some((
             lineage_reference,
             dispersal_origin,

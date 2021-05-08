@@ -1,5 +1,6 @@
 use std::{cmp::Ordering, fmt};
 
+use necsim_core_bond::PositiveF64;
 use serde::{Deserialize, Serialize};
 
 pub mod recorder;
@@ -8,8 +9,8 @@ pub mod replay;
 #[derive(Serialize, Deserialize, PartialEq)]
 #[allow(clippy::module_name_repetitions)]
 pub struct EventLogHeader {
-    min_time: f64,
-    max_time: f64,
+    min_time: PositiveF64,
+    max_time: PositiveF64,
 
     length: usize,
 
@@ -30,8 +31,8 @@ impl fmt::Debug for EventLogHeader {
 impl EventLogHeader {
     #[must_use]
     pub fn new(
-        min_time: f64,
-        max_time: f64,
+        min_time: PositiveF64,
+        max_time: PositiveF64,
         length: usize,
         with_speciation: bool,
         with_dispersal: bool,
@@ -46,12 +47,12 @@ impl EventLogHeader {
     }
 
     #[must_use]
-    pub fn min_time(&self) -> f64 {
+    pub fn min_time(&self) -> PositiveF64 {
         self.min_time
     }
 
     #[must_use]
-    pub fn max_time(&self) -> f64 {
+    pub fn max_time(&self) -> PositiveF64 {
         self.max_time
     }
 

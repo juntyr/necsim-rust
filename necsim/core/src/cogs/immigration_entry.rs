@@ -1,3 +1,5 @@
+use necsim_core_bond::PositiveF64;
+
 use crate::lineage::MigratingLineage;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
@@ -18,7 +20,7 @@ pub trait ImmigrationEntry: crate::cogs::Backup + core::fmt::Debug {
     }, "immigration event time is before the next event")]
     fn next_optional_immigration(
         &mut self,
-        optional_next_event_time: Option<f64>,
+        optional_next_event_time: Option<PositiveF64>,
     ) -> Option<MigratingLineage>;
 
     #[must_use]

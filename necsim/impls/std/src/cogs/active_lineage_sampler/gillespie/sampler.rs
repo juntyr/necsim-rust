@@ -1,5 +1,3 @@
-use float_next_after::NextAfter;
-
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit,
@@ -12,6 +10,7 @@ use necsim_core::{
     simulation::partial::active_lineager_sampler::PartialSimulation,
 };
 
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_impls_no_std::cogs::event_sampler::gillespie::{
     GillespieEventSampler, GillespiePartialSimulation,
 };
@@ -40,7 +39,7 @@ impl<
     }
 
     #[must_use]
-    fn get_last_event_time(&self) -> f64 {
+    fn get_last_event_time(&self) -> NonNegativeF64 {
         self.last_event_time
     }
 
@@ -49,17 +48,13 @@ impl<
         &mut self,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
-    ) -> Option<(R, IndexedLocation, f64, f64)> {
+    ) -> Option<(R, IndexedLocation, NonNegativeF64, PositiveF64)> {
         use necsim_core::cogs::RngSampler;
 
         let (chosen_active_location, chosen_event_time) = self.active_locations.pop()?;
-        let chosen_event_time = chosen_event_time.into();
 
-        let unique_event_time: f64 = if chosen_event_time > self.last_event_time {
-            chosen_event_time
-        } else {
-            self.last_event_time.next_after(f64::INFINITY)
-        };
+        let unique_event_time =
+            PositiveF64::max_after(self.last_event_time, chosen_event_time.into());
 
         let lineages_at_location = simulation
             .lineage_store
@@ -83,23 +78,31 @@ impl<
         self.number_active_lineages -= 1;
 
         if number_lineages_left_at_location > 0 {
-            let event_rate_at_location =
-                simulation.with_split_event_sampler(|event_sampler, simulation| {
-                    GillespiePartialSimulation::without_emigration_exit(simulation, |simulation| {
-                        // All active lineages which are left, which now excludes
-                        //  chosen_lineage_reference, are still in the lineage store
-                        event_sampler
-                            .get_event_rate_at_location(&chosen_active_location, simulation)
+            if let Ok(event_rate_at_location) = PositiveF64::new(
+                simulation
+                    .with_split_event_sampler(|event_sampler, simulation| {
+                        GillespiePartialSimulation::without_emigration_exit(
+                            simulation,
+                            |simulation| {
+                                // All active lineages which are left, which now excludes
+                                //  chosen_lineage_reference, are still in the lineage store
+                                event_sampler
+                                    .get_event_rate_at_location(&chosen_active_location, simulation)
+                            },
+                        )
                     })
-                });
-
-            self.active_locations.push(
-                chosen_active_location,
-                EventTime::from(unique_event_time + rng.sample_exponential(event_rate_at_location)),
-            );
+                    .get(),
+            ) {
+                self.active_locations.push(
+                    chosen_active_location,
+                    EventTime::from(
+                        unique_event_time + rng.sample_exponential(event_rate_at_location),
+                    ),
+                );
+            }
         }
 
-        self.last_event_time = unique_event_time;
+        self.last_event_time = unique_event_time.into();
 
         Some((
             chosen_lineage_reference,
@@ -120,7 +123,7 @@ impl<
         &mut self,
         lineage_reference: R,
         indexed_location: IndexedLocation,
-        time: f64,
+        time: PositiveF64,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
     ) {
@@ -136,30 +139,33 @@ impl<
                 &simulation.habitat,
             );
 
-        let event_rate_at_location =
-            simulation.with_split_event_sampler(|event_sampler, simulation| {
-                GillespiePartialSimulation::without_emigration_exit(simulation, |simulation| {
-                    // All active lineage references, including lineage_reference,
-                    //  are now (back) in the lineage store
-                    event_sampler.get_event_rate_at_location(&location, simulation)
+        if let Ok(event_rate_at_location) = PositiveF64::new(
+            simulation
+                .with_split_event_sampler(|event_sampler, simulation| {
+                    GillespiePartialSimulation::without_emigration_exit(simulation, |simulation| {
+                        // All active lineage references, including lineage_reference,
+                        //  are now (back) in the lineage store
+                        event_sampler.get_event_rate_at_location(&location, simulation)
+                    })
                 })
-            });
+                .get(),
+        ) {
+            self.active_locations.push(
+                location,
+                EventTime::from(time + rng.sample_exponential(event_rate_at_location)),
+            );
 
-        self.active_locations.push(
-            location,
-            EventTime::from(time + rng.sample_exponential(event_rate_at_location)),
-        );
+            self.number_active_lineages += 1;
+        }
 
-        self.last_event_time = time;
-
-        self.number_active_lineages += 1;
+        self.last_event_time = time.into();
     }
 
     fn insert_new_lineage_to_indexed_location(
         &mut self,
         global_reference: GlobalLineageReference,
         indexed_location: IndexedLocation,
-        time: f64,
+        time: PositiveF64,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
     ) {
@@ -174,23 +180,26 @@ impl<
             time,
         );
 
-        let event_rate_at_location =
-            simulation.with_split_event_sampler(|event_sampler, simulation| {
-                GillespiePartialSimulation::without_emigration_exit(simulation, |simulation| {
-                    // All active lineages, including _immigrant_lineage_reference,
-                    //  are now in the lineage store
-                    event_sampler.get_event_rate_at_location(&location, simulation)
+        if let Ok(event_rate_at_location) = PositiveF64::new(
+            simulation
+                .with_split_event_sampler(|event_sampler, simulation| {
+                    GillespiePartialSimulation::without_emigration_exit(simulation, |simulation| {
+                        // All active lineages, including _immigrant_lineage_reference,
+                        //  are now in the lineage store
+                        event_sampler.get_event_rate_at_location(&location, simulation)
+                    })
                 })
-            });
+                .get(),
+        ) {
+            self.active_locations.push(
+                location,
+                EventTime::from(time + rng.sample_exponential(event_rate_at_location)),
+            );
 
-        self.active_locations.push(
-            location,
-            EventTime::from(time + rng.sample_exponential(event_rate_at_location)),
-        );
+            self.number_active_lineages += 1;
+        }
 
-        self.last_event_time = time;
-
-        self.number_active_lineages += 1;
+        self.last_event_time = time.into();
     }
 }
 
@@ -215,10 +224,12 @@ impl<
         _habitat: &H,
         _turnover_rate: &T,
         _rng: &mut G,
-    ) -> Result<f64, EmptyActiveLineageSamplerError> {
+    ) -> Result<PositiveF64, EmptyActiveLineageSamplerError> {
         self.active_locations
             .peek()
-            .map(|(_, next_event_time)| next_event_time.clone().into())
+            .map(|(_, next_event_time)| {
+                PositiveF64::max_after(self.last_event_time, next_event_time.clone().into())
+            })
             .ok_or(EmptyActiveLineageSamplerError)
     }
 }

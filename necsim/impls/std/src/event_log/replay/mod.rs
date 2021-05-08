@@ -88,7 +88,7 @@ impl FromIterator<SortedSegment> for anyhow::Result<EventLogReplay> {
 
             for (i, seg) in segments.iter().enumerate() {
                 if seg.header().min_time() > max_time && seg.header().min_time() < min_time {
-                    min_time = seg.header().min_time();
+                    min_time = seg.header().min_time().get();
                     min_index = Some(i);
                 }
             }
@@ -108,7 +108,7 @@ impl FromIterator<SortedSegment> for anyhow::Result<EventLogReplay> {
 
             let min_segement = segments.swap_remove(min_index);
 
-            max_time = min_segement.header().max_time();
+            max_time = min_segement.header().max_time().get();
 
             current_group.push(min_segement);
         }

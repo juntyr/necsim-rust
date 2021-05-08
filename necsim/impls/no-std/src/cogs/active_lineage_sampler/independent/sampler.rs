@@ -7,6 +7,7 @@ use necsim_core::{
     lineage::{GlobalLineageReference, Lineage},
     simulation::partial::active_lineager_sampler::PartialSimulation,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::cogs::{
     coalescence_sampler::independent::IndependentCoalescenceSampler,
@@ -48,10 +49,10 @@ impl<
             .map_or(0, |lineage| lineage.is_active() as usize)
     }
 
-    fn get_last_event_time(&self) -> f64 {
+    fn get_last_event_time(&self) -> NonNegativeF64 {
         self.active_lineage
             .as_ref()
-            .map_or(0.0_f64, Lineage::last_event_time)
+            .map_or(NonNegativeF64::zero(), Lineage::last_event_time)
     }
 
     #[must_use]
@@ -72,7 +73,12 @@ impl<
             IndependentEventSampler<H, G, X, D, T, N>,
         >,
         rng: &mut G,
-    ) -> Option<(GlobalLineageReference, IndexedLocation, f64, f64)> {
+    ) -> Option<(
+        GlobalLineageReference,
+        IndexedLocation,
+        NonNegativeF64,
+        PositiveF64,
+    )> {
         let next_event_time = self
             .peek_time_of_next_event(&simulation.habitat, &simulation.turnover_rate, rng)
             .ok()?;
@@ -101,7 +107,7 @@ impl<
         &mut self,
         _lineage_reference: GlobalLineageReference,
         indexed_location: IndexedLocation,
-        _time: f64,
+        _time: PositiveF64,
         _simulation: &mut PartialSimulation<
             H,
             G,
@@ -126,7 +132,7 @@ impl<
         &mut self,
         _global_reference: GlobalLineageReference,
         _indexed_location: IndexedLocation,
-        _time: f64,
+        _time: PositiveF64,
         _simulation: &mut PartialSimulation<
             H,
             G,
@@ -176,7 +182,7 @@ impl<
         habitat: &H,
         turnover_rate: &T,
         rng: &mut G,
-    ) -> Result<f64, EmptyActiveLineageSamplerError> {
+    ) -> Result<PositiveF64, EmptyActiveLineageSamplerError> {
         if self.next_event_time.is_none() {
             if let Some(active_lineage) = &self.active_lineage {
                 // Check for extraneously simulated (inactive) lineages
@@ -186,7 +192,7 @@ impl<
 
                 let next_event_time = self
                     .event_time_sampler
-                    .next_event_time_at_indexed_location_after(
+                    .next_event_time_at_indexed_location_weakly_after(
                         lineage_indexed_location,
                         active_lineage.last_event_time(),
                         habitat,
@@ -194,7 +200,10 @@ impl<
                         turnover_rate,
                     );
 
-                self.next_event_time = Some(next_event_time);
+                self.next_event_time = Some(PositiveF64::max_after(
+                    active_lineage.last_event_time(),
+                    next_event_time,
+                ));
             }
         }
 

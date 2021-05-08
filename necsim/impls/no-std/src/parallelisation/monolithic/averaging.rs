@@ -7,7 +7,7 @@ use necsim_core::{
     reporter::Reporter,
     simulation::Simulation,
 };
-use necsim_core_bond::PositiveF64;
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::{
     cogs::{
@@ -62,16 +62,16 @@ pub fn simulate<
     >,
     independent_time_slice: PositiveF64,
     local_partition: &mut L,
-) -> (f64, u64) {
+) -> (NonNegativeF64, u64) {
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(simulation.get_balanced_remaining_work().0);
 
-    let mut global_safe_time = 0.0_f64;
+    let mut global_safe_time = NonNegativeF64::zero();
 
     let mut total_steps = 0_u64;
 
     while local_partition.reduce_vote_continue(simulation.peek_time_of_next_event().is_some()) {
-        let next_safe_time = global_safe_time + independent_time_slice.get();
+        let next_safe_time = global_safe_time + independent_time_slice;
 
         let (_, new_steps) = simulation.simulate_incremental_early_stop(
             |simulation, _| {
@@ -94,7 +94,7 @@ pub fn simulate<
             //  not conflict with the independence of the current time slice
             immigrant.event_time = immigrant
                 .event_time
-                .max(global_safe_time + independent_time_slice.get());
+                .max(global_safe_time + independent_time_slice);
 
             simulation.immigration_entry_mut().push(immigrant)
         }
@@ -110,14 +110,14 @@ pub fn simulate<
                 //  slice
                 immigrant.event_time = immigrant
                     .event_time
-                    .max(global_safe_time + independent_time_slice.get());
+                    .max(global_safe_time + independent_time_slice);
 
                 simulation.immigration_entry_mut().push(immigrant)
             }
         }
 
         // Globally advance the simulation to the next safe point
-        global_safe_time += independent_time_slice.get();
+        global_safe_time += independent_time_slice.into();
     }
 
     local_partition.report_progress_sync(0_u64);

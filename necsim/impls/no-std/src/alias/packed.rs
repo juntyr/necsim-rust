@@ -109,10 +109,10 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let i = floor(x * (alias_samplers.len() as f64)) as usize; // index into events
+        let i = floor(x.get() * (alias_samplers.len() as f64)) as usize; // index into events
 
         #[allow(clippy::cast_precision_loss)]
-        let y = x * (alias_samplers.len() as f64) - (i as f64); // U(0,1) to compare against U[i]
+        let y = x.get() * (alias_samplers.len() as f64) - (i as f64); // U(0,1) to compare against U[i]
 
         let sample = &alias_samplers[i];
 

@@ -1,3 +1,5 @@
+use necsim_core_bond::{NonNegativeF64, ZeroInclOneInclF64};
+
 #[must_use]
 #[inline]
 pub fn floor(val: f64) -> f64 {
@@ -51,8 +53,20 @@ pub fn exp(val: f64) -> f64 {
 
 #[must_use]
 #[inline]
+pub fn neg_exp(val: NonNegativeF64) -> ZeroInclOneInclF64 {
+    unsafe { ZeroInclOneInclF64::new_unchecked(-val.get()) }
+}
+
+#[must_use]
+#[inline]
 pub fn sqrt(val: f64) -> f64 {
     unsafe { core::intrinsics::sqrtf64(val) }
+}
+
+#[must_use]
+#[inline]
+pub fn safe_sqrt(val: NonNegativeF64) -> NonNegativeF64 {
+    unsafe { NonNegativeF64::new_unchecked(core::intrinsics::sqrtf64(val.get())) }
 }
 
 #[must_use]

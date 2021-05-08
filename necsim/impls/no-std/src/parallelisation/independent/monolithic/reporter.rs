@@ -1,11 +1,12 @@
 use alloc::vec::Vec;
 use core::{fmt, marker::PhantomData};
+use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::{event::PackedEvent, impl_report, reporter::Reporter};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct WaterLevelReporter<'e, R: Reporter> {
-    water_level: f64,
+    water_level: NonNegativeF64,
     slow_events: &'e mut Vec<PackedEvent>,
     fast_events: &'e mut Vec<PackedEvent>,
     _marker: PhantomData<R>,
@@ -57,7 +58,7 @@ impl<'e, R: Reporter> Reporter for WaterLevelReporter<'e, R> {
 
 impl<'e, R: Reporter> WaterLevelReporter<'e, R> {
     pub fn new(
-        water_level: f64,
+        water_level: NonNegativeF64,
         slow_events: &'e mut Vec<PackedEvent>,
         fast_events: &'e mut Vec<PackedEvent>,
     ) -> Self {

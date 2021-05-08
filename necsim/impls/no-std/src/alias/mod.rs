@@ -93,10 +93,10 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let i = floor(x * (self.Es.len() as f64)) as usize; // index into events
+        let i = floor(x.get() * (self.Es.len() as f64)) as usize; // index into events
 
         #[allow(clippy::cast_precision_loss)]
-        let y = x * (self.Es.len() as f64) - (i as f64); // U(0,1) to compare against U[i]
+        let y = x.get() * (self.Es.len() as f64) - (i as f64); // U(0,1) to compare against U[i]
 
         if y < self.Us[i] {
             self.Es[i]

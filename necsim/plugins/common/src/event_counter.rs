@@ -5,10 +5,11 @@ use necsim_core::{
     impl_finalise, impl_report,
     reporter::Reporter,
 };
+use necsim_core_bond::NonNegativeF64;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct EventCounterReporter {
-    last_parent_prior_time: Option<u64>,
+    last_parent_prior_time: Option<NonNegativeF64>,
     last_speciation_event: Option<SpeciationEvent>,
     last_dispersal_event: Option<DispersalEvent>,
 
@@ -43,15 +44,15 @@ impl Reporter for EventCounterReporter {
     impl_report!(speciation(&mut self, event: Unused) -> Used {
         event.use_in(|event| {
             if Some(event) == self.last_speciation_event.as_ref() {
-                if Some(event.prior_time.to_bits()) != self.last_parent_prior_time {
+                if Some(event.prior_time) != self.last_parent_prior_time {
                     self.late_coalescence += 1;
                 }
-                self.last_parent_prior_time = Some(event.prior_time.to_bits());
+                self.last_parent_prior_time = Some(event.prior_time);
 
                 return;
             }
             self.last_speciation_event = Some(event.clone());
-            self.last_parent_prior_time = Some(event.prior_time.to_bits());
+            self.last_parent_prior_time = Some(event.prior_time);
 
             self.speciation += 1;
         })
@@ -60,15 +61,15 @@ impl Reporter for EventCounterReporter {
     impl_report!(dispersal(&mut self, event: Unused) -> Used {
         event.use_in(|event| {
             if Some(event) == self.last_dispersal_event.as_ref() {
-                if Some(event.prior_time.to_bits()) != self.last_parent_prior_time {
+                if Some(event.prior_time) != self.last_parent_prior_time {
                     self.late_coalescence += 1;
                 }
-                self.last_parent_prior_time = Some(event.prior_time.to_bits());
+                self.last_parent_prior_time = Some(event.prior_time);
 
                 return;
             }
             self.last_dispersal_event = Some(event.clone());
-            self.last_parent_prior_time = Some(event.prior_time.to_bits());
+            self.last_parent_prior_time = Some(event.prior_time);
 
             let self_dispersal = event.origin == event.target;
             let coalescence = matches!(event.interaction, LineageInteraction::Coalescence(_));

@@ -1,8 +1,9 @@
 use necsim_core::{
     cogs::{Habitat, HabitatPrimeableRng, PrimeableRng, RngSampler, TurnoverRate},
-    intrinsics::{exp, floor, sqrt},
+    intrinsics::{exp, floor, safe_sqrt},
     landscape::IndexedLocation,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use super::EventTimeSampler;
 
@@ -13,12 +14,12 @@ const INV_PHI: u64 = 0x9e37_79b9_7f4a_7c15_u64;
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 pub struct PoissonEventTimeSampler {
-    delta_t: f64,
+    delta_t: PositiveF64,
 }
 
 impl PoissonEventTimeSampler {
-    #[debug_requires(delta_t > 0.0_f64, "delta_t is positive")]
-    pub fn new(delta_t: f64) -> Self {
+    #[must_use]
+    pub fn new(delta_t: PositiveF64) -> Self {
         Self { delta_t }
     }
 }
@@ -31,19 +32,19 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
     fn next_event_time_at_indexed_location_weakly_after(
         &self,
         indexed_location: &IndexedLocation,
-        time: f64,
+        time: NonNegativeF64,
         habitat: &H,
         rng: &mut G,
         turnover_rate: &T,
-    ) -> f64 {
+    ) -> NonNegativeF64 {
         let lambda =
             turnover_rate.get_turnover_rate_at_location(indexed_location.location(), habitat);
         let lambda_per_step = lambda * self.delta_t;
-        let no_event_probability_per_step = exp(-lambda_per_step);
+        let no_event_probability_per_step = exp(-lambda_per_step.get());
 
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
-        let mut time_step = floor(time / self.delta_t) as u64;
+        let mut time_step = floor(time.get() / self.delta_t.get()) as u64;
 
         let (event_time, event_index) = loop {
             rng.prime_with_habitat(habitat, indexed_location, time_step);
@@ -58,7 +59,7 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
 
                 while u > acc && prod > 0.0_f64 {
                     poisson += 1;
-                    prod *= lambda_per_step / f64::from(poisson);
+                    prod *= lambda_per_step.get() / f64::from(poisson);
                     acc += prod;
                 }
 
@@ -67,7 +68,7 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
                 // Fallback in case no_event_probability_per_step underflows
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let normal_as_poisson = rng
-                    .sample_2d_normal(lambda_per_step, sqrt(lambda_per_step))
+                    .sample_2d_normal(lambda_per_step.get(), safe_sqrt(lambda_per_step))
                     .0
                     .max(0.0_f64) as u32;
 
@@ -78,7 +79,8 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
 
             for event_index in 0..number_events_at_time_steps {
                 #[allow(clippy::cast_precision_loss)]
-                let event_time = ((time_step as f64) + rng.sample_uniform()) * self.delta_t;
+                let event_time =
+                    (NonNegativeF64::from(time_step) + rng.sample_uniform()) * self.delta_t;
 
                 if event_time > time {
                     next_event = match next_event {

@@ -11,6 +11,10 @@
 #[doc(hidden)]
 pub extern crate alloc;
 
+#[cfg(feature = "mpi")]
+#[doc(hidden)]
+extern crate rsmpi as mpi;
+
 #[macro_use]
 extern crate contracts;
 
@@ -24,9 +28,6 @@ extern crate rust_cuda_derive;
 #[cfg(feature = "cuda")]
 #[macro_use]
 extern crate rustacuda_derive;
-
-#[macro_use]
-extern crate type_layout;
 
 pub mod cogs;
 pub mod event;

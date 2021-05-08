@@ -67,7 +67,7 @@ impl<G: RngCore> Scenario<G> for SpatiallyExplicitScenario<G> {
         let habitat = InMemoryHabitat::new(args.habitat_map);
         let turnover_rate = UniformTurnoverRate::default();
         let speciation_probability =
-            UniformSpeciationProbability::new(speciation_probability_per_generation.get());
+            UniformSpeciationProbability::new(speciation_probability_per_generation.into());
 
         let habitat_extent = habitat.get_extent();
         let habitat_area = (habitat_extent.width() as usize) * (habitat_extent.height() as usize);

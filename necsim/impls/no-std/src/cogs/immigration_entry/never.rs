@@ -2,6 +2,7 @@ use necsim_core::{
     cogs::{Backup, ImmigrationEntry},
     lineage::MigratingLineage,
 };
+use necsim_core_bond::PositiveF64;
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
@@ -28,7 +29,7 @@ impl ImmigrationEntry for NeverImmigrationEntry {
     #[debug_ensures(ret.is_none(), "no lineage ever immigrates")]
     fn next_optional_immigration(
         &mut self,
-        _optional_next_event_time: Option<f64>,
+        _optional_next_event_time: Option<PositiveF64>,
     ) -> Option<MigratingLineage> {
         None
     }
