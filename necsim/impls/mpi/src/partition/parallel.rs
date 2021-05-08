@@ -340,13 +340,20 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
         local_time: NonNegativeF64,
         local_steps: u64,
     ) -> (NonNegativeF64, u64) {
-        let mut global_time_max = NonNegativeF64::zero();
+        let mut global_time_max = 0.0_f64;
         let mut global_steps_sum = 0_u64;
 
-        self.world
-            .all_reduce_into(&local_time, &mut global_time_max, SystemOperation::max());
+        self.world.all_reduce_into(
+            &local_time.get(),
+            &mut global_time_max,
+            SystemOperation::max(),
+        );
         self.world
             .all_reduce_into(&local_steps, &mut global_steps_sum, SystemOperation::sum());
+
+        // Safety: `global_time_max` is the max of multiple `NonNegativeF64`s
+        //         communicated through MPI
+        let global_time_max = unsafe { NonNegativeF64::new_unchecked(global_time_max) };
 
         (global_time_max, global_steps_sum)
     }
