@@ -223,8 +223,6 @@ impl<'de> Visitor<'de> for ReporterPluginLibraryVisitor {
                 return Err(de::Error::missing_field("reporters"));
             };
 
-        // TODO: Check if this accepts extraneous keys
-
         Ok(ReporterPluginLibrary { library, reporters })
     }
 }

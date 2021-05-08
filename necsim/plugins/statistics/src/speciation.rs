@@ -29,6 +29,7 @@ impl fmt::Debug for GlobalSpeciationReporter {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct GlobalSpeciationReporterArgs {
     output: PathBuf,
 }

@@ -137,10 +137,7 @@ where
             .active_lineage_sampler(active_lineage_sampler)
             .build();
 
-        // TODO: It seems to be more performant to spawn smaller tasks than to use
-        //        the full parallelism - why?
-        //       Does it have to do with detecting duplication slower (we could increase
-        //        the step size bit by bit) or with bottlenecks on the GPU?
+        // Note: It seems to be more performant to spawn smaller blocks
         let block_size = BlockSize::x(args.block_size);
         let grid_size = GridSize::x(args.grid_size);
 

@@ -34,6 +34,7 @@ impl fmt::Debug for GlobalTurnoverReporter {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct GlobalTurnoverReporterArgs {
     output: PathBuf,
 }
