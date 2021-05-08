@@ -41,6 +41,7 @@ enum Metacommunity {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct MetacommunityMigrationReporterArgs {
     metacommunity: Metacommunity,
     seed: u64,

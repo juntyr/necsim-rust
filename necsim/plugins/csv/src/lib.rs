@@ -34,6 +34,7 @@ impl fmt::Debug for CsvReporter {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct CsvReporterArgs {
     output: PathBuf,
 }

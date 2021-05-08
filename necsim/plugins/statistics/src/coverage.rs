@@ -29,6 +29,7 @@ impl fmt::Debug for GlobalCoverageReporter {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct GlobalCoverageReporterArgs {
     output: PathBuf,
 }

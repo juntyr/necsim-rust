@@ -127,8 +127,7 @@ pub fn simulate<
     let cpu_turnover_rate = simulation.turnover_rate().backup();
     let cpu_speciation_probability = simulation.speciation_probability().backup();
 
-    // TODO: We should use async launches and callbacks to rotate between
-    // simulation, event analysis etc.
+    // TODO: Pipeline async launches and callbacks of simulation/event analysis
     simulation
         .lend_to_cuda_mut(|mut simulation_cuda_repr| {
             while !slow_lineages.is_empty() {
