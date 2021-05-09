@@ -1,0 +1,23 @@
+=>> PBS: job killed: mem 33458032kb exceeded limit 16777216kb
+/var/spool/PBS/mom_priv/jobs/3493357[9].pbs.SC: line 29: 837971 Killed                  mpiexec $HOME/necsim-rust/target-mpi/release/rustcoalescence simulate '(
+        speciation: 0.001,
+        sample: 5e-06,
+        seed: '$(python3 -c "import random; print(random.getrandbits(64))")',
+
+        algorithm: SkippingGillespie(parallelism_mode:Optimistic(delta_sync:1000.0)),
+
+        scenario: SpatiallyExplicit(
+            habitat: "'$HOME'/necsim-rust/maps/madingley/fg0size12/habitat.tif",
+            dispersal: "'$HOME'/necsim-rust/maps/madingley/fg0size12/dispersal.tif",
+        ),
+        
+        log: "'$TMPDIR'/event_log",
+
+        reporters: [
+            Plugin(
+                library: "'$HOME'/necsim-rust/target-mpi/release/deps/libnecsim_plugins_common.so",
+                reporters: [Execution(),Biodiversity()],
+            ),
+        ],
+    )'
+-bash: line 1: 837967 Killed                  /var/spool/PBS/mom_priv/jobs/3493357\[9\].pbs.SC
