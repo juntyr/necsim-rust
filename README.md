@@ -47,13 +47,16 @@ necsim-rust consists of the following crates:
         - no-std/: `necsim-impls-no-std` contains the implementations of cogs that **do not** require the Rust standard library
         - std/: `necsim-impls-std` contains the implementations of cogs that **do** require the Rust standard library
         - cuda/: `necsim-impls-cuda` contains the implementations of CUDA specific cogs
-        - mpi/: `necsim-impls-mpi` contains the implementation of the MPI-based parallelisation backend
     - plugins/:
         - core/: `necsim-plugins-core` implements the reporter plugin system and provides the functionality to export and load plugins
         - common/: `necsim-plugins-common` implements common analysis reporters, e.g. to measure biodiversity, print a progress bar, etc.
         - metacommunity/: `necsim-plugins-metacommunity` implements a reporter which measures migrations to a static external metacommunity, which can be simulated separately using the non-spatial scenario
         - csv/: `necsim-plugins-csv` implements a reporter which records events in a CSV file
         - coalescence/: `necsim-plugins-coalescence` is **WORK IN PROGRESS**
+    - partitioning/:
+        - core/: `necsim-partitioning-core` declares the core partitioning traits
+        - monolithic/: `necsim-partitioning-monolithic` implements monolithic, i.e. non-parallel partitioning
+        - mpi/: `necsim-partitioning-mpi` implements the MPI-based partitioning backend
 - rustcoalescence/: `rustcoalescence` provides the command-line interface.
     - linker/: `rustcoalescence-linker` is a custom linker used during the compilation.
     - scenarios/: `rustcoalescence-scenarios` contains the glue code to put together the cogs for the built-in scenarios. It is specifically built only for reducing code duplication in rustcoalescence, not for giving a minimal example of how to construct a simulation.
