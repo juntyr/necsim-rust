@@ -48,6 +48,7 @@ impl<R: Reporter> fmt::Debug for RecordedMonolithicLocalPartition<R> {
 #[contract_trait]
 impl<R: Reporter> LocalPartition<R> for RecordedMonolithicLocalPartition<R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
+    type IsLive = False;
     type Reporter = Self;
 
     fn get_reporter(&mut self) -> &mut Self::Reporter {

@@ -1,6 +1,9 @@
 use core::num::NonZeroU32;
 
-use necsim_core::{lineage::MigratingLineage, reporter::Reporter};
+use necsim_core::{
+    lineage::MigratingLineage,
+    reporter::{boolean::Boolean, Reporter},
+};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::reporter::ReporterContext;
@@ -52,6 +55,7 @@ pub enum MigrationMode {
 #[contract_trait]
 pub trait LocalPartition<R: Reporter>: Sized {
     type Reporter: Reporter;
+    type IsLive: Boolean;
     type ImmigrantIterator<'a>: Iterator<Item = MigratingLineage>;
 
     fn get_reporter(&mut self) -> &mut Self::Reporter;

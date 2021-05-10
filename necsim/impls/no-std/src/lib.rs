@@ -10,6 +10,7 @@
 #![feature(debug_non_exhaustive)]
 #![feature(option_result_unwrap_unchecked)]
 #![feature(drain_filter)]
+#![feature(specialization)]
 
 extern crate alloc;
 
@@ -19,6 +20,9 @@ extern crate rust_cuda_derive;
 
 #[macro_use]
 extern crate contracts;
+
+#[macro_use]
+extern crate log;
 
 pub mod alias;
 pub mod cache;

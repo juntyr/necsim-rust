@@ -77,6 +77,7 @@ impl<R: Reporter> fmt::Debug for LiveMonolithicLocalPartition<R> {
 #[contract_trait]
 impl<R: Reporter> LocalPartition<R> for LiveMonolithicLocalPartition<R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
+    type IsLive = True;
     type Reporter = FilteredReporter<R, True, True, True>;
 
     fn get_reporter(&mut self) -> &mut Self::Reporter {
