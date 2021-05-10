@@ -1,7 +1,7 @@
 use std::{
     fmt,
-    mem::ManuallyDrop,
-    num::{NonZeroU32, Wrapping},
+    marker::PhantomData,
+    num::NonZeroU32,
     time::{Duration, Instant},
 };
 
@@ -18,52 +18,48 @@ use necsim_core::{
     impl_report,
     lineage::MigratingLineage,
     reporter::{
-        boolean::{Boolean, False, True},
-        used::Unused,
-        FilteredReporter, Reporter,
+        boolean::{Boolean, False},
+        Reporter,
     },
 };
-
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
-use necsim_impls_no_std::partitioning::{
-    iterator::ImmigrantPopIterator, LocalPartition, MigrationMode,
-};
+
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use necsim_partitioning_core::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode};
 
 use crate::MpiPartitioning;
 
 static mut MPI_LOCAL_CONTINUE: bool = false;
 static mut MPI_GLOBAL_CONTINUE: bool = false;
 
+static mut MPI_LOCAL_REMAINING: u64 = 0_u64;
+
 static mut MPI_MIGRATION_BUFFERS: Vec<Vec<MigratingLineage>> = Vec::new();
 
-pub struct MpiRootPartition<R: Reporter> {
+pub struct MpiParallelPartition<R: Reporter> {
     _universe: Universe,
     world: SystemCommunicator,
     last_report_time: Instant,
-    all_remaining: Box<[u64]>,
+    progress: Option<Request<'static, StaticScope>>,
     migration_buffers: Box<[Vec<MigratingLineage>]>,
     last_migration_times: Box<[Instant]>,
     emigration_requests: Box<[Option<Request<'static, StaticScope>>]>,
-    reporter: ManuallyDrop<FilteredReporter<R, False, False, True>>,
-    recorder: EventLogRecorder,
     barrier: Option<Request<'static, StaticScope>>,
     communicated_since_last_barrier: bool,
-    finalised: bool,
+    recorder: EventLogRecorder,
+    _marker: PhantomData<R>,
 }
 
-impl<R: Reporter> fmt::Debug for MpiRootPartition<R> {
+impl<R: Reporter> fmt::Debug for MpiParallelPartition<R> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("MpiRootPartition").finish()
+        fmt.debug_struct("MpiParallelPartition").finish()
     }
 }
 
-impl<R: Reporter> Drop for MpiRootPartition<R> {
+impl<R: Reporter> Drop for MpiParallelPartition<R> {
     fn drop(&mut self) {
-        if self.finalised {
-            unsafe { ManuallyDrop::take(&mut self.reporter) }.finalise()
-        } else {
-            unsafe { ManuallyDrop::drop(&mut self.reporter) }
+        if let Some(progress) = self.progress.take() {
+            CancelGuard::from(progress);
         }
 
         for request in self.emigration_requests.iter_mut() {
@@ -78,7 +74,7 @@ impl<R: Reporter> Drop for MpiRootPartition<R> {
     }
 }
 
-impl<R: Reporter> MpiRootPartition<R> {
+impl<R: Reporter> MpiParallelPartition<R> {
     const MPI_MIGRATION_WAIT_TIME: Duration = Duration::from_millis(100_u64);
     const MPI_PROGRESS_WAIT_TIME: Duration = Duration::from_millis(100_u64);
 
@@ -86,7 +82,6 @@ impl<R: Reporter> MpiRootPartition<R> {
     pub fn new(
         universe: Universe,
         world: SystemCommunicator,
-        reporter: FilteredReporter<R, False, False, True>,
         mut recorder: EventLogRecorder,
     ) -> Self {
         recorder.set_event_filter(R::ReportSpeciation::VALUE, R::ReportDispersal::VALUE);
@@ -111,21 +106,20 @@ impl<R: Reporter> MpiRootPartition<R> {
             _universe: universe,
             world,
             last_report_time: now.checked_sub(Self::MPI_PROGRESS_WAIT_TIME).unwrap_or(now),
-            all_remaining: vec![0; world_size].into_boxed_slice(),
+            progress: None,
             migration_buffers: migration_buffers.into_boxed_slice(),
             last_migration_times: vec![now; world_size].into_boxed_slice(),
             emigration_requests: emigration_requests.into_boxed_slice(),
-            reporter: ManuallyDrop::new(reporter),
-            recorder,
             barrier: None,
             communicated_since_last_barrier: false,
-            finalised: false,
+            recorder,
+            _marker: PhantomData::<R>,
         }
     }
 }
 
 #[contract_trait]
-impl<R: Reporter> LocalPartition<R> for MpiRootPartition<R> {
+impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
     type IsLive = False;
     type Reporter = Self;
@@ -135,7 +129,7 @@ impl<R: Reporter> LocalPartition<R> for MpiRootPartition<R> {
     }
 
     fn is_root(&self) -> bool {
-        true
+        false
     }
 
     fn get_partition_rank(&self) -> u32 {
@@ -287,7 +281,7 @@ impl<R: Reporter> LocalPartition<R> for MpiRootPartition<R> {
             }),
         );
 
-        if global_min_time_partition == local_time_partition {
+        if global_min_time_partition.1 == local_time_partition.1 {
             Ok(local_time)
         } else {
             Err(global_min_time_partition.0)
@@ -333,12 +327,6 @@ impl<R: Reporter> LocalPartition<R> for MpiRootPartition<R> {
             Ok(_) => {
                 let global_continue: &'static mut bool = unsafe { &mut MPI_GLOBAL_CONTINUE };
 
-                if !*global_continue {
-                    let remaining = self.all_remaining[self.get_partition_rank() as usize];
-
-                    self.report_progress(Unused::new(&remaining));
-                }
-
                 *global_continue
             },
             Err(barrier) => {
@@ -375,27 +363,15 @@ impl<R: Reporter> LocalPartition<R> for MpiRootPartition<R> {
     fn report_progress_sync(&mut self, remaining: u64) {
         let root_process = self.world.process_at_rank(MpiPartitioning::ROOT_RANK);
 
-        root_process.gather_into_root(&remaining, &mut self.all_remaining[..]);
-
-        self.reporter.report_progress(Unused::new(
-            &self
-                .all_remaining
-                .iter()
-                .copied()
-                .map(Wrapping)
-                .sum::<Wrapping<u64>>()
-                .0,
-        ));
+        root_process.gather_into(&remaining);
     }
 
-    fn finalise_reporting(mut self) {
-        self.finalised = true;
-
+    fn finalise_reporting(self) {
         std::mem::drop(self)
     }
 }
 
-impl<R: Reporter> Reporter for MpiRootPartition<R> {
+impl<R: Reporter> Reporter for MpiParallelPartition<R> {
     impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<R::ReportSpeciation> {
         event.maybe_use_in(|event| {
             self.recorder.record_speciation(event)
@@ -410,33 +386,33 @@ impl<R: Reporter> Reporter for MpiRootPartition<R> {
 
     impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<R::ReportProgress> {
         remaining.maybe_use_in(|remaining| {
-            let now = Instant::now();
+            if unsafe { MPI_LOCAL_REMAINING } == *remaining {
+                return;
+            }
 
-            if now.duration_since(self.last_report_time) >= Self::MPI_PROGRESS_WAIT_TIME {
-                self.last_report_time = now;
+            if *remaining > 0 || self.barrier.is_none() {
+                let now = Instant::now();
 
-                self.all_remaining[MpiPartitioning::ROOT_RANK as usize] = *remaining;
+                if now.duration_since(self.last_report_time) >= Self::MPI_PROGRESS_WAIT_TIME {
+                    let progress = self.progress.take().unwrap_or_else(|| {
+                        let local_remaining: &'static mut u64 = unsafe { &mut MPI_LOCAL_REMAINING };
 
-                let any_process = self.world.any_process();
+                        self.last_report_time = now;
+                        *local_remaining = *remaining;
 
-                while let Some((msg, _)) =
-                    any_process.immediate_matched_probe_with_tag(MpiPartitioning::MPI_PROGRESS_TAG)
-                {
-                    let remaining_status: (u64, _) = msg.matched_receive();
+                        let root_process = self.world.process_at_rank(MpiPartitioning::ROOT_RANK);
 
-                    #[allow(clippy::cast_sign_loss)]
-                    self.all_remaining[remaining_status.1.source_rank() as usize] = remaining_status.0;
+                        root_process.immediate_send_with_tag(
+                            StaticScope,
+                            local_remaining,
+                            MpiPartitioning::MPI_PROGRESS_TAG,
+                        )
+                    });
+
+                    if let Err(progress) = progress.test() {
+                        self.progress = Some(progress);
+                    }
                 }
-
-                self.reporter.report_progress(
-                    Unused::new(&self.all_remaining
-                        .iter()
-                        .copied()
-                        .map(Wrapping)
-                        .sum::<Wrapping<u64>>()
-                        .0
-                    )
-                );
             }
         })
     });

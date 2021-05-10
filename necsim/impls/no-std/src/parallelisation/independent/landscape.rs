@@ -14,6 +14,8 @@ use necsim_core::{
     simulation::Simulation,
 };
 
+use necsim_partitioning_core::{LocalPartition, MigrationMode};
+
 use crate::{
     cogs::{
         active_lineage_sampler::independent::{
@@ -26,7 +28,6 @@ use crate::{
         lineage_store::independent::IndependentLineageStore,
     },
     decomposition::Decomposition,
-    partitioning::{LocalPartition, MigrationMode},
 };
 
 use super::{reporter::IgnoreProgressReporterProxy, DedupCache};

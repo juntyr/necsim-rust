@@ -18,13 +18,10 @@ use thiserror::Error;
 
 use necsim_core::reporter::Reporter;
 
-use necsim_impls_no_std::{
-    partitioning::{monolithic::live::LiveMonolithicLocalPartition, Partitioning},
-    reporter::ReporterContext,
-};
-use necsim_impls_std::{
-    event_log::recorder::EventLogRecorder,
-    partitioning::monolithic::recorded::RecordedMonolithicLocalPartition,
+use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use necsim_partitioning_core::{context::ReporterContext, Partitioning};
+use necsim_partitioning_monolithic::{
+    live::LiveMonolithicLocalPartition, recorded::RecordedMonolithicLocalPartition,
 };
 
 mod partition;

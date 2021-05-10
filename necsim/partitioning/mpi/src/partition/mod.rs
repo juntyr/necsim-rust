@@ -5,14 +5,12 @@ use necsim_core::{
     lineage::MigratingLineage,
     reporter::{boolean::True, Reporter},
 };
-
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
-use necsim_impls_no_std::partitioning::{
-    iterator::ImmigrantPopIterator, monolithic::live::LiveMonolithicLocalPartition, LocalPartition,
-    MigrationMode,
-};
 
-use necsim_impls_std::partitioning::monolithic::recorded::RecordedMonolithicLocalPartition;
+use necsim_partitioning_core::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode};
+use necsim_partitioning_monolithic::{
+    live::LiveMonolithicLocalPartition, recorded::RecordedMonolithicLocalPartition,
+};
 
 mod parallel;
 mod root;

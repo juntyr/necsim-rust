@@ -8,7 +8,7 @@ use necsim_core::{
     reporter::{used::Unused, Reporter},
 };
 
-use crate::partitioning::LocalPartition;
+use necsim_partitioning_core::LocalPartition;
 
 use super::WaterLevelReporterProxy;
 

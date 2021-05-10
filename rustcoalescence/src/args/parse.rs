@@ -3,7 +3,7 @@ use serde_state::DeserializeState;
 
 use necsim_core_bond::Partition;
 
-use necsim_impls_no_std::partitioning::Partitioning;
+use necsim_partitioning_core::Partitioning;
 
 use super::{CommandArgs, ReplayArgs, SimulateArgs};
 

@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use log::LevelFilter;
 
-use necsim_impls_mpi::{MpiLocalPartition, MpiPartitioning};
-use necsim_impls_no_std::partitioning::Partitioning;
+use necsim_partitioning_core::Partitioning;
+use necsim_partitioning_mpi::{MpiLocalPartition, MpiPartitioning};
 use necsim_plugins_core::match_any_reporter_plugin_vec;
 
 use crate::{

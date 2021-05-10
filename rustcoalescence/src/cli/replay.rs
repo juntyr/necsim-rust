@@ -6,7 +6,7 @@ use necsim_core::{
     reporter::{used::Unused, Reporter},
 };
 
-use necsim_impls_no_std::partitioning::Partitioning;
+use necsim_partitioning_core::Partitioning;
 use necsim_plugins_core::match_any_reporter_plugin_vec;
 
 use crate::args::{CommandArgs, ReplayArgs};

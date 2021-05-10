@@ -29,5 +29,3 @@ pub mod cache;
 pub mod cogs;
 pub mod decomposition;
 pub mod parallelisation;
-pub mod partitioning;
-pub mod reporter;
