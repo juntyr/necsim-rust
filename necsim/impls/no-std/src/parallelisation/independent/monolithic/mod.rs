@@ -1,5 +1,5 @@
-use alloc::{collections::VecDeque, vec::Vec};
-use core::num::{NonZeroU32, NonZeroU64, Wrapping};
+use alloc::collections::VecDeque;
+use core::num::{NonZeroU64, NonZeroUsize, Wrapping};
 use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::{
@@ -7,7 +7,6 @@ use necsim_core::{
         ActiveLineageSampler, DispersalSampler, Habitat, MinSpeciationTrackingEventSampler,
         PrimeableRng, SingularActiveLineageSampler, SpeciationProbability, TurnoverRate,
     },
-    event::{PackedEvent, TypedEvent},
     lineage::{GlobalLineageReference, Lineage},
     reporter::{boolean::Boolean, used::Unused, Reporter},
     simulation::Simulation,
@@ -27,10 +26,13 @@ use crate::{
     partitioning::LocalPartition,
 };
 
-use super::{reporter::IgnoreProgressReporterProxy, DedupCache};
+use crate::parallelisation::independent::DedupCache;
 
-mod reporter;
-pub use reporter::WaterLevelReporter;
+pub mod reporter;
+
+use reporter::{
+    WaterLevelReporterConstructor, WaterLevelReporterProxy, WaterLevelReporterStrategy,
+};
 
 #[allow(clippy::type_complexity, clippy::too_many_lines)]
 pub fn simulate<
@@ -60,7 +62,7 @@ pub fn simulate<
     lineages: VecDeque<Lineage>,
     dedup_cache: DedupCache,
     step_slice: NonZeroU64,
-    event_slice: NonZeroU32,
+    event_slice: NonZeroUsize,
     local_partition: &mut P,
 ) -> (NonNegativeF64, u64) {
     // Ensure that the progress bar starts with the expected target
@@ -68,7 +70,11 @@ pub fn simulate<
         (Wrapping(lineages.len() as u64) + simulation.get_balanced_remaining_work()).0,
     );
 
-    let mut proxy = IgnoreProgressReporterProxy::from(local_partition);
+    let mut proxy = <WaterLevelReporterStrategy as WaterLevelReporterConstructor<
+        P::IsLive,
+        R,
+        P,
+    >>::WaterLevelReporter::new(event_slice.get(), local_partition);
     let mut min_spec_samples = dedup_cache.construct(lineages.len());
 
     let mut total_steps = 0_u64;
@@ -76,9 +82,6 @@ pub fn simulate<
 
     let mut slow_lineages = lineages;
     let mut fast_lineages = VecDeque::new();
-
-    let mut slow_events: Vec<PackedEvent> = Vec::with_capacity(event_slice.get() as usize);
-    let mut fast_events: Vec<PackedEvent> = Vec::with_capacity(event_slice.get() as usize);
 
     let mut level_time = NonNegativeF64::zero();
 
@@ -118,11 +121,8 @@ pub fn simulate<
 
         level_time += NonNegativeF64::from(event_slice.get()) / total_event_rate;
 
-        // Move fast events below the new level into slow events
-        slow_events.extend(fast_events.drain_filter(|event| event.event_time < level_time));
-
-        let mut reporter: WaterLevelReporter<R> =
-            WaterLevelReporter::new(level_time, &mut slow_events, &mut fast_events);
+        // [Report all events below the water level] + Advance the water level
+        proxy.advance_water_level(level_time);
 
         // Simulate all slow lineages until they have finished or exceeded the new water
         //  level
@@ -161,53 +161,31 @@ pub fn simulate<
                             .peek_time_of_next_event()
                             .map_or(true, |next_time| next_time >= level_time)
                 },
-                &mut reporter,
+                &mut proxy,
             );
 
             total_steps += new_steps;
             max_time = max_time.max(new_time);
 
-            proxy.report_total_progress(
-                (Wrapping(slow_lineages.len() as u64)
-                    + Wrapping(fast_lineages.len() as u64)
-                    + simulation.get_balanced_remaining_work())
-                .0,
-            );
-        }
-
-        // Report all events below the water level
-        slow_events.sort();
-        for event in slow_events.drain(..) {
-            match event.into() {
-                TypedEvent::Speciation(event) => {
-                    proxy.report_speciation(Unused::new(&event));
-                },
-                TypedEvent::Dispersal(event) => {
-                    proxy.report_dispersal(Unused::new(&event));
-                },
-            }
+            proxy
+                .local_partition()
+                .get_reporter()
+                .report_progress(Unused::new(
+                    &(Wrapping(slow_lineages.len() as u64)
+                        + Wrapping(fast_lineages.len() as u64)
+                        + simulation.get_balanced_remaining_work())
+                    .0,
+                ));
         }
 
         // Fast lineages are now slow again
         core::mem::swap(&mut slow_lineages, &mut fast_lineages);
     }
 
-    // Report all remaining events above the water level
-    fast_events.sort();
-    for event in fast_events.drain(..) {
-        match event.into() {
-            TypedEvent::Speciation(event) => {
-                proxy.report_speciation(Unused::new(&event));
-            },
-            TypedEvent::Dispersal(event) => {
-                proxy.report_dispersal(Unused::new(&event));
-            },
-        }
-    }
+    // [Report all remaining events]
+    proxy.finalise();
 
-    proxy.local_partition().report_progress_sync(0_u64);
+    local_partition.report_progress_sync(0_u64);
 
-    proxy
-        .local_partition()
-        .reduce_global_time_steps(max_time, total_steps)
+    local_partition.reduce_global_time_steps(max_time, total_steps)
 }

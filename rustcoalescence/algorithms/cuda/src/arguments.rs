@@ -1,4 +1,4 @@
-use std::num::{NonZeroU32, NonZeroU64};
+use std::num::{NonZeroU64, NonZeroUsize};
 
 use serde::Deserialize;
 use serde_state::DeserializeState;
@@ -10,13 +10,13 @@ use necsim_impls_no_std::parallelisation::independent::{DedupCache, RelativeDedu
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MonolithicParallelismMode {
-    pub event_slice: NonZeroU32,
+    pub event_slice: NonZeroUsize,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct IsolatedParallelismMode {
-    pub event_slice: NonZeroU32,
+    pub event_slice: NonZeroUsize,
     pub partition: Partition,
 }
 
@@ -80,7 +80,7 @@ impl<'de> DeserializeState<'de, Partition> for CudaArguments {
             ));
         } else {
             ParallelismMode::Monolithic(MonolithicParallelismMode {
-                event_slice: NonZeroU32::new(1_000_000_u32).unwrap(),
+                event_slice: NonZeroUsize::new(1_000_000_usize).unwrap(),
             })
         };
 

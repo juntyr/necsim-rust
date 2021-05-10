@@ -1,7 +1,7 @@
 use std::{
     collections::VecDeque,
     convert::TryInto,
-    num::{NonZeroU32, NonZeroU64},
+    num::{NonZeroU64, NonZeroUsize},
 };
 
 use anyhow::{Context, Result};
@@ -25,14 +25,18 @@ use necsim_core::{
         PeekableActiveLineageSampler, PrimeableRng, SingularActiveLineageSampler,
         SpeciationProbability, TurnoverRate,
     },
-    event::{PackedEvent, TypedEvent},
     lineage::Lineage,
     reporter::{boolean::Boolean, used::Unused, Reporter},
     simulation::Simulation,
 };
 
 use necsim_impls_no_std::{
-    parallelisation::independent::{monolithic::WaterLevelReporter, DedupCache},
+    parallelisation::independent::{
+        monolithic::reporter::{
+            WaterLevelReporterConstructor, WaterLevelReporterProxy, WaterLevelReporterStrategy,
+        },
+        DedupCache,
+    },
     partitioning::LocalPartition,
 };
 
@@ -75,17 +79,23 @@ pub fn simulate<
         E,
         I,
         A,
-        <WaterLevelReporter<P> as Reporter>::ReportSpeciation,
-        <WaterLevelReporter<P> as Reporter>::ReportDispersal,
+        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
+        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
     >,
     stream: &Stream,
     config: (GridSize, BlockSize, DedupCache, NonZeroU64),
     lineages: VecDeque<Lineage>,
-    event_slice: NonZeroU32,
+    event_slice: NonZeroUsize,
     local_partition: &mut L,
 ) -> Result<(NonNegativeF64, u64)> {
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(lineages.len() as u64);
+
+    let mut proxy = <WaterLevelReporterStrategy as WaterLevelReporterConstructor<
+        L::IsLive,
+        P,
+        L,
+    >>::WaterLevelReporter::new(event_slice.get(), local_partition);
 
     let (grid_size, block_size, dedup_cache, step_slice) = config;
 
@@ -96,8 +106,8 @@ pub fn simulate<
     let mut task_list = ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
     let mut event_buffer: ExchangeWithCudaWrapper<
         EventBuffer<
-            <WaterLevelReporter<P> as Reporter>::ReportSpeciation,
-            <WaterLevelReporter<P> as Reporter>::ReportDispersal,
+            <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
+            <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
         >,
     > = ExchangeWithCudaWrapper::new(EventBuffer::new(
         &block_size,
@@ -117,9 +127,6 @@ pub fn simulate<
 
     let mut slow_lineages = lineages;
     let mut fast_lineages = VecDeque::new();
-
-    let mut slow_events: Vec<PackedEvent> = Vec::with_capacity(event_slice.get() as usize);
-    let mut fast_events: Vec<PackedEvent> = Vec::with_capacity(event_slice.get() as usize);
 
     let mut level_time = NonNegativeF64::zero();
 
@@ -162,11 +169,8 @@ pub fn simulate<
 
                 level_time += NonNegativeF64::from(event_slice.get()) / total_event_rate;
 
-                // Move fast events below the new level into slow events
-                slow_events.extend(fast_events.drain_filter(|event| event.event_time < level_time));
-
-                let mut reporter: WaterLevelReporter<P> =
-                    WaterLevelReporter::new(level_time, &mut slow_events, &mut fast_events);
+                // [Report all events below the water level] + Advance the water level
+                proxy.advance_water_level(level_time);
 
                 // Simulate all slow lineages until they have finished or exceeded the new water
                 //  level
@@ -228,54 +232,26 @@ pub fn simulate<
                         }
                     }
 
-                    event_buffer.report_events(&mut reporter);
+                    event_buffer.report_events(&mut proxy);
 
-                    local_partition.get_reporter().report_progress(Unused::new(
-                        &((slow_lineages.len() as u64) + (fast_lineages.len() as u64)),
-                    ));
-                }
-
-                // Report all events below the water level
-                slow_events.sort();
-                for event in slow_events.drain(..) {
-                    match event.into() {
-                        TypedEvent::Speciation(event) => {
-                            local_partition
-                                .get_reporter()
-                                .report_speciation(Unused::new(&event));
-                        },
-                        TypedEvent::Dispersal(event) => {
-                            local_partition
-                                .get_reporter()
-                                .report_dispersal(Unused::new(&event));
-                        },
-                    }
+                    proxy
+                        .local_partition()
+                        .get_reporter()
+                        .report_progress(Unused::new(
+                            &((slow_lineages.len() as u64) + (fast_lineages.len() as u64)),
+                        ));
                 }
 
                 // Fast lineages are now slow again
-                core::mem::swap(&mut slow_lineages, &mut fast_lineages);
+                std::mem::swap(&mut slow_lineages, &mut fast_lineages);
             }
 
             Ok(())
         })
         .with_context(|| "Running the CUDA kernel failed.")?;
 
-    // Report all remaining events above the water level
-    fast_events.sort();
-    for event in fast_events.drain(..) {
-        match event.into() {
-            TypedEvent::Speciation(event) => {
-                local_partition
-                    .get_reporter()
-                    .report_speciation(Unused::new(&event));
-            },
-            TypedEvent::Dispersal(event) => {
-                local_partition
-                    .get_reporter()
-                    .report_dispersal(Unused::new(&event));
-            },
-        }
-    }
+    // [Report all remaining events]
+    proxy.finalise();
 
     let (total_time_max, total_steps_sum) = {
         let mut total_time_max_result = 0_u64;

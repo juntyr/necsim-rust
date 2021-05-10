@@ -17,7 +17,10 @@ use mpi::{
 use necsim_core::{
     impl_report,
     lineage::MigratingLineage,
-    reporter::{boolean::Boolean, Reporter},
+    reporter::{
+        boolean::{Boolean, False},
+        Reporter,
+    },
 };
 
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -120,6 +123,7 @@ impl<R: Reporter> MpiParallelPartition<R> {
 #[contract_trait]
 impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
+    type IsLive = False;
     type Reporter = Self;
 
     fn get_reporter(&mut self) -> &mut Self::Reporter {

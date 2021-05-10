@@ -1,6 +1,10 @@
 use std::num::NonZeroU32;
 
-use necsim_core::{impl_report, lineage::MigratingLineage, reporter::Reporter};
+use necsim_core::{
+    impl_report,
+    lineage::MigratingLineage,
+    reporter::{boolean::True, Reporter},
+};
 
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_impls_no_std::partitioning::{
@@ -28,6 +32,8 @@ pub enum MpiLocalPartition<R: Reporter> {
 #[contract_trait]
 impl<R: Reporter> LocalPartition<R> for MpiLocalPartition<R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
+    type IsLive = True;
+    // pessimistic
     type Reporter = Self;
 
     fn get_reporter(&mut self) -> &mut Self::Reporter {
