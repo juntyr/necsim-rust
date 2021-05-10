@@ -1,10 +1,10 @@
 use anyhow::Result;
 use log::LevelFilter;
 
-use necsim_impls_no_std::partitioning::monolithic::live::{
-    LiveMonolithicLocalPartition, LiveMonolithicPartitioning,
+use necsim_partitioning_monolithic::{
+    live::{LiveMonolithicLocalPartition, LiveMonolithicPartitioning},
+    recorded::RecordedMonolithicLocalPartition,
 };
-use necsim_impls_std::partitioning::monolithic::recorded::RecordedMonolithicLocalPartition;
 use necsim_plugins_core::match_any_reporter_plugin_vec;
 
 use crate::{

@@ -5,8 +5,8 @@ use necsim_core::{
     reporter::Reporter,
     simulation::Simulation,
 };
-
 use necsim_core_bond::NonNegativeF64;
+
 use necsim_impls_no_std::{
     cogs::{
         active_lineage_sampler::classical::ClassicalActiveLineageSampler,
@@ -23,9 +23,9 @@ use necsim_impls_no_std::{
         turnover_rate::uniform::UniformTurnoverRate,
     },
     parallelisation,
-    partitioning::LocalPartition,
 };
 use necsim_impls_std::cogs::rng::pcg::Pcg;
+use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_algorithms::{Algorithm, AlgorithmArguments};
 use rustcoalescence_scenarios::Scenario;

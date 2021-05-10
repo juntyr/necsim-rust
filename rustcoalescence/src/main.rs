@@ -47,13 +47,13 @@ fn main() -> Result<()> {
         RustcoalescenceArgs::Replay(replay_args) => {
             #[cfg(feature = "necsim-partitioning-mpi")]
             {
-                use necsim_impls_mpi::MpiPartitioning;
+                use necsim_partitioning_mpi::MpiPartitioning;
 
                 cli::replay::replay_with_logger(replay_args, MpiPartitioning::initialise()?)
             }
             #[cfg(not(feature = "necsim-partitioning-mpi"))]
             {
-                use necsim_impls_no_std::partitioning::monolithic::live::LiveMonolithicPartitioning;
+                use necsim_partitioning_monolithic::live::LiveMonolithicPartitioning;
 
                 cli::replay::replay_with_logger(replay_args, LiveMonolithicPartitioning::default())
             }

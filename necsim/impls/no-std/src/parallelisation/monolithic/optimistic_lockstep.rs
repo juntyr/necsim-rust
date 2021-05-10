@@ -9,13 +9,14 @@ use necsim_core::{
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
+use necsim_partitioning_core::{LocalPartition, MigrationMode};
+
 use crate::{
     cogs::{
         emigration_exit::domain::DomainEmigrationExit,
         immigration_entry::buffered::BufferedImmigrationEntry,
     },
     decomposition::Decomposition,
-    partitioning::{LocalPartition, MigrationMode},
 };
 
 #[allow(clippy::type_complexity)]

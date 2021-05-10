@@ -9,12 +9,10 @@ use necsim_core::{
 };
 use necsim_core_bond::NonNegativeF64;
 
-use crate::{
-    cogs::{
-        emigration_exit::never::NeverEmigrationExit,
-        immigration_entry::never::NeverImmigrationEntry,
-    },
-    partitioning::LocalPartition,
+use necsim_partitioning_core::LocalPartition;
+
+use crate::cogs::{
+    emigration_exit::never::NeverEmigrationExit, immigration_entry::never::NeverImmigrationEntry,
 };
 
 #[allow(clippy::type_complexity)]

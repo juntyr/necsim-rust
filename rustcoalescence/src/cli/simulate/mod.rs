@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use necsim_core::reporter::Reporter;
-use necsim_impls_no_std::partitioning::LocalPartition;
+use necsim_partitioning_core::LocalPartition;
 
 use crate::args::{CommonArgs, Scenario as ScenarioArgs};
 

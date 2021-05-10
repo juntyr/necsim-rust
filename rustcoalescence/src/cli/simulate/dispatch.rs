@@ -14,9 +14,8 @@ use rustcoalescence_algorithms_monolithic::{
 
 use necsim_core::reporter::Reporter;
 use necsim_core_bond::NonNegativeF64;
-use necsim_impls_no_std::{
-    cogs::origin_sampler::pre_sampler::OriginPreSampler, partitioning::LocalPartition,
-};
+use necsim_impls_no_std::cogs::origin_sampler::pre_sampler::OriginPreSampler;
+use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_scenarios::{
     almost_infinite::AlmostInfiniteScenario, non_spatial::NonSpatialScenario,

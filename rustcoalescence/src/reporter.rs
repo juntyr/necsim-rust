@@ -2,7 +2,7 @@ use std::fmt;
 
 use necsim_core::reporter::{boolean::Boolean, FilteredReporter, Reporter};
 
-use necsim_impls_no_std::reporter::ReporterContext;
+use necsim_partitioning_core::context::ReporterContext;
 
 use necsim_plugins_core::import::ReporterPluginVec;
 

@@ -5,7 +5,7 @@ use necsim_core::reporter::{
     Reporter,
 };
 
-use crate::partitioning::LocalPartition;
+use necsim_partitioning_core::LocalPartition;
 
 mod live;
 mod recorded;

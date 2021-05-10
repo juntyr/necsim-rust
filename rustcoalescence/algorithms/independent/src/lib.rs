@@ -17,8 +17,8 @@ use necsim_core::{
     reporter::Reporter,
     simulation::Simulation,
 };
-
 use necsim_core_bond::NonNegativeF64;
+
 use necsim_impls_no_std::{
     cogs::{
         active_lineage_sampler::independent::{
@@ -44,8 +44,8 @@ use necsim_impls_no_std::{
         rng::wyhash::WyHash,
     },
     parallelisation,
-    partitioning::LocalPartition,
 };
+use necsim_partitioning_core::LocalPartition;
 
 mod arguments;
 

@@ -12,18 +12,17 @@ use necsim_core::{
     simulation::Simulation,
 };
 
-use crate::{
-    cogs::{
-        active_lineage_sampler::independent::{
-            event_time_sampler::EventTimeSampler, IndependentActiveLineageSampler,
-        },
-        coalescence_sampler::independent::IndependentCoalescenceSampler,
-        emigration_exit::never::NeverEmigrationExit,
-        event_sampler::independent::IndependentEventSampler,
-        immigration_entry::never::NeverImmigrationEntry,
-        lineage_store::independent::IndependentLineageStore,
+use necsim_partitioning_core::LocalPartition;
+
+use crate::cogs::{
+    active_lineage_sampler::independent::{
+        event_time_sampler::EventTimeSampler, IndependentActiveLineageSampler,
     },
-    partitioning::LocalPartition,
+    coalescence_sampler::independent::IndependentCoalescenceSampler,
+    emigration_exit::never::NeverEmigrationExit,
+    event_sampler::independent::IndependentEventSampler,
+    immigration_entry::never::NeverImmigrationEntry,
+    lineage_store::independent::IndependentLineageStore,
 };
 
 use super::{reporter::IgnoreProgressReporterProxy, DedupCache};

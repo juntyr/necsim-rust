@@ -1,3 +1,13 @@
+#![deny(clippy::pedantic)]
+#![no_std]
+#![allow(incomplete_features)]
+#![feature(generic_associated_types)]
+
+extern crate alloc;
+
+#[macro_use]
+extern crate contracts;
+
 use core::num::NonZeroU32;
 
 use necsim_core::{
@@ -6,10 +16,10 @@ use necsim_core::{
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
-use crate::reporter::ReporterContext;
-
+pub mod context;
 pub mod iterator;
-pub mod monolithic;
+
+use context::ReporterContext;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]

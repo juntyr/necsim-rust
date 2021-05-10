@@ -7,36 +7,29 @@ extern crate serde_derive_state;
 
 use std::collections::VecDeque;
 
-use arguments::{
-    CudaArguments, IsolatedParallelismMode, MonolithicParallelismMode, ParallelismMode,
-};
 use necsim_core::{
     cogs::RngCore,
     lineage::{GlobalLineageReference, Lineage},
     reporter::Reporter,
     simulation::Simulation,
 };
-
 use necsim_core_bond::NonNegativeF64;
+
 use necsim_impls_cuda::cogs::rng::CudaRng;
-use necsim_impls_no_std::{
-    cogs::{
-        active_lineage_sampler::independent::{
-            event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
-        },
-        coalescence_sampler::independent::IndependentCoalescenceSampler,
-        dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
-        emigration_exit::never::NeverEmigrationExit,
-        event_sampler::independent::IndependentEventSampler,
-        immigration_entry::never::NeverImmigrationEntry,
-        lineage_store::independent::IndependentLineageStore,
-        origin_sampler::{
-            decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
-        },
-        rng::wyhash::WyHash,
+use necsim_impls_no_std::cogs::{
+    active_lineage_sampler::independent::{
+        event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
     },
-    partitioning::LocalPartition,
+    coalescence_sampler::independent::IndependentCoalescenceSampler,
+    dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
+    emigration_exit::never::NeverEmigrationExit,
+    event_sampler::independent::IndependentEventSampler,
+    immigration_entry::never::NeverImmigrationEntry,
+    lineage_store::independent::IndependentLineageStore,
+    origin_sampler::{decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler},
+    rng::wyhash::WyHash,
 };
+use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_algorithms::{Algorithm, AlgorithmArguments};
 use rustcoalescence_scenarios::Scenario;
@@ -52,6 +45,10 @@ mod cuda;
 mod info;
 mod kernel;
 mod parallelisation;
+
+use arguments::{
+    CudaArguments, IsolatedParallelismMode, MonolithicParallelismMode, ParallelismMode,
+};
 
 use crate::kernel::SimulationKernel;
 use cuda::with_initialised_cuda;

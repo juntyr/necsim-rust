@@ -6,7 +6,6 @@ use std::{
 
 use anyhow::{Context, Result};
 
-use necsim_core_bond::NonNegativeF64;
 use rustacuda::{
     function::{BlockSize, GridSize},
     memory::{CopyDestination, DeviceBox},
@@ -29,16 +28,15 @@ use necsim_core::{
     reporter::{boolean::Boolean, used::Unused, Reporter},
     simulation::Simulation,
 };
+use necsim_core_bond::NonNegativeF64;
 
-use necsim_impls_no_std::{
-    parallelisation::independent::{
-        monolithic::reporter::{
-            WaterLevelReporterConstructor, WaterLevelReporterProxy, WaterLevelReporterStrategy,
-        },
-        DedupCache,
+use necsim_impls_no_std::parallelisation::independent::{
+    monolithic::reporter::{
+        WaterLevelReporterConstructor, WaterLevelReporterProxy, WaterLevelReporterStrategy,
     },
-    partitioning::LocalPartition,
+    DedupCache,
 };
+use necsim_partitioning_core::LocalPartition;
 
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 

@@ -1,33 +1,62 @@
 use std::{fmt, num::NonZeroU32};
 
 use necsim_core::{
-    impl_report,
     lineage::MigratingLineage,
-    reporter::{
-        boolean::{Boolean, False, True},
-        used::Unused,
-        FilteredReporter, Reporter,
-    },
+    reporter::{boolean::True, used::Unused, FilteredReporter, Reporter},
 };
-
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
-use necsim_impls_no_std::{
-    partitioning::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode},
-    reporter::ReporterContext,
+
+use necsim_partitioning_core::{
+    context::ReporterContext, iterator::ImmigrantPopIterator, LocalPartition, MigrationMode,
+    Partitioning,
 };
-
-use crate::event_log::recorder::EventLogRecorder;
-
-use anyhow::Result;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct RecordedMonolithicLocalPartition<R: Reporter> {
-    reporter: FilteredReporter<R, False, False, True>,
-    recorder: EventLogRecorder,
+pub struct LiveMonolithicPartitioning(());
+
+impl Default for LiveMonolithicPartitioning {
+    fn default() -> Self {
+        Self(())
+    }
+}
+
+#[contract_trait]
+impl Partitioning for LiveMonolithicPartitioning {
+    type Auxiliary = ();
+    type LocalPartition<R: Reporter> = LiveMonolithicLocalPartition<R>;
+
+    fn is_monolithic(&self) -> bool {
+        true
+    }
+
+    fn is_root(&self) -> bool {
+        true
+    }
+
+    fn get_number_of_partitions(&self) -> NonZeroU32 {
+        unsafe { NonZeroU32::new_unchecked(1) }
+    }
+
+    fn get_rank(&self) -> u32 {
+        0
+    }
+
+    fn into_local_partition<R: Reporter, P: ReporterContext<Reporter = R>>(
+        self,
+        reporter_context: P,
+        _auxiliary: Self::Auxiliary,
+    ) -> anyhow::Result<Self::LocalPartition<R>> {
+        LiveMonolithicLocalPartition::try_from_context(reporter_context)
+    }
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub struct LiveMonolithicLocalPartition<R: Reporter> {
+    reporter: FilteredReporter<R, True, True, True>,
     loopback: Vec<MigratingLineage>,
 }
 
-impl<R: Reporter> fmt::Debug for RecordedMonolithicLocalPartition<R> {
+impl<R: Reporter> fmt::Debug for LiveMonolithicLocalPartition<R> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         struct LoopbackLen(usize);
 
@@ -37,22 +66,21 @@ impl<R: Reporter> fmt::Debug for RecordedMonolithicLocalPartition<R> {
             }
         }
 
-        fmt.debug_struct("RecordedMonolithicLocalPartition")
+        fmt.debug_struct("LiveMonolithicLocalPartition")
             .field("reporter", &self.reporter)
-            .field("recorder", &self.recorder)
             .field("loopback", &LoopbackLen(self.loopback.len()))
             .finish()
     }
 }
 
 #[contract_trait]
-impl<R: Reporter> LocalPartition<R> for RecordedMonolithicLocalPartition<R> {
+impl<R: Reporter> LocalPartition<R> for LiveMonolithicLocalPartition<R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
-    type IsLive = False;
-    type Reporter = Self;
+    type IsLive = True;
+    type Reporter = FilteredReporter<R, True, True, True>;
 
     fn get_reporter(&mut self) -> &mut Self::Reporter {
-        self
+        &mut self.reporter
     }
 
     fn is_root(&self) -> bool {
@@ -109,38 +137,18 @@ impl<R: Reporter> LocalPartition<R> for RecordedMonolithicLocalPartition<R> {
     }
 }
 
-impl<R: Reporter> RecordedMonolithicLocalPartition<R> {
+impl<R: Reporter> LiveMonolithicLocalPartition<R> {
+    pub fn from_reporter(reporter: FilteredReporter<R, True, True, True>) -> Self {
+        Self {
+            reporter,
+            loopback: Vec::new(),
+        }
+    }
+
     /// # Errors
     ///
     /// Returns any error which occured while building the context's reporter
-    pub fn try_from_context_and_recorder<P: ReporterContext<Reporter = R>>(
-        context: P,
-        mut recorder: EventLogRecorder,
-    ) -> anyhow::Result<Self> {
-        recorder.set_event_filter(R::ReportSpeciation::VALUE, R::ReportDispersal::VALUE);
-
-        Ok(Self {
-            reporter: context.try_build()?,
-            recorder,
-            loopback: Vec::new(),
-        })
+    pub fn try_from_context<P: ReporterContext<Reporter = R>>(context: P) -> anyhow::Result<Self> {
+        Ok(Self::from_reporter(context.try_build()?))
     }
-}
-
-impl<R: Reporter> Reporter for RecordedMonolithicLocalPartition<R> {
-    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<R::ReportSpeciation> {
-        event.maybe_use_in(|event| {
-            self.recorder.record_speciation(event)
-        })
-    });
-
-    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<R::ReportDispersal> {
-        event.maybe_use_in(|event| {
-            self.recorder.record_dispersal(event)
-        })
-    });
-
-    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<R::ReportProgress> {
-        self.reporter.report_progress(remaining)
-    });
 }
