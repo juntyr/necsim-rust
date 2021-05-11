@@ -1,0 +1,665 @@
+# mpiexec: MPI is /apps/mpi/intel/2019.6.166
+# mpiexec: No RDMA network found -- using sockets+shared memory
+# mpiexec: bootstrapping with /apps/mpi/intel/2019.6.166/bin/__pbs_tmrsh
+# mpiexec: full path to program is /rds/general/user/ml5717/home/necsim-rust/target-mpi/release/rustcoalescence
+# mpiexec: program arguments are: simulate (
+        speciation: 0.001,
+        sample: 3.75e-06,
+        seed: 15164614923451208836,
+
+        algorithm: SkippingGillespie(parallelism_mode:Optimistic(delta_sync:0.1)),
+
+        scenario: SpatiallyExplicit(
+            habitat: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif",
+            dispersal: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif",
+        ),
+        
+        log: "/var/tmp/pbs.3501076[1].pbs/event_log",
+
+        reporters: [
+            Plugin(
+                library: "/rds/general/user/ml5717/home/necsim-rust/target-mpi/release/deps/libnecsim_plugins_common.so",
+                reporters: [Execution(),Biodiversity()],
+            ),
+        ],
+    )
+# mpiexec: 32 ranks allocated via PBS select
+# mpiexec: 1 OpenMP threads / rank allocated by PBS select
+# mpiexec: Job has shared use of the allocated nodes. Disabling process-pinning
+# mpiexec: machinefile configured as:
+cx1-109-15-3.cx1.hpc.ic.ac.uk:32
+#
+# mpiexec: Checking all nodes are ONLINE:
+# mpiexec: All nodes appear ONLINE
+# mpiexec: launch started at Mon 10 May 08:39:26 BST 2021
+# mpiexec: launching program...
+# /rds/general/user/ml5717/home/necsim-rust/target-mpi/release/rustcoalescence simulate (
+        speciation: 0.001,
+        sample: 3.75e-06,
+        seed: 15164614923451208836,
+
+        algorithm: SkippingGillespie(parallelism_mode:Optimistic(delta_sync:0.1)),
+
+        scenario: SpatiallyExplicit(
+            habitat: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif",
+            dispersal: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif",
+        ),
+        
+        log: "/var/tmp/pbs.3501076[1].pbs/event_log",
+
+        reporters: [
+            Plugin(
+                library: "/rds/general/user/ml5717/home/necsim-rust/target-mpi/release/deps/libnecsim_plugins_common.so",
+                reporters: [Execution(),Biodiversity()],
+            ),
+        ],
+    )
+(cx1-109-15-3.cx1.hpc.ic.ac.uk:0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31)
+
+INFO  Starting to load the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" ...
+INFO  Used GDAL no data value -99.0 ...
+INFO  Successfully loaded the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" with dimensions 11700x11700 [cols x rows].
+INFO  Starting to load the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" ...
+INFO  Used GDAL no data value 0 ...
+INFO  Successfully loaded the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" with dimensions 180x65 [cols x rows].
+INFO  Parsed simulation arguments:
+SimulateArgs {
+    common: CommonArgs {
+        speciation_probability_per_generation: ZeroExclOneInclF64(
+            0.0 < 0.001 <= 1.0,
+        ),
+        sample_percentage: ZeroInclOneInclF64(
+            0.0 <= 0.00000375 <= 1.0,
+        ),
+        seed: 15164614923451208836,
+        algorithm: SkippingGillespie(
+            MonolithicArguments {
+                parallelism_mode: Optimistic(
+                    OptimisticParallelismMode {
+                        delta_sync: PositiveF64(
+                            0.0 < 0.1,
+                        ),
+                    },
+                ),
+            },
+        ),
+    },
+    event_log: Some(
+        EventLogRecorder {
+            segment_size: 1000000,
+            directory: "/var/tmp/pbs.3501076[1].pbs/event_log/0",
+            segment_index: 0,
+            buffer: Vec<Event; 0>,
+        },
+    ),
+    scenario: SpatiallyExplicit(
+        InMemoryArguments {
+            habitat_map: Array2D {
+                array: Box [ 0x7ffc0f5b8c48; 11700 ],
+                num_rows: 65,
+                num_columns: 180,
+            },
+            dispersal_map: Array2D {
+                array: Box [ 0x7ffc0f5b8c68; 136890000 ],
+                num_rows: 11700,
+                num_columns: 11700,
+            },
+        },
+    ),
+    reporters: ReportSpeciationIgnoreDispersalReportProgress(
+        ReporterPluginVec {
+            plugins: [
+                ExecutionTimeReporter {
+                    start_time: None,
+                    end_time: None,
+                },
+                BiodiversityReporter {
+                    biodiversity: 0,
+                },
+            ],
+        },
+    ),
+}
+INFO  The simulation will log its events to "/var/tmp/pbs.3501076[1].pbs/event_log/0".
+WARN  Therefore, only progress will be reported live.
+INFO  The simulation will be distributed across 32 partitions.
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation took:
+ - initialisation: 2.593309488s
+ - execution: 1585.351637553s
+ - cleanup: 5.831136ms
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation finished at time 21724.03731312284 after 923047 steps.
+
+# mpiexec: finished at Mon 10 May 09:05:59 BST 2021
+INFO  Parsed replay arguments:
+ReplayArgs {
+    log: EventLogReplay {
+        frontier: [
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 0.08516095518885788,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 15306.55014381382,
+                            ),
+                            length: 505,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 0.14507492807663566,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 14041.100127770933,
+                            ),
+                            length: 552,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 0.575696007832969,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 10290.536059271464,
+                            ),
+                            length: 498,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 1.1376566301118203,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 11015.595634693565,
+                            ),
+                            length: 448,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 1.2372456507250702,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 14804.56875378729,
+                            ),
+                            length: 500,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 1.319540006734359,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 12955.573209505545,
+                            ),
+                            length: 537,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 1.7939160967466319,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 11068.45809309806,
+                            ),
+                            length: 493,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 1.9852083059235195,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 21724.03731312284,
+                            ),
+                            length: 546,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 2.0996525110264415,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 13553.860560467505,
+                            ),
+                            length: 542,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 2.2007061053098487,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 10402.553222195891,
+                            ),
+                            length: 423,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 2.4411374227190654,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 9642.073434781163,
+                            ),
+                            length: 460,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 2.6668930150099475,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 13373.477022662419,
+                            ),
+                            length: 523,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 3.3473707968463593,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 12210.991779061811,
+                            ),
+                            length: 474,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 3.5554264328806564,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 13772.646038547884,
+                            ),
+                            length: 496,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 3.674988949345577,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 19887.782898361344,
+                            ),
+                            length: 492,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 3.860376108324273,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 14479.942607487332,
+                            ),
+                            length: 455,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 4.073768723793184,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 10765.779257985383,
+                            ),
+                            length: 425,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 4.364848066699556,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 16357.26097263718,
+                            ),
+                            length: 499,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 4.726983661466438,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 10033.467584079433,
+                            ),
+                            length: 708,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 4.855650645458404,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 12761.469184595888,
+                            ),
+                            length: 529,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 5.114146266931668,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 11727.746462323961,
+                            ),
+                            length: 461,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 5.2363982933309785,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 16056.834733572541,
+                            ),
+                            length: 493,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 5.515292121287947,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 12854.502266069512,
+                            ),
+                            length: 460,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 5.77966483048251,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 8989.576766516095,
+                            ),
+                            length: 308,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 5.936168471497499,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 11580.089064811584,
+                            ),
+                            length: 461,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 6.73415521141897,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 14438.283573381465,
+                            ),
+                            length: 502,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 6.993700637477105,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 13435.410752972493,
+                            ),
+                            length: 396,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 7.143903712967615,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 11506.223266020306,
+                            ),
+                            length: 421,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 7.152933996540655,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 12529.628030622225,
+                            ),
+                            length: 682,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 8.099517232193397,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 19603.933860967343,
+                            ),
+                            length: 463,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 10.237338186207724,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 10450.129769843159,
+                            ),
+                            length: 505,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: PositiveF64(
+                                0.0 < 10.583023279450531,
+                            ),
+                            max_time: PositiveF64(
+                                0.0 < 12150.017847554947,
+                            ),
+                            length: 510,
+                        },
+                    },
+                ],
+            },
+        ],
+        with_speciation: true,
+        with_dispersal: false,
+    },
+    reporters: ReportSpeciationIgnoreDispersalReportProgress(
+        ReporterPluginVec {
+            plugins: [
+                ExecutionTimeReporter {
+                    start_time: None,
+                    end_time: None,
+                },
+                BiodiversityReporter {
+                    biodiversity: 0,
+                },
+            ],
+        },
+    ),
+}
+INFO  Starting event replay ...
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation took:
+ - initialisation: 642ns
+ - execution: 2.589425ms
+ - cleanup: 15.34µs
+INFO  The simulation resulted in a biodiversity of 15767 unique species.
+
+=============================== Reporter Summary ===============================
+
+INFO  The event replay has completed.
+
+============================================
+
+        Job resource usage summary 
+
+                 Memory (GB)    NCPUs
+ Requested  :        62            32
+ Used       :         1 (peak)  31.99 (ave)
+
+============================================
