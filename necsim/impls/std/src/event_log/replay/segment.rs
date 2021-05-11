@@ -40,14 +40,10 @@ impl SortedSegment {
 
         let header: EventLogHeader = bincode::deserialize_from(&mut buf_reader)?;
 
-        let mut buffer = VecDeque::with_capacity(capacity);
+        let mut buffer = VecDeque::with_capacity(header.length.min(capacity));
 
-        for _ in 0..capacity {
-            if let Ok(event) = bincode::deserialize_from(&mut buf_reader) {
-                buffer.push_back(event)
-            } else {
-                break;
-            }
+        if let Ok(event) = bincode::deserialize_from(&mut buf_reader) {
+            buffer.push_back(event)
         }
 
         Ok(Self {
