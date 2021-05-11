@@ -1,42 +1,25 @@
 (
-    speciation: 0.1,
-    seed: 42,
+    speciation: 0.01,
     sample: 1.0,
-
-    algorithm: Independent(),
-
-    log: "event_log",
+    seed: 42,
+    
+    algorithm: Classical(),
 
     scenario: NonSpatial(
-        area: (100, 100),
-        deme: 10,
+        area: (10,10),
+        deme: 1,
     ),
-
+    
     reporters: [
         Plugin(
             library: "target/debug/deps/libnecsim_plugins_common.so",
-            reporters: [
-                Progress(),
-                Execution(),
-                Counter(),
-                /*Verbose(),*/
-                Biodiversity(),
-            ],
+            reporters: [Biodiversity()],
         ),
         Plugin(
-            library: "target/debug/deps/libnecsim_plugins_csv.so",
-            reporters: [
-                Csv(output: "events.csv"),
-            ],
-        ),
-        Plugin(
-            library: "target/debug/deps/libnecsim_plugins_metacommunity.so",
-            reporters: [
-                Metacommunity(
-                    metacommunity: Finite(100),
-                    seed: 42,
-                ),
-            ],
+            library: "target/debug/deps/libnecsim_plugins_species.so",
+            reporters: [Species(
+                output: "species.sqlite",
+            )],
         ),
     ],
 )
