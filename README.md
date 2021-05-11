@@ -52,7 +52,7 @@ necsim-rust consists of the following crates:
         - common/: `necsim-plugins-common` implements common analysis reporters, e.g. to measure biodiversity, print a progress bar, etc.
         - metacommunity/: `necsim-plugins-metacommunity` implements a reporter which measures migrations to a static external metacommunity, which can be simulated separately using the non-spatial scenario
         - csv/: `necsim-plugins-csv` implements a reporter which records events in a CSV file
-        - coalescence/: `necsim-plugins-coalescence` is **WORK IN PROGRESS**
+        - species/: `necsim-plugins-species` is **WORK IN PROGRESS**
     - partitioning/:
         - core/: `necsim-partitioning-core` declares the core partitioning traits
         - monolithic/: `necsim-partitioning-monolithic` implements monolithic, i.e. non-parallel partitioning

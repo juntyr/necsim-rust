@@ -21,6 +21,7 @@ pub struct ReporterPluginDeclaration {
 }
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub struct ReporterPluginFilter {
     pub(crate) report_speciation: bool,
     pub(crate) report_dispersal: bool,
