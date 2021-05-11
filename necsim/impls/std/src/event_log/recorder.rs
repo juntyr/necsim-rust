@@ -20,9 +20,6 @@ use std::{
     fs::{self, OpenOptions},
     io::BufWriter,
     path::{Path, PathBuf},
-    sync::{mpsc, mpsc::SyncSender},
-    thread,
-    thread::JoinHandle,
 };
 
 use anyhow::{Error, Result};
@@ -30,11 +27,6 @@ use anyhow::{Error, Result};
 use necsim_core::event::{DispersalEvent, PackedEvent, SpeciationEvent};
 
 use super::EventLogHeader;
-
-struct EventLogWriter {
-    thread: JoinHandle<()>,
-    sender: SyncSender<(Vec<PackedEvent>, PathBuf, bool, bool)>,
-}
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(serde::Deserialize)]
@@ -47,8 +39,6 @@ pub struct EventLogRecorder {
 
     record_speciation: bool,
     record_dispersal: bool,
-
-    writer: Option<EventLogWriter>,
 }
 
 impl TryFrom<PathBuf> for EventLogRecorder {
@@ -62,13 +52,7 @@ impl TryFrom<PathBuf> for EventLogRecorder {
 impl Drop for EventLogRecorder {
     fn drop(&mut self) {
         if !self.buffer.is_empty() {
-            self.sort_and_write_segment();
-        }
-
-        if let Some(writer) = self.writer.take() {
-            std::mem::drop(writer.sender);
-
-            std::mem::drop(writer.thread.join());
+            std::mem::drop(self.sort_and_write_segment());
         }
     }
 }
@@ -91,21 +75,6 @@ impl EventLogRecorder {
             return Err(anyhow::anyhow!("{:?} is read-only.", path));
         }
 
-        let (sender, receiver) = mpsc::sync_channel(0);
-
-        let thread = thread::spawn(move || {
-            while let Ok((buffer, segment_path, record_speciation, record_dispersal)) =
-                receiver.recv()
-            {
-                std::mem::drop(sort_and_write_segment(
-                    buffer,
-                    segment_path,
-                    record_speciation,
-                    record_dispersal,
-                ))
-            }
-        });
-
         let segment_size = 1_000_000_usize;
 
         Ok(Self {
@@ -116,8 +85,6 @@ impl EventLogRecorder {
 
             record_speciation: false,
             record_dispersal: false,
-
-            writer: Some(EventLogWriter { thread, sender }),
         })
     }
 
@@ -137,7 +104,7 @@ impl EventLogRecorder {
         self.buffer.push(event.clone().into());
 
         if self.buffer.len() >= self.segment_size {
-            self.sort_and_write_segment();
+            std::mem::drop(self.sort_and_write_segment());
         }
     }
 
@@ -147,61 +114,42 @@ impl EventLogRecorder {
         self.buffer.push(event.clone().into());
 
         if self.buffer.len() >= self.segment_size {
-            self.sort_and_write_segment();
+            std::mem::drop(self.sort_and_write_segment());
         }
     }
 
-    fn sort_and_write_segment(&mut self) {
+    fn sort_and_write_segment(&mut self) -> Result<()> {
+        self.buffer.sort();
+
         let segment_path = self.directory.join(format!("{}", self.segment_index));
         self.segment_index += 1;
 
-        let buffer = std::mem::replace(&mut self.buffer, Vec::with_capacity(self.segment_size));
+        let segment_file = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(&segment_path)?;
+        let mut buf_writer = BufWriter::new(segment_file);
 
-        if let Some(writer) = &self.writer {
-            std::mem::drop(writer.sender.send((
-                buffer,
-                segment_path,
+        bincode::serialize_into(
+            &mut buf_writer,
+            &EventLogHeader::new(
+                self.buffer[0].event_time,
+                self.buffer[self.buffer.len() - 1].event_time,
+                self.buffer.len(),
                 self.record_speciation,
                 self.record_dispersal,
-            )));
+            ),
+        )?;
+
+        for event in self.buffer.drain(0..) {
+            bincode::serialize_into(&mut buf_writer, &event)?;
         }
+
+        buf_writer.into_inner()?;
+
+        Ok(())
     }
-}
-
-#[allow(clippy::needless_pass_by_value)]
-fn sort_and_write_segment(
-    mut buffer: Vec<PackedEvent>,
-    segment_path: PathBuf,
-    record_speciation: bool,
-    record_dispersal: bool,
-) -> Result<()> {
-    buffer.sort();
-
-    let segment_file = OpenOptions::new()
-        .create(true)
-        .truncate(true)
-        .write(true)
-        .open(&segment_path)?;
-    let mut buf_writer = BufWriter::new(segment_file);
-
-    bincode::serialize_into(
-        &mut buf_writer,
-        &EventLogHeader::new(
-            buffer[0].event_time,
-            buffer[buffer.len() - 1].event_time,
-            buffer.len(),
-            record_speciation,
-            record_dispersal,
-        ),
-    )?;
-
-    for event in buffer.drain(0..) {
-        bincode::serialize_into(&mut buf_writer, &event)?;
-    }
-
-    buf_writer.into_inner()?;
-
-    Ok(())
 }
 
 impl fmt::Debug for EventLogRecorder {
