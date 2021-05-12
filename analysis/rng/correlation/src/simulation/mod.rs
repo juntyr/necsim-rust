@@ -7,7 +7,7 @@ use necsim_core::{
     reporter::NullReporter,
     simulation::Simulation,
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64, ZeroInclOneInclF64};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveF64};
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::independent::{
         event_time_sampler::poisson::PoissonEventTimeSampler, IndependentActiveLineageSampler,
@@ -70,9 +70,7 @@ impl<G: RngCore<Seed: Clone> + PrimeableRng, const SIGMA: f64> RngCore
         let mut simulation = Simulation::builder()
             .habitat(AlmostInfiniteHabitat::default())
             .rng(InterceptingReporter::<G>::from_seed(seed.clone()))
-            .speciation_probability(UniformSpeciationProbability::new(
-                ZeroInclOneInclF64::new(0.0_f64).unwrap(),
-            ))
+            .speciation_probability(UniformSpeciationProbability::new(ClosedUnitF64::zero()))
             .dispersal_sampler(AlmostInfiniteNormalDispersalSampler::new(
                 NonNegativeF64::new(SIGMA).unwrap(),
             ))

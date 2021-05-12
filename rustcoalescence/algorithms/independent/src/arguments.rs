@@ -3,7 +3,7 @@ use std::num::{NonZeroU64, NonZeroUsize};
 use serde::Deserialize;
 use serde_state::DeserializeState;
 
-use necsim_core_bond::{Partition, PositiveF64, ZeroInclOneInclF64};
+use necsim_core_bond::{ClosedUnitF64, Partition, PositiveF64};
 
 use necsim_impls_no_std::parallelisation::independent::{DedupCache, RelativeDedupCache};
 
@@ -24,7 +24,7 @@ pub struct IsolatedParallelismMode {
 #[serde(deny_unknown_fields)]
 pub struct ProbabilisticParallelismMode {
     #[serde(alias = "communication")]
-    pub communication_probability: ZeroInclOneInclF64,
+    pub communication_probability: ClosedUnitF64,
 }
 
 #[derive(Debug, Deserialize)]

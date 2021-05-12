@@ -5,7 +5,7 @@ use necsim_core::{
     reporter::NullReporter,
     simulation::Simulation,
 };
-use necsim_core_bond::{PositiveF64, ZeroInclOneInclF64};
+use necsim_core_bond::{ClosedUnitF64, PositiveF64};
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::independent::{
         event_time_sampler::poisson::PoissonEventTimeSampler, IndependentActiveLineageSampler,
@@ -65,9 +65,7 @@ impl<G: RngCore + PrimeableRng, const SIZE: u32> RngCore for SimulationRng<G, SI
         let mut simulation = Simulation::builder()
             .habitat(NonSpatialHabitat::new((SIZE, SIZE), SIZE))
             .rng(InterceptingReporter::<G>::from_seed(seed))
-            .speciation_probability(UniformSpeciationProbability::new(
-                ZeroInclOneInclF64::new(0.0_f64).unwrap(),
-            ))
+            .speciation_probability(UniformSpeciationProbability::new(ClosedUnitF64::zero()))
             .dispersal_sampler(NonSpatialDispersalSampler::default())
             .lineage_reference(std::marker::PhantomData::<GlobalLineageReference>)
             .lineage_store(IndependentLineageStore::default())

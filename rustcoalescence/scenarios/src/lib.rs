@@ -12,7 +12,7 @@ use necsim_core::cogs::{
     DispersalSampler, Habitat, LineageReference, LineageStore, OriginSampler, RngCore,
     SpeciationProbability, TurnoverRate,
 };
-use necsim_core_bond::ZeroExclOneInclF64;
+use necsim_core_bond::PositiveUnitF64;
 
 use necsim_impls_no_std::{
     cogs::{
@@ -51,7 +51,7 @@ pub trait Scenario<G: RngCore>: Sized + ScenarioArguments {
     /// Returns a `Self::Error` if initialising the scenario failed
     fn initialise(
         args: Self::Arguments,
-        speciation_probability_per_generation: ZeroExclOneInclF64,
+        speciation_probability_per_generation: PositiveUnitF64,
     ) -> Result<Self, Self::Error>;
 
     /// Inside rustcoalescence, I know that only specialised

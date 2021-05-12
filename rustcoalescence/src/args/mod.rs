@@ -9,7 +9,7 @@ use structopt::StructOpt;
 
 mod parse;
 
-use necsim_core_bond::{Partition, ZeroExclOneInclF64, ZeroInclOneInclF64};
+use necsim_core_bond::{ClosedUnitF64, Partition, PositiveUnitF64};
 
 use necsim_impls_std::event_log::{recorder::EventLogRecorder, replay::EventLogReplay};
 
@@ -79,10 +79,10 @@ impl<'de> DeserializeState<'de, Partition> for SimulateArgs {
 #[serde(deserialize_state = "Partition")]
 struct SimulateArgsRaw {
     #[serde(alias = "speciation")]
-    speciation_probability_per_generation: ZeroExclOneInclF64,
+    speciation_probability_per_generation: PositiveUnitF64,
 
     #[serde(alias = "sample")]
-    sample_percentage: ZeroInclOneInclF64,
+    sample_percentage: ClosedUnitF64,
 
     seed: u64,
 
@@ -125,8 +125,8 @@ where
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
 pub struct CommonArgs {
-    pub speciation_probability_per_generation: ZeroExclOneInclF64,
-    pub sample_percentage: ZeroInclOneInclF64,
+    pub speciation_probability_per_generation: PositiveUnitF64,
+    pub sample_percentage: ClosedUnitF64,
     pub seed: u64,
     pub algorithm: Algorithm,
 }

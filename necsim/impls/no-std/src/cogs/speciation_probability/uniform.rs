@@ -2,18 +2,18 @@ use necsim_core::{
     cogs::{Backup, Habitat, SpeciationProbability},
     landscape::Location,
 };
-use necsim_core_bond::ZeroInclOneInclF64;
+use necsim_core_bond::ClosedUnitF64;
 
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 #[allow(clippy::module_name_repetitions)]
 pub struct UniformSpeciationProbability {
-    speciation_probability: ZeroInclOneInclF64,
+    speciation_probability: ClosedUnitF64,
 }
 
 impl UniformSpeciationProbability {
     #[must_use]
-    pub fn new(speciation_probability: ZeroInclOneInclF64) -> Self {
+    pub fn new(speciation_probability: ClosedUnitF64) -> Self {
         Self {
             speciation_probability,
         }
@@ -37,7 +37,7 @@ impl<H: Habitat> SpeciationProbability<H> for UniformSpeciationProbability {
         &self,
         _location: &Location,
         _habitat: &H,
-    ) -> ZeroInclOneInclF64 {
+    ) -> ClosedUnitF64 {
         self.speciation_probability
     }
 }

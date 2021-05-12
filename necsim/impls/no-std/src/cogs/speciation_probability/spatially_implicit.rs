@@ -2,7 +2,7 @@ use necsim_core::{
     cogs::{Backup, Habitat, SpeciationProbability},
     landscape::Location,
 };
-use necsim_core_bond::{ZeroExclOneInclF64, ZeroInclOneInclF64};
+use necsim_core_bond::{ClosedUnitF64, PositiveUnitF64};
 
 use crate::cogs::habitat::spatially_implicit::SpatiallyImplicitHabitat;
 
@@ -10,12 +10,12 @@ use crate::cogs::habitat::spatially_implicit::SpatiallyImplicitHabitat;
 #[cfg_attr(feature = "cuda", derive(RustToCuda))]
 #[allow(clippy::module_name_repetitions)]
 pub struct SpatiallyImplicitSpeciationProbability {
-    meta_speciation_probability: ZeroExclOneInclF64,
+    meta_speciation_probability: PositiveUnitF64,
 }
 
 impl SpatiallyImplicitSpeciationProbability {
     #[must_use]
-    pub fn new(meta_speciation_probability: ZeroExclOneInclF64) -> Self {
+    pub fn new(meta_speciation_probability: PositiveUnitF64) -> Self {
         Self {
             meta_speciation_probability,
         }
@@ -43,9 +43,9 @@ impl SpeciationProbability<SpatiallyImplicitHabitat> for SpatiallyImplicitSpecia
         &self,
         location: &Location,
         habitat: &SpatiallyImplicitHabitat,
-    ) -> ZeroInclOneInclF64 {
+    ) -> ClosedUnitF64 {
         if habitat.local().contains(location) {
-            ZeroInclOneInclF64::zero()
+            ClosedUnitF64::zero()
         } else {
             self.meta_speciation_probability.into()
         }

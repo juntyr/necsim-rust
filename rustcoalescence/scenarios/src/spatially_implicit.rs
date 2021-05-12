@@ -3,7 +3,7 @@ use std::num::NonZeroU32;
 use serde::Deserialize;
 
 use necsim_core::cogs::{DispersalSampler, LineageStore, RngCore};
-use necsim_core_bond::ZeroExclOneInclF64;
+use necsim_core_bond::PositiveUnitF64;
 
 use necsim_impls_no_std::{
     cogs::{
@@ -39,7 +39,7 @@ pub struct SpatiallyImplicitArguments {
     pub meta_deme: u32,
 
     #[serde(alias = "migration")]
-    pub migration_probability_per_generation: ZeroExclOneInclF64,
+    pub migration_probability_per_generation: PositiveUnitF64,
 }
 
 impl<G: RngCore> ScenarioArguments for SpatiallyImplicitScenario<G> {
@@ -60,7 +60,7 @@ impl<G: RngCore> Scenario<G> for SpatiallyImplicitScenario<G> {
 
     fn initialise(
         args: Self::Arguments,
-        speciation_probability_per_generation: ZeroExclOneInclF64,
+        speciation_probability_per_generation: PositiveUnitF64,
     ) -> Result<Self, Self::Error> {
         let habitat = SpatiallyImplicitHabitat::new(
             args.local_area,

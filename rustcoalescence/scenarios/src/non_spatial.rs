@@ -3,7 +3,7 @@ use std::num::NonZeroU32;
 use serde::Deserialize;
 
 use necsim_core::cogs::{DispersalSampler, LineageStore, RngCore};
-use necsim_core_bond::ZeroExclOneInclF64;
+use necsim_core_bond::PositiveUnitF64;
 
 use necsim_impls_no_std::{
     cogs::{
@@ -52,7 +52,7 @@ impl<G: RngCore> Scenario<G> for NonSpatialScenario<G> {
 
     fn initialise(
         args: Self::Arguments,
-        speciation_probability_per_generation: ZeroExclOneInclF64,
+        speciation_probability_per_generation: PositiveUnitF64,
     ) -> Result<Self, Self::Error> {
         let habitat = NonSpatialHabitat::new(args.area, args.deme);
         let dispersal_sampler = NonSpatialDispersalSampler::default();

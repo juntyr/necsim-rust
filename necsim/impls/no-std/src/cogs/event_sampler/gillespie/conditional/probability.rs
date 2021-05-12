@@ -5,7 +5,7 @@ use necsim_core::{
     },
     landscape::Location,
 };
-use necsim_core_bond::ZeroInclOneInclF64;
+use necsim_core_bond::ClosedUnitF64;
 
 use crate::cogs::{
     coalescence_sampler::conditional::ConditionalCoalescenceSampler,
@@ -14,9 +14,9 @@ use crate::cogs::{
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ProbabilityAtLocation {
-    speciation: ZeroInclOneInclF64,
-    out_dispersal: ZeroInclOneInclF64,
-    self_coalescence: ZeroInclOneInclF64,
+    speciation: ClosedUnitF64,
+    out_dispersal: ClosedUnitF64,
+    self_coalescence: ClosedUnitF64,
 }
 
 impl ProbabilityAtLocation {
@@ -67,23 +67,23 @@ impl ProbabilityAtLocation {
         }
     }
 
-    pub fn speciation(&self) -> ZeroInclOneInclF64 {
+    pub fn speciation(&self) -> ClosedUnitF64 {
         self.speciation
     }
 
-    pub fn out_dispersal(&self) -> ZeroInclOneInclF64 {
+    pub fn out_dispersal(&self) -> ClosedUnitF64 {
         self.out_dispersal
     }
 
-    pub fn self_coalescence(&self) -> ZeroInclOneInclF64 {
+    pub fn self_coalescence(&self) -> ClosedUnitF64 {
         self.self_coalescence
     }
 
-    pub fn total(&self) -> ZeroInclOneInclF64 {
+    pub fn total(&self) -> ClosedUnitF64 {
         let total =
             self.speciation().get() + self.out_dispersal().get() + self.self_coalescence().get();
 
         // Safety: Sum of disjoint event probabilities is in [0.0; 1.0]
-        unsafe { ZeroInclOneInclF64::new_unchecked(total) }
+        unsafe { ClosedUnitF64::new_unchecked(total) }
     }
 }

@@ -1,4 +1,4 @@
-use necsim_core_bond::ZeroInclOneInclF64;
+use necsim_core_bond::ClosedUnitF64;
 
 use crate::{cogs::Habitat, landscape::Location};
 
@@ -11,5 +11,5 @@ pub trait SpeciationProbability<H: Habitat>: crate::cogs::Backup + core::fmt::De
         &self,
         location: &Location,
         habitat: &H,
-    ) -> ZeroInclOneInclF64;
+    ) -> ClosedUnitF64;
 }

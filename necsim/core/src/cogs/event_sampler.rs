@@ -4,7 +4,7 @@ use core::{
     num::NonZeroU64,
 };
 
-use necsim_core_bond::{NonNegativeF64, PositiveF64, ZeroInclOneInclF64};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveF64};
 
 use super::{
     CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, LineageReference, LineageStore,
@@ -61,7 +61,7 @@ pub trait EventSampler<
 pub struct SpeciationSample {
     indexed_location: IndexedLocation,
     time: NonZeroU64,
-    speciation_sample: ZeroInclOneInclF64,
+    speciation_sample: ClosedUnitF64,
 }
 
 impl SpeciationSample {
@@ -69,7 +69,7 @@ impl SpeciationSample {
     pub fn new(
         indexed_location: IndexedLocation,
         time: PositiveF64,
-        speciation_sample: ZeroInclOneInclF64,
+        speciation_sample: ClosedUnitF64,
     ) -> Self {
         // From the precondition time > 0.0_f64, we know that time =/= 0.0_f64
         //  i.e. time =/= 0_u64
