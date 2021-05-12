@@ -9,7 +9,7 @@ use core::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{PositiveF64, ZeroInclOneInclF64};
+use crate::{ClosedUnitF64, PositiveF64};
 
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
@@ -115,8 +115,8 @@ impl From<PositiveF64> for NonNegativeF64 {
     }
 }
 
-impl From<ZeroInclOneInclF64> for NonNegativeF64 {
-    fn from(value: ZeroInclOneInclF64) -> Self {
+impl From<ClosedUnitF64> for NonNegativeF64 {
+    fn from(value: ClosedUnitF64) -> Self {
         Self(value.get())
     }
 }
@@ -209,18 +209,18 @@ impl Mul<PositiveF64> for NonNegativeF64 {
     }
 }
 
-impl Add<ZeroInclOneInclF64> for NonNegativeF64 {
+impl Add<ClosedUnitF64> for NonNegativeF64 {
     type Output = Self;
 
-    fn add(self, other: ZeroInclOneInclF64) -> Self {
+    fn add(self, other: ClosedUnitF64) -> Self {
         Self(self.0 + other.get())
     }
 }
 
-impl Mul<ZeroInclOneInclF64> for NonNegativeF64 {
+impl Mul<ClosedUnitF64> for NonNegativeF64 {
     type Output = Self;
 
-    fn mul(self, other: ZeroInclOneInclF64) -> Self {
+    fn mul(self, other: ClosedUnitF64) -> Self {
         Self(self.0 * other.get())
     }
 }

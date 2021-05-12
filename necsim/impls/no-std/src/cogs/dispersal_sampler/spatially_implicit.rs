@@ -2,7 +2,7 @@ use necsim_core::{
     cogs::{Backup, DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
-use necsim_core_bond::{ZeroExclOneInclF64, ZeroInclOneInclF64};
+use necsim_core_bond::{ClosedUnitF64, PositiveUnitF64};
 
 use crate::cogs::{
     dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
@@ -17,12 +17,12 @@ pub struct SpatiallyImplicitDispersalSampler<G: RngCore> {
     local: NonSpatialDispersalSampler<G>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     meta: NonSpatialDispersalSampler<G>,
-    local_migration_probability_per_generation: ZeroExclOneInclF64,
+    local_migration_probability_per_generation: PositiveUnitF64,
 }
 
 impl<G: RngCore> SpatiallyImplicitDispersalSampler<G> {
     #[must_use]
-    pub fn new(local_migration_probability_per_generation: ZeroExclOneInclF64) -> Self {
+    pub fn new(local_migration_probability_per_generation: PositiveUnitF64) -> Self {
         Self {
             local: NonSpatialDispersalSampler::default(),
             meta: NonSpatialDispersalSampler::default(),
@@ -141,12 +141,11 @@ impl<G: RngCore> SeparableDispersalSampler<SpatiallyImplicitHabitat, G>
         &self,
         location: &Location,
         habitat: &SpatiallyImplicitHabitat,
-    ) -> ZeroInclOneInclF64 {
+    ) -> ClosedUnitF64 {
         if habitat.local().contains(location) {
             self.local
                 .get_self_dispersal_probability_at_location(location, habitat.local())
-                * ZeroInclOneInclF64::from(self.local_migration_probability_per_generation)
-                    .one_minus()
+                * ClosedUnitF64::from(self.local_migration_probability_per_generation).one_minus()
         } else {
             self.meta
                 .get_self_dispersal_probability_at_location(location, habitat.meta())

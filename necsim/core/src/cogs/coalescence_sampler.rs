@@ -1,6 +1,6 @@
 use core::cmp::{Ord, Ordering};
 
-use necsim_core_bond::ZeroInclOneInclF64;
+use necsim_core_bond::ClosedUnitF64;
 
 use crate::{
     cogs::{Backup, RngCore},
@@ -28,7 +28,7 @@ pub trait CoalescenceSampler<H: Habitat, R: LineageReference<H>, S: LineageStore
 
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
-pub struct CoalescenceRngSample(ZeroInclOneInclF64);
+pub struct CoalescenceRngSample(ClosedUnitF64);
 
 #[contract_trait]
 impl Backup for CoalescenceRngSample {

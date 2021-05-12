@@ -8,13 +8,13 @@ use core::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::ZeroExclOneInclF64;
+use crate::PositiveUnitF64;
 
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
-pub struct ZeroInclOneInclF64Error(f64);
+pub struct ClosedUnitF64Error(f64);
 
-impl fmt::Display for ZeroInclOneInclF64Error {
+impl fmt::Display for ClosedUnitF64Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{} is not in [0.0, 1.0].", self.0)
     }
@@ -26,41 +26,41 @@ impl fmt::Display for ZeroInclOneInclF64Error {
 #[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 #[repr(transparent)]
 #[serde(try_from = "f64")]
-pub struct ZeroInclOneInclF64(f64);
+pub struct ClosedUnitF64(f64);
 
-impl TryFrom<f64> for ZeroInclOneInclF64 {
-    type Error = ZeroInclOneInclF64Error;
+impl TryFrom<f64> for ClosedUnitF64 {
+    type Error = ClosedUnitF64Error;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
         Self::new(value)
     }
 }
 
-impl fmt::Debug for ZeroInclOneInclF64 {
+impl fmt::Debug for ClosedUnitF64 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        struct ZeroInclOneInclF64Range(f64);
+        struct ClosedUnitF64Range(f64);
 
-        impl fmt::Debug for ZeroInclOneInclF64Range {
+        impl fmt::Debug for ClosedUnitF64Range {
             fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
                 write!(fmt, "0.0 <= {} <= 1.0", self.0)
             }
         }
 
-        fmt.debug_tuple("ZeroInclOneInclF64")
-            .field(&ZeroInclOneInclF64Range(self.0))
+        fmt.debug_tuple("ClosedUnitF64")
+            .field(&ClosedUnitF64Range(self.0))
             .finish()
     }
 }
 
-impl ZeroInclOneInclF64 {
+impl ClosedUnitF64 {
     /// # Errors
     ///
-    /// Returns `ZeroInclOneInclF64Error` if not `0.0 <= value <= 1.0`
-    pub fn new(value: f64) -> Result<Self, ZeroInclOneInclF64Error> {
+    /// Returns `ClosedUnitF64Error` if not `0.0 <= value <= 1.0`
+    pub fn new(value: f64) -> Result<Self, ClosedUnitF64Error> {
         if (0.0..=1.0).contains(&value) {
             Ok(Self(value))
         } else {
-            Err(ZeroInclOneInclF64Error(value))
+            Err(ClosedUnitF64Error(value))
         }
     }
 
@@ -93,51 +93,51 @@ impl ZeroInclOneInclF64 {
     }
 }
 
-impl From<ZeroExclOneInclF64> for ZeroInclOneInclF64 {
-    fn from(value: ZeroExclOneInclF64) -> Self {
+impl From<PositiveUnitF64> for ClosedUnitF64 {
+    fn from(value: PositiveUnitF64) -> Self {
         Self(value.get())
     }
 }
 
-impl PartialEq for ZeroInclOneInclF64 {
+impl PartialEq for ClosedUnitF64 {
     fn eq(&self, other: &Self) -> bool {
         self.0.eq(&other.0)
     }
 }
 
-impl Eq for ZeroInclOneInclF64 {}
+impl Eq for ClosedUnitF64 {}
 
-impl PartialOrd for ZeroInclOneInclF64 {
+impl PartialOrd for ClosedUnitF64 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.0.partial_cmp(&other.0)
     }
 }
 
-impl Ord for ZeroInclOneInclF64 {
+impl Ord for ClosedUnitF64 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.0.total_cmp(&other.0)
     }
 }
 
-impl Hash for ZeroInclOneInclF64 {
+impl Hash for ClosedUnitF64 {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.to_bits().hash(state)
     }
 }
 
-impl PartialEq<f64> for ZeroInclOneInclF64 {
+impl PartialEq<f64> for ClosedUnitF64 {
     fn eq(&self, other: &f64) -> bool {
         self.0.eq(&other)
     }
 }
 
-impl PartialOrd<f64> for ZeroInclOneInclF64 {
+impl PartialOrd<f64> for ClosedUnitF64 {
     fn partial_cmp(&self, other: &f64) -> Option<Ordering> {
         self.0.partial_cmp(&other)
     }
 }
 
-impl Mul for ZeroInclOneInclF64 {
+impl Mul for ClosedUnitF64 {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {

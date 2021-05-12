@@ -9,7 +9,7 @@ use necsim_core::{
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
 };
-use necsim_core_bond::ZeroInclOneInclF64;
+use necsim_core_bond::ClosedUnitF64;
 
 use super::optional_coalescence;
 
@@ -95,7 +95,7 @@ impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>>
         habitat: &H,
         lineage_store: &S,
         lineage_store_includes_self: bool,
-    ) -> ZeroInclOneInclF64 {
+    ) -> ClosedUnitF64 {
         // If the lineage store includes self, the population must be decremented
         //  to avoid coalescence with the currently active lineage
 
@@ -107,6 +107,6 @@ impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>>
         let habitat = f64::from(habitat.get_habitat_at_location(location));
 
         // Safety: Normalised probability in range [0.0; 1.0]
-        unsafe { ZeroInclOneInclF64::new_unchecked(population / habitat) }
+        unsafe { ClosedUnitF64::new_unchecked(population / habitat) }
     }
 }

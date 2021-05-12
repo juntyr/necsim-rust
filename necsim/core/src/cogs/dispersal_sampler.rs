@@ -1,4 +1,4 @@
-use necsim_core_bond::ZeroInclOneInclF64;
+use necsim_core_bond::ClosedUnitF64;
 
 use crate::{cogs::RngCore, landscape::Location};
 
@@ -40,5 +40,5 @@ pub trait SeparableDispersalSampler<H: Habitat, G: RngCore>: DispersalSampler<H,
         &self,
         location: &Location,
         habitat: &H,
-    ) -> ZeroInclOneInclF64;
+    ) -> ClosedUnitF64;
 }

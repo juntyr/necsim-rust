@@ -2,7 +2,7 @@ use necsim_core::{
     cogs::{DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
-use necsim_core_bond::ZeroInclOneInclF64;
+use necsim_core_bond::ClosedUnitF64;
 
 use super::InMemorySeparableAliasDispersalSampler;
 
@@ -69,7 +69,7 @@ impl<H: Habitat, G: RngCore> SeparableDispersalSampler<H, G>
         &self,
         location: &Location,
         habitat: &H,
-    ) -> ZeroInclOneInclF64 {
+    ) -> ClosedUnitF64 {
         self.self_dispersal[(
             (location.y() - habitat.get_extent().y()) as usize,
             (location.x() - habitat.get_extent().x()) as usize,

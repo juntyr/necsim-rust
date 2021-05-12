@@ -8,7 +8,7 @@ use necsim_core::{
     cogs::{Backup, Habitat, RngCore},
     landscape::Location,
 };
-use necsim_core_bond::ZeroInclOneInclF64;
+use necsim_core_bond::ClosedUnitF64;
 
 use crate::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
 
@@ -20,7 +20,7 @@ use crate::alias::AliasMethodSampler;
 #[derive(Debug)]
 pub struct InMemorySeparableAliasDispersalSampler<H: Habitat, G: RngCore> {
     alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
-    self_dispersal: Array2D<ZeroInclOneInclF64>,
+    self_dispersal: Array2D<ClosedUnitF64>,
     _marker: PhantomData<(H, G)>,
 }
 
@@ -36,7 +36,7 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G>
         let mut event_weights: Vec<(usize, f64)> = Vec::with_capacity(dispersal.row_len());
 
         let mut self_dispersal = Array2D::filled_with(
-            ZeroInclOneInclF64::zero(),
+            ClosedUnitF64::zero(),
             habitat_extent.height() as usize,
             habitat_extent.width() as usize,
         );
@@ -74,7 +74,7 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G>
                 if total_weight > 0.0_f64 {
                     // Safety: Normalisation limits the result to [0.0; 1.0]
                     let dispersal_probability = unsafe {
-                        ZeroInclOneInclF64::new_unchecked(self_dispersal_at_location / total_weight)
+                        ClosedUnitF64::new_unchecked(self_dispersal_at_location / total_weight)
                     };
 
                     self_dispersal[(

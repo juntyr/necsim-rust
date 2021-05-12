@@ -15,9 +15,23 @@ pub struct SortedSortedSegments {
 
 impl fmt::Debug for SortedSortedSegments {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("SortedSortedSegments")
-            .field("segments", &self.segments)
-            .finish()
+        struct SortedSegmentFmt(usize);
+
+        impl fmt::Debug for SortedSegmentFmt {
+            fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+                write!(fmt, "Vec<SortedSegment; {}>", self.0)
+            }
+        }
+
+        let mut debug = fmt.debug_struct("SortedSortedSegments");
+        debug.field("segments", &SortedSegmentFmt(self.segments.len()));
+
+        if let (Some(last), Some(first)) = (self.segments.first(), self.segments.last()) {
+            debug.field("min_time", &first.header().min_time());
+            debug.field("max_time", &last.header().max_time());
+        }
+
+        debug.field("length", &self.length()).finish()
     }
 }
 

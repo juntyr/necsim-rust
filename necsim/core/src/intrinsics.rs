@@ -1,4 +1,4 @@
-use necsim_core_bond::{NonNegativeF64, ZeroInclOneInclF64};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
 #[must_use]
 #[inline]
@@ -53,8 +53,8 @@ pub fn exp(val: f64) -> f64 {
 
 #[must_use]
 #[inline]
-pub fn neg_exp(val: NonNegativeF64) -> ZeroInclOneInclF64 {
-    unsafe { ZeroInclOneInclF64::new_unchecked(-val.get()) }
+pub fn neg_exp(val: NonNegativeF64) -> ClosedUnitF64 {
+    unsafe { ClosedUnitF64::new_unchecked(-val.get()) }
 }
 
 #[must_use]

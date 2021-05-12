@@ -1,6 +1,6 @@
 use core::{convert::AsMut, default::Default, ptr::copy_nonoverlapping};
 
-use necsim_core_bond::{NonNegativeF64, PositiveF64, ZeroInclOneInclF64};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveF64};
 
 use crate::{
     cogs::Habitat,
@@ -56,12 +56,12 @@ pub trait RngCore: crate::cogs::Backup + Sized + Clone + core::fmt::Debug {
 pub trait RngSampler: RngCore {
     #[must_use]
     #[inline]
-    fn sample_uniform(&mut self) -> ZeroInclOneInclF64 {
+    fn sample_uniform(&mut self) -> ClosedUnitF64 {
         // http://prng.di.unimi.it -> Generating uniform doubles in the unit interval
         #[allow(clippy::cast_precision_loss)]
         let u01 = ((self.sample_u64() >> 11) as f64) * f64::from_bits(0x3CA0_0000_0000_0000_u64); // 0x1.0p-53
 
-        unsafe { ZeroInclOneInclF64::new_unchecked(u01) }
+        unsafe { ClosedUnitF64::new_unchecked(u01) }
     }
 
     #[must_use]
@@ -104,7 +104,7 @@ pub trait RngSampler: RngCore {
 
     #[must_use]
     #[inline]
-    fn sample_event(&mut self, probability: ZeroInclOneInclF64) -> bool {
+    fn sample_event(&mut self, probability: ClosedUnitF64) -> bool {
         self.sample_uniform().get() < probability.get()
     }
 

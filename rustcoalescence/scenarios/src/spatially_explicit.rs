@@ -4,7 +4,7 @@ use array2d::Array2D;
 use necsim_core::cogs::{DispersalSampler, Habitat, LineageStore, RngCore};
 use thiserror::Error;
 
-use necsim_core_bond::ZeroExclOneInclF64;
+use necsim_core_bond::PositiveUnitF64;
 
 use necsim_impls_no_std::{
     cogs::{
@@ -62,7 +62,7 @@ impl<G: RngCore> Scenario<G> for SpatiallyExplicitScenario<G> {
 
     fn initialise(
         args: Self::Arguments,
-        speciation_probability_per_generation: ZeroExclOneInclF64,
+        speciation_probability_per_generation: PositiveUnitF64,
     ) -> Result<Self, Self::Error> {
         let habitat = InMemoryHabitat::new(args.habitat_map);
         let turnover_rate = UniformTurnoverRate::default();

@@ -2,19 +2,19 @@ use necsim_core::{
     cogs::{Backup, Habitat},
     landscape::IndexedLocation,
 };
-use necsim_core_bond::{PositiveF64, ZeroInclOneInclF64};
+use necsim_core_bond::{ClosedUnitF64, PositiveF64};
 
 use super::EmigrationChoice;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct ProbabilisticEmigrationChoice {
-    probability: ZeroInclOneInclF64,
+    probability: ClosedUnitF64,
 }
 
 impl ProbabilisticEmigrationChoice {
     #[must_use]
-    pub fn new(probability: ZeroInclOneInclF64) -> Self {
+    pub fn new(probability: ClosedUnitF64) -> Self {
         Self { probability }
     }
 }
