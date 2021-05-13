@@ -1,0 +1,1256 @@
+# mpiexec: MPI is /apps/mpi/intel/2019.6.166
+# mpiexec: RDMA network found -- using rdma+shared memory (FI_VERBS_IFACE=ib0)
+# mpiexec: bootstrapping with /apps/mpi/intel/2019.6.166/bin/__pbs_tmrsh
+# mpiexec: full path to program is /rds/general/user/ml5717/home/necsim-rust/target-mpi/release/rustcoalescence
+# mpiexec: program arguments are: simulate (
+        speciation: 1.0,
+        sample: 0.025,
+        seed: 2022117357562431299,
+
+        algorithm: Independent(delta_t:2.5, step_slice:10, dedup_cache:Relative(factor:0.1), parallelism_mode:Probabilistic(communication:0.5)),
+
+        scenario: SpatiallyExplicit(
+            habitat: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif",
+            dispersal: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif",
+        ),
+        
+        log: "/var/tmp/pbs.3517113[9].pbs/event_log",
+
+        reporters: [
+            Plugin(
+                library: "/rds/general/user/ml5717/home/necsim-rust/target-mpi/release/deps/libnecsim_plugins_common.so",
+                reporters: [Execution(),Biodiversity()],
+            ),
+        ],
+    )
+# mpiexec: 2 ranks allocated via PBS select
+# mpiexec: 1 OpenMP threads / rank allocated by PBS select
+# mpiexec: Job has shared use of the allocated nodes. Disabling process-pinning
+# mpiexec: machinefile configured as:
+cx1-133-2-20.cx1.hpc.ic.ac.uk:2
+#
+# mpiexec: Checking all nodes are ONLINE:
+# mpiexec: All nodes appear ONLINE
+# mpiexec: launch started at Thu 13 May 07:24:30 BST 2021
+# mpiexec: launching program...
+# /rds/general/user/ml5717/home/necsim-rust/target-mpi/release/rustcoalescence simulate (
+        speciation: 1.0,
+        sample: 0.025,
+        seed: 2022117357562431299,
+
+        algorithm: Independent(delta_t:2.5, step_slice:10, dedup_cache:Relative(factor:0.1), parallelism_mode:Probabilistic(communication:0.5)),
+
+        scenario: SpatiallyExplicit(
+            habitat: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif",
+            dispersal: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif",
+        ),
+        
+        log: "/var/tmp/pbs.3517113[9].pbs/event_log",
+
+        reporters: [
+            Plugin(
+                library: "/rds/general/user/ml5717/home/necsim-rust/target-mpi/release/deps/libnecsim_plugins_common.so",
+                reporters: [Execution(),Biodiversity()],
+            ),
+        ],
+    )
+(cx1-133-2-20.cx1.hpc.ic.ac.uk:0,1)
+
+INFO  Starting to load the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" ...
+INFO  Used GDAL no data value -99.0 ...
+INFO  Successfully loaded the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" with dimensions 11700x11700 [cols x rows].
+INFO  Starting to load the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" ...
+INFO  Used GDAL no data value 0 ...
+INFO  Successfully loaded the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" with dimensions 180x65 [cols x rows].
+INFO  Parsed simulation arguments:
+SimulateArgs {
+    common: CommonArgs {
+        speciation_probability_per_generation: PositiveUnitF64(
+            0.0 < 1 <= 1.0,
+        ),
+        sample_percentage: ClosedUnitF64(
+            0.0 <= 0.025 <= 1.0,
+        ),
+        seed: 2022117357562431299,
+        algorithm: Independent(
+            IndependentArguments {
+                delta_t: PositiveF64(
+                    0.0 < 2.5,
+                ),
+                step_slice: 10,
+                dedup_cache: Relative(
+                    RelativeDedupCache {
+                        factor: PositiveF64(
+                            0.0 < 0.1,
+                        ),
+                    },
+                ),
+                parallelism_mode: Probabilistic(
+                    ProbabilisticParallelismMode {
+                        communication_probability: ClosedUnitF64(
+                            0.0 <= 0.5 <= 1.0,
+                        ),
+                    },
+                ),
+            },
+        ),
+    },
+    event_log: Some(
+        EventLogRecorder {
+            segment_size: 1000000,
+            directory: "/var/tmp/pbs.3517113[9].pbs/event_log/0",
+            segment_index: 0,
+            buffer: Vec<Event; 0>,
+        },
+    ),
+    scenario: SpatiallyExplicit(
+        InMemoryArguments {
+            habitat_map: Array2D {
+                array: Box [ 0x7ffcedc44098; 11700 ],
+                num_rows: 65,
+                num_columns: 180,
+            },
+            dispersal_map: Array2D {
+                array: Box [ 0x7ffcedc440b8; 136890000 ],
+                num_rows: 11700,
+                num_columns: 11700,
+            },
+        },
+    ),
+    reporters: ReportSpeciationIgnoreDispersalReportProgress(
+        ReporterPluginVec {
+            plugins: [
+                ExecutionTimeReporter {
+                    start_time: None,
+                    end_time: None,
+                },
+                BiodiversityReporter {
+                    biodiversity: 0,
+                },
+            ],
+        },
+    ),
+}
+INFO  The simulation will log its events to "/var/tmp/pbs.3517113[9].pbs/event_log/0".
+WARN  Therefore, only progress will be reported live.
+INFO  The simulation will be distributed across 2 partitions.
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation took:
+ - initialisation: 8.953192137s
+ - execution: 40.595668458s
+ - cleanup: 36.453343ms
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation finished at time 37.50199260854542 after 105304286 steps.
+
+# mpiexec: finished at Thu 13 May 07:25:23 BST 2021
+INFO  Parsed replay arguments:
+ReplayArgs {
+    log: EventLogReplay {
+        frontier: [
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000005385279250313957,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.999018700008833,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000006071852742817185,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.217304419009082,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000007829590559227384,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 30.11958684790589,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000008909484816577162,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.728271455080673,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000009061292993717274,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 25.672478800379572,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000009578207976757014,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.11275305509168,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000009632489000876987,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.995696960219448,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000010219723400872738,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.29534879986643,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000011058413240672138,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.245139177753156,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000017277825281603043,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 32.00515284093878,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000022794484327848252,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 28.112279542268634,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000002469770654656145,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.624093608613336,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000002485920114203566,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.267273739082118,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000002700401313671108,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.349214552723527,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000002757070369230341,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.60318422798344,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000027942997943286585,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 28.534755956393376,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000028050266304147087,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 28.08915967509379,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000028338760782453676,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.644661980090355,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000003208936602550061,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 28.531641689031574,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000032604720118234454,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.739510402154863,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000034067589443909085,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.867283681428745,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000041419966984035383,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 28.64073038103209,
+                ),
+                length: 695153,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000042318886700476455,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.829711360723255,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000004391560992633714,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.421159764478617,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000004476797324515225,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 24.64195758677664,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000045441008955648954,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 25.78655533409576,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000045552772526269436,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.032065641092366,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000004677182469103869,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.1746495315215,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000047136564457206376,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.18837549161777,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000000546812045643108,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.926081172985967,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000005536781938486612,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.26441446015449,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000000624887570577215,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 30.133805767182302,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000006518304998537339,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.70141138683009,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000006859461731956173,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.957309953764707,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000000702829972276664,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 28.357438615840845,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000007113590536067527,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 33.07591801913456,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000008106468055157912,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.48904589990078,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000008902206968808279,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.746642420371703,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000009395886865770642,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 28.74730803256009,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000009564048092380872,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 28.642041643191476,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000009800615910493526,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.522877400084273,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000010071757491902922,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.602849115029777,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000011334535621188024,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.36168490551173,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000011693463677908689,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 25.85033490577012,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000001175602938607856,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.722062115748557,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000001248495875016964,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.97211584817721,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000001263354848513032,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.357423721267946,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000013107522853217368,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 30.56797543203512,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000013362699594066108,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.717395368249413,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000014021726918445054,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.416402776436215,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000014091439062835498,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 25.021778846520718,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000014311847335024552,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 25.0037388005082,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000014733711536929484,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.587471086005415,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000014842442830342861,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.660742735263895,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000014842764747835524,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.298474476553523,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000015760381030793802,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.647225383362926,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000016253516452180428,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.465704650975205,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000016395537152935624,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.442196348431118,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000017265166260549414,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.170272162208782,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000017449132477809215,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.130010358556564,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000017875815483403557,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.08288824896858,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000018693044626094668,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.955437451484006,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000001917895860181762,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.513835840860366,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000019725283897931156,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.276990513580902,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000001976555031035776,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 37.50199260854542,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000001981741863110731,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.996615479494718,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000019849540194849524,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 30.043152145490133,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000198819700203412,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 30.596828253853193,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000019895693117999436,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 25.524070545358413,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000019949743626512806,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 32.58060990112688,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000020263252450969382,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.2461978001725,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000002127949576824495,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.859648582353493,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000021838801469997726,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.880873812625218,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000002201910006549568,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 25.948875767199304,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000022380915684627745,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 28.424960296611246,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000022807553295978167,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 32.35207233542087,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000002321062367860449,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 35.440018949906815,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000002327593215945001,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.110527158579327,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000002328235636506193,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 25.697198250765773,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000023649563432592835,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.243123983619853,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000247448515955373,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.156081063653026,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000002500807166905261,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.403665169979202,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000025091360422724307,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.228629974235297,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000002512198876147842,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 30.281894715933817,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000002525459097679761,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.08796361097795,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000002702017894151698,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.30181277960974,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000027148485612360496,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 28.063317445959704,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000029224841147090785,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.460553791720287,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000030488871702316622,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.078803887720138,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000032431516489017653,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 24.633237382215846,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000032713210493251488,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 24.768445076683836,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000032807429509174035,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.93861283120237,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000033403333685178005,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.160566472591853,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000034393810338650965,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.549674621421197,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000035540499673802906,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.357360171102208,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000037602867211661284,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 32.308267491724834,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000003856492215292828,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.494054909893066,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000004037395502920482,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.718526822680936,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000004157285698469515,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.52570176921142,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000004301123367744797,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.018824858612007,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000005037319836254106,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 33.592796242399785,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000007531245348191273,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.454958871348037,
+                ),
+                length: 609133,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000008564899515728364,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 27.174990540303515,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000008592818793451418,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 29.443018550023584,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000008642265020009088,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 30.087962006159454,
+                ),
+                length: 1000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 1>,
+                min_time: PositiveF64(
+                    0.0 < 0.000009184447089527481,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 26.835138612783606,
+                ),
+                length: 1000000,
+            },
+        ],
+        with_speciation: true,
+        with_dispersal: false,
+    },
+    reporters: ReportSpeciationIgnoreDispersalReportProgress(
+        ReporterPluginVec {
+            plugins: [
+                ExecutionTimeReporter {
+                    start_time: None,
+                    end_time: None,
+                },
+                BiodiversityReporter {
+                    biodiversity: 0,
+                },
+            ],
+        },
+    ),
+}
+INFO  Starting event replay ...
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation took:
+ - initialisation: 791ns
+ - execution: 34.776572228s
+ - cleanup: 30.062µs
+INFO  The simulation resulted in a biodiversity of 105304286 unique species.
+
+=============================== Reporter Summary ===============================
+
+INFO  The event replay has completed.
+
+============================================
+
+        Job resource usage summary 
+
+                 Memory (GB)    NCPUs
+ Requested  :        16             2
+ Used       :         5 (peak)   1.82 (ave)
+
+============================================

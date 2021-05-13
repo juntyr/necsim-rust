@@ -1,0 +1,177 @@
+1
+Wed May 12 10:28:46 2021       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 450.66       Driver Version: 450.66       CUDA Version: 11.0     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  Tesla P100-PCIE...  On   | 00000000:04:00.0 Off |                    0 |
+| N/A   42C    P0    38W / 250W |    599MiB / 16280MiB |     96%   E. Process |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   1  Tesla P100-PCIE...  On   | 00000000:05:00.0 Off |                    0 |
+| N/A   43C    P0    28W / 250W |      0MiB / 16280MiB |      0%   E. Process |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   2  Tesla P100-PCIE...  On   | 00000000:08:00.0 Off |                    0 |
+| N/A   41C    P0    30W / 250W |      0MiB / 16280MiB |      0%   E. Process |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   3  Tesla P100-PCIE...  On   | 00000000:09:00.0 Off |                    0 |
+| N/A   43C    P0    29W / 250W |      0MiB / 16280MiB |      0%   E. Process |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   4  Tesla P100-PCIE...  On   | 00000000:83:00.0 Off |                    0 |
+| N/A   60C    P0   175W / 250W |   1377MiB / 16280MiB |     93%   E. Process |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   5  Tesla P100-PCIE...  On   | 00000000:84:00.0 Off |                    0 |
+| N/A   64C    P0   182W / 250W |   1377MiB / 16280MiB |     94%   E. Process |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   6  Tesla P100-PCIE...  On   | 00000000:87:00.0 Off |                    0 |
+| N/A   51C    P0   177W / 250W |   1377MiB / 16280MiB |     91%   E. Process |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   7  Tesla P100-PCIE...  On   | 00000000:88:00.0 Off |                    0 |
+| N/A   47C    P0   115W / 250W |   1377MiB / 16280MiB |     84%   E. Process |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|    0   N/A  N/A   1324322      C   ...a/release/rustcoalescence      597MiB |
+|    4   N/A  N/A   1317709      C   python                           1375MiB |
+|    5   N/A  N/A   1315155      C   python                           1375MiB |
+|    6   N/A  N/A   1314597      C   python                           1375MiB |
+|    7   N/A  N/A   1314989      C   python                           1375MiB |
++-----------------------------------------------------------------------------+
+INFO  Starting to load the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" ...
+INFO  Used GDAL no data value -99.0 ...
+INFO  Successfully loaded the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" with dimensions 11700x11700 [cols x rows].
+INFO  Starting to load the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" ...
+INFO  Used GDAL no data value 0 ...
+INFO  Successfully loaded the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" with dimensions 180x65 [cols x rows].
+INFO  Parsed simulation arguments:
+SimulateArgs {
+    common: CommonArgs {
+        speciation_probability_per_generation: PositiveUnitF64(
+            0.0 < 0.000001 <= 1.0,
+        ),
+        sample_percentage: ClosedUnitF64(
+            0.0 <= 0.00025 <= 1.0,
+        ),
+        seed: 15712355657089176212,
+        algorithm: Cuda(
+            CudaArguments {
+                device: 0,
+                ptx_jit: true,
+                delta_t: PositiveF64(
+                    0.0 < 1,
+                ),
+                block_size: 16,
+                grid_size: 4,
+                step_slice: 200,
+                dedup_cache: Relative(
+                    RelativeDedupCache {
+                        factor: PositiveF64(
+                            0.0 < 2,
+                        ),
+                    },
+                ),
+                parallelism_mode: Monolithic(
+                    MonolithicParallelismMode {
+                        event_slice: 1000000,
+                    },
+                ),
+            },
+        ),
+    },
+    event_log: None,
+    scenario: SpatiallyExplicit(
+        InMemoryArguments {
+            habitat_map: Array2D {
+                array: Box [ 0x7fffff1743a8; 11700 ],
+                num_rows: 65,
+                num_columns: 180,
+            },
+            dispersal_map: Array2D {
+                array: Box [ 0x7fffff1743c8; 136890000 ],
+                num_rows: 11700,
+                num_columns: 11700,
+            },
+        },
+    ),
+    reporters: ReportSpeciationIgnoreDispersalReportProgress(
+        ReporterPluginVec {
+            plugins: [
+                ExecutionTimeReporter {
+                    start_time: None,
+                    end_time: None,
+                },
+                BiodiversityReporter {
+                    biodiversity: 0,
+                },
+            ],
+        },
+    ),
+}
+INFO  The simulation will be run in monolithic mode.
+=========================== Context Resource Limits ============================
+StackSize: Ok(4096)
+PrintfFifoSize: Ok(3670016)
+MallocHeapSize: Ok(8388608)
+DeviceRuntimeSynchronizeDepth: Ok(2)
+DeviceRuntimePendingLaunchCount: Ok(2048)
+MaxL2FetchGranularity: Ok(0)
+================================================================================
+========================== Kernel Function Attributes ==========================
+MaxThreadsPerBlock: Ok(1024)
+SharedMemorySizeBytes: Ok(0)
+ConstSizeBytes: Ok(0)
+LocalSizeBytes: Ok(240)
+NumRegisters: Ok(60)
+PtxVersion: Ok(35)
+BinaryVersion: Ok(60)
+CacheModeCa: Ok(0)
+================================================================================
+INFO  Events will be reported using the live water-level algorithm ...
+========================== Kernel Function Attributes ==========================
+MaxThreadsPerBlock: Ok(1024)
+SharedMemorySizeBytes: Ok(0)
+ConstSizeBytes: Ok(0)
+LocalSizeBytes: Ok(240)
+NumRegisters: Ok(54)
+PtxVersion: Ok(35)
+BinaryVersion: Ok(60)
+CacheModeCa: Ok(0)
+================================================================================
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation took:
+ - initialisation: 1.830143407s
+ - execution: 3193.848498743s
+ - cleanup: 58.821083ms
+INFO  The simulation resulted in a biodiversity of 14472 unique species.
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation finished at time 12791647.735143254 after 14765742356 steps.
+
+
+============================================
+
+        Job resource usage summary 
+
+                 Memory (GB)    NCPUs
+ Requested  :        24             4
+ Used       :         0 (peak)   0.98 (ave)
+
+============================================
