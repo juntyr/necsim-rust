@@ -16,7 +16,6 @@ mod args;
 mod cli;
 mod maps;
 mod minimal_logger;
-mod plugins;
 mod reporter;
 mod tiff;
 
