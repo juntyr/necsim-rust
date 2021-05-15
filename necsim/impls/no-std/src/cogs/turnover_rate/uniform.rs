@@ -4,15 +4,27 @@ use necsim_core::{
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[allow(clippy::module_name_repetitions)]
-pub struct UniformTurnoverRate([u8; 0]);
+pub struct UniformTurnoverRate {
+    turnover_rate: PositiveF64,
+}
+
+impl Default for UniformTurnoverRate {
+    fn default() -> Self {
+        Self {
+            turnover_rate: unsafe { PositiveF64::new_unchecked(0.5_f64) },
+        }
+    }
+}
 
 #[contract_trait]
 impl Backup for UniformTurnoverRate {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self([])
+        Self {
+            turnover_rate: self.turnover_rate,
+        }
     }
 }
 
@@ -21,14 +33,19 @@ impl<M: MathsCore, H: Habitat<M>> TurnoverRate<M, H> for UniformTurnoverRate {
     #[must_use]
     #[inline]
     fn get_turnover_rate_at_location(&self, _location: &Location, _habitat: &H) -> NonNegativeF64 {
-        Self::get_uniform_turnover_rate().into()
+        self.turnover_rate.into()
     }
 }
 
 impl UniformTurnoverRate {
     #[must_use]
+    pub fn new(turnover_rate: PositiveF64) -> Self {
+        Self { turnover_rate }
+    }
+
+    #[must_use]
     #[inline]
-    pub fn get_uniform_turnover_rate() -> PositiveF64 {
-        unsafe { PositiveF64::new_unchecked(0.5_f64) }
+    pub fn get_uniform_turnover_rate(&self) -> PositiveF64 {
+        self.turnover_rate
     }
 }

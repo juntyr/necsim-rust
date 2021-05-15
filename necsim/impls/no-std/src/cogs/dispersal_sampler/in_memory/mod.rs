@@ -10,6 +10,7 @@ pub mod packed_alias;
 pub mod separable_alias;
 
 use contract::explicit_in_memory_dispersal_check_contract;
+use necsim_core_bond::NonNegativeF64;
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
@@ -28,5 +29,5 @@ pub trait InMemoryDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>>:
         explicit_in_memory_dispersal_check_contract(dispersal, habitat),
         "dispersal probabilities are consistent"
     )]
-    fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Self;
+    fn unchecked_new(dispersal: &Array2D<NonNegativeF64>, habitat: &H) -> Self;
 }

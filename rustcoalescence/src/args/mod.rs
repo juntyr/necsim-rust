@@ -9,13 +9,12 @@ use std::{
     path::PathBuf,
 };
 
-use necsim_core::cogs::{MathsCore, RngCore};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_state::DeserializeState;
 use structopt::StructOpt;
 
+use necsim_core::cogs::{MathsCore, RngCore};
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, Partition};
-
 use necsim_impls_std::{event_log::replay::EventLogReplay, lineage_file::saver::LineageFileSaver};
 
 use rustcoalescence_scenarios::{

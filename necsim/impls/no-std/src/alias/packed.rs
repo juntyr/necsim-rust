@@ -3,15 +3,23 @@ use core::cmp::Ordering;
 use alloc::vec::Vec;
 
 use necsim_core::cogs::{MathsCore, RngCore};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(non_snake_case)]
 #[derive(Clone, Debug, TypeLayout)]
 #[repr(C)]
 pub struct AliasMethodSamplerAtom<E: Copy + PartialEq> {
+    U: ClosedUnitF64,
     E: E,
     K: E,
-    U: f64,
+}
+
+#[allow(dead_code, non_snake_case)]
+struct AliasMethodSamplerAtomRaw<E: Copy + PartialEq> {
+    U: NonNegativeF64,
+    E: E,
+    K: E,
 }
 
 impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
@@ -25,28 +33,23 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
         "stores exactly the input events"
     )]
     #[debug_ensures(
-        ret.iter().all(|s| s.U >= 0.0_f64 && s.U <= 1.0_f64),
-        "all bucket probabilities are in U(0, 1)"
-    )]
-    #[debug_ensures(
         ret.iter().all(|s| {
-            let full_bucket = s.U.to_bits() == 1.0_f64.to_bits();
+            let full_bucket = s.U == ClosedUnitF64::one();
             !full_bucket || (s.E == s.K)
         }),
         "full buckets sample the same event just in case"
     )]
-    pub fn create(event_weights: &[(E, f64)]) -> Vec<AliasMethodSamplerAtom<E>> {
+    pub fn create(event_weights: &[(E, NonNegativeF64)]) -> Vec<AliasMethodSamplerAtom<E>> {
         #[allow(non_snake_case)]
         let mut alias_samplers = Vec::with_capacity(event_weights.len());
 
-        let total_weight: f64 = event_weights.iter().map(|(_e, p)| *p).sum();
+        let total_weight: NonNegativeF64 = event_weights.iter().map(|(_e, p)| *p).sum();
 
-        #[allow(clippy::cast_precision_loss)]
-        let n: f64 = event_weights.len() as f64;
+        let n = NonNegativeF64::from(event_weights.len());
 
         for (event, weight) in event_weights {
-            alias_samplers.push(AliasMethodSamplerAtom {
-                U: weight * n / total_weight,
+            alias_samplers.push(AliasMethodSamplerAtomRaw {
+                U: *weight * n / total_weight,
                 E: *event,
                 K: *event,
             });
@@ -62,7 +65,15 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
         while let Some((overfull_index, underfull_index)) =
             pop_overfull_underfull_pair_atomic(&mut overfull_indices, &mut underfull_indices)
         {
-            alias_samplers[overfull_index].U -= 1.0_f64 - alias_samplers[underfull_index].U;
+            // Safety: alias_samplers[overfull_index].U > 1.0,
+            //         so (alias_samplers[overfull_index].U - 1.0) > 0.0
+            alias_samplers[overfull_index].U = unsafe {
+                NonNegativeF64::new_unchecked(
+                    alias_samplers[overfull_index].U.get()
+                        + alias_samplers[underfull_index].U.get()
+                        - 1.0_f64,
+                )
+            };
             alias_samplers[underfull_index].K = alias_samplers[overfull_index].E;
 
             match alias_samplers[overfull_index].U.partial_cmp(&1.0_f64) {
@@ -78,12 +89,17 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
         // 9,   pp. 972-975, Sept. 1991, doi: 10.1109/32.92917.
         overfull_indices
             .into_iter()
-            .for_each(|i| alias_samplers[i].U = 1.0_f64);
+            .for_each(|i| alias_samplers[i].U = NonNegativeF64::one());
         underfull_indices
             .into_iter()
-            .for_each(|i| alias_samplers[i].U = 1.0_f64);
+            .for_each(|i| alias_samplers[i].U = NonNegativeF64::one());
 
-        alias_samplers
+        // Safety: The bucket weights are now probabilities in [0.0; 1.0]
+        unsafe {
+            core::mem::transmute::<Vec<AliasMethodSamplerAtomRaw<E>>, Vec<AliasMethodSamplerAtom<E>>>(
+                alias_samplers,
+            )
+        }
     }
 
     #[debug_requires(!alias_samplers.is_empty(), "alias_samplers is non-empty")]
@@ -111,7 +127,7 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
 
         let sample = &alias_samplers[i];
 
-        if y < sample.U {
+        if y < sample.U.get() {
             sample.E
         } else {
             sample.K
