@@ -409,6 +409,30 @@ impl<T> Array2D<T> {
         self.array.into()
     }
 
+    /// Returns an [`Iterator`] over references to all elements in
+    /// [row major order].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use necsim_impls_no_std::array2d::{Array2D, Error};
+    /// # fn main() -> Result<(), Error> {
+    /// let rows = vec![vec![1, 2, 3], vec![4, 5, 6]];
+    /// let elements = vec![1, 2, 3, 4, 5, 6];
+    /// let array = Array2D::from_rows(&rows)?;
+    /// let row_major = array.elements_row_major_iter();
+    /// assert_eq!(row_major.cloned().collect::<Vec<_>>(), elements);
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Iterator`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html
+    /// [row major order]: https://en.wikipedia.org/wiki/Row-_and_column-major_order
+    #[must_use]
+    pub fn elements_row_major_iter(&self) -> impl DoubleEndedIterator<Item = &T> {
+        self.array.iter()
+    }
+
     fn get_index(&self, row: usize, column: usize) -> Option<usize> {
         if row < self.num_rows && column < self.num_columns() {
             Some(row * self.row_len() + column)

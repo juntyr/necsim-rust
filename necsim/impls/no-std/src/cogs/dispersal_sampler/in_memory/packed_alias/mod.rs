@@ -1,5 +1,6 @@
 use alloc::{boxed::Box, vec::Vec};
 use core::{marker::PhantomData, ops::Range};
+use necsim_core_bond::NonNegativeF64;
 
 use r#final::Final;
 
@@ -56,10 +57,11 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
 {
     /// Creates a new `InMemoryPackedAliasDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
-    fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Self {
+    fn unchecked_new(dispersal: &Array2D<NonNegativeF64>, habitat: &H) -> Self {
         let habitat_extent = habitat.get_extent();
 
-        let mut event_weights: Vec<(usize, f64)> = Vec::with_capacity(dispersal.row_len());
+        let mut event_weights: Vec<(usize, NonNegativeF64)> =
+            Vec::with_capacity(dispersal.row_len());
 
         let mut alias_dispersal_buffer = Vec::new();
 
@@ -75,8 +77,8 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                     );
 
                     // Multiply all dispersal probabilities by the habitat of their target
-                    let weight = dispersal_probability
-                        * f64::from(habitat.get_habitat_at_location(&location));
+                    let weight = *dispersal_probability
+                        * NonNegativeF64::from(habitat.get_habitat_at_location(&location));
 
                     if weight > 0.0_f64 {
                         event_weights.push((col_index, weight));

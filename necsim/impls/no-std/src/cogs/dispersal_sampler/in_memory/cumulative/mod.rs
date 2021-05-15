@@ -4,6 +4,7 @@ use necsim_core::{
     cogs::{Backup, Habitat, MathsCore, RngCore},
     landscape::Location,
 };
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
 use crate::{array2d::Array2D, cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler};
 
@@ -13,7 +14,7 @@ mod dispersal;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct InMemoryCumulativeDispersalSampler {
-    cumulative_dispersal: Box<[f64]>,
+    cumulative_dispersal: Box<[ClosedUnitF64]>,
     valid_dispersal_targets: Box<[Option<usize>]>,
 }
 
@@ -27,14 +28,15 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
         .explicit_only_valid_targets_dispersal_contract(old(habitat)),
         "valid_dispersal_targets only allows dispersal to habitat"
     )]
-    fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Self {
+    fn unchecked_new(dispersal: &Array2D<NonNegativeF64>, habitat: &H) -> Self {
         let habitat_extent = habitat.get_extent();
 
-        let mut cumulative_dispersal = vec![0.0_f64; dispersal.num_elements()].into_boxed_slice();
+        let mut cumulative_dispersal =
+            vec![NonNegativeF64::zero(); dispersal.num_elements()].into_boxed_slice();
         let mut valid_dispersal_targets = vec![None; dispersal.num_elements()].into_boxed_slice();
 
         for (row_index, row) in dispersal.rows_iter().enumerate() {
-            let sum: f64 = row
+            let sum: NonNegativeF64 = row
                 .enumerate()
                 .map(|(col_index, dispersal_probability)| {
                     #[allow(clippy::cast_possible_truncation)]
@@ -44,12 +46,13 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                     );
 
                     // Multiply all dispersal probabilities by the habitat of their target
-                    dispersal_probability * f64::from(habitat.get_habitat_at_location(&location))
+                    *dispersal_probability
+                        * NonNegativeF64::from(habitat.get_habitat_at_location(&location))
                 })
                 .sum();
 
             if sum > 0.0_f64 {
-                let mut acc = 0.0_f64;
+                let mut acc = NonNegativeF64::zero();
                 let mut last_valid_target: Option<usize> = None;
 
                 for col_index in 0..dispersal.num_columns() {
@@ -61,7 +64,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
 
                     // Multiply all dispersal probabilities by the habitat of their target
                     let dispersal_probability = dispersal[(row_index, col_index)]
-                        * f64::from(habitat.get_habitat_at_location(&location));
+                        * NonNegativeF64::from(habitat.get_habitat_at_location(&location));
 
                     if dispersal_probability > 0.0_f64 {
                         acc += dispersal_probability;
@@ -77,6 +80,9 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                 }
             }
         }
+
+        // Safety: The dispersal weights are now probabilities in [0.0; 1.0]
+        let cumulative_dispersal = unsafe { core::mem::transmute(cumulative_dispersal) };
 
         InMemoryCumulativeDispersalSampler {
             cumulative_dispersal,

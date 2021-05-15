@@ -1,6 +1,7 @@
 use alloc::vec::Vec;
 
 use necsim_core::cogs::{MathsCore, RngCore};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
 pub mod packed;
 
@@ -8,33 +9,25 @@ pub mod packed;
 #[allow(non_snake_case)]
 #[derive(Clone)]
 pub struct AliasMethodSampler<E: Copy + PartialEq> {
-    Us: Vec<f64>,
+    Us: Vec<ClosedUnitF64>,
     Es: Vec<E>,
     Ks: Vec<E>,
 }
 
 impl<E: Copy + PartialEq> AliasMethodSampler<E> {
     #[debug_requires(!event_weights.is_empty(), "event_weights is non-empty")]
-    #[debug_requires(
-        event_weights.iter().all(|(_e, p)| *p >= 0.0_f64),
-        "all event weights are non-negative"
-    )]
     #[debug_ensures(
         ret.Es.iter().eq(old(event_weights).iter().map(|(e, _p)| e)),
         "stores exactly the input events"
     )]
     #[debug_ensures(
-        ret.Us.iter().all(|u| *u >= 0.0_f64 && *u <= 1.0_f64),
-        "all bucket probabilities are in U(0, 1)"
-    )]
-    #[debug_ensures(
         ret.Us.iter().zip(ret.Es.iter()).zip(ret.Ks.iter()).all(|((u, e), k)| {
-            let full_bucket = u.to_bits() == 1.0_f64.to_bits();
+            let full_bucket = *u == ClosedUnitF64::one();
             !full_bucket || (e == k)
         }),
         "full buckets sample the same event just in case"
     )]
-    pub fn new(event_weights: &[(E, f64)]) -> Self {
+    pub fn new(event_weights: &[(E, NonNegativeF64)]) -> Self {
         #[allow(non_snake_case)]
         let mut Us = Vec::with_capacity(event_weights.len());
         #[allow(non_snake_case)]
@@ -42,13 +35,12 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
         #[allow(non_snake_case)]
         let mut Ks = Vec::with_capacity(event_weights.len());
 
-        let total_weight: f64 = event_weights.iter().map(|(_e, p)| *p).sum();
+        let total_weight: NonNegativeF64 = event_weights.iter().map(|(_e, p)| *p).sum();
 
-        #[allow(clippy::cast_precision_loss)]
-        let n: f64 = event_weights.len() as f64;
+        let n = NonNegativeF64::from(event_weights.len());
 
         for (event, weight) in event_weights {
-            Us.push(weight * n / total_weight);
+            Us.push(*weight * n / total_weight);
             Es.push(*event);
             Ks.push(*event);
         }
@@ -60,9 +52,16 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
         while let Some((overfull_index, underfull_index)) =
             pop_overfull_underfull_pair_atomic(&mut overfull_indices, &mut underfull_indices)
         {
-            Us[overfull_index] -= 1.0_f64 - Us[underfull_index];
+            // Safety: Us[overfull_index] > 1.0,
+            //         so (Us[overfull_index] - 1.0) > 0.0
+            Us[overfull_index] = unsafe {
+                NonNegativeF64::new_unchecked(
+                    Us[overfull_index].get() + Us[underfull_index].get() - 1.0_f64,
+                )
+            };
             Ks[underfull_index] = Es[overfull_index];
 
+            #[allow(clippy::comparison_chain)]
             if Us[overfull_index] < 1.0_f64 {
                 underfull_indices.push(overfull_index);
             } else if Us[overfull_index] > 1.0_f64 {
@@ -74,8 +73,16 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
         //   M. D. Vose, "A linear algorithm for generating random numbers with a given
         //   distribution", in IEEE Transactions on Software Engineering, vol. 17, no.
         //   9, pp. 972-975, Sept. 1991, doi: 10.1109/32.92917.
-        overfull_indices.into_iter().for_each(|i| Us[i] = 1.0_f64);
-        underfull_indices.into_iter().for_each(|i| Us[i] = 1.0_f64);
+        overfull_indices
+            .into_iter()
+            .for_each(|i| Us[i] = NonNegativeF64::one());
+        underfull_indices
+            .into_iter()
+            .for_each(|i| Us[i] = NonNegativeF64::one());
+
+        // Safety: The bucket weights are now probabilities in [0.0; 1.0]
+        #[allow(non_snake_case)]
+        let Us = unsafe { core::mem::transmute(Us) };
 
         Self { Us, Es, Ks }
     }
@@ -96,7 +103,7 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
         #[allow(clippy::cast_precision_loss)]
         let y = x.get() * (self.Es.len() as f64) - (i as f64); // U(0,1) to compare against U[i]
 
-        if y < self.Us[i] {
+        if y < self.Us[i].get() {
             self.Es[i]
         } else {
             self.Ks[i]
