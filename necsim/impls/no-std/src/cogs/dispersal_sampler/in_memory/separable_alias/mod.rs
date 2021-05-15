@@ -6,7 +6,7 @@ use necsim_core::{
     cogs::{Backup, Habitat, MathsCore, RngCore},
     landscape::Location,
 };
-use necsim_core_bond::ClosedUnitF64;
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
 use crate::{
     alias::AliasMethodSampler, array2d::Array2D,
@@ -29,10 +29,11 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
 {
     /// Creates a new `InMemorySeparableAliasDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
-    fn unchecked_new(dispersal: &Array2D<f64>, habitat: &H) -> Self {
+    fn unchecked_new(dispersal: &Array2D<NonNegativeF64>, habitat: &H) -> Self {
         let habitat_extent = habitat.get_extent();
 
-        let mut event_weights: Vec<(usize, f64)> = Vec::with_capacity(dispersal.row_len());
+        let mut event_weights: Vec<(usize, NonNegativeF64)> =
+            Vec::with_capacity(dispersal.row_len());
 
         let mut self_dispersal = Array2D::filled_with(
             ClosedUnitF64::zero(),
@@ -44,7 +45,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
             dispersal.rows_iter().enumerate().map(|(row_index, row)| {
                 event_weights.clear();
 
-                let mut self_dispersal_at_location = 0.0_f64;
+                let mut self_dispersal_at_location = NonNegativeF64::zero();
 
                 for (col_index, dispersal_probability) in row.enumerate() {
                     #[allow(clippy::cast_possible_truncation)]
@@ -54,8 +55,8 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                     );
 
                     // Multiply all dispersal probabilities by the habitat of their target
-                    let weight = dispersal_probability
-                        * f64::from(habitat.get_habitat_at_location(&location));
+                    let weight = *dispersal_probability
+                        * NonNegativeF64::from(habitat.get_habitat_at_location(&location));
 
                     if weight > 0.0_f64 {
                         // Separate self-dispersal from out-dispersal
@@ -67,13 +68,18 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                     }
                 }
 
-                let total_weight = event_weights.iter().map(|(_e, w)| *w).sum::<f64>()
+                let total_weight = event_weights
+                    .iter()
+                    .map(|(_e, w)| *w)
+                    .sum::<NonNegativeF64>()
                     + self_dispersal_at_location;
 
                 if total_weight > 0.0_f64 {
                     // Safety: Normalisation limits the result to [0.0; 1.0]
                     let dispersal_probability = unsafe {
-                        ClosedUnitF64::new_unchecked(self_dispersal_at_location / total_weight)
+                        ClosedUnitF64::new_unchecked(
+                            (self_dispersal_at_location / total_weight).get(),
+                        )
                     };
 
                     self_dispersal[(
