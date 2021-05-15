@@ -85,6 +85,7 @@ impl PositiveF64 {
     }
 
     #[must_use]
+    #[inline]
     pub fn max_after(before: NonNegativeF64, value: NonNegativeF64) -> Self {
         if value > before {
             Self(value.get())
