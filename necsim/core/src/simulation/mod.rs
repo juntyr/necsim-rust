@@ -34,7 +34,8 @@ impl<
         A: PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
     > Simulation<H, G, R, S, X, D, C, T, N, E, I, A>
 {
-    #[inline]
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
     pub fn peek_time_of_next_event(&mut self) -> Option<PositiveF64> {
         let next_immigration_time = self
             .immigration_entry

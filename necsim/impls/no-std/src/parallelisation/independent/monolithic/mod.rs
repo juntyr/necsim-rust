@@ -115,7 +115,7 @@ pub fn simulate<
                 .sum()
         } else {
             // No events produced -> no restriction
-            NonNegativeF64::infinity()
+            NonNegativeF64::zero()
         };
 
         level_time += NonNegativeF64::from(event_slice.get()) / total_event_rate;
