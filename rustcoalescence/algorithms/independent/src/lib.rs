@@ -48,14 +48,15 @@ use necsim_partitioning_core::LocalPartition;
 
 mod arguments;
 
-use rustcoalescence_algorithms::{Algorithm, AlgorithmArguments, AlgorithmResult};
+use rustcoalescence_algorithms::{Algorithm, AlgorithmParamters, AlgorithmResult};
 use rustcoalescence_scenarios::Scenario;
 
 #[allow(clippy::module_name_repetitions, clippy::empty_enum)]
 pub enum IndependentAlgorithm {}
 
-impl AlgorithmArguments for IndependentAlgorithm {
+impl AlgorithmParamters for IndependentAlgorithm {
     type Arguments = IndependentArguments;
+    type Error = !;
 }
 
 #[allow(clippy::type_complexity)]
@@ -65,7 +66,6 @@ impl<
         P: LocalPartition<R>,
     > Algorithm<O, R, P> for IndependentAlgorithm
 {
-    type Error = !;
     type LineageReference = GlobalLineageReference;
     type LineageStore = IndependentLineageStore<IntrinsicsMathsCore, O::Habitat>;
     type MathsCore = IntrinsicsMathsCore;

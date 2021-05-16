@@ -32,7 +32,7 @@ use necsim_impls_no_std::{
 use necsim_impls_std::cogs::rng::pcg::Pcg;
 use necsim_partitioning_core::LocalPartition;
 
-use rustcoalescence_algorithms::{Algorithm, AlgorithmArguments, AlgorithmResult};
+use rustcoalescence_algorithms::{Algorithm, AlgorithmParamters, AlgorithmResult};
 use rustcoalescence_scenarios::Scenario;
 
 use crate::arguments::{
@@ -42,8 +42,9 @@ use crate::arguments::{
 #[allow(clippy::module_name_repetitions, clippy::empty_enum)]
 pub struct EventSkippingAlgorithm {}
 
-impl AlgorithmArguments for EventSkippingAlgorithm {
+impl AlgorithmParamters for EventSkippingAlgorithm {
     type Arguments = MonolithicArguments;
+    type Error = !;
 }
 
 #[allow(clippy::type_complexity)]
@@ -67,7 +68,6 @@ where
         >,
     >: SeparableDispersalSampler<IntrinsicsMathsCore, O::Habitat, Pcg<IntrinsicsMathsCore>>,
 {
-    type Error = !;
     type LineageReference = InMemoryLineageReference;
     type LineageStore = O::LineageStore<GillespieLineageStore<Self::MathsCore, O::Habitat>>;
     type MathsCore = IntrinsicsMathsCore;

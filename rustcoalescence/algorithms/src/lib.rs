@@ -14,15 +14,14 @@ use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_scenarios::Scenario;
 
-pub trait AlgorithmArguments {
+pub trait AlgorithmParamters {
     type Arguments;
+    type Error;
 }
 
 pub trait Algorithm<O: Scenario<Self::MathsCore, Self::Rng>, R: Reporter, P: LocalPartition<R>>:
-    Sized + AlgorithmArguments
+    Sized + AlgorithmParamters
 {
-    type Error;
-
     type MathsCore: MathsCore;
     type Rng: RngCore<Self::MathsCore>;
     type LineageReference: LineageReference<Self::MathsCore, O::Habitat>;

@@ -31,7 +31,7 @@ use necsim_impls_no_std::{
 use necsim_impls_std::cogs::rng::pcg::Pcg;
 use necsim_partitioning_core::LocalPartition;
 
-use rustcoalescence_algorithms::{Algorithm, AlgorithmArguments, AlgorithmResult};
+use rustcoalescence_algorithms::{Algorithm, AlgorithmParamters, AlgorithmResult};
 use rustcoalescence_scenarios::Scenario;
 
 use crate::arguments::{
@@ -41,8 +41,9 @@ use crate::arguments::{
 #[allow(clippy::module_name_repetitions, clippy::empty_enum)]
 pub enum ClassicalAlgorithm {}
 
-impl AlgorithmArguments for ClassicalAlgorithm {
+impl AlgorithmParamters for ClassicalAlgorithm {
     type Arguments = MonolithicArguments;
+    type Error = !;
 }
 
 // Default 'Gillespie' implementation for any turnover sampler
@@ -60,7 +61,6 @@ where
     O::LineageStore<ClassicalLineageStore<IntrinsicsMathsCore, O::Habitat>>:
         LocallyCoherentLineageStore<IntrinsicsMathsCore, O::Habitat, InMemoryLineageReference>,
 {
-    type Error = !;
     type LineageReference = InMemoryLineageReference;
     type LineageStore = O::LineageStore<ClassicalLineageStore<Self::MathsCore, O::Habitat>>;
     type MathsCore = IntrinsicsMathsCore;
