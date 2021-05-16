@@ -26,13 +26,12 @@ pub mod non_spatial;
 pub mod spatially_explicit;
 pub mod spatially_implicit;
 
-pub trait ScenarioArguments {
+pub trait ScenarioParameters {
     type Arguments;
+    type Error;
 }
 
-pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioArguments {
-    type Error;
-
+pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioParameters {
     type Habitat: Habitat<M>;
     type OriginSampler<'h, I: Iterator<Item = u64>>: OriginSampler<'h, M, Habitat = Self::Habitat>;
     type Decomposition: Decomposition<M, Self::Habitat>;

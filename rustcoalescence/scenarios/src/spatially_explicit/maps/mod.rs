@@ -8,8 +8,6 @@ use necsim_impls_no_std::array2d::Array2D;
 
 mod tiff;
 
-use super::{SpatiallyExplicitTurnover, TurnoverMap};
-
 pub fn load_dispersal_map(
     path: &Path,
     loading_mode: MapLoadingMode,
@@ -56,7 +54,7 @@ pub fn load_turnover_map(
 
 pub fn load_habitat_map(
     path: &Path,
-    turnover: &SpatiallyExplicitTurnover,
+    turnover: Option<&Array2D<NonNegativeF64>>,
     dispersal: &mut Array2D<NonNegativeF64>,
     loading_mode: MapLoadingMode,
 ) -> Result<Array2D<u32>> {
@@ -99,7 +97,7 @@ impl Default for MapLoadingMode {
 //  (can only disperse from habitat) and turnover (no turnover -> no habitat)
 fn fix_habitat_map(
     habitat: &mut Array2D<u32>,
-    turnover: &SpatiallyExplicitTurnover,
+    turnover: Option<&Array2D<NonNegativeF64>>,
     dispersal: &Array2D<NonNegativeF64>,
 ) {
     for y in 0..habitat.num_rows() {
@@ -109,12 +107,7 @@ fn fix_habitat_map(
             if h_before <= 1 {
                 // If there is no turnover, there cannot be habitat at this location
                 // If there is any dispersal from this location, it must be habitat
-                let h_fixed = if match turnover {
-                    SpatiallyExplicitTurnover::Map(TurnoverMap { map: turnover, .. }) => {
-                        turnover[(y, x)] == 0.0_f64
-                    },
-                    SpatiallyExplicitTurnover::Uniform(_) => false,
-                } {
+                let h_fixed = if turnover.map_or(false, |turnover| turnover[(y, x)] == 0.0_f64) {
                     0
                 } else if dispersal
                     .row_iter(y * habitat.num_columns() + x)
@@ -139,8 +132,11 @@ fn fix_habitat_map(
 }
 
 // Sets habitat to 0 if there is no turnover
-fn fix_no_turnover_habitat_map(habitat: &mut Array2D<u32>, turnover: &SpatiallyExplicitTurnover) {
-    if let SpatiallyExplicitTurnover::Map(TurnoverMap { map: turnover, .. }) = turnover {
+fn fix_no_turnover_habitat_map(
+    habitat: &mut Array2D<u32>,
+    turnover: Option<&Array2D<NonNegativeF64>>,
+) {
+    if let Some(turnover) = turnover {
         for y in 0..habitat.num_rows() {
             for x in 0..habitat.num_columns() {
                 if turnover[(y, x)] == 0.0_f64 {

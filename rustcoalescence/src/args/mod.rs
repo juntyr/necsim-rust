@@ -18,8 +18,12 @@ use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, Partition};
 use necsim_impls_std::{event_log::replay::EventLogReplay, lineage_file::saver::LineageFileSaver};
 
 use rustcoalescence_scenarios::{
-    almost_infinite::AlmostInfiniteArguments, non_spatial::NonSpatialArguments,
-    spatially_explicit::SpatiallyExplicitArguments, spatially_implicit::SpatiallyImplicitArguments,
+    almost_infinite::AlmostInfiniteArguments,
+    non_spatial::NonSpatialArguments,
+    spatially_explicit::{
+        SpatiallyExplicitTurnoverMapArguments, SpatiallyExplicitUniformTurnoverArguments,
+    },
+    spatially_implicit::SpatiallyImplicitArguments,
 };
 
 #[cfg(any(
@@ -27,7 +31,7 @@ use rustcoalescence_scenarios::{
     feature = "rustcoalescence-algorithms-independent",
     feature = "rustcoalescence-algorithms-cuda"
 ))]
-use rustcoalescence_algorithms::AlgorithmArguments;
+use rustcoalescence_algorithms::AlgorithmParamters;
 
 use necsim_plugins_core::import::{AnyReporterPluginVec, ReporterPluginLibrary};
 
@@ -273,20 +277,20 @@ pub enum Algorithm {
     #[serde(alias = "Gillespie")]
     Classical(
         #[serde(deserialize_state)]
-        <rustcoalescence_algorithms_gillespie::classical::ClassicalAlgorithm as rustcoalescence_algorithms::AlgorithmArguments>::Arguments,
+        <rustcoalescence_algorithms_gillespie::classical::ClassicalAlgorithm as rustcoalescence_algorithms::AlgorithmParamters>::Arguments,
     ),
     #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
     #[serde(alias = "SkippingGillespie")]
     EventSkipping(
         #[serde(deserialize_state)]
-        <rustcoalescence_algorithms_gillespie::event_skipping::EventSkippingAlgorithm as AlgorithmArguments>::Arguments,
+        <rustcoalescence_algorithms_gillespie::event_skipping::EventSkippingAlgorithm as AlgorithmParamters>::Arguments,
     ),
     #[cfg(feature = "rustcoalescence-algorithms-cuda")]
     #[serde(alias = "CUDA")]
-    Cuda(#[serde(deserialize_state)] <rustcoalescence_algorithms_cuda::CudaAlgorithm as AlgorithmArguments>::Arguments),
+    Cuda(#[serde(deserialize_state)] <rustcoalescence_algorithms_cuda::CudaAlgorithm as AlgorithmParamters>::Arguments),
     #[cfg(feature = "rustcoalescence-algorithms-independent")]
     Independent(
-        #[serde(deserialize_state)] <rustcoalescence_algorithms_independent::IndependentAlgorithm as AlgorithmArguments>::Arguments,
+        #[serde(deserialize_state)] <rustcoalescence_algorithms_independent::IndependentAlgorithm as AlgorithmParamters>::Arguments,
     ),
 }
 
@@ -326,7 +330,9 @@ impl Serialize for Algorithm {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Scenario {
-    SpatiallyExplicit(SpatiallyExplicitArguments),
+    #[serde(alias = "SpatiallyExplicit")]
+    SpatiallyExplicitUniformTurnover(SpatiallyExplicitUniformTurnoverArguments),
+    SpatiallyExplicitTurnoverMap(SpatiallyExplicitTurnoverMapArguments),
     NonSpatial(NonSpatialArguments),
     SpatiallyImplicit(SpatiallyImplicitArguments),
     AlmostInfinite(AlmostInfiniteArguments),

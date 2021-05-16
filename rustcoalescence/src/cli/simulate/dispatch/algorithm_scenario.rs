@@ -12,8 +12,12 @@ use rustcoalescence_algorithms_gillespie::{
 use rustcoalescence_algorithms_independent::IndependentAlgorithm;
 
 use rustcoalescence_scenarios::{
-    almost_infinite::AlmostInfiniteScenario, non_spatial::NonSpatialScenario,
-    spatially_explicit::SpatiallyExplicitScenario, spatially_implicit::SpatiallyImplicitScenario,
+    almost_infinite::AlmostInfiniteScenario,
+    non_spatial::NonSpatialScenario,
+    spatially_explicit::{
+        SpatiallyExplicitTurnoverMapScenario, SpatiallyExplicitUniformTurnoverScenario,
+    },
+    spatially_implicit::SpatiallyImplicitScenario,
     Scenario,
 };
 
@@ -137,8 +141,14 @@ pub(super) fn dispatch<R: Reporter, P: LocalPartition<R>>(
             )
         }
         <=>
-        ScenarioArgs::SpatiallyExplicit(scenario_args) => {
-            SpatiallyExplicitScenario::initialise(
+        ScenarioArgs::SpatiallyExplicitUniformTurnover(scenario_args) => {
+            SpatiallyExplicitUniformTurnoverScenario::initialise(
+                scenario_args,
+                speciation_probability_per_generation,
+            )?
+        },
+        ScenarioArgs::SpatiallyExplicitTurnoverMap(scenario_args) => {
+            SpatiallyExplicitTurnoverMapScenario::initialise(
                 scenario_args,
                 speciation_probability_per_generation,
             )?

@@ -40,7 +40,7 @@ use necsim_impls_no_std::{
 };
 use necsim_partitioning_core::LocalPartition;
 
-use rustcoalescence_algorithms::{Algorithm, AlgorithmArguments, AlgorithmResult};
+use rustcoalescence_algorithms::{Algorithm, AlgorithmParamters, AlgorithmResult};
 use rustcoalescence_scenarios::Scenario;
 
 use rust_cuda::{
@@ -68,8 +68,9 @@ use crate::kernel::SimulationKernel;
 #[allow(clippy::module_name_repetitions, clippy::empty_enum)]
 pub enum CudaAlgorithm {}
 
-impl AlgorithmArguments for CudaAlgorithm {
+impl AlgorithmParamters for CudaAlgorithm {
     type Arguments = CudaArguments;
+    type Error = anyhow::Error;
 }
 
 #[allow(clippy::type_complexity)]
@@ -193,7 +194,6 @@ where
         R::ReportDispersal,
     >,
 {
-    type Error = anyhow::Error;
     type LineageReference = GlobalLineageReference;
     type LineageStore = IndependentLineageStore<Self::MathsCore, O::Habitat>;
     type MathsCore = NvptxMathsCore;
