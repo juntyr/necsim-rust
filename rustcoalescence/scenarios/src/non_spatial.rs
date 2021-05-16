@@ -17,7 +17,7 @@ use necsim_impls_no_std::{
     decomposition::modulo::ModuloDecomposition,
 };
 
-use crate::{Scenario, ScenarioArguments};
+use crate::{Scenario, ScenarioParameters};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct NonSpatialScenario<M: MathsCore, G: RngCore<M>> {
@@ -34,15 +34,15 @@ pub struct NonSpatialArguments {
     pub deme: NonZeroU32,
 }
 
-impl<M: MathsCore, G: RngCore<M>> ScenarioArguments for NonSpatialScenario<M, G> {
+impl<M: MathsCore, G: RngCore<M>> ScenarioParameters for NonSpatialScenario<M, G> {
     type Arguments = NonSpatialArguments;
+    type Error = !;
 }
 
 impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for NonSpatialScenario<M, G> {
     type Decomposition = ModuloDecomposition;
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
         NonSpatialDispersalSampler<M, G>;
-    type Error = !;
     type Habitat = NonSpatialHabitat<M>;
     type LineageReference = InMemoryLineageReference;
     type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>> = L;

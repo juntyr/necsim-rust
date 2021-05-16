@@ -157,3 +157,23 @@ link_kernel!(
     necsim_impls_no_std::cogs::turnover_rate::uniform::UniformTurnoverRate,
     necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
 );
+
+link_kernel!(
+    necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat<
+        necsim_impls_cuda::cogs::maths::NvptxMathsCore
+    >,
+    necsim_impls_no_std::cogs::dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler<
+        necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+        necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat<
+            necsim_impls_cuda::cogs::maths::NvptxMathsCore
+        >,
+        necsim_impls_cuda::cogs::rng::CudaRng<
+            necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+            necsim_impls_no_std::cogs::rng::wyhash::WyHash<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore
+            >,
+        >,
+    >,
+    necsim_impls_no_std::cogs::turnover_rate::in_memory::InMemoryTurnoverRate,
+    necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
+);
