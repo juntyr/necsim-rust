@@ -13,11 +13,13 @@ pub struct EventCounterReporter {
     last_speciation_event: Option<SpeciationEvent>,
     last_dispersal_event: Option<DispersalEvent>,
 
+    raw_total: usize,
     speciation: usize,
     out_dispersal: usize,
     self_dispersal: usize,
     out_coalescence: usize,
     self_coalescence: usize,
+    late_dispersal: usize,
     late_coalescence: usize,
 }
 
@@ -43,6 +45,8 @@ impl<'de> serde::Deserialize<'de> for EventCounterReporter {
 impl Reporter for EventCounterReporter {
     impl_report!(speciation(&mut self, event: Unused) -> Used {
         event.use_in(|event| {
+            self.raw_total += 1;
+
             if Some(event) == self.last_speciation_event.as_ref() {
                 if Some(event.prior_time) != self.last_parent_prior_time {
                     self.late_coalescence += 1;
@@ -60,6 +64,8 @@ impl Reporter for EventCounterReporter {
 
     impl_report!(dispersal(&mut self, event: Unused) -> Used {
         event.use_in(|event| {
+            self.raw_total += 1;
+
             if Some(event) == self.last_dispersal_event.as_ref() {
                 if Some(event.prior_time) != self.last_parent_prior_time {
                     self.late_coalescence += 1;
@@ -72,7 +78,14 @@ impl Reporter for EventCounterReporter {
             self.last_parent_prior_time = Some(event.prior_time);
 
             let self_dispersal = event.origin == event.target;
-            let coalescence = matches!(event.interaction, LineageInteraction::Coalescence(_));
+            let coalescence = match event.interaction {
+                LineageInteraction::Coalescence(_) => true,
+                LineageInteraction::Maybe => {
+                    self.late_dispersal += 1;
+                    return
+                },
+                LineageInteraction::None => false,
+            };
 
             match (self_dispersal, coalescence) {
                 (true, true) => {
@@ -106,48 +119,43 @@ impl Reporter for EventCounterReporter {
 
         let _ = writeln!(
             &mut event_summary,
-            " - Total #individuals:\n     {}",
+            " - Total #individuals:\n   {}",
             self.speciation + self.self_coalescence + self.out_coalescence + self.late_coalescence
         );
         let _ = writeln!(
             &mut event_summary,
-            " - Total #events:\n     {}",
+            " - Total #events:\
+            \n   - raw:\n     {}\
+            \n   - deduplicated:\n     {}",
+            self.raw_total,
             self.speciation
                 + self.self_coalescence
                 + self.out_coalescence
                 + self.self_dispersal
                 + self.out_dispersal
-                + self.late_coalescence
+                + self.late_dispersal
+                - self.late_coalescence
         );
-
         let _ = writeln!(
             &mut event_summary,
-            " - Speciation:\n     {}",
+            " - Speciation:\
+            \n    {}",
             self.speciation
         );
         let _ = writeln!(
             &mut event_summary,
-            " - Dispersal outside cell:\n     {}",
-            self.out_dispersal
-        );
-        let _ = writeln!(
-            &mut event_summary,
-            " - Dispersal inside cell:\n     {}",
-            self.self_dispersal
-        );
-        let _ = writeln!(
-            &mut event_summary,
-            " - Coalescence outside cell:\n     {}",
-            self.out_coalescence
-        );
-        let _ = writeln!(
-            &mut event_summary,
-            " - Coalescence inside cell:\n     {}",
-            self.self_coalescence
-        );
-        let _ = write!(
-            &mut event_summary,
-            " - Coalescence detected late:\n     {}",
+            " - Dispersal:\
+            \n   - same location, no coalescence:\n     {}\
+            \n   - same location, with coalescence:\n     {}\
+            \n   - new location, no coalescence:\n     {}\
+            \n   - different location, with coalescence:\n     {}\
+            \n   - detected late, no coalescence:\n     {}\
+            \n   - detected late, with coalescence:\n     {}",
+            self.self_dispersal,
+            self.self_coalescence,
+            self.out_dispersal,
+            self.out_coalescence,
+            self.late_dispersal - self.late_coalescence,
             self.late_coalescence
         );
 
@@ -162,11 +170,13 @@ impl Default for EventCounterReporter {
             last_speciation_event: None,
             last_dispersal_event: None,
 
+            raw_total: 0,
             speciation: 0,
             out_dispersal: 0,
             self_dispersal: 0,
             out_coalescence: 0,
             self_coalescence: 0,
+            late_dispersal: 0,
             late_coalescence: 0,
         }
     }
