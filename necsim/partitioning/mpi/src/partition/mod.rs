@@ -153,32 +153,54 @@ impl<R: Reporter> LocalPartition<R> for MpiLocalPartition<R> {
 }
 
 impl<R: Reporter> Reporter for MpiLocalPartition<R> {
-    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<R::ReportSpeciation> {
+    impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
         match self {
-            Self::LiveMonolithic(partition) => partition.get_reporter().report_speciation(event),
-            Self::RecordedMonolithic(partition) => partition.get_reporter().report_speciation(event),
-            Self::Root(partition) => partition.get_reporter().report_speciation(event),
-            Self::Parallel(partition) => partition.get_reporter().report_speciation(event),
+            Self::LiveMonolithic(partition) => partition.get_reporter().report_speciation(
+                speciation.into()
+            ),
+            Self::RecordedMonolithic(partition) => partition.get_reporter().report_speciation(
+                speciation.into()
+            ),
+            Self::Root(partition) => partition.get_reporter().report_speciation(
+                speciation.into()
+            ),
+            Self::Parallel(partition) => partition.get_reporter().report_speciation(
+                speciation.into()
+            ),
         }
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<R::ReportDispersal> {
+    impl_report!(dispersal(&mut self, dispersal: MaybeUsed<R::ReportDispersal>) {
         match self {
-            Self::LiveMonolithic(partition) => partition.get_reporter().report_dispersal(event),
-            Self::RecordedMonolithic(partition) => partition.get_reporter().report_dispersal(event),
-            Self::Root(partition) => partition.get_reporter().report_dispersal(event),
-            Self::Parallel(partition) => partition.get_reporter().report_dispersal(event),
+            Self::LiveMonolithic(partition) => partition.get_reporter().report_dispersal(
+                dispersal.into()
+            ),
+            Self::RecordedMonolithic(partition) => partition.get_reporter().report_dispersal(
+                dispersal.into()
+            ),
+            Self::Root(partition) => partition.get_reporter().report_dispersal(
+                dispersal.into()
+            ),
+            Self::Parallel(partition) => partition.get_reporter().report_dispersal(
+                dispersal.into()
+            ),
         }
     });
 
-    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<R::ReportProgress> {
+    impl_report!(progress(&mut self, progress: MaybeUsed<R::ReportProgress>) {
         match self {
-            Self::LiveMonolithic(partition) => partition.get_reporter().report_progress(remaining),
-            Self::RecordedMonolithic(partition) => {
-                partition.get_reporter().report_progress(remaining)
-            },
-            Self::Root(partition) => partition.get_reporter().report_progress(remaining),
-            Self::Parallel(partition) => partition.get_reporter().report_progress(remaining),
+            Self::LiveMonolithic(partition) => partition.get_reporter().report_progress(
+                progress.into()
+            ),
+            Self::RecordedMonolithic(partition) => partition.get_reporter().report_progress(
+                progress.into()
+            ),
+            Self::Root(partition) => partition.get_reporter().report_progress(
+                progress.into()
+            ),
+            Self::Parallel(partition) => partition.get_reporter().report_progress(
+                progress.into()
+            ),
         }
     });
 }

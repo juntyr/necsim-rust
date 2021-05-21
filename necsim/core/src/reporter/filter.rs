@@ -6,7 +6,6 @@ use crate::{
     impl_finalise, impl_report,
     reporter::{
         boolean::{And, Boolean},
-        used::Unused,
         Reporter,
     },
 };
@@ -50,28 +49,22 @@ where
     KeepDispersal: And<R::ReportDispersal>,
     KeepProgress: And<R::ReportProgress>,
 {
-    impl_report!(speciation(&mut self, event: Unused)
-        -> MaybeUsed< <KeepSpeciation as And<R::ReportSpeciation> >::RESULT>
-    {
-        event.maybe_use_in(|event| {
-            self.reporter.report_speciation(Unused::new(event));
-        })
+    impl_report!(speciation(&mut self, speciation: MaybeUsed<
+        <KeepSpeciation as And<R::ReportSpeciation>
+    >::RESULT>) {
+        self.reporter.report_speciation(speciation.into())
     });
 
-    impl_report!(dispersal(&mut self, event: Unused)
-        -> MaybeUsed< <KeepDispersal as And<R::ReportDispersal> >::RESULT>
-    {
-        event.maybe_use_in(|event| {
-            self.reporter.report_dispersal(Unused::new(event));
-        })
+    impl_report!(dispersal(&mut self, dispersal: MaybeUsed<
+        <KeepDispersal as And<R::ReportDispersal>
+    >::RESULT>) {
+        self.reporter.report_dispersal(dispersal.into())
     });
 
-    impl_report!(progress(&mut self, event: Unused)
-        -> MaybeUsed< <KeepProgress as And<R::ReportProgress> >::RESULT>
-    {
-        event.maybe_use_in(|event| {
-            self.reporter.report_progress(Unused::new(event));
-        })
+    impl_report!(progress(&mut self, progress: MaybeUsed<
+        <KeepProgress as And<R::ReportProgress>
+    >::RESULT>) {
+        self.reporter.report_progress(progress.into())
     });
 
     impl_finalise!((self) {

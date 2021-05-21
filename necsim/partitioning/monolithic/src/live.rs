@@ -2,7 +2,7 @@ use std::{fmt, num::NonZeroU32};
 
 use necsim_core::{
     lineage::MigratingLineage,
-    reporter::{boolean::True, used::Unused, FilteredReporter, Reporter},
+    reporter::{boolean::True, FilteredReporter, Reporter},
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
@@ -129,7 +129,7 @@ impl<R: Reporter> LocalPartition<R> for LiveMonolithicLocalPartition<R> {
     }
 
     fn report_progress_sync(&mut self, remaining: u64) {
-        self.reporter.report_progress(Unused::new(&remaining));
+        self.reporter.report_progress(&remaining.into());
     }
 
     fn finalise_reporting(self) {

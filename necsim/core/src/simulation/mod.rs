@@ -13,7 +13,7 @@ use crate::{
         OptionallyPeekableActiveLineageSampler, PeekableActiveLineageSampler, RngCore,
         SpeciationProbability, TurnoverRate,
     },
-    reporter::{used::Unused, Reporter},
+    reporter::Reporter,
 };
 
 pub use builder::Simulation;
@@ -86,7 +86,7 @@ impl<
     ) -> (NonNegativeF64, u64) {
         let mut steps = 0_u64;
 
-        reporter.report_progress(Unused::new(&self.get_balanced_remaining_work().0));
+        reporter.report_progress(&self.get_balanced_remaining_work().0.into());
 
         while !early_stop(self, steps) {
             // Peek the time of the next local event
@@ -111,12 +111,12 @@ impl<
                     migrating_lineage,
                 );
             } else if !process::local::simulate_and_report_local_step_or_finish(self, reporter) {
-                reporter.report_progress(Unused::new(&self.get_balanced_remaining_work().0));
+                reporter.report_progress(&self.get_balanced_remaining_work().0.into());
 
                 break;
             }
 
-            reporter.report_progress(Unused::new(&self.get_balanced_remaining_work().0));
+            reporter.report_progress(&self.get_balanced_remaining_work().0.into());
 
             steps += 1;
         }

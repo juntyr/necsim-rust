@@ -55,31 +55,27 @@ impl TryFrom<GlobalCoverageReporterArgs> for GlobalCoverageReporter {
 }
 
 impl Reporter for GlobalCoverageReporter {
-    impl_report!(speciation(&mut self, event: Unused) -> Unused {
-        event.ignore()
+    impl_report!(speciation(&mut self, _speciation: Ignored) {});
+
+    impl_report!(dispersal(&mut self, dispersal: Used) {
+        if Some(dispersal) == self.last_dispersal_event.as_ref() {
+            return;
+        }
+
+        self.last_dispersal_event = Some(dispersal.clone());
+
+        if let Some(writer) = &mut self.writer {
+            std::mem::drop(writeln!(
+                writer, "{},{},{},{},{},{}",
+                dispersal.origin.location().x(), dispersal.origin.location().y(),
+                dispersal.origin.index(),
+                dispersal.target.location().x(), dispersal.target.location().y(),
+                dispersal.target.index(),
+            ));
+        }
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> Used {
-        event.use_in(|event| {
-            if Some(event) == self.last_dispersal_event.as_ref() {
-                return;
-            }
-
-            self.last_dispersal_event = Some(event.clone());
-
-            if let Some(writer) = &mut self.writer {
-                std::mem::drop(writeln!(
-                    writer, "{},{},{},{},{},{}",
-                    event.origin.location().x(), event.origin.location().y(), event.origin.index(),
-                    event.target.location().x(), event.target.location().y(), event.target.index(),
-                ));
-            }
-        })
-    });
-
-    impl_report!(progress(&mut self, remaining: Unused) -> Unused {
-        remaining.ignore()
-    });
+    impl_report!(progress(&mut self, _progress: Ignored) {});
 
     impl_finalise!((mut self) {
         if let Some(writer) = &mut self.writer {

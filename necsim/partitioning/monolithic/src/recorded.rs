@@ -7,7 +7,6 @@ use necsim_core::{
     lineage::MigratingLineage,
     reporter::{
         boolean::{Boolean, False, True},
-        used::Unused,
         FilteredReporter, Reporter,
     },
 };
@@ -100,7 +99,7 @@ impl<R: Reporter> LocalPartition<R> for RecordedMonolithicLocalPartition<R> {
     }
 
     fn report_progress_sync(&mut self, remaining: u64) {
-        self.reporter.report_progress(Unused::new(&remaining));
+        self.reporter.report_progress(&remaining.into());
     }
 
     fn finalise_reporting(self) {
@@ -127,19 +126,15 @@ impl<R: Reporter> RecordedMonolithicLocalPartition<R> {
 }
 
 impl<R: Reporter> Reporter for RecordedMonolithicLocalPartition<R> {
-    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<R::ReportSpeciation> {
-        event.maybe_use_in(|event| {
-            self.recorder.record_speciation(event)
-        })
+    impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
+        self.recorder.record_speciation(speciation)
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<R::ReportDispersal> {
-        event.maybe_use_in(|event| {
-            self.recorder.record_dispersal(event)
-        })
+    impl_report!(dispersal(&mut self, dispersal: MaybeUsed<R::ReportDispersal>) {
+        self.recorder.record_dispersal(dispersal)
     });
 
-    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<R::ReportProgress> {
-        self.reporter.report_progress(remaining)
+    impl_report!(progress(&mut self, progress: MaybeUsed<R::ReportProgress>) {
+        self.reporter.report_progress(progress.into())
     });
 }

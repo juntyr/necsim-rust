@@ -5,7 +5,7 @@ use necsim_core_bond::NonNegativeF64;
 use necsim_core::{
     event::{PackedEvent, TypedEvent},
     impl_report,
-    reporter::{used::Unused, Reporter},
+    reporter::Reporter,
 };
 
 use necsim_partitioning_core::LocalPartition;
@@ -41,29 +41,23 @@ impl<'p, R: Reporter, P: LocalPartition<R>> fmt::Debug for LiveWaterLevelReporte
 }
 
 impl<'p, R: Reporter, P: LocalPartition<R>> Reporter for LiveWaterLevelReporterProxy<'p, R, P> {
-    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<R::ReportSpeciation> {
-        event.maybe_use_in(|event| {
-            if event.event_time < self.water_level {
-                self.slow_events.push(event.clone().into())
-            } else {
-                self.fast_events.push(event.clone().into())
-            }
-        })
+    impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
+        if speciation.event_time < self.water_level {
+            self.slow_events.push(speciation.clone().into())
+        } else {
+            self.fast_events.push(speciation.clone().into())
+        }
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<R::ReportDispersal> {
-        event.maybe_use_in(|event| {
-            if event.event_time < self.water_level {
-                self.slow_events.push(event.clone().into())
-            } else {
-                self.fast_events.push(event.clone().into())
-            }
-        })
+    impl_report!(dispersal(&mut self, dispersal: MaybeUsed<R::ReportDispersal>) {
+        if dispersal.event_time < self.water_level {
+            self.slow_events.push(dispersal.clone().into())
+        } else {
+            self.fast_events.push(dispersal.clone().into())
+        }
     });
 
-    impl_report!(progress(&mut self, remaining: Unused) -> Unused {
-        remaining.ignore()
-    });
+    impl_report!(progress(&mut self, _progress: Ignored) {});
 }
 
 #[contract_trait]
@@ -96,12 +90,12 @@ impl<'p, R: Reporter, P: LocalPartition<R>> WaterLevelReporterProxy<'p, R, P>
                 TypedEvent::Speciation(event) => {
                     self.local_partition
                         .get_reporter()
-                        .report_speciation(Unused::new(&event));
+                        .report_speciation(&event.into());
                 },
                 TypedEvent::Dispersal(event) => {
                     self.local_partition
                         .get_reporter()
-                        .report_dispersal(Unused::new(&event));
+                        .report_dispersal(&event.into());
                 },
             }
         }
@@ -131,12 +125,12 @@ impl<'p, R: Reporter, P: LocalPartition<R>> Drop for LiveWaterLevelReporterProxy
                 TypedEvent::Speciation(event) => {
                     self.local_partition
                         .get_reporter()
-                        .report_speciation(Unused::new(&event));
+                        .report_speciation(&event.into());
                 },
                 TypedEvent::Dispersal(event) => {
                     self.local_partition
                         .get_reporter()
-                        .report_dispersal(Unused::new(&event));
+                        .report_dispersal(&event.into());
                 },
             }
         }
@@ -149,12 +143,12 @@ impl<'p, R: Reporter, P: LocalPartition<R>> Drop for LiveWaterLevelReporterProxy
                 TypedEvent::Speciation(event) => {
                     self.local_partition
                         .get_reporter()
-                        .report_speciation(Unused::new(&event));
+                        .report_speciation(&event.into());
                 },
                 TypedEvent::Dispersal(event) => {
                     self.local_partition
                         .get_reporter()
-                        .report_dispersal(Unused::new(&event));
+                        .report_dispersal(&event.into());
                 },
             }
         }

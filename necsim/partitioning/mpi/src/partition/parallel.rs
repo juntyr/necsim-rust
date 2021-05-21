@@ -372,48 +372,42 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
 }
 
 impl<R: Reporter> Reporter for MpiParallelPartition<R> {
-    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<R::ReportSpeciation> {
-        event.maybe_use_in(|event| {
-            self.recorder.record_speciation(event)
-        })
+    impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
+        self.recorder.record_speciation(speciation)
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<R::ReportDispersal> {
-        event.maybe_use_in(|event| {
-            self.recorder.record_dispersal(event)
-        })
+    impl_report!(dispersal(&mut self, dispersal: MaybeUsed<R::ReportDispersal>) {
+        self.recorder.record_dispersal(dispersal)
     });
 
-    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<R::ReportProgress> {
-        remaining.maybe_use_in(|remaining| {
-            if unsafe { MPI_LOCAL_REMAINING } == *remaining {
-                return;
-            }
+    impl_report!(progress(&mut self, remaining: MaybeUsed<R::ReportProgress>) {
+        if unsafe { MPI_LOCAL_REMAINING } == *remaining {
+            return;
+        }
 
-            if *remaining > 0 || self.barrier.is_none() {
-                let now = Instant::now();
+        if *remaining > 0 || self.barrier.is_none() {
+            let now = Instant::now();
 
-                if now.duration_since(self.last_report_time) >= Self::MPI_PROGRESS_WAIT_TIME {
-                    let progress = self.progress.take().unwrap_or_else(|| {
-                        let local_remaining: &'static mut u64 = unsafe { &mut MPI_LOCAL_REMAINING };
+            if now.duration_since(self.last_report_time) >= Self::MPI_PROGRESS_WAIT_TIME {
+                let progress = self.progress.take().unwrap_or_else(|| {
+                    let local_remaining: &'static mut u64 = unsafe { &mut MPI_LOCAL_REMAINING };
 
-                        self.last_report_time = now;
-                        *local_remaining = *remaining;
+                    self.last_report_time = now;
+                    *local_remaining = *remaining;
 
-                        let root_process = self.world.process_at_rank(MpiPartitioning::ROOT_RANK);
+                    let root_process = self.world.process_at_rank(MpiPartitioning::ROOT_RANK);
 
-                        root_process.immediate_send_with_tag(
-                            StaticScope,
-                            local_remaining,
-                            MpiPartitioning::MPI_PROGRESS_TAG,
-                        )
-                    });
+                    root_process.immediate_send_with_tag(
+                        StaticScope,
+                        local_remaining,
+                        MpiPartitioning::MPI_PROGRESS_TAG,
+                    )
+                });
 
-                    if let Err(progress) = progress.test() {
-                        self.progress = Some(progress);
-                    }
+                if let Err(progress) = progress.test() {
+                    self.progress = Some(progress);
                 }
             }
-        })
+        }
     });
 }

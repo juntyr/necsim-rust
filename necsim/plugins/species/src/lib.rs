@@ -82,60 +82,60 @@ impl TryFrom<SpeciesLocationsReporterArgs> for SpeciesLocationsReporter {
 }
 
 impl Reporter for SpeciesLocationsReporter {
-    impl_report!(speciation(&mut self, event: Unused) -> Used {
-        event.use_in(|event| {
-            if event.prior_time == 0.0_f64 {
-                self.store_individual_origin(&event.global_lineage_reference, &event.origin)
-            }
+    impl_report!(speciation(&mut self, speciation: Used) {
+        if speciation.prior_time == 0.0_f64 {
+            self.store_individual_origin(&speciation.global_lineage_reference, &speciation.origin)
+        }
 
-            if Some(event) == self.last_speciation_event.as_ref() {
-                if let Some((parent, prior_time)) = &self.last_parent_prior_time {
-                    if prior_time != &event.prior_time {
-                        let parent = parent.clone();
-                        self.store_individual_coalescence(&event.global_lineage_reference, &parent)
-                    }
+        if Some(speciation) == self.last_speciation_event.as_ref() {
+            if let Some((parent, prior_time)) = &self.last_parent_prior_time {
+                if prior_time != &speciation.prior_time {
+                    let parent = parent.clone();
+                    self.store_individual_coalescence(&speciation.global_lineage_reference, &parent)
                 }
-
-                self.last_parent_prior_time = Some((event.global_lineage_reference.clone(), event.prior_time));
-
-                return;
             }
 
-            self.store_individual_speciation(event);
+            self.last_parent_prior_time = Some(
+                (speciation.global_lineage_reference.clone(), speciation.prior_time)
+            );
 
-            self.last_speciation_event = Some(event.clone());
-            self.last_parent_prior_time = Some((event.global_lineage_reference.clone(), event.prior_time));
-        })
+            return;
+        }
+
+        self.store_individual_speciation(speciation);
+
+        self.last_speciation_event = Some(speciation.clone());
+        self.last_parent_prior_time = Some(
+            (speciation.global_lineage_reference.clone(), speciation.prior_time)
+        );
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> Used {
-        event.use_in(|event| {
-            if event.prior_time == 0.0_f64 {
-                self.store_individual_origin(&event.global_lineage_reference, &event.origin)
-            }
+    impl_report!(dispersal(&mut self, dispersal: Used) {
+        if dispersal.prior_time == 0.0_f64 {
+            self.store_individual_origin(&dispersal.global_lineage_reference, &dispersal.origin)
+        }
 
-            if Some(event) == self.last_dispersal_event.as_ref() {
-                if let Some((parent, prior_time)) = &self.last_parent_prior_time {
-                    if prior_time != &event.prior_time {
-                        let parent = parent.clone();
-                        self.store_individual_coalescence(&event.global_lineage_reference, &parent)
-                    }
+        if Some(dispersal) == self.last_dispersal_event.as_ref() {
+            if let Some((parent, prior_time)) = &self.last_parent_prior_time {
+                if prior_time != &dispersal.prior_time {
+                    let parent = parent.clone();
+                    self.store_individual_coalescence(&dispersal.global_lineage_reference, &parent)
                 }
-
-                self.last_parent_prior_time = Some((event.global_lineage_reference.clone(), event.prior_time));
-
-                return;
             }
 
-            if let LineageInteraction::Coalescence(parent) = &event.interaction {
-                self.store_individual_coalescence(&event.global_lineage_reference, parent)
-            }
-        })
+            self.last_parent_prior_time = Some(
+                (dispersal.global_lineage_reference.clone(), dispersal.prior_time)
+            );
+
+            return;
+        }
+
+        if let LineageInteraction::Coalescence(parent) = &dispersal.interaction {
+            self.store_individual_coalescence(&dispersal.global_lineage_reference, parent)
+        }
     });
 
-    impl_report!(progress(&mut self, remaining: Unused) -> Unused {
-        remaining.ignore()
-    });
+    impl_report!(progress(&mut self, _progress: Ignored) {});
 
     impl_finalise!((mut self) {
         let output = self.output.clone();

@@ -8,7 +8,7 @@ use crate::{
     },
     event::{DispersalEvent, LineageInteraction},
     lineage::MigratingLineage,
-    reporter::{used::Unused, Reporter},
+    reporter::Reporter,
     simulation::Simulation,
 };
 
@@ -75,14 +75,17 @@ pub fn simulate_and_report_immigration_step<
             }
 
             // Report the migration dispersal event
-            reporter.report_dispersal(Unused::new(&DispersalEvent {
-                origin: migrating_lineage.dispersal_origin,
-                prior_time: migrating_lineage.prior_time,
-                event_time: migrating_lineage.event_time,
-                global_lineage_reference: migrating_lineage.global_reference,
-                target: dispersal_target,
-                interaction,
-            }));
+            reporter.report_dispersal(
+                &DispersalEvent {
+                    origin: migrating_lineage.dispersal_origin,
+                    prior_time: migrating_lineage.prior_time,
+                    event_time: migrating_lineage.event_time,
+                    global_lineage_reference: migrating_lineage.global_reference,
+                    target: dispersal_target,
+                    interaction,
+                }
+                .into(),
+            );
         },
     )
 }

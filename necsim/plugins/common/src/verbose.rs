@@ -18,22 +18,16 @@ impl<'de> serde::Deserialize<'de> for VerboseReporter {
 }
 
 impl Reporter for VerboseReporter {
-    impl_report!(speciation(&mut self, event: Unused) -> Used {
-        event.use_in(|event| {
-            info!("{:#?}", event)
-        })
+    impl_report!(speciation(&mut self, speciation: Used) {
+        info!("{:#?}", speciation)
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> Used {
-        event.use_in(|event| {
-            info!("{:#?}", event)
-        })
+    impl_report!(dispersal(&mut self, dispersal: Used) {
+        info!("{:#?}", dispersal)
     });
 
-    impl_report!(progress(&mut self, remaining: Unused) -> Used {
-        remaining.use_in(|remaining| {
-            info!("Remaining: {}", remaining)
-        })
+    impl_report!(progress(&mut self, remaining: Used) {
+        info!("Remaining: {}", remaining)
     });
 }
 

@@ -37,26 +37,20 @@ impl<'de> serde::Deserialize<'de> for ExecutionTimeReporter {
 }
 
 impl Reporter for ExecutionTimeReporter {
-    impl_report!(speciation(&mut self, event: Unused) -> Unused {
-        event.ignore()
-    });
+    impl_report!(speciation(&mut self, _speciation: Ignored) {});
 
-    impl_report!(dispersal(&mut self, event: Unused) -> Unused {
-        event.ignore()
-    });
+    impl_report!(dispersal(&mut self, _dispersal: Ignored) {});
 
     impl_report!(
         #[debug_ensures(self.start_time.is_some(), "start_time is set after first call")]
-        progress(&mut self, remaining: Unused) -> Used {
-            remaining.use_in(|remaining| {
-                if self.start_time.is_none() {
-                    self.start_time = Some(Instant::now());
-                }
+        progress(&mut self, remaining: Used) {
+            if self.start_time.is_none() {
+                self.start_time = Some(Instant::now());
+            }
 
-                if *remaining == 0 {
-                    self.end_time = Some(Instant::now());
-                }
-            })
+            if *remaining == 0 {
+                self.end_time = Some(Instant::now());
+            }
         }
     );
 

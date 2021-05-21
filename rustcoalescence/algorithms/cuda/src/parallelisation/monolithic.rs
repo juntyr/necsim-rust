@@ -25,7 +25,7 @@ use necsim_core::{
         SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
-    reporter::{boolean::Boolean, used::Unused, Reporter},
+    reporter::{boolean::Boolean, Reporter},
     simulation::Simulation,
 };
 use necsim_core_bond::NonNegativeF64;
@@ -232,12 +232,9 @@ pub fn simulate<
 
                     event_buffer.report_events(&mut proxy);
 
-                    proxy
-                        .local_partition()
-                        .get_reporter()
-                        .report_progress(Unused::new(
-                            &((slow_lineages.len() as u64) + (fast_lineages.len() as u64)),
-                        ));
+                    proxy.local_partition().get_reporter().report_progress(
+                        &((slow_lineages.len() as u64) + (fast_lineages.len() as u64)).into(),
+                    );
                 }
 
                 // Fast lineages are now slow again

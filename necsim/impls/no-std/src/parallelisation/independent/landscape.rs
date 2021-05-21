@@ -10,7 +10,7 @@ use necsim_core::{
     event::{DispersalEvent, LineageInteraction},
     landscape::IndexedLocation,
     lineage::{GlobalLineageReference, Lineage, MigratingLineage},
-    reporter::{used::Unused, Reporter},
+    reporter::Reporter,
     simulation::Simulation,
 };
 
@@ -169,7 +169,7 @@ pub fn simulate<
 
         // Report any immigration events
         while let Some(immigration_event) = immigration_events.pop() {
-            proxy.report_dispersal(Unused::new(&immigration_event));
+            proxy.report_dispersal(&immigration_event.into());
         }
     }
 

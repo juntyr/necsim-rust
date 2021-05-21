@@ -43,70 +43,64 @@ impl<'de> serde::Deserialize<'de> for EventCounterReporter {
 }
 
 impl Reporter for EventCounterReporter {
-    impl_report!(speciation(&mut self, event: Unused) -> Used {
-        event.use_in(|event| {
-            self.raw_total += 1;
+    impl_report!(speciation(&mut self, speciation: Used) {
+        self.raw_total += 1;
 
-            if Some(event) == self.last_speciation_event.as_ref() {
-                if Some(event.prior_time) != self.last_parent_prior_time {
-                    self.late_coalescence += 1;
-                }
-                self.last_parent_prior_time = Some(event.prior_time);
-
-                return;
+        if Some(speciation) == self.last_speciation_event.as_ref() {
+            if Some(speciation.prior_time) != self.last_parent_prior_time {
+                self.late_coalescence += 1;
             }
-            self.last_speciation_event = Some(event.clone());
-            self.last_parent_prior_time = Some(event.prior_time);
+            self.last_parent_prior_time = Some(speciation.prior_time);
 
-            self.speciation += 1;
-        })
+            return;
+        }
+        self.last_speciation_event = Some(speciation.clone());
+        self.last_parent_prior_time = Some(speciation.prior_time);
+
+        self.speciation += 1;
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> Used {
-        event.use_in(|event| {
-            self.raw_total += 1;
+    impl_report!(dispersal(&mut self, dispersal: Used) {
+        self.raw_total += 1;
 
-            if Some(event) == self.last_dispersal_event.as_ref() {
-                if Some(event.prior_time) != self.last_parent_prior_time {
-                    self.late_coalescence += 1;
-                }
-                self.last_parent_prior_time = Some(event.prior_time);
-
-                return;
+        if Some(dispersal) == self.last_dispersal_event.as_ref() {
+            if Some(dispersal.prior_time) != self.last_parent_prior_time {
+                self.late_coalescence += 1;
             }
-            self.last_dispersal_event = Some(event.clone());
-            self.last_parent_prior_time = Some(event.prior_time);
+            self.last_parent_prior_time = Some(dispersal.prior_time);
 
-            let self_dispersal = event.origin == event.target;
-            let coalescence = match event.interaction {
-                LineageInteraction::Coalescence(_) => true,
-                LineageInteraction::Maybe => {
-                    self.late_dispersal += 1;
-                    return
-                },
-                LineageInteraction::None => false,
-            };
+            return;
+        }
+        self.last_dispersal_event = Some(dispersal.clone());
+        self.last_parent_prior_time = Some(dispersal.prior_time);
 
-            match (self_dispersal, coalescence) {
-                (true, true) => {
-                    self.self_coalescence += 1;
-                },
-                (true, false) => {
-                    self.self_dispersal += 1;
-                },
-                (false, true) => {
-                    self.out_coalescence += 1;
-                },
-                (false, false) => {
-                    self.out_dispersal += 1;
-                },
-            }
-        })
+        let self_dispersal = dispersal.origin == dispersal.target;
+        let coalescence = match dispersal.interaction {
+            LineageInteraction::Coalescence(_) => true,
+            LineageInteraction::Maybe => {
+                self.late_dispersal += 1;
+                return
+            },
+            LineageInteraction::None => false,
+        };
+
+        match (self_dispersal, coalescence) {
+            (true, true) => {
+                self.self_coalescence += 1;
+            },
+            (true, false) => {
+                self.self_dispersal += 1;
+            },
+            (false, true) => {
+                self.out_coalescence += 1;
+            },
+            (false, false) => {
+                self.out_dispersal += 1;
+            },
+        }
     });
 
-    impl_report!(progress(&mut self, remaining: Unused) -> Unused {
-        remaining.ignore()
-    });
+    impl_report!(progress(&mut self, _progress: Ignored) {});
 
     impl_finalise!((self) {
         if self.last_speciation_event.is_none() && self.last_dispersal_event.is_none() {
