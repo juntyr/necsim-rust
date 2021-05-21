@@ -19,7 +19,6 @@ use necsim_core::{
     lineage::MigratingLineage,
     reporter::{
         boolean::{Boolean, False, True},
-        used::Unused,
         FilteredReporter, Reporter,
     },
 };
@@ -334,7 +333,7 @@ impl<R: Reporter> LocalPartition<R> for MpiRootPartition<R> {
                 if !*global_continue {
                     let remaining = self.all_remaining[self.get_partition_rank() as usize];
 
-                    self.report_progress(Unused::new(&remaining));
+                    self.report_progress(&remaining.into());
                 }
 
                 *global_continue
@@ -375,15 +374,16 @@ impl<R: Reporter> LocalPartition<R> for MpiRootPartition<R> {
 
         root_process.gather_into_root(&remaining, &mut self.all_remaining[..]);
 
-        self.reporter.report_progress(Unused::new(
+        self.reporter.report_progress(
             &self
                 .all_remaining
                 .iter()
                 .copied()
                 .map(Wrapping)
                 .sum::<Wrapping<u64>>()
-                .0,
-        ));
+                .0
+                .into(),
+        );
     }
 
     fn finalise_reporting(mut self) {
@@ -394,48 +394,41 @@ impl<R: Reporter> LocalPartition<R> for MpiRootPartition<R> {
 }
 
 impl<R: Reporter> Reporter for MpiRootPartition<R> {
-    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<R::ReportSpeciation> {
-        event.maybe_use_in(|event| {
-            self.recorder.record_speciation(event)
-        })
+    impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
+        self.recorder.record_speciation(speciation)
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<R::ReportDispersal> {
-        event.maybe_use_in(|event| {
-            self.recorder.record_dispersal(event)
-        })
+    impl_report!(dispersal(&mut self, dispersal: MaybeUsed<R::ReportDispersal>) {
+        self.recorder.record_dispersal(dispersal)
     });
 
-    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<R::ReportProgress> {
-        remaining.maybe_use_in(|remaining| {
-            let now = Instant::now();
+    impl_report!(progress(&mut self, remaining: MaybeUsed<R::ReportProgress>) {
+        let now = Instant::now();
 
-            if now.duration_since(self.last_report_time) >= Self::MPI_PROGRESS_WAIT_TIME {
-                self.last_report_time = now;
+        if now.duration_since(self.last_report_time) >= Self::MPI_PROGRESS_WAIT_TIME {
+            self.last_report_time = now;
 
-                self.all_remaining[MpiPartitioning::ROOT_RANK as usize] = *remaining;
+            self.all_remaining[MpiPartitioning::ROOT_RANK as usize] = *remaining;
 
-                let any_process = self.world.any_process();
+            let any_process = self.world.any_process();
 
-                while let Some((msg, _)) =
-                    any_process.immediate_matched_probe_with_tag(MpiPartitioning::MPI_PROGRESS_TAG)
-                {
-                    let remaining_status: (u64, _) = msg.matched_receive();
+            while let Some((msg, _)) =
+                any_process.immediate_matched_probe_with_tag(MpiPartitioning::MPI_PROGRESS_TAG)
+            {
+                let remaining_status: (u64, _) = msg.matched_receive();
 
-                    #[allow(clippy::cast_sign_loss)]
-                    self.all_remaining[remaining_status.1.source_rank() as usize] = remaining_status.0;
-                }
-
-                self.reporter.report_progress(
-                    Unused::new(&self.all_remaining
-                        .iter()
-                        .copied()
-                        .map(Wrapping)
-                        .sum::<Wrapping<u64>>()
-                        .0
-                    )
-                );
+                #[allow(clippy::cast_sign_loss)]
+                self.all_remaining[remaining_status.1.source_rank() as usize] = remaining_status.0;
             }
-        })
+
+            self.reporter.report_progress(
+                &self.all_remaining
+                    .iter()
+                    .copied()
+                    .map(Wrapping)
+                    .sum::<Wrapping<u64>>()
+                    .0.into()
+            );
+        }
     });
 }

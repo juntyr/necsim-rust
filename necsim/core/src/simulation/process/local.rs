@@ -7,7 +7,7 @@ use crate::{
         TurnoverRate,
     },
     event::{LineageInteraction, TypedEvent},
-    reporter::{used::Unused, Reporter},
+    reporter::Reporter,
     simulation::Simulation,
 };
 
@@ -63,13 +63,13 @@ pub fn simulate_and_report_local_step_or_finish<
                                 match event.into() {
                                     TypedEvent::Speciation(event) => {
                                         // Report the local speciation event
-                                        reporter.report_speciation(Unused::new(&event));
+                                        reporter.report_speciation((&event).into());
 
                                         None
                                     },
                                     TypedEvent::Dispersal(event) => {
                                         // Report the local dispersal event
-                                        reporter.report_dispersal(Unused::new(&event));
+                                        reporter.report_dispersal((&event).into());
 
                                         if let LineageInteraction::Coalescence(_) =
                                             event.interaction

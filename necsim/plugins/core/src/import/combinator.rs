@@ -8,7 +8,6 @@ use necsim_core::{
     impl_finalise, impl_report,
     reporter::{
         boolean::{Boolean, False, True},
-        used::Unused,
         Reporter,
     },
 };
@@ -63,34 +62,28 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
 impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolean> Reporter
     for ReporterPluginVec<ReportSpeciation, ReportDispersal, ReportProgress>
 {
-    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<ReportSpeciation> {
-        event.maybe_use_in(|event| {
-            for plugin in self.plugins.iter_mut() {
-                if plugin.filter.report_speciation {
-                    plugin.reporter.report_speciation(Unused::new(event));
-                }
+    impl_report!(speciation(&mut self, speciation: MaybeUsed<ReportSpeciation>) {
+        for plugin in self.plugins.iter_mut() {
+            if plugin.filter.report_speciation {
+                plugin.reporter.report_speciation(speciation.into());
             }
-        })
+        }
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<ReportDispersal> {
-        event.maybe_use_in(|event| {
-            for plugin in self.plugins.iter_mut() {
-                if plugin.filter.report_dispersal {
-                    plugin.reporter.report_dispersal(Unused::new(event));
-                }
+    impl_report!(dispersal(&mut self, dispersal: MaybeUsed<ReportDispersal>) {
+        for plugin in self.plugins.iter_mut() {
+            if plugin.filter.report_dispersal {
+                plugin.reporter.report_dispersal(dispersal.into());
             }
-        })
+        }
     });
 
-    impl_report!(progress(&mut self, event: Unused) -> MaybeUsed<ReportProgress> {
-        event.maybe_use_in(|event| {
-            for plugin in self.plugins.iter_mut() {
-                if plugin.filter.report_progress {
-                    plugin.reporter.report_progress(Unused::new(event));
-                }
+    impl_report!(progress(&mut self, progress: MaybeUsed<ReportProgress>) {
+        for plugin in self.plugins.iter_mut() {
+            if plugin.filter.report_progress {
+                plugin.reporter.report_progress(progress.into());
             }
-        })
+        }
     });
 
     impl_finalise!((self) {

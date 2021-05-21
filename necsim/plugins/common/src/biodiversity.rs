@@ -24,25 +24,19 @@ impl<'de> serde::Deserialize<'de> for BiodiversityReporter {
 }
 
 impl Reporter for BiodiversityReporter {
-    impl_report!(speciation(&mut self, event: Unused) -> Used {
-        event.use_in(|event| {
-            if Some(event) == self.last_event.as_ref() {
-                return;
-            }
+    impl_report!(speciation(&mut self, speciation: Used) {
+        if Some(speciation) == self.last_event.as_ref() {
+            return;
+        }
 
-            self.last_event = Some(event.clone());
+        self.last_event = Some(speciation.clone());
 
-            self.biodiversity += 1;
-        })
+        self.biodiversity += 1;
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> Unused {
-        event.ignore()
-    });
+    impl_report!(dispersal(&mut self, _dispersal: Ignored) {});
 
-    impl_report!(progress(&mut self, remaining: Unused) -> Unused {
-        remaining.ignore()
-    });
+    impl_report!(progress(&mut self, _progress: Ignored) {});
 
     impl_finalise!((self) {
         if self.biodiversity > 0 {

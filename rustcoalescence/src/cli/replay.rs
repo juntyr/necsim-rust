@@ -1,10 +1,7 @@
 use anyhow::Result;
 use log::LevelFilter;
 
-use necsim_core::{
-    event::TypedEvent,
-    reporter::{used::Unused, Reporter},
-};
+use necsim_core::{event::TypedEvent, reporter::Reporter};
 
 use necsim_partitioning_core::Partitioning;
 use necsim_plugins_core::match_any_reporter_plugin_vec;
@@ -28,18 +25,18 @@ pub fn replay_with_logger<P: Partitioning>(
 
         let mut remaining = replay_args.log.length() as u64;
 
-        reporter.report_progress(Unused::new(&remaining));
+        reporter.report_progress(&remaining.into());
 
         for event in replay_args.log {
             remaining -= 1;
-            reporter.report_progress(Unused::new(&remaining));
+            reporter.report_progress(&remaining.into());
 
             match event.into() {
                 TypedEvent::Speciation(event) => {
-                    reporter.report_speciation(Unused::new(&event));
+                    reporter.report_speciation(&event.into());
                 },
                 TypedEvent::Dispersal(event) => {
-                    reporter.report_dispersal(Unused::new(&event));
+                    reporter.report_dispersal(&event.into());
                 },
             }
         }

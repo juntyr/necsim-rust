@@ -69,33 +69,27 @@ impl GlobalTurnoverReporter {
 }
 
 impl Reporter for GlobalTurnoverReporter {
-    impl_report!(speciation(&mut self, event: Unused) -> Used {
-        event.use_in(|event| {
-            if Some(event) == self.last_speciation_event.as_ref() {
-                return;
-            }
+    impl_report!(speciation(&mut self, speciation: Used) {
+        if Some(speciation) == self.last_speciation_event.as_ref() {
+            return;
+        }
 
-            self.last_speciation_event = Some(event.clone());
+        self.last_speciation_event = Some(speciation.clone());
 
-            self.write_turnover(event.event_time.get() - event.prior_time.get());
-        })
+        self.write_turnover(speciation.event_time.get() - speciation.prior_time.get());
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> Used {
-        event.use_in(|event| {
-            if Some(event) == self.last_dispersal_event.as_ref() {
-                return;
-            }
+    impl_report!(dispersal(&mut self, dispersal: Used) {
+        if Some(dispersal) == self.last_dispersal_event.as_ref() {
+            return;
+        }
 
-            self.last_dispersal_event = Some(event.clone());
+        self.last_dispersal_event = Some(dispersal.clone());
 
-            self.write_turnover(event.event_time.get() - event.prior_time.get());
-        })
+        self.write_turnover(dispersal.event_time.get() - dispersal.prior_time.get());
     });
 
-    impl_report!(progress(&mut self, remaining: Unused) -> Unused {
-        remaining.ignore()
-    });
+    impl_report!(progress(&mut self, _progress: Ignored) {});
 
     impl_finalise!((mut self) {
         if let Some(writer) = &mut self.writer {

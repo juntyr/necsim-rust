@@ -4,7 +4,7 @@ use core::{fmt, marker::PhantomData};
 use necsim_core::{
     event::{PackedEvent, TypedEvent},
     impl_report,
-    reporter::{used::Unused, Reporter},
+    reporter::Reporter,
 };
 
 use necsim_partitioning_core::LocalPartition;
@@ -32,26 +32,22 @@ impl<'p, R: Reporter, P: LocalPartition<R>> fmt::Debug for BufferingReporterProx
 }
 
 impl<'p, R: Reporter, P: LocalPartition<R>> Reporter for BufferingReporterProxy<'p, R, P> {
-    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<
+    impl_report!(speciation(&mut self, speciation: MaybeUsed<
         <<P as LocalPartition<R>>::Reporter as Reporter
-    >::ReportSpeciation> {
-        event.maybe_use_in(|event| {
-            self.event_buffer.push(event.clone().into())
-        })
+    >::ReportSpeciation>) {
+        self.event_buffer.push(speciation.clone().into())
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<
+    impl_report!(dispersal(&mut self, dispersal: MaybeUsed<
         <<P as LocalPartition<R>>::Reporter as Reporter
-    >::ReportDispersal> {
-        event.maybe_use_in(|event| {
-            self.event_buffer.push(event.clone().into())
-        })
+    >::ReportDispersal>) {
+        self.event_buffer.push(dispersal.clone().into())
     });
 
-    impl_report!(progress(&mut self, remaining: Unused) -> MaybeUsed<
+    impl_report!(progress(&mut self, progress: MaybeUsed<
         <<P as LocalPartition<R>>::Reporter as Reporter
-    >::ReportProgress> {
-        self.local_partition.get_reporter().report_progress(remaining)
+    >::ReportProgress>) {
+        self.local_partition.get_reporter().report_progress(progress.into())
     });
 }
 
@@ -74,12 +70,12 @@ impl<'p, R: Reporter, P: LocalPartition<R>> BufferingReporterProxy<'p, R, P> {
                 TypedEvent::Speciation(event) => {
                     self.local_partition
                         .get_reporter()
-                        .report_speciation(Unused::new(&event));
+                        .report_speciation(&event.into());
                 },
                 TypedEvent::Dispersal(event) => {
                     self.local_partition
                         .get_reporter()
-                        .report_dispersal(Unused::new(&event));
+                        .report_dispersal(&event.into());
                 },
             }
         }

@@ -55,27 +55,21 @@ impl TryFrom<GlobalSpeciationReporterArgs> for GlobalSpeciationReporter {
 }
 
 impl Reporter for GlobalSpeciationReporter {
-    impl_report!(speciation(&mut self, event: Unused) -> Used {
-        event.use_in(|event| {
-            if Some(event) == self.last_speciation_event.as_ref() {
-                return;
-            }
+    impl_report!(speciation(&mut self, speciation: Used) {
+        if Some(speciation) == self.last_speciation_event.as_ref() {
+            return;
+        }
 
-            self.last_speciation_event = Some(event.clone());
+        self.last_speciation_event = Some(speciation.clone());
 
-            if let Some(writer) = &mut self.writer {
-                std::mem::drop(writeln!(writer, "{}", event.event_time.get()));
-            }
-        })
+        if let Some(writer) = &mut self.writer {
+            std::mem::drop(writeln!(writer, "{}", speciation.event_time.get()));
+        }
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> Unused {
-        event.ignore()
-    });
+    impl_report!(dispersal(&mut self, _dispersal: Ignored) {});
 
-    impl_report!(progress(&mut self, remaining: Unused) -> Unused {
-        remaining.ignore()
-    });
+    impl_report!(progress(&mut self, _progress: Ignored) {});
 
     impl_finalise!((mut self) {
         if let Some(writer) = &mut self.writer {

@@ -40,33 +40,27 @@ impl<'de> serde::Deserialize<'de> for ProgressReporter {
 }
 
 impl Reporter for ProgressReporter {
-    impl_report!(speciation(&mut self, event: Unused) -> Unused {
-        event.ignore()
-    });
+    impl_report!(speciation(&mut self, _speciation: Ignored) {});
 
-    impl_report!(dispersal(&mut self, event: Unused) -> Unused {
-        event.ignore()
-    });
+    impl_report!(dispersal(&mut self, _dispersal: Ignored) {});
 
-    impl_report!(progress(&mut self, remaining: Unused) -> Used {
-        remaining.use_in(|remaining| {
-            let last_remaining = self.last_remaining.swap(*remaining, Ordering::AcqRel);
+    impl_report!(progress(&mut self, remaining: Used) {
+        let last_remaining = self.last_remaining.swap(*remaining, Ordering::AcqRel);
 
-            // Update the progress total in case of regression
-            if last_remaining < *remaining {
-                self.last_total
-                    .fetch_add(remaining - last_remaining, Ordering::AcqRel);
-            }
+        // Update the progress total in case of regression
+        if last_remaining < *remaining {
+            self.last_total
+                .fetch_add(remaining - last_remaining, Ordering::AcqRel);
+        }
 
-            if last_remaining > 0 && *remaining == 0 {
-                let total = self.last_total.load(Ordering::Acquire);
+        if last_remaining > 0 && *remaining == 0 {
+            let total = self.last_total.load(Ordering::Acquire);
 
-                display_progress(total, self.last_remaining.load(Ordering::Acquire).min(total));
+            display_progress(total, self.last_remaining.load(Ordering::Acquire).min(total));
 
-                // Flush stdout to update the progress bar
-                std::mem::drop(io::stdout().flush());
-            }
-        })
+            // Flush stdout to update the progress bar
+            std::mem::drop(io::stdout().flush());
+        }
     });
 
     impl_finalise!((self) {

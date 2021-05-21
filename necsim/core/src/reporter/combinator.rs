@@ -34,31 +34,25 @@ where
     F::ReportDispersal: Or<T::ReportDispersal>,
     F::ReportProgress: Or<T::ReportProgress>,
 {
-    impl_report!(speciation(&mut self, event: Unused)
-        -> MaybeUsed< <F::ReportSpeciation as Or<T::ReportSpeciation> >::RESULT>
-    {
-        self.front.report_speciation(event.unused());
-        self.tail.report_speciation(event.unused());
-
-        event.into()
+    impl_report!(speciation(&mut self, speciation: MaybeUsed<
+        <F::ReportSpeciation as Or<T::ReportSpeciation>
+    >::RESULT>) {
+        self.front.report_speciation(speciation.into());
+        self.tail.report_speciation(speciation.into())
     });
 
-    impl_report!(dispersal(&mut self, event: Unused)
-        -> MaybeUsed< <F::ReportDispersal as Or<T::ReportDispersal> >::RESULT>
-    {
-        self.front.report_dispersal(event.unused());
-        self.tail.report_dispersal(event.unused());
-
-        event.into()
+    impl_report!(dispersal(&mut self, dispersal: MaybeUsed<
+        <F::ReportDispersal as Or<T::ReportDispersal>
+    >::RESULT>) {
+        self.front.report_dispersal(dispersal.into());
+        self.tail.report_dispersal(dispersal.into())
     });
 
-    impl_report!(progress(&mut self, remaining: Unused)
-        -> MaybeUsed< <F::ReportProgress as Or<T::ReportProgress> >::RESULT>
-    {
-        self.front.report_progress(remaining.unused());
-        self.tail.report_progress(remaining.unused());
-
-        remaining.into()
+    impl_report!(progress(&mut self, progress: MaybeUsed<
+        <F::ReportProgress as Or<T::ReportProgress>
+    >::RESULT>) {
+        self.front.report_progress(progress.into());
+        self.tail.report_progress(progress.into())
     });
 
     impl_finalise!((self) {

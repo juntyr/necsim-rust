@@ -1,10 +1,7 @@
 use core::{fmt, marker::PhantomData};
 use necsim_core_bond::NonNegativeF64;
 
-use necsim_core::{
-    impl_report,
-    reporter::{used::Unused, Reporter},
-};
+use necsim_core::{impl_report, reporter::Reporter};
 
 use necsim_partitioning_core::LocalPartition;
 
@@ -37,21 +34,15 @@ impl<'p, R: Reporter, P: LocalPartition<R>> fmt::Debug
 }
 
 impl<'p, R: Reporter, P: LocalPartition<R>> Reporter for RecordedWaterLevelReporterProxy<'p, R, P> {
-    impl_report!(speciation(&mut self, event: Unused) -> MaybeUsed<R::ReportSpeciation> {
-        event.maybe_use_in(|event| {
-            self.local_partition.get_reporter().report_speciation(Unused::new(&event));
-        })
+    impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
+        self.local_partition.get_reporter().report_speciation(speciation.into());
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> MaybeUsed<R::ReportDispersal> {
-        event.maybe_use_in(|event| {
-            self.local_partition.get_reporter().report_dispersal(Unused::new(&event));
-        })
+    impl_report!(dispersal(&mut self, dispersal: MaybeUsed<R::ReportDispersal>) {
+        self.local_partition.get_reporter().report_dispersal(dispersal.into());
     });
 
-    impl_report!(progress(&mut self, remaining: Unused) -> Unused {
-        remaining.ignore()
-    });
+    impl_report!(progress(&mut self, _progress: Ignored) {});
 }
 
 #[contract_trait]

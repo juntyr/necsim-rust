@@ -58,21 +58,21 @@ impl TryFrom<CsvReporterArgs> for CsvReporter {
 }
 
 impl Reporter for CsvReporter {
-    impl_report!(speciation(&mut self, event: Unused) -> Used {
-        event.use_in(|event| {
-            self.write_event(&event.global_lineage_reference, event.event_time.get(), &event.origin, 's')
-        })
+    impl_report!(speciation(&mut self, speciation: Used) {
+        self.write_event(
+            &speciation.global_lineage_reference,
+            speciation.event_time.get(), &speciation.origin, 's'
+        )
     });
 
-    impl_report!(dispersal(&mut self, event: Unused) -> Used {
-        event.use_in(|event| {
-            self.write_event(&event.global_lineage_reference, event.event_time.get(), &event.origin, 'd')
-        })
+    impl_report!(dispersal(&mut self, dispersal: Used) {
+        self.write_event(
+            &dispersal.global_lineage_reference,
+            dispersal.event_time.get(), &dispersal.origin, 'd'
+        )
     });
 
-    impl_report!(progress(&mut self, remaining: Unused) -> Unused {
-        remaining.ignore()
-    });
+    impl_report!(progress(&mut self, _progress: Ignored) {});
 
     impl_finalise!((mut self) {
         if let Some(writer) = &mut self.writer {

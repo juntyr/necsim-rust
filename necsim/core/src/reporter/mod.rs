@@ -7,7 +7,7 @@ mod r#impl;
 mod null;
 
 use boolean::Boolean;
-use used::{MaybeUsed, Unused};
+use used::MaybeUsed;
 
 pub mod boolean;
 pub mod used;
@@ -21,20 +21,11 @@ pub trait Reporter: core::fmt::Debug {
     type ReportDispersal: Boolean;
     type ReportProgress: Boolean;
 
-    fn report_speciation<'a>(
-        &mut self,
-        event: Unused<'a, SpeciationEvent>,
-    ) -> MaybeUsed<'a, SpeciationEvent, Self::ReportSpeciation>;
+    fn report_speciation(&mut self, event: &MaybeUsed<SpeciationEvent, Self::ReportSpeciation>);
 
-    fn report_dispersal<'a>(
-        &mut self,
-        event: Unused<'a, DispersalEvent>,
-    ) -> MaybeUsed<'a, DispersalEvent, Self::ReportDispersal>;
+    fn report_dispersal(&mut self, event: &MaybeUsed<DispersalEvent, Self::ReportDispersal>);
 
-    fn report_progress<'a>(
-        &mut self,
-        remaining: Unused<'a, u64>,
-    ) -> MaybeUsed<'a, u64, Self::ReportProgress>;
+    fn report_progress(&mut self, remaining: &MaybeUsed<u64, Self::ReportProgress>);
 
     /// This `initialise` hook can be used to commit to make final
     /// initialisation steps which have side effects.

@@ -8,7 +8,7 @@ use necsim_core::{
         PrimeableRng, SingularActiveLineageSampler, SpeciationProbability, TurnoverRate,
     },
     lineage::{GlobalLineageReference, Lineage},
-    reporter::{boolean::Boolean, used::Unused, Reporter},
+    reporter::{boolean::Boolean, Reporter},
     simulation::Simulation,
 };
 
@@ -166,15 +166,13 @@ pub fn simulate<
             total_steps += new_steps;
             max_time = max_time.max(new_time);
 
-            proxy
-                .local_partition()
-                .get_reporter()
-                .report_progress(Unused::new(
-                    &(Wrapping(slow_lineages.len() as u64)
-                        + Wrapping(fast_lineages.len() as u64)
-                        + simulation.get_balanced_remaining_work())
-                    .0,
-                ));
+            proxy.local_partition().get_reporter().report_progress(
+                &(Wrapping(slow_lineages.len() as u64)
+                    + Wrapping(fast_lineages.len() as u64)
+                    + simulation.get_balanced_remaining_work())
+                .0
+                .into(),
+            );
         }
 
         // Fast lineages are now slow again

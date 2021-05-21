@@ -7,15 +7,9 @@ use crate::{impl_report, reporter::Reporter};
 pub struct NullReporter;
 
 impl Reporter for NullReporter {
-    impl_report!(speciation(&mut self, event: Unused) -> Unused {
-        event.ignore()
-    });
+    impl_report!(speciation(&mut self, _speciation: Ignored) {});
 
-    impl_report!(dispersal(&mut self, event: Unused) -> Unused {
-        event.ignore()
-    });
+    impl_report!(dispersal(&mut self, _dispersal: Ignored) {});
 
-    impl_report!(progress(&mut self, remaining: Unused) -> Unused {
-        remaining.ignore()
-    });
+    impl_report!(progress(&mut self, _progress: Ignored) {});
 }
