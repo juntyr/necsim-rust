@@ -1,0 +1,345 @@
+# mpiexec: MPI is /apps/mpi/intel/2019.6.166
+# mpiexec: No RDMA network found -- using sockets+shared memory
+# mpiexec: bootstrapping with /apps/mpi/intel/2019.6.166/bin/__pbs_tmrsh
+# mpiexec: full path to program is /rds/general/user/ml5717/home/necsim-rust/target-mpi/release/rustcoalescence
+# mpiexec: program arguments are: simulate (
+        speciation: 1.0,
+        sample: 0.025,
+        seed: 12080190438038648858,
+
+        algorithm: SkippingGillespie(parallelism_mode:Averaging(delta_sync:0.032)),
+
+        scenario: SpatiallyExplicit(
+            habitat: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif",
+            dispersal: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif",
+        ),
+        
+        log: "/var/tmp/pbs.3586644[0].pbs/event_log",
+
+        reporters: [
+            Plugin(
+                library: "/rds/general/user/ml5717/home/necsim-rust/target-mpi/release/deps/libnecsim_plugins_common.so",
+                reporters: [Execution(),Biodiversity()],
+            ),
+        ],
+    )
+# mpiexec: 16 ranks allocated via PBS select
+# mpiexec: 1 OpenMP threads / rank allocated by PBS select
+# mpiexec: Job has shared use of the allocated nodes. Disabling process-pinning
+# mpiexec: machinefile configured as:
+cx3-7-20.cx3.hpc.ic.ac.uk:16
+#
+# mpiexec: Checking all nodes are ONLINE:
+# mpiexec: All nodes appear ONLINE
+# mpiexec: launch started at Fri 21 May 10:23:46 BST 2021
+# mpiexec: launching program...
+# /rds/general/user/ml5717/home/necsim-rust/target-mpi/release/rustcoalescence simulate (
+        speciation: 1.0,
+        sample: 0.025,
+        seed: 12080190438038648858,
+
+        algorithm: SkippingGillespie(parallelism_mode:Averaging(delta_sync:0.032)),
+
+        scenario: SpatiallyExplicit(
+            habitat: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif",
+            dispersal: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif",
+        ),
+        
+        log: "/var/tmp/pbs.3586644[0].pbs/event_log",
+
+        reporters: [
+            Plugin(
+                library: "/rds/general/user/ml5717/home/necsim-rust/target-mpi/release/deps/libnecsim_plugins_common.so",
+                reporters: [Execution(),Biodiversity()],
+            ),
+        ],
+    )
+(cx3-7-20.cx3.hpc.ic.ac.uk:0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15)
+
+INFO  Starting to load the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" ...
+INFO  Used GDAL no data value -99.0 ...
+INFO  Successfully loaded the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" with dimensions 11700x11700 [cols x rows].
+INFO  Starting to load the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" ...
+INFO  Used GDAL no data value 0 ...
+INFO  Successfully loaded the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" with dimensions 180x65 [cols x rows].
+INFO  Parsed simulation arguments:
+SimulateArgs {
+    common: CommonArgs {
+        speciation_probability_per_generation: PositiveUnitF64(
+            0.0 < 1 <= 1.0,
+        ),
+        sample_percentage: ClosedUnitF64(
+            0.0 <= 0.025 <= 1.0,
+        ),
+        seed: 12080190438038648858,
+        algorithm: SkippingGillespie(
+            MonolithicArguments {
+                parallelism_mode: Averaging(
+                    AveragingParallelismMode {
+                        delta_sync: PositiveF64(
+                            0.0 < 0.032,
+                        ),
+                    },
+                ),
+            },
+        ),
+    },
+    event_log: Some(
+        EventLogRecorder {
+            segment_size: 1000000,
+            directory: "/var/tmp/pbs.3586644[0].pbs/event_log/0",
+            segment_index: 0,
+            buffer: Vec<Event; 0>,
+        },
+    ),
+    scenario: SpatiallyExplicit(
+        InMemoryArguments {
+            habitat_map: Array2D {
+                array: Box [ 0x7ffce1bd5ed8; 11700 ],
+                num_rows: 65,
+                num_columns: 180,
+            },
+            dispersal_map: Array2D {
+                array: Box [ 0x7ffce1bd5ef8; 136890000 ],
+                num_rows: 11700,
+                num_columns: 11700,
+            },
+        },
+    ),
+    reporters: ReportSpeciationIgnoreDispersalReportProgress(
+        ReporterPluginVec {
+            plugins: [
+                ExecutionTimeReporter {
+                    start_time: None,
+                    end_time: None,
+                },
+                BiodiversityReporter {
+                    biodiversity: 0,
+                },
+            ],
+        },
+    ),
+}
+INFO  The simulation will log its events to "/var/tmp/pbs.3586644[0].pbs/event_log/0".
+WARN  Therefore, only progress will be reported live.
+INFO  The simulation will be distributed across 16 partitions.
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation took:
+ - initialisation: 15.770472005s
+ - execution: 19.871887167s
+ - cleanup: 104.696625ms
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation finished at time 36.73130026018731 after 105304286 steps.
+
+# mpiexec: finished at Fri 21 May 10:24:29 BST 2021
+INFO  Parsed replay arguments:
+ReplayArgs {
+    log: EventLogReplay {
+        frontier: [
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000000014795276499468944,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.697986760350638,
+                ),
+                length: 6587070,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.000000010711522563440602,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 36.73130026018731,
+                ),
+                length: 6578913,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000003762408259140455,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.842484263151583,
+                ),
+                length: 6581305,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.000000044113362874755524,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 32.01812357918638,
+                ),
+                length: 6587984,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000012004458133848583,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 28.748051126466706,
+                ),
+                length: 6339683,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000012300359582860312,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 32.960857479401625,
+                ),
+                length: 6631643,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000012312065861240168,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.642228668986377,
+                ),
+                length: 6575084,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000001327307702331775,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 33.21093073019036,
+                ),
+                length: 6573711,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000001983079040322512,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 32.21838829986951,
+                ),
+                length: 6583463,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000023582126134611855,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 30.379725607393333,
+                ),
+                length: 6552197,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.000000272350565176459,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 34.06768027717356,
+                ),
+                length: 6620588,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000002802361173827751,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.47200941120728,
+                ),
+                length: 6435396,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.00000039950540461180275,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 28.021977476195357,
+                ),
+                length: 6584371,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000005294944416021264,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.185172610856235,
+                ),
+                length: 6560360,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000005529138902084566,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31.388336377622664,
+                ),
+                length: 6914183,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 7>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000012996018801327807,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 34.18421609001791,
+                ),
+                length: 6598335,
+            },
+        ],
+        with_speciation: true,
+        with_dispersal: false,
+    },
+    reporters: ReportSpeciationIgnoreDispersalReportProgress(
+        ReporterPluginVec {
+            plugins: [
+                ExecutionTimeReporter {
+                    start_time: None,
+                    end_time: None,
+                },
+                BiodiversityReporter {
+                    biodiversity: 0,
+                },
+            ],
+        },
+    ),
+}
+INFO  Starting event replay ...
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation took:
+ - initialisation: 660ns
+ - execution: 29.61380752s
+ - cleanup: 45.002µs
+INFO  The simulation resulted in a biodiversity of 105304286 unique species.
+
+=============================== Reporter Summary ===============================
+
+INFO  The event replay has completed.
+
+============================================
+
+        Job resource usage summary 
+
+                 Memory (GB)    NCPUs
+ Requested  :        62            16
+ Used       :        20 (peak)  13.31 (ave)
+
+============================================
