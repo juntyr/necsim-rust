@@ -6,11 +6,11 @@ extern crate contracts;
 #[macro_use]
 extern crate log;
 
-mod biodiversity;
-mod event_counter;
-mod execution_time;
-mod progress;
-mod verbose;
+pub mod biodiversity;
+pub mod event_counter;
+pub mod execution_time;
+pub mod progress;
+pub mod verbose;
 
 necsim_plugins_core::export_plugin!(
     Biodiversity => biodiversity::BiodiversityReporter,

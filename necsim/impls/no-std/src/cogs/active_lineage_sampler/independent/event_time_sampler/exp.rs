@@ -63,7 +63,7 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
         loop {
             event_time += rng.sample_exponential(lambda);
 
-            sub_index += INV_PHI;
+            sub_index = sub_index.wrapping_add(INV_PHI);
 
             // The time slice is exclusive at time_slice_end
             if event_time >= time_slice_end {
@@ -79,7 +79,7 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
             }
         }
 
-        rng.prime_with_habitat(habitat, indexed_location, time_step + sub_index);
+        rng.prime_with_habitat(habitat, indexed_location, time_step.wrapping_add(sub_index));
 
         event_time
     }

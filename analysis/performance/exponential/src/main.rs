@@ -4,7 +4,10 @@
 #[macro_use]
 extern crate contracts;
 
-use std::{convert::TryFrom, time::Instant};
+use std::{
+    convert::TryFrom,
+    time::{Duration, Instant},
+};
 
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use structopt::{
@@ -43,7 +46,9 @@ struct Options {
     #[structopt(long, parse(try_from_str = try_from_str))]
     delta_t: PositiveF64,
     #[structopt(long, parse(try_from_str = try_from_str))]
-    lambda: NonNegativeF64,
+    lambda: PositiveF64,
+    #[structopt(long)]
+    cuda: bool,
     #[structopt(subcommand)]
     mode: SamplingMode,
 }
@@ -60,6 +65,14 @@ fn try_from_str<T: TryFrom<f64, Error: std::fmt::Display>>(input: &str) -> Resul
 fn main() {
     let options = Options::from_args();
 
+    if options.cuda {
+        main_gpu(&options)
+    } else {
+        main_cpu(&options)
+    }
+}
+
+fn main_cpu(options: &Options) {
     let habitat = NonSpatialHabitat::new((1, 1), 1);
     let rng = WyHash::seed_from_u64(options.seed);
     let turnover_rate = UniformTurnoverRate {
@@ -85,6 +98,80 @@ fn main() {
             options.limit,
         ),
     }
+}
+
+fn main_gpu(options: &Options) {
+    use rust_cuda::common::{DeviceBoxConst, DeviceBoxMut};
+    use rustacuda::{launch, memory::DeviceBox, prelude::*};
+    use std::ffi::CString;
+
+    rustacuda::quick_init().unwrap();
+
+    // Get the first device
+    let device = Device::get_device(0).unwrap();
+
+    // Create a context associated to this device
+    let _context = Context::create_and_push(ContextFlags::SCHED_AUTO, device).unwrap();
+
+    // Load the module containing the function we want to call
+    let module_data = CString::new(include_str!(env!("CUDA_PTX_KERNEL"))).unwrap();
+    let module = Module::load_from_string(&module_data).unwrap();
+
+    // Create a stream to submit work to
+    let stream = Stream::new(StreamFlags::NON_BLOCKING, None).unwrap();
+
+    let limit = DeviceBox::new(&options.limit).unwrap();
+
+    let mut total_cycles_sum = DeviceBox::new(&0_u64).unwrap();
+    let mut total_time_sum = DeviceBox::new(&0_u64).unwrap();
+
+    match options.mode {
+        SamplingMode::Exponential => unsafe {
+            launch!(module.benchmark_exp<<<256, 32, 0, stream>>>(
+                options.seed,
+                options.lambda,
+                options.delta_t,
+                DeviceBoxConst::from(&limit),
+                DeviceBoxMut::from(&mut total_cycles_sum),
+                DeviceBoxMut::from(&mut total_time_sum)
+            ))
+            .unwrap()
+        },
+        SamplingMode::Poisson => unsafe {
+            launch!(module.benchmark_poisson<<<256, 32, 0, stream>>>(
+                options.seed,
+                options.lambda,
+                options.delta_t,
+                DeviceBoxConst::from(&limit),
+                DeviceBoxMut::from(&mut total_cycles_sum),
+                DeviceBoxMut::from(&mut total_time_sum)
+            ))
+            .unwrap()
+        },
+    }
+
+    // The kernel launch is asynchronous, so we wait for the kernel to finish
+    // executing
+    stream.synchronize().unwrap();
+
+    let mut result_total_cycles_sum = 0_u64;
+    let mut result_total_time_sum = 0_u64;
+
+    total_cycles_sum
+        .copy_to(&mut result_total_cycles_sum)
+        .unwrap();
+    total_time_sum.copy_to(&mut result_total_time_sum).unwrap();
+
+    let execution_time = Duration::from_nanos(result_total_time_sum / (32 * 256));
+
+    println!(
+        "Drawing {} exponential inter-event times with {:?} took {:?} ({}s) [{} cycles].",
+        options.limit,
+        options.mode,
+        execution_time,
+        execution_time.as_secs_f64(),
+        result_total_cycles_sum / (32 * 256),
+    );
 }
 
 #[allow(clippy::needless_pass_by_value)]
@@ -130,7 +217,7 @@ fn sample_exponential_inter_event_times<
 
 #[derive(Debug)]
 pub struct UniformTurnoverRate {
-    turnover_rate: NonNegativeF64,
+    turnover_rate: PositiveF64,
 }
 
 #[contract_trait]
@@ -150,6 +237,6 @@ impl<H: Habitat> TurnoverRate<H> for UniformTurnoverRate {
         // Use a volatile read to ensure that the turnover rate cannot be
         //  optimised out of this benchmark test
 
-        unsafe { core::ptr::read_volatile(&self.turnover_rate) }
+        unsafe { core::ptr::read_volatile(&self.turnover_rate) }.into()
     }
 }
