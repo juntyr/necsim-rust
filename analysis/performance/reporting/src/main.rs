@@ -101,6 +101,8 @@ fn main() {
 }
 
 fn simulate<R: Reporter>(options: &Options, mut reporter: R) {
+    reporter.initialise().unwrap();
+
     let habitat = AlmostInfiniteHabitat::default();
     let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(options.sigma);
     let turnover_rate = UniformTurnoverRate::default();
@@ -133,7 +135,7 @@ fn simulate<R: Reporter>(options: &Options, mut reporter: R) {
         .active_lineage_sampler(active_lineage_sampler)
         .build();
 
-    reporter.initialise().unwrap();
     simulation.simulate(&mut reporter);
+
     reporter.finalise();
 }
