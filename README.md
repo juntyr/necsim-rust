@@ -113,8 +113,8 @@ Please refer to [docs/simulate.ron](docs/simulate.ron) and [docs/replay.ron](doc
 
 pycoalescence and necsim both used GDAL to load habitat and dispersal maps. As rustcoalescence is more strict about type checking the TIFF files, you can use the following commands to convert and compress your GeoTIFF files:
 ```shell
-> gdalwarp -ot Uint32 -co "COMPRESS=LZW" -dstnodata 0 -to "SRC_METHOD=NO_GEOTRANSFORM" input_habitat.tif output_habitat.tif
-> gdalwarp -ot Float64 -co "COMPRESS=LZW" -dstnodata 0 -to "SRC_METHOD=NO_GEOTRANSFORM" input_dispersal.tif output_dispersal.tif
+> gdalwarp -ot Uint32 -co "COMPRESS=LZW" -dstnodata 0 -to "SRC_METHOD=NO_GEOTRANSFORM" -to "DST_METHOD=NO_GEOTRANSFORM" input_habitat.tif output_habitat.tif
+> gdalwarp -ot Float64 -co "COMPRESS=LZW" -dstnodata 0 -to "SRC_METHOD=NO_GEOTRANSFORM" -to "DST_METHOD=NO_GEOTRANSFORM" input_dispersal.tif output_dispersal.tif
 ```
 
 ## License
