@@ -1,0 +1,289 @@
+0
+Fri May 28 22:53:56 2021       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 450.66       Driver Version: 450.66       CUDA Version: 11.0     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  Quadro P1000        On   | 00000000:B0:00.0 Off |                  N/A |
+| 34%   39C    P8    N/A /  N/A |      1MiB /  4040MiB |      0%   E. Process |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+INFO  Starting to load the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" ...
+INFO  Used GDAL no data value 0.0 ...
+INFO  Successfully loaded the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" with dimensions 11700x11700 [cols x rows].
+INFO  Starting to load the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" ...
+INFO  Used GDAL no data value 0 ...
+INFO  Successfully loaded the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" with dimensions 180x65 [cols x rows].
+INFO  Parsed simulation arguments:
+SimulateArgs {
+    common: CommonArgs {
+        speciation_probability_per_generation: PositiveUnitF64(
+            0.0 < 0.0001 <= 1.0,
+        ),
+        sample_percentage: ClosedUnitF64(
+            0.0 <= 0.0000025 <= 1.0,
+        ),
+        seed: 4208217291802809056,
+        algorithm: Cuda(
+            CudaArguments {
+                device: 0,
+                ptx_jit: true,
+                delta_t: PositiveF64(
+                    0.0 < 1,
+                ),
+                block_size: 32,
+                grid_size: 256,
+                step_slice: 200,
+                dedup_cache: Relative(
+                    RelativeDedupCache {
+                        factor: PositiveF64(
+                            0.0 < 2,
+                        ),
+                    },
+                ),
+                parallelism_mode: Monolithic(
+                    MonolithicParallelismMode {
+                        event_slice: 10000000,
+                    },
+                ),
+            },
+        ),
+    },
+    event_log: Some(
+        EventLogRecorder {
+            segment_size: 1000000,
+            directory: "/var/tmp/pbs.3648870[0].pbs/event_log/0",
+            segment_index: 0,
+            buffer: Vec<Event; 0>,
+        },
+    ),
+    scenario: SpatiallyExplicit(
+        InMemoryArguments {
+            habitat_map: Array2D {
+                array: Box [ 0x7ffd13347298; 11700 ],
+                num_rows: 65,
+                num_columns: 180,
+            },
+            dispersal_map: Array2D {
+                array: Box [ 0x7ffd133472b8; 136890000 ],
+                num_rows: 11700,
+                num_columns: 11700,
+            },
+        },
+    ),
+    reporters: ReportSpeciationReportDispersalReportProgress(
+        ReporterPluginVec {
+            plugins: [
+                ExecutionTimeReporter {
+                    start_time: None,
+                    end_time: None,
+                },
+                BiodiversityReporter {
+                    biodiversity: 0,
+                },
+                EventReporter {
+                    speciation: 0,
+                    out_dispersal: 0,
+                    self_dispersal: 0,
+                    out_coalescence: 0,
+                    self_coalescence: 0,
+                    late_coalescence: 0,
+                },
+            ],
+        },
+    ),
+}
+INFO  The simulation will log its events to "/var/tmp/pbs.3648870[0].pbs/event_log/0".
+WARN  Therefore, only progress will be reported live.
+INFO  The simulation will be run in monolithic mode.
+=========================== Context Resource Limits ============================
+StackSize: Ok(4096)
+PrintfFifoSize: Ok(1048576)
+MallocHeapSize: Ok(8388608)
+DeviceRuntimeSynchronizeDepth: Ok(2)
+DeviceRuntimePendingLaunchCount: Ok(2048)
+MaxL2FetchGranularity: Ok(0)
+================================================================================
+========================== Kernel Function Attributes ==========================
+MaxThreadsPerBlock: Ok(640)
+SharedMemorySizeBytes: Ok(0)
+ConstSizeBytes: Ok(0)
+LocalSizeBytes: Ok(0)
+NumRegisters: Ok(90)
+PtxVersion: Ok(35)
+BinaryVersion: Ok(61)
+CacheModeCa: Ok(0)
+================================================================================
+INFO  Events will be reported using the recorded water-level algorithm ...
+========================== Kernel Function Attributes ==========================
+MaxThreadsPerBlock: Ok(1024)
+SharedMemorySizeBytes: Ok(0)
+ConstSizeBytes: Ok(0)
+LocalSizeBytes: Ok(0)
+NumRegisters: Ok(61)
+PtxVersion: Ok(35)
+BinaryVersion: Ok(61)
+CacheModeCa: Ok(0)
+================================================================================
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation took:
+ - initialisation: 28.110929478s
+ - execution: 58.878336612s
+ - cleanup: 33.822823ms
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation finished at time 172280.83364118627 after 103516541 steps.
+
+INFO  Parsed replay arguments:
+ReplayArgs {
+    log: EventLogReplay {
+        frontier: [
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 34>,
+                min_time: PositiveF64(
+                    0.0 < 0.0000006152635865116542,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 172280.83364118627,
+                ),
+                length: 33516541,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 32>,
+                min_time: PositiveF64(
+                    0.0 < 0.0006675925624826533,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 106814.73604151914,
+                ),
+                length: 32000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 20>,
+                min_time: PositiveF64(
+                    0.0 < 0.004626889330808026,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 31656.472487812647,
+                ),
+                length: 20000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 10>,
+                min_time: PositiveF64(
+                    0.0 < 9.19136792442519,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 18929.83724693469,
+                ),
+                length: 10000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 5>,
+                min_time: PositiveF64(
+                    0.0 < 327.519492849035,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 11608.534693139225,
+                ),
+                length: 5000000,
+            },
+            SortedSortedSegments {
+                segments: Vec<SortedSegment; 3>,
+                min_time: PositiveF64(
+                    0.0 < 1390.0635033753558,
+                ),
+                max_time: PositiveF64(
+                    0.0 < 6217.777914060302,
+                ),
+                length: 3000000,
+            },
+        ],
+        with_speciation: true,
+        with_dispersal: true,
+    },
+    reporters: ReportSpeciationReportDispersalReportProgress(
+        ReporterPluginVec {
+            plugins: [
+                ExecutionTimeReporter {
+                    start_time: None,
+                    end_time: None,
+                },
+                BiodiversityReporter {
+                    biodiversity: 0,
+                },
+                EventReporter {
+                    speciation: 0,
+                    out_dispersal: 0,
+                    self_dispersal: 0,
+                    out_coalescence: 0,
+                    self_coalescence: 0,
+                    late_coalescence: 0,
+                },
+            ],
+        },
+    ),
+}
+INFO  Starting event replay ...
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation took:
+ - initialisation: 735ns
+ - execution: 26.293811666s
+ - cleanup: 60.033µs
+INFO  The simulation resulted in a biodiversity of 10300 unique species.
+INFO  Event Summary:
+ - Total #individuals:
+   10524
+ - Total #events:
+   - raw:
+     103516541
+   - deduplicated:
+     103459161
+ - Speciation:
+    10300
+ - Dispersal:
+   - same location, no coalescence:
+     0
+   - same location, with coalescence:
+     0
+   - new location, no coalescence:
+     0
+   - different location, with coalescence:
+     0
+   - detected late, no coalescence:
+     103448861
+   - detected late, with coalescence:
+     224
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The event replay has completed.
+
+============================================
+
+        Job resource usage summary 
+
+                 Memory (GB)    NCPUs
+ Requested  :        24             1
+ Used       :         0 (peak)   0.34 (ave)
+
+============================================
