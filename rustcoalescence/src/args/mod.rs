@@ -360,23 +360,46 @@ impl<'de> DeserializeState<'de, Partition> for ReplayArgs {
             },
         };
 
-        if report_speciation && !log.with_speciation() && report_dispersal && !log.with_dispersal()
+        let valid = if report_speciation
+            && !log.with_speciation()
+            && report_dispersal
+            && !log.with_dispersal()
         {
-            Err(serde::de::Error::custom(
+            Err(
                 "The reporters require speciation and dispersal events, but the event log cannot \
                  provide either.",
-            ))
+            )
         } else if report_speciation && !log.with_speciation() {
-            Err(serde::de::Error::custom(
-                "The reporters require speciation events, but the event log cannot provide them.",
-            ))
+            Err("The reporters require speciation events, but the event log cannot provide them.")
         } else if report_dispersal && !log.with_dispersal() {
-            Err(serde::de::Error::custom(
-                "The reporters require dispersal events, but the event log cannot provide them.",
-            ))
+            Err("The reporters require dispersal events, but the event log cannot provide them.")
         } else {
-            Ok(Self { log, reporters })
+            Ok(())
+        };
+
+        match (valid, raw.mode) {
+            (Ok(_), _) => Ok(Self { log, reporters }),
+            (Err(error), ReplayMode::WarnOnly) => {
+                warn!("{}", error);
+
+                Ok(Self { log, reporters })
+            },
+            (Err(error), ReplayMode::Strict) => Err(serde::de::Error::custom(error)),
         }
+    }
+}
+
+#[derive(Deserialize)]
+#[allow(clippy::module_name_repetitions)]
+#[serde(deny_unknown_fields)]
+enum ReplayMode {
+    Strict,
+    WarnOnly,
+}
+
+impl Default for ReplayMode {
+    fn default() -> Self {
+        Self::Strict
     }
 }
 
@@ -385,5 +408,7 @@ impl<'de> DeserializeState<'de, Partition> for ReplayArgs {
 #[serde(deny_unknown_fields)]
 struct ReplayArgsRaw {
     logs: EventLogReplay,
+    #[serde(default)]
+    mode: ReplayMode,
     reporters: Vec<ReporterPluginLibrary>,
 }
