@@ -1,0 +1,136 @@
+INFO  Starting to load the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" ...
+INFO  Used GDAL no data value 0.0 ...
+INFO  Successfully loaded the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" with dimensions 11700x11700 [cols x rows].
+INFO  Starting to load the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" ...
+INFO  Used GDAL no data value 0 ...
+INFO  Successfully loaded the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" with dimensions 180x65 [cols x rows].
+INFO  Parsed simulation arguments:
+SimulateArgs {
+    common: CommonArgs {
+        speciation_probability_per_generation: PositiveUnitF64(
+            0.0 < 0.000001 <= 1.0,
+        ),
+        sample_percentage: ClosedUnitF64(
+            0.0 <= 0.025 <= 1.0,
+        ),
+        seed: 13519210174630911984,
+        algorithm: Cuda(
+            CudaArguments {
+                device: 0,
+                ptx_jit: true,
+                delta_t: PositiveF64(
+                    0.0 < 3,
+                ),
+                block_size: 64,
+                grid_size: 64,
+                step_slice: 150,
+                dedup_cache: Relative(
+                    RelativeDedupCache {
+                        factor: PositiveF64(
+                            0.0 < 0.1,
+                        ),
+                    },
+                ),
+                parallelism_mode: IsolatedLandscape(
+                    IsolatedParallelismMode {
+                        event_slice: 2000000000,
+                        partition: Partition {
+                            rank: 25,
+                            partitions: 32,
+                        },
+                    },
+                ),
+            },
+        ),
+    },
+    event_log: Some(
+        EventLogRecorder {
+            segment_size: 1000000,
+            directory: "/rds/general/user/ml5717/ephemeral/3694083[].pbs/event_log/25/0",
+            segment_index: 0,
+            buffer: Vec<Event; 0>,
+        },
+    ),
+    scenario: SpatiallyExplicit(
+        InMemoryArguments {
+            habitat_map: Array2D {
+                array: Box [ 0x7ffc7c4cb218; 11700 ],
+                num_rows: 65,
+                num_columns: 180,
+            },
+            dispersal_map: Array2D {
+                array: Box [ 0x7ffc7c4cb238; 136890000 ],
+                num_rows: 11700,
+                num_columns: 11700,
+            },
+        },
+    ),
+    reporters: ReportSpeciationIgnoreDispersalReportProgress(
+        ReporterPluginVec {
+            plugins: [
+                ExecutionTimeReporter {
+                    start_time: None,
+                    end_time: None,
+                },
+                BiodiversityReporter {
+                    biodiversity: 0,
+                },
+            ],
+        },
+    ),
+}
+INFO  The simulation will log its events to "/rds/general/user/ml5717/ephemeral/3694083[].pbs/event_log/25/0".
+WARN  Therefore, only progress will be reported live.
+INFO  The simulation will be run in monolithic mode.
+=========================== Context Resource Limits ============================
+StackSize: Ok(4096)
+PrintfFifoSize: Ok(1048576)
+MallocHeapSize: Ok(8388608)
+DeviceRuntimeSynchronizeDepth: Ok(2)
+DeviceRuntimePendingLaunchCount: Ok(2048)
+MaxL2FetchGranularity: Ok(0)
+================================================================================
+========================== Kernel Function Attributes ==========================
+MaxThreadsPerBlock: Ok(640)
+SharedMemorySizeBytes: Ok(0)
+ConstSizeBytes: Ok(0)
+LocalSizeBytes: Ok(0)
+NumRegisters: Ok(86)
+PtxVersion: Ok(35)
+BinaryVersion: Ok(61)
+CacheModeCa: Ok(0)
+================================================================================
+INFO  Events will be reported using the recorded water-level algorithm ...
+========================== Kernel Function Attributes ==========================
+MaxThreadsPerBlock: Ok(1024)
+SharedMemorySizeBytes: Ok(0)
+ConstSizeBytes: Ok(0)
+LocalSizeBytes: Ok(0)
+NumRegisters: Ok(54)
+PtxVersion: Ok(35)
+BinaryVersion: Ok(61)
+CacheModeCa: Ok(0)
+================================================================================
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation took:
+ - initialisation: 10.276677167s
+ - execution: 63.365792895s
+ - cleanup: 42.738309ms
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation finished at time 8903824.817271922 after 2614255670 steps.
+
+
+============================================
+
+        Job resource usage summary 
+
+                 Memory (GB)    NCPUs
+ Requested  :        16             1
+ Used       :         1 (peak)   0.99 (ave)
+
+============================================
