@@ -237,7 +237,7 @@ struct InMemoryArgs {
 }
 
 impl TryFrom<InMemoryArgsRaw> for InMemoryArgs {
-    type Error = anyhow::Error;
+    type Error = String;
 
     fn try_from(raw: InMemoryArgsRaw) -> Result<Self, Self::Error> {
         info!(
@@ -246,7 +246,8 @@ impl TryFrom<InMemoryArgsRaw> for InMemoryArgs {
         );
 
         let mut dispersal_map =
-            crate::maps::load_dispersal_map(&raw.dispersal_map, raw.loading_mode)?;
+            crate::maps::load_dispersal_map(&raw.dispersal_map, raw.loading_mode)
+                .map_err(|err| format!("{:?}", err))?;
 
         info!(
             "Successfully loaded the dispersal map {:?} with dimensions {}x{} [cols x rows].",
@@ -261,7 +262,8 @@ impl TryFrom<InMemoryArgsRaw> for InMemoryArgs {
         );
 
         let habitat_map =
-            crate::maps::load_habitat_map(&raw.habitat_map, &mut dispersal_map, raw.loading_mode)?;
+            crate::maps::load_habitat_map(&raw.habitat_map, &mut dispersal_map, raw.loading_mode)
+                .map_err(|err| format!("{:?}", err))?;
 
         info!(
             "Successfully loaded the habitat map {:?} with dimensions {}x{} [cols x rows].",
