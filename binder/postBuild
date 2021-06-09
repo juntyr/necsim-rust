@@ -10,13 +10,19 @@ source $HOME/.cargo/env
 cargo build --release --features rustcoalescence-algorithms-monolithic \
                       --features rustcoalescence-algorithms-independent
 
+mkdir plugins
+
 for f in target/release/deps/libnecsim_plugins*.so
-    do cp "$f" "plugins/$(echo "$f" | sed s:libnecsim_plugins_::)"
+    do cp "$f" "plugins/$(echo "$f" | sed s:target/release/deps/libnecsim_plugins_::)"
 done
 
 cargo install --path rustcoalescence --locked \
               --features rustcoalescence-algorithms-monolithic \
               --features rustcoalescence-algorithms-independent
+
+rm -rf .cargo .vscode analysis binder necsim rust-cuda rustcoalescence \
+       target third-party .gitpod.Dockerfile .gitpod.yml Cargo.lock \
+       Cargo.toml rust-toolchain rustfmt.toml setup.sh
 
 jupyter contrib nbextension install --user
 jupyter nbextension enable --py widgetsnbextension
