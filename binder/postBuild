@@ -13,19 +13,18 @@ cargo build --release --features rustcoalescence-algorithms-monolithic \
 
 mkdir plugins
 
-ls target/release > ls1.txt
-ls target/release/deps/*.so > ls2.txt
-
 for f in target/release/deps/libnecsim_plugins_*.so
 do
-    echo 'cp "'$f'" "plugins/'$(echo "$f" | sed s:target/release/deps/libnecsim_plugins_::)'"' >> cp.txt
     cp "$f" "plugins/$(echo "$f" | sed s:target/release/deps/libnecsim_plugins_::)"
 done
 
-rm -rf rustcoalescence
+mkdir bin
+cp target/release/rustcoalescence ./bin
 
-cp target/release/rustcoalescence .
+cp binder/demo.ipynb .
 
-rm -rf .cargo .rustup .vscode analysis binder necsim rust-cuda \
+rm -rf .cargo .rustup .vscode analysis binder necsim rust-cuda rustcoalescence \
        target third-party .gitpod.Dockerfile .gitpod.yml Cargo.lock \
        Cargo.toml rust-toolchain rustfmt.toml setup.sh
+
+echo 'export PATH="$HOME/bin:$PATH"' >> $HOME/.bashrc
