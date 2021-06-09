@@ -17,14 +17,14 @@ RUN adduser --disabled-password \
 WORKDIR ${HOME}
 USER ${USER}
 
-SHELL ["/bin/bash", "-c"]
-
 RUN sudo apt-get update -q && \
     sudo apt-get upgrade -y && \
     sudo apt-get install curl -y --no-install-recommends && \
     sudo apt-get clean autoclean && \
     sudo apt-get autoremove -y && \
     sudo rm -rf /var/lib/{apt,dpkg,cache,log}/
+
+SHELL ["/bin/bash", "-c"]
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
     sh -s -- --default-toolchain none --profile minimal -y && \
