@@ -4,6 +4,13 @@ FROM python:3.9-slim
 RUN pip install --no-cache --upgrade pip && \
     pip install --no-cache notebook
 
+RUN apt-get update -q && \
+    apt-get upgrade -y && \
+    apt-get install curl -y --no-install-recommends && \
+    apt-get clean autoclean && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/{apt,dpkg,cache,log}/
+
 # create user with a home directory
 ARG NB_USER
 ARG NB_UID
@@ -16,13 +23,6 @@ RUN adduser --disabled-password \
     ${NB_USER}
 WORKDIR ${HOME}
 USER ${USER}
-
-RUN sudo apt-get update -q && \
-    sudo apt-get upgrade -y && \
-    sudo apt-get install curl -y --no-install-recommends && \
-    sudo apt-get clean autoclean && \
-    sudo apt-get autoremove -y && \
-    sudo rm -rf /var/lib/{apt,dpkg,cache,log}/
 
 SHELL ["/bin/bash", "-c"]
 
