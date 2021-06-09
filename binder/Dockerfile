@@ -12,8 +12,8 @@ RUN apt-get update -q && \
     rm -rf /var/lib/{apt,dpkg,cache,log}/
 
 # create user with a home directory
-ARG NB_USER
-ARG NB_UID
+ARG NB_USER=demo
+ARG NB_UID=1000
 ENV USER ${NB_USER}
 ENV HOME /home/${NB_USER}
 
@@ -21,8 +21,16 @@ RUN adduser --disabled-password \
     --gecos "Default user" \
     --uid ${NB_UID} \
     ${NB_USER}
+
+# Make sure the contents of our repo are in ${HOME}
+USER ${USER}
+COPY . ${HOME}
+USER root
+RUN chown -R ${NB_UID} ${HOME}
 WORKDIR ${HOME}
 USER ${USER}
+
+RUN pwd && ls
 
 SHELL ["/bin/bash", "-c"]
 
