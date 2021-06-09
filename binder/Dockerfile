@@ -7,6 +7,7 @@ RUN pip install --no-cache --upgrade pip && \
 RUN apt-get update -q && \
     apt-get upgrade -y && \
     apt-get install curl -y --no-install-recommends && \
+    apt-get install build-essential -y --no-install-recommends && \
     apt-get clean autoclean && \
     apt-get autoremove -y && \
     rm -rf /var/lib/{apt,dpkg,cache,log}/
