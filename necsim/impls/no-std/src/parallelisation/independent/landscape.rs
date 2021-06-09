@@ -77,13 +77,17 @@ pub fn simulate<
     let mut total_steps = 0_u64;
     let mut max_time = NonNegativeF64::zero();
 
+    let mut local_immigration_count = Wrapping(0_u64);
+
     while !lineages.is_empty()
         || simulation.active_lineage_sampler().number_active_lineages() > 0
         || !simulation.emigration_exit().is_empty()
         || proxy.local_partition().wait_for_termination()
     {
         proxy.report_total_progress(
-            (Wrapping(lineages.len() as u64) + simulation.get_balanced_remaining_work()).0,
+            (Wrapping(lineages.len() as u64) + simulation.get_balanced_remaining_work()
+                - local_immigration_count)
+                .0,
         );
 
         let previous_task = simulation
@@ -158,6 +162,10 @@ pub fn simulate<
                 target: dispersal_target.clone(),
                 interaction: LineageInteraction::Maybe,
             });
+
+            // Since the simulation has no internal immigration,
+            //  we have to manually keep score of the immigrations
+            local_immigration_count += Wrapping(1_u64);
 
             // Append the new Lineage to the local task list
             lineages.push_back(Lineage::immigrate(
