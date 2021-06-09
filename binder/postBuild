@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none --profile minimal -y && \
+
+source $HOME/.cargo/env
+
+./setup.sh
+
+cargo build --release --features rustcoalescence-algorithms-monolithic \
+                      --features rustcoalescence-algorithms-independent
+
+for f in target/release/deps/libnecsim_plugins*.so
+    do cp "$f" "plugins/$(echo "$f" | sed s:libnecsim_plugins_::)"
+done
+
+cargo install --path rustcoalescence --locked \
+              --features rustcoalescence-algorithms-monolithic \
+              --features rustcoalescence-algorithms-independent
+
+jupyter contrib nbextension install --user
+jupyter nbextension enable --py widgetsnbextension
+jupyter labextension install @jupyter-widgets/jupyterlab-manager@3.0.0 --minimize=False
