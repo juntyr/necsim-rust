@@ -5,12 +5,17 @@ use std::{
     io::{self, Read, Write},
 };
 
+use serde::Deserialize;
+
 use necsim_core::{impl_report, reporter::Reporter};
 
 necsim_plugins_core::export_plugin!(Demo => DemoReporter);
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Deserialize)]
+#[serde(from = "DemoReporterArgs")]
 pub struct DemoReporter {
+    interactive: bool,
     initialised: bool,
 }
 
@@ -20,9 +25,19 @@ impl fmt::Debug for DemoReporter {
     }
 }
 
-impl<'de> serde::Deserialize<'de> for DemoReporter {
-    fn deserialize<D: serde::Deserializer<'de>>(_deserializer: D) -> Result<Self, D::Error> {
-        Ok(Self::default())
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DemoReporterArgs {
+    #[serde(default)]
+    auto: bool,
+}
+
+impl From<DemoReporterArgs> for DemoReporter {
+    fn from(args: DemoReporterArgs) -> Self {
+        Self {
+            interactive: !args.auto,
+            initialised: false,
+        }
     }
 }
 
@@ -30,7 +45,7 @@ impl Reporter for DemoReporter {
     impl_report!(speciation(&mut self, speciation: Used) {
         self.check_initialised();
 
-        std::mem::drop(Self::confirm_continue(&format!(
+        std::mem::drop(self.confirm_continue(&format!(
             "{:>5.2}: <{}> speciates              at ({},{}):{} ...",
             speciation.event_time.get(),
             speciation.global_lineage_reference,
@@ -43,7 +58,7 @@ impl Reporter for DemoReporter {
     impl_report!(dispersal(&mut self, dispersal: Used) {
         self.check_initialised();
 
-        std::mem::drop(Self::confirm_continue(&format!(
+        std::mem::drop(self.confirm_continue(&format!(
             "{:>5.2}: <{}> disperses from ({},{}):{} to ({},{}):{} ...",
             dispersal.event_time.get(),
             dispersal.global_lineage_reference,
@@ -59,30 +74,24 @@ impl Reporter for DemoReporter {
     impl_report!(progress(&mut self, _remaining: Ignored) {});
 }
 
-impl Default for DemoReporter {
-    fn default() -> Self {
-        Self { initialised: false }
-    }
-}
-
 impl DemoReporter {
     fn check_initialised(&mut self) {
-        if !self.initialised && atty::is(atty::Stream::Stdin) {
+        if !self.initialised && self.interactive {
             println!("{:=^80}", "");
             println!("={: ^78}=", "Starting Interactive Event Prompt ...");
             println!("={: ^78}=", "(Press ENTER to continue)");
             println!("{:=^80}", "");
 
-            std::mem::drop(Self::confirm_continue(""));
+            std::mem::drop(self.confirm_continue(""));
         }
 
         self.initialised = true;
     }
 
-    fn confirm_continue(message: &str) -> io::Result<()> {
+    fn confirm_continue(&self, message: &str) -> io::Result<()> {
         let mut stdout = io::stdout();
 
-        if atty::is(atty::Stream::Stdin) {
+        if self.interactive {
             write!(stdout, "{}", message)?;
             stdout.flush()?;
 
