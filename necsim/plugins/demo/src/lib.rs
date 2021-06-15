@@ -62,7 +62,7 @@ impl Reporter for DemoReporter {
             return
         }
 
-        std::mem::drop(self.confirm_continue(&format!(
+        println!("{:?}", self.confirm_continue(&format!(
             "{:>5.2}: <{}> speciates              at ({},{}):{} ...",
             speciation.event_time.get(),
             speciation.global_lineage_reference,
@@ -79,7 +79,7 @@ impl Reporter for DemoReporter {
             return
         }
 
-        std::mem::drop(self.confirm_continue(&format!(
+        println!("{:?}", self.confirm_continue(&format!(
             "{:>5.2}: <{}> disperses from ({},{}):{} to ({},{}):{} ...",
             dispersal.event_time.get(),
             dispersal.global_lineage_reference,
