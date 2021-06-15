@@ -16,7 +16,7 @@ pub fn replay_with_logger<P: Partitioning>(
     log::set_max_level(LevelFilter::Info);
 
     let replay_args = ReplayArgs::try_parse(replay_args, &partitioning)?;
-    info!("Parsed replay arguments:\n{:#?}", replay_args);
+    // DEMO: info!("Parsed replay arguments:\n{:#?}", replay_args);
 
     info!("Starting event replay ...");
 

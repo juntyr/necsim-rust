@@ -18,7 +18,9 @@ pub struct DemoReporter {
 
 impl fmt::Debug for DemoReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("DemoReporter").finish()
+        fmt.debug_struct("DemoReporter")
+            .field("ignore", &self.ignore)
+            .finish()
     }
 }
 
