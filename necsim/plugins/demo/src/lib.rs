@@ -1,13 +1,14 @@
 #![deny(clippy::pedantic)]
 
 use std::{
+    collections::HashSet,
     fmt,
     io::{self, Read, Write},
 };
 
 use serde::Deserialize;
 
-use necsim_core::{impl_report, reporter::Reporter};
+use necsim_core::{impl_report, landscape::Location, reporter::Reporter};
 
 necsim_plugins_core::export_plugin!(Demo => DemoReporter);
 
@@ -16,6 +17,7 @@ necsim_plugins_core::export_plugin!(Demo => DemoReporter);
 #[serde(from = "DemoReporterArgs")]
 pub struct DemoReporter {
     interactive: bool,
+    ignore: HashSet<Location>,
     initialised: bool,
 }
 
@@ -27,15 +29,26 @@ impl fmt::Debug for DemoReporter {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+#[serde(default)]
 struct DemoReporterArgs {
-    #[serde(default)]
-    auto: bool,
+    interactive: bool,
+    ignore: HashSet<Location>,
+}
+
+impl Default for DemoReporterArgs {
+    fn default() -> Self {
+        Self {
+            interactive: true,
+            ignore: HashSet::new(),
+        }
+    }
 }
 
 impl From<DemoReporterArgs> for DemoReporter {
     fn from(args: DemoReporterArgs) -> Self {
         Self {
-            interactive: !args.auto,
+            interactive: args.interactive,
+            ignore: args.ignore,
             initialised: false,
         }
     }
@@ -44,6 +57,10 @@ impl From<DemoReporterArgs> for DemoReporter {
 impl Reporter for DemoReporter {
     impl_report!(speciation(&mut self, speciation: Used) {
         self.check_initialised();
+
+        if self.ignore.contains(speciation.origin.location()) {
+            return
+        }
 
         std::mem::drop(self.confirm_continue(&format!(
             "{:>5.2}: <{}> speciates              at ({},{}):{} ...",
@@ -57,6 +74,10 @@ impl Reporter for DemoReporter {
 
     impl_report!(dispersal(&mut self, dispersal: Used) {
         self.check_initialised();
+
+        if self.ignore.contains(dispersal.target.location()) {
+            return
+        }
 
         std::mem::drop(self.confirm_continue(&format!(
             "{:>5.2}: <{}> disperses from ({},{}):{} to ({},{}):{} ...",
@@ -76,13 +97,19 @@ impl Reporter for DemoReporter {
 
 impl DemoReporter {
     fn check_initialised(&mut self) {
-        if !self.initialised && self.interactive {
-            println!("{:=^80}", "");
-            println!("={: ^78}=", "Starting Interactive Event Prompt ...");
-            println!("={: ^78}=", "(Press ENTER to continue)");
-            println!("{:=^80}", "");
+        if !self.initialised {
+            if self.interactive {
+                println!("{:=^80}", "");
+                println!("={: ^78}=", "Starting Interactive Event Prompt ...");
+                println!("={: ^78}=", "(Press ENTER to continue)");
+                println!("{:=^80}", "");
 
-            std::mem::drop(self.confirm_continue(""));
+                std::mem::drop(self.confirm_continue(""));
+            } else {
+                println!("{:=^80}", "");
+                println!("={: ^78}=", "Starting Automatic Event Report ...");
+                println!("{:=^80}", "");
+            }
         }
 
         self.initialised = true;
