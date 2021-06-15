@@ -122,7 +122,15 @@ impl DemoReporter {
             write!(stdout, "{}", message)?;
             stdout.flush()?;
 
-            io::stdin().read(&mut [0_u8; 1]).map(|_| ())
+            let mut line = String::new();
+            io::stdin().read_line(&mut line)?;
+            println!("{:?}", line);
+            
+            if !line.contains('\n') {
+                writeln!(stdout, "")
+            } else {
+                Ok(())
+            }
         } else {
             writeln!(stdout, "{}", message)?;
             stdout.flush()
