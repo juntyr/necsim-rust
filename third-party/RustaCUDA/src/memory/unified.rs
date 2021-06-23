@@ -1,22 +1,28 @@
 use super::DeviceCopy;
-use crate::error::*;
-use crate::memory::malloc::{cuda_free_unified, cuda_malloc_unified};
-use crate::memory::UnifiedPointer;
-use std::borrow::{Borrow, BorrowMut};
-use std::cmp::Ordering;
-use std::convert::{AsMut, AsRef};
-use std::fmt::{self, Display, Pointer};
-use std::hash::{Hash, Hasher};
-use std::mem;
-use std::ops::{Deref, DerefMut};
-use std::ptr;
-use std::slice;
+use crate::{
+    error::*,
+    memory::{
+        malloc::{cuda_free_unified, cuda_malloc_unified},
+        UnifiedPointer,
+    },
+};
+use std::{
+    borrow::{Borrow, BorrowMut},
+    cmp::Ordering,
+    convert::{AsMut, AsRef},
+    fmt::{self, Display, Pointer},
+    hash::{Hash, Hasher},
+    mem,
+    ops::{Deref, DerefMut},
+    ptr, slice,
+};
 
 /// A pointer type for heap-allocation in CUDA unified memory.
 ///
-/// See the [`module-level documentation`](../memory/index.html) for more information on unified
-/// memory. Should behave equivalently to `std::boxed::Box`, except that the allocated memory can be
-/// seamlessly shared between host and device.
+/// See the [`module-level documentation`](../memory/index.html) for more
+/// information on unified memory. Should behave equivalently to
+/// `std::boxed::Box`, except that the allocated memory can be seamlessly shared
+/// between host and device.
 #[derive(Debug)]
 pub struct UnifiedBox<T: DeviceCopy> {
     ptr: UnifiedPointer<T>,
@@ -55,9 +61,9 @@ impl<T: DeviceCopy> UnifiedBox<T> {
     ///
     /// # Safety
     ///
-    /// Since the backing memory is not initialized, this function is not safe. The caller must
-    /// ensure that the backing memory is set to a valid value before it is read, else undefined
-    /// behavior may occur.
+    /// Since the backing memory is not initialized, this function is not safe.
+    /// The caller must ensure that the backing memory is set to a valid
+    /// value before it is read, else undefined behavior may occur.
     ///
     /// # Errors
     ///
@@ -84,16 +90,18 @@ impl<T: DeviceCopy> UnifiedBox<T> {
 
     /// Constructs a UnifiedBox from a raw pointer.
     ///
-    /// After calling this function, the raw pointer and the memory it points to is owned by the
-    /// UnifiedBox. The UnifiedBox destructor will free the allocated memory, but will not call the destructor
-    /// of `T`. This function may accept any pointer produced by the `cuMemAllocManaged` CUDA API
-    /// call.
+    /// After calling this function, the raw pointer and the memory it points to
+    /// is owned by the UnifiedBox. The UnifiedBox destructor will free the
+    /// allocated memory, but will not call the destructor of `T`. This
+    /// function may accept any pointer produced by the `cuMemAllocManaged` CUDA
+    /// API call.
     ///
     /// # Safety
     ///
-    /// This function is unsafe because improper use may lead to memory problems. For example, a
-    /// double free may occur if this function is called twice on the same pointer, or a segfault
-    /// may occur if the pointer is not one returned by the appropriate API call.
+    /// This function is unsafe because improper use may lead to memory
+    /// problems. For example, a double free may occur if this function is
+    /// called twice on the same pointer, or a segfault may occur if the
+    /// pointer is not one returned by the appropriate API call.
     ///
     /// # Examples
     ///
@@ -112,16 +120,18 @@ impl<T: DeviceCopy> UnifiedBox<T> {
 
     /// Constructs a UnifiedBox from a UnifiedPointer.
     ///
-    /// After calling this function, the pointer and the memory it points to is owned by the
-    /// UnifiedBox. The UnifiedBox destructor will free the allocated memory, but will not call the destructor
-    /// of `T`. This function may accept any pointer produced by the `cuMemAllocManaged` CUDA API
-    /// call, such as one taken from `UnifiedBox::into_unified`.
+    /// After calling this function, the pointer and the memory it points to is
+    /// owned by the UnifiedBox. The UnifiedBox destructor will free the
+    /// allocated memory, but will not call the destructor of `T`. This
+    /// function may accept any pointer produced by the `cuMemAllocManaged` CUDA
+    /// API call, such as one taken from `UnifiedBox::into_unified`.
     ///
     /// # Safety
     ///
-    /// This function is unsafe because improper use may lead to memory problems. For example, a
-    /// double free may occur if this function is called twice on the same pointer, or a segfault
-    /// may occur if the pointer is not one returned by the appropriate API call.
+    /// This function is unsafe because improper use may lead to memory
+    /// problems. For example, a double free may occur if this function is
+    /// called twice on the same pointer, or a segfault may occur if the
+    /// pointer is not one returned by the appropriate API call.
     ///
     /// # Examples
     ///
@@ -138,13 +148,16 @@ impl<T: DeviceCopy> UnifiedBox<T> {
 
     /// Consumes the UnifiedBox, returning the wrapped UnifiedPointer.
     ///
-    /// After calling this function, the caller is responsible for the memory previously managed by
-    /// the UnifiedBox. In particular, the caller should properly destroy T and deallocate the memory.
-    /// The easiest way to do so is to create a new UnifiedBox using the `UnifiedBox::from_unified` function.
+    /// After calling this function, the caller is responsible for the memory
+    /// previously managed by the UnifiedBox. In particular, the caller
+    /// should properly destroy T and deallocate the memory. The easiest way
+    /// to do so is to create a new UnifiedBox using the
+    /// `UnifiedBox::from_unified` function.
     ///
-    /// Note: This is an associated function, which means that you have to all it as
-    /// `UnifiedBox::into_unified(b)` instead of `b.into_unified()` This is so that there is no conflict with
-    /// a method on the inner type.
+    /// Note: This is an associated function, which means that you have to all
+    /// it as `UnifiedBox::into_unified(b)` instead of `b.into_unified()`
+    /// This is so that there is no conflict with a method on the inner
+    /// type.
     ///
     /// # Examples
     ///
@@ -179,18 +192,21 @@ impl<T: DeviceCopy> UnifiedBox<T> {
         self.ptr
     }
 
-    /// Consumes and leaks the UnifiedBox, returning a mutable reference, &'a mut T. Note that the type T
-    /// must outlive the chosen lifetime 'a. If the type has only static references, or none at all,
-    /// this may be chosen to be 'static.
+    /// Consumes and leaks the UnifiedBox, returning a mutable reference, &'a
+    /// mut T. Note that the type T must outlive the chosen lifetime 'a. If
+    /// the type has only static references, or none at all, this may be
+    /// chosen to be 'static.
     ///
-    /// This is mainly useful for data that lives for the remainder of the program's life. Dropping
-    /// the returned reference will cause a memory leak. If this is not acceptable, the reference
-    /// should be wrapped with the UnifiedBox::from_raw function to produce a new UnifiedBox. This UnifiedBox can then
-    /// be dropped, which will properly destroy T and release the allocated memory.
+    /// This is mainly useful for data that lives for the remainder of the
+    /// program's life. Dropping the returned reference will cause a memory
+    /// leak. If this is not acceptable, the reference should be wrapped
+    /// with the UnifiedBox::from_raw function to produce a new UnifiedBox. This
+    /// UnifiedBox can then be dropped, which will properly destroy T and
+    /// release the allocated memory.
     ///
-    /// Note: This is an associated function, which means that you have to all it as
-    /// `UnifiedBox::leak(b)` instead of `b.leak()` This is so that there is no conflict with
-    /// a method on the inner type.
+    /// Note: This is an associated function, which means that you have to all
+    /// it as `UnifiedBox::leak(b)` instead of `b.leak()` This is so that
+    /// there is no conflict with a method on the inner type.
     pub fn leak<'a>(b: UnifiedBox<T>) -> &'a mut T
     where
         T: 'a,
@@ -200,8 +216,9 @@ impl<T: DeviceCopy> UnifiedBox<T> {
 
     /// Destroy a `UnifiedBox`, returning an error.
     ///
-    /// Deallocating unified memory can return errors from previous asynchronous work. This function
-    /// destroys the given box and returns the error and the un-destroyed box on failure.
+    /// Deallocating unified memory can return errors from previous asynchronous
+    /// work. This function destroys the given box and returns the error and
+    /// the un-destroyed box on failure.
     ///
     /// # Example
     ///
@@ -228,7 +245,7 @@ impl<T: DeviceCopy> UnifiedBox<T> {
                 Ok(()) => {
                     mem::forget(uni_box);
                     Ok(())
-                }
+                },
                 Err(e) => Err((e, UnifiedBox { ptr })),
             }
         }
@@ -298,15 +315,19 @@ impl<T: DeviceCopy + PartialOrd> PartialOrd for UnifiedBox<T> {
     fn partial_cmp(&self, other: &UnifiedBox<T>) -> Option<Ordering> {
         PartialOrd::partial_cmp(&**self, &**other)
     }
+
     fn lt(&self, other: &UnifiedBox<T>) -> bool {
         PartialOrd::lt(&**self, &**other)
     }
+
     fn le(&self, other: &UnifiedBox<T>) -> bool {
         PartialOrd::le(&**self, &**other)
     }
+
     fn ge(&self, other: &UnifiedBox<T>) -> bool {
         PartialOrd::ge(&**self, &**other)
     }
+
     fn gt(&self, other: &UnifiedBox<T>) -> bool {
         PartialOrd::gt(&**self, &**other)
     }
@@ -324,20 +345,22 @@ impl<T: DeviceCopy + Hash> Hash for UnifiedBox<T> {
 
 /// Fixed-size buffer in unified memory.
 ///
-/// See the [`module-level documentation`](../memory/index.html) for more details on unified memory.
+/// See the [`module-level documentation`](../memory/index.html) for more
+/// details on unified memory.
 #[derive(Debug)]
 pub struct UnifiedBuffer<T: DeviceCopy> {
     buf: UnifiedPointer<T>,
     capacity: usize,
 }
 impl<T: DeviceCopy + Clone> UnifiedBuffer<T> {
-    /// Allocate a new unified buffer large enough to hold `size` `T`'s and initialized with
-    /// clones of `value`.
+    /// Allocate a new unified buffer large enough to hold `size` `T`'s and
+    /// initialized with clones of `value`.
     ///
     /// # Errors
     ///
-    /// If the allocation fails, returns the error from CUDA. If `size` is large enough that
-    /// `size * mem::sizeof::<T>()` overflows usize, then returns InvalidMemoryAllocation.
+    /// If the allocation fails, returns the error from CUDA. If `size` is large
+    /// enough that `size * mem::sizeof::<T>()` overflows usize, then
+    /// returns InvalidMemoryAllocation.
     ///
     /// # Examples
     ///
@@ -357,8 +380,8 @@ impl<T: DeviceCopy + Clone> UnifiedBuffer<T> {
         }
     }
 
-    /// Allocate a new unified buffer of the same size as `slice`, initialized with a clone of
-    /// the data in `slice`.
+    /// Allocate a new unified buffer of the same size as `slice`, initialized
+    /// with a clone of the data in `slice`.
     ///
     /// # Errors
     ///
@@ -384,18 +407,19 @@ impl<T: DeviceCopy + Clone> UnifiedBuffer<T> {
     }
 }
 impl<T: DeviceCopy> UnifiedBuffer<T> {
-    /// Allocate a new unified buffer large enough to hold `size` `T`'s, but without
-    /// initializing the contents.
+    /// Allocate a new unified buffer large enough to hold `size` `T`'s, but
+    /// without initializing the contents.
     ///
     /// # Errors
     ///
-    /// If the allocation fails, returns the error from CUDA. If `size` is large enough that
-    /// `size * mem::sizeof::<T>()` overflows usize, then returns InvalidMemoryAllocation.
+    /// If the allocation fails, returns the error from CUDA. If `size` is large
+    /// enough that `size * mem::sizeof::<T>()` overflows usize, then
+    /// returns InvalidMemoryAllocation.
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the contents of the buffer are initialized before reading from
-    /// the buffer.
+    /// The caller must ensure that the contents of the buffer are initialized
+    /// before reading from the buffer.
     ///
     /// # Examples
     ///
@@ -455,17 +479,18 @@ impl<T: DeviceCopy> UnifiedBuffer<T> {
 
     /// Returns a `UnifiedPointer<T>` to the buffer.
     ///
-    /// The caller must ensure that the buffer outlives the returned pointer, or it will end up
-    /// pointing to garbage.
+    /// The caller must ensure that the buffer outlives the returned pointer, or
+    /// it will end up pointing to garbage.
     ///
-    /// Modifying the buffer is guaranteed not to cause its buffer to be reallocated, so pointers
-    /// cannot be invalidated in that manner, but other types may be added in the future which can
-    /// reallocate.
+    /// Modifying the buffer is guaranteed not to cause its buffer to be
+    /// reallocated, so pointers cannot be invalidated in that manner, but
+    /// other types may be added in the future which can reallocate.
     pub fn as_unified_ptr(&mut self) -> UnifiedPointer<T> {
         self.buf
     }
 
-    /// Creates a `UnifiedBuffer<T>` directly from the raw components of another unified buffer.
+    /// Creates a `UnifiedBuffer<T>` directly from the raw components of another
+    /// unified buffer.
     ///
     /// # Safety
     ///
@@ -474,8 +499,10 @@ impl<T: DeviceCopy> UnifiedBuffer<T> {
     ///
     /// * `ptr` needs to have been previously allocated via `UnifiedBuffer` or
     /// [`cuda_malloc_unified`](fn.cuda_malloc_unified.html).
-    /// * `ptr`'s `T` needs to have the same size and alignment as it was allocated with.
-    /// * `capacity` needs to be the capacity that the pointer was allocated with.
+    /// * `ptr`'s `T` needs to have the same size and alignment as it was
+    ///   allocated with.
+    /// * `capacity` needs to be the capacity that the pointer was allocated
+    ///   with.
     ///
     /// Violating these may cause problems like corrupting the CUDA driver's
     /// internal data structures.
@@ -507,8 +534,9 @@ impl<T: DeviceCopy> UnifiedBuffer<T> {
 
     /// Destroy a `UnifiedBuffer`, returning an error.
     ///
-    /// Deallocating unified memory can return errors from previous asynchronous work. This function
-    /// destroys the given buffer and returns the error and the un-destroyed buffer on failure.
+    /// Deallocating unified memory can return errors from previous asynchronous
+    /// work. This function destroys the given buffer and returns the error
+    /// and the un-destroyed buffer on failure.
     ///
     /// # Example
     ///
@@ -537,7 +565,7 @@ impl<T: DeviceCopy> UnifiedBuffer<T> {
                     Ok(()) => {
                         mem::forget(uni_buf);
                         Ok(())
-                    }
+                    },
                     Err(e) => Err((e, UnifiedBuffer::from_raw_parts(ptr, capacity))),
                 }
             }

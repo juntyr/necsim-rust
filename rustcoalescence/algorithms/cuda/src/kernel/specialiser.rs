@@ -12,7 +12,7 @@ use necsim_core::{
     reporter::boolean::Boolean,
 };
 
-use rustacuda_core::DeviceCopy;
+use rust_cuda::rustacuda_core::DeviceCopy;
 
 use rust_cuda::common::RustToCuda;
 

@@ -1,7 +1,7 @@
 use core::{fmt, marker::PhantomData};
 
 #[cfg(not(target_os = "cuda"))]
-use rustacuda::{
+use rust_cuda::rustacuda::{
     error::CudaResult,
     function::{BlockSize, GridSize},
 };
@@ -17,7 +17,7 @@ use necsim_core::{
 use necsim_core::impl_report;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(RustToCuda, LendToCuda)]
+#[derive(rust_cuda::common::RustToCuda, rust_cuda::host::LendToCuda)]
 pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
     #[r2cEmbed]
     speciation_buffer: CudaExchangeBuffer<Option<SpeciationEvent>>,

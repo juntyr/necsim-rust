@@ -2,21 +2,17 @@
 //!
 //! # Error handling in CUDA:
 //!
-//! RustaCUDA uses the [`CudaError`](enum.CudaError.html) enum to represent the errors returned by
-//! the CUDA API. It is important to note that nearly every function in CUDA (and therefore
-//! RustaCUDA) can fail. Even those functions which have no normal failure conditions can return
-//! errors related to previous asynchronous launches.
+//! RustaCUDA uses the [`CudaError`](enum.CudaError.html) enum to represent the
+//! errors returned by the CUDA API. It is important to note that nearly every
+//! function in CUDA (and therefore RustaCUDA) can fail. Even those functions
+//! which have no normal failure conditions can return errors related to
+//! previous asynchronous launches.
 
 use cuda_driver_sys::{self as cuda, cudaError_enum};
-use std::error::Error;
-use std::ffi::CStr;
-use std::fmt;
-use std::mem;
-use std::os::raw::c_char;
-use std::ptr;
-use std::result::Result;
+use std::{error::Error, ffi::CStr, fmt, mem, os::raw::c_char, ptr, result::Result};
 
-/// Error enum which represents all the potential errors returned by the CUDA driver API.
+/// Error enum which represents all the potential errors returned by the CUDA
+/// driver API.
 #[repr(u32)]
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -89,18 +85,18 @@ impl fmt::Display for CudaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             CudaError::InvalidMemoryAllocation => write!(f, "Invalid memory allocation"),
-            //CudaError::__Nonexhaustive => write!(f, "__Nonexhaustive"),
+            // CudaError::__Nonexhaustive => write!(f, "__Nonexhaustive"),
             other if (other as u32) <= 999 => {
                 let value = other as u32;
                 let mut ptr: *const c_char = ptr::null();
                 unsafe {
                     cuda::cuGetErrorString(mem::transmute(value), &mut ptr as *mut *const c_char)
-                        .to_result()
+                        .into_result()
                         .map_err(|_| fmt::Error)?;
                     let cstr = CStr::from_ptr(ptr);
                     write!(f, "{:?}", cstr)
                 }
-            }
+            },
             // This shouldn't happen
             _ => write!(f, "Unknown error"),
         }
@@ -111,14 +107,15 @@ impl Error for CudaError {}
 /// Result type for most CUDA functions.
 pub type CudaResult<T> = Result<T, CudaError>;
 
-/// Special result type for `drop` functions which includes the un-dropped value with the error.
+/// Special result type for `drop` functions which includes the un-dropped value
+/// with the error.
 pub type DropResult<T> = Result<(), (CudaError, T)>;
 
-pub(crate) trait ToResult {
-    fn to_result(self) -> CudaResult<()>;
+pub(crate) trait IntoResult {
+    fn into_result(self) -> CudaResult<()>;
 }
-impl ToResult for cudaError_enum {
-    fn to_result(self) -> CudaResult<()> {
+impl IntoResult for cudaError_enum {
+    fn into_result(self) -> CudaResult<()> {
         match self {
             cudaError_enum::CUDA_SUCCESS => Ok(()),
             cudaError_enum::CUDA_ERROR_INVALID_VALUE => Err(CudaError::InvalidValue),
@@ -128,20 +125,20 @@ impl ToResult for cudaError_enum {
             cudaError_enum::CUDA_ERROR_PROFILER_DISABLED => Err(CudaError::ProfilerDisabled),
             cudaError_enum::CUDA_ERROR_PROFILER_NOT_INITIALIZED => {
                 Err(CudaError::ProfilerNotInitialized)
-            }
+            },
             cudaError_enum::CUDA_ERROR_PROFILER_ALREADY_STARTED => {
                 Err(CudaError::ProfilerAlreadyStarted)
-            }
+            },
             cudaError_enum::CUDA_ERROR_PROFILER_ALREADY_STOPPED => {
                 Err(CudaError::ProfilerAlreadyStopped)
-            }
+            },
             cudaError_enum::CUDA_ERROR_NO_DEVICE => Err(CudaError::NoDevice),
             cudaError_enum::CUDA_ERROR_INVALID_DEVICE => Err(CudaError::InvalidDevice),
             cudaError_enum::CUDA_ERROR_INVALID_IMAGE => Err(CudaError::InvalidImage),
             cudaError_enum::CUDA_ERROR_INVALID_CONTEXT => Err(CudaError::InvalidContext),
             cudaError_enum::CUDA_ERROR_CONTEXT_ALREADY_CURRENT => {
                 Err(CudaError::ContextAlreadyCurrent)
-            }
+            },
             cudaError_enum::CUDA_ERROR_MAP_FAILED => Err(CudaError::MapFailed),
             cudaError_enum::CUDA_ERROR_UNMAP_FAILED => Err(CudaError::UnmapFailed),
             cudaError_enum::CUDA_ERROR_ARRAY_IS_MAPPED => Err(CudaError::ArrayIsMapped),
@@ -155,23 +152,23 @@ impl ToResult for cudaError_enum {
             cudaError_enum::CUDA_ERROR_UNSUPPORTED_LIMIT => Err(CudaError::UnsupportedLimit),
             cudaError_enum::CUDA_ERROR_CONTEXT_ALREADY_IN_USE => {
                 Err(CudaError::ContextAlreadyInUse)
-            }
+            },
             cudaError_enum::CUDA_ERROR_PEER_ACCESS_UNSUPPORTED => {
                 Err(CudaError::PeerAccessUnsupported)
-            }
+            },
             cudaError_enum::CUDA_ERROR_INVALID_PTX => Err(CudaError::InvalidPtx),
             cudaError_enum::CUDA_ERROR_INVALID_GRAPHICS_CONTEXT => {
                 Err(CudaError::InvalidGraphicsContext)
-            }
+            },
             cudaError_enum::CUDA_ERROR_NVLINK_UNCORRECTABLE => Err(CudaError::NvlinkUncorrectable),
             cudaError_enum::CUDA_ERROR_INVALID_SOURCE => Err(CudaError::InvalidSouce),
             cudaError_enum::CUDA_ERROR_FILE_NOT_FOUND => Err(CudaError::FileNotFound),
             cudaError_enum::CUDA_ERROR_SHARED_OBJECT_SYMBOL_NOT_FOUND => {
                 Err(CudaError::SharedObjectSymbolNotFound)
-            }
+            },
             cudaError_enum::CUDA_ERROR_SHARED_OBJECT_INIT_FAILED => {
                 Err(CudaError::SharedObjectInitFailed)
-            }
+            },
             cudaError_enum::CUDA_ERROR_OPERATING_SYSTEM => Err(CudaError::OperatingSystemError),
             cudaError_enum::CUDA_ERROR_INVALID_HANDLE => Err(CudaError::InvalidHandle),
             cudaError_enum::CUDA_ERROR_NOT_FOUND => Err(CudaError::NotFound),
@@ -179,29 +176,29 @@ impl ToResult for cudaError_enum {
             cudaError_enum::CUDA_ERROR_ILLEGAL_ADDRESS => Err(CudaError::IllegalAddress),
             cudaError_enum::CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES => {
                 Err(CudaError::LaunchOutOfResources)
-            }
+            },
             cudaError_enum::CUDA_ERROR_LAUNCH_TIMEOUT => Err(CudaError::LaunchTimeout),
             cudaError_enum::CUDA_ERROR_LAUNCH_INCOMPATIBLE_TEXTURING => {
                 Err(CudaError::LaunchIncompatibleTexturing)
-            }
+            },
             cudaError_enum::CUDA_ERROR_PEER_ACCESS_ALREADY_ENABLED => {
                 Err(CudaError::PeerAccessAlreadyEnabled)
-            }
+            },
             cudaError_enum::CUDA_ERROR_PEER_ACCESS_NOT_ENABLED => {
                 Err(CudaError::PeerAccessNotEnabled)
-            }
+            },
             cudaError_enum::CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE => {
                 Err(CudaError::PrimaryContextActive)
-            }
+            },
             cudaError_enum::CUDA_ERROR_CONTEXT_IS_DESTROYED => Err(CudaError::ContextIsDestroyed),
             cudaError_enum::CUDA_ERROR_ASSERT => Err(CudaError::AssertError),
             cudaError_enum::CUDA_ERROR_TOO_MANY_PEERS => Err(CudaError::TooManyPeers),
             cudaError_enum::CUDA_ERROR_HOST_MEMORY_ALREADY_REGISTERED => {
                 Err(CudaError::HostMemoryAlreadyRegistered)
-            }
+            },
             cudaError_enum::CUDA_ERROR_HOST_MEMORY_NOT_REGISTERED => {
                 Err(CudaError::HostMemoryNotRegistered)
-            }
+            },
             cudaError_enum::CUDA_ERROR_HARDWARE_STACK_ERROR => Err(CudaError::HardwareStackError),
             cudaError_enum::CUDA_ERROR_ILLEGAL_INSTRUCTION => Err(CudaError::IllegalInstruction),
             cudaError_enum::CUDA_ERROR_MISALIGNED_ADDRESS => Err(CudaError::MisalignedAddress),

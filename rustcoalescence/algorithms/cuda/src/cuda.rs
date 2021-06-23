@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use rustacuda::{
+use rust_cuda::rustacuda::{
     context::{Context, CurrentContext, ResourceLimit},
     prelude::*,
 };
@@ -12,7 +12,7 @@ use crate::info;
 #[allow(clippy::module_name_repetitions)]
 pub fn with_initialised_cuda<O, F: FnOnce() -> Result<O>>(device: u32, inner: F) -> Result<O> {
     // Initialize the CUDA API
-    rustacuda::init(CudaFlags::empty())?;
+    rust_cuda::rustacuda::init(CudaFlags::empty())?;
 
     // Get the first device
     let device = Device::get_device(device)?;

@@ -1,9 +1,8 @@
 use core::ops::{Deref, DerefMut};
 
-use rust_cuda::utils::exchange::buffer::CudaExchangeBuffer;
-use rustacuda_core::DeviceCopy;
+use rust_cuda::{rustacuda_core::DeviceCopy, utils::exchange::buffer::CudaExchangeBuffer};
 
-#[derive(RustToCuda, LendToCuda)]
+#[derive(rust_cuda::common::RustToCuda, rust_cuda::host::LendToCuda)]
 #[allow(clippy::module_name_repetitions)]
 pub struct ValueBuffer<T: Clone + DeviceCopy> {
     #[r2cEmbed]
@@ -11,7 +10,7 @@ pub struct ValueBuffer<T: Clone + DeviceCopy> {
 }
 
 #[cfg(not(target_os = "cuda"))]
-use rustacuda::{
+use rust_cuda::rustacuda::{
     error::CudaResult,
     function::{BlockSize, GridSize},
 };

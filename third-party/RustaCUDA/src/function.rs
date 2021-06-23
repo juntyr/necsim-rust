@@ -1,17 +1,19 @@
 //! Functions and types for working with CUDA kernels.
 
-use crate::context::{CacheConfig, SharedMemoryConfig};
-use crate::error::{CudaResult, ToResult};
-use crate::module::Module;
+use crate::{
+    context::{CacheConfig, SharedMemoryConfig},
+    error::{CudaResult, IntoResult},
+    module::Module,
+};
 use cuda_driver_sys::{self as cuda, CUfunction};
-use std::marker::PhantomData;
-use std::mem::transmute;
+use std::{marker::PhantomData, mem::transmute};
 
 /// Dimensions of a grid, or the number of thread blocks in a kernel launch.
 ///
-/// Each component of a `GridSize` must be at least 1. The maximum size depends on your device's
-/// compute capability, but maximums of `x = (2^31)-1, y = 65535, z = 65535` are common. Launching
-/// a kernel with a grid size greater than these limits will cause an error.
+/// Each component of a `GridSize` must be at least 1. The maximum size depends
+/// on your device's compute capability, but maximums of `x = (2^31)-1, y =
+/// 65535, z = 65535` are common. Launching a kernel with a grid size greater
+/// than these limits will cause an error.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GridSize {
     /// Width of grid in blocks
@@ -63,10 +65,11 @@ impl<'a> From<&'a GridSize> for GridSize {
 
 /// Dimensions of a thread block, or the number of threads in a block.
 ///
-/// Each component of a `BlockSize` must be at least 1. The maximum size depends on your device's
-/// compute capability, but maximums of `x = 1024, y = 1024, z = 64` are common. In addition, the
-/// limit on total number of threads in a block (`x * y * z`) is also defined by the compute
-/// capability, typically 1024. Launching a kernel with a block size greater than these limits will
+/// Each component of a `BlockSize` must be at least 1. The maximum size depends
+/// on your device's compute capability, but maximums of `x = 1024, y = 1024, z
+/// = 64` are common. In addition, the limit on total number of threads in a
+/// block (`x * y * z`) is also defined by the compute capability, typically
+/// 1024. Launching a kernel with a block size greater than these limits will
 /// cause an error.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BlockSize {
@@ -117,16 +120,18 @@ impl<'a> From<&'a BlockSize> for BlockSize {
     }
 }
 
-/// All supported function attributes for [Function::get_attribute](struct.Function.html#method.get_attribute)
+/// All supported function attributes for
+/// [Function::get_attribute](struct.Function.html#method.get_attribute)
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum FunctionAttribute {
-    /// The maximum number of threads per block, beyond which a launch would fail. This depends on
-    /// both the function and the device.
+    /// The maximum number of threads per block, beyond which a launch would
+    /// fail. This depends on both the function and the device.
     MaxThreadsPerBlock = 0,
 
-    /// The size in bytes of the statically-allocated shared memory required by this function.
+    /// The size in bytes of the statically-allocated shared memory required by
+    /// this function.
     SharedMemorySizeBytes = 1,
 
     /// The size in bytes of the constant memory required by this function
@@ -138,16 +143,17 @@ pub enum FunctionAttribute {
     /// The number of registers used by each thread of this function
     NumRegisters = 4,
 
-    /// The PTX virtual architecture version for which the function was compiled. This value is the
-    /// major PTX version * 10 + the minor PTX version, so version 1.3 would return the value 13.
+    /// The PTX virtual architecture version for which the function was
+    /// compiled. This value is the major PTX version * 10 + the minor PTX
+    /// version, so version 1.3 would return the value 13.
     PtxVersion = 5,
 
-    /// The binary architecture version for which the function was compiled. Encoded the same way as
-    /// PtxVersion.
+    /// The binary architecture version for which the function was compiled.
+    /// Encoded the same way as PtxVersion.
     BinaryVersion = 6,
 
-    /// The attribute to indicate whether the function has been compiled with user specified
-    /// option "-Xptxas --dlcm=ca" set.
+    /// The attribute to indicate whether the function has been compiled with
+    /// user specified option "-Xptxas --dlcm=ca" set.
     CacheModeCa = 7,
 }
 
@@ -195,21 +201,22 @@ impl<'a> Function<'a> {
                 ::std::mem::transmute(attr),
                 self.inner,
             )
-            .to_result()?;
+            .into_result()?;
             Ok(val)
         }
     }
 
     /// Sets the preferred cache configuration for this function.
     ///
-    /// On devices where L1 cache and shared memory use the same hardware resources, this sets the
-    /// preferred cache configuration for this function. This is only a preference. The
-    /// driver will use the requested configuration if possible, but is free to choose a different
-    /// configuration if required to execute the function. This setting will override the
-    /// context-wide setting.
+    /// On devices where L1 cache and shared memory use the same hardware
+    /// resources, this sets the preferred cache configuration for this
+    /// function. This is only a preference. The driver will use the
+    /// requested configuration if possible, but is free to choose a different
+    /// configuration if required to execute the function. This setting will
+    /// override the context-wide setting.
     ///
-    /// This setting does nothing on devices where the size of the L1 cache and shared memory are
-    /// fixed.
+    /// This setting does nothing on devices where the size of the L1 cache and
+    /// shared memory are fixed.
     ///
     /// # Example
     ///
@@ -230,14 +237,15 @@ impl<'a> Function<'a> {
     /// # }
     /// ```
     pub fn set_cache_config(&mut self, config: CacheConfig) -> CudaResult<()> {
-        unsafe { cuda::cuFuncSetCacheConfig(self.inner, transmute(config)).to_result() }
+        unsafe { cuda::cuFuncSetCacheConfig(self.inner, transmute(config)).into_result() }
     }
 
     /// Sets the preferred shared memory configuration for this function.
     ///
-    /// On devices with configurable shared memory banks, this function will set this function's
-    /// shared memory bank size which is used for subsequent launches of this function. If not set,
-    /// the context-wide setting will be used instead.
+    /// On devices with configurable shared memory banks, this function will set
+    /// this function's shared memory bank size which is used for subsequent
+    /// launches of this function. If not set, the context-wide setting will
+    /// be used instead.
     ///
     /// # Example
     ///
@@ -258,7 +266,7 @@ impl<'a> Function<'a> {
     /// # }
     /// ```
     pub fn set_shared_memory_config(&mut self, cfg: SharedMemoryConfig) -> CudaResult<()> {
-        unsafe { cuda::cuFuncSetSharedMemConfig(self.inner, transmute(cfg)).to_result() }
+        unsafe { cuda::cuFuncSetSharedMemConfig(self.inner, transmute(cfg)).into_result() }
     }
 
     pub(crate) fn to_inner(&self) -> CUfunction {
@@ -270,25 +278,28 @@ impl<'a> Function<'a> {
 ///
 /// # Syntax:
 ///
-/// The format of this macro is designed to resemble the triple-chevron syntax used to launch
-/// kernels in CUDA C. There are two forms available:
+/// The format of this macro is designed to resemble the triple-chevron syntax
+/// used to launch kernels in CUDA C. There are two forms available:
 ///
 /// ```ignore
 /// let result = launch!(module.function_name<<<grid, block, shared_memory_size, stream>>>(parameter1, parameter2...));
 /// ```
 ///
-/// This will load a kernel called `function_name` from the module `module` and launch it with
-/// the given grid/block size on the given stream. Unlike in CUDA C, the shared memory size and
-/// stream parameters are not optional. The shared memory size is a number of bytes per thread for
-/// dynamic shared memory (Note that this uses `extern __shared__ int x[]` in CUDA C, not the
-/// fixed-length arrays created by `__shared__ int x[64]`. This will usually be zero.).
+/// This will load a kernel called `function_name` from the module `module` and
+/// launch it with the given grid/block size on the given stream. Unlike in CUDA
+/// C, the shared memory size and stream parameters are not optional. The shared
+/// memory size is a number of bytes per thread for dynamic shared memory (Note
+/// that this uses `extern __shared__ int x[]` in CUDA C, not the fixed-length
+/// arrays created by `__shared__ int x[64]`. This will usually be zero.).
 /// `stream` must be the name of a [`Stream`](stream/struct.Stream.html) value.
-/// `grid` can be any value which implements [`Into<GridSize>`](function/struct.GridSize.html) (such as
-/// `u32` values, tuples of up to three `u32` values, and GridSize structures) and likewise `block`
-/// can be any value that implements [`Into<BlockSize>`](function/struct.BlockSize.html).
+/// `grid` can be any value which implements
+/// [`Into<GridSize>`](function/struct.GridSize.html) (such as `u32` values,
+/// tuples of up to three `u32` values, and GridSize structures) and likewise
+/// `block` can be any value that implements
+/// [`Into<BlockSize>`](function/struct.BlockSize.html).
 ///
-/// NOTE: due to some limitations of Rust's macro system, `module` and `stream` must be local
-/// variable names. Paths or function calls will not work.
+/// NOTE: due to some limitations of Rust's macro system, `module` and `stream`
+/// must be local variable names. Paths or function calls will not work.
 ///
 /// The second form is similar:
 ///
@@ -296,17 +307,19 @@ impl<'a> Function<'a> {
 /// let result = launch!(function<<<grid, block, shared_memory_size, stream>>>(parameter1, parameter2...));
 /// ```
 ///
-/// In this variant, the `function` parameter must be a variable. Use this form to avoid looking up
-/// the kernel function for each call.
+/// In this variant, the `function` parameter must be a variable. Use this form
+/// to avoid looking up the kernel function for each call.
 ///
 /// # Safety
 ///
-/// Launching kernels must be done in an `unsafe` block. Calling a kernel is similar to calling a
-/// foreign-language function, as the kernel itself could be written in C or unsafe Rust. The kernel
-/// must accept the same number and type of parameters that are passed to the `launch!` macro. The
-/// kernel must not write invalid data (for example, invalid enums) into areas of memory that can
-/// be copied back to the host. The programmer must ensure that the host does not access device or
-/// unified memory that the kernel could write to until after calling `stream.synchronize()`.
+/// Launching kernels must be done in an `unsafe` block. Calling a kernel is
+/// similar to calling a foreign-language function, as the kernel itself could
+/// be written in C or unsafe Rust. The kernel must accept the same number and
+/// type of parameters that are passed to the `launch!` macro. The kernel must
+/// not write invalid data (for example, invalid enums) into areas of memory
+/// that can be copied back to the host. The programmer must ensure that the
+/// host does not access device or unified memory that the kernel could write to
+/// until after calling `stream.synchronize()`.
 ///
 /// # Examples
 ///
@@ -376,7 +389,6 @@ impl<'a> Function<'a> {
 /// # Ok(())
 /// # }
 /// ```
-///
 #[macro_export]
 macro_rules! launch {
     ($module:ident . $function:ident <<<$grid:expr, $block:expr, $shared:expr, $stream:ident>>>( $( $arg:expr),* )) => {
@@ -412,12 +424,12 @@ macro_rules! launch {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::memory::CopyDestination;
-    use crate::memory::DeviceBuffer;
-    use crate::quick_init;
-    use crate::stream::{Stream, StreamFlags};
-    use std::error::Error;
-    use std::ffi::CString;
+    use crate::{
+        memory::{CopyDestination, DeviceBuffer},
+        quick_init,
+        stream::{Stream, StreamFlags},
+    };
+    use std::{error::Error, ffi::CString};
 
     #[test]
     fn test_launch() -> Result<(), Box<dyn Error>> {

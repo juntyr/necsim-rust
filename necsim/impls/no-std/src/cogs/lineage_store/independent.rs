@@ -6,7 +6,7 @@ use necsim_core::{
 };
 
 #[allow(clippy::module_name_repetitions)]
-#[cfg_attr(feature = "cuda", derive(RustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
 #[derive(Debug)]
 pub struct IndependentLineageStore<H: Habitat> {

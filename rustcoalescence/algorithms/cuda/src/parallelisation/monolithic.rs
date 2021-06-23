@@ -6,16 +6,18 @@ use std::{
 
 use anyhow::{Context, Result};
 
-use rustacuda::{
-    function::{BlockSize, GridSize},
-    memory::{CopyDestination, DeviceBox},
-    stream::Stream,
+use rust_cuda::{
+    rustacuda::{
+        function::{BlockSize, GridSize},
+        memory::{CopyDestination, DeviceBox},
+        stream::Stream,
+    },
+    rustacuda_core::DeviceCopy,
 };
 
 use rust_cuda::{
     common::RustToCuda, host::LendToCuda, utils::exchange::wrapper::ExchangeWithCudaWrapper,
 };
-use rustacuda_core::DeviceCopy;
 
 use necsim_core::{
     cogs::{

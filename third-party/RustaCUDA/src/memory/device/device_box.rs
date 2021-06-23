@@ -1,19 +1,24 @@
-use crate::error::{CudaResult, DropResult, ToResult};
-use crate::memory::device::AsyncCopyDestination;
-use crate::memory::device::CopyDestination;
-use crate::memory::malloc::{cuda_free, cuda_malloc};
-use crate::memory::DeviceCopy;
-use crate::memory::DevicePointer;
-use crate::stream::Stream;
+use crate::{
+    error::{CudaResult, DropResult, IntoResult},
+    memory::{
+        device::{AsyncCopyDestination, CopyDestination},
+        malloc::{cuda_free, cuda_malloc},
+        DeviceCopy, DevicePointer,
+    },
+    stream::Stream,
+};
 use cuda_driver_sys as cuda;
-use std::fmt::{self, Pointer};
-use std::mem;
+use std::{
+    fmt::{self, Pointer},
+    mem,
+};
 
 use std::os::raw::c_void;
 
 /// A pointer type for heap-allocation in CUDA device memory.
 ///
-/// See the [`module-level documentation`](../memory/index.html) for more information on device memory.
+/// See the [`module-level documentation`](../memory/index.html) for more
+/// information on device memory.
 #[derive(Debug)]
 pub struct DeviceBox<T> {
     ptr: DevicePointer<T>,
@@ -47,9 +52,9 @@ impl<T> DeviceBox<T> {
     ///
     /// # Safety
     ///
-    /// Since the backing memory is not initialized, this function is not safe. The caller must
-    /// ensure that the backing memory is set to a valid value before it is read, else undefined
-    /// behavior may occur.
+    /// Since the backing memory is not initialized, this function is not safe.
+    /// The caller must ensure that the backing memory is set to a valid
+    /// value before it is read, else undefined behavior may occur.
     ///
     /// # Examples
     ///
@@ -76,9 +81,10 @@ impl<T> DeviceBox<T> {
     ///
     /// # Safety
     ///
-    /// The backing memory is zeroed, which may not be a valid bit-pattern for type `T`. The caller
-    /// must ensure either that all-zeroes is a valid bit-pattern for type `T` or that the backing
-    /// memory is set to a valid value before it is read.
+    /// The backing memory is zeroed, which may not be a valid bit-pattern for
+    /// type `T`. The caller must ensure either that all-zeroes is a valid
+    /// bit-pattern for type `T` or that the backing memory is set to a
+    /// valid value before it is read.
     ///
     /// # Examples
     ///
@@ -98,23 +104,25 @@ impl<T> DeviceBox<T> {
                 0,
                 mem::size_of::<T>(),
             )
-            .to_result()?;
+            .into_result()?;
         }
         Ok(new_box)
     }
 
     /// Constructs a DeviceBox from a raw pointer.
     ///
-    /// After calling this function, the raw pointer and the memory it points to is owned by the
-    /// DeviceBox. The DeviceBox destructor will free the allocated memory, but will not call the destructor
-    /// of `T`. This function may accept any pointer produced by the `cuMemAllocManaged` CUDA API
-    /// call.
+    /// After calling this function, the raw pointer and the memory it points to
+    /// is owned by the DeviceBox. The DeviceBox destructor will free the
+    /// allocated memory, but will not call the destructor of `T`. This
+    /// function may accept any pointer produced by the `cuMemAllocManaged` CUDA
+    /// API call.
     ///
     /// # Safety
     ///
-    /// This function is unsafe because improper use may lead to memory problems. For example, a
-    /// double free may occur if this function is called twice on the same pointer, or a segfault
-    /// may occur if the pointer is not one returned by the appropriate API call.
+    /// This function is unsafe because improper use may lead to memory
+    /// problems. For example, a double free may occur if this function is
+    /// called twice on the same pointer, or a segfault may occur if the
+    /// pointer is not one returned by the appropriate API call.
     ///
     /// # Examples
     ///
@@ -133,16 +141,18 @@ impl<T> DeviceBox<T> {
 
     /// Constructs a DeviceBox from a DevicePointer.
     ///
-    /// After calling this function, the pointer and the memory it points to is owned by the
-    /// DeviceBox. The DeviceBox destructor will free the allocated memory, but will not call the destructor
-    /// of `T`. This function may accept any pointer produced by the `cuMemAllocManaged` CUDA API
-    /// call, such as one taken from `DeviceBox::into_device`.
+    /// After calling this function, the pointer and the memory it points to is
+    /// owned by the DeviceBox. The DeviceBox destructor will free the
+    /// allocated memory, but will not call the destructor of `T`. This
+    /// function may accept any pointer produced by the `cuMemAllocManaged` CUDA
+    /// API call, such as one taken from `DeviceBox::into_device`.
     ///
     /// # Safety
     ///
-    /// This function is unsafe because improper use may lead to memory problems. For example, a
-    /// double free may occur if this function is called twice on the same pointer, or a segfault
-    /// may occur if the pointer is not one returned by the appropriate API call.
+    /// This function is unsafe because improper use may lead to memory
+    /// problems. For example, a double free may occur if this function is
+    /// called twice on the same pointer, or a segfault may occur if the
+    /// pointer is not one returned by the appropriate API call.
     ///
     /// # Examples
     ///
@@ -159,13 +169,15 @@ impl<T> DeviceBox<T> {
 
     /// Consumes the DeviceBox, returning the wrapped DevicePointer.
     ///
-    /// After calling this function, the caller is responsible for the memory previously managed by
-    /// the DeviceBox. In particular, the caller should properly destroy T and deallocate the memory.
-    /// The easiest way to do so is to create a new DeviceBox using the `DeviceBox::from_device` function.
+    /// After calling this function, the caller is responsible for the memory
+    /// previously managed by the DeviceBox. In particular, the caller
+    /// should properly destroy T and deallocate the memory. The easiest way
+    /// to do so is to create a new DeviceBox using the `DeviceBox::from_device`
+    /// function.
     ///
-    /// Note: This is an associated function, which means that you have to all it as
-    /// `DeviceBox::into_device(b)` instead of `b.into_device()` This is so that there is no conflict with
-    /// a method on the inner type.
+    /// Note: This is an associated function, which means that you have to all
+    /// it as `DeviceBox::into_device(b)` instead of `b.into_device()` This
+    /// is so that there is no conflict with a method on the inner type.
     ///
     /// # Examples
     ///
@@ -202,8 +214,9 @@ impl<T> DeviceBox<T> {
 
     /// Destroy a `DeviceBox`, returning an error.
     ///
-    /// Deallocating device memory can return errors from previous asynchronous work. This function
-    /// destroys the given box and returns the error and the un-destroyed box on failure.
+    /// Deallocating device memory can return errors from previous asynchronous
+    /// work. This function destroys the given box and returns the error and
+    /// the un-destroyed box on failure.
     ///
     /// # Example
     ///
@@ -230,7 +243,7 @@ impl<T> DeviceBox<T> {
                 Ok(()) => {
                     mem::forget(dev_box);
                     Ok(())
-                }
+                },
                 Err(e) => Err((e, DeviceBox { ptr })),
             }
         }
@@ -265,7 +278,7 @@ impl<T: DeviceCopy> CopyDestination<T> for DeviceBox<T> {
                     val as *const T as *const c_void,
                     size,
                 )
-                .to_result()?
+                .into_result()?
             }
         }
         Ok(())
@@ -280,7 +293,7 @@ impl<T: DeviceCopy> CopyDestination<T> for DeviceBox<T> {
                     self.ptr.as_raw() as u64,
                     size,
                 )
-                .to_result()?
+                .into_result()?
             }
         }
         Ok(())
@@ -292,7 +305,7 @@ impl<T: DeviceCopy> CopyDestination<DeviceBox<T>> for DeviceBox<T> {
         if size != 0 {
             unsafe {
                 cuda::cuMemcpyDtoD_v2(self.ptr.as_raw_mut() as u64, val.ptr.as_raw() as u64, size)
-                    .to_result()?
+                    .into_result()?
             }
         }
         Ok(())
@@ -303,7 +316,7 @@ impl<T: DeviceCopy> CopyDestination<DeviceBox<T>> for DeviceBox<T> {
         if size != 0 {
             unsafe {
                 cuda::cuMemcpyDtoD_v2(val.ptr.as_raw_mut() as u64, self.ptr.as_raw() as u64, size)
-                    .to_result()?
+                    .into_result()?
             }
         }
         Ok(())
@@ -319,7 +332,7 @@ impl<T: DeviceCopy> AsyncCopyDestination<DeviceBox<T>> for DeviceBox<T> {
                 size,
                 stream.as_inner(),
             )
-            .to_result()?
+            .into_result()?
         }
         Ok(())
     }
@@ -333,7 +346,7 @@ impl<T: DeviceCopy> AsyncCopyDestination<DeviceBox<T>> for DeviceBox<T> {
                 size,
                 stream.as_inner(),
             )
-            .to_result()?
+            .into_result()?
         }
         Ok(())
     }

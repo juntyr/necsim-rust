@@ -3,14 +3,11 @@
 //! Detailed documentation about allocating CUDA Arrays can be found in the
 //! [CUDA Driver API](https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__MEM.html#group__CUDA__MEM_1gc2322c70b38c2984536c90ed118bb1d7)
 
-use std::mem::MaybeUninit;
-use std::os::raw::c_uint;
+use std::{mem::MaybeUninit, os::raw::c_uint};
 
 use cuda_driver_sys::{CUarray, CUarray_format, CUarray_format_enum};
 
-use crate::context::CurrentContext;
-use crate::device::DeviceAttribute;
-use crate::error::*;
+use crate::{context::CurrentContext, device::DeviceAttribute, error::*};
 
 /// Describes the format used for a CUDA Array.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -104,7 +101,8 @@ impl ArrayDescriptor {
         Self { desc }
     }
 
-    /// Constructs an ArrayDescriptor from dimensions, format, num_channels, and flags.
+    /// Constructs an ArrayDescriptor from dimensions, format, num_channels, and
+    /// flags.
     pub fn new(
         dims: [usize; 3],
         format: ArrayFormat,
@@ -218,8 +216,9 @@ pub struct ArrayObject {
 impl ArrayObject {
     /// Constructs a generic ArrayObject from an `ArrayDescriptor`.
     pub fn from_descriptor(descriptor: &ArrayDescriptor) -> CudaResult<Self> {
-        // We validate the descriptor up front in debug mode. This provides a good error message to
-        // the user when they get something wrong, but doesn't re-validate in release mode.
+        // We validate the descriptor up front in debug mode. This provides a good error
+        // message to the user when they get something wrong, but doesn't
+        // re-validate in release mode.
         if cfg!(debug_assertions) {
             assert_ne!(
                 0,
@@ -231,8 +230,8 @@ impl ArrayObject {
                 assert_ne!(
                     0,
                     descriptor.height(),
-                    "If Depth is non-zero and the descriptor is not LAYERED, then Height must also \
-                    be non-zero."
+                    "If Depth is non-zero and the descriptor is not LAYERED, then Height must \
+                     also be non-zero."
                 );
             }
 
@@ -367,19 +366,19 @@ impl ArrayObject {
 
             if !bounds.iter().any(bounds_invalid) {
                 panic!(
-                    "The dimensions of the {} ArrayObject did not fall within the valid bounds for \
-                     the array. descriptor = {:?}, dims = {:?}, valid bounds = {:?}",
-                     description,
-                     descriptor,
-                     [descriptor.width(), descriptor.height(), descriptor.depth()],
-                     bounds
+                    "The dimensions of the {} ArrayObject did not fall within the valid bounds \
+                     for the array. descriptor = {:?}, dims = {:?}, valid bounds = {:?}",
+                    description,
+                    descriptor,
+                    [descriptor.width(), descriptor.height(), descriptor.depth()],
+                    bounds
                 );
             }
         }
 
         let mut handle = MaybeUninit::uninit();
         unsafe { cuda_driver_sys::cuArray3DCreate_v2(handle.as_mut_ptr(), &descriptor.desc) }
-            .to_result()?;
+            .into_result()?;
         Ok(Self {
             handle: unsafe { handle.assume_init() },
         })
@@ -387,13 +386,14 @@ impl ArrayObject {
 
     /// Allocates a new CUDA Array that is up to 3-dimensions.
     ///
-    /// `dims` contains the extents of the array. `dims[0]` must be non-zero. `dims[1]` must be
-    /// non-zero if `dims[2]` is non-zero. The rank of the array is equal to the number of non-zero
-    /// `dims`.
+    /// `dims` contains the extents of the array. `dims[0]` must be non-zero.
+    /// `dims[1]` must be non-zero if `dims[2]` is non-zero. The rank of the
+    /// array is equal to the number of non-zero `dims`.
     ///
     /// `format` determines the data-type of the array.
     ///
-    /// `num_channels` determines the number of channels per array element (1, 2, or 4).
+    /// `num_channels` determines the number of channels per array element (1,
+    /// 2, or 4).
     ///
     /// ```
     /// # use rustacuda::*;
@@ -423,7 +423,8 @@ impl ArrayObject {
     ///
     /// `format` determines the data-type of the array.
     ///
-    /// `num_channels` determines the number of channels per array element (1, 2, or 4).
+    /// `num_channels` determines the number of channels per array element (1,
+    /// 2, or 4).
     ///
     /// ```
     /// # use rustacuda::*;
@@ -448,12 +449,13 @@ impl ArrayObject {
 
     /// Allocates a new CUDA Array that is up to 2-dimensions.
     ///
-    /// `dims` contains the extents of the array. `dims[0]` must be non-zero. The rank of the array
-    /// is equal to the number of non-zero `dims`.
+    /// `dims` contains the extents of the array. `dims[0]` must be non-zero.
+    /// The rank of the array is equal to the number of non-zero `dims`.
     ///
     /// `format` determines the data-type of the array.
     ///
-    /// `num_channels` determines the number of channels per array element (1, 2, or 4).
+    /// `num_channels` determines the number of channels per array element (1,
+    /// 2, or 4).
     ///
     /// ```
     /// # use rustacuda::*;
@@ -478,14 +480,16 @@ impl ArrayObject {
 
     /// Creates a new Layered 1D or 2D CUDA Array.
     ///
-    /// `dims` contains the extents of the array. `dims[0]` must be non-zero. The rank of the array
-    /// is equivalent to the number of non-zero dimensions.
+    /// `dims` contains the extents of the array. `dims[0]` must be non-zero.
+    /// The rank of the array is equivalent to the number of non-zero
+    /// dimensions.
     ///
     /// `num_layers` determines the number of layers in the array.
     ///
     /// `format` determines the data-type of the array.
     ///
-    /// `num_channels` determines the number of channels per array element (1, 2, or 4).
+    /// `num_channels` determines the number of channels per array element (1,
+    /// 2, or 4).
     ///
     /// ```
     /// # use rustacuda::*;
@@ -522,7 +526,8 @@ impl ArrayObject {
     ///
     /// `format` determines the data-type of the array.
     ///
-    /// `num_channels` determines the number of channels per array element (1, 2, or 4).
+    /// `num_channels` determines the number of channels per array element (1,
+    /// 2, or 4).
     ///
     /// ```
     /// # use rustacuda::*;
@@ -551,13 +556,15 @@ impl ArrayObject {
         ))
     }
 
-    /// Creates a new Cubemap CUDA Array. The array is represented as 6 side x side 2D arrays.
+    /// Creates a new Cubemap CUDA Array. The array is represented as 6 side x
+    /// side 2D arrays.
     ///
     /// `side` is the length of an edge of the cube.
     ///
     /// `format` determines the data-type of the array.
     ///
-    /// `num_channels` determines the number of channels per array element (1, 2, or 4).
+    /// `num_channels` determines the number of channels per array element (1,
+    /// 2, or 4).
     ///
     /// ```
     /// # use rustacuda::*;
@@ -584,17 +591,18 @@ impl ArrayObject {
         ))
     }
 
-    /// Creates a new Layered Cubemap CUDA Array. The array is represented as multiple 6 side x side
-    /// 2D arrays.
+    /// Creates a new Layered Cubemap CUDA Array. The array is represented as
+    /// multiple 6 side x side 2D arrays.
     ///
     /// `side` is the length of an edge of the cube.
     ///
-    /// `num_layers` is the number of cubemaps in the array. The actual "depth" of the array is
-    /// `num_layers * 6`.
+    /// `num_layers` is the number of cubemaps in the array. The actual "depth"
+    /// of the array is `num_layers * 6`.
     ///
     /// `format` determines the data-type of the array.
     ///
-    /// `num_channels` determines the number of channels per array element (1, 2, or 4).
+    /// `num_channels` determines the number of channels per array element (1,
+    /// 2, or 4).
     ///
     /// ```
     /// # use rustacuda::*;
@@ -633,17 +641,17 @@ impl ArrayObject {
         unsafe {
             cuda_driver_sys::cuArray3DGetDescriptor_v2(raw_descriptor.as_mut_ptr(), self.handle)
         }
-        .to_result()?;
+        .into_result()?;
 
         Ok(ArrayDescriptor::from_raw(unsafe {
             raw_descriptor.assume_init()
         }))
     }
 
-    /// Try to destroy an `ArrayObject`. Can fail - if it does, returns the CUDA error and the
-    /// un-destroyed array object
+    /// Try to destroy an `ArrayObject`. Can fail - if it does, returns the CUDA
+    /// error and the un-destroyed array object
     pub fn drop(array: ArrayObject) -> DropResult<ArrayObject> {
-        match unsafe { cuda_driver_sys::cuArrayDestroy(array.handle) }.to_result() {
+        match unsafe { cuda_driver_sys::cuArrayDestroy(array.handle) }.into_result() {
             Ok(()) => Ok(()),
             Err(e) => Err((e, array)),
         }
@@ -659,7 +667,7 @@ impl std::fmt::Debug for ArrayObject {
 impl Drop for ArrayObject {
     fn drop(&mut self) {
         unsafe { cuda_driver_sys::cuArrayDestroy(self.handle) }
-            .to_result()
+            .into_result()
             .expect("Failed to destroy CUDA Array")
     }
 }

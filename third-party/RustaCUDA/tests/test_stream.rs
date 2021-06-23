@@ -1,7 +1,6 @@
 extern crate rustacuda;
 
-use rustacuda::prelude::*;
-use rustacuda::quick_init;
+use rustacuda::{prelude::*, quick_init};
 use std::sync::mpsc::sync_channel;
 
 #[test]

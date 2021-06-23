@@ -7,9 +7,6 @@ extern crate alloc;
 #[macro_use]
 extern crate contracts;
 
-#[macro_use]
-extern crate rust_cuda_derive;
-
 pub mod cogs;
 pub mod event_buffer;
 pub mod value_buffer;

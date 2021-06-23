@@ -6,11 +6,10 @@ use necsim_core::cogs::{Backup, Habitat, LineageReference};
 // Option optimisation
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::rustacuda_core::DeviceCopy))]
+#[cfg_attr(feature = "cuda", rustacuda(core = "rust_cuda::rustacuda_core"))]
 #[allow(clippy::module_name_repetitions)]
 pub struct InMemoryLineageReference(NonZeroUsize);
-
-#[cfg(feature = "cuda")]
-unsafe impl rustacuda_core::DeviceCopy for InMemoryLineageReference {}
 
 #[contract_trait]
 impl Backup for InMemoryLineageReference {

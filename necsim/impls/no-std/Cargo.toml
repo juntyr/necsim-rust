@@ -9,15 +9,15 @@ edition = "2018"
 
 [features]
 default = []
-cuda = ["rust-cuda", "rust-cuda-derive", "rustacuda_core", "rustacuda_derive", "rustacuda", "array2d/cuda", "necsim-core/cuda"]
+cuda = ["rust-cuda", "array2d/cuda", "necsim-core/cuda"]
 
 [dependencies]
 necsim-core = { path = "../../core" }
 necsim-core-bond = { path = "../../core/bond" }
 necsim-partitioning-core = { path = "../../partitioning/core" }
 
-array2d = "0.2.1"
-contracts = "0.6.0"
+array2d = { path = "../../../third-party/array2d-no-std" }
+contracts = { path = "../../../third-party/contracts" }
 nanorand = { version = "0.5.2", default-features = false, features = ["wyrand"] }
 aes = { version = "0.7.4", default-features = false, features = ["force-soft"] }
 seahash = "4.1.0"
@@ -28,13 +28,8 @@ slab = { version = "0.4.3", default-features = false, features = [] }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 log = "0.4.14"
 
-rust-cuda-derive = { path = "../../../rust-cuda/rust-cuda-derive", optional = true }
-rustacuda_core = { version = "0.1.2", optional = true }
-rustacuda_derive = { version = "0.1.2", optional = true }
-
 [target.'cfg(target_os = "cuda")'.dependencies]
-rust-cuda = { path = "../../../rust-cuda", features = [], optional = true }
+rust-cuda = { path = "../../../rust-cuda", features = ["derive"], optional = true }
 
 [target.'cfg(not(target_os = "cuda"))'.dependencies]
-rust-cuda = { path = "../../../rust-cuda", features = ["host"], optional = true }
-rustacuda = { version = "0.1.2", optional = true }
+rust-cuda = { path = "../../../rust-cuda", features = ["derive", "host"], optional = true }

@@ -5,7 +5,7 @@ use necsim_core::{
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 #[derive(Debug)]
-#[cfg_attr(feature = "cuda", derive(RustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCuda))]
 #[allow(clippy::module_name_repetitions)]
 pub struct UniformTurnoverRate(());
 

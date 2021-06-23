@@ -5,7 +5,7 @@ use necsim_core::{
 use necsim_core_bond::PositiveF64;
 
 #[allow(clippy::module_name_repetitions)]
-#[cfg_attr(feature = "cuda", derive(RustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCuda))]
 #[derive(Debug)]
 pub struct NeverImmigrationEntry(());
 

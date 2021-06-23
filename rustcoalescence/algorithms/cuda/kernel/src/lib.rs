@@ -29,7 +29,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
-use rustacuda_core::DeviceCopy;
+use rust_cuda::rustacuda_core::DeviceCopy;
 
 use rustcoalescence_algorithms_cuda_kernel_ptx_jit::PtxJITConstLoad;
 
