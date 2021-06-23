@@ -145,9 +145,11 @@ unsafe fn simulate_generic<
         ValueBuffer::with_borrow_from_rust_mut(task_list_cuda_repr, |task_list| {
             task_list.with_value_for_core(|task| {
                 // Discard the prior task (the simulation is just a temporary local copy)
-                simulation
-                    .active_lineage_sampler_mut()
-                    .replace_active_lineage(task);
+                core::mem::drop(
+                    simulation
+                        .active_lineage_sampler_mut()
+                        .replace_active_lineage(task),
+                );
 
                 EventBuffer::with_borrow_from_rust_mut(
                     event_buffer_cuda_repr,
