@@ -39,7 +39,7 @@ pub fn load_map_from_tiff<D: TiffDataType>(path: &Path, strict_load: bool) -> Re
                 colortype,
                 std::any::type_name::<D>()
             )
-        )
+        );
     } else {
         anyhow::bail!(format!(
             "Image data format {:?} does not use the correct data format for {}.",

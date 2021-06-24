@@ -228,7 +228,7 @@ impl<
         self.active_locations
             .peek()
             .map(|(_, next_event_time)| {
-                PositiveF64::max_after(self.last_event_time, next_event_time.clone().into())
+                PositiveF64::max_after(self.last_event_time, (*next_event_time).into())
             })
             .ok_or(EmptyActiveLineageSamplerError)
     }

@@ -90,7 +90,7 @@ impl<'h, I: Iterator<Item = u64>> Iterator for AlmostInfiniteOriginSampler<'h, I
         let mut index_difference = next_index - self.last_index;
         self.last_index = next_index + 1;
 
-        while let Some(next_location) = self.location_iterator.next() {
+        for next_location in &mut self.location_iterator {
             let dx = i64::from(next_location.x()) - i64::from(HABITAT_CENTRE);
             let dy = i64::from(next_location.y()) - i64::from(HABITAT_CENTRE);
 

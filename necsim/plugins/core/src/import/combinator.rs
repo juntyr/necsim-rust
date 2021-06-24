@@ -88,7 +88,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
 
     impl_finalise!((self) {
         for plugin in self.plugins.into_vec() {
-            plugin.finalise()
+            plugin.finalise();
         }
     });
 
@@ -101,7 +101,6 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
     }
 }
 
-#[allow(clippy::pub_enum_variant_names)]
 #[derive(Debug)]
 pub enum AnyReporterPluginVec {
     IgnoreSpeciationIgnoreDispersalIgnoreProgress(ReporterPluginVec<False, False, False>),

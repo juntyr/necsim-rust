@@ -118,25 +118,25 @@ fn get_assert_macro(
             (ContractType::Requires, ContractMode::Always) => {
                 Some(Ident::new("checked_precondition", span))
             }
-            (ContractType::Requires, ContractMode::Debug)
-            | (ContractType::Requires, ContractMode::Test) => {
-                Some(Ident::new("debug_checked_precondition", span))
-            }
-            (ContractType::Requires, ContractMode::Disabled)
-            | (ContractType::Requires, ContractMode::LogOnly) => {
-                Some(Ident::new("precondition", span))
-            }
+            (
+                ContractType::Requires,
+                ContractMode::Debug | ContractMode::Test,
+            ) => Some(Ident::new("debug_checked_precondition", span)),
+            (
+                ContractType::Requires,
+                ContractMode::Disabled | ContractMode::LogOnly,
+            ) => Some(Ident::new("precondition", span)),
             (ContractType::Ensures, ContractMode::Always) => {
                 Some(Ident::new("checked_postcondition", span))
             }
-            (ContractType::Ensures, ContractMode::Debug)
-            | (ContractType::Ensures, ContractMode::Test) => {
-                Some(Ident::new("debug_checked_postcondition", span))
-            }
-            (ContractType::Ensures, ContractMode::Disabled)
-            | (ContractType::Ensures, ContractMode::LogOnly) => {
-                Some(Ident::new("postcondition", span))
-            }
+            (
+                ContractType::Ensures,
+                ContractMode::Debug | ContractMode::Test,
+            ) => Some(Ident::new("debug_checked_postcondition", span)),
+            (
+                ContractType::Ensures,
+                ContractMode::Disabled | ContractMode::LogOnly,
+            ) => Some(Ident::new("postcondition", span)),
             (ContractType::Invariant, _) => {
                 panic!("expected Invariant to be narrowed down to Pre/Post")
             }
@@ -209,7 +209,7 @@ pub(crate) fn generate(
     // generate assertion code for pre-conditions
     //
 
-    #[allow(clippy::filter_map)]
+    #[allow(clippy::manual_filter_map)]
     let pre: proc_macro2::TokenStream = func
         .contracts
         .iter()
@@ -248,7 +248,7 @@ pub(crate) fn generate(
     // generate assertion code for post-conditions
     //
 
-    #[allow(clippy::filter_map)]
+    #[allow(clippy::manual_filter_map)]
     let post: proc_macro2::TokenStream = func
         .contracts
         .iter()

@@ -97,7 +97,7 @@ pub fn simulate<
                 .event_time
                 .max(global_safe_time + independent_time_slice);
 
-            simulation.immigration_entry_mut().push(immigrant)
+            simulation.immigration_entry_mut().push(immigrant);
         }
 
         while local_partition.wait_for_termination() {
@@ -113,7 +113,7 @@ pub fn simulate<
                     .event_time
                     .max(global_safe_time + independent_time_slice);
 
-                simulation.immigration_entry_mut().push(immigrant)
+                simulation.immigration_entry_mut().push(immigrant);
             }
         }
 

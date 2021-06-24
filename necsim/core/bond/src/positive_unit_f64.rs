@@ -89,18 +89,18 @@ impl Ord for PositiveUnitF64 {
 
 impl Hash for PositiveUnitF64 {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.to_bits().hash(state)
+        self.0.to_bits().hash(state);
     }
 }
 
 impl PartialEq<f64> for PositiveUnitF64 {
     fn eq(&self, other: &f64) -> bool {
-        self.0.eq(&other)
+        self.0.eq(other)
     }
 }
 
 impl PartialOrd<f64> for PositiveUnitF64 {
     fn partial_cmp(&self, other: &f64) -> Option<Ordering> {
-        self.0.partial_cmp(&other)
+        self.0.partial_cmp(other)
     }
 }

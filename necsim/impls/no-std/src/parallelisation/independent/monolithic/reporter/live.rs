@@ -43,17 +43,17 @@ impl<'p, R: Reporter, P: LocalPartition<R>> fmt::Debug for LiveWaterLevelReporte
 impl<'p, R: Reporter, P: LocalPartition<R>> Reporter for LiveWaterLevelReporterProxy<'p, R, P> {
     impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
         if speciation.event_time < self.water_level {
-            self.slow_events.push(speciation.clone().into())
+            self.slow_events.push(speciation.clone().into());
         } else {
-            self.fast_events.push(speciation.clone().into())
+            self.fast_events.push(speciation.clone().into());
         }
     });
 
     impl_report!(dispersal(&mut self, dispersal: MaybeUsed<R::ReportDispersal>) {
         if dispersal.event_time < self.water_level {
-            self.slow_events.push(dispersal.clone().into())
+            self.slow_events.push(dispersal.clone().into());
         } else {
-            self.fast_events.push(dispersal.clone().into())
+            self.fast_events.push(dispersal.clone().into());
         }
     });
 

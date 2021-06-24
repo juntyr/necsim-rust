@@ -31,7 +31,8 @@ jobs:
           wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/cuda-repo-ubuntu1604_8.0.61-1_amd64.deb
           sudo dpkg -i cuda-repo-ubuntu1604_8.0.61-1_amd64.deb
           sudo apt-get update
-          sudo apt-get install cuda-driver-dev-8.0
+          sudo apt-get install cuda-driver-dev-8.0 -y --no-install-recommends
+          sudo cp /usr/local/cuda-8.0/targets/x86_64-linux/lib/stubs/* /usr/local/cuda-8.0/targets/x86_64-linux/lib/
       
       - name: Install OpenMPI
         run: sudo apt-get install libopenmpi-dev -y --no-install-recommends
@@ -40,7 +41,7 @@ jobs:
         run: cargo install ptx-linker -f
       
       - name: Run the test-suite
-        run: cargo test --workspace --no-fail-fast
+        run: LIBRARY_PATH="$LD_LIBRARY_PATH" cargo test --workspace --no-fail-fast
 
   fmt:
     name: Rustfmt

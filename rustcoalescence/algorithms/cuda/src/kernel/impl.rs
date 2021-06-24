@@ -121,7 +121,7 @@ impl<
     }
 
     pub fn function(&self) -> &Function {
-        &self.entry_point
+        self.entry_point
     }
 }
 

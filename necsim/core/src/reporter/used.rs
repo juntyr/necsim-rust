@@ -38,7 +38,7 @@ impl<T> core::ops::Deref for Used<T> {
 impl<T, B: Boolean> MaybeUsed<T, B> {
     pub fn maybe_use_in<F: FnOnce(&T)>(&self, func: F) {
         if B::VALUE {
-            func(&self.inner)
+            func(&self.inner);
         }
     }
 }

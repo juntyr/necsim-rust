@@ -12,8 +12,11 @@ use used::MaybeUsed;
 pub mod boolean;
 pub mod used;
 
+#[allow(clippy::module_name_repetitions)]
 pub use combinator::ReporterCombinator;
+#[allow(clippy::module_name_repetitions)]
 pub use filter::FilteredReporter;
+#[allow(clippy::module_name_repetitions)]
 pub use null::NullReporter;
 
 pub trait Reporter: core::fmt::Debug {
@@ -42,7 +45,7 @@ pub trait Reporter: core::fmt::Debug {
     where
         Self: Sized,
     {
-        core::mem::drop(self)
+        core::mem::drop(self);
     }
 
     /// # Safety
@@ -50,6 +53,6 @@ pub trait Reporter: core::fmt::Debug {
     /// This method should not be implemented manually
     //  please - use the`impl_finalise` macro instead.
     unsafe fn finalise_boxed(self: alloc::boxed::Box<Self>) {
-        core::mem::drop(self)
+        core::mem::drop(self);
     }
 }

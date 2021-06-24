@@ -19,15 +19,15 @@ impl<'de> serde::Deserialize<'de> for VerboseReporter {
 
 impl Reporter for VerboseReporter {
     impl_report!(speciation(&mut self, speciation: Used) {
-        info!("{:#?}", speciation)
+        info!("{:#?}", speciation);
     });
 
     impl_report!(dispersal(&mut self, dispersal: Used) {
-        info!("{:#?}", dispersal)
+        info!("{:#?}", dispersal);
     });
 
     impl_report!(progress(&mut self, remaining: Used) {
-        info!("Remaining: {}", remaining)
+        info!("Remaining: {}", remaining);
     });
 }
 

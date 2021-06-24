@@ -56,7 +56,7 @@ impl Executable for Cargo {
         // https://github.com/steveklabnik/semver/issues/105
 
         self::runner::parse_executable_version(self).map(|mut version| {
-            version.pre = vec![];
+            version.pre = semver::Prerelease::EMPTY;
             version
         })
     }

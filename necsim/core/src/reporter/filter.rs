@@ -52,24 +52,24 @@ where
     impl_report!(speciation(&mut self, speciation: MaybeUsed<
         <KeepSpeciation as And<R::ReportSpeciation>
     >::RESULT>) {
-        self.reporter.report_speciation(speciation.into())
+        self.reporter.report_speciation(speciation.into());
     });
 
     impl_report!(dispersal(&mut self, dispersal: MaybeUsed<
         <KeepDispersal as And<R::ReportDispersal>
     >::RESULT>) {
-        self.reporter.report_dispersal(dispersal.into())
+        self.reporter.report_dispersal(dispersal.into());
     });
 
     impl_report!(progress(&mut self, progress: MaybeUsed<
         <KeepProgress as And<R::ReportProgress>
     >::RESULT>) {
-        self.reporter.report_progress(progress.into())
+        self.reporter.report_progress(progress.into());
     });
 
     impl_finalise!((self) {
         if Self::ReportSpeciation::VALUE || Self::ReportDispersal::VALUE || Self::ReportProgress::VALUE {
-            self.reporter.finalise()
+            self.reporter.finalise();
         }
     });
 

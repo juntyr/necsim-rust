@@ -118,9 +118,9 @@ impl<'de> serde::de::DeserializeSeed<'de> for RcPluginLibrary {
                 deserializer: D,
             ) -> Result<Self::Value, D::Error> {
                 match unsafe {
-                    (self.library.declaration.deserialise)(&mut erased_serde::Deserializer::erase(
-                        deserializer,
-                    ))
+                    (self.library.declaration.deserialise)(
+                        &mut <dyn erased_serde::Deserializer>::erase(deserializer),
+                    )
                 } {
                     Ok(reporter) => Ok(ReporterPlugin {
                         library: self.library,

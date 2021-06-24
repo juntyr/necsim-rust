@@ -153,7 +153,7 @@ impl Reporter for EventCounterReporter {
             self.late_coalescence
         );
 
-        log::info!("{}", event_summary)
+        log::info!("{}", event_summary);
     });
 }
 

@@ -94,7 +94,7 @@ pub fn simulate<
                 MigrationMode::Default,
                 MigrationMode::Default,
             ) {
-                simulation.immigration_entry_mut().push(immigrant)
+                simulation.immigration_entry_mut().push(immigrant);
             }
         }
 
@@ -105,7 +105,7 @@ pub fn simulate<
                 MigrationMode::Force,
                 MigrationMode::Force,
             ) {
-                simulation.immigration_entry_mut().push(immigrant)
+                simulation.immigration_entry_mut().push(immigrant);
             }
         }
     }

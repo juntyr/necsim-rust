@@ -133,7 +133,7 @@ impl<R: Reporter> LocalPartition<R> for LiveMonolithicLocalPartition<R> {
     }
 
     fn finalise_reporting(self) {
-        self.reporter.finalise()
+        self.reporter.finalise();
     }
 }
 

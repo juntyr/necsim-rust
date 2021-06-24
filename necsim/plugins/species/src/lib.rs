@@ -84,18 +84,18 @@ impl TryFrom<SpeciesLocationsReporterArgs> for SpeciesLocationsReporter {
 impl Reporter for SpeciesLocationsReporter {
     impl_report!(speciation(&mut self, speciation: Used) {
         if speciation.prior_time == 0.0_f64 {
-            self.store_individual_origin(&speciation.global_lineage_reference, &speciation.origin)
+            self.store_individual_origin(&speciation.global_lineage_reference, &speciation.origin);
         }
 
         if Some(speciation) == self.last_speciation_event.as_ref() {
             if let Some((parent, prior_time)) = &self.last_parent_prior_time {
                 if prior_time != &speciation.prior_time {
                     let parent = parent.clone();
-                    self.store_individual_coalescence(&speciation.global_lineage_reference, &parent)
+                    self.store_individual_coalescence(&speciation.global_lineage_reference, &parent);
                 }
             }
         } else {
-            self.store_individual_speciation(speciation)
+            self.store_individual_speciation(speciation);
         }
 
         self.last_speciation_event = Some(speciation.clone());
@@ -106,18 +106,18 @@ impl Reporter for SpeciesLocationsReporter {
 
     impl_report!(dispersal(&mut self, dispersal: Used) {
         if dispersal.prior_time == 0.0_f64 {
-            self.store_individual_origin(&dispersal.global_lineage_reference, &dispersal.origin)
+            self.store_individual_origin(&dispersal.global_lineage_reference, &dispersal.origin);
         }
 
         if Some(dispersal) == self.last_dispersal_event.as_ref() {
             if let Some((parent, prior_time)) = &self.last_parent_prior_time {
                 if prior_time != &dispersal.prior_time {
                     let parent = parent.clone();
-                    self.store_individual_coalescence(&dispersal.global_lineage_reference, &parent)
+                    self.store_individual_coalescence(&dispersal.global_lineage_reference, &parent);
                 }
             }
         } else if let LineageInteraction::Coalescence(parent) = &dispersal.interaction {
-            self.store_individual_coalescence(&dispersal.global_lineage_reference, parent)
+            self.store_individual_coalescence(&dispersal.global_lineage_reference, parent);
         }
 
         self.last_dispersal_event = Some(dispersal.clone());
@@ -147,7 +147,7 @@ impl Reporter for SpeciesLocationsReporter {
 
             self.connection.close().map_err(|(_, err)| err)
         })() {
-            error!("Failed to write the lineage locations to table {:?} at {:?}: {:?}", table, output, err)
+            error!("Failed to write the lineage locations to table {:?} at {:?}: {:?}", table, output, err);
         }
     });
 

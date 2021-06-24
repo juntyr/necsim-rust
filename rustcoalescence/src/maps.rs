@@ -35,7 +35,7 @@ pub fn load_habitat_map(
             fix_habitat_map(&mut habitat, dispersal);
             fix_dispersal_map(&habitat, dispersal);
         },
-        MapLoadingMode::OffByOne => fix_habitat_map(&mut habitat, &dispersal),
+        MapLoadingMode::OffByOne => fix_habitat_map(&mut habitat, dispersal),
         MapLoadingMode::Strict => (),
     };
 

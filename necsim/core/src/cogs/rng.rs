@@ -149,7 +149,7 @@ pub trait HabitatPrimeableRng<H: Habitat>: PrimeableRng {
         self.prime_with(
             habitat.map_indexed_location_to_u64_injective(indexed_location),
             time_index,
-        )
+        );
     }
 }
 

@@ -45,7 +45,7 @@ impl PtxJITCompiler {
                 //  generated constant load instructions
                 for element in self.ptx_slices.iter() {
                     match element {
-                        PtxElement::CopiedSource { ptx } => output_ptx.extend_from_slice(&ptx),
+                        PtxElement::CopiedSource { ptx } => output_ptx.extend_from_slice(ptx),
                         PtxElement::ConstLoad {
                             ptx,
                             parameter_index,
@@ -87,7 +87,7 @@ impl PtxJITCompiler {
                                     output_ptx.extend_from_slice(" \t".as_bytes());
 
                                     // Append the destination register from the load instruction
-                                    output_ptx.extend_from_slice(&register);
+                                    output_ptx.extend_from_slice(register);
 
                                     // Generate the hexadecimal constant in little-endian order
                                     output_ptx.extend_from_slice(", 0x".as_bytes());
@@ -104,7 +104,7 @@ impl PtxJITCompiler {
                             }
 
                             // else: const load generation failed, fall back to original PTX source
-                            output_ptx.extend_from_slice(&ptx);
+                            output_ptx.extend_from_slice(ptx);
                         },
                     }
                 }
@@ -113,7 +113,7 @@ impl PtxJITCompiler {
                 for element in self.ptx_slices.iter() {
                     match element {
                         PtxElement::CopiedSource { ptx } | PtxElement::ConstLoad { ptx, .. } => {
-                            output_ptx.extend_from_slice(&ptx)
+                            output_ptx.extend_from_slice(ptx);
                         },
                     }
                 }
