@@ -110,10 +110,8 @@ impl Crate {
     /// Returns deps file filename prefix.
     pub fn get_deps_file_prefix(&self, crate_type: Option<CrateType>) -> Result<String> {
         match (&self.deps_file_prefix, crate_type) {
-            (FilePrefix::Library(prefix), Some(CrateType::Library))
-            | (FilePrefix::Library(prefix), None)
-            | (FilePrefix::Binary(prefix), Some(CrateType::Binary))
-            | (FilePrefix::Binary(prefix), None) => Ok(prefix.clone()),
+            (FilePrefix::Library(prefix), Some(CrateType::Library) | None)
+            | (FilePrefix::Binary(prefix), Some(CrateType::Binary) | None) => Ok(prefix.clone()),
             (FilePrefix::Mixed { bin, .. }, Some(CrateType::Binary)) => Ok(bin.clone()),
             (FilePrefix::Mixed { lib, .. }, Some(CrateType::Library)) => Ok(lib.clone()),
             (FilePrefix::Mixed { .. }, None) => {
@@ -137,7 +135,7 @@ impl Crate {
 
     /// Returns crate root path.
     pub fn get_path(&self) -> &Path {
-        &self.path.as_path()
+        self.path.as_path()
     }
 
     /// Returns temporary crate build location.
