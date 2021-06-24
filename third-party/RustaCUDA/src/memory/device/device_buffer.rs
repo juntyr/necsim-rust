@@ -480,7 +480,7 @@ mod test_device_buffer {
             .unwrap();
 
         // Don't allocate all memory to leave some space for the display's frame buffer
-        let allocation_size = (total_memory * 3) / 4 / mem::size_of::<u64>();
+        let allocation_size = total_memory / 100 / mem::size_of::<u64>();
         unsafe {
             // Test if allocation fails with an out-of-memory error
             let _buffer = DeviceBuffer::<u64>::uninitialized(allocation_size).unwrap();

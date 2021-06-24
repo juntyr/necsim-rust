@@ -1,7 +1,7 @@
 # necsim-rust &emsp; [![Build Status]][actions] [![Rust Doc]][docs] [![Binder Demo]][binder] [![Gitpod Ready-to-Code]][gitpod]
 
-[Build Status]: https://img.shields.io/github/workflow/status/MomoLangenstein/necsim-rust/binder/main
-[actions]: https://github.com/MomoLangenstein/necsim-rust/actions?query=branch%3Amain
+[Build Status]: https://img.shields.io/github/workflow/status/MomoLangenstein/necsim-rust/CI/main
+[actions]: https://github.com/MomoLangenstein/necsim-rust/actions/workflows/ci.yml?query=branch%3Amain
 
 [Rust Doc]: https://img.shields.io/badge/docs-main-blue
 [docs]: https://momolangenstein.github.io/necsim-rust/

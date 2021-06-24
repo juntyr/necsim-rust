@@ -198,7 +198,7 @@ pub enum DeviceAttribute {
     /// the CPU
     CanUseHostPointerForRegisteredMem = 91,
     #[doc(hidden)]
-    __NonExhaustive = 92,
+    __NonExhaustive = 106,
 }
 
 /// Opaque handle to a CUDA device.

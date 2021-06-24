@@ -1,5 +1,6 @@
 #![feature(abi_ptx, core_intrinsics)]
 #![no_std]
+#![no_main]
 
 mod mod1;
 mod mod2;
