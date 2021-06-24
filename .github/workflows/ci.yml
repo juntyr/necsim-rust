@@ -7,32 +7,56 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: default features
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Install OpenMPI
+        run: sudo apt-get install libopenmpi-dev -y --no-install-recommends
+      
+      - name: Check the default features
         run: cargo check
-      - name: all features
+      
+      - name: Check all features
         run: cargo check --all-features
 
   test:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - run: cargo test --workspace
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      
+      - name: Install OpenMPI
+        run: sudo apt-get install libopenmpi-dev -y --no-install-recommends
+
+      - name: Install Rust toolchain
+        run: cargo install ptx-linker -f
+      
+      - name: Run the test-suite
+        run: cargo test --workspace
 
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - run: cargo fmt --all -- --check
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Check the code formatting
+        run: cargo fmt --all -- --check
 
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: default features
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Install OpenMPI
+        run: sudo apt-get install libopenmpi-dev -y --no-install-recommends
+
+      - name: Check the code style for the default features
         run: cargo clippy -- -D warnings
-      - name: all features
+      
+      - name: Check the code style for all features
         run: cargo clippy --all-features -- -D warnings
