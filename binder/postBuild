@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+    sh -s -- --default-toolchain none --profile minimal --no-modify-path -y
+
+source $HOME/.cargo/env
+
+cargo build --release --features rustcoalescence-algorithms-monolithic \
+                      --features rustcoalescence-algorithms-independent
+
+mkdir plugins
+
+for f in target/release/deps/libnecsim_plugins_*.so
+do
+    cp "$f" "plugins/$(echo "$f" | sed s:target/release/deps/libnecsim_plugins_::)"
+done
+
+mkdir bin
+cp target/release/rustcoalescence ./bin
+
+cp binder/demo.ipynb .
+cp binder/demo.py .
+cp binder/simulate.ron .
+cp binder/replay.ron .
+
+rm -rf .cargo .rustup .vscode analysis binder necsim rust-cuda rustcoalescence \
+       target third-party .gitpod.Dockerfile .gitpod.yml Cargo.lock \
+       Cargo.toml rust-toolchain rustfmt.toml
+
+echo 'export PATH="$HOME/bin:$PATH"' >> $HOME/.bashrc
