@@ -1,25 +1,19 @@
 (
-    speciation: 0.75,
+    speciation: 0.001,
     sample: 1.0,
-    seed: 7206077791098137251,
+    seed: 42,
 
-    scenario: SpatiallyExplicit(
-        habitat: "maps/demo/habitat.tif",
-        dispersal: "maps/demo/dispersal.tif",
+    scenario: NonSpatial(
+        area: (100, 100),
+        deme: 100,
     ),
     
-    algorithm: Independent(
-        dedup_cache: None,
-    ),
+    algorithm: Independent(),
     
-    reporters: [ Plugin(
-        library: "plugins/demo.so",
-        reporters: [ Demo(
-            ignore: [
-                Location(x: 0, y: 0),
-                Location(x: 1, y: 0),
-                Location(x: 5, y: 0),
-            ],
-        ) ],
-    ) ],
+    reporters: [
+        Plugin(
+            library: "target/release/deps/libnecsim_plugins_common.so",
+            reporters: [Execution(), Progress(), Biodiversity()],
+        ),
+    ],
 )

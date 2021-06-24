@@ -24,7 +24,7 @@ pub fn simulate_with_logger_mpi(simulate_args: CommandArgs) -> Result<()> {
     });
 
     let simulate_args = SimulateArgs::try_parse(simulate_args, &partitioning)?;
-    // DEMO: info!("Parsed simulation arguments:\n{:#?}", simulate_args);
+    info!("Parsed simulation arguments:\n{:#?}", simulate_args);
 
     if let Some(event_log) = &simulate_args.event_log {
         info!(
