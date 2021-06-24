@@ -7,7 +7,7 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout the Repository
         uses: actions/checkout@v2
 
       - name: Install OpenMPI
@@ -23,23 +23,30 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout the Repository
         uses: actions/checkout@v2
+
+      - name: Install CUDA
+        run: |
+          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/cuda-repo-ubuntu1604_8.0.61-1_amd64.deb
+          sudo dpkg -i cuda-repo-ubuntu1604_8.0.61-1_amd64.deb
+          sudo apt-get update
+          sudo apt-get install cuda-driver-dev-8.0
       
       - name: Install OpenMPI
         run: sudo apt-get install libopenmpi-dev -y --no-install-recommends
 
-      - name: Install Rust toolchain
+      - name: Install the Rust toolchain
         run: cargo install ptx-linker -f
       
       - name: Run the test-suite
-        run: cargo test --workspace
+        run: cargo test --workspace --no-fail-fast
 
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout the Repository
         uses: actions/checkout@v2
 
       - name: Check the code formatting
@@ -49,7 +56,7 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout the Repository
         uses: actions/checkout@v2
 
       - name: Install OpenMPI
