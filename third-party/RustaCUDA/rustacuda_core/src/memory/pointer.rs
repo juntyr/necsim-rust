@@ -58,14 +58,16 @@ derive_traits!(DevicePointer<T> UnifiedPointer<T>);
 
 /// A pointer to device memory.
 ///
-/// `DevicePointer` cannot be dereferenced by the CPU, as it is a pointer to a memory allocation in
-/// the device. It can be safely copied to the device (eg. as part of a kernel launch) and either
-/// unwrapped or transmuted to an appropriate pointer.
+/// `DevicePointer` cannot be dereferenced by the CPU, as it is a pointer to a
+/// memory allocation in the device. It can be safely copied to the device (eg.
+/// as part of a kernel launch) and either unwrapped or transmuted to an
+/// appropriate pointer.
 ///
-/// `DevicePointer` is guaranteed to have an equivalent internal representation to a raw pointer.
-/// Thus, it can be safely reinterpreted or transmuted to `*mut T`. It is safe to pass a
-/// `DevicePointer` through an FFI boundary to C code expecting a `*mut T`, so long as the code on
-/// the other side of that boundary does not attempt to dereference the pointer on the CPU. It is
+/// `DevicePointer` is guaranteed to have an equivalent internal representation
+/// to a raw pointer. Thus, it can be safely reinterpreted or transmuted to
+/// `*mut T`. It is safe to pass a `DevicePointer` through an FFI boundary to C
+/// code expecting a `*mut T`, so long as the code on the other side of that
+/// boundary does not attempt to dereference the pointer on the CPU. It is
 /// thus possible to pass a `DevicePointer` to a CUDA kernel written in C.
 #[repr(transparent)]
 pub struct DevicePointer<T: ?Sized>(*mut T);
@@ -73,13 +75,13 @@ pub struct DevicePointer<T: ?Sized>(*mut T);
 unsafe impl<T: ?Sized> DeviceCopy for DevicePointer<T> {}
 
 impl<T: ?Sized> DevicePointer<T> {
-    /// Wrap the given raw pointer in a DevicePointer. The given pointer is assumed to be a valid,
-    /// device pointer or null.
+    /// Wrap the given raw pointer in a DevicePointer. The given pointer is
+    /// assumed to be a valid, device pointer or null.
     ///
     /// # Safety
     ///
-    /// The given pointer must have been allocated with [`cuda_malloc`](fn.cuda_malloc.html) or
-    /// be null.
+    /// The given pointer must have been allocated with
+    /// [`cuda_malloc`](fn.cuda_malloc.html) or be null.
     ///
     /// # Examples
     ///
@@ -96,8 +98,8 @@ impl<T: ?Sized> DevicePointer<T> {
         DevicePointer(ptr)
     }
 
-    /// Returns the contained pointer as a raw pointer. The returned pointer is not valid on the CPU
-    /// and must not be dereferenced.
+    /// Returns the contained pointer as a raw pointer. The returned pointer is
+    /// not valid on the CPU and must not be dereferenced.
     ///
     /// # Examples
     ///
@@ -114,8 +116,8 @@ impl<T: ?Sized> DevicePointer<T> {
         self.0
     }
 
-    /// Returns the contained pointer as a mutable raw pointer. The returned pointer is not valid on the CPU
-    /// and must not be dereferenced.
+    /// Returns the contained pointer as a mutable raw pointer. The returned
+    /// pointer is not valid on the CPU and must not be dereferenced.
     ///
     /// # Examples
     ///
@@ -167,21 +169,22 @@ impl<T: ?Sized> DevicePointer<T> {
 
     /// Calculates the offset from a device pointer.
     ///
-    /// `count` is in units of T; eg. a `count` of 3 represents a pointer offset of
-    /// `3 * size_of::<T>()` bytes.
+    /// `count` is in units of T; eg. a `count` of 3 represents a pointer offset
+    /// of `3 * size_of::<T>()` bytes.
     ///
     /// # Safety
     ///
     /// If any of the following conditions are violated, the result is Undefined
     /// Behavior:
     ///
-    /// * Both the starting and resulting pointer must be either in bounds or one
-    ///   byte past the end of *the same* allocated object.
+    /// * Both the starting and resulting pointer must be either in bounds or
+    ///   one byte past the end of *the same* allocated object.
     ///
     /// * The computed offset, **in bytes**, cannot overflow an `isize`.
     ///
-    /// * The offset being in bounds cannot rely on "wrapping around" the address
-    ///   space. That is, the infinite-precision sum, **in bytes** must fit in a usize.
+    /// * The offset being in bounds cannot rely on "wrapping around" the
+    ///   address space. That is, the infinite-precision sum, **in bytes** must
+    ///   fit in a usize.
     ///
     /// Consider using `wrapping_offset` instead if these constraints are
     /// difficult to satisfy. The only advantage of this method is that it
@@ -207,8 +210,8 @@ impl<T: ?Sized> DevicePointer<T> {
 
     /// Calculates the offset from a device pointer using wrapping arithmetic.
     ///
-    /// `count` is in units of T; eg. a `count` of 3 represents a pointer offset of
-    /// `3 * size_of::<T>()` bytes.
+    /// `count` is in units of T; eg. a `count` of 3 represents a pointer offset
+    /// of `3 * size_of::<T>()` bytes.
     ///
     /// # Safety
     ///
@@ -242,7 +245,8 @@ impl<T: ?Sized> DevicePointer<T> {
         unsafe { Self::wrap(self.0.wrapping_offset(count)) }
     }
 
-    /// Calculates the offset from a pointer (convenience for `.offset(count as isize)`).
+    /// Calculates the offset from a pointer (convenience for `.offset(count as
+    /// isize)`).
     ///
     /// `count` is in units of T; e.g. a `count` of 3 represents a pointer
     /// offset of `3 * size_of::<T>()` bytes.
@@ -252,13 +256,14 @@ impl<T: ?Sized> DevicePointer<T> {
     /// If any of the following conditions are violated, the result is Undefined
     /// Behavior:
     ///
-    /// * Both the starting and resulting pointer must be either in bounds or one
-    ///   byte past the end of an allocated object.
+    /// * Both the starting and resulting pointer must be either in bounds or
+    ///   one byte past the end of an allocated object.
     ///
     /// * The computed offset, **in bytes**, cannot overflow an `isize`.
     ///
-    /// * The offset being in bounds cannot rely on "wrapping around" the address
-    ///   space. That is, the infinite-precision sum must fit in a `usize`.
+    /// * The offset being in bounds cannot rely on "wrapping around" the
+    ///   address space. That is, the infinite-precision sum must fit in a
+    ///   `usize`.
     ///
     /// Consider using `wrapping_offset` instead if these constraints are
     /// difficult to satisfy. The only advantage of this method is that it
@@ -294,13 +299,14 @@ impl<T: ?Sized> DevicePointer<T> {
     /// If any of the following conditions are violated, the result is Undefined
     /// Behavior:
     ///
-    /// * Both the starting and resulting pointer must be either in bounds or one
-    ///   byte past the end of an allocated object.
+    /// * Both the starting and resulting pointer must be either in bounds or
+    ///   one byte past the end of an allocated object.
     ///
     /// * The computed offset, **in bytes**, cannot overflow an `isize`.
     ///
-    /// * The offset being in bounds cannot rely on "wrapping around" the address
-    ///   space. That is, the infinite-precision sum must fit in a `usize`.
+    /// * The offset being in bounds cannot rely on "wrapping around" the
+    ///   address space. That is, the infinite-precision sum must fit in a
+    ///   `usize`.
     ///
     /// Consider using `wrapping_offset` instead if these constraints are
     /// difficult to satisfy. The only advantage of this method is that it
@@ -391,22 +397,23 @@ impl<T: ?Sized> DevicePointer<T> {
 
 /// A pointer to unified memory.
 ///
-/// `UnifiedPointer` can be safely dereferenced by the CPU, as the memory allocation it points to is
-/// shared between the CPU and the GPU. It can also be safely copied to the device (eg. as part of
-/// a kernel launch).
+/// `UnifiedPointer` can be safely dereferenced by the CPU, as the memory
+/// allocation it points to is shared between the CPU and the GPU. It can also
+/// be safely copied to the device (eg. as part of a kernel launch).
 ///
-/// `UnifiedPointer` is guaranteed to have an equivalent internal representation to a raw pointer.
-/// Thus, it can be safely reinterpreted or transmuted to `*mut T`. It is also safe to pass a
-/// `UnifiedPointer` through an FFI boundary to C code expecting a `*mut T`. It is
-/// thus possible to pass a `UnifiedPointer` to a CUDA kernel written in C.
+/// `UnifiedPointer` is guaranteed to have an equivalent internal representation
+/// to a raw pointer. Thus, it can be safely reinterpreted or transmuted to
+/// `*mut T`. It is also safe to pass a `UnifiedPointer` through an FFI boundary
+/// to C code expecting a `*mut T`. It is thus possible to pass a
+/// `UnifiedPointer` to a CUDA kernel written in C.
 #[repr(transparent)]
 pub struct UnifiedPointer<T: ?Sized>(*mut T);
 
 unsafe impl<T: ?Sized + DeviceCopy> DeviceCopy for UnifiedPointer<T> {}
 
 impl<T: ?Sized> UnifiedPointer<T> {
-    /// Wrap the given raw pointer in a UnifiedPointer. The given pointer is assumed to be a valid,
-    /// unified-memory pointer or null.
+    /// Wrap the given raw pointer in a UnifiedPointer. The given pointer is
+    /// assumed to be a valid, unified-memory pointer or null.
     ///
     /// # Safety
     ///
@@ -499,21 +506,22 @@ impl<T: ?Sized> UnifiedPointer<T> {
 
     /// Calculates the offset from a unified pointer.
     ///
-    /// `count` is in units of T; eg. a `count` of 3 represents a pointer offset of
-    /// `3 * size_of::<T>()` bytes.
+    /// `count` is in units of T; eg. a `count` of 3 represents a pointer offset
+    /// of `3 * size_of::<T>()` bytes.
     ///
     /// # Safety
     ///
     /// If any of the following conditions are violated, the result is Undefined
     /// Behavior:
     ///
-    /// * Both the starting and resulting pointer must be either in bounds or one
-    ///   byte past the end of *the same* allocated object.
+    /// * Both the starting and resulting pointer must be either in bounds or
+    ///   one byte past the end of *the same* allocated object.
     ///
     /// * The computed offset, **in bytes**, cannot overflow an `isize`.
     ///
-    /// * The offset being in bounds cannot rely on "wrapping around" the address
-    ///   space. That is, the infinite-precision sum, **in bytes** must fit in a usize.
+    /// * The offset being in bounds cannot rely on "wrapping around" the
+    ///   address space. That is, the infinite-precision sum, **in bytes** must
+    ///   fit in a usize.
     ///
     /// Consider using `wrapping_offset` instead if these constraints are
     /// difficult to satisfy. The only advantage of this method is that it
@@ -539,8 +547,8 @@ impl<T: ?Sized> UnifiedPointer<T> {
 
     /// Calculates the offset from a unified pointer using wrapping arithmetic.
     ///
-    /// `count` is in units of T; eg. a `count` of 3 represents a pointer offset of
-    /// `3 * size_of::<T>()` bytes.
+    /// `count` is in units of T; eg. a `count` of 3 represents a pointer offset
+    /// of `3 * size_of::<T>()` bytes.
     ///
     /// # Safety
     ///
@@ -574,7 +582,8 @@ impl<T: ?Sized> UnifiedPointer<T> {
         unsafe { Self::wrap(self.0.wrapping_offset(count)) }
     }
 
-    /// Calculates the offset from a pointer (convenience for `.offset(count as isize)`).
+    /// Calculates the offset from a pointer (convenience for `.offset(count as
+    /// isize)`).
     ///
     /// `count` is in units of T; e.g. a `count` of 3 represents a pointer
     /// offset of `3 * size_of::<T>()` bytes.
@@ -584,13 +593,14 @@ impl<T: ?Sized> UnifiedPointer<T> {
     /// If any of the following conditions are violated, the result is Undefined
     /// Behavior:
     ///
-    /// * Both the starting and resulting pointer must be either in bounds or one
-    ///   byte past the end of an allocated object.
+    /// * Both the starting and resulting pointer must be either in bounds or
+    ///   one byte past the end of an allocated object.
     ///
     /// * The computed offset, **in bytes**, cannot overflow an `isize`.
     ///
-    /// * The offset being in bounds cannot rely on "wrapping around" the address
-    ///   space. That is, the infinite-precision sum must fit in a `usize`.
+    /// * The offset being in bounds cannot rely on "wrapping around" the
+    ///   address space. That is, the infinite-precision sum must fit in a
+    ///   `usize`.
     ///
     /// Consider using `wrapping_offset` instead if these constraints are
     /// difficult to satisfy. The only advantage of this method is that it
@@ -626,13 +636,14 @@ impl<T: ?Sized> UnifiedPointer<T> {
     /// If any of the following conditions are violated, the result is Undefined
     /// Behavior:
     ///
-    /// * Both the starting and resulting pointer must be either in bounds or one
-    ///   byte past the end of an allocated object.
+    /// * Both the starting and resulting pointer must be either in bounds or
+    ///   one byte past the end of an allocated object.
     ///
     /// * The computed offset, **in bytes**, cannot overflow an `isize`.
     ///
-    /// * The offset being in bounds cannot rely on "wrapping around" the address
-    ///   space. That is, the infinite-precision sum must fit in a `usize`.
+    /// * The offset being in bounds cannot rely on "wrapping around" the
+    ///   address space. That is, the infinite-precision sum must fit in a
+    ///   `usize`.
     ///
     /// Consider using `wrapping_offset` instead if these constraints are
     /// difficult to satisfy. The only advantage of this method is that it

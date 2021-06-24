@@ -25,9 +25,9 @@ checksum = "f26201604c87b1e01bd3d98f8d5d9a8fcbb815e8cedb41ffccbeb4bf593a35fe"
 
 [[package]]
 name = "aes"
-version = "0.7.2"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbda1ffd586ec58bdbc3290f9243c1d05bec1abf49ec15e4bc3d60070b7d9d11"
+checksum = "495ee669413bfbe9e8cace80f4d3d78e6d8c8d99579f97fb93bde351b185f2d4"
 dependencies = [
  "cfg-if 1.0.0",
  "cipher",
@@ -65,7 +65,6 @@ dependencies = [
  "necsim-impls-no-std",
  "ptx-builder",
  "rust-cuda",
- "rustacuda",
  "structopt",
 ]
 
@@ -79,7 +78,6 @@ dependencies = [
  "necsim-impls-cuda",
  "necsim-impls-no-std",
  "rust-cuda",
- "rustacuda_core",
 ]
 
 [[package]]
@@ -140,6 +138,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "antidote"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34fde25430d87a9388dadbe6e34d7f72a462c8b43ac8d309b42b0a8505d7e2a5"
+
+[[package]]
 name = "anyhow"
 version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -150,10 +154,7 @@ name = "array2d"
 version = "0.2.1"
 dependencies = [
  "rust-cuda",
- "rust-cuda-derive",
- "rustacuda",
- "rustacuda_core",
- "rustacuda_derive",
+ "serde",
 ]
 
 [[package]]
@@ -357,6 +358,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "crc32fast"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81156fece84ab6a9f2afdb109ce3ae577e42b1228441eded99bd77f627953b1a"
+dependencies = [
+ "cfg-if 1.0.0",
+]
+
+[[package]]
 name = "cuda-config"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -435,6 +445,18 @@ name = "fallible-streaming-iterator"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7360491ce676a36bf9bb3c56c1aa791658183a54d2744120f27285738d90465a"
+
+[[package]]
+name = "flate2"
+version = "1.0.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd3aec53de10fe96d7d8c565eb17f2c687bb5518a2ec453b5b1252964526abe0"
+dependencies = [
+ "cfg-if 1.0.0",
+ "crc32fast",
+ "libc",
+ "miniz_oxide",
+]
 
 [[package]]
 name = "float_next_after"
@@ -535,7 +557,14 @@ checksum = "824845a0bf897a9042383849b02c1bc219c2383772efcd5c6f9766fa4b81aef3"
 dependencies = [
  "autocfg",
  "hashbrown 0.9.1",
+ "serde",
 ]
+
+[[package]]
+name = "itoa"
+version = "0.4.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd25036021b0de88a0aff6b850051563c6516d0bf53f8638938edbb9de732736"
 
 [[package]]
 name = "jpeg-decoder"
@@ -697,10 +726,6 @@ dependencies = [
  "mpi",
  "necsim-core-bond",
  "rust-cuda",
- "rust-cuda-derive",
- "rustacuda",
- "rustacuda_core",
- "rustacuda_derive",
  "serde",
  "typed-builder",
 ]
@@ -711,8 +736,7 @@ version = "0.1.0"
 dependencies = [
  "float_next_after",
  "mpi",
- "rustacuda_core",
- "rustacuda_derive",
+ "rust-cuda",
  "serde",
 ]
 
@@ -723,9 +747,6 @@ dependencies = [
  "contracts",
  "necsim-core",
  "rust-cuda",
- "rust-cuda-derive",
- "rustacuda",
- "rustacuda_core",
 ]
 
 [[package]]
@@ -743,14 +764,9 @@ dependencies = [
  "necsim-core-bond",
  "necsim-partitioning-core",
  "rust-cuda",
- "rust-cuda-derive",
- "rustacuda",
- "rustacuda_core",
- "rustacuda_derive",
  "seahash",
  "serde",
  "slab",
- "wyhash",
  "xxhash-rust",
 ]
 
@@ -999,6 +1015,7 @@ dependencies = [
 name = "ptx-builder"
 version = "0.5.3"
 dependencies = [
+ "antidote",
  "colored",
  "failure",
  "lazy_static",
@@ -1024,9 +1041,9 @@ dependencies = [
 
 [[package]]
 name = "rand"
-version = "0.8.3"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ef9e7e66b4468674bfcb0c81af8b7fa0bb154fa9f28eb840da5c447baeb8d7e"
+checksum = "2e7573632e6454cf6b99d7aac4ccca54be06da05aca2ef7423d22d27d4d4bcd8"
 dependencies = [
  "libc",
  "rand_chacha",
@@ -1103,7 +1120,10 @@ version = "0.6.4"
 dependencies = [
  "base64",
  "bitflags",
+ "indexmap",
  "serde",
+ "serde_bytes",
+ "serde_json",
 ]
 
 [[package]]
@@ -1125,6 +1145,7 @@ dependencies = [
 name = "rust-cuda"
 version = "0.1.0"
 dependencies = [
+ "rust-cuda-derive",
  "rustacuda",
  "rustacuda_core",
 ]
@@ -1152,6 +1173,10 @@ dependencies = [
 [[package]]
 name = "rustacuda_core"
 version = "0.1.2"
+dependencies = [
+ "rustacuda",
+ "rustacuda_derive",
+]
 
 [[package]]
 name = "rustacuda_derive"
@@ -1239,8 +1264,6 @@ dependencies = [
  "necsim-impls-std",
  "necsim-partitioning-core",
  "rust-cuda",
- "rustacuda",
- "rustacuda_core",
  "rustcoalescence-algorithms",
  "rustcoalescence-algorithms-cuda-kernel",
  "rustcoalescence-algorithms-cuda-kernel-ptx-jit",
@@ -1259,7 +1282,6 @@ dependencies = [
  "necsim-impls-cuda",
  "necsim-impls-no-std",
  "rust-cuda",
- "rustacuda_core",
  "rustcoalescence-algorithms-cuda-kernel-ptx-jit",
  "rustcoalescence-algorithms-cuda-kernel-specialiser",
 ]
@@ -1338,6 +1360,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ryu"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71d301d4193d031abdd79ff7e3dd721168a9572ef3fe51a1517aba235bd8f86e"
+
+[[package]]
 name = "seahash"
 version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1371,6 +1399,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_bytes"
+version = "0.11.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16ae07dd2f88a366f15bd0632ba725227018c69a1c8550a927324f8eb8368bb9"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_derive"
 version = "1.0.125"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1390,6 +1427,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "serde_json"
+version = "1.0.64"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "799e97dc9fdae36a5c8b8f2cae9ce2ee9fdce2058c57a93e6099d919fd982f79"
+dependencies = [
+ "itoa",
+ "ryu",
+ "serde",
 ]
 
 [[package]]
@@ -1460,9 +1508,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.72"
+version = "1.0.73"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1e8cdbefb79a9a5a65e0db8b47b723ee907b7c7f8496c76a1770b5c310bab82"
+checksum = "f71489ff30030d2ae598524f61326b902466f72a0fb1a8564c001cc63425bcc7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1535,12 +1583,12 @@ dependencies = [
 
 [[package]]
 name = "tiff"
-version = "0.6.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a53f4706d65497df0c4349241deddf35f84cee19c87ed86ea8ca590f4464437"
+checksum = "400e4ab5b897187c0a0a6c80ed886d28edcb8156e13e0c677b54a695a173c3fa"
 dependencies = [
+ "flate2",
  "jpeg-decoder",
- "miniz_oxide",
  "weezl",
 ]
 
@@ -1669,15 +1717,6 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
-
-[[package]]
-name = "wyhash"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "baf6e163c25e3fac820b4b453185ea2dea3b6a3e0a721d4d23d75bd33734c295"
-dependencies = [
- "rand_core",
-]
 
 [[package]]
 name = "xxhash-rust"

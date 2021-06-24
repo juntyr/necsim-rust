@@ -11,7 +11,7 @@ use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-#[cfg_attr(feature = "cuda", derive(RustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCuda))]
 pub struct AlmostInfiniteNormalDispersalSampler<G: RngCore> {
     sigma: NonNegativeF64,
     self_dispersal: ClosedUnitF64,

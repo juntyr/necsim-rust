@@ -1,5 +1,6 @@
-//! This module is a dummy module. It contains doctests that should fail to compile. It's used for
-//! testing the DeriveCopy custom-derive macro and should not contain any actual code.
+//! This module is a dummy module. It contains doctests that should fail to
+//! compile. It's used for testing the DeriveCopy custom-derive macro and should
+//! not contain any actual code.
 //!
 //! ```compile_fail
 //! #[macro_use]

@@ -1,27 +1,34 @@
-use crate::error::{CudaResult, ToResult};
-use crate::memory::device::AsyncCopyDestination;
-use crate::memory::device::{CopyDestination, DeviceBuffer};
-use crate::memory::DeviceCopy;
-use crate::memory::DevicePointer;
-use crate::stream::Stream;
+use crate::{
+    error::{CudaResult, IntoResult},
+    memory::{
+        device::{AsyncCopyDestination, CopyDestination, DeviceBuffer},
+        DeviceCopy, DevicePointer,
+    },
+    stream::Stream,
+};
 use cuda_driver_sys as cuda;
-use std::iter::{ExactSizeIterator, FusedIterator};
-use std::mem;
-use std::ops::{
-    Index, IndexMut, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
+use std::{
+    iter::{ExactSizeIterator, FusedIterator},
+    mem,
+    ops::{
+        Index, IndexMut, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
+    },
 };
 
-use std::os::raw::c_void;
-use std::slice::{self, Chunks, ChunksMut};
+use std::{
+    os::raw::c_void,
+    slice::{self, Chunks, ChunksMut},
+};
 
 /// Fixed-size device-side slice.
 #[derive(Debug)]
 #[repr(C)]
 pub struct DeviceSlice<T>([T]);
-// This works by faking a regular slice out of the device raw-pointer and the length and transmuting
-// I have no idea if this is safe or not. Probably not, though I can't imagine how the compiler
-// could possibly know that the pointer is not de-referenceable. I'm banking that we get proper
-// Dynamicaly-sized Types before the compiler authors break this assumption.
+// This works by faking a regular slice out of the device raw-pointer and the
+// length and transmuting I have no idea if this is safe or not. Probably not,
+// though I can't imagine how the compiler could possibly know that the pointer
+// is not de-referenceable. I'm banking that we get proper Dynamicaly-sized
+// Types before the compiler authors break this assumption.
 impl<T> DeviceSlice<T> {
     /// Returns the number of elements in the slice.
     ///
@@ -53,9 +60,9 @@ impl<T> DeviceSlice<T> {
 
     /// Return a raw device-pointer to the slice's buffer.
     ///
-    /// The caller must ensure that the slice outlives the pointer this function returns, or else
-    /// it will end up pointing to garbage. The caller must also ensure that the pointer is not
-    /// dereferenced by the CPU.
+    /// The caller must ensure that the slice outlives the pointer this function
+    /// returns, or else it will end up pointing to garbage. The caller must
+    /// also ensure that the pointer is not dereferenced by the CPU.
     ///
     /// Examples:
     ///
@@ -71,9 +78,9 @@ impl<T> DeviceSlice<T> {
 
     /// Returns an unsafe mutable device-pointer to the slice's buffer.
     ///
-    /// The caller must ensure that the slice outlives the pointer this function returns, or else
-    /// it will end up pointing to garbage. The caller must also ensure that the pointer is not
-    /// dereferenced by the CPU.
+    /// The caller must ensure that the slice outlives the pointer this function
+    /// returns, or else it will end up pointing to garbage. The caller must
+    /// also ensure that the pointer is not dereferenced by the CPU.
     ///
     /// Examples:
     ///
@@ -89,8 +96,9 @@ impl<T> DeviceSlice<T> {
 
     /// Divides one DeviceSlice into two at a given index.
     ///
-    /// The first will contain all indices from `[0, mid)` (excluding the index `mid` itself) and
-    /// the second will contain all indices from `[mid, len)` (excluding the index `len` itself).
+    /// The first will contain all indices from `[0, mid)` (excluding the index
+    /// `mid` itself) and the second will contain all indices from `[mid,
+    /// len)` (excluding the index `len` itself).
     ///
     /// # Panics
     ///
@@ -122,8 +130,9 @@ impl<T> DeviceSlice<T> {
 
     /// Divides one mutable DeviceSlice into two at a given index.
     ///
-    /// The first will contain all indices from `[0, mid)` (excluding the index `mid` itself) and
-    /// the second will contain all indices from `[mid, len)` (excluding the index `len` itself).
+    /// The first will contain all indices from `[0, mid)` (excluding the index
+    /// `mid` itself) and the second will contain all indices from `[mid,
+    /// len)` (excluding the index `len` itself).
     ///
     /// # Panics
     ///
@@ -158,12 +167,13 @@ impl<T> DeviceSlice<T> {
         }
     }
 
-    /// Returns an iterator over `chunk_size` elements of the slice at a time. The chunks are device
-    /// slices and do not overlap. If `chunk_size` does not divide the length of the slice, then the
-    /// last chunk will not have length `chunk_size`.
+    /// Returns an iterator over `chunk_size` elements of the slice at a time.
+    /// The chunks are device slices and do not overlap. If `chunk_size`
+    /// does not divide the length of the slice, then the last chunk will
+    /// not have length `chunk_size`.
     ///
-    /// See `exact_chunks` for a variant of this iterator that returns chunks of always exactly
-    /// `chunk_size` elements.
+    /// See `exact_chunks` for a variant of this iterator that returns chunks of
+    /// always exactly `chunk_size` elements.
     ///
     /// # Panics
     ///
@@ -184,18 +194,18 @@ impl<T> DeviceSlice<T> {
     /// assert_eq!([3, 4], host_buf);
     ///
     /// assert_eq!(iter.next().unwrap().len(), 1);
-    ///
     /// ```
     pub fn chunks(&self, chunk_size: usize) -> DeviceChunks<T> {
         DeviceChunks(self.0.chunks(chunk_size))
     }
 
-    /// Returns an iterator over `chunk_size` elements of the slice at a time. The chunks are
-    /// mutable device slices and do not overlap. If `chunk_size` does not divide the length of the
-    /// slice, then the last chunk will not have length `chunk_size`.
+    /// Returns an iterator over `chunk_size` elements of the slice at a time.
+    /// The chunks are mutable device slices and do not overlap. If
+    /// `chunk_size` does not divide the length of the slice, then the last
+    /// chunk will not have length `chunk_size`.
     ///
-    /// See `exact_chunks` for a variant of this iterator that returns chunks of always exactly
-    /// `chunk_size` elements.
+    /// See `exact_chunks` for a variant of this iterator that returns chunks of
+    /// always exactly `chunk_size` elements.
     ///
     /// # Panics
     ///
@@ -226,26 +236,28 @@ impl<T> DeviceSlice<T> {
         DeviceChunksMut(self.0.chunks_mut(chunk_size))
     }
 
-    /// Private function used to transmute a CPU slice (which must have the device pointer as it's
-    /// buffer pointer) to a DeviceSlice. Completely unsafe.
+    /// Private function used to transmute a CPU slice (which must have the
+    /// device pointer as it's buffer pointer) to a DeviceSlice. Completely
+    /// unsafe.
     pub(super) unsafe fn from_slice(slice: &[T]) -> &DeviceSlice<T> {
         &*(slice as *const [T] as *const DeviceSlice<T>)
     }
 
-    /// Private function used to transmute a mutable CPU slice (which must have the device pointer
-    /// as it's buffer pointer) to a mutable DeviceSlice. Completely unsafe.
+    /// Private function used to transmute a mutable CPU slice (which must have
+    /// the device pointer as it's buffer pointer) to a mutable DeviceSlice.
+    /// Completely unsafe.
     pub(super) unsafe fn from_slice_mut(slice: &mut [T]) -> &mut DeviceSlice<T> {
         &mut *(slice as *mut [T] as *mut DeviceSlice<T>)
     }
 
     /// Returns a `DevicePointer<T>` to the buffer.
     ///
-    /// The caller must ensure that the buffer outlives the returned pointer, or it will end up
-    /// pointing to garbage.
+    /// The caller must ensure that the buffer outlives the returned pointer, or
+    /// it will end up pointing to garbage.
     ///
-    /// Modifying `DeviceBuffer` is guaranteed not to cause its buffer to be reallocated, so pointers
-    /// cannot be invalidated in that manner, but other types may be added in the future which can
-    /// reallocate.
+    /// Modifying `DeviceBuffer` is guaranteed not to cause its buffer to be
+    /// reallocated, so pointers cannot be invalidated in that manner, but
+    /// other types may be added in the future which can reallocate.
     pub fn as_device_ptr(&mut self) -> DevicePointer<T> {
         unsafe { DevicePointer::wrap(self.0.as_mut_ptr()) }
     }
@@ -256,15 +268,17 @@ impl<T> DeviceSlice<T> {
     ///
     /// # Safety
     ///
-    /// This function is unsafe as there is no guarantee that the given pointer is valid for `len`
-    /// elements, nor whether the lifetime inferred is a suitable lifetime for the returned slice.
+    /// This function is unsafe as there is no guarantee that the given pointer
+    /// is valid for `len` elements, nor whether the lifetime inferred is a
+    /// suitable lifetime for the returned slice.
     ///
     /// # Caveat
     ///
-    /// The lifetime for the returned slice is inferred from its usage. To prevent accidental misuse,
-    /// it's suggested to tie the lifetime to whatever source lifetime is safe in the context, such
-    /// as by providing a helper function taking the lifetime of a host value for the slice or
-    /// by explicit annotation.
+    /// The lifetime for the returned slice is inferred from its usage. To
+    /// prevent accidental misuse, it's suggested to tie the lifetime to
+    /// whatever source lifetime is safe in the context, such
+    /// as by providing a helper function taking the lifetime of a host value
+    /// for the slice or by explicit annotation.
     ///
     /// # Examples
     ///
@@ -289,13 +303,15 @@ impl<T> DeviceSlice<T> {
     ///
     /// # Safety
     ///
-    /// This function is unsafe as there is no guarantee that the given pointer is valid for `len`
-    /// elements, nor whether the lifetime inferred is a suitable lifetime for the returned slice.
+    /// This function is unsafe as there is no guarantee that the given pointer
+    /// is valid for `len` elements, nor whether the lifetime inferred is a
+    /// suitable lifetime for the returned slice.
     ///
-    /// This function is unsafe as there is no guarantee that the given pointer is valid for `len`
-    /// elements, not whether the lifetime inferred is a suitable lifetime for the returned slice,
-    /// as well as not being able to provide a non-aliasing guarantee of the returned
-    /// mutable slice. `data` must be non-null and aligned even for zero-length
+    /// This function is unsafe as there is no guarantee that the given pointer
+    /// is valid for `len` elements, not whether the lifetime inferred is a
+    /// suitable lifetime for the returned slice, as well as not being able
+    /// to provide a non-aliasing guarantee of the returned mutable slice.
+    /// `data` must be non-null and aligned even for zero-length
     /// slices as with `from_raw_parts`.
     ///
     /// See the documentation of `from_raw_parts` for more details.
@@ -307,11 +323,11 @@ impl<T> DeviceSlice<T> {
     }
 }
 
-/// An iterator over a [`DeviceSlice`](struct.DeviceSlice.html) in (non-overlapping) chunks
-/// (`chunk_size` elements at a time).
+/// An iterator over a [`DeviceSlice`](struct.DeviceSlice.html) in
+/// (non-overlapping) chunks (`chunk_size` elements at a time).
 ///
-/// When the slice len is not evenly divided by the chunk size, the last slice of the iteration will
-/// be the remainder.
+/// When the slice len is not evenly divided by the chunk size, the last slice
+/// of the iteration will be the remainder.
 ///
 /// This struct is created by the `chunks` method on `DeviceSlices`.
 #[derive(Debug, Clone)]
@@ -357,11 +373,11 @@ impl<'a, T> DoubleEndedIterator for DeviceChunks<'a, T> {
 impl<'a, T> ExactSizeIterator for DeviceChunks<'a, T> {}
 impl<'a, T> FusedIterator for DeviceChunks<'a, T> {}
 
-/// An iterator over a [`DeviceSlice`](struct.DeviceSlice.html) in (non-overlapping) mutable chunks
-/// (`chunk_size` elements at a time).
+/// An iterator over a [`DeviceSlice`](struct.DeviceSlice.html) in
+/// (non-overlapping) mutable chunks (`chunk_size` elements at a time).
 ///
-/// When the slice len is not evenly divided by the chunk size, the last slice of the iteration will
-/// be the remainder.
+/// When the slice len is not evenly divided by the chunk size, the last slice
+/// of the iteration will be the remainder.
 ///
 /// This struct is created by the `chunks` method on `DeviceSlices`.
 #[derive(Debug)]
@@ -452,7 +468,7 @@ impl<T: DeviceCopy, I: AsRef<[T]> + AsMut<[T]> + ?Sized> CopyDestination<I> for 
                     val.as_ptr() as *const c_void,
                     size,
                 )
-                .to_result()?
+                .into_result()?
             }
         }
         Ok(())
@@ -468,7 +484,7 @@ impl<T: DeviceCopy, I: AsRef<[T]> + AsMut<[T]> + ?Sized> CopyDestination<I> for 
         if size != 0 {
             unsafe {
                 cuda::cuMemcpyDtoH_v2(val.as_mut_ptr() as *mut c_void, self.as_ptr() as u64, size)
-                    .to_result()?
+                    .into_result()?
             }
         }
         Ok(())
@@ -484,7 +500,7 @@ impl<T: DeviceCopy> CopyDestination<DeviceSlice<T>> for DeviceSlice<T> {
         if size != 0 {
             unsafe {
                 cuda::cuMemcpyDtoD_v2(self.0.as_mut_ptr() as u64, val.as_ptr() as u64, size)
-                    .to_result()?
+                    .into_result()?
             }
         }
         Ok(())
@@ -499,7 +515,7 @@ impl<T: DeviceCopy> CopyDestination<DeviceSlice<T>> for DeviceSlice<T> {
         if size != 0 {
             unsafe {
                 cuda::cuMemcpyDtoD_v2(val.as_mut_ptr() as u64, self.as_ptr() as u64, size)
-                    .to_result()?
+                    .into_result()?
             }
         }
         Ok(())
@@ -531,7 +547,7 @@ impl<T: DeviceCopy, I: AsRef<[T]> + AsMut<[T]> + ?Sized> AsyncCopyDestination<I>
                 size,
                 stream.as_inner(),
             )
-            .to_result()?
+            .into_result()?
         }
         Ok(())
     }
@@ -550,7 +566,7 @@ impl<T: DeviceCopy, I: AsRef<[T]> + AsMut<[T]> + ?Sized> AsyncCopyDestination<I>
                 size,
                 stream.as_inner(),
             )
-            .to_result()?
+            .into_result()?
         }
         Ok(())
     }
@@ -569,7 +585,7 @@ impl<T: DeviceCopy> AsyncCopyDestination<DeviceSlice<T>> for DeviceSlice<T> {
                 size,
                 stream.as_inner(),
             )
-            .to_result()?
+            .into_result()?
         }
         Ok(())
     }
@@ -587,7 +603,7 @@ impl<T: DeviceCopy> AsyncCopyDestination<DeviceSlice<T>> for DeviceSlice<T> {
                 size,
                 stream.as_inner(),
             )
-            .to_result()?
+            .into_result()?
         }
         Ok(())
     }

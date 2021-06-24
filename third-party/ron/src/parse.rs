@@ -587,7 +587,7 @@ impl<'a> Bytes<'a> {
     }
 
     pub fn skip_ws(&mut self) -> Result<()> {
-        while self.peek().map_or(false, |c| is_whitespace_char(c)) {
+        while self.peek().map_or(false, is_whitespace_char) {
             let _ = self.advance_single();
         }
 

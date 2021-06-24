@@ -4,9 +4,7 @@
 
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::ToTokens;
-use syn::{
-    spanned::Spanned, visit_mut as visitor, Attribute, Expr, ExprCall,
-};
+use syn::{spanned::Spanned, visit_mut as visitor, Attribute, Expr, ExprCall};
 
 use crate::implementation::{
     Contract, ContractMode, ContractType, FuncWithContracts,
@@ -120,19 +118,23 @@ fn get_assert_macro(
             (ContractType::Requires, ContractMode::Always) => {
                 Some(Ident::new("checked_precondition", span))
             }
-            (ContractType::Requires, ContractMode::Debug) | (ContractType::Requires, ContractMode::Test) => {
+            (ContractType::Requires, ContractMode::Debug)
+            | (ContractType::Requires, ContractMode::Test) => {
                 Some(Ident::new("debug_checked_precondition", span))
             }
-            (ContractType::Requires, ContractMode::Disabled) | (ContractType::Requires, ContractMode::LogOnly) => {
+            (ContractType::Requires, ContractMode::Disabled)
+            | (ContractType::Requires, ContractMode::LogOnly) => {
                 Some(Ident::new("precondition", span))
             }
             (ContractType::Ensures, ContractMode::Always) => {
                 Some(Ident::new("checked_postcondition", span))
             }
-            (ContractType::Ensures, ContractMode::Debug) | (ContractType::Ensures, ContractMode::Test)=> {
+            (ContractType::Ensures, ContractMode::Debug)
+            | (ContractType::Ensures, ContractMode::Test) => {
                 Some(Ident::new("debug_checked_postcondition", span))
             }
-            (ContractType::Ensures, ContractMode::Disabled) | (ContractType::Ensures, ContractMode::LogOnly) => {
+            (ContractType::Ensures, ContractMode::Disabled)
+            | (ContractType::Ensures, ContractMode::LogOnly) => {
                 Some(Ident::new("postcondition", span))
             }
             (ContractType::Invariant, _) => {
@@ -142,8 +144,10 @@ fn get_assert_macro(
     } else {
         match mode {
             ContractMode::Always => Some(Ident::new("assert", span)),
-            ContractMode::Debug | ContractMode::Test => Some(Ident::new("debug_assert", span)),
-            ContractMode::Disabled | ContractMode::LogOnly=> None,
+            ContractMode::Debug | ContractMode::Test => {
+                Some(Ident::new("debug_assert", span))
+            }
+            ContractMode::Disabled | ContractMode::LogOnly => None,
         }
     }
 }

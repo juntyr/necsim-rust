@@ -1,18 +1,19 @@
 mod pointer;
 pub use self::pointer::*;
 
-use core::marker::PhantomData;
-use core::num::*;
+use core::{marker::PhantomData, num::*};
 
 /// Marker trait for types which can safely be copied to or from a CUDA device.
 ///
-/// A type can be safely copied if its value can be duplicated simply by copying bits and if it does
-/// not contain a reference to memory which is not accessible to the device. Additionally, the
-/// DeviceCopy trait does not imply copy semantics as the Copy trait does.
+/// A type can be safely copied if its value can be duplicated simply by copying
+/// bits and if it does not contain a reference to memory which is not
+/// accessible to the device. Additionally, the DeviceCopy trait does not imply
+/// copy semantics as the Copy trait does.
 ///
 /// ## How can I implement DeviceCopy?
 ///
-/// There are two ways to implement DeviceCopy on your type. The simplest is to use `derive`:
+/// There are two ways to implement DeviceCopy on your type. The simplest is to
+/// use `derive`:
 ///
 /// ```
 /// #[macro_use]
@@ -24,9 +25,9 @@ use core::num::*;
 /// # fn main () {}
 /// ```
 ///
-/// This is safe because the `DeviceCopy` derive macro will check that all fields of the struct,
-/// enum or union implement `DeviceCopy`. For example, this fails to compile, because `Vec` cannot
-/// be copied to the device:
+/// This is safe because the `DeviceCopy` derive macro will check that all
+/// fields of the struct, enum or union implement `DeviceCopy`. For example,
+/// this fails to compile, because `Vec` cannot be copied to the device:
 ///
 /// ```compile_fail
 /// # #[macro_use]
@@ -50,18 +51,21 @@ use core::num::*;
 ///
 /// ## What is the difference between `DeviceCopy` and `Copy`?
 ///
-/// `DeviceCopy` is stricter than `Copy`. `DeviceCopy` must only be implemented for types which
-/// do not contain references or raw pointers to non-device-accessible memory. `DeviceCopy` also
-/// does not imply copy semantics - that is, `DeviceCopy` values are not implicitly copied on
-/// assignment the way that `Copy` values are. This is helpful, as it may be desirable to implement
-/// `DeviceCopy` for large structures that would be inefficient to copy for every assignment.
+/// `DeviceCopy` is stricter than `Copy`. `DeviceCopy` must only be implemented
+/// for types which do not contain references or raw pointers to
+/// non-device-accessible memory. `DeviceCopy` also does not imply copy
+/// semantics - that is, `DeviceCopy` values are not implicitly copied on
+/// assignment the way that `Copy` values are. This is helpful, as it may be
+/// desirable to implement `DeviceCopy` for large structures that would be
+/// inefficient to copy for every assignment.
 ///
 /// ## When can't my type be `DeviceCopy`?
 ///
-/// Some types cannot be safely copied to the device. For example, copying `&T` would create an
-/// invalid reference on the device which would segfault if dereferenced. Generalizing this, any
-/// type implementing `Drop` cannot be `DeviceCopy` since it is responsible for some resource that
-/// would not be available on the device.
+/// Some types cannot be safely copied to the device. For example, copying `&T`
+/// would create an invalid reference on the device which would segfault if
+/// dereferenced. Generalizing this, any type implementing `Drop` cannot be
+/// `DeviceCopy` since it is responsible for some resource that would not be
+/// available on the device.
 pub unsafe trait DeviceCopy {
     // Empty
 }
@@ -80,7 +84,7 @@ impl_device_copy!(
     f32 f64
     bool char
 
-    NonZeroU8 NonZeroU16 NonZeroU32 NonZeroU64 NonZeroU128
+    NonZeroU8 NonZeroU16 NonZeroU32 NonZeroU64 NonZeroUsize NonZeroU128
 );
 unsafe impl<T: DeviceCopy> DeviceCopy for Option<T> {}
 unsafe impl<L: DeviceCopy, R: DeviceCopy> DeviceCopy for Result<L, R> {}

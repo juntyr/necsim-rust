@@ -1,28 +1,28 @@
 use super::DeviceCopy;
-use crate::error::*;
-use crate::memory::malloc::{cuda_free_locked, cuda_malloc_locked};
-use std::mem;
-use std::ops;
-use std::ptr;
-use std::slice;
+use crate::{
+    error::*,
+    memory::malloc::{cuda_free_locked, cuda_malloc_locked},
+};
+use std::{mem, ops, ptr, slice};
 
 /// Fixed-size host-side buffer in page-locked memory.
 ///
-/// See the [`module-level documentation`](../memory/index.html) for more details on page-locked
-/// memory.
+/// See the [`module-level documentation`](../memory/index.html) for more
+/// details on page-locked memory.
 #[derive(Debug)]
 pub struct LockedBuffer<T: DeviceCopy> {
     buf: *mut T,
     capacity: usize,
 }
 impl<T: DeviceCopy + Clone> LockedBuffer<T> {
-    /// Allocate a new page-locked buffer large enough to hold `size` `T`'s and initialized with
-    /// clones of `value`.
+    /// Allocate a new page-locked buffer large enough to hold `size` `T`'s and
+    /// initialized with clones of `value`.
     ///
     /// # Errors
     ///
-    /// If the allocation fails, returns the error from CUDA. If `size` is large enough that
-    /// `size * mem::sizeof::<T>()` overflows usize, then returns InvalidMemoryAllocation.
+    /// If the allocation fails, returns the error from CUDA. If `size` is large
+    /// enough that `size * mem::sizeof::<T>()` overflows usize, then
+    /// returns InvalidMemoryAllocation.
     ///
     /// # Examples
     ///
@@ -42,8 +42,8 @@ impl<T: DeviceCopy + Clone> LockedBuffer<T> {
         }
     }
 
-    /// Allocate a new page-locked buffer of the same size as `slice`, initialized with a clone of
-    /// the data in `slice`.
+    /// Allocate a new page-locked buffer of the same size as `slice`,
+    /// initialized with a clone of the data in `slice`.
     ///
     /// # Errors
     ///
@@ -69,18 +69,19 @@ impl<T: DeviceCopy + Clone> LockedBuffer<T> {
     }
 }
 impl<T: DeviceCopy> LockedBuffer<T> {
-    /// Allocate a new page-locked buffer large enough to hold `size` `T`'s, but without
-    /// initializing the contents.
+    /// Allocate a new page-locked buffer large enough to hold `size` `T`'s, but
+    /// without initializing the contents.
     ///
     /// # Errors
     ///
-    /// If the allocation fails, returns the error from CUDA. If `size` is large enough that
-    /// `size * mem::sizeof::<T>()` overflows usize, then returns InvalidMemoryAllocation.
+    /// If the allocation fails, returns the error from CUDA. If `size` is large
+    /// enough that `size * mem::sizeof::<T>()` overflows usize, then
+    /// returns InvalidMemoryAllocation.
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the contents of the buffer are initialized before reading from
-    /// the buffer.
+    /// The caller must ensure that the contents of the buffer are initialized
+    /// before reading from the buffer.
     ///
     /// # Examples
     ///
@@ -138,7 +139,8 @@ impl<T: DeviceCopy> LockedBuffer<T> {
         self
     }
 
-    /// Creates a `LockedBuffer<T>` directly from the raw components of another locked buffer.
+    /// Creates a `LockedBuffer<T>` directly from the raw components of another
+    /// locked buffer.
     ///
     /// # Safety
     ///
@@ -147,8 +149,10 @@ impl<T: DeviceCopy> LockedBuffer<T> {
     ///
     /// * `ptr` needs to have been previously allocated via `LockedBuffer` or
     /// [`cuda_malloc_locked`](fn.cuda_malloc_locked.html).
-    /// * `ptr`'s `T` needs to have the same size and alignment as it was allocated with.
-    /// * `capacity` needs to be the capacity that the pointer was allocated with.
+    /// * `ptr`'s `T` needs to have the same size and alignment as it was
+    ///   allocated with.
+    /// * `capacity` needs to be the capacity that the pointer was allocated
+    ///   with.
     ///
     /// Violating these may cause problems like corrupting the CUDA driver's
     /// internal data structures.
@@ -183,8 +187,9 @@ impl<T: DeviceCopy> LockedBuffer<T> {
 
     /// Destroy a `LockedBuffer`, returning an error.
     ///
-    /// Deallocating page-locked memory can return errors from previous asynchronous work. This function
-    /// destroys the given buffer and returns the error and the un-destroyed buffer on failure.
+    /// Deallocating page-locked memory can return errors from previous
+    /// asynchronous work. This function destroys the given buffer and
+    /// returns the error and the un-destroyed buffer on failure.
     ///
     /// # Example
     ///
@@ -213,7 +218,7 @@ impl<T: DeviceCopy> LockedBuffer<T> {
                     Ok(()) => {
                         mem::forget(buf);
                         Ok(())
-                    }
+                    },
                     Err(e) => Err((e, LockedBuffer::from_raw_parts(ptr, capacity))),
                 }
             }

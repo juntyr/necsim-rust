@@ -94,15 +94,9 @@ impl Reporter for SpeciesLocationsReporter {
                     self.store_individual_coalescence(&speciation.global_lineage_reference, &parent)
                 }
             }
-
-            self.last_parent_prior_time = Some(
-                (speciation.global_lineage_reference.clone(), speciation.prior_time)
-            );
-
-            return;
+        } else {
+            self.store_individual_speciation(speciation)
         }
-
-        self.store_individual_speciation(speciation);
 
         self.last_speciation_event = Some(speciation.clone());
         self.last_parent_prior_time = Some(
@@ -122,17 +116,14 @@ impl Reporter for SpeciesLocationsReporter {
                     self.store_individual_coalescence(&dispersal.global_lineage_reference, &parent)
                 }
             }
-
-            self.last_parent_prior_time = Some(
-                (dispersal.global_lineage_reference.clone(), dispersal.prior_time)
-            );
-
-            return;
-        }
-
-        if let LineageInteraction::Coalescence(parent) = &dispersal.interaction {
+        } else if let LineageInteraction::Coalescence(parent) = &dispersal.interaction {
             self.store_individual_coalescence(&dispersal.global_lineage_reference, parent)
         }
+
+        self.last_dispersal_event = Some(dispersal.clone());
+        self.last_parent_prior_time = Some(
+            (dispersal.global_lineage_reference.clone(), dispersal.prior_time)
+        );
     });
 
     impl_report!(progress(&mut self, _progress: Ignored) {});

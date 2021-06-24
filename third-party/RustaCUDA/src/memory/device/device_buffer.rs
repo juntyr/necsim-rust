@@ -1,12 +1,17 @@
-use crate::error::{CudaResult, DropResult, ToResult};
-use crate::memory::device::{AsyncCopyDestination, CopyDestination, DeviceSlice};
-use crate::memory::malloc::{cuda_free, cuda_malloc};
-use crate::memory::DeviceCopy;
-use crate::memory::DevicePointer;
-use crate::stream::Stream;
+use crate::{
+    error::{CudaResult, DropResult, IntoResult},
+    memory::{
+        device::{AsyncCopyDestination, CopyDestination, DeviceSlice},
+        malloc::{cuda_free, cuda_malloc},
+        DeviceCopy, DevicePointer,
+    },
+    stream::Stream,
+};
 use cuda_driver_sys as cuda;
-use std::mem;
-use std::ops::{Deref, DerefMut};
+use std::{
+    mem,
+    ops::{Deref, DerefMut},
+};
 
 use std::ptr;
 
@@ -17,18 +22,19 @@ pub struct DeviceBuffer<T> {
     capacity: usize,
 }
 impl<T> DeviceBuffer<T> {
-    /// Allocate a new device buffer large enough to hold `size` `T`'s, but without
-    /// initializing the contents.
+    /// Allocate a new device buffer large enough to hold `size` `T`'s, but
+    /// without initializing the contents.
     ///
     /// # Errors
     ///
-    /// If the allocation fails, returns the error from CUDA. If `size` is large enough that
-    /// `size * mem::sizeof::<T>()` overflows usize, then returns InvalidMemoryAllocation.
+    /// If the allocation fails, returns the error from CUDA. If `size` is large
+    /// enough that `size * mem::sizeof::<T>()` overflows usize, then
+    /// returns InvalidMemoryAllocation.
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the contents of the buffer are initialized before reading from
-    /// the buffer.
+    /// The caller must ensure that the contents of the buffer are initialized
+    /// before reading from the buffer.
     ///
     /// # Examples
     ///
@@ -50,19 +56,21 @@ impl<T> DeviceBuffer<T> {
         })
     }
 
-    /// Allocate a new device buffer large enough to hold `size` `T`'s and fill the contents with
-    /// zeroes (`0u8`).
+    /// Allocate a new device buffer large enough to hold `size` `T`'s and fill
+    /// the contents with zeroes (`0u8`).
     ///
     /// # Errors
     ///
-    /// If the allocation fails, returns the error from CUDA. If `size` is large enough that
-    /// `size * mem::sizeof::<T>()` overflows usize, then returns InvalidMemoryAllocation.
+    /// If the allocation fails, returns the error from CUDA. If `size` is large
+    /// enough that `size * mem::sizeof::<T>()` overflows usize, then
+    /// returns InvalidMemoryAllocation.
     ///
     /// # Safety
     ///
-    /// The backing memory is zeroed, which may not be a valid bit-pattern for type `T`. The caller
-    /// must ensure either that all-zeroes is a valid bit-pattern for type `T` or that the backing
-    /// memory is set to a valid value before it is read.
+    /// The backing memory is zeroed, which may not be a valid bit-pattern for
+    /// type `T`. The caller must ensure either that all-zeroes is a valid
+    /// bit-pattern for type `T` or that the backing memory is set to a
+    /// valid value before it is read.
     ///
     /// # Examples
     ///
@@ -78,7 +86,7 @@ impl<T> DeviceBuffer<T> {
         let ptr = if size > 0 && mem::size_of::<T>() > 0 {
             let mut ptr = cuda_malloc(size)?;
             cuda::cuMemsetD8_v2(ptr.as_raw_mut() as u64, 0, size * mem::size_of::<T>())
-                .to_result()?;
+                .into_result()?;
             ptr
         } else {
             DevicePointer::wrap(ptr::NonNull::dangling().as_ptr() as *mut T)
@@ -89,7 +97,8 @@ impl<T> DeviceBuffer<T> {
         })
     }
 
-    /// Creates a `DeviceBuffer<T>` directly from the raw components of another device buffer.
+    /// Creates a `DeviceBuffer<T>` directly from the raw components of another
+    /// device buffer.
     ///
     /// # Safety
     ///
@@ -98,8 +107,10 @@ impl<T> DeviceBuffer<T> {
     ///
     /// * `ptr` needs to have been previously allocated via `DeviceBuffer` or
     /// [`cuda_malloc`](fn.cuda_malloc.html).
-    /// * `ptr`'s `T` needs to have the same size and alignment as it was allocated with.
-    /// * `capacity` needs to be the capacity that the pointer was allocated with.
+    /// * `ptr`'s `T` needs to have the same size and alignment as it was
+    ///   allocated with.
+    /// * `capacity` needs to be the capacity that the pointer was allocated
+    ///   with.
     ///
     /// Violating these may cause problems like corrupting the CUDA driver's
     /// internal data structures.
@@ -131,8 +142,9 @@ impl<T> DeviceBuffer<T> {
 
     /// Destroy a `DeviceBuffer`, returning an error.
     ///
-    /// Deallocating device memory can return errors from previous asynchronous work. This function
-    /// destroys the given buffer and returns the error and the un-destroyed buffer on failure.
+    /// Deallocating device memory can return errors from previous asynchronous
+    /// work. This function destroys the given buffer and returns the error
+    /// and the un-destroyed buffer on failure.
     ///
     /// # Example
     ///
@@ -161,7 +173,7 @@ impl<T> DeviceBuffer<T> {
                     Ok(()) => {
                         mem::forget(dev_buf);
                         Ok(())
-                    }
+                    },
                     Err(e) => Err((e, DeviceBuffer::from_raw_parts(ptr, capacity))),
                 }
             }
@@ -171,8 +183,8 @@ impl<T> DeviceBuffer<T> {
     }
 }
 impl<T: DeviceCopy> DeviceBuffer<T> {
-    /// Allocate a new device buffer of the same size as `slice`, initialized with a clone of
-    /// the data in `slice`.
+    /// Allocate a new device buffer of the same size as `slice`, initialized
+    /// with a clone of the data in `slice`.
     ///
     /// # Errors
     ///
@@ -194,12 +206,13 @@ impl<T: DeviceCopy> DeviceBuffer<T> {
         }
     }
 
-    /// Asynchronously allocate a new buffer of the same size as `slice`, initialized
-    /// with a clone of the data in `slice`.
+    /// Asynchronously allocate a new buffer of the same size as `slice`,
+    /// initialized with a clone of the data in `slice`.
     ///
     /// # Safety
     ///
-    /// For why this function is unsafe, see [AsyncCopyDestination](trait.AsyncCopyDestination.html)
+    /// For why this function is unsafe, see
+    /// [AsyncCopyDestination](trait.AsyncCopyDestination.html)
     ///
     /// # Errors
     ///
@@ -266,8 +279,10 @@ impl<T> Drop for DeviceBuffer<T> {
 #[cfg(test)]
 mod test_device_buffer {
     use super::*;
-    use crate::memory::device::DeviceBox;
-    use crate::stream::{Stream, StreamFlags};
+    use crate::{
+        memory::device::DeviceBox,
+        stream::{Stream, StreamFlags},
+    };
 
     #[derive(Clone, Debug)]
     struct ZeroSizedType;

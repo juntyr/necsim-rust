@@ -1,11 +1,12 @@
-//! Functions and types for enumerating CUDA devices and retrieving information about them.
+//! Functions and types for enumerating CUDA devices and retrieving information
+//! about them.
 
-use crate::error::{CudaResult, ToResult};
+use crate::error::{CudaResult, IntoResult};
 use cuda_driver_sys::*;
-use std::ffi::CStr;
-use std::ops::Range;
+use std::{ffi::CStr, ops::Range};
 
-/// All supported device attributes for [Device::get_attribute](struct.Device.html#method.get_attribute)
+/// All supported device attributes for
+/// [Device::get_attribute](struct.Device.html#method.get_attribute)
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[allow(clippy::manual_non_exhaustive)]
@@ -30,8 +31,8 @@ pub enum DeviceAttribute {
     TotalConstantMemory = 9,
     /// Warp size in threads
     WarpSize = 10,
-    /// Maximum pitch in bytes allowed by the memory copy functions that involve memory regions
-    /// allocated through cuMemAllocPitch()
+    /// Maximum pitch in bytes allowed by the memory copy functions that involve
+    /// memory regions allocated through cuMemAllocPitch()
     MaxPitch = 11,
     /// Maximum number of 32-bit registers available to a thread block
     MaxRegistersPerBlock = 12,
@@ -39,7 +40,7 @@ pub enum DeviceAttribute {
     ClockRate = 13,
     /// Alignment requirement for textures
     TextureAlignment = 14,
-    //GpuOverlap = 15, - Deprecated.
+    // GpuOverlap = 15, - Deprecated.
     /// Number of multiprocessors on device.
     MultiprocessorCount = 16,
     /// Specifies whether there is a run time limit on kernels
@@ -96,7 +97,7 @@ pub enum DeviceAttribute {
     MaximumTexture1DLayeredWidth = 42,
     /// Maximum layers in a 1D layered texture
     MaximumTexture1DLayeredLayers = 43,
-    //CanTex2DGather = 44, deprecated
+    // CanTex2DGather = 44, deprecated
     /// Maximum 2D texture width if CUDA_ARRAY3D_TEXTURE_GATHER is set
     MaximumTexture2DGatherWidth = 45,
     /// Maximum 2D texture height if CUDA_ARRAY3D_TEXTURE_GATHER is set
@@ -179,19 +180,22 @@ pub enum DeviceAttribute {
     MultiGpuBoard = 84,
     /// Unique ID for a group of devices on the same multi-GPU board
     MultiGpuBoardGroupId = 85,
-    /// Link between the device and the host supports native atomic operations (this is a
-    /// placeholder attribute and is not supported on any current hardware)
+    /// Link between the device and the host supports native atomic operations
+    /// (this is a placeholder attribute and is not supported on any current
+    /// hardware)
     HostNativeAtomicSupported = 86,
-    /// Ratio of single precision performance (in floating-point operations per second) to double
-    /// precision performance
+    /// Ratio of single precision performance (in floating-point operations per
+    /// second) to double precision performance
     SingleToDoublePrecisionPerfRatio = 87,
-    /// Device supports coherently accessing pageable memory without calling cudaHostRegister on it.
+    /// Device supports coherently accessing pageable memory without calling
+    /// cudaHostRegister on it.
     PageableMemoryAccess = 88,
     /// Device can coherently access managed memory concurrently with the CPU
     ConcurrentManagedAccess = 89,
     /// Device supports compute preemption
     ComputePreemptionSupported = 90,
-    /// Device can access host registered memory at the same virtual address as the CPU
+    /// Device can access host registered memory at the same virtual address as
+    /// the CPU
     CanUseHostPointerForRegisteredMem = 91,
     #[doc(hidden)]
     __NonExhaustive = 92,
@@ -205,8 +209,8 @@ pub struct Device {
 impl Device {
     /// Get the number of CUDA-capable devices.
     ///
-    /// Returns the number of devices with compute-capability 2.0 or greater which are available
-    /// for execution.
+    /// Returns the number of devices with compute-capability 2.0 or greater
+    /// which are available for execution.
     ///
     /// # Example
     /// ```
@@ -223,14 +227,15 @@ impl Device {
     pub fn num_devices() -> CudaResult<u32> {
         unsafe {
             let mut num_devices = 0i32;
-            cuDeviceGetCount(&mut num_devices as *mut i32).to_result()?;
+            cuDeviceGetCount(&mut num_devices as *mut i32).into_result()?;
             Ok(num_devices as u32)
         }
     }
 
     /// Get a handle to the `ordinal`'th CUDA device.
     ///
-    /// Ordinal must be in the range `0..num_devices()`. If not, an error will be returned.
+    /// Ordinal must be in the range `0..num_devices()`. If not, an error will
+    /// be returned.
     ///
     /// # Example
     /// ```
@@ -247,7 +252,7 @@ impl Device {
     pub fn get_device(ordinal: u32) -> CudaResult<Device> {
         unsafe {
             let mut device = Device { device: 0 };
-            cuDeviceGet(&mut device.device as *mut CUdevice, ordinal as i32).to_result()?;
+            cuDeviceGet(&mut device.device as *mut CUdevice, ordinal as i32).into_result()?;
             Ok(device)
         }
     }
@@ -291,7 +296,7 @@ impl Device {
     pub fn total_memory(self) -> CudaResult<usize> {
         unsafe {
             let mut memory = 0;
-            cuDeviceTotalMem_v2(&mut memory as *mut usize, self.device).to_result()?;
+            cuDeviceTotalMem_v2(&mut memory as *mut usize, self.device).into_result()?;
             Ok(memory)
         }
     }
@@ -318,7 +323,7 @@ impl Device {
                 128,
                 self.device,
             )
-            .to_result()?;
+            .into_result()?;
             let nul_index = name
                 .iter()
                 .cloned()
@@ -353,7 +358,7 @@ impl Device {
                 ::std::mem::transmute(attr),
                 self.device,
             )
-            .to_result()?;
+            .into_result()?;
             Ok(val)
         }
     }
@@ -364,7 +369,8 @@ impl Device {
 }
 
 /// Iterator over all available CUDA devices. See
-/// [the Device::devices function](./struct.Device.html#method.devices) for more information.
+/// [the Device::devices function](./struct.Device.html#method.devices) for more
+/// information.
 #[derive(Debug, Clone)]
 pub struct Devices {
     range: Range<u32>,

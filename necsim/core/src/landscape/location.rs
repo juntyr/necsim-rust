@@ -3,7 +3,8 @@ use core::num::NonZeroU32;
 use serde::{Deserialize, Serialize};
 
 #[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::rustacuda_core::DeviceCopy))]
+#[cfg_attr(feature = "cuda", rustacuda(core = "rust_cuda::rustacuda_core"))]
 #[cfg_attr(feature = "mpi", derive(rsmpi::traits::Equivalence))]
 pub struct Location {
     x: u32,
@@ -36,7 +37,8 @@ impl From<IndexedLocation> for Location {
 }
 
 #[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Copy, Hash, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::rustacuda_core::DeviceCopy))]
+#[cfg_attr(feature = "cuda", rustacuda(core = "rust_cuda::rustacuda_core"))]
 struct LocationIndex(NonZeroU32);
 
 #[cfg(feature = "mpi")]
@@ -53,7 +55,8 @@ unsafe impl rsmpi::traits::Equivalence for LocationIndex {
 // IndexedLocation uses a NonZeroU32 index internally to enable same-size
 //  Option optimisation
 #[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::rustacuda_core::DeviceCopy))]
+#[cfg_attr(feature = "cuda", rustacuda(core = "rust_cuda::rustacuda_core"))]
 #[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
 pub struct IndexedLocation {

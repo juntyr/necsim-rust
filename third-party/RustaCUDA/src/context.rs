@@ -1,40 +1,48 @@
 //! # CUDA context management
 //!
-//! Most CUDA functions require a context. A CUDA context is analogous to a CPU process - it's
-//! an isolated container for all runtime state, including configuration settings and the
-//! device/unified/page-locked memory allocations. Each context has a separate memory space, and
-//! pointers from one context do not work in another. Each context is associated with a single
-//! device. Although it is possible to have multiple contexts associated with a single device, this
-//! is strongly discouraged as it can cause a significant loss of performance.
+//! Most CUDA functions require a context. A CUDA context is analogous to a CPU
+//! process - it's an isolated container for all runtime state, including
+//! configuration settings and the device/unified/page-locked memory
+//! allocations. Each context has a separate memory space, and pointers from one
+//! context do not work in another. Each context is associated with a single
+//! device. Although it is possible to have multiple contexts associated with a
+//! single device, this is strongly discouraged as it can cause a significant
+//! loss of performance.
 //!
-//! CUDA keeps a thread-local stack of contexts which the programmer can push to or pop from.
-//! The top context in that stack is known as the "current" context and it is used in most CUDA
-//! API calls. One context can be safely made current in multiple CPU threads.
+//! CUDA keeps a thread-local stack of contexts which the programmer can push to
+//! or pop from. The top context in that stack is known as the "current" context
+//! and it is used in most CUDA API calls. One context can be safely made
+//! current in multiple CPU threads.
 //!
 //! # Safety
 //!
-//! The CUDA context management API does not fit easily into Rust's safety guarantees.
+//! The CUDA context management API does not fit easily into Rust's safety
+//! guarantees.
 //!
-//! The thread-local stack (as well as the fact that any context can be on the stack for any number
-//! of threads) means there is no clear owner for a CUDA context, but it still has to be cleaned up.
-//! Also, the fact that a context can be current to multiple threads at once means that there can be
+//! The thread-local stack (as well as the fact that any context can be on the
+//! stack for any number of threads) means there is no clear owner for a CUDA
+//! context, but it still has to be cleaned up. Also, the fact that a context
+//! can be current to multiple threads at once means that there can be
 //! multiple implicit references to a context which are not controlled by Rust.
 //!
-//! RustaCUDA handles ownership by providing an owning [`Context`](struct.Context.html) struct and
-//! a non-owning [`UnownedContext`](struct.UnownedContext.html). When the `Context` is dropped, the
-//! backing context is destroyed. The context could be current on other threads, though. In this
-//! case, the context is still destroyed, and attempts to access the context on other threads will
-//! fail with an error. This is (mostly) safe, if a bit inconvenient. It's only mostly safe because
-//! other threads could be accessing that context while the destructor is running on this thread,
-//! which could result in undefined behavior.
+//! RustaCUDA handles ownership by providing an owning
+//! [`Context`](struct.Context.html) struct and a non-owning
+//! [`UnownedContext`](struct.UnownedContext.html). When the `Context` is
+//! dropped, the backing context is destroyed. The context could be current on
+//! other threads, though. In this case, the context is still destroyed, and
+//! attempts to access the context on other threads will fail with an error.
+//! This is (mostly) safe, if a bit inconvenient. It's only mostly safe because
+//! other threads could be accessing that context while the destructor is
+//! running on this thread, which could result in undefined behavior.
 //!
-//! In short, Rust's thread-safety guarantees cannot fully protect use of the context management
-//! functions. The programmer must ensure that no other OS threads are using the `Context` when it
-//! is dropped.
+//! In short, Rust's thread-safety guarantees cannot fully protect use of the
+//! context management functions. The programmer must ensure that no other OS
+//! threads are using the `Context` when it is dropped.
 //!
 //! # Examples
 //!
-//! For most commmon uses (one device, one OS thread) it should suffice to create a single context:
+//! For most commmon uses (one device, one OS thread) it should suffice to
+//! create a single context:
 //!
 //! ```
 //! use rustacuda::device::Device;
@@ -53,8 +61,8 @@
 //! # }
 //! ```
 //!
-//! If you have multiple OS threads that each submit work to the same device, you can get a handle
-//! to the single context and pass it to each thread.
+//! If you have multiple OS threads that each submit work to the same device,
+//! you can get a handle to the single context and pass it to each thread.
 //!
 //! ```
 //! # use rustacuda::context::{Context, ContextFlags, CurrentContext};
@@ -112,25 +120,27 @@
 //! # }
 //! ```
 
-use crate::device::Device;
-use crate::error::{CudaResult, DropResult, ToResult};
-use crate::private::Sealed;
-use crate::CudaApiVersion;
+use crate::{
+    device::Device,
+    error::{CudaResult, DropResult, IntoResult},
+    private::Sealed,
+    CudaApiVersion,
+};
 use cuda_driver_sys::{self as cuda, CUcontext};
-use std::mem;
-use std::mem::transmute;
-use std::ptr;
+use std::{mem, mem::transmute, ptr};
 
-/// This enumeration represents configuration settings for devices which share hardware resources
-/// between L1 cache and shared memory.
+/// This enumeration represents configuration settings for devices which share
+/// hardware resources between L1 cache and shared memory.
 ///
-/// Note that this is only a preference - the driver will use the requested configuration if
-/// possible, but it is free to choose a different configuration if required to execute functions.
+/// Note that this is only a preference - the driver will use the requested
+/// configuration if possible, but it is free to choose a different
+/// configuration if required to execute functions.
 ///
 /// See
-/// [CurrentContext::get_cache_config](struct.CurrentContext.html#method.get_cache_config) and
-/// [CurrentContext::set_cache_config](struct.CurrentContext.html#method.set_cache_config) to get
-/// and set the cache config for the current context.
+/// [CurrentContext::get_cache_config](struct.CurrentContext.html#method.
+/// get_cache_config) and [CurrentContext::set_cache_config](struct.
+/// CurrentContext.html#method.set_cache_config) to get and set the cache config
+/// for the current context.
 #[repr(u32)]
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 #[non_exhaustive]
@@ -145,9 +155,10 @@ pub enum CacheConfig {
     PreferEqual = 3,
 }
 
-/// This enumeration represents the limited resources which can be accessed through
-/// [CurrentContext::get_resource_limit](struct.CurrentContext.html#method.get_resource_limit) and
-/// [CurrentContext::set_resource_limit](struct.CurrentContext.html#method.set_resource_limit).
+/// This enumeration represents the limited resources which can be accessed
+/// through [CurrentContext::get_resource_limit](struct.CurrentContext.html#
+/// method.get_resource_limit) and [CurrentContext::set_resource_limit](struct.
+/// CurrentContext.html#method.set_resource_limit).
 #[repr(u32)]
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 #[non_exhaustive]
@@ -156,27 +167,31 @@ pub enum ResourceLimit {
     StackSize = 0,
     /// The size in bytes of the FIFO used by the `printf()` device system call.
     PrintfFifoSize = 1,
-    /// The size in bytes of the heap used by the `malloc()` and `free()` device system calls.
+    /// The size in bytes of the heap used by the `malloc()` and `free()` device
+    /// system calls.
     ///
-    /// Note that this is used for memory allocated within a kernel launch; it is not related to the
-    /// device memory allocated by the host.
+    /// Note that this is used for memory allocated within a kernel launch; it
+    /// is not related to the device memory allocated by the host.
     MallocHeapSize = 2,
     /// The maximum nesting depth of a grid at which a thread can safely call
     /// `cudaDeviceSynchronize()` to wait on child grid launches to complete.
     DeviceRuntimeSynchronizeDepth = 3,
-    /// The maximum number of outstanding device runtime launches that can be made from the current
-    /// context.
+    /// The maximum number of outstanding device runtime launches that can be
+    /// made from the current context.
     DeviceRuntimePendingLaunchCount = 4,
     /// L2 cache fetch granularity
     MaxL2FetchGranularity = 5,
 }
 
-/// This enumeration represents the options for configuring the shared memory bank size.
+/// This enumeration represents the options for configuring the shared memory
+/// bank size.
 ///
 /// See
-/// [CurrentContext::get_shared_memory_config](struct.CurrentContext.html#method.get_shared_memory_config) and
-/// [CurrentContext::set_shared_memory_config](struct.CurrentContext.html#method.set_shared_memory_config) to get
-/// and set the cache config for the current context.
+/// [CurrentContext::get_shared_memory_config](struct.CurrentContext.html#
+/// method.get_shared_memory_config) and [CurrentContext::
+/// set_shared_memory_config](struct.CurrentContext.html#method.
+/// set_shared_memory_config) to get and set the cache config for the current
+/// context.
 #[repr(u32)]
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 #[non_exhaustive]
@@ -225,10 +240,11 @@ bitflags! {
 
 /// Owned handle to a CUDA context.
 ///
-/// The context will be destroyed when this goes out of scope. If this is the current context on
-/// the current OS thread, the next context on the stack (if any) will be made current. Note that
-/// the context will be destroyed even if other threads are still using it. Attempts to access the
-/// destroyed context from another thread will return an error.
+/// The context will be destroyed when this goes out of scope. If this is the
+/// current context on the current OS thread, the next context on the stack (if
+/// any) will be made current. Note that the context will be destroyed even if
+/// other threads are still using it. Attempts to access the destroyed context
+/// from another thread will return an error.
 #[derive(Debug)]
 pub struct Context {
     inner: CUcontext,
@@ -252,16 +268,16 @@ impl Context {
     /// ```
     pub fn create_and_push(flags: ContextFlags, device: Device) -> CudaResult<Context> {
         unsafe {
-            // CUDA only provides a create-and-push operation, but that makes it hard to provide
-            // lifetime guarantees so we create-and-push, then pop, then the programmer has to
-            // push again.
+            // CUDA only provides a create-and-push operation, but that makes it hard to
+            // provide lifetime guarantees so we create-and-push, then pop, then
+            // the programmer has to push again.
             let mut ctx: CUcontext = ptr::null_mut();
             cuda::cuCtxCreate_v2(
                 &mut ctx as *mut CUcontext,
                 flags.bits(),
                 device.into_inner(),
             )
-            .to_result()?;
+            .into_result()?;
             Ok(Context { inner: ctx })
         }
     }
@@ -288,7 +304,7 @@ impl Context {
     pub fn get_api_version(&self) -> CudaResult<CudaApiVersion> {
         unsafe {
             let mut api_version = 0u32;
-            cuda::cuCtxGetApiVersion(self.inner, &mut api_version as *mut u32).to_result()?;
+            cuda::cuCtxGetApiVersion(self.inner, &mut api_version as *mut u32).into_result()?;
             Ok(CudaApiVersion {
                 version: api_version as i32,
             })
@@ -297,8 +313,8 @@ impl Context {
 
     /// Returns an non-owning handle to this context.
     ///
-    /// This is useful for sharing a single context between threads (though see the module-level
-    /// documentation for safety details!).
+    /// This is useful for sharing a single context between threads (though see
+    /// the module-level documentation for safety details!).
     ///
     /// # Example
     ////*  */
@@ -321,8 +337,9 @@ impl Context {
 
     /// Destroy a `Context`, returning an error.
     ///
-    /// Destroying a context can return errors from previous asynchronous work. This function
-    /// destroys the given context and returns the error and the un-destroyed context on failure.
+    /// Destroying a context can return errors from previous asynchronous work.
+    /// This function destroys the given context and returns the error and
+    /// the un-destroyed context on failure.
     ///
     /// # Example
     ///
@@ -352,11 +369,11 @@ impl Context {
 
         unsafe {
             let inner = mem::replace(&mut ctx.inner, ptr::null_mut());
-            match cuda::cuCtxDestroy_v2(inner).to_result() {
+            match cuda::cuCtxDestroy_v2(inner).into_result() {
                 Ok(()) => {
                     mem::forget(ctx);
                     Ok(())
-                }
+                },
                 Err(e) => Err((e, Context { inner })),
             }
         }
@@ -372,13 +389,14 @@ impl Drop for Context {
             let inner = mem::replace(&mut self.inner, ptr::null_mut());
             // No choice but to panic here.
             cuda::cuCtxDestroy_v2(inner)
-                .to_result()
+                .into_result()
                 .expect("Failed to destroy context");
         }
     }
 }
 
-/// Sealed trait for `Context` and `UnownedContext`. Not intended for use outside of RustaCUDA.
+/// Sealed trait for `Context` and `UnownedContext`. Not intended for use
+/// outside of RustaCUDA.
 pub trait ContextHandle: Sealed {
     #[doc(hidden)]
     fn get_inner(&self) -> CUcontext;
@@ -428,7 +446,7 @@ impl UnownedContext {
     pub fn get_api_version(&self) -> CudaResult<CudaApiVersion> {
         unsafe {
             let mut api_version = 0u32;
-            cuda::cuCtxGetApiVersion(self.inner, &mut api_version as *mut u32).to_result()?;
+            cuda::cuCtxGetApiVersion(self.inner, &mut api_version as *mut u32).into_result()?;
             Ok(CudaApiVersion {
                 version: api_version as i32,
             })
@@ -440,8 +458,9 @@ impl UnownedContext {
 #[derive(Debug)]
 pub struct ContextStack;
 impl ContextStack {
-    /// Pop the current context off the stack and return the handle. That context may then be made
-    /// current again (perhaps on a different CPU thread) by calling [push](#method.push).
+    /// Pop the current context off the stack and return the handle. That
+    /// context may then be made current again (perhaps on a different CPU
+    /// thread) by calling [push](#method.push).
     ///
     /// # Example
     ///
@@ -462,7 +481,7 @@ impl ContextStack {
     pub fn pop() -> CudaResult<UnownedContext> {
         unsafe {
             let mut ctx: CUcontext = ptr::null_mut();
-            cuda::cuCtxPopCurrent_v2(&mut ctx as *mut CUcontext).to_result()?;
+            cuda::cuCtxPopCurrent_v2(&mut ctx as *mut CUcontext).into_result()?;
             Ok(UnownedContext { inner: ctx })
         }
     }
@@ -487,7 +506,7 @@ impl ContextStack {
     /// ```
     pub fn push<C: ContextHandle>(ctx: &C) -> CudaResult<()> {
         unsafe {
-            cuda::cuCtxPushCurrent_v2(ctx.get_inner()).to_result()?;
+            cuda::cuCtxPushCurrent_v2(ctx.get_inner()).into_result()?;
             Ok(())
         }
     }
@@ -495,8 +514,9 @@ impl ContextStack {
 
 /// Struct representing a range of stream priorities.
 ///
-/// By convention, lower numbers imply greater priorities. The range of meaningful stream priorities
-/// is given by `[greatest, least]` - that is (numerically), `greatest <= least`.
+/// By convention, lower numbers imply greater priorities. The range of
+/// meaningful stream priorities is given by `[greatest, least]` - that is
+/// (numerically), `greatest <= least`.
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct StreamPriorityRange {
     /// The least stream priority
@@ -511,10 +531,11 @@ pub struct CurrentContext;
 impl CurrentContext {
     /// Returns the preferred cache configuration for the current context.
     ///
-    /// On devices where the L1 cache and shared memory use the same hardware resources, this
-    /// function returns the preferred cache configuration for the current context. For devices
-    /// where the size of the L1 cache and shared memory are fixed, this will always return
-    /// `CacheConfig::PreferNone`.
+    /// On devices where the L1 cache and shared memory use the same hardware
+    /// resources, this function returns the preferred cache configuration
+    /// for the current context. For devices where the size of the L1 cache
+    /// and shared memory are fixed, this will always return `CacheConfig::
+    /// PreferNone`.
     ///
     /// # Example
     ///
@@ -535,7 +556,7 @@ impl CurrentContext {
         unsafe {
             let mut config = CacheConfig::PreferNone;
             cuda::cuCtxGetCacheConfig(&mut config as *mut CacheConfig as *mut cuda::CUfunc_cache)
-                .to_result()?;
+                .into_result()?;
             Ok(config)
         }
     }
@@ -560,7 +581,7 @@ impl CurrentContext {
     pub fn get_device() -> CudaResult<Device> {
         unsafe {
             let mut device = Device { device: 0 };
-            cuda::cuCtxGetDevice(&mut device.device as *mut cuda::CUdevice).to_result()?;
+            cuda::cuCtxGetDevice(&mut device.device as *mut cuda::CUdevice).into_result()?;
             Ok(device)
         }
     }
@@ -585,7 +606,7 @@ impl CurrentContext {
     pub fn get_flags() -> CudaResult<ContextFlags> {
         unsafe {
             let mut flags = 0u32;
-            cuda::cuCtxGetFlags(&mut flags as *mut u32).to_result()?;
+            cuda::cuCtxGetFlags(&mut flags as *mut u32).into_result()?;
             Ok(ContextFlags::from_bits_truncate(flags))
         }
     }
@@ -610,7 +631,7 @@ impl CurrentContext {
     pub fn get_resource_limit(resource: ResourceLimit) -> CudaResult<usize> {
         unsafe {
             let mut limit: usize = 0;
-            cuda::cuCtxGetLimit(&mut limit as *mut usize, transmute(resource)).to_result()?;
+            cuda::cuCtxGetLimit(&mut limit as *mut usize, transmute(resource)).into_result()?;
             Ok(limit)
         }
     }
@@ -638,16 +659,17 @@ impl CurrentContext {
             cuda::cuCtxGetSharedMemConfig(
                 &mut cfg as *mut SharedMemoryConfig as *mut cuda::CUsharedconfig,
             )
-            .to_result()?;
+            .into_result()?;
             Ok(cfg)
         }
     }
 
     /// Return the least and greatest stream priorities.
     ///
-    /// If the program attempts to create a stream with a priority outside of this range, it will be
-    /// automatically clamped to within the valid range. If the device does not support stream
-    /// priorities, the returned range will contain zeroes.
+    /// If the program attempts to create a stream with a priority outside of
+    /// this range, it will be automatically clamped to within the valid
+    /// range. If the device does not support stream priorities, the
+    /// returned range will contain zeroes.
     ///
     /// # Example
     ///
@@ -674,20 +696,21 @@ impl CurrentContext {
                 &mut range.least as *mut i32,
                 &mut range.greatest as *mut i32,
             )
-            .to_result()?;
+            .into_result()?;
             Ok(range)
         }
     }
 
     /// Sets the preferred cache configuration for the current context.
     ///
-    /// On devices where L1 cache and shared memory use the same hardware resources, this sets the
-    /// preferred cache configuration for the current context. This is only a preference. The
-    /// driver will use the requested configuration if possible, but is free to choose a different
+    /// On devices where L1 cache and shared memory use the same hardware
+    /// resources, this sets the preferred cache configuration for the
+    /// current context. This is only a preference. The driver will use the
+    /// requested configuration if possible, but is free to choose a different
     /// configuration if required to execute the function.
     ///
-    /// This setting does nothing on devices where the size of the L1 cache and shared memory are
-    /// fixed.
+    /// This setting does nothing on devices where the size of the L1 cache and
+    /// shared memory are fixed.
     ///
     /// # Example
     ///
@@ -705,33 +728,38 @@ impl CurrentContext {
     /// # }
     /// ```
     pub fn set_cache_config(cfg: CacheConfig) -> CudaResult<()> {
-        unsafe { cuda::cuCtxSetCacheConfig(transmute(cfg)).to_result() }
+        unsafe { cuda::cuCtxSetCacheConfig(transmute(cfg)).into_result() }
     }
 
     /// Sets a requested resource limit for the current context.
     ///
-    /// Note that this is only a request; the driver is free to modify the requested value to meet
-    /// hardware requirements. Each limit has some specific restrictions.
+    /// Note that this is only a request; the driver is free to modify the
+    /// requested value to meet hardware requirements. Each limit has some
+    /// specific restrictions.
     ///
     /// * `StackSize`: Controls the stack size in bytes for each GPU thread
-    /// * `PrintfFifoSize`: Controls the size in bytes of the FIFO used by the `printf()` device
-    ///   system call. This cannot be changed after a kernel has been launched which uses the
-    ///   `printf()` function.
-    /// * `MallocHeapSize`: Controls the size in bytes of the heap used by the `malloc()` and `free()`
-    ///   device system calls. This cannot be changed aftr a kernel has been launched which uses the
-    ///   `malloc()` and `free()` system calls.
-    /// * `DeviceRuntimeSyncDepth`: Controls the maximum nesting depth of a grid at which a thread
-    ///   can safely call `cudaDeviceSynchronize()`. This cannot be changed after a kernel has been
-    ///   launched which uses the device runtime. When setting this limit, keep in mind that
-    ///   additional levels of sync depth require the driver to reserve large amounts of device
+    /// * `PrintfFifoSize`: Controls the size in bytes of the FIFO used by the
+    ///   `printf()` device system call. This cannot be changed after a kernel
+    ///   has been launched which uses the `printf()` function.
+    /// * `MallocHeapSize`: Controls the size in bytes of the heap used by the
+    ///   `malloc()` and `free()` device system calls. This cannot be changed
+    ///   aftr a kernel has been launched which uses the `malloc()` and `free()`
+    ///   system calls.
+    /// * `DeviceRuntimeSyncDepth`: Controls the maximum nesting depth of a grid
+    ///   at which a thread can safely call `cudaDeviceSynchronize()`. This
+    ///   cannot be changed after a kernel has been launched which uses the
+    ///   device runtime. When setting this limit, keep in mind that additional
+    ///   levels of sync depth require the driver to reserve large amounts of
+    ///   device memory which can no longer be used for device allocations.
+    /// * `DeviceRuntimePendingLaunchCount`: Controls the maximum number of
+    ///   outstanding device runtime launches that can be made from the current
+    ///   context. A grid is outstanding from the point of the launch up until
+    ///   the grid is known to have completed. Keep in mind that increasing this
+    ///   limit will require the driver to reserve larger amounts of device
     ///   memory which can no longer be used for device allocations.
-    /// * `DeviceRuntimePendingLaunchCount`: Controls the maximum number of outstanding device
-    ///    runtime launches that can be made from the current context. A grid is outstanding from
-    ///    the point of the launch up until the grid is known to have completed. Keep in mind that
-    ///    increasing this limit will require the driver to reserve larger amounts of device memory
-    ///    which can no longer be used for device allocations.
-    /// * `MaxL2FetchGranularity`: Controls the L2 fetch granularity. This is purely a performance
-    ///    hint and it can be ignored or clamped depending on the platform.
+    /// * `MaxL2FetchGranularity`: Controls the L2 fetch granularity. This is
+    ///   purely a performance hint and it can be ignored or clamped depending
+    ///   on the platform.
     ///
     /// # Example
     ///
@@ -750,15 +778,16 @@ impl CurrentContext {
     /// ```
     pub fn set_resource_limit(resource: ResourceLimit, limit: usize) -> CudaResult<()> {
         unsafe {
-            cuda::cuCtxSetLimit(transmute(resource), limit).to_result()?;
+            cuda::cuCtxSetLimit(transmute(resource), limit).into_result()?;
             Ok(())
         }
     }
 
     /// Sets the preferred shared memory configuration for the current context.
     ///
-    /// On devices with configurable shared memory banks, this function will set the context's
-    /// shared memory bank size which is used for subsequent kernel launches.
+    /// On devices with configurable shared memory banks, this function will set
+    /// the context's shared memory bank size which is used for subsequent
+    /// kernel launches.
     ///
     /// # Example
     ///
@@ -776,7 +805,7 @@ impl CurrentContext {
     /// # }
     /// ```
     pub fn set_shared_memory_config(cfg: SharedMemoryConfig) -> CudaResult<()> {
-        unsafe { cuda::cuCtxSetSharedMemConfig(transmute(cfg)).to_result() }
+        unsafe { cuda::cuCtxSetSharedMemConfig(transmute(cfg)).into_result() }
     }
 
     /// Returns a non-owning handle to the current context.
@@ -799,16 +828,16 @@ impl CurrentContext {
     pub fn get_current() -> CudaResult<UnownedContext> {
         unsafe {
             let mut ctx: CUcontext = ptr::null_mut();
-            cuda::cuCtxGetCurrent(&mut ctx as *mut CUcontext).to_result()?;
+            cuda::cuCtxGetCurrent(&mut ctx as *mut CUcontext).into_result()?;
             Ok(UnownedContext { inner: ctx })
         }
     }
 
     /// Set the given context as the current context for this thread.
     ///
-    /// If there is no context set for this thread, this pushes the given context onto the stack.
-    /// If there is a context set for this thread, this replaces the top context on the stack with
-    /// the given context.
+    /// If there is no context set for this thread, this pushes the given
+    /// context onto the stack. If there is a context set for this thread,
+    /// this replaces the top context on the stack with the given context.
     ///
     /// # Example
     ///
@@ -827,7 +856,7 @@ impl CurrentContext {
     /// ```
     pub fn set_current<C: ContextHandle>(c: &C) -> CudaResult<()> {
         unsafe {
-            cuda::cuCtxSetCurrent(c.get_inner()).to_result()?;
+            cuda::cuCtxSetCurrent(c.get_inner()).into_result()?;
             Ok(())
         }
     }
@@ -835,7 +864,7 @@ impl CurrentContext {
     /// Block to wait for a context's tasks to complete.
     pub fn synchronize() -> CudaResult<()> {
         unsafe {
-            cuda::cuCtxSynchronize().to_result()?;
+            cuda::cuCtxSynchronize().into_result()?;
             Ok(())
         }
     }

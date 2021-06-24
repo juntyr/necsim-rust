@@ -10,11 +10,14 @@ use crate::cogs::{
 };
 
 #[derive(TypedBuilder, Debug)]
-#[cfg_attr(feature = "cuda", derive(RustToCuda, LendToCuda))]
+#[cfg_attr(
+    feature = "cuda",
+    derive(rust_cuda::common::RustToCuda, rust_cuda::host::LendToCuda)
+)]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(R: rustacuda_core::DeviceCopy))]
+#[cfg_attr(feature = "cuda", r2cBound(R: rust_cuda::rustacuda_core::DeviceCopy))]
 #[cfg_attr(feature = "cuda", r2cBound(S: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(X: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(C: rust_cuda::common::RustToCuda))]

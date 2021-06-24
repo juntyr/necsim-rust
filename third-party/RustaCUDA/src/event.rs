@@ -10,18 +10,20 @@
 //!
 //! Events may be reused multiple times.
 
-// TODO: I'm not sure that these events are/can be safe by Rust's model of safety; they inherently
-// create state which can be mutated even while an immutable borrow is held.
+// TODO: I'm not sure that these events are/can be safe by Rust's model of
+// safety; they inherently create state which can be mutated even while an
+// immutable borrow is held.
 
-use crate::error::{CudaError, CudaResult, DropResult, ToResult};
-use crate::stream::Stream;
+use crate::{
+    error::{CudaError, CudaResult, DropResult, IntoResult},
+    stream::Stream,
+};
 use cuda_driver_sys::{
     cuEventCreate, cuEventDestroy_v2, cuEventElapsedTime, cuEventQuery, cuEventRecord,
     cuEventSynchronize, CUevent,
 };
 
-use std::mem;
-use std::ptr;
+use std::{mem, ptr};
 
 bitflags! {
     /// Bit flags for configuring a CUDA Event.
@@ -51,12 +53,13 @@ bitflags! {
 pub enum EventStatus {
     /// Ready indicates that all work captured by the event has been completed.
     ///
-    /// The CUDA documentation states that for Unified Memory, `EventStatus::Ready` is
-    /// equivalent to having called `Event::synchronize`.
+    /// The CUDA documentation states that for Unified Memory,
+    /// `EventStatus::Ready` is equivalent to having called
+    /// `Event::synchronize`.
     Ready,
 
-    /// `EventStatus::NotReady` indicates that the work captured by the event is still
-    /// incomplete.
+    /// `EventStatus::NotReady` indicates that the work captured by the event is
+    /// still incomplete.
     NotReady,
 }
 
@@ -86,13 +89,14 @@ impl Event {
     pub fn new(flags: EventFlags) -> CudaResult<Self> {
         unsafe {
             let mut event: CUevent = mem::zeroed();
-            cuEventCreate(&mut event, flags.bits()).to_result()?;
+            cuEventCreate(&mut event, flags.bits()).into_result()?;
             Ok(Event(event))
         }
     }
 
-    /// Add the event to the given stream of work. The event will be completed when the stream
-    /// completes all previously-submitted work and reaches the event in the queue.
+    /// Add the event to the given stream of work. The event will be completed
+    /// when the stream completes all previously-submitted work and reaches
+    /// the event in the queue.
     ///
     /// This function is used together with `query`, `synchronize`, and
     /// `elapsed_time_f32`. See the respective functions for more information.
@@ -126,13 +130,14 @@ impl Event {
     /// ```
     pub fn record(&self, stream: &Stream) -> CudaResult<()> {
         unsafe {
-            cuEventRecord(self.0, stream.as_inner()).to_result()?;
+            cuEventRecord(self.0, stream.as_inner()).into_result()?;
             Ok(())
         }
     }
 
-    /// Return whether the stream this event was recorded on (see `record`) has processed this event
-    /// yet or not. A return value of `EventStatus::Ready` indicates that all work submitted before
+    /// Return whether the stream this event was recorded on (see `record`) has
+    /// processed this event yet or not. A return value of
+    /// `EventStatus::Ready` indicates that all work submitted before
     /// the event has been completed.
     ///
     /// # Example
@@ -163,7 +168,7 @@ impl Event {
     /// }
     /// ```
     pub fn query(&self) -> CudaResult<EventStatus> {
-        let result = unsafe { cuEventQuery(self.0).to_result() };
+        let result = unsafe { cuEventQuery(self.0).into_result() };
 
         match result {
             Ok(()) => Ok(EventStatus::Ready),
@@ -204,7 +209,7 @@ impl Event {
     /// ```
     pub fn synchronize(&self) -> CudaResult<()> {
         unsafe {
-            cuEventSynchronize(self.0).to_result()?;
+            cuEventSynchronize(self.0).into_result()?;
             Ok(())
         }
     }
@@ -212,8 +217,8 @@ impl Event {
     /// Return the duration between two events.
     ///
     /// The duration is computed in milliseconds with a resolution of
-    /// approximately 0.5 microseconds. This can be used to measure the duration of work
-    /// queued in between the two events.
+    /// approximately 0.5 microseconds. This can be used to measure the duration
+    /// of work queued in between the two events.
     ///
     /// # Errors
     ///
@@ -276,7 +281,7 @@ impl Event {
     pub fn elapsed_time_f32(&self, start: &Self) -> CudaResult<f32> {
         unsafe {
             let mut millis: f32 = 0.0;
-            cuEventElapsedTime(&mut millis, start.0, self.0).to_result()?;
+            cuEventElapsedTime(&mut millis, start.0, self.0).into_result()?;
             Ok(millis)
         }
     }
@@ -322,11 +327,11 @@ impl Event {
 
         unsafe {
             let inner = mem::replace(&mut event.0, ptr::null_mut());
-            match cuEventDestroy_v2(inner).to_result() {
+            match cuEventDestroy_v2(inner).into_result() {
                 Ok(()) => {
                     mem::forget(event);
                     Ok(())
-                }
+                },
                 Err(e) => Err((e, Event(inner))),
             }
         }
@@ -336,7 +341,7 @@ impl Event {
 impl Drop for Event {
     fn drop(&mut self) {
         unsafe { cuEventDestroy_v2(self.0) }
-            .to_result()
+            .into_result()
             .expect("Failed to destroy CUDA event");
     }
 }
@@ -344,8 +349,7 @@ impl Drop for Event {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::quick_init;
-    use crate::stream::StreamFlags;
+    use crate::{quick_init, stream::StreamFlags};
     use std::error::Error;
 
     #[test]

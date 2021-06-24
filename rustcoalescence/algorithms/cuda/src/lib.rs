@@ -34,10 +34,13 @@ use necsim_partitioning_core::LocalPartition;
 use rustcoalescence_algorithms::{Algorithm, AlgorithmArguments};
 use rustcoalescence_scenarios::Scenario;
 
-use rust_cuda::{common::RustToCuda, host::CudaDropWrapper};
-use rustacuda::{
-    function::{BlockSize, GridSize},
-    prelude::{Stream, StreamFlags},
+use rust_cuda::{
+    common::RustToCuda,
+    host::CudaDropWrapper,
+    rustacuda::{
+        function::{BlockSize, GridSize},
+        prelude::{Stream, StreamFlags},
+    },
 };
 
 mod arguments;

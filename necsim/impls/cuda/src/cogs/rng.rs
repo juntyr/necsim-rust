@@ -1,7 +1,7 @@
 use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug, RustToCuda, LendToCuda)]
+#[derive(Clone, Debug, rust_cuda::common::RustToCuda, rust_cuda::host::LendToCuda)]
 pub struct CudaRng<R: RngCore>(R);
 
 impl<R: RngCore> From<R> for CudaRng<R> {

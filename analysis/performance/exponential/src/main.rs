@@ -101,11 +101,13 @@ fn main_cpu(options: &Options) {
 }
 
 fn main_gpu(options: &Options) {
-    use rust_cuda::common::{DeviceBoxConst, DeviceBoxMut};
-    use rustacuda::{launch, memory::DeviceBox, prelude::*};
+    use rust_cuda::{
+        common::{DeviceBoxConst, DeviceBoxMut},
+        rustacuda::{launch, memory::DeviceBox, prelude::*},
+    };
     use std::ffi::CString;
 
-    rustacuda::quick_init().unwrap();
+    rust_cuda::rustacuda::quick_init().unwrap();
 
     // Get the first device
     let device = Device::get_device(0).unwrap();

@@ -1,4 +1,4 @@
-use rustacuda::{
+use rust_cuda::rustacuda::{
     context::{CurrentContext, ResourceLimit},
     function::{Function, FunctionAttribute},
 };
