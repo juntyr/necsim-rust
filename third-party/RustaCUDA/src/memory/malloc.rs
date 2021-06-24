@@ -1,31 +1,34 @@
 use super::DeviceCopy;
-use crate::error::*;
-use crate::memory::DevicePointer;
-use crate::memory::UnifiedPointer;
+use crate::{
+    error::*,
+    memory::{DevicePointer, UnifiedPointer},
+};
 use cuda_driver_sys as cuda;
-use std::mem;
-use std::os::raw::c_void;
-use std::ptr;
+use std::{mem, os::raw::c_void, ptr};
 
-/// Unsafe wrapper around the `cuMemAlloc` function, which allocates some device memory and
-/// returns a [`DevicePointer`](struct.DevicePointer.html) pointing to it. The memory is not cleared.
+/// Unsafe wrapper around the `cuMemAlloc` function, which allocates some device
+/// memory and returns a [`DevicePointer`](struct.DevicePointer.html) pointing
+/// to it. The memory is not cleared.
 ///
-/// Note that `count` is in units of T; thus a `count` of 3 will allocate `3 * size_of::<T>()` bytes
-/// of memory.
+/// Note that `count` is in units of T; thus a `count` of 3 will allocate `3 *
+/// size_of::<T>()` bytes of memory.
 ///
-/// Memory buffers allocated using `cuda_malloc` must be freed using [`cuda_free`](fn.cuda_free.html).
+/// Memory buffers allocated using `cuda_malloc` must be freed using
+/// [`cuda_free`](fn.cuda_free.html).
 ///
 /// # Errors
 ///
 /// If allocating memory fails, returns the CUDA error value.
-/// If the number of bytes to allocate is zero (either because count is zero or because T is a
-/// zero-sized type), or if the size of the allocation would overflow a usize, returns InvalidValue.
+/// If the number of bytes to allocate is zero (either because count is zero or
+/// because T is a zero-sized type), or if the size of the allocation would
+/// overflow a usize, returns InvalidValue.
 ///
 /// # Safety
 ///
-/// Since the allocated memory is not initialized, the caller must ensure that it is initialized
-/// before copying it to the host in any way. Additionally, the caller must ensure that the memory
-/// allocated is freed using cuda_free, or the memory will be leaked.
+/// Since the allocated memory is not initialized, the caller must ensure that
+/// it is initialized before copying it to the host in any way. Additionally,
+/// the caller must ensure that the memory allocated is freed using cuda_free,
+/// or the memory will be leaked.
 ///
 /// # Examples
 ///
@@ -45,30 +48,34 @@ pub unsafe fn cuda_malloc<T>(count: usize) -> CudaResult<DevicePointer<T>> {
     }
 
     let mut ptr: *mut c_void = ptr::null_mut();
-    cuda::cuMemAlloc_v2(&mut ptr as *mut *mut c_void as *mut u64, size).to_result()?;
+    cuda::cuMemAlloc_v2(&mut ptr as *mut *mut c_void as *mut u64, size).into_result()?;
     let ptr = ptr as *mut T;
     Ok(DevicePointer::wrap(ptr as *mut T))
 }
 
-/// Unsafe wrapper around the `cuMemAllocManaged` function, which allocates some unified memory and
-/// returns a [`UnifiedPointer`](struct.UnifiedPointer.html) pointing to it. The memory is not cleared.
+/// Unsafe wrapper around the `cuMemAllocManaged` function, which allocates some
+/// unified memory and returns a [`UnifiedPointer`](struct.UnifiedPointer.html)
+/// pointing to it. The memory is not cleared.
 ///
-/// Note that `count` is in units of T; thus a `count` of 3 will allocate `3 * size_of::<T>()` bytes
-/// of memory.
+/// Note that `count` is in units of T; thus a `count` of 3 will allocate `3 *
+/// size_of::<T>()` bytes of memory.
 ///
-/// Memory buffers allocated using `cuda_malloc_unified` must be freed using [`cuda_free`](fn.cuda_free.html).
+/// Memory buffers allocated using `cuda_malloc_unified` must be freed using
+/// [`cuda_free`](fn.cuda_free.html).
 ///
 /// # Errors
 ///
 /// If allocating memory fails, returns the CUDA error value.
-/// If the number of bytes to allocate is zero (either because count is zero or because T is a
-/// zero-sized type), or if the size of the allocation would overflow a usize, returns InvalidValue.
+/// If the number of bytes to allocate is zero (either because count is zero or
+/// because T is a zero-sized type), or if the size of the allocation would
+/// overflow a usize, returns InvalidValue.
 ///
 /// # Safety
 ///
-/// Since the allocated memory is not initialized, the caller must ensure that it is initialized
-/// before reading from it in any way. Additionally, the caller must ensure that the memory
-/// allocated is freed using cuda_free, or the memory will be leaked.
+/// Since the allocated memory is not initialized, the caller must ensure that
+/// it is initialized before reading from it in any way. Additionally, the
+/// caller must ensure that the memory allocated is freed using cuda_free, or
+/// the memory will be leaked.
 ///
 /// # Examples
 ///
@@ -95,7 +102,7 @@ pub unsafe fn cuda_malloc_unified<T: DeviceCopy>(count: usize) -> CudaResult<Uni
         size,
         cuda::CUmemAttach_flags_enum::CU_MEM_ATTACH_GLOBAL as u32,
     )
-    .to_result()?;
+    .into_result()?;
     let ptr = ptr as *mut T;
     Ok(UnifiedPointer::wrap(ptr as *mut T))
 }
@@ -104,13 +111,14 @@ pub unsafe fn cuda_malloc_unified<T: DeviceCopy>(count: usize) -> CudaResult<Uni
 ///
 /// # Errors
 ///
-/// If freeing memory fails, returns the CUDA error value. If the given pointer is null, returns
-/// InvalidValue.
+/// If freeing memory fails, returns the CUDA error value. If the given pointer
+/// is null, returns InvalidValue.
 ///
 /// # Safety
 ///
 /// The given pointer must have been allocated with `cuda_malloc`, or null.
-/// The caller is responsible for ensuring that no other pointers to the deallocated buffer exist.
+/// The caller is responsible for ensuring that no other pointers to the
+/// deallocated buffer exist.
 ///
 /// # Examples
 ///
@@ -129,21 +137,23 @@ pub unsafe fn cuda_free<T>(mut p: DevicePointer<T>) -> CudaResult<()> {
         return Err(CudaError::InvalidMemoryAllocation);
     }
 
-    cuda::cuMemFree_v2(ptr as u64).to_result()?;
+    cuda::cuMemFree_v2(ptr as u64).into_result()?;
     Ok(())
 }
 
-/// Free memory allocated with [`cuda_malloc_unified`](fn.cuda_malloc_unified.html).
+/// Free memory allocated with
+/// [`cuda_malloc_unified`](fn.cuda_malloc_unified.html).
 ///
 /// # Errors
 ///
-/// If freeing memory fails, returns the CUDA error value. If the given pointer is null, returns
-/// InvalidValue.
+/// If freeing memory fails, returns the CUDA error value. If the given pointer
+/// is null, returns InvalidValue.
 ///
 /// # Safety
 ///
-/// The given pointer must have been allocated with `cuda_malloc_unified`, or null.
-/// The caller is responsible for ensuring that no other pointers to the deallocated buffer exist.
+/// The given pointer must have been allocated with `cuda_malloc_unified`, or
+/// null. The caller is responsible for ensuring that no other pointers to the
+/// deallocated buffer exist.
 ///
 /// # Examples
 ///
@@ -162,29 +172,33 @@ pub unsafe fn cuda_free_unified<T: DeviceCopy>(mut p: UnifiedPointer<T>) -> Cuda
         return Err(CudaError::InvalidMemoryAllocation);
     }
 
-    cuda::cuMemFree_v2(ptr as u64).to_result()?;
+    cuda::cuMemFree_v2(ptr as u64).into_result()?;
     Ok(())
 }
 
-/// Unsafe wrapper around the `cuMemAllocHost` function, which allocates some page-locked host memory
-/// and returns a raw pointer pointing to it. The memory is not cleared.
+/// Unsafe wrapper around the `cuMemAllocHost` function, which allocates some
+/// page-locked host memory and returns a raw pointer pointing to it. The memory
+/// is not cleared.
 ///
-/// Note that `count` is in units of T; thus a `count` of 3 will allocate `3 * size_of::<T>()` bytes
-/// of memory.
+/// Note that `count` is in units of T; thus a `count` of 3 will allocate `3 *
+/// size_of::<T>()` bytes of memory.
 ///
-/// Memory buffers allocated using `cuda_malloc_locked` must be freed using [`cuda_free_locked`](fn.cuda_free_locked.html).
+/// Memory buffers allocated using `cuda_malloc_locked` must be freed using
+/// [`cuda_free_locked`](fn.cuda_free_locked.html).
 ///
 /// # Errors
 ///
 /// If allocating memory fails, returns the CUDA error value.
-/// If the number of bytes to allocate is zero (either because count is zero or because T is a
-/// zero-sized type), or if the size of the allocation would overflow a usize, returns InvalidValue.
+/// If the number of bytes to allocate is zero (either because count is zero or
+/// because T is a zero-sized type), or if the size of the allocation would
+/// overflow a usize, returns InvalidValue.
 ///
 /// # Safety
 ///
-/// Since the allocated memory is not initialized, the caller must ensure that it is initialized
-/// before reading from it in any way. Additionally, the caller must ensure that the memory
-/// allocated is freed using `cuda_free_locked`, or the memory will be leaked.
+/// Since the allocated memory is not initialized, the caller must ensure that
+/// it is initialized before reading from it in any way. Additionally, the
+/// caller must ensure that the memory allocated is freed using
+/// `cuda_free_locked`, or the memory will be leaked.
 ///
 /// # Examples
 ///
@@ -204,22 +218,24 @@ pub unsafe fn cuda_malloc_locked<T>(count: usize) -> CudaResult<*mut T> {
     }
 
     let mut ptr: *mut c_void = ptr::null_mut();
-    cuda::cuMemAllocHost_v2(&mut ptr as *mut *mut c_void, size).to_result()?;
+    cuda::cuMemAllocHost_v2(&mut ptr as *mut *mut c_void, size).into_result()?;
     let ptr = ptr as *mut T;
     Ok(ptr as *mut T)
 }
 
-/// Free page-locked memory allocated with [`cuda_malloc_host`](fn.cuda_malloc_host.html).
+/// Free page-locked memory allocated with
+/// [`cuda_malloc_host`](fn.cuda_malloc_host.html).
 ///
 /// # Errors
 ///
-/// If freeing memory fails, returns the CUDA error value. If the given pointer is null, returns
-/// InvalidValue.
+/// If freeing memory fails, returns the CUDA error value. If the given pointer
+/// is null, returns InvalidValue.
 ///
 /// # Safety
 ///
-/// The given pointer must have been allocated with `cuda_malloc_locked`, or null.
-/// The caller is responsible for ensuring that no other pointers to the deallocated buffer exist.
+/// The given pointer must have been allocated with `cuda_malloc_locked`, or
+/// null. The caller is responsible for ensuring that no other pointers to the
+/// deallocated buffer exist.
 ///
 /// # Examples
 ///
@@ -237,7 +253,7 @@ pub unsafe fn cuda_free_locked<T>(ptr: *mut T) -> CudaResult<()> {
         return Err(CudaError::InvalidMemoryAllocation);
     }
 
-    cuda::cuMemFreeHost(ptr as *mut c_void).to_result()?;
+    cuda::cuMemFreeHost(ptr as *mut c_void).into_result()?;
     Ok(())
 }
 

@@ -10,12 +10,14 @@ use necsim_core::{
     reporter::boolean::Boolean,
 };
 
-use rustacuda::{
-    function::{BlockSize, Function, GridSize},
-    module::Module,
-    stream::Stream,
+use rust_cuda::{
+    rustacuda::{
+        function::{BlockSize, Function, GridSize},
+        module::Module,
+        stream::Stream,
+    },
+    rustacuda_core::DeviceCopy,
 };
-use rustacuda_core::DeviceCopy;
 
 use rust_cuda::common::RustToCuda;
 use rustcoalescence_algorithms_cuda_kernel_ptx_jit::host::compiler::PtxJITCompiler;

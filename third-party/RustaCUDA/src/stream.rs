@@ -1,23 +1,24 @@
 //! Streams of work for the device to perform.
 //!
-//! In CUDA, most work is performed asynchronously. Even tasks such as memory copying can be
-//! scheduled by the host and performed when ready. Scheduling this work is done using a Stream.
+//! In CUDA, most work is performed asynchronously. Even tasks such as memory
+//! copying can be scheduled by the host and performed when ready. Scheduling
+//! this work is done using a Stream.
 //!
-//! A stream is required for all asynchronous tasks in CUDA, such as kernel launches and
-//! asynchronous memory copying. Each task in a stream is performed in the order it was scheduled,
-//! and tasks within a stream cannot overlap. Tasks scheduled in multiple streams may interleave or
-//! execute concurrently. Sequencing between multiple streams can be achieved using events, which
-//! are not currently supported by RustaCUDA. Finally, the host can wait for all work scheduled in
-//! a stream to be completed.
+//! A stream is required for all asynchronous tasks in CUDA, such as kernel
+//! launches and asynchronous memory copying. Each task in a stream is performed
+//! in the order it was scheduled, and tasks within a stream cannot overlap.
+//! Tasks scheduled in multiple streams may interleave or execute concurrently.
+//! Sequencing between multiple streams can be achieved using events, which
+//! are not currently supported by RustaCUDA. Finally, the host can wait for all
+//! work scheduled in a stream to be completed.
 
-use crate::error::{CudaResult, DropResult, ToResult};
-use crate::event::Event;
-use crate::function::{BlockSize, Function, GridSize};
+use crate::{
+    error::{CudaResult, DropResult, IntoResult},
+    event::Event,
+    function::{BlockSize, Function, GridSize},
+};
 use cuda_driver_sys::{self as cuda, cudaError_enum, CUstream};
-use std::ffi::c_void;
-use std::mem;
-use std::panic;
-use std::ptr;
+use std::{ffi::c_void, mem, panic, ptr};
 
 bitflags! {
     /// Bit flags for configuring a CUDA Stream.
@@ -60,11 +61,13 @@ pub struct Stream {
 impl Stream {
     /// Create a new stream with the given flags and optional priority.
     ///
-    /// By convention, `priority` follows a convention where lower numbers represent greater
-    /// priorities. That is, work in a stream with a lower priority number may pre-empt work in
-    /// a stream with a higher priority number. `Context::get_stream_priority_range` can be used
-    /// to get the range of valid priority values; if priority is set outside that range, it will
-    /// be automatically clamped to the lowest or highest number in the range.
+    /// By convention, `priority` follows a convention where lower numbers
+    /// represent greater priorities. That is, work in a stream with a lower
+    /// priority number may pre-empt work in a stream with a higher priority
+    /// number. `Context::get_stream_priority_range` can be used to get the
+    /// range of valid priority values; if priority is set outside that range,
+    /// it will be automatically clamped to the lowest or highest number in
+    /// the range.
     ///
     /// # Examples
     ///
@@ -93,7 +96,7 @@ impl Stream {
                 flags.bits(),
                 priority.unwrap_or(0),
             )
-            .to_result()?;
+            .into_result()?;
             Ok(stream)
         }
     }
@@ -117,16 +120,16 @@ impl Stream {
     pub fn get_flags(&self) -> CudaResult<StreamFlags> {
         unsafe {
             let mut bits = 0u32;
-            cuda::cuStreamGetFlags(self.inner, &mut bits as *mut u32).to_result()?;
+            cuda::cuStreamGetFlags(self.inner, &mut bits as *mut u32).into_result()?;
             Ok(StreamFlags::from_bits_truncate(bits))
         }
     }
 
     /// Return the priority of this stream.
     ///
-    /// If this stream was created without a priority, returns the default priority.
-    /// If the stream was created with a priority outside the valid range, returns the clamped
-    /// priority.
+    /// If this stream was created without a priority, returns the default
+    /// priority. If the stream was created with a priority outside the
+    /// valid range, returns the clamped priority.
     ///
     /// # Examples
     ///
@@ -145,7 +148,7 @@ impl Stream {
     pub fn get_priority(&self) -> CudaResult<i32> {
         unsafe {
             let mut priority = 0i32;
-            cuda::cuStreamGetPriority(self.inner, &mut priority as *mut i32).to_result()?;
+            cuda::cuStreamGetPriority(self.inner, &mut priority as *mut i32).into_result()?;
             Ok(priority)
         }
     }
@@ -192,13 +195,14 @@ impl Stream {
                 Box::into_raw(callback) as *mut c_void,
                 0,
             )
-            .to_result()
+            .into_result()
         }
     }
 
     /// Wait until a stream's tasks are completed.
     ///
-    /// Waits until the device has completed all operations scheduled for this stream.
+    /// Waits until the device has completed all operations scheduled for this
+    /// stream.
     ///
     /// # Examples
     ///
@@ -219,7 +223,7 @@ impl Stream {
     /// # }
     /// ```
     pub fn synchronize(&self) -> CudaResult<()> {
-        unsafe { cuda::cuStreamSynchronize(self.inner).to_result() }
+        unsafe { cuda::cuStreamSynchronize(self.inner).into_result() }
     }
 
     /// Make the stream wait on an event.
@@ -253,10 +257,11 @@ impl Stream {
     /// }
     /// ```
     pub fn wait_event(&self, event: Event, flags: StreamWaitEventFlags) -> CudaResult<()> {
-        unsafe { cuda::cuStreamWaitEvent(self.inner, event.as_inner(), flags.bits()).to_result() }
+        unsafe { cuda::cuStreamWaitEvent(self.inner, event.as_inner(), flags.bits()).into_result() }
     }
 
-    // Hidden implementation detail function. Highly unsafe. Use the `launch!` macro instead.
+    // Hidden implementation detail function. Highly unsafe. Use the `launch!` macro
+    // instead.
     #[doc(hidden)]
     pub unsafe fn launch<G, B>(
         &self,
@@ -286,7 +291,7 @@ impl Stream {
             args.as_ptr() as *mut _,
             ptr::null_mut(),
         )
-        .to_result()
+        .into_result()
     }
 
     // Get the inner `CUstream` from the `Stream`.
@@ -299,8 +304,9 @@ impl Stream {
 
     /// Destroy a `Stream`, returning an error.
     ///
-    /// Destroying a stream can return errors from previous asynchronous work. This function
-    /// destroys the given stream and returns the error and the un-destroyed stream on failure.
+    /// Destroying a stream can return errors from previous asynchronous work.
+    /// This function destroys the given stream and returns the error and
+    /// the un-destroyed stream on failure.
     ///
     /// # Example
     ///
@@ -329,11 +335,11 @@ impl Stream {
 
         unsafe {
             let inner = mem::replace(&mut stream.inner, ptr::null_mut());
-            match cuda::cuStreamDestroy_v2(inner).to_result() {
+            match cuda::cuStreamDestroy_v2(inner).into_result() {
                 Ok(()) => {
                     mem::forget(stream);
                     Ok(())
-                }
+                },
                 Err(e) => Err((e, Stream { inner })),
             }
         }
@@ -349,7 +355,7 @@ impl Drop for Stream {
             let inner = mem::replace(&mut self.inner, ptr::null_mut());
             // No choice but to panic here.
             cuda::cuStreamDestroy_v2(inner)
-                .to_result()
+                .into_result()
                 .expect("Failed to destroy CUDA stream.");
         }
     }
@@ -364,6 +370,6 @@ unsafe extern "C" fn callback_wrapper<T>(
     // Stop panics from unwinding across the FFI
     let _ = panic::catch_unwind(|| {
         let callback: Box<T> = Box::from_raw(callback as *mut T);
-        callback(status.to_result());
+        callback(status.into_result());
     });
 }

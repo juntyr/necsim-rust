@@ -7,16 +7,12 @@ use necsim_core::{cogs::RngCore, intrinsics::floor};
 #[allow(clippy::module_name_repetitions)]
 #[allow(non_snake_case)]
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::rustacuda_core::DeviceCopy))]
+#[cfg_attr(feature = "cuda", rustacuda(core = "rust_cuda::rustacuda_core"))]
 pub struct AliasMethodSamplerAtom<E: Copy + PartialEq> {
     U: f64,
     E: E,
     K: E,
-}
-
-#[cfg(feature = "cuda")]
-unsafe impl<E: Copy + PartialEq + rustacuda_core::DeviceCopy> rustacuda_core::DeviceCopy
-    for AliasMethodSamplerAtom<E>
-{
 }
 
 impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {

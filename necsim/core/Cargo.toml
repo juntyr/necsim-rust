@@ -9,25 +9,20 @@ edition = "2018"
 
 [features]
 default = []
-cuda = ["rust-cuda", "rust-cuda-derive", "rustacuda_core", "rustacuda_derive", "rustacuda", "necsim-core-bond/cuda"]
+cuda = ["rust-cuda", "necsim-core-bond/cuda"]
 mpi = ["rsmpi", "necsim-core-bond/mpi"]
 
 [dependencies]
 necsim-core-bond = { path = "bond" }
 
-contracts = "0.6"
+contracts = { path = "../../third-party/contracts" }
 typed-builder = "0.9.0"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 
-rust-cuda-derive = { path = "../../rust-cuda/rust-cuda-derive", optional = true }
-rustacuda_core = { version = "0.1.2", optional = true }
-rustacuda_derive = { version = "0.1.2", optional = true }
-
-rsmpi = { package = "mpi", version = "0.6.0", default-features = false, features = ["derive"], optional = true }
+rsmpi = { package = "mpi", git = "https://github.com/rsmpi/rsmpi", rev = "e9b1844", default-features = false, features = ["derive"], optional = true }
 
 [target.'cfg(target_os = "cuda")'.dependencies]
-rust-cuda = { path = "../../rust-cuda", features = [], optional = true }
+rust-cuda = { path = "../../rust-cuda", features = ["derive"], optional = true }
 
 [target.'cfg(not(target_os = "cuda"))'.dependencies]
-rust-cuda = { path = "../../rust-cuda", features = ["host"], optional = true }
-rustacuda = { version = "0.1.2", optional = true }
+rust-cuda = { path = "../../rust-cuda", features = ["derive", "host"], optional = true }

@@ -13,11 +13,10 @@ use crate::{
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::rustacuda_core::DeviceCopy))]
+#[cfg_attr(feature = "cuda", rustacuda(core = "rust_cuda::rustacuda_core"))]
 #[repr(transparent)]
 pub struct GlobalLineageReference(NonZeroOneU64);
-
-#[cfg(feature = "cuda")]
-unsafe impl rustacuda_core::DeviceCopy for GlobalLineageReference {}
 
 impl fmt::Display for GlobalLineageReference {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -59,7 +58,8 @@ impl Backup for GlobalLineageReference {
 
 impl<H: Habitat> LineageReference<H> for GlobalLineageReference {}
 
-#[cfg_attr(feature = "cuda", derive(DeviceCopy))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::rustacuda_core::DeviceCopy))]
+#[cfg_attr(feature = "cuda", rustacuda(core = "rust_cuda::rustacuda_core"))]
 #[derive(Debug, Clone)]
 pub struct Lineage {
     global_reference: GlobalLineageReference,

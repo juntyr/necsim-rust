@@ -140,8 +140,8 @@ impl Builder {
         let cargo_env = env::var("CARGO");
         let recursive_env = env::var("PTX_CRATE_BUILDING");
 
-        let is_rls_build = cargo_env.is_ok() && cargo_env.unwrap().ends_with("rls");
-        let is_recursive_build = recursive_env.is_ok() && recursive_env.unwrap() == "1";
+        let is_rls_build = cargo_env.map_or(false, |cargo_env| cargo_env.ends_with("rls"));
+        let is_recursive_build = recursive_env.map_or(false, |recursive_env| recursive_env == "1");
 
         !is_rls_build && !is_recursive_build
     }
@@ -185,9 +185,7 @@ impl Builder {
         ExecutableRunner::new(Linker).with_args(vec!["-V"]).run()?;
 
         let mut cargo = ExecutableRunner::new(Cargo);
-        let mut args = Vec::new();
-
-        args.push("rustc");
+        let mut args = vec!["rustc"];
 
         if self.profile == Profile::Release {
             args.push("--release");
@@ -260,7 +258,7 @@ impl Builder {
 
         // We need the build command to get real output filename.
         let build_command = {
-            #[allow(clippy::find_map)]
+            #[allow(clippy::manual_find_map)]
             cargo_stderr
                 .trim_matches('\n')
                 .split('\n')

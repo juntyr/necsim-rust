@@ -2,8 +2,7 @@
 extern crate rustacuda;
 
 use rustacuda::prelude::*;
-use std::error::Error;
-use std::ffi::CString;
+use std::{error::Error, ffi::CString};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Set up the context, load the module, and create a stream to run kernels in.
@@ -21,9 +20,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut out_1 = DeviceBuffer::from_slice(&[0.0f32; 10])?;
     let mut out_2 = DeviceBuffer::from_slice(&[0.0f32; 10])?;
 
-    // This kernel adds each element in `in_x` and `in_y` and writes the result into `out`.
+    // This kernel adds each element in `in_x` and `in_y` and writes the result into
+    // `out`.
     unsafe {
-        // Launch the kernel with one block of one thread, no dynamic shared memory on `stream`.
+        // Launch the kernel with one block of one thread, no dynamic shared memory on
+        // `stream`.
         let result = launch!(module.sum<<<1, 1, 0, stream>>>(
             in_x.as_device_ptr(),
             in_y.as_device_ptr(),
@@ -35,8 +36,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         // Launch the kernel again using the `function` form:
         let function_name = CString::new("sum")?;
         let sum = module.get_function(&function_name)?;
-        // Launch with 1x1x1 (1) blocks of 10x1x1 (10) threads, to show that you can use tuples to
-        // configure grid and block size.
+        // Launch with 1x1x1 (1) blocks of 10x1x1 (10) threads, to show that you can use
+        // tuples to configure grid and block size.
         let result = launch!(sum<<<(1, 1, 1), (10, 1, 1), 0, stream>>>(
             in_x.as_device_ptr(),
             in_y.as_device_ptr(),
@@ -46,7 +47,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         result?;
     }
 
-    // Kernel launches are asynchronous, so we wait for the kernels to finish executing.
+    // Kernel launches are asynchronous, so we wait for the kernels to finish
+    // executing.
     stream.synchronize()?;
 
     // Copy the results back to host memory

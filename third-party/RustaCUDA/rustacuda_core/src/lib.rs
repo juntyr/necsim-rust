@@ -1,8 +1,9 @@
-//! RustaCUDA-core is a minimal subset of RustaCUDA which is intended to be used in device-side
-//! crates.
+//! RustaCUDA-core is a minimal subset of RustaCUDA which is intended to be used
+//! in device-side crates.
 //!
-//! It includes a small number of types needed when sharing types between the host and device.
-//! This is not intended to be used in a standalone way - see RustaCUDA for full documentation.
+//! It includes a small number of types needed when sharing types between the
+//! host and device. This is not intended to be used in a standalone way - see
+//! RustaCUDA for full documentation.
 
 #![no_std]
 #![warn(
@@ -16,3 +17,6 @@
 
 mod memory;
 pub use crate::memory::*;
+
+#[cfg(feature = "derive")]
+pub use rustacuda_derive::DeviceCopy;

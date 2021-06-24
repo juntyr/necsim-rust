@@ -27,15 +27,15 @@ pub(crate) fn generate_attributes(contracts: &[Contract]) -> Vec<Attribute> {
         stream.to_string()
     }
 
-    let mut attrs = vec![];
-
     // header
-    attrs.push(make_attribute("# Contracts"));
+    let mut attrs = vec![make_attribute("# Contracts")];
 
     for contract in contracts {
         let ty = contract.ty;
         let mode = match contract.mode {
-            ContractMode::Always | ContractMode::Disabled | ContractMode::LogOnly => None,
+            ContractMode::Always
+            | ContractMode::Disabled
+            | ContractMode::LogOnly => None,
             ContractMode::Debug => Some("debug"),
             ContractMode::Test => Some("test"),
         };

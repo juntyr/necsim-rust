@@ -1,14 +1,17 @@
 //! Functions and types for working with CUDA modules.
 
-use crate::error::{CudaResult, DropResult, ToResult};
-use crate::function::Function;
-use crate::memory::{CopyDestination, DeviceCopy, DevicePointer};
+use crate::{
+    error::{CudaResult, DropResult, IntoResult},
+    function::Function,
+    memory::{CopyDestination, DeviceCopy, DevicePointer},
+};
 use cuda_driver_sys as cuda;
-use std::ffi::{c_void, CStr};
-use std::fmt;
-use std::marker::PhantomData;
-use std::mem;
-use std::ptr;
+use std::{
+    ffi::{c_void, CStr},
+    fmt,
+    marker::PhantomData,
+    mem, ptr,
+};
 
 /// A compiled CUDA module, loaded into a context.
 #[derive(Debug)]
@@ -18,8 +21,8 @@ pub struct Module {
 impl Module {
     /// Load a module from the given file name into the current context.
     ///
-    /// The given file should be either a cubin file, a ptx file, or a fatbin file such as
-    /// those produced by `nvcc`.
+    /// The given file should be either a cubin file, a ptx file, or a fatbin
+    /// file such as those produced by `nvcc`.
     ///
     /// # Example
     ///
@@ -42,18 +45,18 @@ impl Module {
                 inner: ptr::null_mut(),
             };
             cuda::cuModuleLoad(&mut module.inner as *mut cuda::CUmodule, filename.as_ptr())
-                .to_result()?;
+                .into_result()?;
             Ok(module)
         }
     }
 
     /// Load a module from a CStr.
     ///
-    /// This is useful in combination with `include_str!`, to include the device code into the
-    /// compiled executable.
+    /// This is useful in combination with `include_str!`, to include the device
+    /// code into the compiled executable.
     ///
-    /// The given CStr must contain the bytes of a cubin file, a ptx file or a fatbin file such as
-    /// those produced by `nvcc`.
+    /// The given CStr must contain the bytes of a cubin file, a ptx file or a
+    /// fatbin file such as those produced by `nvcc`.
     ///
     /// # Example
     ///
@@ -79,7 +82,7 @@ impl Module {
                 &mut module.inner as *mut cuda::CUmodule,
                 image.as_ptr() as *const c_void,
             )
-            .to_result()?;
+            .into_result()?;
             Ok(module)
         }
     }
@@ -88,7 +91,8 @@ impl Module {
     ///
     /// # Panics:
     ///
-    /// This function panics if the size of the symbol is not the same as the `mem::sizeof<T>()`.
+    /// This function panics if the size of the symbol is not the same as the
+    /// `mem::sizeof<T>()`.
     ///
     /// # Examples
     ///
@@ -122,7 +126,7 @@ impl Module {
                 self.inner,
                 name.as_ptr(),
             )
-            .to_result()?;
+            .into_result()?;
             assert_eq!(size, mem::size_of::<T>());
             Ok(Symbol {
                 ptr,
@@ -159,15 +163,16 @@ impl Module {
                 self.inner,
                 name.as_ptr(),
             )
-            .to_result()?;
+            .into_result()?;
             Ok(Function::new(func, self))
         }
     }
 
     /// Destroy a `Module`, returning an error.
     ///
-    /// Destroying a module can return errors from previous asynchronous work. This function
-    /// destroys the given module and returns the error and the un-destroyed module on failure.
+    /// Destroying a module can return errors from previous asynchronous work.
+    /// This function destroys the given module and returns the error and
+    /// the un-destroyed module on failure.
     ///
     /// # Example
     ///
@@ -198,11 +203,11 @@ impl Module {
 
         unsafe {
             let inner = mem::replace(&mut module.inner, ptr::null_mut());
-            match cuda::cuModuleUnload(inner).to_result() {
+            match cuda::cuModuleUnload(inner).into_result() {
                 Ok(()) => {
                     mem::forget(module);
                     Ok(())
-                }
+                },
                 Err(e) => Err((e, Module { inner })),
             }
         }
@@ -217,7 +222,7 @@ impl Drop for Module {
             // No choice but to panic if this fails...
             let module = mem::replace(&mut self.inner, ptr::null_mut());
             cuda::cuModuleUnload(module)
-                .to_result()
+                .into_result()
                 .expect("Failed to unload CUDA module");
         }
     }
@@ -245,7 +250,7 @@ impl<'a, T: DeviceCopy> CopyDestination<T> for Symbol<'a, T> {
                     val as *const T as *const c_void,
                     size,
                 )
-                .to_result()?
+                .into_result()?
             }
         }
         Ok(())
@@ -260,7 +265,7 @@ impl<'a, T: DeviceCopy> CopyDestination<T> for Symbol<'a, T> {
                     self.ptr.as_raw() as u64,
                     size,
                 )
-                .to_result()?
+                .into_result()?
             }
         }
         Ok(())
@@ -271,8 +276,7 @@ impl<'a, T: DeviceCopy> CopyDestination<T> for Symbol<'a, T> {
 mod test {
     use super::*;
     use crate::quick_init;
-    use std::error::Error;
-    use std::ffi::CString;
+    use std::{error::Error, ffi::CString};
 
     #[test]
     fn test_load_from_file() -> Result<(), Box<dyn Error>> {

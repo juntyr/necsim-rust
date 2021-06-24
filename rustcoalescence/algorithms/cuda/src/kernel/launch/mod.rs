@@ -15,8 +15,10 @@ use necsim_core::{
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
-use rustacuda::{error::CudaResult, function::Function, memory::DeviceBox, module::Module};
-use rustacuda_core::DeviceCopy;
+use rust_cuda::{
+    rustacuda::{error::CudaResult, function::Function, memory::DeviceBox, module::Module},
+    rustacuda_core::DeviceCopy,
+};
 
 use rust_cuda::{
     common::{DeviceBoxMut, RustToCuda},
@@ -136,7 +138,7 @@ impl<
         let kernel = &self.entry_point;
         let stream = self.stream;
 
-        rustacuda::launch!(
+        rust_cuda::rustacuda::launch!(
             kernel<<<
                 self.grid_size.clone(),
                 self.block_size.clone(),
