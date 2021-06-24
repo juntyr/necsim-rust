@@ -62,14 +62,14 @@ impl Reporter for CsvReporter {
         self.write_event(
             &speciation.global_lineage_reference,
             speciation.event_time.get(), &speciation.origin, 's'
-        )
+        );
     });
 
     impl_report!(dispersal(&mut self, dispersal: Used) {
         self.write_event(
             &dispersal.global_lineage_reference,
             dispersal.event_time.get(), &dispersal.origin, 'd'
-        )
+        );
     });
 
     impl_report!(progress(&mut self, _progress: Ignored) {});

@@ -123,7 +123,9 @@ impl<
         _rng: &mut G,
     ) {
         if let Some(active_lineage) = &mut self.active_lineage {
-            unsafe { active_lineage.move_to_indexed_location(indexed_location) }
+            unsafe {
+                active_lineage.move_to_indexed_location(indexed_location);
+            }
         }
     }
 

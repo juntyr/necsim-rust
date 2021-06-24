@@ -102,6 +102,6 @@ impl Reporter for MetacommunityMigrationReporter {
             "There were {} migrations to {} ancestors on a finite metacommunity of \
             size {} during the simulation.",
             self.migrations, unique_migration_targets.len(), metacommunity_size,
-        )
+        );
     });
 }

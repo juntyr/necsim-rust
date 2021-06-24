@@ -1,4 +1,5 @@
 #![deny(clippy::pedantic)]
+#![allow(clippy::useless_attribute)]
 #![no_std]
 #![feature(core_intrinsics)]
 #![feature(stmt_expr_attributes)]

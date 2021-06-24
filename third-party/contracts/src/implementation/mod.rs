@@ -181,7 +181,7 @@ impl FuncWithContracts {
 
         // find all other attributes
 
-        #[allow(clippy::filter_map)]
+        #[allow(clippy::manual_filter_map)]
         let contract_attrs = func
             .attrs
             .iter()
@@ -211,7 +211,7 @@ impl FuncWithContracts {
 
         // remove contract attributes
         {
-            let attrs = std::mem::replace(&mut func.attrs, vec![]);
+            let attrs = std::mem::take(&mut func.attrs);
 
             let other_attrs = attrs
                 .into_iter()

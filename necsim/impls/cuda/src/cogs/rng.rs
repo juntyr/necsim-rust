@@ -38,6 +38,6 @@ impl<R: RngCore> RngCore for CudaRng<R> {
 impl<R: PrimeableRng> PrimeableRng for CudaRng<R> {
     #[inline]
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
-        self.0.prime_with(location_index, time_index)
+        self.0.prime_with(location_index, time_index);
     }
 }

@@ -7,7 +7,6 @@
 #![feature(iter_advance_by)]
 #![feature(fn_traits)]
 #![feature(never_type)]
-#![feature(debug_non_exhaustive)]
 #![feature(option_result_unwrap_unchecked)]
 #![feature(drain_filter)]
 #![feature(specialization)]

@@ -316,7 +316,7 @@ impl<'a> Bytes<'a> {
     }
 
     pub fn bytes(&self) -> &[u8] {
-        &self.bytes
+        self.bytes
     }
 
     pub fn char(&mut self) -> Result<char> {

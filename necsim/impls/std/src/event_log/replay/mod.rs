@@ -120,7 +120,7 @@ impl FromIterator<SortedSegment> for anyhow::Result<EventLogReplay> {
         let mut frontier = BinaryHeap::with_capacity(grouped_segments.len());
 
         for group in grouped_segments {
-            frontier.push(SortedSortedSegments::new(group))
+            frontier.push(SortedSortedSegments::new(group));
         }
 
         Ok(EventLogReplay {

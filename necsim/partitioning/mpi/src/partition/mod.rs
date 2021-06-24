@@ -15,7 +15,9 @@ use necsim_partitioning_monolithic::{
 mod parallel;
 mod root;
 
+#[allow(clippy::module_name_repetitions)]
 pub use parallel::MpiParallelPartition;
+#[allow(clippy::module_name_repetitions)]
 pub use root::MpiRootPartition;
 
 #[allow(clippy::module_name_repetitions)]

@@ -10,7 +10,7 @@ use std::{
     time::Duration,
 };
 
-use necsim_core::{impl_finalise, impl_report, reporter::Reporter};
+use necsim_core::{impl_report, reporter::Reporter};
 
 struct ProgressUpdater {
     thread: JoinHandle<()>,
@@ -61,10 +61,6 @@ impl Reporter for ProgressReporter {
             // Flush stdout to update the progress bar
             std::mem::drop(io::stdout().flush());
         }
-    });
-
-    impl_finalise!((self) {
-        std::mem::drop(self)
     });
 
     fn initialise(&mut self) -> Result<(), String> {

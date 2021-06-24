@@ -184,13 +184,13 @@ pub trait GloballyCoherentLineageStore<H: Habitat, R: LineageReference<H>>:
             reference,
             indexed_location,
             habitat,
-        )
+        );
     }
 
     #[must_use]
     #[debug_ensures(
         self.get_active_local_lineage_references_at_location_unordered(
-            &ret.0.location(),
+            ret.0.location(),
             old(habitat),
         ).len() + 1 == old(self.get_active_local_lineage_references_at_location_unordered(
             self[reference.clone()].indexed_location().unwrap().location(),

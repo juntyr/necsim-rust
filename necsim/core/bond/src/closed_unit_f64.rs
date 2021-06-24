@@ -122,19 +122,19 @@ impl Ord for ClosedUnitF64 {
 
 impl Hash for ClosedUnitF64 {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.to_bits().hash(state)
+        self.0.to_bits().hash(state);
     }
 }
 
 impl PartialEq<f64> for ClosedUnitF64 {
     fn eq(&self, other: &f64) -> bool {
-        self.0.eq(&other)
+        self.0.eq(other)
     }
 }
 
 impl PartialOrd<f64> for ClosedUnitF64 {
     fn partial_cmp(&self, other: &f64) -> Option<Ordering> {
-        self.0.partial_cmp(&other)
+        self.0.partial_cmp(other)
     }
 }
 

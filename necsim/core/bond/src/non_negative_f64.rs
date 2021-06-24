@@ -144,7 +144,7 @@ impl Ord for NonNegativeF64 {
 
 impl Hash for NonNegativeF64 {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.to_bits().hash(state)
+        self.0.to_bits().hash(state);
     }
 }
 
@@ -162,13 +162,13 @@ impl PartialOrd<PositiveF64> for NonNegativeF64 {
 
 impl PartialEq<f64> for NonNegativeF64 {
     fn eq(&self, other: &f64) -> bool {
-        self.0.eq(&other)
+        self.0.eq(other)
     }
 }
 
 impl PartialOrd<f64> for NonNegativeF64 {
     fn partial_cmp(&self, other: &f64) -> Option<Ordering> {
-        self.0.partial_cmp(&other)
+        self.0.partial_cmp(other)
     }
 }
 
@@ -182,7 +182,7 @@ impl Add for NonNegativeF64 {
 
 impl AddAssign for NonNegativeF64 {
     fn add_assign(&mut self, other: Self) {
-        self.0 += other.0
+        self.0 += other.0;
     }
 }
 

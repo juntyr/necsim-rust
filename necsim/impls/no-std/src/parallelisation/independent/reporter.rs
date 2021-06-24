@@ -19,13 +19,13 @@ impl<'p, R: Reporter, P: LocalPartition<R>> Reporter for IgnoreProgressReporterP
     impl_report!(speciation(&mut self, speciation: MaybeUsed<
         <<P as LocalPartition<R>>::Reporter as Reporter
     >::ReportSpeciation>) {
-        self.local_partition.get_reporter().report_speciation(speciation.into())
+        self.local_partition.get_reporter().report_speciation(speciation.into());
     });
 
     impl_report!(dispersal(&mut self, dispersal: MaybeUsed<
         <<P as LocalPartition<R>>::Reporter as Reporter
     >::ReportDispersal>) {
-        self.local_partition.get_reporter().report_dispersal(dispersal.into())
+        self.local_partition.get_reporter().report_dispersal(dispersal.into());
     });
 
     impl_report!(progress(&mut self, _progress: Ignored) {});

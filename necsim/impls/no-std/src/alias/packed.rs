@@ -50,7 +50,7 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
                 U: weight * n / total_weight,
                 E: *event,
                 K: *event,
-            })
+            });
         }
 
         let mut overfull_indices: Vec<usize> = (0..alias_samplers.len())

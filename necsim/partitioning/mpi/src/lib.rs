@@ -1,4 +1,5 @@
 #![deny(clippy::pedantic)]
+#![allow(clippy::useless_attribute)]
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
 #![feature(stmt_expr_attributes)]
@@ -64,7 +65,7 @@ impl MpiPartitioning {
 
     pub fn update_message_buffer_size(&mut self, size: usize) {
         if !self.is_monolithic() {
-            self.universe.set_buffer_size(size)
+            self.universe.set_buffer_size(size);
         }
     }
 }

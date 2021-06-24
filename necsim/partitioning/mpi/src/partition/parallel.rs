@@ -92,7 +92,9 @@ impl<R: Reporter> MpiParallelPartition<R> {
         let mut mpi_migration_buffers = Vec::with_capacity(world_size);
         mpi_migration_buffers.resize_with(world_size, Vec::new);
 
-        unsafe { MPI_MIGRATION_BUFFERS = mpi_migration_buffers };
+        unsafe {
+            MPI_MIGRATION_BUFFERS = mpi_migration_buffers;
+        }
 
         let mut migration_buffers = Vec::with_capacity(world_size);
         migration_buffers.resize_with(world_size, Vec::new);
@@ -151,7 +153,7 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
         immigration_mode: MigrationMode,
     ) -> Self::ImmigrantIterator<'_> {
         for (partition, emigrant) in emigrants {
-            self.migration_buffers[partition as usize].push(emigrant)
+            self.migration_buffers[partition as usize].push(emigrant);
         }
 
         let self_rank_index = self.get_partition_rank() as usize;
@@ -212,7 +214,9 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
                     if let Err(request) = request.test() {
                         self.emigration_requests[rank_index] = Some(request);
                     } else {
-                        unsafe { MPI_MIGRATION_BUFFERS[rank_index].clear() };
+                        unsafe {
+                            MPI_MIGRATION_BUFFERS[rank_index].clear();
+                        }
                     }
                 }
 
@@ -275,7 +279,7 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
                 // Lexicographic min reduction, by time first then partition rank
                 for (&x, acc) in x.iter().zip(acc) {
                     if x.0 <= acc.0 && x.1 < acc.1 {
-                        *acc = x
+                        *acc = x;
                     }
                 }
             }),
@@ -367,17 +371,17 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
     }
 
     fn finalise_reporting(self) {
-        std::mem::drop(self)
+        std::mem::drop(self);
     }
 }
 
 impl<R: Reporter> Reporter for MpiParallelPartition<R> {
     impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
-        self.recorder.record_speciation(speciation)
+        self.recorder.record_speciation(speciation);
     });
 
     impl_report!(dispersal(&mut self, dispersal: MaybeUsed<R::ReportDispersal>) {
-        self.recorder.record_dispersal(dispersal)
+        self.recorder.record_dispersal(dispersal);
     });
 
     impl_report!(progress(&mut self, remaining: MaybeUsed<R::ReportProgress>) {

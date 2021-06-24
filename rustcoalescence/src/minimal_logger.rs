@@ -24,9 +24,9 @@ impl log::Log for MinimalLogger {
         };
 
         if record.level() > LevelFilter::Error {
-            println!("{:<5} {}", level_string, record.args())
+            println!("{:<5} {}", level_string, record.args());
         } else {
-            eprintln!("{:<5} {}", level_string, record.args())
+            eprintln!("{:<5} {}", level_string, record.args());
         }
     }
 

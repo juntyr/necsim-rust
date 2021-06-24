@@ -60,10 +60,10 @@ impl Default for BufferedImmigrationEntry {
 
 impl BufferedImmigrationEntry {
     pub fn reset(&mut self) {
-        self.immigrants.clear()
+        self.immigrants.clear();
     }
 
     pub fn push(&mut self, immigrant: MigratingLineage) {
-        self.immigrants.push(Reverse(immigrant))
+        self.immigrants.push(Reverse(immigrant));
     }
 }

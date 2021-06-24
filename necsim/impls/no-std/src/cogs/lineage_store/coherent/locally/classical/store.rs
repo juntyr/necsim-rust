@@ -69,7 +69,7 @@ impl<H: Habitat> LocallyCoherentLineageStore<H, InMemoryLineageReference>
             .insert(indexed_location.clone(), reference);
 
         unsafe {
-            self.lineages_store[usize::from(reference)].move_to_indexed_location(indexed_location)
+            self.lineages_store[usize::from(reference)].move_to_indexed_location(indexed_location);
         };
     }
 

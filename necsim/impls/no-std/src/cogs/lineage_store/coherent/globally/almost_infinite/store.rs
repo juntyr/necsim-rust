@@ -74,7 +74,7 @@ impl LocallyCoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference
             .insert(indexed_location.location().clone(), reference);
 
         unsafe {
-            self.lineages_store[usize::from(reference)].move_to_indexed_location(indexed_location)
+            self.lineages_store[usize::from(reference)].move_to_indexed_location(indexed_location);
         };
     }
 

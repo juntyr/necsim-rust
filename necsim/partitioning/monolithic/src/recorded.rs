@@ -103,7 +103,7 @@ impl<R: Reporter> LocalPartition<R> for RecordedMonolithicLocalPartition<R> {
     }
 
     fn finalise_reporting(self) {
-        self.reporter.finalise()
+        self.reporter.finalise();
     }
 }
 
@@ -127,14 +127,14 @@ impl<R: Reporter> RecordedMonolithicLocalPartition<R> {
 
 impl<R: Reporter> Reporter for RecordedMonolithicLocalPartition<R> {
     impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
-        self.recorder.record_speciation(speciation)
+        self.recorder.record_speciation(speciation);
     });
 
     impl_report!(dispersal(&mut self, dispersal: MaybeUsed<R::ReportDispersal>) {
-        self.recorder.record_dispersal(dispersal)
+        self.recorder.record_dispersal(dispersal);
     });
 
     impl_report!(progress(&mut self, progress: MaybeUsed<R::ReportProgress>) {
-        self.reporter.report_progress(progress.into())
+        self.reporter.report_progress(progress.into());
     });
 }

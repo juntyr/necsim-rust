@@ -43,7 +43,7 @@ impl SortedSegment {
         let mut buffer = VecDeque::with_capacity(header.length.min(capacity));
 
         if let Ok(event) = bincode::deserialize_from(&mut buf_reader) {
-            buffer.push_back(event)
+            buffer.push_back(event);
         }
 
         Ok(Self {
@@ -74,7 +74,7 @@ impl Iterator for SortedSegment {
         if next_event.is_some() && self.buffer.is_empty() {
             for _ in 0..self.capacity {
                 if let Ok(event) = bincode::deserialize_from(&mut self.reader) {
-                    self.buffer.push_back(event)
+                    self.buffer.push_back(event);
                 } else {
                     break;
                 }

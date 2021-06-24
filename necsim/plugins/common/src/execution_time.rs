@@ -62,7 +62,7 @@ impl Reporter for ExecutionTimeReporter {
                 (start_time - self.init_time),
                 (end_time - start_time),
                 end_time.elapsed()
-            )
+            );
         }
     });
 

@@ -48,6 +48,7 @@ impl<'d, O: OriginSampler<'d>, D: Decomposition<O::Habitat>> Iterator
     type Item = IndexedLocation;
 
     fn next(&mut self) -> Option<Self::Item> {
+        #[allow(clippy::while_let_on_iterator)]
         while let Some(indexed_location) = self.origin_sampler.next() {
             if self.decomposition.map_location_to_subdomain_rank(
                 indexed_location.location(),

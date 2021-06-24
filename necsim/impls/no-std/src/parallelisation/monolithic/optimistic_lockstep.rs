@@ -112,7 +112,7 @@ pub fn simulate<
                     MigrationMode::Default,
                     MigrationMode::Default,
                 ) {
-                    simulation.immigration_entry_mut().push(immigrant)
+                    simulation.immigration_entry_mut().push(immigrant);
                 }
             },
             // All other partitions get to simulate until just before this next migration event
@@ -137,7 +137,7 @@ pub fn simulate<
                 MigrationMode::Force,
                 MigrationMode::Force,
             ) {
-                simulation.immigration_entry_mut().push(immigrant)
+                simulation.immigration_entry_mut().push(immigrant);
             }
         }
 

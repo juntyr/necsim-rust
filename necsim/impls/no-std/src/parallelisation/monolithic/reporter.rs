@@ -35,19 +35,19 @@ impl<'p, R: Reporter, P: LocalPartition<R>> Reporter for BufferingReporterProxy<
     impl_report!(speciation(&mut self, speciation: MaybeUsed<
         <<P as LocalPartition<R>>::Reporter as Reporter
     >::ReportSpeciation>) {
-        self.event_buffer.push(speciation.clone().into())
+        self.event_buffer.push(speciation.clone().into());
     });
 
     impl_report!(dispersal(&mut self, dispersal: MaybeUsed<
         <<P as LocalPartition<R>>::Reporter as Reporter
     >::ReportDispersal>) {
-        self.event_buffer.push(dispersal.clone().into())
+        self.event_buffer.push(dispersal.clone().into());
     });
 
     impl_report!(progress(&mut self, progress: MaybeUsed<
         <<P as LocalPartition<R>>::Reporter as Reporter
     >::ReportProgress>) {
-        self.local_partition.get_reporter().report_progress(progress.into())
+        self.local_partition.get_reporter().report_progress(progress.into());
     });
 }
 
@@ -61,7 +61,7 @@ impl<'p, R: Reporter, P: LocalPartition<R>> BufferingReporterProxy<'p, R, P> {
     }
 
     pub fn clear_events(&mut self) {
-        self.event_buffer.clear()
+        self.event_buffer.clear();
     }
 
     pub fn report_events(&mut self) {

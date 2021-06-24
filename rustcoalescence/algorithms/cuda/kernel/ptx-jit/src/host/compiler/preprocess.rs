@@ -90,8 +90,7 @@ impl PtxJITCompiler {
                                     last_slice.extend_from_slice(&ptx[from_index..range.start]);
 
                                     ptx_slices.push(PtxElement::CopiedSource {
-                                        ptx: std::mem::replace(&mut last_slice, Vec::new())
-                                            .into_boxed_slice(),
+                                        ptx: std::mem::take(&mut last_slice).into_boxed_slice(),
                                     });
 
                                     from_index = range.end;

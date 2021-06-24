@@ -111,7 +111,7 @@ pub fn simulate<
                     &mut core::iter::empty(),
                     MigrationMode::Force,
                     MigrationMode::Force,
-                ))
+                ));
             }
 
             immigrants.sort();
@@ -129,12 +129,12 @@ pub fn simulate<
                 // Back up the previous immigrating lineages in last_immigrants
                 last_immigrants.clear();
                 for immigrant in &immigrants {
-                    last_immigrants.push(immigrant.backup())
+                    last_immigrants.push(immigrant.backup());
                 }
 
                 // Move the immigrating lineages into the simulation's immigration entry
                 for immigrant in immigrants.drain(..) {
-                    simulation.immigration_entry_mut().push(immigrant)
+                    simulation.immigration_entry_mut().push(immigrant);
                 }
             } else {
                 immigrants.clear();

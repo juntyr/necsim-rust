@@ -219,7 +219,6 @@ impl Eq for MigratingLineage {}
 
 impl PartialEq<BackedUp<Self>> for MigratingLineage {
     fn eq(&self, other: &BackedUp<Self>) -> bool {
-        use core::ops::Deref;
-        self.eq(other.deref())
+        self.eq(&**other)
     }
 }
