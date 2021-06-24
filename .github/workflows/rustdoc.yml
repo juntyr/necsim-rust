@@ -21,7 +21,20 @@ jobs:
         run: cargo install ptx-linker -f
 
       - name: Build Documentation
-        run: RUSTDOCFLAGS="--enable-index-page -Zunstable-options" cargo doc --all --no-deps --document-private-items
+        run: |
+          RUSTDOCFLAGS="--enable-index-page -Zunstable-options" cargo doc \
+            --all --no-deps \
+            --exclude analysis-rng-randomness \
+            --exclude analysis-rng-hash \
+            --exclude analysis-rng-correlation \
+            --exclude analysis-performance-exponential \
+            --exclude analysis-performance-exponential-kernel \
+            --exclude analysis-performance-reporting \
+            --exclude contracts \
+            --exclude ptx-builder \
+            --exclude rustacuda_derive \
+            --exclude rustcoalescence-linker \
+            --exclude rust-cuda-derive \
 
       - name: Deploy Documentation
         uses: peaceiris/actions-gh-pages@v3

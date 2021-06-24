@@ -24,8 +24,7 @@
 //! #[requires(x > 0, "x must be in the valid input range")]
 //! #[ensures(ret.is_some() -> ret.unwrap() * ret.unwrap() == x)]
 //! fn integer_sqrt(x: u64) -> Option<u64> {
-//!    // ...
-//! # unimplemented!()
+//!     x.checked_mul(x)
 //! }
 //! ```
 //!

@@ -17,9 +17,10 @@ lazy_static! {
 
 #[test]
 fn should_provide_output_path() {
+    let _lock = ENV_MUTEX.lock();
+
     cleanup_temp_location();
 
-    let _lock = ENV_MUTEX.lock();
     let builder = Builder::new("tests/fixtures/sample-crate").unwrap();
 
     match builder.disable_colors().build().unwrap() {
@@ -37,9 +38,10 @@ fn should_provide_output_path() {
 
 #[test]
 fn should_write_assembly() {
+    let _lock = ENV_MUTEX.lock();
+
     cleanup_temp_location();
 
-    let _lock = ENV_MUTEX.lock();
     let builder = Builder::new("tests/fixtures/sample-crate").unwrap();
 
     match builder.disable_colors().build().unwrap() {
@@ -65,9 +67,10 @@ fn should_write_assembly() {
 
 #[test]
 fn should_build_application_crate() {
+    let _lock = ENV_MUTEX.lock();
+
     cleanup_temp_location();
 
-    let _lock = ENV_MUTEX.lock();
     let builder = Builder::new("tests/fixtures/app-crate").unwrap();
 
     match builder.disable_colors().build().unwrap() {
@@ -93,9 +96,10 @@ fn should_build_application_crate() {
 
 #[test]
 fn should_build_mixed_crate_lib() {
+    let _lock = ENV_MUTEX.lock();
+
     cleanup_temp_location();
 
-    let _lock = ENV_MUTEX.lock();
     let builder = Builder::new("tests/fixtures/mixed-crate").unwrap();
 
     match builder
@@ -128,9 +132,10 @@ fn should_build_mixed_crate_lib() {
 
 #[test]
 fn should_build_mixed_crate_bin() {
+    let _lock = ENV_MUTEX.lock();
+
     cleanup_temp_location();
 
-    let _lock = ENV_MUTEX.lock();
     let builder = Builder::new("tests/fixtures/mixed-crate").unwrap();
 
     match builder
@@ -163,9 +168,10 @@ fn should_build_mixed_crate_bin() {
 
 #[test]
 fn should_handle_rebuild_without_changes() {
+    let _lock = ENV_MUTEX.lock();
+
     cleanup_temp_location();
 
-    let _lock = ENV_MUTEX.lock();
     let builder = {
         Builder::new("tests/fixtures/app-crate")
             .unwrap()
@@ -197,9 +203,10 @@ fn should_handle_rebuild_without_changes() {
 
 #[test]
 fn should_write_assembly_in_debug_mode() {
+    let _lock = ENV_MUTEX.lock();
+
     cleanup_temp_location();
 
-    let _lock = ENV_MUTEX.lock();
     let builder = Builder::new("tests/fixtures/sample-crate").unwrap();
 
     match builder
@@ -230,9 +237,10 @@ fn should_write_assembly_in_debug_mode() {
 
 #[test]
 fn should_report_about_build_failure() {
+    let _lock = ENV_MUTEX.lock();
+
     cleanup_temp_location();
 
-    let _lock = ENV_MUTEX.lock();
     let builder = Builder::new("tests/fixtures/faulty-crate")
         .unwrap()
         .disable_colors();
@@ -274,7 +282,7 @@ fn should_report_about_build_failure() {
                     String::from(
                         "For more information about this error, try `rustc --explain E0425`.",
                     ),
-                    String::from("error: could not compile `faulty-ptx_crate`."),
+                    String::from("error: could not compile `faulty-ptx_crate`"),
                     String::from(""),
                 ]
             );
@@ -357,6 +365,7 @@ fn should_provide_application_crate_source_files() {
 #[test]
 fn should_not_get_built_from_rls() {
     let _lock = ENV_MUTEX.lock();
+
     env::set_var("CARGO", "some/path/to/rls");
 
     assert_eq!(Builder::is_build_needed(), false);
@@ -373,6 +382,7 @@ fn should_not_get_built_from_rls() {
 #[test]
 fn should_not_get_built_recursively() {
     let _lock = ENV_MUTEX.lock();
+
     env::set_var("PTX_CRATE_BUILDING", "1");
 
     assert_eq!(Builder::is_build_needed(), false);
