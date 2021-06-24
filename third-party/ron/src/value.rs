@@ -19,9 +19,9 @@ use crate::de::{Error as RonError, Result};
 /// A `Value` to `Value` map.
 ///
 /// This structure either uses a [BTreeMap](std::collections::BTreeMap) or the
-/// [IndexMap](indexmap::IndexMap) internally.
-/// The latter can be used by enabling the `indexmap` feature. This can be used
-/// to preserve the order of the parsed map.
+/// [IndexMap](https://docs.rs/indexmap/1.6.2/indexmap/map/struct.IndexMap.html)
+/// internally. The latter can be used by enabling the `indexmap` feature. This
+/// can be used to preserve the order of the parsed map.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Map(MapInner);
 
