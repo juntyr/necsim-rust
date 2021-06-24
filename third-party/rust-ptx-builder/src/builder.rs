@@ -229,7 +229,7 @@ impl Builder {
 
         let cargo_output = cargo.run().map_err(|error| match error.kind() {
             BuildErrorKind::CommandFailed { stderr, .. } => {
-                #[allow(clippy::filter_map)]
+                #[allow(clippy::manual_filter_map)]
                 let lines = stderr
                     .trim_matches('\n')
                     .split('\n')
@@ -276,7 +276,7 @@ impl Builder {
         };
 
         if let BuildCommand::Realtime(ref command) = build_command {
-            Self::store_cached_build_command(&output_path, &command)?;
+            Self::store_cached_build_command(&output_path, command)?;
         }
 
         let file_suffix = match SUFFIX_REGEX.captures(&build_command) {
@@ -462,7 +462,7 @@ impl std::ops::Deref for BuildCommand {
 
     fn deref(&self) -> &str {
         match self {
-            BuildCommand::Realtime(line) | BuildCommand::Cached(line) => &line,
+            BuildCommand::Realtime(line) | BuildCommand::Cached(line) => line,
         }
     }
 }

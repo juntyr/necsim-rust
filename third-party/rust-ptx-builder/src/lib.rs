@@ -1,7 +1,7 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::missing_errors_doc)]
 #![deny(warnings)]
-#![warn(clippy::all)]
+#![allow(clippy::useless_attribute)]
 
 //! `build.rs` helper crate for your CUDA experiments.
 //!

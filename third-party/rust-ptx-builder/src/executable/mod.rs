@@ -3,6 +3,7 @@ use semver::{Version, VersionReq};
 use crate::error::Result;
 
 pub mod runner;
+#[allow(clippy::module_name_repetitions)]
 pub use self::runner::{ExecutableRunner, Output};
 
 /// Details and requirements for executables.
