@@ -1,0 +1,329 @@
+# mpiexec: MPI is /apps/mpi/intel/2019.6.166
+# mpiexec: No RDMA network found -- using sockets+shared memory
+# mpiexec: bootstrapping with /apps/mpi/intel/2019.6.166/bin/__pbs_tmrsh
+# mpiexec: full path to program is /rds/general/user/ml5717/home/necsim-rust/target-mpi/release/rustcoalescence
+# mpiexec: program arguments are: simulate (
+        speciation: 0.01,
+        sample: 0.0025,
+        seed: 9421040204131958619,
+
+        algorithm: SkippingGillespie(parallelism_mode:Averaging(delta_sync:0.032)),
+
+        scenario: SpatiallyExplicit(
+            habitat: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif",
+            dispersal: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif",
+        ),
+        
+        log: "/var/tmp/pbs.3474367[1].pbs/event_log",
+
+        reporters: [
+            Plugin(
+                library: "/rds/general/user/ml5717/home/necsim-rust/target-mpi/release/deps/libnecsim_plugins_common.so",
+                reporters: [Execution(),Biodiversity()],
+            ),
+        ],
+    )
+# mpiexec: 8 ranks allocated via PBS select
+# mpiexec: 1 OpenMP threads / rank allocated by PBS select
+# mpiexec: Job has shared use of the allocated nodes. Disabling process-pinning
+# mpiexec: machinefile configured as:
+cx3-2-26.cx3.hpc.ic.ac.uk:8
+#
+# mpiexec: Checking all nodes are ONLINE:
+# mpiexec: All nodes appear ONLINE
+# mpiexec: launch started at Wed  5 May 11:55:52 BST 2021
+# mpiexec: launching program...
+# /rds/general/user/ml5717/home/necsim-rust/target-mpi/release/rustcoalescence simulate (
+        speciation: 0.01,
+        sample: 0.0025,
+        seed: 9421040204131958619,
+
+        algorithm: SkippingGillespie(parallelism_mode:Averaging(delta_sync:0.032)),
+
+        scenario: SpatiallyExplicit(
+            habitat: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif",
+            dispersal: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif",
+        ),
+        
+        log: "/var/tmp/pbs.3474367[1].pbs/event_log",
+
+        reporters: [
+            Plugin(
+                library: "/rds/general/user/ml5717/home/necsim-rust/target-mpi/release/deps/libnecsim_plugins_common.so",
+                reporters: [Execution(),Biodiversity()],
+            ),
+        ],
+    )
+(cx3-2-26.cx3.hpc.ic.ac.uk:0,1,2,3,4,5,6,7)
+
+INFO  Starting to load the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" ...
+INFO  Used GDAL no data value -99.0 ...
+INFO  Successfully loaded the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" with dimensions 11700x11700 [cols x rows].
+INFO  Starting to load the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" ...
+INFO  Used GDAL no data value 0 ...
+INFO  Successfully loaded the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" with dimensions 180x65 [cols x rows].
+INFO  Parsed simulation arguments:
+SimulateArgs {
+    common: CommonArgs {
+        speciation_probability_per_generation: ZeroExclOneInclF64(
+            0.0 < 0.01 <= 1.0,
+        ),
+        sample_percentage: ZeroInclOneInclF64(
+            0.0 <= 0.0025 <= 1.0,
+        ),
+        seed: 9421040204131958619,
+        algorithm: SkippingGillespie(
+            MonolithicArguments {
+                parallelism_mode: Averaging(
+                    AveragingParallelismMode {
+                        delta_sync: PositiveF64(
+                            0.0 < 0.032,
+                        ),
+                    },
+                ),
+            },
+        ),
+    },
+    event_log: Some(
+        EventLogRecorder {
+            segment_size: 1000000,
+            directory: "/var/tmp/pbs.3474367[1].pbs/event_log/0",
+            segment_index: 0,
+            buffer: Vec<Event; 0>,
+        },
+    ),
+    scenario: SpatiallyExplicit(
+        InMemoryArguments {
+            habitat_map: Array2D {
+                array: Box [ 0x7fff28395920; 11700 ],
+                num_rows: 65,
+                num_columns: 180,
+            },
+            dispersal_map: Array2D {
+                array: Box [ 0x7fff28395940; 136890000 ],
+                num_rows: 11700,
+                num_columns: 11700,
+            },
+        },
+    ),
+    reporters: ReportSpeciationIgnoreDispersalReportProgress(
+        ReporterPluginVec {
+            plugins: [
+                ExecutionTimeReporter {
+                    start_time: None,
+                    end_time: None,
+                },
+                BiodiversityReporter {
+                    biodiversity: 0,
+                },
+            ],
+        },
+    ),
+}
+INFO  The simulation will log its events to "/var/tmp/pbs.3474367[1].pbs/event_log/0".
+WARN  Therefore, only progress will be reported live.
+INFO  The simulation will be distributed across 8 partitions.
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation took:
+ - initialisation: 2.422591279s
+ - execution: 11.428889125s
+ - cleanup: 21.701654ms
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation finished at time 3169.095783486224 after 39288306 steps.
+
+# mpiexec: finished at Wed  5 May 11:56:09 BST 2021
+INFO  Parsed replay arguments:
+ReplayArgs {
+    log: EventLogReplay {
+        frontier: [
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 337.4088309178025,
+                            max_time: 2665.942174469772,
+                            length: 218515,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.000005715373151787025,
+                            max_time: 337.40825933666105,
+                            length: 1000000,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 383.25525510013284,
+                            max_time: 3169.095783486224,
+                            length: 150943,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.00005438509832679766,
+                            max_time: 383.2481427156632,
+                            length: 1000000,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 372.4786449860514,
+                            max_time: 3057.3831070907045,
+                            length: 154117,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.00006632671006245682,
+                            max_time: 372.4783222870213,
+                            length: 1000000,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 367.8335136251864,
+                            max_time: 2826.6363925414266,
+                            length: 168634,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.00020599578078096638,
+                            max_time: 367.8307035757231,
+                            length: 1000000,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 362.5153014213135,
+                            max_time: 3054.9344003053166,
+                            length: 174097,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.0003723058124513959,
+                            max_time: 362.51422180058404,
+                            length: 1000000,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 362.0898192374735,
+                            max_time: 2882.570510838431,
+                            length: 173363,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.0003784582700321558,
+                            max_time: 362.08972721779963,
+                            length: 1000000,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 400.9952342150338,
+                            max_time: 2684.4187533226227,
+                            length: 132191,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.0004045298922238729,
+                            max_time: 400.99437496128536,
+                            length: 1000000,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 367.3202547351523,
+                            max_time: 2543.763958268253,
+                            length: 165987,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.0006271950117625635,
+                            max_time: 367.3200631059405,
+                            length: 1000000,
+                        },
+                    },
+                ],
+            },
+        ],
+        with_speciation: true,
+        with_dispersal: false,
+    },
+    reporters: ReportSpeciationIgnoreDispersalReportProgress(
+        ReporterPluginVec {
+            plugins: [
+                ExecutionTimeReporter {
+                    start_time: None,
+                    end_time: None,
+                },
+                BiodiversityReporter {
+                    biodiversity: 0,
+                },
+            ],
+        },
+    ),
+}
+INFO  Starting event replay ...
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation took:
+ - initialisation: 491ns
+ - execution: 1.552595189s
+ - cleanup: 45.161µs
+INFO  The simulation resulted in a biodiversity of 9337847 unique species.
+
+=============================== Reporter Summary ===============================
+
+INFO  The event replay has completed.
+
+============================================
+
+        Job resource usage summary 
+
+                 Memory (GB)    NCPUs
+ Requested  :        62             8
+ Used       :         1 (peak)   7.60 (ave)
+
+============================================

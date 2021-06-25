@@ -1,0 +1,935 @@
+# mpiexec: MPI is /apps/mpi/intel/2019.6.166
+# mpiexec: No RDMA network found -- using sockets+shared memory
+# mpiexec: bootstrapping with /apps/mpi/intel/2019.6.166/bin/__pbs_tmrsh
+# mpiexec: full path to program is /rds/general/user/ml5717/home/necsim-rust/target-mpi/release/rustcoalescence
+# mpiexec: program arguments are: simulate (
+        speciation: 1.0,
+        sample: 0.025,
+        seed: 16652034269425068115,
+
+        algorithm: SkippingGillespie(parallelism_mode:Averaging(delta_sync:3.2)),
+
+        scenario: SpatiallyExplicit(
+            habitat: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif",
+            dispersal: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif",
+        ),
+        
+        log: "/var/tmp/pbs.3472205[0].pbs/event_log",
+
+        reporters: [
+            Plugin(
+                library: "/rds/general/user/ml5717/home/necsim-rust/target-mpi/release/deps/libnecsim_plugins_common.so",
+                reporters: [Execution(),Biodiversity()],
+            ),
+        ],
+    )
+# mpiexec: 2 ranks allocated via PBS select
+# mpiexec: 1 OpenMP threads / rank allocated by PBS select
+# mpiexec: Job has shared use of the allocated nodes. Disabling process-pinning
+# mpiexec: machinefile configured as:
+cx3-7-29.cx3.hpc.ic.ac.uk:2
+#
+# mpiexec: Checking all nodes are ONLINE:
+# mpiexec: All nodes appear ONLINE
+# mpiexec: launch started at Tue  4 May 23:01:38 BST 2021
+# mpiexec: launching program...
+# /rds/general/user/ml5717/home/necsim-rust/target-mpi/release/rustcoalescence simulate (
+        speciation: 1.0,
+        sample: 0.025,
+        seed: 16652034269425068115,
+
+        algorithm: SkippingGillespie(parallelism_mode:Averaging(delta_sync:3.2)),
+
+        scenario: SpatiallyExplicit(
+            habitat: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif",
+            dispersal: "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif",
+        ),
+        
+        log: "/var/tmp/pbs.3472205[0].pbs/event_log",
+
+        reporters: [
+            Plugin(
+                library: "/rds/general/user/ml5717/home/necsim-rust/target-mpi/release/deps/libnecsim_plugins_common.so",
+                reporters: [Execution(),Biodiversity()],
+            ),
+        ],
+    )
+(cx3-7-29.cx3.hpc.ic.ac.uk:0,1)
+
+INFO  Starting to load the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" ...
+INFO  Used GDAL no data value -99.0 ...
+INFO  Successfully loaded the dispersal map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/dispersal.tif" with dimensions 11700x11700 [cols x rows].
+INFO  Starting to load the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" ...
+INFO  Used GDAL no data value 0 ...
+INFO  Successfully loaded the habitat map "/rds/general/user/ml5717/home/necsim-rust/maps/madingley/fg0size12/habitat.tif" with dimensions 180x65 [cols x rows].
+INFO  Parsed simulation arguments:
+SimulateArgs {
+    common: CommonArgs {
+        speciation_probability_per_generation: ZeroExclOneInclF64(
+            0.0 < 1 <= 1.0,
+        ),
+        sample_percentage: ZeroInclOneInclF64(
+            0.0 <= 0.025 <= 1.0,
+        ),
+        seed: 16652034269425068115,
+        algorithm: SkippingGillespie(
+            MonolithicArguments {
+                parallelism_mode: Averaging(
+                    AveragingParallelismMode {
+                        delta_sync: PositiveF64(
+                            0.0 < 3.2,
+                        ),
+                    },
+                ),
+            },
+        ),
+    },
+    event_log: Some(
+        EventLogRecorder {
+            segment_size: 1000000,
+            directory: "/var/tmp/pbs.3472205[0].pbs/event_log/0",
+            segment_index: 0,
+            buffer: Vec<Event; 0>,
+        },
+    ),
+    scenario: SpatiallyExplicit(
+        InMemoryArguments {
+            habitat_map: Array2D {
+                array: Box [ 0x7ffcede89e80; 11700 ],
+                num_rows: 65,
+                num_columns: 180,
+            },
+            dispersal_map: Array2D {
+                array: Box [ 0x7ffcede89ea0; 136890000 ],
+                num_rows: 11700,
+                num_columns: 11700,
+            },
+        },
+    ),
+    reporters: ReportSpeciationIgnoreDispersalReportProgress(
+        ReporterPluginVec {
+            plugins: [
+                ExecutionTimeReporter {
+                    start_time: None,
+                    end_time: None,
+                },
+                BiodiversityReporter {
+                    biodiversity: 0,
+                },
+            ],
+        },
+    ),
+}
+INFO  The simulation will log its events to "/var/tmp/pbs.3472205[0].pbs/event_log/0".
+WARN  Therefore, only progress will be reported live.
+INFO  The simulation will be distributed across 2 partitions.
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation took:
+ - initialisation: 26.680881031s
+ - execution: 103.907043775s
+ - cleanup: 349.016861ms
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation finished at time 33.455234116129716 after 105304286 steps.
+
+# mpiexec: finished at Tue  4 May 23:03:51 BST 2021
+INFO  Parsed replay arguments:
+ReplayArgs {
+    log: EventLogReplay {
+        frontier: [
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 8.658565232480688,
+                            max_time: 33.433532303442604,
+                            length: 695153,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 6.874838434891622,
+                            max_time: 8.658565153850748,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 5.946790247294531,
+                            max_time: 6.874838023078521,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 5.3156639234464444,
+                            max_time: 5.946790056419946,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 4.8365948674714785,
+                            max_time: 5.315663510360723,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 4.449989804378599,
+                            max_time: 4.836594799638231,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 4.126383393396364,
+                            max_time: 4.449989377046892,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 3.848014658915126,
+                            max_time: 4.126382815558875,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 3.6033243915753643,
+                            max_time: 3.8480142828652486,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 3.3858535856115326,
+                            max_time: 3.6033243843578857,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 3.1895218746352128,
+                            max_time: 3.3858534586270417,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 3.010802082432544,
+                            max_time: 3.189521712135387,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 2.8469993949904713,
+                            max_time: 3.010801929365593,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 2.6953474208898753,
+                            max_time: 2.8469989710903905,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 2.5543421088487945,
+                            max_time: 2.6953473788152866,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 2.422725636299736,
+                            max_time: 2.554342061390446,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 2.299215502639191,
+                            max_time: 2.42272549167445,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 2.182994139646958,
+                            max_time: 2.299215420931629,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 2.07305989594138,
+                            max_time: 2.1829935571649193,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.9686464661622791,
+                            max_time: 2.0730597311074512,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.8695242387638384,
+                            max_time: 1.9686462329813723,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.7751661735343636,
+                            max_time: 1.8695240177654313,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.6850597762295865,
+                            max_time: 1.7751661582908074,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.5988595207210117,
+                            max_time: 1.685059695786727,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.5161799688012827,
+                            max_time: 1.5988593658657408,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.4365630398877756,
+                            max_time: 1.516179907369154,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.360176192254938,
+                            max_time: 1.4365630351923317,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.286626264351546,
+                            max_time: 1.3601761236609953,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.2157032089312159,
+                            max_time: 1.2866261995681867,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.1471630740850138,
+                            max_time: 1.215703177792979,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.0809452283079215,
+                            max_time: 1.14716306029344,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.0167440223783228,
+                            max_time: 1.0809451079846832,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.9544959915525998,
+                            max_time: 1.0167440197945952,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.8942052278769944,
+                            max_time: 0.9544959260825896,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.835678235161117,
+                            max_time: 0.8942051856966217,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.778810976297835,
+                            max_time: 0.8356781243540888,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.7235658248043318,
+                            max_time: 0.7788109676312109,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.6698278918142802,
+                            max_time: 0.7235658243197636,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.617494380390847,
+                            max_time: 0.6698278908308462,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.5664435347255913,
+                            max_time: 0.6174943556875184,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.5167283323295359,
+                            max_time: 0.5664435280124377,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.4681932327118977,
+                            max_time: 0.516728251926735,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.4207584804341222,
+                            max_time: 0.4681931690845459,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.374465618735185,
+                            max_time: 0.42075841408647413,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.3293060009587544,
+                            max_time: 0.3744656023200866,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.2850499754956985,
+                            max_time: 0.3293059505172223,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.2417678076675751,
+                            max_time: 0.28504997167513574,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.19934917600500732,
+                            max_time: 0.24176778729350615,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.15788530334703227,
+                            max_time: 0.1993491621360872,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.11724259127068491,
+                            max_time: 0.15788527499086907,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.0773825454118735,
+                            max_time: 0.11724256605414381,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.03829932405815984,
+                            max_time: 0.07738253540982594,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.00000003808280592023261,
+                            max_time: 0.038299284995602874,
+                            length: 1000000,
+                        },
+                    },
+                ],
+            },
+            SortedSortedSegments {
+                segments: [
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 8.916778726678563,
+                            max_time: 33.455234116129716,
+                            length: 609133,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 6.971975750861147,
+                            max_time: 8.916767269184174,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 6.006790735403835,
+                            max_time: 6.971973577043581,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 5.358621488511259,
+                            max_time: 6.0067902123172585,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 4.870117143757328,
+                            max_time: 5.358620013793738,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 4.477966940098303,
+                            max_time: 4.870116194688199,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 4.149888213487271,
+                            max_time: 4.477966862818934,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 3.8681572757212335,
+                            max_time: 4.149888176650499,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 3.6209372835427285,
+                            max_time: 3.868157184618836,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 3.400993923063379,
+                            max_time: 3.6209370840122306,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 3.202951342010525,
+                            max_time: 3.400993817579307,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 3.022902408130166,
+                            max_time: 3.2029513366267226,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 2.857412970557955,
+                            max_time: 3.022902390829253,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 2.7046403613532077,
+                            max_time: 2.857412846923413,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 2.562824865742396,
+                            max_time: 2.704640329708924,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 2.4303273155301475,
+                            max_time: 2.562824627852436,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 2.3060865625984523,
+                            max_time: 2.430326996445012,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 2.189249561298132,
+                            max_time: 2.306086396894679,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 2.078604563560807,
+                            max_time: 2.189249528973936,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.9740477657076052,
+                            max_time: 2.078604513493531,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.874404154389438,
+                            max_time: 1.9740476768997777,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.7795289171841557,
+                            max_time: 1.8744041330518761,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.6892304124127395,
+                            max_time: 1.7795289074172997,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.6026438354387844,
+                            max_time: 1.6892303855900044,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.5197218886771564,
+                            max_time: 1.6026437168725447,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.4399211982398863,
+                            max_time: 1.5197216766850654,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.3631919165639952,
+                            max_time: 1.439921096059197,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.28942735776619,
+                            max_time: 1.3631919106063175,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.2182111409972414,
+                            max_time: 1.2894273524322655,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.1496207310213762,
+                            max_time: 1.218211072054574,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.0831443922417239,
+                            max_time: 1.1496206636624324,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 1.0188490984692693,
+                            max_time: 1.0831443510944208,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.9566754592042834,
+                            max_time: 1.0188490029710924,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.8961823372144562,
+                            max_time: 0.956675312825665,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.8376083694971704,
+                            max_time: 0.8961822818504608,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.780701401434031,
+                            max_time: 0.8376083214240935,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.7251963961859968,
+                            max_time: 0.780701322344026,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.6713168205735909,
+                            max_time: 0.7251962998036344,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.6188446545186563,
+                            max_time: 0.6713167913477773,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.5676502530410764,
+                            max_time: 0.6188445246210119,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.5177688309400013,
+                            max_time: 0.5676502053209541,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.4690317941673192,
+                            max_time: 0.51776882807301,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.42156507811351485,
+                            max_time: 0.4690317586503397,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.37522614363239143,
+                            max_time: 0.42156506948539146,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.32984537256627033,
+                            max_time: 0.37522609607551377,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.2854923809313638,
+                            max_time: 0.3298453087715514,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.24210481810500148,
+                            max_time: 0.2854923456706395,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.19959580565545634,
+                            max_time: 0.242104809352369,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.1580509350168821,
+                            max_time: 0.1995957356955642,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.11735575623260555,
+                            max_time: 0.15805092788840686,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.07739751571244831,
+                            max_time: 0.11735574476171032,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.03831391150045898,
+                            max_time: 0.07739744146287629,
+                            length: 1000000,
+                        },
+                    },
+                    SortedSegment {
+                        header: EventLogHeader {
+                            min_time: 0.000000047910157131250664,
+                            max_time: 0.03831390475059183,
+                            length: 1000000,
+                        },
+                    },
+                ],
+            },
+        ],
+        with_speciation: true,
+        with_dispersal: false,
+    },
+    reporters: ReportSpeciationIgnoreDispersalReportProgress(
+        ReporterPluginVec {
+            plugins: [
+                ExecutionTimeReporter {
+                    start_time: None,
+                    end_time: None,
+                },
+                BiodiversityReporter {
+                    biodiversity: 0,
+                },
+            ],
+        },
+    ),
+}
+INFO  Starting event replay ...
+
+
+=============================== Reporter Summary ===============================
+
+INFO  The simulation took:
+ - initialisation: 440ns
+ - execution: 15.940266354s
+ - cleanup: 31.151µs
+INFO  The simulation resulted in a biodiversity of 105304286 unique species.
+
+=============================== Reporter Summary ===============================
+
+INFO  The event replay has completed.
+
+============================================
+
+        Job resource usage summary 
+
+                 Memory (GB)    NCPUs
+ Requested  :        62             2
+ Used       :        11 (peak)   1.84 (ave)
+
+============================================
