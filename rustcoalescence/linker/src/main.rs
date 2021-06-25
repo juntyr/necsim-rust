@@ -40,7 +40,7 @@ fn extract_specialisation(input: &str) -> Option<&str> {
 fn build_kernel_with_specialisation(specialisation: &str) -> Result<PathBuf> {
     env::set_var(SIMULATION_SPECIALISATION_ENV, specialisation);
 
-    match Builder::new("rustcoalescence/algorithms/cuda/kernel")?.build()? {
+    match Builder::new("../algorithms/cuda/kernel")?.build()? {
         BuildStatus::Success(output) => {
             let ptx_path = output.get_assembly_path();
 
