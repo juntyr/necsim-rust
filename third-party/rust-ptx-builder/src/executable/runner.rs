@@ -1,6 +1,6 @@
 use std::{ffi::OsStr, path::Path, process::Command};
 
-use failure::ResultExt;
+use anyhow::Context;
 use regex::Regex;
 use semver::Version;
 
@@ -57,7 +57,7 @@ impl<Ex: Executable> ExecutableRunner<Ex> {
         self.check_version()?;
 
         let raw_output = {
-            self.command.output().with_context(|_| {
+            self.command.output().with_context(|| {
                 BuildErrorKind::InternalError(format!(
                     "Unable to execute command '{}'",
                     self.executable.get_name()
@@ -108,7 +108,7 @@ pub(crate) fn parse_executable_version<E: Executable>(executable: &E) -> Result<
     let raw_output = {
         command
             .output()
-            .with_context(|_| BuildErrorKind::CommandNotFound {
+            .with_context(|| BuildErrorKind::CommandNotFound {
                 command: executable.get_name(),
                 hint: executable.get_verification_hint(),
             })?

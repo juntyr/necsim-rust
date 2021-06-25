@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use failure::ResultExt;
+use anyhow::Context;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -227,8 +227,11 @@ impl Builder {
             .with_env("PTX_CRATE_BUILDING", "1")
             .with_env("CARGO_TARGET_DIR", output_path.clone());
 
-        let cargo_output = cargo.run().map_err(|error| match error.kind() {
-            BuildErrorKind::CommandFailed { stderr, .. } => {
+        let cargo_output = cargo.run().map_err(|error| match error.downcast_ref() {
+            None => Error::from(BuildErrorKind::InternalError(String::from(
+                "Error downcast failed.",
+            ))),
+            Some(BuildErrorKind::CommandFailed { stderr, .. }) => {
                 #[allow(clippy::manual_filter_map)]
                 let lines = stderr
                     .trim_matches('\n')
@@ -239,8 +242,7 @@ impl Builder {
 
                 Error::from(BuildErrorKind::BuildFailed(lines))
             },
-
-            _ => error,
+            Some(_) => error,
         })?;
 
         Ok(BuildStatus::Success(

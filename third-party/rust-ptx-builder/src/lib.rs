@@ -2,6 +2,7 @@
 #![allow(clippy::missing_errors_doc)]
 #![deny(warnings)]
 #![allow(clippy::useless_attribute)]
+#![feature(backtrace)]
 
 //! `build.rs` helper crate for your CUDA experiments.
 //!
