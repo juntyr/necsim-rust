@@ -6,7 +6,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use failure::ResultExt;
+use anyhow::Context;
 
 use crate::{
     builder::CrateType,
@@ -178,7 +178,9 @@ fn should_find_crate_names() {
     match source
         .get_deps_file_prefix(Some(CrateType::Binary))
         .unwrap_err()
-        .kind()
+        .root_cause()
+        .downcast_ref()
+        .unwrap()
     {
         BuildErrorKind::InvalidCrateType(kind) => {
             assert_eq!(kind, "Binary");
@@ -209,7 +211,9 @@ fn should_find_app_crate_names() {
     match source
         .get_deps_file_prefix(Some(CrateType::Library))
         .unwrap_err()
-        .kind()
+        .root_cause()
+        .downcast_ref()
+        .unwrap()
     {
         BuildErrorKind::InvalidCrateType(kind) => {
             assert_eq!(kind, "Library");
@@ -239,7 +243,13 @@ fn should_find_mixed_crate_names() {
         "libmixed_crate"
     );
 
-    match source.get_deps_file_prefix(None).unwrap_err().kind() {
+    match source
+        .get_deps_file_prefix(None)
+        .unwrap_err()
+        .root_cause()
+        .downcast_ref()
+        .unwrap()
+    {
         BuildErrorKind::MissingCrateType => {},
         _ => unreachable!("it should fail with proper error"),
     }
@@ -249,7 +259,7 @@ fn should_find_mixed_crate_names() {
 fn should_check_existence_of_crate_path() {
     let result = Crate::analyse("tests/fixtures/non-existing-crate");
 
-    match result.unwrap_err().kind() {
+    match result.unwrap_err().downcast_ref().unwrap() {
         BuildErrorKind::InvalidCratePath(path) => {
             assert!(path.ends_with("tests/fixtures/non-existing-crate"));
         },
@@ -262,7 +272,7 @@ fn should_check_existence_of_crate_path() {
 fn should_check_validity_of_crate_path() {
     let result = Crate::analyse("tests/builder.rs");
 
-    match result.unwrap_err().kind() {
+    match result.unwrap_err().downcast_ref().unwrap() {
         BuildErrorKind::InvalidCratePath(path) => {
             assert!(path.ends_with("tests/builder.rs"));
         },

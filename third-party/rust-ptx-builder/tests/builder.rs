@@ -256,7 +256,7 @@ fn should_report_about_build_failure() {
 
     let crate_absoulte_path_str = crate_absoulte_path.display().to_string();
 
-    match output.unwrap_err().kind() {
+    match output.unwrap_err().downcast_ref().unwrap() {
         BuildErrorKind::BuildFailed(diagnostics) => {
             assert_eq!(
                 diagnostics
@@ -267,23 +267,21 @@ fn should_report_about_build_failure() {
                         && !item.contains("Finished release [optimized] target(s)"))
                     .collect::<Vec<_>>(),
                 &[
-                    format!(
+                    &format!(
                         "   Compiling faulty-ptx_crate v0.1.0 ({})",
                         crate_absoulte_path_str
                     ),
-                    String::from("error[E0425]: cannot find function `external_fn` in this scope"),
-                    format!(" --> {}:6:20", lib_path.display()),
-                    String::from("  |"),
-                    String::from("6 |     *y.offset(0) = external_fn(*x.offset(0)) * a;"),
-                    String::from("  |                    ^^^^^^^^^^^ not found in this scope"),
-                    String::from(""),
-                    String::from("error: aborting due to previous error"),
-                    String::from(""),
-                    String::from(
-                        "For more information about this error, try `rustc --explain E0425`.",
-                    ),
-                    String::from("error: could not compile `faulty-ptx_crate`"),
-                    String::from(""),
+                    "error[E0425]: cannot find function `external_fn` in this scope",
+                    &format!(" --> {}:6:20", lib_path.display()),
+                    "  |",
+                    "6 |     *y.offset(0) = external_fn(*x.offset(0)) * a;",
+                    "  |                    ^^^^^^^^^^^ not found in this scope",
+                    "",
+                    "error: aborting due to previous error",
+                    "",
+                    "For more information about this error, try `rustc --explain E0425`.",
+                    "error: could not compile `faulty-ptx_crate`",
+                    "",
                 ]
             );
         },
