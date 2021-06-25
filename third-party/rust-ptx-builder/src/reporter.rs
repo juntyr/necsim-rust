@@ -1,7 +1,6 @@
 use std::{fmt, process::exit};
 
 use colored::{control, Colorize};
-use failure::Fail;
 
 use crate::{
     builder::{BuildStatus, Builder},
@@ -100,15 +99,16 @@ impl CargoAdapter {
 /// #    Err(BuildErrorKind::InternalError("any...".into()).into())
 /// # }
 pub struct ErrorLogPrinter {
-    error: Box<dyn Fail>,
+    error: Error,
     colors: bool,
 }
 
 impl ErrorLogPrinter {
     /// Creates instance of the printer.
+    #[must_use]
     pub fn print(error: Error) -> Self {
         Self {
-            error: Box::new(error),
+            error,
             colors: true,
         }
     }
@@ -147,7 +147,7 @@ impl fmt::Display for ErrorLogPrinter {
                 .prefix_each_line("[PTX] ".bright_black())
         )?;
 
-        for next in self.error.iter_causes() {
+        for next in self.error.chain().skip(1) {
             write!(
                 f,
                 "\n{}",
