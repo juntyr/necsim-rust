@@ -1,4 +1,9 @@
-use core::{convert::AsMut, default::Default, ptr::copy_nonoverlapping};
+use core::{
+    convert::AsMut,
+    default::Default,
+    num::{NonZeroU128, NonZeroU32, NonZeroUsize},
+    ptr::copy_nonoverlapping,
+};
 
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -74,8 +79,8 @@ pub trait RngSampler<M: MathsCore>: RngCore<M> {
 
     #[must_use]
     #[inline]
-    #[debug_ensures(ret < length, "samples U(0, length - 1)")]
-    fn sample_index(&mut self, length: usize) -> usize {
+    #[debug_ensures(ret < length.get(), "samples U(0, length - 1)")]
+    fn sample_index(&mut self, length: NonZeroUsize) -> usize {
         // attributes on expressions are experimental
         // see https://github.com/rust-lang/rust/issues/15701
         #[allow(
@@ -83,14 +88,14 @@ pub trait RngSampler<M: MathsCore>: RngCore<M> {
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let index = M::floor(self.sample_uniform().get() * (length as f64)) as usize;
-        index
+        let index = M::floor(self.sample_uniform().get() * (length.get() as f64)) as usize;
+        index.min(length.get() - 1)
     }
 
     #[must_use]
     #[inline]
-    #[debug_ensures(ret < length, "samples U(0, length - 1)")]
-    fn sample_index_u32(&mut self, length: u32) -> u32 {
+    #[debug_ensures(ret < length.get(), "samples U(0, length - 1)")]
+    fn sample_index_u32(&mut self, length: NonZeroU32) -> u32 {
         // attributes on expressions are experimental
         // see https://github.com/rust-lang/rust/issues/15701
         #[allow(
@@ -98,8 +103,23 @@ pub trait RngSampler<M: MathsCore>: RngCore<M> {
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let index = M::floor(self.sample_uniform().get() * f64::from(length)) as u32;
-        index
+        let index = M::floor(self.sample_uniform().get() * f64::from(length.get())) as u32;
+        index.min(length.get() - 1)
+    }
+
+    #[must_use]
+    #[inline]
+    #[debug_ensures(ret < length.get(), "samples U(0, length - 1)")]
+    fn sample_index_u128(&mut self, length: NonZeroU128) -> u128 {
+        // attributes on expressions are experimental
+        // see https://github.com/rust-lang/rust/issues/15701
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
+        let index = M::floor(self.sample_uniform().get() * (length.get() as f64)) as u128;
+        index.min(length.get() - 1)
     }
 
     #[must_use]

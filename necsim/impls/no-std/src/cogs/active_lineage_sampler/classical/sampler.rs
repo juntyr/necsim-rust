@@ -1,4 +1,4 @@
-use core::num::NonZeroU64;
+use core::num::{NonZeroU64, NonZeroUsize};
 
 use necsim_core::{
     cogs::{
@@ -113,7 +113,10 @@ impl<
 
             self.last_event_time = next_event_time.into();
 
-            let chosen_lineage_index = rng.sample_index(self.active_lineage_references.len());
+            // Safety: +1 can never be zero
+            let chosen_lineage_index = rng.sample_index(unsafe {
+                NonZeroUsize::new_unchecked(self.active_lineage_references.len() + 1)
+            });
             let chosen_lineage_reference = self
                 .active_lineage_references
                 .swap_remove(chosen_lineage_index);

@@ -1,3 +1,5 @@
+use core::num::NonZeroUsize;
+
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit,
@@ -71,7 +73,10 @@ impl<
             );
         let number_lineages_left_at_location = lineages_at_location.len() - 1;
 
-        let chosen_lineage_index_at_location = rng.sample_index(lineages_at_location.len());
+        // Safety: `lineages_at_location` must be >0 since
+        //         `chosen_active_location` can only be selected in that case
+        let chosen_lineage_index_at_location =
+            rng.sample_index(unsafe { NonZeroUsize::new_unchecked(lineages_at_location.len()) });
         let chosen_lineage_reference =
             lineages_at_location[chosen_lineage_index_at_location].clone();
 
