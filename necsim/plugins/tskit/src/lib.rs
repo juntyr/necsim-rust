@@ -1,7 +1,7 @@
 #![deny(clippy::pedantic)]
 
 mod provenance;
-mod reporter;
+mod tree;
 
 // Register the reporter plugin
-necsim_plugins_core::export_plugin!(Tree => reporter::TskitTreeReporter);
+necsim_plugins_core::export_plugin!(Tree => tree::TskitTreeReporter);
