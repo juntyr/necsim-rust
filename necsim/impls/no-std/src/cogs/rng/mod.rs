@@ -3,4 +3,3 @@ pub mod fixedseahash;
 pub mod seahash;
 pub mod wyhash;
 pub mod wyrand;
-pub mod xxhash;
