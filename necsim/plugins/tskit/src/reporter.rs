@@ -21,6 +21,7 @@ use necsim_core::{
 };
 use necsim_core_bond::NonNegativeF64;
 
+// An arbitrary genome sequence interval
 const TSK_SEQUENCE_MIN: f64 = 0.0_f64;
 const TSK_SEQUENCE_MAX: f64 = 1.0_f64;
 
@@ -32,7 +33,9 @@ pub struct TskitTreeReporter {
     last_speciation_event: Option<SpeciationEvent>,
     last_dispersal_event: Option<DispersalEvent>,
 
+    // Original (present-time) locations of all lineages
     origins: HashMap<GlobalLineageReference, IndexedLocation>,
+    // Children lineages of all parents, used to create tskit individuals in order
     children: HashMap<GlobalLineageReference, Vec<(GlobalLineageReference, f64)>>,
 
     table: TableCollection,
@@ -143,10 +146,12 @@ impl Reporter for TskitTreeReporter {
     impl_finalise!((mut self) {
         self.table.full_sort(TableSortOptions::NONE).unwrap();
 
+        // Output the tree sequence to the specified `output` file
         self.table.tree_sequence(TreeSequenceFlags::BUILD_INDEXES).unwrap().dump(&self.output, TableOutputOptions::NONE).unwrap();
     });
 
     fn initialise(&mut self) -> Result<(), String> {
+        // Capture and record the provenance information inside the table
         let provenance =
             crate::provenance::TskitProvenance::try_new().map_err(|err| err.to_string())?;
         let provenance_json = serde_json::to_string(&provenance).map_err(|err| err.to_string())?;
@@ -168,6 +173,7 @@ impl crate::reporter::TskitTreeReporter {
     }
 
     fn store_individual_speciation(&mut self, reference: &GlobalLineageReference, time: f64) {
+        // Insert the speciating parent lineage as an individual
         let parent_id = if let Some(origin) = self.origins.remove(reference) {
             self.table
                 .add_individual(
@@ -184,6 +190,7 @@ impl crate::reporter::TskitTreeReporter {
             return;
         };
 
+        // Create the speciation node
         let parent_node_id = self
             .table
             .add_node(tskit::TSK_NODE_IS_SAMPLE, time, tskit::TSK_NULL, parent_id)
@@ -191,10 +198,12 @@ impl crate::reporter::TskitTreeReporter {
 
         let mut stack = VecDeque::from(vec![(reference.clone(), parent_id, parent_node_id)]);
 
+        // Iteratively insert the parent's successors in breadth first order
         while let Some((parent, parent_id, parent_node_id)) = stack.pop_front() {
             if let Some(children) = self.children.remove(&parent) {
                 for (child, time) in children {
                     if let Some(origin) = self.origins.remove(&child) {
+                        // Insert the coalesced child lineage as an individual
                         let child_id = self
                             .table
                             .add_individual(
@@ -208,11 +217,13 @@ impl crate::reporter::TskitTreeReporter {
                             )
                             .unwrap();
 
+                        // Create the coalescence node
                         let child_node_id = self
                             .table
                             .add_node(tskit::TSK_NODE_IS_SAMPLE, time, tskit::TSK_NULL, child_id)
                             .unwrap();
 
+                        // Add the parent-child relation between the nodes
                         self.table
                             .add_edge(
                                 TSK_SEQUENCE_MIN,

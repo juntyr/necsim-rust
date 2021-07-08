@@ -3,6 +3,7 @@ use std::{collections::HashMap, io};
 use findshlibs::{SharedLibrary, TargetSharedLibrary};
 use serde::Serialize;
 
+/// tskit's provenance JSON schema format root for version 1.0.0
 #[allow(clippy::module_name_repetitions)]
 #[derive(Serialize)]
 pub struct TskitProvenance {
@@ -38,6 +39,7 @@ impl TskitProvenanceSoftware {
         let version_str = String::from_utf8_lossy(&output.stdout);
         let mut version = version_str.split_whitespace();
 
+        // Split a version string such as 'man 2.9.1' into 'man' and '2.9.1'
         Ok(Self {
             name: version
                 .next()
@@ -74,6 +76,7 @@ impl TskitProvenanceEnvironment {
         #[allow(clippy::zero_sized_map_values)]
         let mut libraries = HashMap::new();
 
+        // Create a map of all dynamically loaded libraries
         TargetSharedLibrary::each(|lib| {
             if let Ok(library) = TskitProvenanceEnvironmentLibrary::try_new(lib.name()) {
                 libraries.insert(lib.name().to_string_lossy().into_owned(), library);
@@ -116,6 +119,8 @@ struct TskitProvenanceEnvironmentLibrary {}
 impl TskitProvenanceEnvironmentLibrary {
     #[allow(clippy::unnecessary_wraps)]
     pub fn try_new(_library: &std::ffi::OsStr) -> io::Result<Self> {
+        // TODO: Future work might deduce version information etc.
+
         Ok(Self {})
     }
 }
