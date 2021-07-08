@@ -1,4 +1,5 @@
 # necsim-rust &emsp; [![Build Status]][actions] [![Rust Doc]][docs] [![Binder Demo]][binder] [![Gitpod Ready-to-Code]][gitpod]
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FMomoLangenstein%2Fnecsim-rust.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FMomoLangenstein%2Fnecsim-rust?ref=badge_shield)
 
 [Build Status]: https://img.shields.io/github/workflow/status/MomoLangenstein/necsim-rust/CI/main
 [actions]: https://github.com/MomoLangenstein/necsim-rust/actions/workflows/ci.yml?query=branch%3Amain
@@ -134,6 +135,9 @@ Licensed under either of
    ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FMomoLangenstein%2Fnecsim-rust.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FMomoLangenstein%2Fnecsim-rust?ref=badge_large)
 
 ## Contribution
 
