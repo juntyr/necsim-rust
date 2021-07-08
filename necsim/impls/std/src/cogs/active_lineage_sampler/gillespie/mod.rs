@@ -1,7 +1,8 @@
-use std::marker::PhantomData;
+use std::{hash::BuildHasherDefault, iter::FromIterator, marker::PhantomData};
 
+use fxhash::FxHasher32;
+use keyed_priority_queue::KeyedPriorityQueue;
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
-use priority_queue::PriorityQueue;
 
 use necsim_core::{
     cogs::{
@@ -35,7 +36,7 @@ pub struct GillespieActiveLineageSampler<
     E: GillespieEventSampler<H, G, R, S, X, D, C, T, N>,
     I: ImmigrationEntry,
 > {
-    active_locations: PriorityQueue<Location, EventTime>,
+    active_locations: KeyedPriorityQueue<Location, EventTime, BuildHasherDefault<FxHasher32>>,
     number_active_lineages: usize,
     last_event_time: NonNegativeF64,
     marker: PhantomData<(H, G, R, S, X, D, C, T, N, E, I)>,
@@ -98,7 +99,7 @@ impl<
             });
 
         Self {
-            active_locations: PriorityQueue::from(active_locations),
+            active_locations: KeyedPriorityQueue::from_iter(active_locations),
             number_active_lineages,
             last_event_time: NonNegativeF64::zero(),
             marker: PhantomData::<(H, G, R, S, X, D, C, T, N, E, I)>,
