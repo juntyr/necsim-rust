@@ -1,4 +1,4 @@
-use nanorand::{WyRand as WyImpl, RNG};
+use nanorand::{Rng, WyRand as WyImpl};
 
 use necsim_core::cogs::{Backup, RngCore};
 
