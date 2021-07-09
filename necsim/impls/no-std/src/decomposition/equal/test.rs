@@ -61,8 +61,8 @@ fn test_equal_area_decomposition() {
                     assert!(num_indices < partition, "{}", assert_message);
                     assert!(
                         u64::from(num_indices) == (u64::from(width) * u64::from(height)),
-                        "{}",          // GRCOV_EXCL_LINE
-                        assert_message // GRCOV_EXCL_LINE
+                        "{}",           // GRCOV_EXCL_LINE
+                        assert_message  // GRCOV_EXCL_LINE
                     );
                 }
 
@@ -77,8 +77,8 @@ fn test_equal_area_decomposition() {
                 // Check that the indices are distributed equally
                 assert!(
                     (max_index_frequency - min_index_frequency) <= 1,
-                    "{}",          // GRCOV_EXCL_LINE
-                    assert_message // GRCOV_EXCL_LINE
+                    "{}",           // GRCOV_EXCL_LINE
+                    assert_message  // GRCOV_EXCL_LINE
                 );
             }
         }
@@ -153,8 +153,8 @@ fn test_equal_weight_decomposition() {
                 // Check that the indices are distributed equally
                 assert!(
                     (max_index_frequency - min_index_frequency) <= (local.max(meta) * 2) as usize,
-                    "{}",          // GRCOV_EXCL_LINE
-                    assert_message // GRCOV_EXCL_LINE
+                    "{}",           // GRCOV_EXCL_LINE
+                    assert_message  // GRCOV_EXCL_LINE
                 );
             }
         }
