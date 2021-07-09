@@ -1,0 +1,50 @@
+name: Code Coverage
+
+on: [push]
+
+jobs:
+  test:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the Repository
+        uses: actions/checkout@v2
+        
+      - name: Install CUDA
+        run: |
+          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
+          sudo mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600
+          sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
+          sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /"
+          sudo apt-get update -q
+          sudo apt-get install cuda -y --no-install-recommends
+      
+      - name: Install OpenMPI
+        run: sudo apt-get install libopenmpi-dev -y --no-install-recommends
+
+      - name: Install the Rust toolchain
+        run: |
+          cargo install ptx-linker -f
+          cargo install cargo-tarpaulin -f
+        
+      - name: Generate the code coverage
+        run: |
+          LIBRARY_PATH="$LD_LIBRARY_PATH" cargo tarpaulin \
+            --verbose --workspace \
+            --timeout 120 --out Xml \
+            --exclude-files "third-party/*" \
+            --exclude array2d \
+            --exclude contracts \
+            --exclude contracts \
+            --exclude float_next_after \
+            --exclude ron \
+            --exclude ptx-builder \
+            --exclude rustacuda \
+            --exclude rustacuda_core \
+            --exclude rustacuda_derive
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
