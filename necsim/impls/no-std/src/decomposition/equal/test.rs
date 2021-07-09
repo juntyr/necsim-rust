@@ -2,7 +2,7 @@ use core::{convert::TryFrom, num::NonZeroU32};
 
 use hashbrown::HashMap;
 
-use necsim_core::cogs::Habitat;
+use necsim_core::cogs::{Backup, Habitat};
 
 use crate::{
     cogs::habitat::{non_spatial::NonSpatialHabitat, spatially_implicit::SpatiallyImplicitHabitat},
@@ -28,6 +28,9 @@ fn test_equal_area_decomposition() {
                     Ok(decomposition) => (true, decomposition),
                     Err(decomposition) => (false, decomposition),
                 };
+
+                // Test decomposition backup
+                let decomposition = decomposition.backup();
 
                 indices.clear();
 
@@ -58,8 +61,8 @@ fn test_equal_area_decomposition() {
                     assert!(num_indices < partition, "{}", assert_message);
                     assert!(
                         u64::from(num_indices) == (u64::from(width) * u64::from(height)),
-                        "{}",
-                        assert_message
+                        "{}",          // GRCOV_EXCL_LINE
+                        assert_message // GRCOV_EXCL_LINE
                     );
                 }
 
@@ -74,8 +77,8 @@ fn test_equal_area_decomposition() {
                 // Check that the indices are distributed equally
                 assert!(
                     (max_index_frequency - min_index_frequency) <= 1,
-                    "{}",
-                    assert_message
+                    "{}",          // GRCOV_EXCL_LINE
+                    assert_message // GRCOV_EXCL_LINE
                 );
             }
         }
@@ -99,6 +102,9 @@ fn test_equal_weight_decomposition() {
                     Ok(decomposition) => (true, decomposition),
                     Err(decomposition) => (false, decomposition),
                 };
+
+                // Test decomposition backup
+                let decomposition = decomposition.backup();
 
                 indices.clear();
 
@@ -147,10 +153,42 @@ fn test_equal_weight_decomposition() {
                 // Check that the indices are distributed equally
                 assert!(
                     (max_index_frequency - min_index_frequency) <= (local.max(meta) * 2) as usize,
-                    "{}",
-                    assert_message
+                    "{}",          // GRCOV_EXCL_LINE
+                    assert_message // GRCOV_EXCL_LINE
                 );
             }
         }
     }
+}
+
+#[test]
+fn equal_area_stores_subdomain() {
+    let habitat = NonSpatialHabitat::new((100, 100), 100);
+
+    let equal_area_decomposition =
+        EqualDecomposition::area(&habitat, 42, NonZeroU32::new(100).unwrap())
+            .unwrap()
+            .backup();
+
+    assert_eq!(equal_area_decomposition.get_subdomain_rank(), 42);
+    assert_eq!(
+        equal_area_decomposition.get_number_of_subdomains().get(),
+        100
+    );
+}
+
+#[test]
+fn equal_weight_stores_subdomain() {
+    let habitat = NonSpatialHabitat::new((100, 100), 100);
+
+    let equal_area_decomposition =
+        EqualDecomposition::area(&habitat, 24, NonZeroU32::new(1000).unwrap())
+            .unwrap()
+            .backup();
+
+    assert_eq!(equal_area_decomposition.get_subdomain_rank(), 24);
+    assert_eq!(
+        equal_area_decomposition.get_number_of_subdomains().get(),
+        1000
+    );
 }
