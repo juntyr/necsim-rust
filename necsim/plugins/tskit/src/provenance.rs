@@ -28,6 +28,8 @@ impl TskitProvenance {
 struct TskitProvenanceSoftware {
     name: String,
     version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    commit: Option<String>,
 }
 
 impl TskitProvenanceSoftware {
@@ -47,6 +49,10 @@ impl TskitProvenanceSoftware {
             version: version
                 .next()
                 .map_or_else(|| "???".to_owned(), str::to_owned),
+            commit: match git_version::git_version!(fallback = "unknown") {
+                "unknown" => None,
+                version => Some(version.to_owned()),
+            },
         })
     }
 }
@@ -69,6 +75,8 @@ struct TskitProvenanceEnvironment {
     os: TskitProvenanceEnvironmentOs,
     #[allow(clippy::zero_sized_map_values)]
     libraries: HashMap<String, TskitProvenanceEnvironmentLibrary>,
+    #[serde(with = "self::rustc_version::VersionMetaDef")]
+    rustc: ::rustc_version::VersionMeta,
 }
 
 impl TskitProvenanceEnvironment {
@@ -86,6 +94,7 @@ impl TskitProvenanceEnvironment {
         Ok(Self {
             os: TskitProvenanceEnvironmentOs::try_new()?,
             libraries,
+            rustc: rustc_version::version_meta(),
         })
     }
 }
@@ -122,5 +131,48 @@ impl TskitProvenanceEnvironmentLibrary {
         // TODO: Future work might deduce version information etc.
 
         Ok(Self {})
+    }
+}
+
+mod rustc_version {
+    include!(concat!(env!("OUT_DIR"), "/rustc_version.rs"));
+
+    #[derive(serde::Serialize)]
+    #[serde(remote = "rustc_version::VersionMeta")]
+    pub(super) struct VersionMetaDef {
+        pub semver: Version,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub commit_hash: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub commit_date: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub build_date: Option<String>,
+        #[serde(serialize_with = "serialize_channel")]
+        pub channel: Channel,
+        pub host: String,
+        pub short_version_string: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        #[serde(serialize_with = "serialize_llvm_version")]
+        pub llvm_version: Option<LlvmVersion>,
+    }
+
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    fn serialize_channel<S: serde::Serializer>(
+        channel: &Channel,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(&format!("{:?}", channel))
+    }
+
+    fn serialize_llvm_version<S: serde::Serializer>(
+        llvm_version: &Option<LlvmVersion>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        #[allow(clippy::option_if_let_else)]
+        if let Some(llvm_version) = llvm_version {
+            serializer.collect_str(llvm_version)
+        } else {
+            serializer.serialize_none()
+        }
     }
 }

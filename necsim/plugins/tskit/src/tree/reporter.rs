@@ -12,11 +12,11 @@ impl Reporter for TskitTreeReporter {
             if let Some((parent, prior_time)) = &self.last_parent_prior_time {
                 if prior_time != &speciation.prior_time {
                     let parent = parent.clone();
-                    self.store_individual_coalescence(&speciation.global_lineage_reference, parent, speciation.prior_time.get());
+                    self.store_individual_coalescence(&speciation.global_lineage_reference, &parent, speciation.prior_time);
                 }
             }
         } else {
-            self.store_individual_speciation(&speciation.global_lineage_reference, speciation.event_time.get());
+            self.store_individual_speciation(&speciation.global_lineage_reference, speciation.event_time.into());
         }
 
         self.last_speciation_event = Some(speciation.clone());
@@ -34,11 +34,11 @@ impl Reporter for TskitTreeReporter {
             if let Some((parent, prior_time)) = &self.last_parent_prior_time {
                 if prior_time != &dispersal.prior_time {
                     let parent = parent.clone();
-                    self.store_individual_coalescence(&dispersal.global_lineage_reference, parent, dispersal.prior_time.get());
+                    self.store_individual_coalescence(&dispersal.global_lineage_reference, &parent, dispersal.prior_time);
                 }
             }
         } else if let Some(parent) = &dispersal.interaction.parent() {
-            self.store_individual_coalescence(&dispersal.global_lineage_reference, parent.clone(), dispersal.event_time.get());
+            self.store_individual_coalescence(&dispersal.global_lineage_reference, parent, dispersal.event_time.into());
         }
 
         self.last_dispersal_event = Some(dispersal.clone());

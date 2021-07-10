@@ -18,6 +18,11 @@ mod table;
 const TSK_SEQUENCE_MIN: f64 = 0.0_f64;
 const TSK_SEQUENCE_MAX: f64 = 1.0_f64;
 
+#[derive(Copy, Clone)]
+struct TskitIndividualID(tskit::tsk_id_t);
+#[derive(Copy, Clone)]
+struct TskitNodeID(tskit::tsk_id_t);
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Deserialize)]
 #[serde(try_from = "TskitTreeReporterArgs")]
@@ -28,8 +33,12 @@ pub struct TskitTreeReporter {
 
     // Original (present-time) locations of all lineages
     origins: HashMap<GlobalLineageReference, IndexedLocation>,
-    // Children lineages of all parents, used to create tskit individuals in order
-    children: HashMap<GlobalLineageReference, Vec<(GlobalLineageReference, f64)>>,
+    // Children lineages of a parent, used if parent is unknown at coalescence
+    children: HashMap<GlobalLineageReference, Vec<(GlobalLineageReference, NonNegativeF64)>>,
+    // Child -> Parent lineage mapping
+    parents: HashMap<GlobalLineageReference, GlobalLineageReference>,
+    // Lineage to tskit mapping, used if parent is known before coalescence
+    tskit_ids: HashMap<GlobalLineageReference, (TskitIndividualID, TskitNodeID)>,
 
     table: TableCollection,
 
@@ -81,6 +90,8 @@ impl TryFrom<TskitTreeReporterArgs> for TskitTreeReporter {
 
             origins: HashMap::new(),
             children: HashMap::new(),
+            parents: HashMap::new(),
+            tskit_ids: HashMap::new(),
 
             table,
 
