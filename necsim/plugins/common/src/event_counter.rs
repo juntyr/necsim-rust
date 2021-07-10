@@ -19,7 +19,7 @@ pub struct EventCounterReporter {
     self_dispersal: usize,
     out_coalescence: usize,
     self_coalescence: usize,
-    late_dispersal: usize,
+    late_dispersal_coalescence: usize,
     late_coalescence: usize,
 }
 
@@ -31,6 +31,10 @@ impl fmt::Debug for EventCounterReporter {
             .field("self_dispersal", &self.self_dispersal)
             .field("out_coalescence", &self.out_coalescence)
             .field("self_coalescence", &self.self_coalescence)
+            .field(
+                "late_dispersal",
+                &(self.late_dispersal_coalescence - self.late_coalescence),
+            )
             .field("late_coalescence", &self.late_coalescence)
             .finish()
     }
@@ -78,7 +82,7 @@ impl Reporter for EventCounterReporter {
         let coalescence = match dispersal.interaction {
             LineageInteraction::Coalescence(_) => true,
             LineageInteraction::Maybe => {
-                self.late_dispersal += 1;
+                self.late_dispersal_coalescence += 1;
                 return
             },
             LineageInteraction::None => false,
@@ -127,8 +131,7 @@ impl Reporter for EventCounterReporter {
                 + self.out_coalescence
                 + self.self_dispersal
                 + self.out_dispersal
-                + self.late_dispersal
-                - self.late_coalescence
+                + self.late_dispersal_coalescence
         );
         let _ = writeln!(
             &mut event_summary,
@@ -142,14 +145,14 @@ impl Reporter for EventCounterReporter {
             \n   - same location, no coalescence:\n     {}\
             \n   - same location, with coalescence:\n     {}\
             \n   - new location, no coalescence:\n     {}\
-            \n   - different location, with coalescence:\n     {}\
+            \n   - new location, with coalescence:\n     {}\
             \n   - detected late, no coalescence:\n     {}\
             \n   - detected late, with coalescence:\n     {}",
             self.self_dispersal,
             self.self_coalescence,
             self.out_dispersal,
             self.out_coalescence,
-            self.late_dispersal - self.late_coalescence,
+            self.late_dispersal_coalescence - self.late_coalescence,
             self.late_coalescence
         );
 
@@ -170,7 +173,7 @@ impl Default for EventCounterReporter {
             self_dispersal: 0,
             out_coalescence: 0,
             self_coalescence: 0,
-            late_dispersal: 0,
+            late_dispersal_coalescence: 0,
             late_coalescence: 0,
         }
     }
