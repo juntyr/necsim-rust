@@ -1,5 +1,5 @@
 use alloc::collections::VecDeque;
-use core::num::{NonZeroU64, NonZeroUsize, Wrapping};
+use core::num::{NonZeroU64, Wrapping};
 use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::{
@@ -25,7 +25,7 @@ use crate::cogs::{
     lineage_store::independent::IndependentLineageStore,
 };
 
-use crate::parallelisation::independent::DedupCache;
+use crate::parallelisation::independent::{DedupCache, EventSlice};
 
 pub mod reporter;
 
@@ -61,13 +61,15 @@ pub fn simulate<
     lineages: VecDeque<Lineage>,
     dedup_cache: DedupCache,
     step_slice: NonZeroU64,
-    event_slice: NonZeroUsize,
+    event_slice: EventSlice,
     local_partition: &mut P,
 ) -> (NonNegativeF64, u64) {
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(
         (Wrapping(lineages.len() as u64) + simulation.get_balanced_remaining_work()).0,
     );
+
+    let event_slice = event_slice.capacity(lineages.len());
 
     let mut proxy = <WaterLevelReporterStrategy as WaterLevelReporterConstructor<
         P::IsLive,
