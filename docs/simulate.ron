@@ -12,7 +12,7 @@
         /* monolithic; picks a random individual for the next event; CPU-based */
       | Classical(
             /* selection of how the algorithm should be parallelised across partitions */
-            /* optional, dynamic default = Monolithic / OptimisticLockstep */
+            /* optional, dynamic default = Monolithic / Lockstep */
             parallelism_mode: (
                 /* no parallelisation, the algorithm runs on a single partition only
                  * invalid when the simulation is internally parallelised */
@@ -57,7 +57,7 @@
         /* monolithic; has a queue of the next events for all locations; CPU-based */
       | Gillespie(
             /* selection of how the algorithm should be parallelised across partitions */
-            /* optional, dynamic default = Monolithic / OptimisticLockstep */
+            /* optional, dynamic default = Monolithic / Lockstep */
             parallelism_mode: (
                 /* no parallelisation, the algorithm runs on a single partition only
                  * invalid when the simulation is internally parallelised */
@@ -102,7 +102,7 @@
         /* monolithic; like Gillespie but skips no-coalescence self-dispersal events; CPU-based */
       | SkippingGillespie(
             /* selection of how the algorithm should be parallelised across partitions */
-            /* optional, dynamic default = Monolithic / OptimisticLockstep */
+            /* optional, dynamic default = Monolithic / Lockstep */
             parallelism_mode: (
                 /* no parallelisation, the algorithm runs on a single partition only
                  * invalid when the simulation is internally parallelised */
@@ -151,27 +151,27 @@
             device: (u32),
             /* if true, enables just-in-time compilation of the simulation parameters into
              *  the CUDA kernel
-             * optional, default = false */
+             * optional, default = true */
             ptx_jit: (bool),
             /* simulation time between random number generator repriming
              *  -> lower deltas require fewer draws to pick the time of the next event
              *  -> higher deltas require fewer reprimings to pick the time of the next event
              * WARNING: changes the result of a particular simulation run
-             * optional, default = 1.0 */
+             * optional, default = 3.0 */
             delta_t: (0.0 < f64),
             /* CUDA thread block 1D size, should be a power of 2
-             * optional, default = 32 */
+             * optional, default = 64 */
             block_size: (u32),
             /* CUDA thread grid 1D size, should be a power of 2
-             * optional, default = 256 */
+             * optional, default = 64 */
             grid_size: (u32),
             /* number of steps which an individual performs on the GPU without supervision
              *  -> shorter slices enable quicker termination of single individuals
              *  -> longer slices incur less overhead from kernel launches
-             * optional, default = 200 */
+             * optional, default = 150 */
             step_slice: (0 < u64),
             /* selection of the mode of the individual deduplication cache
-             * optional, default = Relative(factor: 2.0) */
+             * optional, default = Relative(factor: 0.1) */
             dedup_cache: (
                 /* cache has an absolute maximum capacity */
               | Absolute(
@@ -187,13 +187,24 @@
               | None
             ),
             /* selection of the mode in which the simulation is parallelised
-             * optional, default = Monolithic(event_slice: 1000000) */
+             * optional, default = Monolithic(event_slice: Relative(factor: 20.0)) */
             parallelism_mode: (
                 /* no partitioning occurs
                  * invalid when the simulation is internally parallelised */
               | Monolithic(
                     /* average number of events between flushing the event buffer */
-                    event_slice: (0 < usize),
+                    event_slice: (
+                        /* absolute number of events between flushing */
+                      | Absolute(
+                            /* absolute capacity of the event buffer */
+                            capacity: (0 < usize),
+                        )
+                        /* relative number of events between flushing */
+                      | Relative(
+                            /* capacity is the initial number of individuals * factor */
+                            factor: (0.0 < f64),
+                        )
+                    ),
                 )
                 /* partition the initial set of individuals
                  * no individuals are migrated between partitions
@@ -207,7 +218,18 @@
                         partitions: (0 < u32),
                     ),
                     /* average number of events between flushing the event buffer */
-                    event_slice: (0 < usize),
+                    event_slice: (
+                        /* absolute number of events between flushing */
+                      | Absolute(
+                            /* absolute capacity of the event buffer */
+                            capacity: (0 < usize),
+                        )
+                        /* relative number of events between flushing */
+                      | Relative(
+                            /* capacity is the initial number of individuals * factor */
+                            factor: (0.0 < f64),
+                        )
+                    ),
                 )
                 /* partition the original set of individuals
                  * optimised for intra-partition spatial locality
@@ -222,7 +244,18 @@
                         partitions: (0 < u32),
                     ),
                     /* average number of events between flushing the event buffer */
-                    event_slice: (0 < usize),
+                    event_slice: (
+                        /* absolute number of events between flushing */
+                      | Absolute(
+                            /* absolute capacity of the event buffer */
+                            capacity: (0 < usize),
+                        )
+                        /* relative number of events between flushing */
+                      | Relative(
+                            /* capacity is the initial number of individuals * factor */
+                            factor: (0.0 < f64),
+                        )
+                    ),
                 )
             )
         )
@@ -232,14 +265,14 @@
              *  -> lower deltas require fewer draws to pick the time of the next event
              *  -> higher deltas require fewer reprimings to pick the time of the next event
              * WARNING: changes the result of a particular simulation run
-             * optional, default = 1.0 */
+             * optional, default = 2.0 */
             delta_t: (0.0 < f64),
             /* number of steps which an individual performs on the CPU without supervision
              *  -> shorter slices enable quicker termination of single individuals
              * optional, default = 10 */
             step_slice: (0 < u64),
             /* Selection of the mode of the individual deduplication cache
-             * optional, default = Relative(factor: 2.0) */
+             * optional, default = Relative(factor: 1.0) */
             dedup_cache: (
                 /* cache has an absolute maximum capacity */
               | Absolute(
@@ -255,13 +288,25 @@
               | None
             ),
             /* selection of the mode in which the simulation is parallelised
-             * optional, dynamic default = Monolithic(event_slice: 1000000) / Individuals */
+             * optional, dynamic default = Monolithic(event_slice: Relative(factor: 2.0))
+                                         / Probabilistic(communication: 0.25) */
             parallelism_mode: (
                 /* no partitioning occurs
                  * invalid when the simulation is internally parallelised */
               | Monolithic(
                     /* average number of events between flushing the event buffer */
-                    event_slice: (0 < usize),
+                    event_slice: (
+                        /* absolute number of events between flushing */
+                      | Absolute(
+                            /* absolute capacity of the event buffer */
+                            capacity: (0 < usize),
+                        )
+                        /* relative number of events between flushing */
+                      | Relative(
+                            /* capacity is the initial number of individuals * factor */
+                            factor: (0.0 < f64),
+                        )
+                    ),
                 )
                 /* partition the initial set of individuals
                  * no individuals are migrated between partitions
@@ -275,7 +320,18 @@
                         partitions: (0 < u32),
                     ),
                     /* average number of events between flushing the event buffer */
-                    event_slice: (0 < usize),
+                    event_slice: (
+                        /* absolute number of events between flushing */
+                      | Absolute(
+                            /* absolute capacity of the event buffer */
+                            capacity: (0 < usize),
+                        )
+                        /* relative number of events between flushing */
+                      | Relative(
+                            /* capacity is the initial number of individuals * factor */
+                            factor: (0.0 < f64),
+                        )
+                    ),
                 )
                 /* partition the original set of individuals
                  * optimised for intra-partition spatial locality
@@ -290,7 +346,18 @@
                         partitions: (0 < u32),
                     ),
                     /* average number of events between flushing the event buffer */
-                    event_slice: (0 < usize),
+                    event_slice: (
+                        /* absolute number of events between flushing */
+                      | Absolute(
+                            /* absolute capacity of the event buffer */
+                            capacity: (0 < usize),
+                        )
+                        /* relative number of events between flushing */
+                      | Relative(
+                            /* capacity is the initial number of individuals * factor */
+                            factor: (0.0 < f64),
+                        )
+                    ),
                 )
                 /* partition the initial set of individuals
                  * no individuals are migrated between partitions

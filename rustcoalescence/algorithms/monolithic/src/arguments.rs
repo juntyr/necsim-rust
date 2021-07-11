@@ -20,7 +20,7 @@ impl<'de> DeserializeState<'de, Partition> for MonolithicArguments {
             Some(parallelism_mode) => parallelism_mode,
             None => {
                 if partition.partitions().get() > 1 {
-                    ParallelismMode::OptimisticLockstep
+                    ParallelismMode::Lockstep
                 } else {
                     ParallelismMode::Monolithic
                 }

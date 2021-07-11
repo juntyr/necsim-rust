@@ -1,22 +1,22 @@
-use std::num::{NonZeroU64, NonZeroUsize};
+use std::num::NonZeroU64;
 
 use serde::Deserialize;
 use serde_state::DeserializeState;
 
 use necsim_core_bond::{Partition, PositiveF64};
 
-use necsim_impls_no_std::parallelisation::independent::{DedupCache, RelativeDedupCache};
+use necsim_impls_no_std::parallelisation::independent::{DedupCache, EventSlice, RelativeCapacity};
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MonolithicParallelismMode {
-    pub event_slice: NonZeroUsize,
+    pub event_slice: EventSlice,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct IsolatedParallelismMode {
-    pub event_slice: NonZeroUsize,
+    pub event_slice: EventSlice,
     pub partition: Partition,
 }
 
@@ -80,7 +80,9 @@ impl<'de> DeserializeState<'de, Partition> for CudaArguments {
             ));
         } else {
             ParallelismMode::Monolithic(MonolithicParallelismMode {
-                event_slice: NonZeroUsize::new(1_000_000_usize).unwrap(),
+                event_slice: EventSlice::Relative(RelativeCapacity {
+                    factor: PositiveF64::new(20.0_f64).unwrap(),
+                }),
             })
         };
 
@@ -116,13 +118,13 @@ impl Default for CudaArgumentsRaw {
     fn default() -> Self {
         Self {
             device: 0_u32,
-            ptx_jit: false,
-            delta_t: PositiveF64::new(1.0_f64).unwrap(),
-            block_size: 32_u32,
-            grid_size: 256_u32,
-            step_slice: NonZeroU64::new(200_u64).unwrap(),
-            dedup_cache: DedupCache::Relative(RelativeDedupCache {
-                factor: PositiveF64::new(2.0_f64).unwrap(),
+            ptx_jit: true,
+            delta_t: PositiveF64::new(3.0_f64).unwrap(),
+            block_size: 64_u32,
+            grid_size: 64_u32,
+            step_slice: NonZeroU64::new(150_u64).unwrap(),
+            dedup_cache: DedupCache::Relative(RelativeCapacity {
+                factor: PositiveF64::new(0.1_f64).unwrap(),
             }),
             parallelism_mode: None,
         }

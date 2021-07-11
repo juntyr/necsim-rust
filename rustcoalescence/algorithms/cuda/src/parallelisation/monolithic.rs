@@ -1,8 +1,4 @@
-use std::{
-    collections::VecDeque,
-    convert::TryInto,
-    num::{NonZeroU64, NonZeroUsize},
-};
+use std::{collections::VecDeque, convert::TryInto, num::NonZeroU64};
 
 use anyhow::{Context, Result};
 
@@ -36,7 +32,7 @@ use necsim_impls_no_std::parallelisation::independent::{
     monolithic::reporter::{
         WaterLevelReporterConstructor, WaterLevelReporterProxy, WaterLevelReporterStrategy,
     },
-    DedupCache,
+    DedupCache, EventSlice,
 };
 use necsim_partitioning_core::LocalPartition;
 
@@ -85,11 +81,13 @@ pub fn simulate<
     stream: &Stream,
     config: (GridSize, BlockSize, DedupCache, NonZeroU64),
     lineages: VecDeque<Lineage>,
-    event_slice: NonZeroUsize,
+    event_slice: EventSlice,
     local_partition: &mut L,
 ) -> Result<(NonNegativeF64, u64)> {
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(lineages.len() as u64);
+
+    let event_slice = event_slice.capacity(lineages.len());
 
     let mut proxy = <WaterLevelReporterStrategy as WaterLevelReporterConstructor<
         L::IsLive,

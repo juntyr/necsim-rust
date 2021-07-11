@@ -1,22 +1,22 @@
-use std::num::{NonZeroU64, NonZeroUsize};
+use std::num::NonZeroU64;
 
 use serde::Deserialize;
 use serde_state::DeserializeState;
 
 use necsim_core_bond::{ClosedUnitF64, Partition, PositiveF64};
 
-use necsim_impls_no_std::parallelisation::independent::{DedupCache, RelativeDedupCache};
+use necsim_impls_no_std::parallelisation::independent::{DedupCache, EventSlice, RelativeCapacity};
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MonolithicParallelismMode {
-    pub event_slice: NonZeroUsize,
+    pub event_slice: EventSlice,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct IsolatedParallelismMode {
-    pub event_slice: NonZeroUsize,
+    pub event_slice: EventSlice,
     pub partition: Partition,
 }
 
@@ -92,10 +92,14 @@ impl<'de> DeserializeState<'de, Partition> for IndependentArguments {
             Some(parallelism_mode) => parallelism_mode,
             None => {
                 if partition.partitions().get() > 1 {
-                    ParallelismMode::Individuals
+                    ParallelismMode::Probabilistic(ProbabilisticParallelismMode {
+                        communication_probability: ClosedUnitF64::new(0.25_f64).unwrap(),
+                    })
                 } else {
                     ParallelismMode::Monolithic(MonolithicParallelismMode {
-                        event_slice: NonZeroUsize::new(1_000_000_usize).unwrap(),
+                        event_slice: EventSlice::Relative(RelativeCapacity {
+                            factor: PositiveF64::new(2.0_f64).unwrap(),
+                        }),
                     })
                 }
             },
@@ -124,10 +128,10 @@ struct IndependentArgumentsRaw {
 impl Default for IndependentArgumentsRaw {
     fn default() -> Self {
         Self {
-            delta_t: PositiveF64::new(1.0_f64).unwrap(),
+            delta_t: PositiveF64::new(2.0_f64).unwrap(),
             step_slice: NonZeroU64::new(10_u64).unwrap(),
-            dedup_cache: DedupCache::Relative(RelativeDedupCache {
-                factor: PositiveF64::new(2.0_f64).unwrap(),
+            dedup_cache: DedupCache::Relative(RelativeCapacity {
+                factor: PositiveF64::new(1.0_f64).unwrap(),
             }),
             parallelism_mode: None,
         }

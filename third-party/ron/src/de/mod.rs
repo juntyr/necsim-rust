@@ -520,9 +520,14 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_str(
-            str::from_utf8(self.bytes.identifier()?).map_err(|e| self.bytes.error(e.into()))?,
-        )
+        // TODO: Remove enum variant index workaround
+        if let Ok(b'0'..=b'9' | b'+' | b'-') = self.bytes.peek_or_eof() {
+            self.deserialize_u64(visitor)
+        } else {
+            visitor.visit_str(
+                str::from_utf8(self.bytes.identifier()?).map_err(|e| self.bytes.error(e.into()))?,
+            )
+        }
     }
 
     fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value>
