@@ -4,7 +4,7 @@
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
 #![cfg_attr(target_os = "cuda", feature(panic_info_message))]
 #![feature(atomic_from_mut)]
-#![feature(asm)]
+//#![feature(asm)]
 
 extern crate alloc;
 
