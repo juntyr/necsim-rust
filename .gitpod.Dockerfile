@@ -24,3 +24,6 @@ RUN sudo apt-get update -q && \
     sudo apt-get clean autoclean && \
     sudo apt-get autoremove -y && \
     sudo rm -rf /var/lib/{apt,dpkg,cache,log}/
+
+RUN cargo install ptx-linker -f && \
+    cargo install cargo-mpirun -f
