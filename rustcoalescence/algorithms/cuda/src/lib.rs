@@ -1,6 +1,7 @@
 #![deny(clippy::pedantic)]
 #![feature(option_result_unwrap_unchecked)]
 #![feature(drain_filter)]
+#![feature(associated_type_defaults)]
 
 #[macro_use]
 extern crate serde_derive_state;
