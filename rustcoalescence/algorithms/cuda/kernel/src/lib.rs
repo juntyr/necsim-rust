@@ -82,35 +82,38 @@ pub fn simulate<
     ReportSpeciation: Boolean,
     ReportDispersal: Boolean,
 >(
-    #[kernel(pass = RustToCuda, jit)] simulation: &mut necsim_core::simulation::Simulation<
-        H,
-        G,
-        R,
-        S,
-        X,
-        D,
-        C,
-        T,
-        N,
-        E,
-        I,
-        A,
-    >,
-    #[kernel(pass = RustToCuda, jit)] task_list: &mut necsim_impls_cuda::value_buffer::ValueBuffer<
-        necsim_core::lineage::Lineage,
-    >,
+    #[rustfmt::skip]
+    #[kernel(pass = RustToCuda, jit)]
+    simulation: &mut necsim_core::simulation::Simulation<H, G, R, S, X, D, C, T, N, E, I, A>,
+    #[rustfmt::skip]
+    #[kernel(pass = RustToCuda, jit)]
+    task_list: &mut necsim_impls_cuda::value_buffer::ValueBuffer<necsim_core::lineage::Lineage>,
+    #[rustfmt::skip]
+    #[kernel(pass = RustToCuda, jit)]
     event_buffer_reporter: &mut necsim_impls_cuda::event_buffer::EventBuffer<
         ReportSpeciation,
         ReportDispersal,
     >,
+    #[rustfmt::skip]
+    #[kernel(pass = RustToCuda, jit)]
     min_spec_sample_buffer: &mut necsim_impls_cuda::value_buffer::ValueBuffer<SpeciationSample>,
+    #[rustfmt::skip]
+    #[kernel(pass = RustToCuda, jit)]
     next_event_time_buffer: &mut necsim_impls_cuda::value_buffer::ValueBuffer<
         necsim_core_bond::PositiveF64,
     >,
-    #[kernel(pass = DeviceCopy)] total_time_max: &mut u64,
-    #[kernel(pass = DeviceCopy)] total_steps_sum: &mut u64,
-    #[kernel(pass = DeviceCopy)] max_steps: u64,
-    #[kernel(pass = DeviceCopy)] max_next_event_time: necsim_core_bond::NonNegativeF64,
+    #[rustfmt::skip]
+    #[kernel(pass = DeviceCopy)]
+    total_time_max: &mut u64,
+    #[rustfmt::skip]
+    #[kernel(pass = DeviceCopy)]
+    total_steps_sum: &mut u64,
+    #[rustfmt::skip]
+    #[kernel(pass = DeviceCopy)]
+    max_steps: u64,
+    #[rustfmt::skip]
+    #[kernel(pass = DeviceCopy)]
+    max_next_event_time: necsim_core_bond::NonNegativeF64,
 ) {
     let total_time_max = core::sync::atomic::AtomicU64::from_mut(total_time_max);
     let total_steps_sum = core::sync::atomic::AtomicU64::from_mut(total_steps_sum);
