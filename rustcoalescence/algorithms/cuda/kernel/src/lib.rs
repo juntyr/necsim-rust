@@ -23,7 +23,24 @@ use rust_cuda::{common::RustToCuda, rustacuda_core::DeviceCopy};
 mod rustcoalescence_algorithms_cuda {
     pub mod kernel {
         #[allow(dead_code)]
-        pub struct DummyLauncher;
+        pub struct DummyLauncher<
+            H: Habitat + RustToCuda,
+            G: PrimeableRng + RustToCuda,
+            R: LineageReference<H> + DeviceCopy,
+            S: LineageStore<H, R> + RustToCuda,
+            X: EmigrationExit<H, G, R, S> + RustToCuda,
+            D: DispersalSampler<H, G> + RustToCuda,
+            C: CoalescenceSampler<H, R, S> + RustToCuda,
+            T: TurnoverRate<H> + RustToCuda,
+            N: SpeciationProbability<H> + RustToCuda,
+            E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
+            I: ImmigrationEntry + RustToCuda,
+            A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+                + PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+                + RustToCuda,
+            ReportSpeciation: Boolean,
+            ReportDispersal: Boolean,
+        >(core::marker::PhantomData<(H, G, R, S, X, D, C, T, N, E, C, I, A, ReportSpeciation, ReportDispersal)>);
     }
 }
 
