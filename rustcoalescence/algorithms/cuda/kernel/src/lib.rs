@@ -22,7 +22,19 @@ use rust_cuda::{common::RustToCuda, rustacuda_core::DeviceCopy};
 
 mod rustcoalescence_algorithms_cuda {
     pub mod kernel {
-        #[allow(dead_code)]
+        use necsim_core::{
+            cogs::{
+                CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+                LineageReference, LineageStore, MinSpeciationTrackingEventSampler,
+                PeekableActiveLineageSampler, PrimeableRng, SingularActiveLineageSampler,
+                SpeciationProbability, TurnoverRate,
+            },
+            reporter::boolean::Boolean,
+        };
+
+        use rust_cuda::{common::RustToCuda, rustacuda_core::DeviceCopy};
+
+        #[allow(dead_code, clippy::type_complexity)]
         pub struct DummyLauncher<
             H: Habitat + RustToCuda,
             G: PrimeableRng + RustToCuda,
@@ -40,7 +52,25 @@ mod rustcoalescence_algorithms_cuda {
                 + RustToCuda,
             ReportSpeciation: Boolean,
             ReportDispersal: Boolean,
-        >(core::marker::PhantomData<(H, G, R, S, X, D, C, T, N, E, C, I, A, ReportSpeciation, ReportDispersal)>);
+        >(
+            core::marker::PhantomData<(
+                H,
+                G,
+                R,
+                S,
+                X,
+                D,
+                C,
+                T,
+                N,
+                E,
+                C,
+                I,
+                A,
+                ReportSpeciation,
+                ReportDispersal,
+            )>,
+        );
     }
 }
 
