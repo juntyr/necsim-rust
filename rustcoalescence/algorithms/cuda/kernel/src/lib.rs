@@ -5,12 +5,6 @@
 #![cfg_attr(target_os = "cuda", feature(panic_info_message))]
 #![feature(atomic_from_mut)]
 #![feature(asm)]
-// TODO: Remove once https://github.com/rust-lang/rust/issues/87551 is fixed
-#![feature(core_intrinsics)]
-#![feature(const_type_id)]
-#![allow(incomplete_features)]
-#![feature(const_generics)]
-#![feature(const_evaluatable_checked)]
 
 extern crate alloc;
 
@@ -25,187 +19,6 @@ use necsim_core::{
 };
 
 use rust_cuda::{common::RustToCuda, rustacuda_core::DeviceCopy};
-
-#[cfg(not(target_os = "cuda"))]
-mod rustcoalescence_algorithms_cuda {
-    pub mod kernel {
-        use necsim_core::{
-            cogs::{
-                CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-                LineageReference, LineageStore, MinSpeciationTrackingEventSampler,
-                PeekableActiveLineageSampler, PrimeableRng, SingularActiveLineageSampler,
-                SpeciationProbability, TurnoverRate,
-            },
-            reporter::boolean::Boolean,
-        };
-
-        use rust_cuda::{common::RustToCuda, rustacuda_core::DeviceCopy};
-
-        #[allow(dead_code, clippy::type_complexity)]
-        pub struct DummyLauncher<
-            H: 'static + Habitat + RustToCuda,
-            G: 'static + PrimeableRng + RustToCuda,
-            R: 'static + LineageReference<H> + DeviceCopy,
-            S: 'static + LineageStore<H, R> + RustToCuda,
-            X: 'static + EmigrationExit<H, G, R, S> + RustToCuda,
-            D: 'static + DispersalSampler<H, G> + RustToCuda,
-            C: 'static + CoalescenceSampler<H, R, S> + RustToCuda,
-            T: 'static + TurnoverRate<H> + RustToCuda,
-            N: 'static + SpeciationProbability<H> + RustToCuda,
-            E: 'static + MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
-            I: 'static + ImmigrationEntry + RustToCuda,
-            A: 'static
-                + SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
-                + PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
-                + RustToCuda,
-            ReportSpeciation: 'static + Boolean,
-            ReportDispersal: 'static + Boolean,
-        >
-        where
-            rust_cuda::host::TypedKernel<
-                {
-                    core::intrinsics::type_id::<
-                        dyn crate::Kernel<
-                            H,
-                            G,
-                            R,
-                            S,
-                            X,
-                            D,
-                            C,
-                            T,
-                            N,
-                            E,
-                            I,
-                            A,
-                            ReportSpeciation,
-                            ReportDispersal,
-                        >,
-                    >()
-                },
-            >: Sized,
-        {
-            kernel: rust_cuda::host::TypedKernel<
-                {
-                    core::intrinsics::type_id::<
-                        dyn crate::Kernel<
-                            H,
-                            G,
-                            R,
-                            S,
-                            X,
-                            D,
-                            C,
-                            T,
-                            N,
-                            E,
-                            I,
-                            A,
-                            ReportSpeciation,
-                            ReportDispersal,
-                        >,
-                    >()
-                },
-            >,
-            _marker: core::marker::PhantomData<(
-                H,
-                G,
-                R,
-                S,
-                X,
-                D,
-                C,
-                T,
-                N,
-                E,
-                C,
-                I,
-                A,
-                ReportSpeciation,
-                ReportDispersal,
-            )>,
-        }
-
-        impl<
-                H: 'static + Habitat + RustToCuda,
-                G: 'static + PrimeableRng + RustToCuda,
-                R: 'static + LineageReference<H> + DeviceCopy,
-                S: 'static + LineageStore<H, R> + RustToCuda,
-                X: 'static + EmigrationExit<H, G, R, S> + RustToCuda,
-                D: 'static + DispersalSampler<H, G> + RustToCuda,
-                C: 'static + CoalescenceSampler<H, R, S> + RustToCuda,
-                T: 'static + TurnoverRate<H> + RustToCuda,
-                N: 'static + SpeciationProbability<H> + RustToCuda,
-                E: 'static + MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
-                I: 'static + ImmigrationEntry + RustToCuda,
-                A: 'static
-                    + SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
-                    + PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
-                    + RustToCuda,
-                ReportSpeciation: 'static + Boolean,
-                ReportDispersal: 'static + Boolean,
-            >
-            rust_cuda::host::Launcher<
-                {
-                    core::intrinsics::type_id::<
-                        dyn crate::Kernel<
-                            H,
-                            G,
-                            R,
-                            S,
-                            X,
-                            D,
-                            C,
-                            T,
-                            N,
-                            E,
-                            I,
-                            A,
-                            ReportSpeciation,
-                            ReportDispersal,
-                        >,
-                    >()
-                },
-            >
-            for DummyLauncher<H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
-        {
-            fn get_launch_params(
-                &mut self,
-            ) -> rust_cuda::host::LaunchParams<
-                {
-                    core::intrinsics::type_id::<
-                        dyn crate::Kernel<
-                            H,
-                            G,
-                            R,
-                            S,
-                            X,
-                            D,
-                            C,
-                            T,
-                            N,
-                            E,
-                            I,
-                            A,
-                            ReportSpeciation,
-                            ReportDispersal,
-                        >,
-                    >()
-                },
-            > {
-                // rust_cuda::host::LaunchParams {
-                // stream: &mut self.stream,
-                // grid: 1.into(),
-                // block: 1.into(),
-                // shared_memory_size: 0_u32,
-                // kernel: &mut self.kernel,
-                // }
-
-                unimplemented!()
-            }
-        }
-    }
-}
 
 #[cfg(target_os = "cuda")]
 mod cuda_prelude {
@@ -242,7 +55,7 @@ mod cuda_prelude {
     }
 }
 
-#[rust_cuda::common::kernel(use link_kernel! as impl Kernel<KernelArgs> for rustcoalescence_algorithms_cuda::kernel::DummyLauncher)]
+#[rust_cuda::common::kernel(pub use link_kernel! as impl Kernel<KernelArgs> for DummyLauncher)]
 #[allow(clippy::too_many_arguments)]
 pub fn simulate<
     H: Habitat + RustToCuda,
@@ -338,46 +151,3 @@ pub fn simulate<
             .replace_active_lineage(None)
     });
 }
-
-#[cfg(not(target_os = "cuda"))]
-link_kernel!(
-    necsim_impls_no_std::cogs::habitat::non_spatial::NonSpatialHabitat,
-    necsim_impls_cuda::cogs::rng::CudaRng<necsim_impls_no_std::cogs::rng::wyhash::WyHash>,
-    necsim_core::lineage::GlobalLineageReference,
-    necsim_impls_no_std::cogs::lineage_store::independent::IndependentLineageStore<
-        necsim_impls_no_std::cogs::habitat::non_spatial::NonSpatialHabitat
-    >,
-    necsim_impls_no_std::cogs::emigration_exit::never::NeverEmigrationExit,
-    necsim_impls_no_std::cogs::dispersal_sampler::non_spatial::NonSpatialDispersalSampler<
-        necsim_impls_cuda::cogs::rng::CudaRng<necsim_impls_no_std::cogs::rng::wyhash::WyHash>,
-    >,
-    necsim_impls_no_std::cogs::coalescence_sampler::independent::IndependentCoalescenceSampler<
-        necsim_impls_no_std::cogs::habitat::non_spatial::NonSpatialHabitat,
-    >,
-    necsim_impls_no_std::cogs::turnover_rate::uniform::UniformTurnoverRate,
-    necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability,
-    necsim_impls_no_std::cogs::event_sampler::independent::IndependentEventSampler<
-        necsim_impls_no_std::cogs::habitat::non_spatial::NonSpatialHabitat,
-        necsim_impls_cuda::cogs::rng::CudaRng<necsim_impls_no_std::cogs::rng::wyhash::WyHash>,
-        necsim_impls_no_std::cogs::emigration_exit::never::NeverEmigrationExit,
-        necsim_impls_no_std::cogs::dispersal_sampler::non_spatial::NonSpatialDispersalSampler<
-            necsim_impls_cuda::cogs::rng::CudaRng<necsim_impls_no_std::cogs::rng::wyhash::WyHash>,
-        >,
-        necsim_impls_no_std::cogs::turnover_rate::uniform::UniformTurnoverRate,
-        necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability,
-    >,
-    necsim_impls_no_std::cogs::immigration_entry::never::NeverImmigrationEntry,
-    necsim_impls_no_std::cogs::active_lineage_sampler::independent::IndependentActiveLineageSampler<
-        necsim_impls_no_std::cogs::habitat::non_spatial::NonSpatialHabitat,
-        necsim_impls_cuda::cogs::rng::CudaRng<necsim_impls_no_std::cogs::rng::wyhash::WyHash>,
-        necsim_impls_no_std::cogs::emigration_exit::never::NeverEmigrationExit,
-        necsim_impls_no_std::cogs::dispersal_sampler::non_spatial::NonSpatialDispersalSampler<
-            necsim_impls_cuda::cogs::rng::CudaRng<necsim_impls_no_std::cogs::rng::wyhash::WyHash>,
-        >,
-        necsim_impls_no_std::cogs::turnover_rate::uniform::UniformTurnoverRate,
-        necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability,
-        necsim_impls_no_std::cogs::active_lineage_sampler::independent::event_time_sampler::exp::ExpEventTimeSampler,
-    >,
-    necsim_core::reporter::boolean::True,
-    necsim_core::reporter::boolean::True,
-);
