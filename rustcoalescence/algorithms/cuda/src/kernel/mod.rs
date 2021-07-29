@@ -22,6 +22,8 @@ mod r#impl;
 mod launch;
 mod specialiser;
 
+pub mod dummy;
+
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::type_complexity)]
 pub struct SimulationKernel<
