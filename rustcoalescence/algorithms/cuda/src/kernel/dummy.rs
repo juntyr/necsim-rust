@@ -60,8 +60,8 @@ impl<
     type KernelTraitObject =
         dyn Kernel<H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>;
 
-    fn get_launch_params(&mut self) -> rust_cuda::host::LaunchParams<Self::KernelTraitObject> {
-        rust_cuda::host::LaunchParams {
+    fn get_config(&mut self) -> rust_cuda::host::LaunchConfig<Self::KernelTraitObject> {
+        rust_cuda::host::LaunchConfig {
             stream: &mut self.stream,
             grid: 1.into(),
             block: 1.into(),
