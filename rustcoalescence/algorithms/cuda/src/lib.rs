@@ -54,7 +54,6 @@ use arguments::{
     CudaArguments, IsolatedParallelismMode, MonolithicParallelismMode, ParallelismMode,
 };
 
-use crate::kernel::SimulationKernel;
 use cuda::with_initialised_cuda;
 
 #[allow(clippy::module_name_repetitions, clippy::empty_enum)]
@@ -155,19 +154,31 @@ where
         with_initialised_cuda(args.device, || {
             let stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
 
-            SimulationKernel::with_kernel(args.ptx_jit, |kernel| {
-                info::print_kernel_function_attributes(kernel.function());
+            // SimulationKernel::with_kernel(args.ptx_jit, |kernel| {
+            // info::print_kernel_function_attributes(kernel.function());
+            //
+            // parallelisation::monolithic::simulate(
+            // simulation,
+            // kernel,
+            // &stream,
+            // (grid_size, block_size, args.dedup_cache, args.step_slice),
+            // lineages,
+            // event_slice,
+            // local_partition,
+            // )
+            // })
 
-                parallelisation::monolithic::simulate(
-                    simulation,
-                    kernel,
-                    &stream,
-                    (grid_size, block_size, args.dedup_cache, args.step_slice),
-                    lineages,
-                    event_slice,
-                    local_partition,
-                )
-            })
+            std::mem::drop((
+                stream,
+                lineages,
+                simulation,
+                block_size,
+                grid_size,
+                event_slice,
+                local_partition,
+            ));
+
+            unimplemented!()
         })
     }
 }

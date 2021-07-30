@@ -38,8 +38,6 @@ use necsim_partitioning_core::LocalPartition;
 
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
-use crate::kernel::SimulationKernel;
-
 #[allow(clippy::type_complexity, clippy::too_many_lines)]
 pub fn simulate<
     'k,
