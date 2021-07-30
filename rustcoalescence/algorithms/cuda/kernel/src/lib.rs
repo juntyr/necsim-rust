@@ -56,7 +56,7 @@ mod cuda_prelude {
 }
 
 #[rust_cuda::common::kernel(pub use link_kernel! as impl Kernel<KernelArgs> for DummyLauncher)]
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn simulate<
     H: Habitat + RustToCuda,
     G: PrimeableRng + RustToCuda,
