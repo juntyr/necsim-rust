@@ -60,14 +60,20 @@ impl<
     type KernelTraitObject =
         dyn Kernel<H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>;
 
-    fn get_config(&mut self) -> rust_cuda::host::LaunchConfig<Self::KernelTraitObject> {
+    fn get_config(&self) -> rust_cuda::host::LaunchConfig {
         rust_cuda::host::LaunchConfig {
-            stream: &mut self.stream,
             grid: 1.into(),
             block: 1.into(),
             shared_memory_size: 0_u32,
-            kernel: &mut self.kernel,
         }
+    }
+
+    fn get_stream(&self) -> &rust_cuda::rustacuda::stream::Stream {
+        &self.stream
+    }
+
+    fn get_kernel_mut(&mut self) -> &mut rust_cuda::host::TypedKernel<Self::KernelTraitObject> {
+        &mut self.kernel
     }
 }
 
