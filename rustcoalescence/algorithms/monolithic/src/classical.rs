@@ -48,7 +48,8 @@ impl<
             LineageReference = InMemoryLineageReference,
             TurnoverRate = UniformTurnoverRate,
         >,
-    > Algorithm<O> for ClassicalAlgorithm
+        R: Reporter,
+    > Algorithm<O, R> for ClassicalAlgorithm
 where
     O::LineageStore<ClassicalLineageStore<O::Habitat>>:
         LocallyCoherentLineageStore<O::Habitat, InMemoryLineageReference>,
@@ -58,7 +59,7 @@ where
     type LineageStore = O::LineageStore<ClassicalLineageStore<O::Habitat>>;
     type Rng = Pcg;
 
-    fn initialise_and_simulate<I: Iterator<Item = u64>, R: Reporter, P: LocalPartition<R>>(
+    fn initialise_and_simulate<I: Iterator<Item = u64>, P: LocalPartition<R>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,
