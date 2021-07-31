@@ -1,5 +1,7 @@
 use anyhow::Result;
 
+use necsim_partitioning_monolithic::live::LiveMonolithicLocalPartition;
+
 use rustcoalescence_algorithms::Algorithm;
 
 #[cfg(feature = "rustcoalescence-algorithms-cuda")]
@@ -12,7 +14,7 @@ use rustcoalescence_algorithms_monolithic::{
     skipping_gillespie::SkippingGillespieAlgorithm,
 };
 
-use necsim_core::reporter::Reporter;
+use necsim_core::reporter::{FilteredReporter, NullReporter, Reporter};
 use necsim_core_bond::NonNegativeF64;
 use necsim_impls_no_std::cogs::origin_sampler::pre_sampler::OriginPreSampler;
 use necsim_partitioning_core::LocalPartition;
@@ -27,7 +29,8 @@ use crate::args::{Algorithm as AlgorithmArgs, CommonArgs, Scenario as ScenarioAr
 
 #[allow(clippy::too_many_lines, clippy::boxed_local)]
 pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>>(
-    mut local_partition: Box<P>,
+    // mut
+    local_partition: Box<P>,
     common_args: CommonArgs,
     scenario: ScenarioArgs,
 ) -> Result<()> {
@@ -39,6 +42,11 @@ pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>>(
             local_partition.get_number_of_partitions().get()
         );
     }
+
+    // TODO: Remove this temporary patch once `Boolean` is fixed
+    let mut local_partition = Box::new(LiveMonolithicLocalPartition::from_reporter(
+        FilteredReporter::from(NullReporter),
+    ));
 
     let pre_sampler = OriginPreSampler::all().percentage(common_args.sample_percentage.get());
 

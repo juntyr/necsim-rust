@@ -37,7 +37,6 @@ use rustcoalescence_scenarios::Scenario;
 
 use rust_cuda::{
     common::RustToCuda,
-    host::CudaDropWrapper,
     rustacuda::{
         function::{BlockSize, GridSize},
         prelude::{Stream, StreamFlags},
@@ -56,6 +55,8 @@ use arguments::{
 
 use cuda::with_initialised_cuda;
 
+use crate::kernel::SimulationKernel;
+
 #[allow(clippy::module_name_repetitions, clippy::empty_enum)]
 pub enum CudaAlgorithm {}
 
@@ -64,20 +65,81 @@ impl AlgorithmArguments for CudaAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<O: Scenario<CudaRng<WyHash>>> Algorithm<O> for CudaAlgorithm
+impl<O: Scenario<CudaRng<WyHash>>, R: Reporter> Algorithm<O, R> for CudaAlgorithm
 where
     O::Habitat: RustToCuda,
     O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>:
         RustToCuda,
     O::TurnoverRate: RustToCuda,
     O::SpeciationProbability: RustToCuda,
+    SimulationKernel<
+        O::Habitat,
+        CudaRng<WyHash>,
+        GlobalLineageReference,
+        IndependentLineageStore<O::Habitat>,
+        NeverEmigrationExit,
+        O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
+        IndependentCoalescenceSampler<O::Habitat>,
+        O::TurnoverRate,
+        O::SpeciationProbability,
+        IndependentEventSampler<
+            O::Habitat,
+            CudaRng<WyHash>,
+            NeverEmigrationExit,
+            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
+            O::TurnoverRate,
+            O::SpeciationProbability,
+        >,
+        NeverImmigrationEntry,
+        IndependentActiveLineageSampler<
+            O::Habitat,
+            CudaRng<WyHash>,
+            NeverEmigrationExit,
+            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
+            O::TurnoverRate,
+            O::SpeciationProbability,
+            ExpEventTimeSampler,
+        >,
+        R::ReportSpeciation,
+        R::ReportDispersal,
+    >: rustcoalescence_algorithms_cuda_kernel::Kernel<
+        O::Habitat,
+        CudaRng<WyHash>,
+        GlobalLineageReference,
+        IndependentLineageStore<O::Habitat>,
+        NeverEmigrationExit,
+        O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
+        IndependentCoalescenceSampler<O::Habitat>,
+        O::TurnoverRate,
+        O::SpeciationProbability,
+        IndependentEventSampler<
+            O::Habitat,
+            CudaRng<WyHash>,
+            NeverEmigrationExit,
+            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
+            O::TurnoverRate,
+            O::SpeciationProbability,
+        >,
+        NeverImmigrationEntry,
+        IndependentActiveLineageSampler<
+            O::Habitat,
+            CudaRng<WyHash>,
+            NeverEmigrationExit,
+            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
+            O::TurnoverRate,
+            O::SpeciationProbability,
+            ExpEventTimeSampler,
+        >,
+        R::ReportSpeciation,
+        R::ReportDispersal,
+    >,
 {
     type Error = anyhow::Error;
     type LineageReference = GlobalLineageReference;
     type LineageStore = IndependentLineageStore<O::Habitat>;
     type Rng = CudaRng<WyHash>;
 
-    fn initialise_and_simulate<I: Iterator<Item = u64>, R: Reporter, P: LocalPartition<R>>(
+    fn initialise_and_simulate<I: Iterator<Item = u64>, P: LocalPartition<R>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,
@@ -152,33 +214,20 @@ where
         };
 
         with_initialised_cuda(args.device, || {
-            let stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
+            let kernel = SimulationKernel::try_new(
+                Stream::new(StreamFlags::NON_BLOCKING, None)?,
+                grid_size.clone(),
+                block_size.clone(),
+            )?;
 
-            // SimulationKernel::with_kernel(args.ptx_jit, |kernel| {
-            // info::print_kernel_function_attributes(kernel.function());
-            //
-            // parallelisation::monolithic::simulate(
-            // simulation,
-            // kernel,
-            // &stream,
-            // (grid_size, block_size, args.dedup_cache, args.step_slice),
-            // lineages,
-            // event_slice,
-            // local_partition,
-            // )
-            // })
-
-            std::mem::drop((
-                stream,
-                lineages,
+            parallelisation::monolithic::simulate(
                 simulation,
-                block_size,
-                grid_size,
+                kernel,
+                (grid_size, block_size, args.dedup_cache, args.step_slice),
+                lineages,
                 event_slice,
                 local_partition,
-            ));
-
-            unimplemented!()
+            )
         })
     }
 }

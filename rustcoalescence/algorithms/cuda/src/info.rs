@@ -34,7 +34,7 @@ pub fn print_context_resource_limits() {
     println!("{:=^80}", "");
 }
 
-pub fn _print_kernel_function_attributes(function: &Function) {
+pub fn print_kernel_function_attributes(function: &Function) {
     println!("{:=^80}", " Kernel Function Attributes ");
 
     println!(
