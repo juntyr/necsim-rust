@@ -44,7 +44,7 @@ impl AlgorithmArguments for GillespieAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<O: Scenario<Pcg, LineageReference = InMemoryLineageReference>> Algorithm<O>
+impl<O: Scenario<Pcg, LineageReference = InMemoryLineageReference>, R: Reporter> Algorithm<O, R>
     for GillespieAlgorithm
 where
     O::LineageStore<GillespieLineageStore<O::Habitat>>:
@@ -56,7 +56,7 @@ where
     type Rng = Pcg;
 
     #[allow(clippy::shadow_unrelated, clippy::too_many_lines)]
-    fn initialise_and_simulate<I: Iterator<Item = u64>, R: Reporter, P: LocalPartition<R>>(
+    fn initialise_and_simulate<I: Iterator<Item = u64>, P: LocalPartition<R>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,

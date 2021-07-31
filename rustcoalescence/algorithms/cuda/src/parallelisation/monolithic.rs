@@ -3,10 +3,10 @@ use std::{collections::VecDeque, convert::TryInto, num::NonZeroU64};
 use anyhow::{Context, Result};
 
 use rust_cuda::{
+    host::HostDeviceBoxMut,
     rustacuda::{
         function::{BlockSize, GridSize},
         memory::{CopyDestination, DeviceBox},
-        stream::Stream,
     },
     rustacuda_core::DeviceCopy,
 };
@@ -38,9 +38,13 @@ use necsim_partitioning_core::LocalPartition;
 
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
+use rustcoalescence_algorithms_cuda_kernel::Kernel;
+
+use crate::kernel::SimulationKernel;
+
 #[allow(clippy::type_complexity, clippy::too_many_lines)]
 pub fn simulate<
-    'k,
+    'l,
     H: Habitat + RustToCuda,
     G: PrimeableRng + RustToCuda,
     R: LineageReference<H> + DeviceCopy,
@@ -59,8 +63,7 @@ pub fn simulate<
     L: LocalPartition<P>,
 >(
     mut simulation: Simulation<H, G, R, S, X, D, C, T, N, E, I, A>,
-    kernel: &'k mut SimulationKernel<
-        'k,
+    mut kernel: SimulationKernel<
         H,
         G,
         R,
@@ -76,12 +79,43 @@ pub fn simulate<
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
     >,
-    stream: &Stream,
     config: (GridSize, BlockSize, DedupCache, NonZeroU64),
     lineages: VecDeque<Lineage>,
     event_slice: EventSlice,
-    local_partition: &mut L,
-) -> Result<(NonNegativeF64, u64)> {
+    local_partition: &'l mut L,
+) -> Result<(NonNegativeF64, u64)>
+    where SimulationKernel<
+        H,
+        G,
+        R,
+        S,
+        X,
+        D,
+        C,
+        T,
+        N,
+        E,
+        I,
+        A,
+        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
+        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
+    >: rustcoalescence_algorithms_cuda_kernel::Kernel<
+        H,
+        G,
+        R,
+        S,
+        X,
+        D,
+        C,
+        T,
+        N,
+        E,
+        I,
+        A,
+        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
+        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
+    >,
+{
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(lineages.len() as u64);
 
@@ -96,8 +130,16 @@ pub fn simulate<
     let (grid_size, block_size, dedup_cache, step_slice) = config;
 
     // Allocate and initialise the total_time_max and total_steps_sum atomics
-    let mut total_time_max = DeviceBox::new(&0.0_f64.to_bits())?;
-    let mut total_steps_sum = DeviceBox::new(&0_u64)?;
+    let mut total_time_max_host = 0.0_f64.to_bits();
+    let mut total_time_max_gpu = DeviceBox::new(&total_time_max_host)?;
+
+    let mut total_steps_sum_host = 0_u64;
+    let mut total_steps_sum_gpu = DeviceBox::new(&total_steps_sum_host)?;
+
+    let mut total_time_max =
+        HostDeviceBoxMut::new(&mut total_time_max_gpu, &mut total_time_max_host);
+    let mut total_steps_sum =
+        HostDeviceBoxMut::new(&mut total_steps_sum_gpu, &mut total_steps_sum_host);
 
     let mut task_list = ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
     let mut event_buffer: ExchangeWithCudaWrapper<
@@ -114,10 +156,6 @@ pub fn simulate<
         ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
     let mut next_event_time_buffer =
         ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
-
-    let mut kernel = kernel
-        .with_dimensions(grid_size, block_size, 0_u32)
-        .with_stream(stream);
 
     let mut min_spec_samples = dedup_cache.construct(lineages.len());
 
@@ -182,22 +220,17 @@ pub fn simulate<
                     let mut next_event_time_buffer_cuda = next_event_time_buffer.move_to_cuda()?;
                     let mut task_list_cuda = task_list.move_to_cuda()?;
 
-                    // Launching kernels is unsafe since Rust cannot
-                    // enforce safety across the foreign function
-                    // CUDA-C language barrier
-                    unsafe {
-                        kernel.launch_and_synchronise(
-                            &mut simulation_cuda_repr,
-                            &mut task_list_cuda.as_mut(),
-                            &mut event_buffer_cuda.as_mut(),
-                            &mut min_spec_sample_buffer_cuda.as_mut(),
-                            &mut next_event_time_buffer_cuda.as_mut(),
-                            &mut total_time_max,
-                            &mut total_steps_sum,
-                            step_slice.get(),
-                            level_time,
-                        )?;
-                    }
+                    kernel.simulate_raw(
+                        &mut simulation_cuda_repr,
+                        &mut task_list_cuda.as_mut(),
+                        &mut event_buffer_cuda.as_mut(),
+                        &mut min_spec_sample_buffer_cuda.as_mut(),
+                        &mut next_event_time_buffer_cuda.as_mut(),
+                        &mut total_time_max,
+                        &mut total_steps_sum,
+                        step_slice.get(),
+                        level_time,
+                    )?;
 
                     min_spec_sample_buffer = min_spec_sample_buffer_cuda.move_to_host()?;
                     next_event_time_buffer = next_event_time_buffer_cuda.move_to_host()?;
@@ -247,16 +280,13 @@ pub fn simulate<
     proxy.finalise();
 
     let (total_time_max, total_steps_sum) = {
-        let mut total_time_max_result = 0_u64;
-        let mut total_steps_sum_result = 0_u64;
-
-        total_time_max.copy_to(&mut total_time_max_result)?;
-        total_steps_sum.copy_to(&mut total_steps_sum_result)?;
+        total_time_max_gpu.copy_to(&mut total_time_max_host)?;
+        total_steps_sum_gpu.copy_to(&mut total_steps_sum_host)?;
 
         (
             // Safety: Max of NonNegativeF64 values from the GPU
-            unsafe { NonNegativeF64::new_unchecked(f64::from_bits(total_time_max_result)) },
-            total_steps_sum_result,
+            unsafe { NonNegativeF64::new_unchecked(f64::from_bits(total_time_max_host)) },
+            total_steps_sum_host,
         )
     };
 
