@@ -18,8 +18,7 @@ impl fmt::Display for PositiveUnitF64Error {
 }
 
 #[derive(Copy, Clone, Deserialize, Serialize)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::rustacuda_core::DeviceCopy))]
-#[cfg_attr(feature = "cuda", rustacuda(core = "rust_cuda::rustacuda_core"))]
+#[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
 #[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 #[repr(transparent)]
 #[serde(try_from = "f64")]
