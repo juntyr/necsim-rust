@@ -47,8 +47,11 @@ impl AlgorithmArguments for SkippingGillespieAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<O: Scenario<Pcg, LineageReference = InMemoryLineageReference>, R: Reporter> Algorithm<O, R>
-    for SkippingGillespieAlgorithm
+impl<
+        O: Scenario<Pcg, LineageReference = InMemoryLineageReference>,
+        R: Reporter,
+        P: LocalPartition<R>,
+    > Algorithm<O, R, P> for SkippingGillespieAlgorithm
 where
     O::LineageStore<GillespieLineageStore<O::Habitat>>:
         GloballyCoherentLineageStore<O::Habitat, InMemoryLineageReference>,
@@ -61,7 +64,7 @@ where
     type Rng = Pcg;
 
     #[allow(clippy::shadow_unrelated, clippy::too_many_lines)]
-    fn initialise_and_simulate<I: Iterator<Item = u64>, P: LocalPartition<R>>(
+    fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,

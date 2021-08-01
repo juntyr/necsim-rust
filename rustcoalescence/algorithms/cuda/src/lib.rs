@@ -2,6 +2,8 @@
 #![feature(option_result_unwrap_unchecked)]
 #![feature(drain_filter)]
 #![feature(associated_type_defaults)]
+#![allow(incomplete_features)]
+#![feature(specialization)]
 
 #[macro_use]
 extern crate serde_derive_state;
@@ -65,7 +67,8 @@ impl AlgorithmArguments for CudaAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<O: Scenario<CudaRng<WyHash>>, R: Reporter> Algorithm<O, R> for CudaAlgorithm
+impl<O: Scenario<CudaRng<WyHash>>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
+    for CudaAlgorithm
 where
     O::Habitat: RustToCuda,
     O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>:
@@ -139,7 +142,7 @@ where
     type LineageStore = IndependentLineageStore<O::Habitat>;
     type Rng = CudaRng<WyHash>;
 
-    fn initialise_and_simulate<I: Iterator<Item = u64>, P: LocalPartition<R>>(
+    fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,
