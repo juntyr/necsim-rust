@@ -15,7 +15,9 @@ pub trait AlgorithmArguments {
     type Arguments;
 }
 
-pub trait Algorithm<O: Scenario<Self::Rng>, R: Reporter>: Sized + AlgorithmArguments {
+pub trait Algorithm<O: Scenario<Self::Rng>, R: Reporter, P: LocalPartition<R>>:
+    Sized + AlgorithmArguments
+{
     type Error;
 
     type Rng: RngCore;
@@ -25,7 +27,7 @@ pub trait Algorithm<O: Scenario<Self::Rng>, R: Reporter>: Sized + AlgorithmArgum
     /// # Errors
     ///
     /// Returns a `Self::Error` if initialising or running the algorithm failed
-    fn initialise_and_simulate<I: Iterator<Item = u64>, P: LocalPartition<R>>(
+    fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,
