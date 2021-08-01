@@ -7,7 +7,6 @@ use core::{
     ops::{Add, Mul},
 };
 
-use float_next_after::NextAfter;
 use serde::{Deserialize, Serialize};
 
 use crate::NonNegativeF64;
@@ -87,10 +86,14 @@ impl PositiveF64 {
     #[must_use]
     #[inline]
     pub fn max_after(before: NonNegativeF64, value: NonNegativeF64) -> Self {
-        if value > before {
+        if value > before || before.get().is_nan() {
             Self(value.get())
+        } else if before.get().is_infinite() {
+            Self(f64::INFINITY)
         } else {
-            Self(before.get().next_after(f64::INFINITY))
+            // also catches `value.get().is_nan()`
+            // Next `f64` value that is larger than `before`
+            Self(f64::from_bits(before.get().to_bits() + 1))
         }
     }
 }
