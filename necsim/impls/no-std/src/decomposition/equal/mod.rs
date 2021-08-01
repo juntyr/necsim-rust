@@ -58,8 +58,8 @@ impl<H: Habitat> Decomposition<H> for EqualDecomposition<H> {
         "habitat has a matching extent"
     )]
     fn map_location_to_subdomain_rank(&self, location: &Location, habitat: &H) -> u32 {
-        let mut dx = location.x() - self.extent.x();
-        let mut dy = location.y() - self.extent.y();
+        let dx = location.x() - self.extent.x();
+        let dy = location.y() - self.extent.y();
 
         let morton_index = Self::map_x_y_to_morton(self.morton.0, self.morton.1, dx, dy);
 
