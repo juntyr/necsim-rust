@@ -83,8 +83,11 @@ impl<
     for ConditionalGillespieEventSampler<H, G, R, S, X, D, T, N>
 {
     #[must_use]
-    #[allow(clippy::double_parens)]
-    #[allow(clippy::type_complexity)]
+    #[allow(
+        clippy::double_parens,
+        clippy::type_complexity,
+        clippy::shadow_unrelated
+    )]
     #[debug_ensures(ret.as_ref().map_or(true, |event: &PackedEvent| {
         Some(event.global_lineage_reference.clone()) == old(
             simulation.lineage_store.get(lineage_reference.clone()).map(

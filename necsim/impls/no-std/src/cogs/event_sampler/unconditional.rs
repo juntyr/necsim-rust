@@ -76,6 +76,7 @@ impl<
     for UnconditionalEventSampler<H, G, R, S, X, D, C, T, N>
 {
     #[must_use]
+    #[allow(clippy::shadow_unrelated)]
     #[debug_ensures(ret.as_ref().map_or(true, |event: &PackedEvent| {
         Some(event.global_lineage_reference.clone()) == old(
             simulation.lineage_store.get(lineage_reference.clone()).map(
