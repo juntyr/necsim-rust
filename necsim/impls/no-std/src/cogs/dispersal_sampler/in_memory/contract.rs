@@ -1,6 +1,6 @@
-use array2d::Array2D;
-
 use necsim_core::{cogs::Habitat, landscape::Location};
+
+use crate::array2d::Array2D;
 
 #[allow(clippy::module_name_repetitions)]
 pub fn explicit_in_memory_dispersal_check_contract<H: Habitat>(

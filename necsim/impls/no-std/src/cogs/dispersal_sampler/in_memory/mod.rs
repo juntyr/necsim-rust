@@ -1,6 +1,6 @@
-use array2d::Array2D;
-
 use necsim_core::cogs::{DispersalSampler, Habitat, RngCore};
+
+use crate::array2d::Array2D;
 
 pub mod contract;
 

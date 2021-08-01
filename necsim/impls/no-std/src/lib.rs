@@ -20,6 +20,7 @@ extern crate contracts;
 extern crate log;
 
 pub mod alias;
+pub mod array2d;
 pub mod cache;
 pub mod cogs;
 pub mod decomposition;

@@ -1,5 +1,3 @@
-use array2d::Array2D;
-
 use alloc::{boxed::Box, vec};
 
 use necsim_core::{
@@ -7,7 +5,7 @@ use necsim_core::{
     landscape::Location,
 };
 
-use crate::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
+use crate::{array2d::Array2D, cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler};
 
 mod contract;
 mod dispersal;

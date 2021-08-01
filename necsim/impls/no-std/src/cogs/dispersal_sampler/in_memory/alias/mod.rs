@@ -2,18 +2,17 @@ use core::marker::PhantomData;
 
 use alloc::vec::Vec;
 
-use array2d::Array2D;
-
 use necsim_core::{
     cogs::{Backup, Habitat, RngCore},
     landscape::Location,
 };
 
-use crate::cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler;
+use crate::{
+    alias::AliasMethodSampler, array2d::Array2D,
+    cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler,
+};
 
 mod dispersal;
-
-use crate::alias::AliasMethodSampler;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]

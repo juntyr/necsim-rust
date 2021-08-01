@@ -1,16 +1,14 @@
 use alloc::{boxed::Box, vec::Vec};
 use core::{marker::PhantomData, ops::Range};
 
-use array2d::Array2D;
-
 use necsim_core::{
     cogs::{Backup, Habitat, RngCore},
     landscape::Location,
 };
 
-mod dispersal;
+use crate::{alias::packed::AliasMethodSamplerAtom, array2d::Array2D};
 
-use crate::alias::packed::AliasMethodSamplerAtom;
+mod dispersal;
 
 use super::InMemoryDispersalSampler;
 
