@@ -57,8 +57,7 @@ pub trait EventSampler<
 // - the simulation starts at time 0.0
 
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::rustacuda_core::DeviceCopy))]
-#[cfg_attr(feature = "cuda", rustacuda(core = "rust_cuda::rustacuda_core"))]
+#[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
 pub struct SpeciationSample {
     indexed_location: IndexedLocation,
     time: NonZeroU64,
