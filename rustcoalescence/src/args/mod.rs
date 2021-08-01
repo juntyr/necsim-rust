@@ -1,16 +1,12 @@
 use std::{convert::TryFrom, fmt, path::PathBuf};
 
-use array2d::Array2D;
-
 use serde::{de::Deserializer, Deserialize};
 use serde_state::DeserializeState;
-
 use structopt::StructOpt;
-
-mod parse;
 
 use necsim_core_bond::{ClosedUnitF64, Partition, PositiveUnitF64};
 
+use necsim_impls_no_std::array2d::Array2D;
 use necsim_impls_std::event_log::{recorder::EventLogRecorder, replay::EventLogReplay};
 
 use rustcoalescence_scenarios::{
@@ -26,6 +22,8 @@ use rustcoalescence_scenarios::{
 use rustcoalescence_algorithms::AlgorithmArguments;
 
 use necsim_plugins_core::import::{AnyReporterPluginVec, ReporterPluginLibrary};
+
+mod parse;
 
 #[derive(Debug, StructOpt)]
 #[allow(clippy::module_name_repetitions)]

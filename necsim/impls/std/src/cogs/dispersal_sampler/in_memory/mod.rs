@@ -1,6 +1,5 @@
-use array2d::Array2D;
-
 use necsim_core::cogs::{Habitat, RngCore};
+use necsim_impls_no_std::array2d::Array2D;
 
 pub mod error;
 

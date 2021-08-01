@@ -123,7 +123,6 @@ necsim-rust consists of the following crates:
         - independent/: `rustcoalescence-algorithms-independent` contains the glue code to put together the cogs for the **independent** coalescence algorithm on the CPU. The algorithm treats the simulation as an embarrassingly parallel problem. It can also be used to simulate subdomains of the simulation separately and piece the results back afterwards without loss of consistency.
         - cuda/: `rustcoalescence-algorithms-cuda` contains the glue code to put together the cogs for the **independent** coalescence algorithm on a CUDA 3.5 capable GPU. The algorithm treats the simulation as an embarrassingly parallel problem. It can also be used to simulate subdomains of the simulation separately and piece the results back afterwards without loss of consistency.
 - rust-cuda/: `rust-cuda` provides automatically derivable traits to add more (but not complete) type safety to sharing data structures between the CPU and GPU
-- third-party/: this folder contains multiple third-party crates which had to be modified (primarily to enable `no-std` support)
 
 ## GDAL GeoTiff compatibility
 

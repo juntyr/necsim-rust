@@ -2,7 +2,6 @@ use core::{marker::PhantomData, ops::Index};
 
 use alloc::vec::Vec;
 
-use array2d::Array2D;
 use hashbrown::hash_map::HashMap;
 use slab::Slab;
 
@@ -12,7 +11,7 @@ use necsim_core::{
     lineage::{GlobalLineageReference, Lineage},
 };
 
-use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
+use crate::{array2d::Array2D, cogs::lineage_reference::in_memory::InMemoryLineageReference};
 
 mod store;
 
