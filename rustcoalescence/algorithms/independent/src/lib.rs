@@ -60,14 +60,16 @@ impl AlgorithmArguments for IndependentAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<O: Scenario<WyHash>, R: Reporter> Algorithm<O, R> for IndependentAlgorithm {
+impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
+    for IndependentAlgorithm
+{
     type Error = !;
     type LineageReference = GlobalLineageReference;
     type LineageStore = IndependentLineageStore<O::Habitat>;
     type Rng = WyHash;
 
     #[allow(clippy::too_many_lines)]
-    fn initialise_and_simulate<I: Iterator<Item = u64>, P: LocalPartition<R>>(
+    fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,
