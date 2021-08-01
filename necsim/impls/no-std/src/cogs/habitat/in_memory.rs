@@ -1,11 +1,11 @@
-use array2d::Array2D;
-
 use alloc::{boxed::Box, vec::Vec};
 
 use necsim_core::{
     cogs::{Backup, Habitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
+
+use crate::array2d::Array2D;
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCuda))]

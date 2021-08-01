@@ -1,9 +1,9 @@
 use std::{fs::File, path::Path};
 
-use array2d::Array2D;
+use anyhow::{Context, Result};
 use tiff::{decoder::Decoder, tags::Tag};
 
-use anyhow::{Context, Result};
+use necsim_impls_no_std::array2d::Array2D;
 
 #[path = "data_type.rs"]
 mod private;
