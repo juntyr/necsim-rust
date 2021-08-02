@@ -122,7 +122,6 @@ necsim-rust consists of the following crates:
             - src/skipping_gillespie: `SkippingGillespieAlgorithm` is a mathematically correct Gillespie-algorithm-based implementation that skips self-dispersal events without coalescence. Therefore, it is very fast on habitats with high self-dispersal probabilities.
         - independent/: `rustcoalescence-algorithms-independent` contains the glue code to put together the cogs for the **independent** coalescence algorithm on the CPU. The algorithm treats the simulation as an embarrassingly parallel problem. It can also be used to simulate subdomains of the simulation separately and piece the results back afterwards without loss of consistency.
         - cuda/: `rustcoalescence-algorithms-cuda` contains the glue code to put together the cogs for the **independent** coalescence algorithm on a CUDA 3.5 capable GPU. The algorithm treats the simulation as an embarrassingly parallel problem. It can also be used to simulate subdomains of the simulation separately and piece the results back afterwards without loss of consistency.
-- rust-cuda/: `rust-cuda` provides automatically derivable traits to add more (but not complete) type safety to sharing data structures between the CPU and GPU
 
 ## GDAL GeoTiff compatibility
 
