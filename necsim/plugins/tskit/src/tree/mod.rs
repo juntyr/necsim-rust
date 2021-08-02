@@ -1,7 +1,7 @@
 use std::{collections::HashMap, convert::TryFrom, fmt, fs::OpenOptions, io};
 
 use serde::{Deserialize, Serialize, Serializer};
-use tskit::TableCollection;
+use tskit::{IndividualId, NodeId, TableCollection};
 
 use necsim_core::{
     event::{DispersalEvent, SpeciationEvent},
@@ -18,11 +18,6 @@ mod table;
 const TSK_SEQUENCE_MIN: f64 = 0.0_f64;
 const TSK_SEQUENCE_MAX: f64 = 1.0_f64;
 
-#[derive(Copy, Clone)]
-struct TskitIndividualID(tskit::tsk_id_t);
-#[derive(Copy, Clone)]
-struct TskitNodeID(tskit::tsk_id_t);
-
 #[allow(clippy::module_name_repetitions)]
 #[derive(Deserialize)]
 #[serde(try_from = "TskitTreeReporterArgs")]
@@ -38,7 +33,7 @@ pub struct TskitTreeReporter {
     // Child -> Parent lineage mapping
     parents: HashMap<GlobalLineageReference, GlobalLineageReference>,
     // Lineage to tskit mapping, used if parent is known before coalescence
-    tskit_ids: HashMap<GlobalLineageReference, (TskitIndividualID, TskitNodeID)>,
+    tskit_ids: HashMap<GlobalLineageReference, (IndividualId, NodeId)>,
 
     table: TableCollection,
 

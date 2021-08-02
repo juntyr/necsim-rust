@@ -2,15 +2,14 @@ use std::collections::VecDeque;
 
 use necsim_core_bond::NonNegativeF64;
 use tskit::{
-    metadata::MetadataRoundtrip, provenance::Provenance, TableOutputOptions, TableSortOptions,
+    provenance::Provenance, IndividualId, NodeId, TableOutputOptions, TableSortOptions,
     TreeSequenceFlags,
 };
 
 use necsim_core::{landscape::IndexedLocation, lineage::GlobalLineageReference};
 
 use super::{
-    metadata::GlobalLineageMetadata, TskitIndividualID, TskitNodeID, TskitTreeReporter,
-    TSK_SEQUENCE_MAX, TSK_SEQUENCE_MIN,
+    metadata::GlobalLineageMetadata, TskitTreeReporter, TSK_SEQUENCE_MAX, TSK_SEQUENCE_MIN,
 };
 
 const TSK_FLAGS_EMPTY: tskit::tsk_flags_t = 0_u32;
@@ -110,48 +109,43 @@ impl TskitTreeReporter {
         &mut self,
         reference: &GlobalLineageReference,
         time: NonNegativeF64,
-        parent: Option<(TskitIndividualID, TskitNodeID)>,
-    ) -> Option<(TskitIndividualID, TskitNodeID)> {
+        parent: Option<(IndividualId, NodeId)>,
+    ) -> Option<(IndividualId, NodeId)> {
         let origin = self.origins.remove(reference)?;
         let location = [
             f64::from(origin.location().x()),
             f64::from(origin.location().y()),
             f64::from(origin.index()),
         ];
-        let metadata: Option<&dyn MetadataRoundtrip> = Some(GlobalLineageMetadata::new(reference));
+        let metadata = GlobalLineageMetadata::new(reference);
+        let parents = if let Some((parent_individual, _parent_node)) = &parent {
+            std::slice::from_ref(parent_individual)
+        } else {
+            &[]
+        };
 
         // Insert the lineage as an individual
-        let individual_id = if let Some((parent_individual, _parent_node)) = parent {
-            self.table.add_individual_with_metadata(
-                TSK_FLAGS_EMPTY,
-                &location,
-                &[parent_individual.0],
-                metadata,
-            )
-        } else {
-            self.table
-                .add_individual_with_metadata(TSK_FLAGS_EMPTY, &location, &[], metadata)
-        }
-        .map(TskitIndividualID)
-        .unwrap();
+        let individual_id = self
+            .table
+            .add_individual_with_some_metadata(TSK_FLAGS_EMPTY, &location, parents, metadata)
+            .unwrap();
 
         // Create corresponding node
         let node_id = self
             .table
-            .add_node_with_metadata(
+            .add_node_with_some_metadata(
                 tskit::TSK_NODE_IS_SAMPLE,
                 time.get(),
                 tskit::TSK_NULL,
-                individual_id.0,
+                individual_id,
                 metadata,
             )
-            .map(TskitNodeID)
             .unwrap();
 
         if let Some((_parent_individual, parent_node)) = parent {
             // Add the parent-child relation between the nodes
             self.table
-                .add_edge(TSK_SEQUENCE_MIN, TSK_SEQUENCE_MAX, parent_node.0, node_id.0)
+                .add_edge(TSK_SEQUENCE_MIN, TSK_SEQUENCE_MAX, parent_node, node_id)
                 .unwrap();
         }
 
@@ -167,8 +161,8 @@ impl TskitTreeReporter {
     fn store_children_of_parent(
         &mut self,
         parent: &GlobalLineageReference,
-        parent_individual: TskitIndividualID,
-        parent_node: TskitNodeID,
+        parent_individual: IndividualId,
+        parent_node: NodeId,
     ) {
         let mut stack = VecDeque::from(vec![(parent.clone(), parent_individual, parent_node)]);
 
