@@ -6,7 +6,7 @@ use necsim_core::{
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 #[allow(clippy::module_name_repetitions)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 #[derive(Debug)]
 pub struct NeverEmigrationExit(());
 

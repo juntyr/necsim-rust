@@ -10,7 +10,7 @@ use core::ops::{Index, IndexMut};
 
 /// A fixed sized two-dimensional array.
 #[derive(Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 #[cfg_attr(feature = "cuda", r2cBound(T: rust_cuda::rustacuda_core::DeviceCopy))]
 pub struct Array2D<T> {
     #[cfg_attr(feature = "cuda", r2cEmbed)]

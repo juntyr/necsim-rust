@@ -2,7 +2,7 @@ use core::ops::{Deref, DerefMut};
 
 use rust_cuda::{rustacuda_core::DeviceCopy, utils::exchange::buffer::CudaExchangeBuffer};
 
-#[derive(rust_cuda::common::RustToCuda, rust_cuda::host::LendToCuda)]
+#[derive(rust_cuda::common::RustToCudaAsRust, rust_cuda::common::LendRustBorrowToCuda)]
 #[allow(clippy::module_name_repetitions)]
 pub struct ValueBuffer<T: Clone + DeviceCopy> {
     #[r2cEmbed]
