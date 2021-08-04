@@ -17,7 +17,7 @@ use necsim_core::{
 use necsim_core::impl_report;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(rust_cuda::common::RustToCuda, rust_cuda::host::LendToCuda)]
+#[derive(rust_cuda::common::RustToCudaAsRust, rust_cuda::common::LendRustBorrowToCuda)]
 pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
     #[r2cEmbed]
     speciation_buffer: CudaExchangeBuffer<Option<SpeciationEvent>>,

@@ -76,22 +76,22 @@ pub fn simulate<
     ReportDispersal: Boolean,
 >(
     #[rustfmt::skip]
-    #[kernel(pass = RustToCuda, jit)]
+    #[kernel(pass = LendRustBorrowToCuda, jit)]
     simulation: &mut necsim_core::simulation::Simulation<H, G, R, S, X, D, C, T, N, E, I, A>,
     #[rustfmt::skip]
-    #[kernel(pass = RustToCuda, jit)]
+    #[kernel(pass = LendRustBorrowToCuda, jit)]
     task_list: &mut necsim_impls_cuda::value_buffer::ValueBuffer<necsim_core::lineage::Lineage>,
     #[rustfmt::skip]
-    #[kernel(pass = RustToCuda, jit)]
+    #[kernel(pass = LendRustBorrowToCuda, jit)]
     event_buffer_reporter: &mut necsim_impls_cuda::event_buffer::EventBuffer<
         ReportSpeciation,
         ReportDispersal,
     >,
     #[rustfmt::skip]
-    #[kernel(pass = RustToCuda, jit)]
+    #[kernel(pass = LendRustBorrowToCuda, jit)]
     min_spec_sample_buffer: &mut necsim_impls_cuda::value_buffer::ValueBuffer<SpeciationSample>,
     #[rustfmt::skip]
-    #[kernel(pass = RustToCuda, jit)]
+    #[kernel(pass = LendRustBorrowToCuda, jit)]
     next_event_time_buffer: &mut necsim_impls_cuda::value_buffer::ValueBuffer<
         necsim_core_bond::PositiveF64,
     >,
