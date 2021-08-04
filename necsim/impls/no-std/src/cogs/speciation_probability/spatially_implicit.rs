@@ -7,7 +7,7 @@ use necsim_core_bond::{ClosedUnitF64, PositiveUnitF64};
 use crate::cogs::habitat::spatially_implicit::SpatiallyImplicitHabitat;
 
 #[derive(Debug)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 #[allow(clippy::module_name_repetitions)]
 pub struct SpatiallyImplicitSpeciationProbability {
     meta_speciation_probability: PositiveUnitF64,

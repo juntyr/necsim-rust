@@ -8,7 +8,7 @@ use necsim_core::{
 use crate::array2d::Array2D;
 
 #[allow(clippy::module_name_repetitions)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 #[derive(Debug)]
 pub struct InMemoryHabitat {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
