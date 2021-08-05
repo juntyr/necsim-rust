@@ -7,18 +7,18 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 #[allow(clippy::module_name_repetitions)]
-pub struct UniformTurnoverRate(());
+pub struct UniformTurnoverRate([u8; 0]);
 
 impl Default for UniformTurnoverRate {
     fn default() -> Self {
-        Self(())
+        Self([])
     }
 }
 
 #[contract_trait]
 impl Backup for UniformTurnoverRate {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(())
+        Self([])
     }
 }
 

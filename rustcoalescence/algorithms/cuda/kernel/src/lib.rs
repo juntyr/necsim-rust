@@ -1,10 +1,10 @@
 #![deny(clippy::pedantic)]
 #![no_std]
-#![feature(abi_ptx)]
+#![cfg_attr(target_os = "cuda", feature(abi_ptx))]
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
 #![cfg_attr(target_os = "cuda", feature(panic_info_message))]
-#![feature(atomic_from_mut)]
-#![feature(asm)]
+#![cfg_attr(target_os = "cuda", feature(atomic_from_mut))]
+#![cfg_attr(target_os = "cuda", feature(asm))]
 
 extern crate alloc;
 

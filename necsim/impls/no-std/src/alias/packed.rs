@@ -8,10 +8,11 @@ use necsim_core::{cogs::RngCore, intrinsics::floor};
 #[allow(non_snake_case)]
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
+#[repr(C)]
 pub struct AliasMethodSamplerAtom<E: Copy + PartialEq> {
-    U: f64,
     E: E,
     K: E,
+    U: f64,
 }
 
 impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {

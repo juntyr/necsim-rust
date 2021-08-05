@@ -15,17 +15,24 @@ use super::InMemoryDispersalSampler;
 #[derive(Clone, Debug)]
 #[allow(clippy::module_name_repetitions)]
 #[doc(hidden)]
-pub struct AliasSamplerRange(Range<usize>);
+#[repr(C)]
+pub struct AliasSamplerRange {
+    start: usize,
+    end: usize,
+}
 
 impl From<Range<usize>> for AliasSamplerRange {
     fn from(range: Range<usize>) -> Self {
-        Self(range)
+        Self {
+            start: range.start,
+            end: range.start,
+        }
     }
 }
 
 impl From<AliasSamplerRange> for Range<usize> {
     fn from(range: AliasSamplerRange) -> Self {
-        range.0
+        range.start..range.end
     }
 }
 
