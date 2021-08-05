@@ -8,18 +8,18 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 #[derive(Debug)]
-pub struct NeverEmigrationExit(());
+pub struct NeverEmigrationExit([u8; 0]);
 
 impl Default for NeverEmigrationExit {
     fn default() -> Self {
-        Self(())
+        Self([])
     }
 }
 
 #[contract_trait]
 impl Backup for NeverEmigrationExit {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(())
+        Self([])
     }
 }
 

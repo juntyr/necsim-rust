@@ -8,18 +8,18 @@ use super::EmigrationChoice;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct AlwaysEmigrationChoice(());
+pub struct AlwaysEmigrationChoice([u8; 0]);
 
 impl Default for AlwaysEmigrationChoice {
     fn default() -> Self {
-        Self(())
+        Self([])
     }
 }
 
 #[contract_trait]
 impl Backup for AlwaysEmigrationChoice {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(())
+        Self([])
     }
 }
 
