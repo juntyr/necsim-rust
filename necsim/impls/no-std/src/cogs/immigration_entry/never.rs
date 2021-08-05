@@ -7,18 +7,18 @@ use necsim_core_bond::PositiveF64;
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 #[derive(Debug)]
-pub struct NeverImmigrationEntry(());
+pub struct NeverImmigrationEntry([u8; 0]);
 
 impl Default for NeverImmigrationEntry {
     fn default() -> Self {
-        Self(())
+        Self([])
     }
 }
 
 #[contract_trait]
 impl Backup for NeverImmigrationEntry {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(())
+        Self([])
     }
 }
 

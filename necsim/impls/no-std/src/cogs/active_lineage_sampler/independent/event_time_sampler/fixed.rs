@@ -10,11 +10,11 @@ use super::EventTimeSampler;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
-pub struct FixedEventTimeSampler(());
+pub struct FixedEventTimeSampler([u8; 0]);
 
 impl Default for FixedEventTimeSampler {
     fn default() -> Self {
-        Self(())
+        Self([])
     }
 }
 
