@@ -22,7 +22,6 @@ impl fmt::Display for ClosedUnitF64Error {
 
 #[allow(clippy::unsafe_derive_deserialize)]
 #[derive(Copy, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
 #[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 #[repr(transparent)]
 #[serde(try_from = "f64")]

@@ -10,7 +10,6 @@ use crate::{landscape::IndexedLocation, lineage::GlobalLineageReference};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
 pub struct PackedEvent {
     pub origin: IndexedLocation,
     pub prior_time: NonNegativeF64, // time of the previous event
@@ -21,21 +20,18 @@ pub struct PackedEvent {
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
 pub enum EventType {
     Speciation,
     Dispersal(Dispersal),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
 pub struct Dispersal {
     pub target: IndexedLocation,
     pub interaction: LineageInteraction,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
 pub enum LineageInteraction {
     None,
     Maybe,
@@ -56,7 +52,6 @@ const EXCESSIVE_INTERACTION_ERROR: [(); 8] = [(); core::mem::size_of::<LineageIn
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
 pub struct SpeciationEvent {
     pub origin: IndexedLocation,
     pub prior_time: NonNegativeF64, // time of the previous event
@@ -66,7 +61,6 @@ pub struct SpeciationEvent {
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
 pub struct DispersalEvent {
     pub origin: IndexedLocation,
     pub prior_time: NonNegativeF64, // time of the previous event
