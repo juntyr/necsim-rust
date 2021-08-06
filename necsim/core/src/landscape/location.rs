@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
 #[cfg_attr(feature = "mpi", derive(rsmpi::traits::Equivalence))]
+#[repr(C)]
 pub struct Location {
     x: u32,
     y: u32,
@@ -37,6 +38,7 @@ impl From<IndexedLocation> for Location {
 
 #[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Copy, Hash, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
+#[repr(transparent)]
 struct LocationIndex(NonZeroU32);
 
 #[cfg(feature = "mpi")]
