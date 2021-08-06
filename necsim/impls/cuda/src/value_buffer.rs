@@ -1,7 +1,7 @@
 #[cfg(not(target_os = "cuda"))]
 use core::iter::Iterator;
 
-use rust_cuda::{rustacuda_core::DeviceCopy, utils::exchange::buffer::CudaExchangeBuffer};
+use rust_cuda::utils::{exchange::buffer::CudaExchangeBuffer, stack::StackOnly};
 
 #[cfg(not(target_os = "cuda"))]
 use rust_cuda::rustacuda::{
@@ -13,7 +13,7 @@ use super::utils::MaybeSome;
 
 #[derive(rust_cuda::common::RustToCudaAsRust, rust_cuda::common::LendRustBorrowToCuda)]
 #[allow(clippy::module_name_repetitions)]
-pub struct ValueBuffer<T: Clone + DeviceCopy> {
+pub struct ValueBuffer<T: StackOnly> {
     #[r2cEmbed]
     mask: CudaExchangeBuffer<bool>,
     #[r2cEmbed]
@@ -21,7 +21,7 @@ pub struct ValueBuffer<T: Clone + DeviceCopy> {
 }
 
 #[cfg(not(target_os = "cuda"))]
-impl<T: Clone + DeviceCopy> ValueBuffer<T> {
+impl<T: StackOnly> ValueBuffer<T> {
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     pub fn new(block_size: &BlockSize, grid_size: &GridSize) -> CudaResult<Self> {
@@ -70,7 +70,7 @@ impl<T: Clone + DeviceCopy> ValueBuffer<T> {
 }
 
 #[cfg(target_os = "cuda")]
-impl<T: Clone + DeviceCopy> ValueBuffer<T> {
+impl<T: StackOnly> ValueBuffer<T> {
     pub fn with_value_for_core<F: FnOnce(Option<T>) -> Option<T>>(&mut self, inner: F) {
         let index = rust_cuda::device::utils::index();
 
@@ -93,12 +93,12 @@ impl<T: Clone + DeviceCopy> ValueBuffer<T> {
     }
 }
 
-pub struct ValueRefMut<'v, T: DeviceCopy> {
+pub struct ValueRefMut<'v, T: StackOnly> {
     mask: &'v mut bool,
     value: &'v mut MaybeSome<T>,
 }
 
-impl<'v, T: DeviceCopy> ValueRefMut<'v, T> {
+impl<'v, T: StackOnly> ValueRefMut<'v, T> {
     pub fn take(&mut self) -> Option<T> {
         if *self.mask {
             *self.mask = false;
