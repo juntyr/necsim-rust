@@ -210,8 +210,8 @@ pub fn simulate<
                 //  level
                 while !slow_lineages.is_empty() {
                     // Upload the new tasks from the front of the task queue
-                    for task in task_list.iter_mut() {
-                        *task = slow_lineages.pop_front();
+                    for mut task in task_list.iter_mut() {
+                        task.replace(slow_lineages.pop_front());
                     }
 
                     // Move the task list, event buffer and min speciation sample buffer to CUDA
@@ -238,7 +238,7 @@ pub fn simulate<
                     event_buffer = event_buffer_cuda.move_to_host()?;
 
                     // Fetch the completion of the tasks
-                    for ((spec_sample, next_event_time), task) in min_spec_sample_buffer
+                    for ((mut spec_sample, mut next_event_time), mut task) in min_spec_sample_buffer
                         .iter_mut()
                         .zip(next_event_time_buffer.iter_mut())
                         .zip(task_list.iter_mut())

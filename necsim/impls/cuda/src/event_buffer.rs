@@ -16,13 +16,19 @@ use necsim_core::{
 #[cfg(target_os = "cuda")]
 use necsim_core::impl_report;
 
+use super::utils::MaybeSome;
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(rust_cuda::common::RustToCudaAsRust, rust_cuda::common::LendRustBorrowToCuda)]
 pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
     #[r2cEmbed]
-    speciation_buffer: CudaExchangeBuffer<Option<SpeciationEvent>>,
+    speciation_mask: CudaExchangeBuffer<bool>,
     #[r2cEmbed]
-    dispersal_buffer: CudaExchangeBuffer<Option<DispersalEvent>>,
+    speciation_buffer: CudaExchangeBuffer<MaybeSome<SpeciationEvent>>,
+    #[r2cEmbed]
+    dispersal_mask: CudaExchangeBuffer<bool>,
+    #[r2cEmbed]
+    dispersal_buffer: CudaExchangeBuffer<MaybeSome<DispersalEvent>>,
     max_events: usize,
     event_counter: usize,
     marker: PhantomData<(ReportSpeciation, ReportDispersal)>,
@@ -72,9 +78,17 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
             1_usize // Caching space used to eliminate local memory usage
         };
 
+        let mut speciation_buffer = alloc::vec::Vec::with_capacity(speciation_capacity);
+        speciation_buffer.resize_with(speciation_capacity, || MaybeSome::None);
+
+        let mut dispersal_buffer = alloc::vec::Vec::with_capacity(dispersal_capacity);
+        dispersal_buffer.resize_with(dispersal_capacity, || MaybeSome::None);
+
         Ok(Self {
-            speciation_buffer: CudaExchangeBuffer::new(&None, speciation_capacity)?,
-            dispersal_buffer: CudaExchangeBuffer::new(&None, dispersal_capacity)?,
+            speciation_mask: CudaExchangeBuffer::new(&false, speciation_capacity)?,
+            speciation_buffer: CudaExchangeBuffer::from_vec(speciation_buffer)?,
+            dispersal_mask: CudaExchangeBuffer::new(&false, dispersal_capacity)?,
+            dispersal_buffer: CudaExchangeBuffer::from_vec(dispersal_buffer)?,
             max_events,
             event_counter: 0_usize,
             marker: PhantomData::<(ReportSpeciation, ReportDispersal)>,
@@ -85,16 +99,28 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
     where
         P: Reporter<ReportSpeciation = ReportSpeciation, ReportDispersal = ReportDispersal>,
     {
-        for event in self.dispersal_buffer.iter_mut().filter_map(Option::take) {
-            if ReportDispersal::VALUE {
-                reporter.report_dispersal(&event.into());
+        for (mask, dispersal) in self
+            .dispersal_mask
+            .iter_mut()
+            .zip(self.dispersal_buffer.iter())
+        {
+            if ReportDispersal::VALUE && *mask {
+                reporter.report_dispersal(unsafe { dispersal.assume_some_ref() }.into());
             }
+
+            *mask = false;
         }
 
-        for event in self.speciation_buffer.iter_mut().filter_map(Option::take) {
-            if ReportSpeciation::VALUE {
-                reporter.report_speciation(&event.into());
+        for (mask, speciation) in self
+            .speciation_mask
+            .iter_mut()
+            .zip(self.speciation_buffer.iter())
+        {
+            if ReportSpeciation::VALUE && *mask {
+                reporter.report_speciation(unsafe { speciation.assume_some_ref() }.into());
             }
+
+            *mask = false;
         }
     }
 }
@@ -105,16 +131,24 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
 {
     impl_report!(
         #[debug_requires(
-            self.speciation_buffer[rust_cuda::device::utils::index()].is_none(),
+            !self.speciation_mask.get(rust_cuda::device::utils::index()).copied().unwrap_or(true),
             "does not report extraneous speciation event"
         )]
         speciation(&mut self, event: Used) {
             if ReportSpeciation::VALUE {
-                self.speciation_buffer[rust_cuda::device::utils::index()] = Some(event.clone());
-            } else {
+                let index = rust_cuda::device::utils::index();
+
+                if let Some(mask) = self.speciation_mask.get_mut(index) {
+                    *mask = true;
+
+                    * unsafe {
+                        self.speciation_buffer.get_unchecked_mut(index)
+                    } = MaybeSome::Some(event.clone());
+                }
+            } /*else {
                 // Note: Using this cache avoids the use of local storage
-                self.speciation_buffer[0] = Some(event.clone());
-            }
+                self.speciation_buffer[0] = MaybeSome::Some(event.clone());
+            }*/
         }
     );
 
@@ -125,13 +159,23 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
         )]
         dispersal(&mut self, event: Used) {
             if ReportDispersal::VALUE {
-                self.dispersal_buffer[rust_cuda::device::utils::index() * self.max_events + self.event_counter] = Some(event.clone());
+                let index = (
+                    rust_cuda::device::utils::index() * self.max_events
+                ) + self.event_counter;
+
+                if let Some(mask) = self.dispersal_mask.get_mut(index) {
+                    *mask = true;
+
+                    * unsafe {
+                        self.dispersal_buffer.get_unchecked_mut(index)
+                    } = MaybeSome::Some(event.clone());
+                }
 
                 self.event_counter += 1;
-            } else {
+            } /*else {
                 // Note: Using this cache avoids the use of local storage
                 self.dispersal_buffer[0] = Some(event.clone());
-            }
+            }*/
         }
     );
 
