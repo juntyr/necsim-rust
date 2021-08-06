@@ -8,7 +8,6 @@ use rust_cuda::{
         function::{BlockSize, GridSize},
         memory::{CopyDestination, DeviceBox},
     },
-    rustacuda_core::DeviceCopy,
 };
 
 use rust_cuda::{
@@ -47,7 +46,7 @@ pub fn simulate<
     'l,
     H: Habitat + RustToCuda,
     G: PrimeableRng + RustToCuda,
-    R: LineageReference<H> + DeviceCopy,
+    R: LineageReference<H>,
     S: LineageStore<H, R> + RustToCuda,
     X: EmigrationExit<H, G, R, S> + RustToCuda,
     D: DispersalSampler<H, G> + RustToCuda,
@@ -229,7 +228,7 @@ pub fn simulate<
                         &mut total_time_max,
                         &mut total_steps_sum,
                         step_slice.get(),
-                        level_time,
+                        level_time.into(),
                     )?;
 
                     min_spec_sample_buffer = min_spec_sample_buffer_cuda.move_to_host()?;

@@ -16,7 +16,6 @@ use rust_cuda::{
         function::{BlockSize, Function, GridSize},
         stream::Stream,
     },
-    rustacuda_core::DeviceCopy,
 };
 
 use rustcoalescence_algorithms_cuda_kernel::Kernel;
@@ -27,7 +26,7 @@ mod link;
 pub struct SimulationKernel<
     H: Habitat + RustToCuda,
     G: PrimeableRng + RustToCuda,
-    R: LineageReference<H> + DeviceCopy,
+    R: LineageReference<H>,
     S: LineageStore<H, R> + RustToCuda,
     X: EmigrationExit<H, G, R, S> + RustToCuda,
     D: DispersalSampler<H, G> + RustToCuda,
@@ -53,7 +52,7 @@ pub struct SimulationKernel<
 impl<
         H: Habitat + RustToCuda,
         G: PrimeableRng + RustToCuda,
-        R: LineageReference<H> + DeviceCopy,
+        R: LineageReference<H>,
         S: LineageStore<H, R> + RustToCuda,
         X: EmigrationExit<H, G, R, S> + RustToCuda,
         D: DispersalSampler<H, G> + RustToCuda,
@@ -88,7 +87,7 @@ impl<
 impl<
         H: Habitat + RustToCuda,
         G: PrimeableRng + RustToCuda,
-        R: LineageReference<H> + DeviceCopy,
+        R: LineageReference<H>,
         S: LineageStore<H, R> + RustToCuda,
         X: EmigrationExit<H, G, R, S> + RustToCuda,
         D: DispersalSampler<H, G> + RustToCuda,
