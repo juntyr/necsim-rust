@@ -36,23 +36,20 @@ pub fn simulate_and_report_local_step_or_finish<
         |active_lineage_sampler, simulation, rng| {
             // Fetch the next `chosen_lineage` to be simulated with its
             // `dispersal_origin` and `event_time`
-            active_lineage_sampler.with_next_active_lineage_indexed_location_prior_event_time(
+            active_lineage_sampler.with_next_active_lineage_and_event_time(
                 simulation,
                 rng,
-                |simulation, rng, chosen_lineage, dispersal_origin, prior_time, event_time| {
+                |simulation, rng, chosen_lineage, event_time| {
                     // Sample the next `event` for the `chosen_lineage`
                     //  or emigrate the `chosen_lineage`
                     simulation
                         .with_mut_split_event_sampler(|event_sampler, simulation| {
-                            event_sampler
-                                .sample_event_for_lineage_at_indexed_location_time_or_emigrate(
-                                    chosen_lineage,
-                                    dispersal_origin,
-                                    prior_time,
-                                    event_time,
-                                    simulation,
-                                    rng,
-                                )
+                            event_sampler.sample_event_for_lineage_at_event_time_or_emigrate(
+                                chosen_lineage,
+                                event_time,
+                                simulation,
+                                rng,
+                            )
                         })
                         .map_or_else(
                             || {

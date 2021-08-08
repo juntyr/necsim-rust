@@ -69,8 +69,8 @@ impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>>
         lineage_store: &S,
         coalescence_rng_sample: CoalescenceRngSample,
     ) -> (IndexedLocation, GlobalLineageReference) {
-        let lineages_at_location = lineage_store
-            .get_active_local_lineage_references_at_location_unordered(&location, habitat);
+        let lineages_at_location =
+            lineage_store.get_local_lineage_references_at_location_unordered(&location, habitat);
 
         #[allow(clippy::cast_possible_truncation)]
         let population = lineages_at_location.len() as u32;
@@ -80,12 +80,9 @@ impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>>
 
         let lineage = &lineage_store[chosen_coalescence];
 
-        let indexed_location = IndexedLocation::new(
-            location,
-            unsafe { lineage.indexed_location().unwrap_unchecked() }.index(),
-        );
+        let indexed_location = IndexedLocation::new(location, lineage.indexed_location.index());
 
-        (indexed_location, lineage.global_reference().clone())
+        (indexed_location, lineage.global_reference.clone())
     }
 
     #[must_use]
@@ -101,7 +98,7 @@ impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>>
 
         #[allow(clippy::cast_precision_loss)]
         let population = (lineage_store
-            .get_active_local_lineage_references_at_location_unordered(location, habitat)
+            .get_local_lineage_references_at_location_unordered(location, habitat)
             .len()
             - usize::from(lineage_store_includes_self)) as f64;
         let habitat = f64::from(habitat.get_habitat_at_location(location));

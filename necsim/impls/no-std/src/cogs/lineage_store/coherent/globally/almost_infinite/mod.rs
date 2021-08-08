@@ -20,7 +20,7 @@ mod store;
 #[derive(Debug)]
 pub struct AlmostInfiniteLineageStore {
     lineages_store: Slab<Lineage>,
-    location_to_lineage_references: HashMap<Location, InMemoryLineageReference>,
+    location_to_lineage_reference: HashMap<Location, InMemoryLineageReference>,
 }
 
 impl Index<InMemoryLineageReference> for AlmostInfiniteLineageStore {
@@ -61,7 +61,7 @@ impl AlmostInfiniteLineageStore {
 
         Self {
             lineages_store,
-            location_to_lineage_references,
+            location_to_lineage_reference: location_to_lineage_references,
         }
     }
 }
@@ -71,7 +71,7 @@ impl Backup for AlmostInfiniteLineageStore {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             lineages_store: self.lineages_store.clone(),
-            location_to_lineage_references: self.location_to_lineage_references.clone(),
+            location_to_lineage_reference: self.location_to_lineage_reference.clone(),
         }
     }
 }

@@ -10,6 +10,7 @@
 #![feature(option_result_unwrap_unchecked)]
 #![feature(drain_filter)]
 #![feature(specialization)]
+#![feature(min_type_alias_impl_trait)]
 
 extern crate alloc;
 

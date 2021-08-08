@@ -86,9 +86,7 @@ pub fn simulate<
         if let Some(previous_speciation_sample) = previous_speciation_sample {
             if min_spec_samples.insert(previous_speciation_sample) {
                 if let Some(previous_task) = previous_task {
-                    if previous_task.is_active() {
-                        lineages.push_back(previous_task);
-                    }
+                    lineages.push_back(previous_task);
                 }
             }
         }

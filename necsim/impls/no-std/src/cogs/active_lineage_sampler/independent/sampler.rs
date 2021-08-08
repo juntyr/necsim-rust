@@ -3,7 +3,6 @@ use necsim_core::{
         ActiveLineageSampler, DispersalSampler, EmigrationExit, EmptyActiveLineageSamplerError,
         Habitat, PeekableActiveLineageSampler, PrimeableRng, SpeciationProbability, TurnoverRate,
     },
-    landscape::IndexedLocation,
     lineage::{GlobalLineageReference, Lineage},
     simulation::partial::active_lineager_sampler::PartialSimulation,
 };
@@ -44,21 +43,19 @@ impl<
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
-        self.active_lineage
-            .as_ref()
-            .map_or(0, |lineage| lineage.is_active() as usize)
+        self.active_lineage.is_some() as usize
     }
 
     fn get_last_event_time(&self) -> NonNegativeF64 {
         self.active_lineage
             .as_ref()
-            .map_or(NonNegativeF64::zero(), Lineage::last_event_time)
+            .map_or(NonNegativeF64::zero(), |lineage| lineage.last_event_time)
     }
 
     #[must_use]
     #[allow(clippy::type_complexity)]
     #[inline]
-    fn pop_active_lineage_indexed_location_prior_event_time(
+    fn pop_active_lineage_and_event_time(
         &mut self,
         simulation: &mut PartialSimulation<
             H,
@@ -73,28 +70,17 @@ impl<
             IndependentEventSampler<H, G, X, D, T, N>,
         >,
         rng: &mut G,
-    ) -> Option<(
-        GlobalLineageReference,
-        IndexedLocation,
-        NonNegativeF64,
-        PositiveF64,
-    )> {
+    ) -> Option<(Lineage, PositiveF64)> {
         let next_event_time = self
             .peek_time_of_next_event(&simulation.habitat, &simulation.turnover_rate, rng)
             .ok()?;
         self.next_event_time = None;
 
-        let chosen_lineage = self.active_lineage.as_mut()?;
+        // Note: Option::take would be better but uses local memory
+        let lineage = self.active_lineage.clone()?;
+        self.active_lineage = None;
 
-        let (lineage_indexed_location, prior_event_time) =
-            unsafe { chosen_lineage.remove_from_location(next_event_time) };
-
-        Some((
-            chosen_lineage.global_reference().clone(),
-            lineage_indexed_location,
-            prior_event_time,
-            next_event_time,
-        ))
+        Some((lineage, next_event_time))
     }
 
     #[debug_requires(
@@ -103,11 +89,9 @@ impl<
     )]
     #[allow(clippy::type_complexity)]
     #[inline]
-    fn push_active_lineage_to_indexed_location(
+    fn push_active_lineage(
         &mut self,
-        _lineage_reference: GlobalLineageReference,
-        indexed_location: IndexedLocation,
-        _time: PositiveF64,
+        lineage: Lineage,
         _simulation: &mut PartialSimulation<
             H,
             G,
@@ -122,35 +106,7 @@ impl<
         >,
         _rng: &mut G,
     ) {
-        if let Some(active_lineage) = &mut self.active_lineage {
-            unsafe {
-                active_lineage.move_to_indexed_location(indexed_location);
-            }
-        }
-    }
-
-    #[allow(clippy::type_complexity)]
-    fn insert_new_lineage_to_indexed_location(
-        &mut self,
-        _global_reference: GlobalLineageReference,
-        _indexed_location: IndexedLocation,
-        _time: PositiveF64,
-        _simulation: &mut PartialSimulation<
-            H,
-            G,
-            GlobalLineageReference,
-            IndependentLineageStore<H>,
-            X,
-            D,
-            IndependentCoalescenceSampler<H>,
-            T,
-            N,
-            IndependentEventSampler<H, G, X, D, T, N>,
-        >,
-        _rng: &mut G,
-    ) {
-        // Ignoring this call is only valid because there will never be any
-        //  dynamic immigration in the independent algorithm
+        self.active_lineage = Some(lineage);
     }
 }
 
@@ -188,22 +144,18 @@ impl<
         if self.next_event_time.is_none() {
             if let Some(active_lineage) = &self.active_lineage {
                 // Check for extraneously simulated (inactive) lineages
-                let lineage_indexed_location = active_lineage
-                    .indexed_location()
-                    .ok_or(EmptyActiveLineageSamplerError)?;
-
                 let next_event_time = self
                     .event_time_sampler
                     .next_event_time_at_indexed_location_weakly_after(
-                        lineage_indexed_location,
-                        active_lineage.last_event_time(),
+                        &active_lineage.indexed_location,
+                        active_lineage.last_event_time,
                         habitat,
                         rng,
                         turnover_rate,
                     );
 
                 self.next_event_time = Some(PositiveF64::max_after(
-                    active_lineage.last_event_time(),
+                    active_lineage.last_event_time,
                     next_event_time,
                 ));
             }

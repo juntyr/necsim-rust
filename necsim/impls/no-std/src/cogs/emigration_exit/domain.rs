@@ -8,7 +8,7 @@ use necsim_core::{
         LocallyCoherentLineageStore, RngCore,
     },
     landscape::{IndexedLocation, Location},
-    lineage::MigratingLineage,
+    lineage::{GlobalLineageReference, MigratingLineage},
     simulation::partial::emigration_exit::PartialSimulation,
 };
 
@@ -56,21 +56,27 @@ impl<
     ), "lineage only emigrates to other subdomains")]
     fn optionally_emigrate(
         &mut self,
-        lineage_reference: R,
+        global_reference: GlobalLineageReference,
         dispersal_origin: IndexedLocation,
         dispersal_target: Location,
         prior_time: NonNegativeF64,
         event_time: PositiveF64,
         simulation: &mut PartialSimulation<H, G, R, S>,
         rng: &mut G,
-    ) -> Option<(R, IndexedLocation, Location, NonNegativeF64, PositiveF64)> {
+    ) -> Option<(
+        GlobalLineageReference,
+        IndexedLocation,
+        Location,
+        NonNegativeF64,
+        PositiveF64,
+    )> {
         let target_subdomain = self
             .decomposition
             .map_location_to_subdomain_rank(&dispersal_target, &simulation.habitat);
 
         if target_subdomain == self.decomposition.get_subdomain_rank() {
             return Some((
-                lineage_reference,
+                global_reference,
                 dispersal_origin,
                 dispersal_target,
                 prior_time,
@@ -81,7 +87,7 @@ impl<
         self.emigrants.push((
             target_subdomain,
             MigratingLineage {
-                global_reference: simulation.lineage_store.emigrate(lineage_reference),
+                global_reference,
                 dispersal_origin,
                 dispersal_target,
                 prior_time,
