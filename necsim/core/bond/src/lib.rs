@@ -1,7 +1,9 @@
 #![deny(clippy::pedantic)]
 #![no_std]
-#![feature(rustc_attrs)]
 #![feature(total_cmp)]
+#![feature(const_fn_floating_point_arithmetic)]
+#![feature(const_float_bits_conv)]
+#![feature(const_float_classify)]
 
 mod closed_unit_f64;
 mod non_negative_f64;

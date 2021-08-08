@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{CoalescenceRngSample, Habitat, LineageReference, LocallyCoherentLineageStore},
-    event::LineageInteraction,
     landscape::{IndexedLocation, Location},
+    lineage::LineageInteraction,
 };
 
 #[must_use]

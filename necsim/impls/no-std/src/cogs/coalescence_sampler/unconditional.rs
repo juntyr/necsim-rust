@@ -5,8 +5,8 @@ use necsim_core::{
         Backup, CoalescenceRngSample, CoalescenceSampler, Habitat, LineageReference,
         LocallyCoherentLineageStore,
     },
-    event::LineageInteraction,
     landscape::{IndexedLocation, Location},
+    lineage::LineageInteraction,
 };
 
 use super::optional_coalescence;

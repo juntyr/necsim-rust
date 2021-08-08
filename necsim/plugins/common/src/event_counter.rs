@@ -1,8 +1,9 @@
 use std::{fmt, fmt::Write};
 
 use necsim_core::{
-    event::{DispersalEvent, LineageInteraction, SpeciationEvent},
+    event::{DispersalEvent, SpeciationEvent},
     impl_finalise, impl_report,
+    lineage::LineageInteraction,
     reporter::Reporter,
 };
 use necsim_core_bond::NonNegativeF64;
@@ -79,14 +80,10 @@ impl Reporter for EventCounterReporter {
         self.last_parent_prior_time = Some(dispersal.prior_time);
 
         let self_dispersal = dispersal.origin == dispersal.target;
-        let coalescence = match dispersal.interaction {
-            LineageInteraction::Coalescence(_) => true,
-            LineageInteraction::Maybe => {
-                self.late_dispersal_coalescence += 1;
-                return
-            },
-            LineageInteraction::None => false,
-        };
+        let coalescence = if dispersal.interaction == LineageInteraction::Maybe {
+            self.late_dispersal_coalescence += 1;
+            return
+        } else { dispersal.interaction.is_coalescence() };
 
         match (self_dispersal, coalescence) {
             (true, true) => {

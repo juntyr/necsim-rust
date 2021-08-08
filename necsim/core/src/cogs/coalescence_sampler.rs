@@ -4,8 +4,8 @@ use necsim_core_bond::ClosedUnitF64;
 
 use crate::{
     cogs::{Backup, RngCore},
-    event::LineageInteraction,
     landscape::{IndexedLocation, Location},
+    lineage::LineageInteraction,
 };
 
 use super::{Habitat, LineageReference, LineageStore};

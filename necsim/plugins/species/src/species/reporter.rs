@@ -1,4 +1,4 @@
-use necsim_core::{event::LineageInteraction, impl_finalise, impl_report, reporter::Reporter};
+use necsim_core::{impl_finalise, impl_report, reporter::Reporter};
 
 use super::SpeciesLocationsReporter;
 
@@ -37,7 +37,7 @@ impl Reporter for SpeciesLocationsReporter {
                     self.store_individual_coalescence(&dispersal.global_lineage_reference, &parent);
                 }
             }
-        } else if let LineageInteraction::Coalescence(parent) = &dispersal.interaction {
+        } else if let Some(ref parent) = dispersal.interaction.parent() {
             self.store_individual_coalescence(&dispersal.global_lineage_reference, parent);
         }
 
