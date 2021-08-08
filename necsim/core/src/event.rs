@@ -11,12 +11,19 @@ use crate::{landscape::IndexedLocation, lineage::GlobalLineageReference};
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PackedEvent {
-    pub origin: IndexedLocation,
+    pub global_lineage_reference: GlobalLineageReference,
     pub prior_time: NonNegativeF64, // time of the previous event
     pub event_time: PositiveF64,    // time of this event
-    pub global_lineage_reference: GlobalLineageReference,
+    pub origin: IndexedLocation,
     pub r#type: EventType,
 }
+
+#[allow(dead_code)]
+const EXCESSIVE_OPTION_PACKED_EVENT_ERROR: [(); 1 - {
+    const ASSERT: bool =
+        core::mem::size_of::<Option<PackedEvent>>() == core::mem::size_of::<PackedEvent>();
+    ASSERT
+} as usize] = [];
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -38,6 +45,12 @@ pub enum LineageInteraction {
     Coalescence(GlobalLineageReference),
 }
 
+#[allow(dead_code)]
+const EXCESSIVE_LINEAGE_INTERACTION_ERROR: [(); 1 - {
+    const ASSERT: bool = core::mem::size_of::<LineageInteraction>() == 8;
+    ASSERT
+} as usize] = [];
+
 impl From<Option<GlobalLineageReference>> for LineageInteraction {
     fn from(value: Option<GlobalLineageReference>) -> Self {
         match value {
@@ -47,43 +60,62 @@ impl From<Option<GlobalLineageReference>> for LineageInteraction {
     }
 }
 
-#[allow(dead_code)]
-const EXCESSIVE_INTERACTION_ERROR: [(); 8] = [(); core::mem::size_of::<LineageInteraction>()];
-
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone)]
+#[repr(C)]
 pub struct SpeciationEvent {
-    pub origin: IndexedLocation,
+    pub global_lineage_reference: GlobalLineageReference,
     pub prior_time: NonNegativeF64, // time of the previous event
     pub event_time: PositiveF64,    // time of this event
-    pub global_lineage_reference: GlobalLineageReference,
+    pub origin: IndexedLocation,
 }
 
+#[allow(dead_code)]
+const EXCESSIVE_OPTION_SPECIATION_EVENT_ERROR: [(); 1 - {
+    const ASSERT: bool =
+        core::mem::size_of::<Option<SpeciationEvent>>() == core::mem::size_of::<SpeciationEvent>();
+    ASSERT
+} as usize] = [];
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone)]
+#[repr(C)]
 pub struct DispersalEvent {
-    pub origin: IndexedLocation,
+    pub global_lineage_reference: GlobalLineageReference,
     pub prior_time: NonNegativeF64, // time of the previous event
     pub event_time: PositiveF64,    // time of this event
-    pub global_lineage_reference: GlobalLineageReference,
+    pub origin: IndexedLocation,
     pub target: IndexedLocation,
     pub interaction: LineageInteraction,
 }
 
+#[allow(dead_code)]
+const EXCESSIVE_OPTION_DISPERSAL_EVENT_ERROR: [(); 1 - {
+    const ASSERT: bool =
+        core::mem::size_of::<Option<DispersalEvent>>() == core::mem::size_of::<DispersalEvent>();
+    ASSERT
+} as usize] = [];
+
 #[allow(clippy::module_name_repetitions)]
-//#[derive(Debug, Clone)]
 pub enum TypedEvent {
     Speciation(SpeciationEvent),
     Dispersal(DispersalEvent),
 }
 
+#[allow(dead_code)]
+const EXCESSIVE_OPTION_TYPED_EVENT_ERROR: [(); 1 - {
+    const ASSERT: bool =
+        core::mem::size_of::<Option<TypedEvent>>() == core::mem::size_of::<TypedEvent>();
+    ASSERT
+} as usize] = [];
+
 impl From<SpeciationEvent> for PackedEvent {
     fn from(event: SpeciationEvent) -> Self {
         Self {
-            origin: event.origin,
+            global_lineage_reference: event.global_lineage_reference,
             prior_time: event.prior_time,
             event_time: event.event_time,
-            global_lineage_reference: event.global_lineage_reference,
+            origin: event.origin,
             r#type: EventType::Speciation,
         }
     }
@@ -92,10 +124,10 @@ impl From<SpeciationEvent> for PackedEvent {
 impl From<DispersalEvent> for PackedEvent {
     fn from(event: DispersalEvent) -> Self {
         Self {
-            origin: event.origin,
+            global_lineage_reference: event.global_lineage_reference,
             prior_time: event.prior_time,
             event_time: event.event_time,
-            global_lineage_reference: event.global_lineage_reference,
+            origin: event.origin,
             r#type: EventType::Dispersal(Dispersal {
                 target: event.target,
                 interaction: event.interaction,
@@ -117,19 +149,19 @@ impl From<PackedEvent> for TypedEvent {
     fn from(event: PackedEvent) -> Self {
         match event.r#type {
             EventType::Speciation => Self::Speciation(SpeciationEvent {
-                origin: event.origin,
+                global_lineage_reference: event.global_lineage_reference,
                 prior_time: event.prior_time,
                 event_time: event.event_time,
-                global_lineage_reference: event.global_lineage_reference,
+                origin: event.origin,
             }),
             EventType::Dispersal(Dispersal {
                 target,
                 interaction,
             }) => Self::Dispersal(DispersalEvent {
-                origin: event.origin,
+                global_lineage_reference: event.global_lineage_reference,
                 prior_time: event.prior_time,
                 event_time: event.event_time,
-                global_lineage_reference: event.global_lineage_reference,
+                origin: event.origin,
                 target,
                 interaction,
             }),
