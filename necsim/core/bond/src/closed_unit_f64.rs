@@ -55,8 +55,8 @@ impl ClosedUnitF64 {
     /// # Errors
     ///
     /// Returns `ClosedUnitF64Error` if not `0.0 <= value <= 1.0`
-    pub fn new(value: f64) -> Result<Self, ClosedUnitF64Error> {
-        if (0.0..=1.0).contains(&value) {
+    pub const fn new(value: f64) -> Result<Self, ClosedUnitF64Error> {
+        if value >= 0.0_f64 && value <= 1.0_f64 {
             Ok(Self(value))
         } else {
             Err(ClosedUnitF64Error(value))
@@ -87,7 +87,7 @@ impl ClosedUnitF64 {
     }
 
     #[must_use]
-    pub fn one_minus(self) -> Self {
+    pub const fn one_minus(self) -> Self {
         Self(1.0_f64 - self.0)
     }
 }

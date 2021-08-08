@@ -2,9 +2,8 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{Backup, CoalescenceRngSample, CoalescenceSampler, Habitat},
-    event::LineageInteraction,
     landscape::{IndexedLocation, Location},
-    lineage::GlobalLineageReference,
+    lineage::{GlobalLineageReference, LineageInteraction},
 };
 
 use crate::cogs::lineage_store::independent::IndependentLineageStore;
@@ -33,7 +32,7 @@ impl<H: Habitat> CoalescenceSampler<H, GlobalLineageReference, IndependentLineag
     for IndependentCoalescenceSampler<H>
 {
     #[must_use]
-    #[debug_ensures(matches!(ret.1, LineageInteraction::Maybe), "always reports maybe")]
+    #[debug_ensures(ret.1 == LineageInteraction::Maybe, "always reports maybe")]
     fn sample_interaction_at_location(
         &self,
         location: Location,

@@ -51,7 +51,7 @@ impl PositiveUnitF64 {
     /// # Errors
     ///
     /// Returns `PositiveUnitF64Error` if not `0.0 < value <= 1.0`
-    pub fn new(value: f64) -> Result<Self, PositiveUnitF64Error> {
+    pub const fn new(value: f64) -> Result<Self, PositiveUnitF64Error> {
         if value > 0.0 && value <= 1.0 {
             Ok(Self(value))
         } else {

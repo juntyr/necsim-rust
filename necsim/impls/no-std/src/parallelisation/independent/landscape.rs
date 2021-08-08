@@ -7,9 +7,9 @@ use necsim_core::{
         ActiveLineageSampler, DispersalSampler, Habitat, MinSpeciationTrackingEventSampler,
         PrimeableRng, SingularActiveLineageSampler, SpeciationProbability, TurnoverRate,
     },
-    event::{DispersalEvent, LineageInteraction},
+    event::DispersalEvent,
     landscape::IndexedLocation,
-    lineage::{GlobalLineageReference, Lineage, MigratingLineage},
+    lineage::{GlobalLineageReference, Lineage, LineageInteraction, MigratingLineage},
     reporter::Reporter,
     simulation::Simulation,
 };

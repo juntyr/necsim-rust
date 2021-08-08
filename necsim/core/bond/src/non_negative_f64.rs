@@ -56,7 +56,7 @@ impl NonNegativeF64 {
     /// # Errors
     ///
     /// Returns `NonNegativeF64Error` if not `0.0 <= value`
-    pub fn new(value: f64) -> Result<Self, NonNegativeF64Error> {
+    pub const fn new(value: f64) -> Result<Self, NonNegativeF64Error> {
         if value >= 0.0 {
             Ok(Self(value))
         } else {

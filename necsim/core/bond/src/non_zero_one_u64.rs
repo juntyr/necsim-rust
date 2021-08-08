@@ -1,4 +1,4 @@
-use core::{convert::TryFrom, fmt};
+use core::{convert::TryFrom, fmt, num::NonZeroU64};
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -13,22 +13,18 @@ impl fmt::Display for NonZeroOneU64Error {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
-#[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 #[repr(transparent)]
-#[rustc_layout_scalar_valid_range_start(2)]
-#[rustc_nonnull_optimization_guaranteed]
 #[serde(try_from = "u64")]
-pub struct NonZeroOneU64(u64);
+pub struct NonZeroOneU64(NonZeroU64);
 
 impl NonZeroOneU64 {
     /// # Errors
     ///
     /// Returns `NonZeroOneU64Error` if not `1 < value`
-    pub fn new(value: u64) -> Result<Self, NonZeroOneU64Error> {
-        if value > 1 {
-            Ok(unsafe { Self(value) })
-        } else {
-            Err(NonZeroOneU64Error(value))
+    pub const fn new(value: u64) -> Result<Self, NonZeroOneU64Error> {
+        match NonZeroU64::new(value) {
+            Some(inner) if value > 1 => Ok(Self(inner)),
+            _ => Err(NonZeroOneU64Error(value)),
         }
     }
 
@@ -39,12 +35,12 @@ impl NonZeroOneU64 {
     ///
     /// The value must not be zero or one.
     pub const unsafe fn new_unchecked(value: u64) -> Self {
-        Self(value)
+        Self(NonZeroU64::new_unchecked(value))
     }
 
     #[must_use]
     pub const fn get(self) -> u64 {
-        self.0
+        self.0.get()
     }
 }
 
