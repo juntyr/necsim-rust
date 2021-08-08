@@ -7,7 +7,7 @@ use crate::{
         TurnoverRate,
     },
     event::{DispersalEvent, LineageInteraction},
-    lineage::MigratingLineage,
+    lineage::{Lineage, MigratingLineage},
     reporter::Reporter,
     simulation::Simulation,
 };
@@ -65,10 +65,12 @@ pub fn simulate_and_report_immigration_step<
             // In the event of migration without coalescence, the lineage has
             //  to be added to the active lineage sampler and lineage store
             if !matches!(interaction, LineageInteraction::Coalescence(_)) {
-                active_lineage_sampler.insert_new_lineage_to_indexed_location(
-                    migrating_lineage.global_reference.clone(),
-                    dispersal_target.clone(),
-                    migrating_lineage.event_time,
+                active_lineage_sampler.push_active_lineage(
+                    Lineage {
+                        global_reference: migrating_lineage.global_reference.clone(),
+                        indexed_location: dispersal_target.clone(),
+                        last_event_time: migrating_lineage.event_time.into(),
+                    },
                     simulation,
                     rng,
                 );

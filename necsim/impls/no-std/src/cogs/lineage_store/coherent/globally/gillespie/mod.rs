@@ -69,7 +69,7 @@ impl<'h, H: 'h + Habitat> GillespieLineageStore<H> {
 
             let lineage = Lineage::new(indexed_location.clone(), origin_sampler.habitat());
 
-            let global_reference = lineage.global_reference().clone();
+            let global_reference = lineage.global_reference.clone();
             let local_reference = InMemoryLineageReference::from(lineages_store.insert(lineage));
 
             indexed_location_to_lineage_reference.insert(

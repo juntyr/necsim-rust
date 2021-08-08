@@ -21,7 +21,7 @@ pub fn sample_interaction_at_location<
     let indexed_location = IndexedLocation::new(location, chosen_coalescence_index);
 
     let optional_coalescence = lineage_store
-        .get_active_global_lineage_reference_at_indexed_location(&indexed_location, habitat)
+        .get_global_lineage_reference_at_indexed_location(&indexed_location, habitat)
         .cloned();
 
     (indexed_location, optional_coalescence.into())

@@ -7,11 +7,10 @@ use necsim_core::{
         SpeciationSample, TurnoverRate,
     },
     event::{DispersalEvent, PackedEvent, SpeciationEvent},
-    landscape::IndexedLocation,
-    lineage::GlobalLineageReference,
+    lineage::{GlobalLineageReference, Lineage},
     simulation::partial::event_sampler::PartialSimulation,
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::PositiveF64;
 
 use crate::cogs::{
     coalescence_sampler::independent::IndependentCoalescenceSampler,
@@ -98,11 +97,13 @@ impl<
     #[must_use]
     #[allow(clippy::type_complexity, clippy::shadow_unrelated)]
     #[inline]
-    fn sample_event_for_lineage_at_indexed_location_time_or_emigrate(
+    fn sample_event_for_lineage_at_event_time_or_emigrate(
         &mut self,
-        lineage_reference: GlobalLineageReference,
-        indexed_location: IndexedLocation,
-        prior_time: NonNegativeF64,
+        Lineage {
+            global_reference,
+            last_event_time: prior_time,
+            indexed_location: dispersal_origin,
+        }: Lineage,
         event_time: PositiveF64,
         simulation: &mut PartialSimulation<
             H,
@@ -122,14 +123,12 @@ impl<
         let speciation_sample = rng.sample_uniform();
 
         let min_speciation_sample =
-            SpeciationSample::new(indexed_location.clone(), event_time, speciation_sample);
+            SpeciationSample::new(dispersal_origin.clone(), event_time, speciation_sample);
 
         match &self.min_spec_sample {
             Some(spec_sample) if spec_sample <= &min_speciation_sample => (),
             _ => self.min_spec_sample = Some(min_speciation_sample),
         }
-
-        let dispersal_origin = indexed_location;
 
         if speciation_sample
             < simulation
@@ -144,7 +143,7 @@ impl<
                     origin: dispersal_origin,
                     prior_time,
                     event_time,
-                    global_lineage_reference: lineage_reference,
+                    global_lineage_reference: global_reference,
                 }
                 .into(),
             )
@@ -156,10 +155,10 @@ impl<
             );
 
             // Check for emigration and return None iff lineage emigrated
-            let (lineage_reference, dispersal_origin, dispersal_target, prior_time, event_time) =
+            let (global_reference, dispersal_origin, dispersal_target, prior_time, event_time) =
                 simulation.with_mut_split_emigration_exit(|emigration_exit, simulation| {
                     emigration_exit.optionally_emigrate(
-                        lineage_reference,
+                        global_reference,
                         dispersal_origin,
                         dispersal_target,
                         prior_time,
@@ -183,7 +182,7 @@ impl<
                     origin: dispersal_origin,
                     prior_time,
                     event_time,
-                    global_lineage_reference: lineage_reference,
+                    global_lineage_reference: global_reference,
                     target: dispersal_target,
                     interaction,
                 }

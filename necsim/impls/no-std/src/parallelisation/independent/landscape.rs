@@ -100,9 +100,7 @@ pub fn simulate<
         if let Some(previous_speciation_sample) = previous_speciation_sample {
             if min_spec_samples.insert(previous_speciation_sample) {
                 if let Some(previous_task) = previous_task {
-                    if previous_task.is_active() {
-                        lineages.push_back(previous_task);
-                    }
+                    lineages.push_back(previous_task);
                 }
             }
         }
@@ -168,11 +166,11 @@ pub fn simulate<
             local_immigration_count += Wrapping(1_u64);
 
             // Append the new Lineage to the local task list
-            lineages.push_back(Lineage::immigrate(
+            lineages.push_back(Lineage {
                 global_reference,
-                dispersal_target,
-                event_time,
-            ));
+                indexed_location: dispersal_target,
+                last_event_time: event_time.into(),
+            });
         }
 
         // Report any immigration events
