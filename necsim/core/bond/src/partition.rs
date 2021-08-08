@@ -37,12 +37,12 @@ impl Partition {
     }
 
     #[must_use]
-    pub fn rank(self) -> u32 {
+    pub const fn rank(self) -> u32 {
         self.rank
     }
 
     #[must_use]
-    pub fn partitions(self) -> NonZeroU32 {
+    pub const fn partitions(self) -> NonZeroU32 {
         self.partitions
     }
 }

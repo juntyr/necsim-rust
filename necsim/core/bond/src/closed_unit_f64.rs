@@ -67,22 +67,22 @@ impl ClosedUnitF64 {
     ///
     /// Only safe iff `0.0 <= value <= 1.0`
     #[must_use]
-    pub unsafe fn new_unchecked(value: f64) -> Self {
+    pub const unsafe fn new_unchecked(value: f64) -> Self {
         Self(value)
     }
 
     #[must_use]
-    pub fn zero() -> Self {
+    pub const fn zero() -> Self {
         Self(0.0_f64)
     }
 
     #[must_use]
-    pub fn one() -> Self {
+    pub const fn one() -> Self {
         Self(1.0_f64)
     }
 
     #[must_use]
-    pub fn get(self) -> f64 {
+    pub const fn get(self) -> f64 {
         self.0
     }
 

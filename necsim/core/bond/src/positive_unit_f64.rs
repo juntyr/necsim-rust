@@ -60,7 +60,7 @@ impl PositiveUnitF64 {
     }
 
     #[must_use]
-    pub fn get(self) -> f64 {
+    pub const fn get(self) -> f64 {
         self.0
     }
 }

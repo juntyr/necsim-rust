@@ -38,12 +38,12 @@ impl NonZeroOneU64 {
     /// # Safety
     ///
     /// The value must not be zero or one.
-    pub unsafe fn new_unchecked(value: u64) -> Self {
+    pub const unsafe fn new_unchecked(value: u64) -> Self {
         Self(value)
     }
 
     #[must_use]
-    pub fn get(self) -> u64 {
+    pub const fn get(self) -> u64 {
         self.0
     }
 }
