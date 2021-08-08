@@ -34,6 +34,7 @@ pub struct IndependentEventSampler<
     T: TurnoverRate<H>,
     N: SpeciationProbability<H>,
 > {
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     min_spec_sample: Option<SpeciationSample>,
     marker: PhantomData<(H, G, X, D, T, N)>,
 }
@@ -122,13 +123,12 @@ impl<
 
         let speciation_sample = rng.sample_uniform();
 
-        let min_speciation_sample =
-            SpeciationSample::new(dispersal_origin.clone(), event_time, speciation_sample);
-
-        match &self.min_spec_sample {
-            Some(spec_sample) if spec_sample <= &min_speciation_sample => (),
-            _ => self.min_spec_sample = Some(min_speciation_sample),
-        }
+        SpeciationSample::update_min(
+            &mut self.min_spec_sample,
+            speciation_sample,
+            event_time,
+            &dispersal_origin,
+        );
 
         if speciation_sample
             < simulation

@@ -1,7 +1,4 @@
-use core::{
-    cmp::Ordering,
-    hash::{Hash, Hasher},
-};
+use core::hash::{Hash, Hasher};
 
 use necsim_core_bond::{ClosedUnitF64, PositiveF64};
 
@@ -48,8 +45,8 @@ pub trait EventSampler<
 #[repr(C)]
 pub struct SpeciationSample {
     speciation_sample: ClosedUnitF64,
-    time: PositiveF64,
-    indexed_location: IndexedLocation,
+    sample_time: PositiveF64,
+    sample_location: IndexedLocation,
 }
 
 #[allow(dead_code)]
@@ -60,25 +57,30 @@ const EXCESSIVE_OPTION_SPECIATION_SAMPLE_ERROR: [(); 1 - {
 } as usize] = [];
 
 impl SpeciationSample {
-    #[must_use]
-    pub fn new(
-        indexed_location: IndexedLocation,
-        time: PositiveF64,
+    pub fn update_min(
+        min_spec_sample: &mut Option<Self>,
         speciation_sample: ClosedUnitF64,
-    ) -> Self {
-        Self {
-            speciation_sample,
-            time,
-            indexed_location,
-        }
+        sample_time: PositiveF64,
+        sample_location: &IndexedLocation,
+    ) {
+        match min_spec_sample {
+            Some(min_spec_sample) if min_spec_sample.speciation_sample <= speciation_sample => (),
+            _ => {
+                *min_spec_sample = Some(Self {
+                    speciation_sample,
+                    sample_time,
+                    sample_location: sample_location.clone(),
+                });
+            },
+        };
     }
 }
 
 impl PartialEq for SpeciationSample {
     fn eq(&self, other: &Self) -> bool {
-        self.speciation_sample.cmp(&other.speciation_sample) == Ordering::Equal
-            && self.time.get().total_cmp(&other.time.get()) == Ordering::Equal
-            && self.indexed_location == other.indexed_location
+        self.speciation_sample.eq(&other.speciation_sample)
+            && self.sample_time.eq(&other.sample_time.get())
+            && self.sample_location.eq(&other.sample_location)
     }
 }
 
@@ -86,21 +88,9 @@ impl Eq for SpeciationSample {}
 
 impl Hash for SpeciationSample {
     fn hash<S: Hasher>(&self, state: &mut S) {
-        self.indexed_location.hash(state);
-        self.time.hash(state);
+        self.sample_location.hash(state);
+        self.sample_time.hash(state);
         self.speciation_sample.hash(state);
-    }
-}
-
-impl PartialOrd for SpeciationSample {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for SpeciationSample {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.speciation_sample.cmp(&other.speciation_sample)
     }
 }
 
