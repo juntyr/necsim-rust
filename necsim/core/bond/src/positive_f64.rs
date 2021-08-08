@@ -68,17 +68,17 @@ impl PositiveF64 {
     ///
     /// Only safe iff `0.0 < value`
     #[must_use]
-    pub unsafe fn new_unchecked(value: f64) -> Self {
+    pub const unsafe fn new_unchecked(value: f64) -> Self {
         Self(value)
     }
 
     #[must_use]
-    pub fn infinity() -> Self {
+    pub const fn infinity() -> Self {
         Self(f64::INFINITY)
     }
 
     #[must_use]
-    pub fn get(self) -> f64 {
+    pub const fn get(self) -> f64 {
         self.0
     }
 
