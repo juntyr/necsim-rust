@@ -55,6 +55,7 @@ unsafe impl rsmpi::traits::Equivalence for LocationIndex {
 #[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
+#[repr(C)]
 pub struct IndexedLocation {
     location: Location,
     index: LocationIndex,

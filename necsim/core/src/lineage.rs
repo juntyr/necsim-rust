@@ -57,11 +57,18 @@ impl Backup for GlobalLineageReference {
 impl<H: Habitat> LineageReference<H> for GlobalLineageReference {}
 
 #[derive(Debug, Clone)]
+#[repr(C)]
 pub struct Lineage {
     global_reference: GlobalLineageReference,
-    indexed_location: Option<IndexedLocation>,
     last_event_time: NonNegativeF64,
+    indexed_location: Option<IndexedLocation>,
 }
+
+#[allow(dead_code)]
+const EXCESSIVE_OPTION_LINEAGE_ERROR: [(); 1 - {
+    const ASSERT: bool = core::mem::size_of::<Option<Lineage>>() == core::mem::size_of::<Lineage>();
+    ASSERT
+} as usize] = [];
 
 impl Lineage {
     #[must_use]
@@ -77,8 +84,8 @@ impl Lineage {
                     habitat.map_indexed_location_to_u64_injective(&indexed_location) + 2,
                 )
             }),
-            indexed_location: Some(indexed_location),
             last_event_time: NonNegativeF64::zero(),
+            indexed_location: Some(indexed_location),
         }
     }
 
@@ -90,8 +97,8 @@ impl Lineage {
     ) -> Self {
         Self {
             global_reference,
-            indexed_location: Some(indexed_location),
             last_event_time: time_of_emigration.into(),
+            indexed_location: Some(indexed_location),
         }
     }
 

@@ -1,7 +1,6 @@
 use core::{
     cmp::Ordering,
     hash::{Hash, Hasher},
-    num::NonZeroU64,
 };
 
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveF64};
@@ -50,18 +49,20 @@ pub trait EventSampler<
     ) -> Option<PackedEvent>;
 }
 
-// The time of a speciation sample can be stored as a NonZeroU64 as:
-// - an f64 can be stored as its u64 binary representation
-// - a speciation sample is generated at an event time
-// - every event must happen at a strictly greater time than the previous one
-// - the simulation starts at time 0.0
-
 #[derive(Clone, Debug)]
+#[repr(C)]
 pub struct SpeciationSample {
-    indexed_location: IndexedLocation,
-    time: NonZeroU64,
     speciation_sample: ClosedUnitF64,
+    time: PositiveF64,
+    indexed_location: IndexedLocation,
 }
+
+#[allow(dead_code)]
+const EXCESSIVE_OPTION_SPECIATION_SAMPLE_ERROR: [(); 1 - {
+    const ASSERT: bool = core::mem::size_of::<Option<SpeciationSample>>()
+        == core::mem::size_of::<SpeciationSample>();
+    ASSERT
+} as usize] = [];
 
 impl SpeciationSample {
     #[must_use]
@@ -70,13 +71,10 @@ impl SpeciationSample {
         time: PositiveF64,
         speciation_sample: ClosedUnitF64,
     ) -> Self {
-        // From the precondition time > 0.0_f64, we know that time =/= 0.0_f64
-        //  i.e. time =/= 0_u64
-
         Self {
-            indexed_location,
-            time: unsafe { NonZeroU64::new_unchecked(time.get().to_bits()) },
             speciation_sample,
+            time,
+            indexed_location,
         }
     }
 }
@@ -84,8 +82,7 @@ impl SpeciationSample {
 impl PartialEq for SpeciationSample {
     fn eq(&self, other: &Self) -> bool {
         self.speciation_sample.cmp(&other.speciation_sample) == Ordering::Equal
-            && f64::from_bits(self.time.get()).total_cmp(&f64::from_bits(other.time.get()))
-                == Ordering::Equal
+            && self.time.get().total_cmp(&other.time.get()) == Ordering::Equal
             && self.indexed_location == other.indexed_location
     }
 }
