@@ -56,12 +56,12 @@ impl Backup for GlobalLineageReference {
 
 impl<H: Habitat> LineageReference<H> for GlobalLineageReference {}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(C)]
 pub struct Lineage {
-    global_reference: GlobalLineageReference,
-    last_event_time: NonNegativeF64,
-    indexed_location: Option<IndexedLocation>,
+    pub global_reference: GlobalLineageReference,
+    pub last_event_time: NonNegativeF64,
+    pub indexed_location: IndexedLocation,
 }
 
 #[allow(dead_code)]
@@ -73,10 +73,10 @@ const EXCESSIVE_OPTION_LINEAGE_ERROR: [(); 1 - {
 impl Lineage {
     #[must_use]
     #[debug_ensures(
-        ret.indexed_location() == Some(&old(indexed_location.clone())),
+        ret.indexed_location == old(indexed_location.clone()),
         "stores the indexed_location"
     )]
-    #[debug_ensures(ret.last_event_time() == 0.0_f64, "starts at t_0 = 0.0")]
+    #[debug_ensures(ret.last_event_time == 0.0_f64, "starts at t_0 = 0.0")]
     pub fn new<H: Habitat>(indexed_location: IndexedLocation, habitat: &H) -> Self {
         Self {
             global_reference: GlobalLineageReference(unsafe {
@@ -85,79 +85,8 @@ impl Lineage {
                 )
             }),
             last_event_time: NonNegativeF64::zero(),
-            indexed_location: Some(indexed_location),
+            indexed_location,
         }
-    }
-
-    #[must_use]
-    pub fn immigrate(
-        global_reference: GlobalLineageReference,
-        indexed_location: IndexedLocation,
-        time_of_emigration: PositiveF64,
-    ) -> Self {
-        Self {
-            global_reference,
-            last_event_time: time_of_emigration.into(),
-            indexed_location: Some(indexed_location),
-        }
-    }
-
-    #[must_use]
-    pub fn emigrate(self) -> GlobalLineageReference {
-        self.global_reference
-    }
-
-    #[must_use]
-    pub fn is_active(&self) -> bool {
-        self.indexed_location.is_some()
-    }
-
-    #[must_use]
-    pub fn indexed_location(&self) -> Option<&IndexedLocation> {
-        self.indexed_location.as_ref()
-    }
-
-    #[must_use]
-    pub fn last_event_time(&self) -> NonNegativeF64 {
-        self.last_event_time
-    }
-
-    #[must_use]
-    pub fn global_reference(&self) -> &GlobalLineageReference {
-        &self.global_reference
-    }
-
-    /// # Safety
-    /// This method should only be called by internal `LineageStore` code to
-    /// update the state of the lineages being simulated.
-    #[debug_requires(self.is_active(), "lineage must be active to be deactivated")]
-    #[debug_requires(event_time > self.last_event_time(), "event_time is after the last event")]
-    #[debug_ensures(!self.is_active(), "lineages has been deactivated")]
-    #[debug_ensures(self.last_event_time() == old(event_time), "updates the last_event_time")]
-    #[debug_ensures(
-        ret == old((self.indexed_location.as_ref().unwrap().clone(), self.last_event_time())),
-        "returns the individual's prior indexed_location and last event time"
-    )]
-    pub unsafe fn remove_from_location(
-        &mut self,
-        event_time: PositiveF64,
-    ) -> (IndexedLocation, NonNegativeF64) {
-        let prior_time = self.last_event_time;
-        self.last_event_time = event_time.into();
-
-        (self.indexed_location.take().unwrap_unchecked(), prior_time)
-    }
-
-    /// # Safety
-    /// This method should only be called by internal `LineageStore` code to
-    /// update the state of the lineages being simulated.
-    #[debug_requires(!self.is_active(), "lineage must be inactive to move")]
-    #[debug_ensures(
-        self.indexed_location() == Some(&old(indexed_location.clone())),
-        "updates the indexed_location"
-    )]
-    pub unsafe fn move_to_indexed_location(&mut self, indexed_location: IndexedLocation) {
-        self.indexed_location = Some(indexed_location);
     }
 }
 

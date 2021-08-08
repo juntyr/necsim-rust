@@ -7,7 +7,8 @@ use necsim_core::{
         SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, PackedEvent, SpeciationEvent},
-    landscape::{IndexedLocation, Location},
+    landscape::Location,
+    lineage::Lineage,
     simulation::partial::event_sampler::PartialSimulation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -80,24 +81,22 @@ impl<
     #[must_use]
     #[allow(clippy::shadow_unrelated)]
     #[debug_ensures(ret.as_ref().map_or(true, |event: &PackedEvent| {
-        Some(event.global_lineage_reference.clone()) == old(
-            simulation.lineage_store.get(lineage_reference.clone()).map(
-                |lineage| lineage.global_reference().clone()
-            )
+        event.global_lineage_reference == old(
+            global_reference.clone()
         )
     }), "event occurs for lineage_reference")]
-    fn sample_event_for_lineage_at_indexed_location_time_or_emigrate(
+    fn sample_event_for_lineage_at_event_time_or_emigrate(
         &mut self,
-        lineage_reference: R,
-        indexed_location: IndexedLocation,
-        prior_time: NonNegativeF64,
+        Lineage {
+            global_reference,
+            last_event_time: prior_time,
+            indexed_location: dispersal_origin,
+        }: Lineage,
         event_time: PositiveF64,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N>,
         rng: &mut G,
     ) -> Option<PackedEvent> {
         use necsim_core::cogs::RngSampler;
-
-        let dispersal_origin = indexed_location;
 
         if rng.sample_event(
             simulation
@@ -112,9 +111,7 @@ impl<
                     origin: dispersal_origin,
                     prior_time,
                     event_time,
-                    global_lineage_reference: simulation.lineage_store[lineage_reference]
-                        .global_reference()
-                        .clone(),
+                    global_lineage_reference: global_reference,
                 }
                 .into(),
             )
@@ -126,10 +123,10 @@ impl<
             );
 
             // Check for emigration and return None iff lineage emigrated
-            let (lineage_reference, dispersal_origin, dispersal_target, prior_time, event_time) =
+            let (global_reference, dispersal_origin, dispersal_target, prior_time, event_time) =
                 simulation.with_mut_split_emigration_exit(|emigration_exit, simulation| {
                     emigration_exit.optionally_emigrate(
-                        lineage_reference,
+                        global_reference,
                         dispersal_origin,
                         dispersal_target,
                         prior_time,
@@ -153,9 +150,7 @@ impl<
                     origin: dispersal_origin,
                     prior_time,
                     event_time,
-                    global_lineage_reference: simulation.lineage_store[lineage_reference]
-                        .global_reference()
-                        .clone(),
+                    global_lineage_reference: global_reference,
                     target: dispersal_target,
                     interaction,
                 }
@@ -188,10 +183,7 @@ impl<
         let population = NonNegativeF64::from(
             simulation
                 .lineage_store
-                .get_active_local_lineage_references_at_location_unordered(
-                    location,
-                    &simulation.habitat,
-                )
+                .get_local_lineage_references_at_location_unordered(location, &simulation.habitat)
                 .len(),
         );
 

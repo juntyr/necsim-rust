@@ -74,7 +74,7 @@ impl<
             .for_each(|location| {
                 let number_active_lineages_at_location = partial_simulation
                     .lineage_store
-                    .get_active_local_lineage_references_at_location_unordered(
+                    .get_local_lineage_references_at_location_unordered(
                         &location,
                         &partial_simulation.habitat,
                     )

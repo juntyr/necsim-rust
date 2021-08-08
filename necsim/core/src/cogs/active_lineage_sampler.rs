@@ -6,8 +6,7 @@ use super::{
 };
 
 use crate::{
-    landscape::IndexedLocation,
-    lineage::{GlobalLineageReference, Lineage},
+    landscape::IndexedLocation, lineage::Lineage,
     simulation::partial::active_lineager_sampler::PartialSimulation,
 };
 
@@ -42,57 +41,35 @@ pub trait ActiveLineageSampler<
         None => old(self.number_active_lineages()) == 0,
     }, "removes an active lineage if some left")]
     #[debug_ensures(
-        ret.is_some() -> ret.as_ref().unwrap().3 > old(self.get_last_event_time()),
+        ret.is_some() -> ret.as_ref().unwrap().1 > old(self.get_last_event_time()),
         "event occurs later than last event time"
     )]
-    #[debug_ensures(if let Some((ref reference, ref _location, _prior_time, event_time)) = ret {
-        simulation.lineage_store.get(reference.clone()).map_or(true, |lineage| {
-            lineage.last_event_time() == event_time
-        })
-    } else { true } , "updates the time of the last event of the returned lineage to event time")]
-    #[debug_ensures(if let Some((ref _reference, ref _location, _prior_time, event_time)) = ret {
+    #[debug_ensures(if let Some((ref _lineage, event_time)) = ret {
         self.get_last_event_time() == event_time
     } else { true }, "updates the time of the last event")]
-    fn pop_active_lineage_indexed_location_prior_event_time(
+    fn pop_active_lineage_and_event_time(
         &mut self,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
-    ) -> Option<(R, IndexedLocation, NonNegativeF64, PositiveF64)>;
+    ) -> Option<(Lineage, PositiveF64)>;
 
     #[debug_ensures(
         self.number_active_lineages() == old(self.number_active_lineages()) + 1,
         "adds an active lineage"
     )]
-    fn push_active_lineage_to_indexed_location(
+    fn push_active_lineage(
         &mut self,
-        lineage_reference: R,
-        indexed_location: IndexedLocation,
-        time: PositiveF64,
-        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
-        rng: &mut G,
-    );
-
-    #[debug_ensures(
-        self.number_active_lineages() == old(self.number_active_lineages()) + 1,
-        "adds an active lineage"
-    )]
-    fn insert_new_lineage_to_indexed_location(
-        &mut self,
-        global_reference: GlobalLineageReference,
-        indexed_location: IndexedLocation,
-        time: PositiveF64,
+        lineage: Lineage,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
     );
 
     #[inline]
-    fn with_next_active_lineage_indexed_location_prior_event_time<
+    fn with_next_active_lineage_and_event_time<
         F: FnOnce(
             &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
             &mut G,
-            R,
-            IndexedLocation,
-            NonNegativeF64,
+            Lineage,
             PositiveF64,
         ) -> Option<IndexedLocation>,
     >(
@@ -101,21 +78,18 @@ pub trait ActiveLineageSampler<
         rng: &mut G,
         inner: F,
     ) -> bool {
-        if let Some((chosen_lineage, dispersal_origin, prior_time, event_time)) =
-            self.pop_active_lineage_indexed_location_prior_event_time(simulation, rng)
+        if let Some((chosen_lineage, event_time)) =
+            self.pop_active_lineage_and_event_time(simulation, rng)
         {
-            if let Some(dispersal_target) = inner(
-                simulation,
-                rng,
-                chosen_lineage.clone(),
-                dispersal_origin,
-                prior_time,
-                event_time,
-            ) {
-                self.push_active_lineage_to_indexed_location(
-                    chosen_lineage,
-                    dispersal_target,
-                    event_time,
+            let global_reference = chosen_lineage.global_reference.clone();
+
+            if let Some(dispersal_target) = inner(simulation, rng, chosen_lineage, event_time) {
+                self.push_active_lineage(
+                    Lineage {
+                        global_reference,
+                        indexed_location: dispersal_target,
+                        last_event_time: event_time.into(),
+                    },
                     simulation,
                     rng,
                 );

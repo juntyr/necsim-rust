@@ -42,18 +42,16 @@ impl<H: Habitat> LineageStore<H, GlobalLineageReference> for IndependentLineageS
     }
 
     #[must_use]
-    fn get_number_total_lineages(&self) -> usize {
-        0_usize
-    }
-
-    #[must_use]
     #[must_use]
     fn iter_local_lineage_references(&self) -> Self::LineageReferenceIterator<'_> {
         core::iter::empty()
     }
 
     #[must_use]
-    fn get(&self, _reference: GlobalLineageReference) -> Option<&Lineage> {
+    fn get_lineage_for_local_reference(
+        &self,
+        _reference: GlobalLineageReference,
+    ) -> Option<&Lineage> {
         None
     }
 }

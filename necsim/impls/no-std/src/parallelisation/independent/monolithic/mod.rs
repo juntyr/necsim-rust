@@ -94,7 +94,7 @@ pub fn simulate<
                 .iter()
                 .map(|lineage| {
                     simulation.turnover_rate().get_turnover_rate_at_location(
-                        unsafe { lineage.indexed_location().unwrap_unchecked() }.location(),
+                        lineage.indexed_location.location(),
                         simulation.habitat(),
                     )
                 })
@@ -104,8 +104,7 @@ pub fn simulate<
             slow_lineages
                 .iter()
                 .map(|lineage| {
-                    let location =
-                        unsafe { lineage.indexed_location().unwrap_unchecked() }.location();
+                    let location = lineage.indexed_location.location();
 
                     simulation
                         .turnover_rate()

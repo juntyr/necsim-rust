@@ -44,7 +44,11 @@ impl<
         Self {
             active_lineage_references: lineage_store
                 .iter_local_lineage_references()
-                .filter(|local_reference| lineage_store.get(local_reference.clone()).is_some())
+                .filter(|local_reference| {
+                    lineage_store
+                        .get_lineage_for_local_reference(local_reference.clone())
+                        .is_some()
+                })
                 .collect(),
             last_event_time: NonNegativeF64::zero(),
             next_event_time: None,

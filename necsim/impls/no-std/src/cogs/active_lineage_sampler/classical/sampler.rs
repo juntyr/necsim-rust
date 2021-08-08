@@ -6,8 +6,7 @@ use necsim_core::{
         Habitat, ImmigrationEntry, LineageReference, LocallyCoherentLineageStore,
         PeekableActiveLineageSampler, RngCore, SpeciationProbability,
     },
-    landscape::IndexedLocation,
-    lineage::GlobalLineageReference,
+    lineage::Lineage,
     simulation::partial::active_lineager_sampler::PartialSimulation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -66,7 +65,7 @@ impl<
 
     #[must_use]
     #[allow(clippy::type_complexity)]
-    fn pop_active_lineage_indexed_location_prior_event_time(
+    fn pop_active_lineage_and_event_time(
         &mut self,
         simulation: &mut PartialSimulation<
             H,
@@ -91,65 +90,35 @@ impl<
             >,
         >,
         rng: &mut G,
-    ) -> Option<(R, IndexedLocation, NonNegativeF64, PositiveF64)> {
+    ) -> Option<(Lineage, PositiveF64)> {
         use necsim_core::cogs::RngSampler;
 
         // The next event time must be calculated before the next active lineage is
         //  popped
-        let optional_next_event_time =
-            self.peek_time_of_next_event(&simulation.habitat, &simulation.turnover_rate, rng);
-
-        let (next_event_time, last_active_lineage_reference) = match (
-            optional_next_event_time,
-            self.active_lineage_references.pop(),
-        ) {
-            (Ok(next_event_time), Some(reference)) => (next_event_time, reference),
-            _ => return None, // In practice, this must match (None, None)
-        };
-
-        let chosen_active_lineage_index =
-            rng.sample_index(self.active_lineage_references.len() + 1);
-
-        let chosen_lineage_reference =
-            if chosen_active_lineage_index == self.active_lineage_references.len() {
-                last_active_lineage_reference
-            } else {
-                let chosen_lineage_reference =
-                    self.active_lineage_references[chosen_active_lineage_index].clone();
-
-                self.active_lineage_references[chosen_active_lineage_index] =
-                    last_active_lineage_reference;
-
-                chosen_lineage_reference
-            };
-
-        let (lineage_indexed_location, prior_event_time) = simulation
-            .lineage_store
-            .extract_lineage_from_its_location_locally_coherent(
-                chosen_lineage_reference.clone(),
-                next_event_time,
-                &simulation.habitat,
-            );
+        let next_event_time = self
+            .peek_time_of_next_event(&simulation.habitat, &simulation.turnover_rate, rng)
+            .ok()?;
 
         self.last_event_time = next_event_time.into();
-
         // Reset the next event time because the internal state has changed
         self.next_event_time = None;
 
-        Some((
-            chosen_lineage_reference,
-            lineage_indexed_location,
-            prior_event_time,
-            next_event_time,
-        ))
+        let chosen_lineage_index = rng.sample_index(self.active_lineage_references.len());
+        let chosen_lineage_reference = self
+            .active_lineage_references
+            .swap_remove(chosen_lineage_index);
+
+        let chosen_lineage = simulation
+            .lineage_store
+            .extract_lineage_locally_coherent(chosen_lineage_reference, &simulation.habitat);
+
+        Some((chosen_lineage, next_event_time))
     }
 
     #[allow(clippy::type_complexity, clippy::cast_possible_truncation)]
-    fn push_active_lineage_to_indexed_location(
+    fn push_active_lineage(
         &mut self,
-        lineage_reference: R,
-        indexed_location: IndexedLocation,
-        time: PositiveF64,
+        lineage: Lineage,
         simulation: &mut PartialSimulation<
             H,
             G,
@@ -174,66 +143,15 @@ impl<
         >,
         _rng: &mut G,
     ) {
-        simulation
+        self.last_event_time = lineage.last_event_time;
+        // Reset the next event time because the internal state has changed
+        self.next_event_time = None;
+
+        let lineage_reference = simulation
             .lineage_store
-            .insert_lineage_to_indexed_location_locally_coherent(
-                lineage_reference.clone(),
-                indexed_location,
-                &simulation.habitat,
-            );
+            .insert_lineage_locally_coherent(lineage, &simulation.habitat);
 
         self.active_lineage_references.push(lineage_reference);
-
-        self.last_event_time = time.into();
-
-        // Reset the next event time because the internal state has changed
-        self.next_event_time = None;
-    }
-
-    #[allow(clippy::type_complexity)]
-    fn insert_new_lineage_to_indexed_location(
-        &mut self,
-        global_reference: GlobalLineageReference,
-        indexed_location: IndexedLocation,
-        time: PositiveF64,
-        simulation: &mut PartialSimulation<
-            H,
-            G,
-            R,
-            S,
-            X,
-            D,
-            UnconditionalCoalescenceSampler<H, R, S>,
-            UniformTurnoverRate,
-            N,
-            UnconditionalEventSampler<
-                H,
-                G,
-                R,
-                S,
-                X,
-                D,
-                UnconditionalCoalescenceSampler<H, R, S>,
-                UniformTurnoverRate,
-                N,
-            >,
-        >,
-        _rng: &mut G,
-    ) {
-        let immigrant_lineage_reference = simulation.lineage_store.immigrate_locally_coherent(
-            &simulation.habitat,
-            global_reference,
-            indexed_location,
-            time,
-        );
-
-        self.active_lineage_references
-            .push(immigrant_lineage_reference);
-
-        self.last_event_time = time.into();
-
-        // Reset the next event time because the internal state has changed
-        self.next_event_time = None;
     }
 }
 
