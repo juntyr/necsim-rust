@@ -9,6 +9,7 @@ const P5: u64 = 0xeb44_acca_b455_d165;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
+#[repr(C)]
 pub struct WyHash {
     seed: u64,
     state: u64,
