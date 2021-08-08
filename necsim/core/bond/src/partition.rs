@@ -28,7 +28,10 @@ impl Partition {
     /// # Errors
     ///
     /// Returns `PartitionRankOutOfBounds` if `rank >= partitions`.
-    pub fn try_new(rank: u32, partitions: NonZeroU32) -> Result<Self, PartitionRankOutOfBounds> {
+    pub const fn try_new(
+        rank: u32,
+        partitions: NonZeroU32,
+    ) -> Result<Self, PartitionRankOutOfBounds> {
         if rank < partitions.get() {
             Ok(Self { rank, partitions })
         } else {

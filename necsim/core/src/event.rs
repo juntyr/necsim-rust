@@ -6,7 +6,10 @@ use core::{
     hash::{Hash, Hasher},
 };
 
-use crate::{landscape::IndexedLocation, lineage::GlobalLineageReference};
+use crate::{
+    landscape::IndexedLocation,
+    lineage::{GlobalLineageReference, LineageInteraction},
+};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,28 +39,6 @@ pub enum EventType {
 pub struct Dispersal {
     pub target: IndexedLocation,
     pub interaction: LineageInteraction,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum LineageInteraction {
-    None,
-    Maybe,
-    Coalescence(GlobalLineageReference),
-}
-
-#[allow(dead_code)]
-const EXCESSIVE_LINEAGE_INTERACTION_ERROR: [(); 1 - {
-    const ASSERT: bool = core::mem::size_of::<LineageInteraction>() == 8;
-    ASSERT
-} as usize] = [];
-
-impl From<Option<GlobalLineageReference>> for LineageInteraction {
-    fn from(value: Option<GlobalLineageReference>) -> Self {
-        match value {
-            None => Self::None,
-            Some(lineage) => Self::Coalescence(lineage),
-        }
-    }
 }
 
 #[allow(clippy::module_name_repetitions)]

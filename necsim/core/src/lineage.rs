@@ -56,6 +56,61 @@ impl Backup for GlobalLineageReference {
 
 impl<H: Habitat> LineageReference<H> for GlobalLineageReference {}
 
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialOrd, Ord)]
+#[repr(transparent)]
+pub struct LineageInteraction(u64);
+
+impl LineageInteraction {
+    #[allow(non_upper_case_globals)]
+    pub const Maybe: Self = Self(1_u64);
+    #[allow(non_upper_case_globals)]
+    pub const None: Self = Self(0_u64);
+
+    #[allow(non_snake_case, clippy::needless_pass_by_value)]
+    #[must_use]
+    pub const fn Coalescence(parent: GlobalLineageReference) -> Self {
+        Self(parent.0.get())
+    }
+
+    #[must_use]
+    pub const fn is_coalescence(&self) -> bool {
+        self.0 > Self::Maybe.0
+    }
+
+    #[must_use]
+    pub const fn parent(&self) -> Option<GlobalLineageReference> {
+        match NonZeroOneU64::new(self.0) {
+            Ok(parent) => Some(GlobalLineageReference(parent)),
+            Err(_) => None,
+        }
+    }
+}
+
+impl From<Option<GlobalLineageReference>> for LineageInteraction {
+    fn from(optional_coalescence: Option<GlobalLineageReference>) -> Self {
+        match optional_coalescence {
+            None => Self::None,
+            Some(coalescence) => Self::Coalescence(coalescence),
+        }
+    }
+}
+
+// Note: manually implementing PartialEq and Eq disables pattern matching
+impl PartialEq for LineageInteraction {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl Eq for LineageInteraction {}
+
+impl core::hash::Hash for LineageInteraction {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(C)]
 pub struct Lineage {

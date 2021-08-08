@@ -6,11 +6,9 @@ use necsim_core::{
         GloballyCoherentLineageStore, Habitat, LineageReference, RngCore, RngSampler,
         SeparableDispersalSampler, SpeciationProbability, TurnoverRate,
     },
-    event::{
-        Dispersal, DispersalEvent, EventType, LineageInteraction, PackedEvent, SpeciationEvent,
-    },
+    event::{Dispersal, DispersalEvent, EventType, PackedEvent, SpeciationEvent},
     landscape::Location,
-    lineage::Lineage,
+    lineage::{Lineage, LineageInteraction},
     simulation::partial::event_sampler::PartialSimulation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -100,9 +98,7 @@ impl<
             EventType::Dispersal(Dispersal {
                 target,
                 interaction,
-            }) => (event.origin.eq(target) -> matches!(
-                interaction, LineageInteraction::Coalescence(_)
-            )),
+            }) => (event.origin.eq(target) -> interaction.is_coalescence()),
         },
         None => true,
     }, "always coalesces on self-dispersal")]

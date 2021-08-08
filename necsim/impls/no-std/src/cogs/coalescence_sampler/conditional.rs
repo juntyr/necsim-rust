@@ -5,9 +5,8 @@ use necsim_core::{
         Backup, CoalescenceRngSample, CoalescenceSampler, GloballyCoherentLineageStore, Habitat,
         LineageReference,
     },
-    event::LineageInteraction,
     landscape::{IndexedLocation, Location},
-    lineage::GlobalLineageReference,
+    lineage::{GlobalLineageReference, LineageInteraction},
 };
 use necsim_core_bond::ClosedUnitF64;
 

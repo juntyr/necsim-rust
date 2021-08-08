@@ -6,7 +6,7 @@ use crate::{
         Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
         TurnoverRate,
     },
-    event::{DispersalEvent, LineageInteraction},
+    event::DispersalEvent,
     lineage::{Lineage, MigratingLineage},
     reporter::Reporter,
     simulation::Simulation,
@@ -64,7 +64,7 @@ pub fn simulate_and_report_immigration_step<
 
             // In the event of migration without coalescence, the lineage has
             //  to be added to the active lineage sampler and lineage store
-            if !matches!(interaction, LineageInteraction::Coalescence(_)) {
+            if !interaction.is_coalescence() {
                 active_lineage_sampler.push_active_lineage(
                     Lineage {
                         global_reference: migrating_lineage.global_reference.clone(),

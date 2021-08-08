@@ -56,7 +56,7 @@ impl PositiveF64 {
     /// # Errors
     ///
     /// Returns `PositiveF64Error` if not `0.0 < value`
-    pub fn new(value: f64) -> Result<Self, PositiveF64Error> {
+    pub const fn new(value: f64) -> Result<Self, PositiveF64Error> {
         if value > 0.0 {
             Ok(Self(value))
         } else {
@@ -84,8 +84,8 @@ impl PositiveF64 {
 
     #[must_use]
     #[inline]
-    pub fn max_after(before: NonNegativeF64, value: NonNegativeF64) -> Self {
-        if value > before || before.get().is_nan() {
+    pub const fn max_after(before: NonNegativeF64, value: NonNegativeF64) -> Self {
+        if value.get() > before.get() || before.get().is_nan() {
             Self(value.get())
         } else if before.get().is_infinite() {
             Self(f64::INFINITY)
