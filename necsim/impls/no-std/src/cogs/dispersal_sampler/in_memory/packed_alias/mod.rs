@@ -1,6 +1,8 @@
 use alloc::{boxed::Box, vec::Vec};
 use core::{marker::PhantomData, ops::Range};
 
+use r#final::Final;
+
 use necsim_core::{
     cogs::{Backup, Habitat, RngCore},
     landscape::Location,
@@ -43,9 +45,9 @@ impl From<AliasSamplerRange> for Range<usize> {
 #[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]
 pub struct InMemoryPackedAliasDispersalSampler<H: Habitat, G: RngCore> {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
-    alias_dispersal_ranges: Array2D<AliasSamplerRange>,
+    alias_dispersal_ranges: Final<Array2D<AliasSamplerRange>>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
-    alias_dispersal_buffer: Box<[AliasMethodSamplerAtom<usize>]>,
+    alias_dispersal_buffer: Final<Box<[AliasMethodSamplerAtom<usize>]>>,
     marker: PhantomData<(H, G)>,
 }
 
@@ -99,8 +101,8 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G>
         .unwrap(); // infallible by PRE;
 
         Self {
-            alias_dispersal_ranges,
-            alias_dispersal_buffer: alias_dispersal_buffer.into_boxed_slice(),
+            alias_dispersal_ranges: Final::new(alias_dispersal_ranges),
+            alias_dispersal_buffer: Final::new(alias_dispersal_buffer.into_boxed_slice()),
             marker: PhantomData::<(H, G)>,
         }
     }
@@ -126,8 +128,8 @@ impl<H: Habitat, G: RngCore> core::fmt::Debug for InMemoryPackedAliasDispersalSa
 impl<H: Habitat, G: RngCore> Backup for InMemoryPackedAliasDispersalSampler<H, G> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
-            alias_dispersal_ranges: self.alias_dispersal_ranges.clone(),
-            alias_dispersal_buffer: self.alias_dispersal_buffer.clone(),
+            alias_dispersal_ranges: Final::new(self.alias_dispersal_ranges.clone()),
+            alias_dispersal_buffer: Final::new(self.alias_dispersal_buffer.clone()),
             marker: PhantomData::<(H, G)>,
         }
     }
