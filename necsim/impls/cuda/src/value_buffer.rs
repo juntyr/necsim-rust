@@ -1,7 +1,10 @@
 #[cfg(not(target_os = "cuda"))]
 use core::iter::Iterator;
 
-use rust_cuda::utils::{exchange::buffer::CudaExchangeBuffer, stack::StackOnly};
+use rust_cuda::utils::{
+    aliasing::r#const::SplitSliceOverCudaThreadsConstStride, exchange::buffer::CudaExchangeBuffer,
+    stack::StackOnly,
+};
 
 #[cfg(not(target_os = "cuda"))]
 use rust_cuda::rustacuda::{
@@ -15,9 +18,9 @@ use super::utils::MaybeSome;
 #[allow(clippy::module_name_repetitions)]
 pub struct ValueBuffer<T: StackOnly> {
     #[r2cEmbed]
-    mask: CudaExchangeBuffer<bool>,
+    mask: SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<bool>, 1_usize>,
     #[r2cEmbed]
-    buffer: CudaExchangeBuffer<MaybeSome<T>>,
+    buffer: SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<MaybeSome<T>>, 1_usize>,
 }
 
 #[cfg(not(target_os = "cuda"))]
@@ -33,8 +36,13 @@ impl<T: StackOnly> ValueBuffer<T> {
         buffer.resize_with(total_capacity, || MaybeSome::None);
 
         Ok(Self {
-            mask: CudaExchangeBuffer::new(&false, total_capacity)?,
-            buffer: CudaExchangeBuffer::from_vec(buffer)?,
+            mask: SplitSliceOverCudaThreadsConstStride::new(CudaExchangeBuffer::new(
+                &false,
+                total_capacity,
+            )?),
+            buffer: SplitSliceOverCudaThreadsConstStride::new(CudaExchangeBuffer::from_vec(
+                buffer,
+            )?),
         })
     }
 
@@ -72,22 +80,20 @@ impl<T: StackOnly> ValueBuffer<T> {
 #[cfg(target_os = "cuda")]
 impl<T: StackOnly> ValueBuffer<T> {
     pub fn with_value_for_core<F: FnOnce(Option<T>) -> Option<T>>(&mut self, inner: F) {
-        let index = rust_cuda::device::utils::index();
-
         // TODO: Check no spill to local memory
-        let value = if self.mask.get(index).copied().unwrap_or(false) {
-            Some(unsafe { self.buffer.get_unchecked(index).assume_some_read() })
+        let value = if self.mask.get(0).copied().unwrap_or(false) {
+            Some(unsafe { self.buffer.get_unchecked(0).assume_some_read() })
         } else {
             None
         };
 
         let result = inner(value);
 
-        if let Some(mask) = self.mask.get_mut(index) {
+        if let Some(mask) = self.mask.get_mut(0) {
             *mask = result.is_some();
 
             if let Some(result) = result {
-                *unsafe { self.buffer.get_unchecked_mut(index) } = MaybeSome::Some(result);
+                *unsafe { self.buffer.get_unchecked_mut(0) } = MaybeSome::Some(result);
             }
         }
     }

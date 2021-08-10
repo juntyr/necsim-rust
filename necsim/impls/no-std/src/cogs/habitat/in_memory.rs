@@ -1,5 +1,7 @@
 use alloc::{boxed::Box, vec::Vec};
 
+use r#final::Final;
+
 use necsim_core::{
     cogs::{Backup, Habitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
@@ -8,13 +10,13 @@ use necsim_core::{
 use crate::array2d::Array2D;
 
 #[allow(clippy::module_name_repetitions)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 #[derive(Debug)]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 pub struct InMemoryHabitat {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
-    habitat: Box<[u32]>,
+    habitat: Final<Box<[u32]>>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
-    u64_injection: Box<[u64]>,
+    u64_injection: Final<Box<[u64]>>,
     extent: LandscapeExtent,
 }
 
@@ -22,8 +24,8 @@ pub struct InMemoryHabitat {
 impl Backup for InMemoryHabitat {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
-            habitat: self.habitat.clone(),
-            u64_injection: self.u64_injection.clone(),
+            habitat: Final::new(self.habitat.clone()),
+            u64_injection: Final::new(self.u64_injection.clone()),
             extent: self.extent.clone(),
         }
     }
@@ -93,8 +95,8 @@ impl InMemoryHabitat {
         let extent = LandscapeExtent::new(0, 0, width, height);
 
         Self {
-            habitat,
-            u64_injection,
+            habitat: Final::new(habitat),
+            u64_injection: Final::new(u64_injection),
             extent,
         }
     }
