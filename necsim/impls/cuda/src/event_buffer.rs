@@ -66,31 +66,16 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
         grid_size: &GridSize,
         max_events: usize,
     ) -> CudaResult<Self> {
-        let max_events = if ReportDispersal::VALUE {
-            max_events
-        } else if ReportSpeciation::VALUE {
-            1_usize
-        } else {
-            0_usize
-        };
-
         let block_size = (block_size.x * block_size.y * block_size.z) as usize;
         let grid_size = (grid_size.x * grid_size.y * grid_size.z) as usize;
 
         let speciation_capacity = if ReportSpeciation::VALUE {
             block_size * grid_size
         } else {
-            // TODO: Remove special case if local memory can be avoided
-            1_usize // Caching space used to eliminate local memory usage
+            0_usize
         };
         let dispersal_capacity = if ReportDispersal::VALUE {
             max_events * block_size * grid_size
-        } else {
-            // TODO: Remove special case if local memory can be avoided
-            1_usize // Caching space used to eliminate local memory usage
-        };
-        let dispersal_stride = if ReportDispersal::VALUE {
-            max_events
         } else {
             0_usize
         };
@@ -111,11 +96,11 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
             ),
             dispersal_mask: SplitSliceOverCudaThreadsDynamicStride::new(
                 CudaExchangeBuffer::new(&false, dispersal_capacity)?,
-                dispersal_stride,
+                max_events,
             ),
             dispersal_buffer: SplitSliceOverCudaThreadsDynamicStride::new(
                 CudaExchangeBuffer::from_vec(dispersal_buffer)?,
-                dispersal_stride,
+                max_events,
             ),
             max_events,
             event_counter: 0_usize,
@@ -167,14 +152,13 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
                 if let Some(mask) = self.speciation_mask.get_mut(0) {
                     *mask = true;
 
+                    // TODO: Optimise out local memory usage for this clone
+
                     * unsafe {
                         self.speciation_buffer.get_unchecked_mut(0)
                     } = MaybeSome::Some(event.clone());
                 }
-            } /*else {
-                // Note: Using this cache avoids the use of local storage
-                self.speciation_buffer[0] = MaybeSome::Some(event.clone());
-            }*/
+            }
         }
     );
 
@@ -194,10 +178,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
                 }
 
                 self.event_counter += 1;
-            } /*else {
-                // Note: Using this cache avoids the use of local storage
-                self.dispersal_buffer[0] = Some(event.clone());
-            }*/
+            }
         }
     );
 
