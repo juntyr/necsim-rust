@@ -6,7 +6,13 @@ use rust_cuda::rustacuda::{
     function::{BlockSize, GridSize},
 };
 
-use rust_cuda::utils::exchange::buffer::CudaExchangeBuffer;
+use rust_cuda::utils::{
+    aliasing::{
+        dynamic::SplitSliceOverCudaThreadsDynamicStride,
+        r#const::SplitSliceOverCudaThreadsConstStride,
+    },
+    exchange::buffer::CudaExchangeBuffer,
+};
 
 use necsim_core::{
     event::{DispersalEvent, SpeciationEvent},
@@ -22,13 +28,17 @@ use super::utils::MaybeSome;
 #[derive(rust_cuda::common::RustToCudaAsRust, rust_cuda::common::LendRustBorrowToCuda)]
 pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
     #[r2cEmbed]
-    speciation_mask: CudaExchangeBuffer<bool>,
+    speciation_mask: SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<bool>, 1_usize>,
     #[r2cEmbed]
-    speciation_buffer: CudaExchangeBuffer<MaybeSome<SpeciationEvent>>,
+    speciation_buffer: SplitSliceOverCudaThreadsConstStride<
+        CudaExchangeBuffer<MaybeSome<SpeciationEvent>>,
+        1_usize,
+    >,
     #[r2cEmbed]
-    dispersal_mask: CudaExchangeBuffer<bool>,
+    dispersal_mask: SplitSliceOverCudaThreadsDynamicStride<CudaExchangeBuffer<bool>>,
     #[r2cEmbed]
-    dispersal_buffer: CudaExchangeBuffer<MaybeSome<DispersalEvent>>,
+    dispersal_buffer:
+        SplitSliceOverCudaThreadsDynamicStride<CudaExchangeBuffer<MaybeSome<DispersalEvent>>>,
     max_events: usize,
     event_counter: usize,
     marker: PhantomData<(ReportSpeciation, ReportDispersal)>,
@@ -70,12 +80,19 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
         let speciation_capacity = if ReportSpeciation::VALUE {
             block_size * grid_size
         } else {
+            // TODO: Remove special case if local memory can be avoided
             1_usize // Caching space used to eliminate local memory usage
         };
         let dispersal_capacity = if ReportDispersal::VALUE {
             max_events * block_size * grid_size
         } else {
+            // TODO: Remove special case if local memory can be avoided
             1_usize // Caching space used to eliminate local memory usage
+        };
+        let dispersal_stride = if ReportDispersal::VALUE {
+            max_events
+        } else {
+            0_usize
         };
 
         let mut speciation_buffer = alloc::vec::Vec::with_capacity(speciation_capacity);
@@ -85,10 +102,21 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
         dispersal_buffer.resize_with(dispersal_capacity, || MaybeSome::None);
 
         Ok(Self {
-            speciation_mask: CudaExchangeBuffer::new(&false, speciation_capacity)?,
-            speciation_buffer: CudaExchangeBuffer::from_vec(speciation_buffer)?,
-            dispersal_mask: CudaExchangeBuffer::new(&false, dispersal_capacity)?,
-            dispersal_buffer: CudaExchangeBuffer::from_vec(dispersal_buffer)?,
+            speciation_mask: SplitSliceOverCudaThreadsConstStride::new(CudaExchangeBuffer::new(
+                &false,
+                speciation_capacity,
+            )?),
+            speciation_buffer: SplitSliceOverCudaThreadsConstStride::new(
+                CudaExchangeBuffer::from_vec(speciation_buffer)?,
+            ),
+            dispersal_mask: SplitSliceOverCudaThreadsDynamicStride::new(
+                CudaExchangeBuffer::new(&false, dispersal_capacity)?,
+                dispersal_stride,
+            ),
+            dispersal_buffer: SplitSliceOverCudaThreadsDynamicStride::new(
+                CudaExchangeBuffer::from_vec(dispersal_buffer)?,
+                dispersal_stride,
+            ),
             max_events,
             event_counter: 0_usize,
             marker: PhantomData::<(ReportSpeciation, ReportDispersal)>,
@@ -131,18 +159,16 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
 {
     impl_report!(
         #[debug_requires(
-            !self.speciation_mask.get(rust_cuda::device::utils::index()).copied().unwrap_or(true),
+            !self.speciation_mask.get(0).copied().unwrap_or(true),
             "does not report extraneous speciation event"
         )]
         speciation(&mut self, event: Used) {
             if ReportSpeciation::VALUE {
-                let index = rust_cuda::device::utils::index();
-
-                if let Some(mask) = self.speciation_mask.get_mut(index) {
+                if let Some(mask) = self.speciation_mask.get_mut(0) {
                     *mask = true;
 
                     * unsafe {
-                        self.speciation_buffer.get_unchecked_mut(index)
+                        self.speciation_buffer.get_unchecked_mut(0)
                     } = MaybeSome::Some(event.clone());
                 }
             } /*else {
@@ -159,15 +185,11 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
         )]
         dispersal(&mut self, event: Used) {
             if ReportDispersal::VALUE {
-                let index = (
-                    rust_cuda::device::utils::index() * self.max_events
-                ) + self.event_counter;
-
-                if let Some(mask) = self.dispersal_mask.get_mut(index) {
+                if let Some(mask) = self.dispersal_mask.get_mut(self.event_counter) {
                     *mask = true;
 
                     * unsafe {
-                        self.dispersal_buffer.get_unchecked_mut(index)
+                        self.dispersal_buffer.get_unchecked_mut(self.event_counter)
                     } = MaybeSome::Some(event.clone());
                 }
 
