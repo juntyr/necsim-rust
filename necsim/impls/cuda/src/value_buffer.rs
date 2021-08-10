@@ -80,7 +80,6 @@ impl<T: StackOnly> ValueBuffer<T> {
 #[cfg(target_os = "cuda")]
 impl<T: StackOnly> ValueBuffer<T> {
     pub fn with_value_for_core<F: FnOnce(Option<T>) -> Option<T>>(&mut self, inner: F) {
-        // TODO: Check no spill to local memory
         let value = if self.mask.get(0).copied().unwrap_or(false) {
             Some(unsafe { self.buffer.get_unchecked(0).assume_some_read() })
         } else {
