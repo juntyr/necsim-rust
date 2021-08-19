@@ -1,4 +1,4 @@
-# necsim-rust &emsp; [![CI Status]][workflow] [![Rust Doc]][docs] [![License Status]][fossa] [![Code Coverage]][codecov] [![Binder Demo]][binder] [![Gitpod Ready-to-Code]][gitpod]
+# necsim-rust &emsp; [![CI Status]][workflow] [![Rust Doc]][docs] [![License Status]][fossa] [![Code Coverage]][codecov] [![Binder Demo]][binder] [![Gitpod Ready-to-Code]][gitpod] [![DOI]][zenodo]
 
 [CI Status]: https://img.shields.io/github/workflow/status/MomoLangenstein/necsim-rust/CI/main?label=CI
 [workflow]: https://github.com/MomoLangenstein/necsim-rust/actions/workflows/ci.yml?query=branch%3Amain
@@ -17,6 +17,9 @@
 
 [Gitpod Ready-to-Code]: https://img.shields.io/badge/Gitpod-ready-blue?logo=gitpod
 [gitpod]: https://gitpod.io/#https://github.com/MomoLangenstein/necsim-rust
+
+[DOI]: https://zenodo.org/badge/303474757.svg
+[zenodo]: https://zenodo.org/badge/latestdoi/303474757
 
 ## Introduction
 
