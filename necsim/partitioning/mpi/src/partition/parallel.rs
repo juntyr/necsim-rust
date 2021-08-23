@@ -6,7 +6,7 @@ use std::{
 };
 
 use mpi::{
-    collective::{CommunicatorCollectives, Root, SystemOperation, UserOperation},
+    collective::{CommunicatorCollectives, Root, SystemOperation},
     datatype::Equivalence,
     environment::Universe,
     point_to_point::{Destination, Source},
@@ -27,7 +27,10 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_partitioning_core::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode};
 
-use crate::MpiPartitioning;
+use crate::{
+    partition::utils::{reduce_lexicographic_min_time_partition, TimePartition},
+    MpiPartitioning,
+};
 
 static mut MPI_LOCAL_CONTINUE: bool = false;
 static mut MPI_GLOBAL_CONTINUE: bool = false;
@@ -263,32 +266,20 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
     }
 
     fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64> {
-        #[derive(mpi::traits::Equivalence, PartialEq, Copy, Clone)]
-        struct TimePartition(PositiveF64, u32);
+        let local_partition_rank = self.get_partition_rank();
 
-        let local_time_partition = TimePartition(local_time, self.get_partition_rank());
-        let mut global_min_time_partition = local_time_partition;
-
-        self.world.all_reduce_into(
-            &local_time_partition,
-            &mut global_min_time_partition,
-            &UserOperation::commutative(|x, acc| {
-                let x: &[TimePartition] = x.downcast().unwrap();
-                let acc: &mut [TimePartition] = acc.downcast().unwrap();
-
-                // Lexicographic min reduction, by time first then partition rank
-                for (&x, acc) in x.iter().zip(acc) {
-                    if x.0 <= acc.0 && x.1 < acc.1 {
-                        *acc = x;
-                    }
-                }
-            }),
+        let global_min_time_partition = reduce_lexicographic_min_time_partition(
+            self.world,
+            TimePartition {
+                time: local_time,
+                partition: local_partition_rank,
+            },
         );
 
-        if global_min_time_partition.1 == local_time_partition.1 {
+        if global_min_time_partition.partition == local_partition_rank {
             Ok(local_time)
         } else {
-            Err(global_min_time_partition.0)
+            Err(global_min_time_partition.time)
         }
     }
 
