@@ -18,7 +18,7 @@ use necsim_core::{
     reporter::boolean::Boolean,
 };
 
-use rust_cuda::{common::RustToCuda, utils::stack::StackOnlyDeviceCopy};
+use rust_cuda::{common::RustToCuda, utils::stack::StackOnlyWrapper};
 
 #[cfg(target_os = "cuda")]
 mod cuda_prelude {
@@ -106,7 +106,7 @@ pub fn simulate<
     max_steps: u64,
     #[rustfmt::skip]
     #[kernel(pass = DeviceCopy)]
-    max_next_event_time: StackOnlyDeviceCopy<necsim_core_bond::NonNegativeF64>,
+    max_next_event_time: StackOnlyWrapper<necsim_core_bond::NonNegativeF64>,
 ) {
     let total_time_max = core::sync::atomic::AtomicU64::from_mut(total_time_max);
     let total_steps_sum = core::sync::atomic::AtomicU64::from_mut(total_steps_sum);
