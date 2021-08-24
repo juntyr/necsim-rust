@@ -37,19 +37,30 @@ pub struct Simulation<
     I: ImmigrationEntry,
     A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
 > {
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) habitat: H,
     pub(super) lineage_reference: PhantomData<R>,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) lineage_store: S,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) dispersal_sampler: D,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) coalescence_sampler: C,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) turnover_rate: T,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) speciation_probability: N,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) emigration_exit: X,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) event_sampler: E,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) active_lineage_sampler: A,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) rng: G,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) immigration_entry: I,
-    #[r2cIgnore]
+    #[cfg_attr(feature = "cuda", r2cIgnore)]
     #[builder(default = Wrapping(0), setter(skip))]
     pub(super) migration_balance: Wrapping<u64>,
 }

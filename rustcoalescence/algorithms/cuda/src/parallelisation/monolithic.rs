@@ -19,13 +19,13 @@ use necsim_core::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
         LineageReference, LineageStore, MinSpeciationTrackingEventSampler,
         PeekableActiveLineageSampler, PrimeableRng, SingularActiveLineageSampler,
-        SpeciationProbability, TurnoverRate,
+        SpeciationProbability, SpeciationSample, TurnoverRate,
     },
     lineage::Lineage,
     reporter::{boolean::Boolean, Reporter},
     simulation::Simulation,
 };
-use necsim_core_bond::NonNegativeF64;
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::parallelisation::independent::{
     monolithic::reporter::{
@@ -131,18 +131,16 @@ pub fn simulate<
     // Allocate and initialise the total_time_max and total_steps_sum atomics
     let mut total_time_max_host = 0.0_f64.to_bits();
     let mut total_time_max_gpu = DeviceBox::new(&total_time_max_host)?;
+    let mut total_time_max_gpu_ptr = total_time_max_gpu.as_device_ptr();
 
     let mut total_steps_sum_host = 0_u64;
     let mut total_steps_sum_gpu = DeviceBox::new(&total_steps_sum_host)?;
+    let mut total_steps_sum_gpu_ptr = total_steps_sum_gpu.as_device_ptr();
 
-    let mut total_time_max = HostDevicePointerMut::new(
-        &mut total_time_max_gpu.as_device_ptr(),
-        &mut total_time_max_host,
-    );
-    let mut total_steps_sum = HostDevicePointerMut::new(
-        &mut total_steps_sum_gpu.as_device_ptr(),
-        &mut total_steps_sum_host,
-    );
+    let mut total_time_max =
+        HostDevicePointerMut::new(&mut total_time_max_gpu_ptr, &mut total_time_max_host);
+    let mut total_steps_sum =
+        HostDevicePointerMut::new(&mut total_steps_sum_gpu_ptr, &mut total_steps_sum_host);
 
     let mut task_list = ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
     let mut event_buffer: ExchangeWithCudaWrapper<
@@ -155,9 +153,9 @@ pub fn simulate<
         &grid_size,
         step_slice.get().try_into()?,
     )?)?;
-    let mut min_spec_sample_buffer =
+    let mut min_spec_sample_buffer: ExchangeWithCudaWrapper<ValueBuffer<SpeciationSample>> =
         ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
-    let mut next_event_time_buffer =
+    let mut next_event_time_buffer: ExchangeWithCudaWrapper<ValueBuffer<PositiveF64>> =
         ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
 
     let mut min_spec_samples = dedup_cache.construct(lineages.len());
