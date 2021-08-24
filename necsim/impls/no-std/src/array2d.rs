@@ -13,6 +13,7 @@ use core::ops::{Index, IndexMut};
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 #[cfg_attr(feature = "cuda", r2cBound(T: rust_cuda::rustacuda_core::DeviceCopy))]
 pub struct Array2D<T> {
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     array: Box<[T]>,
     num_rows: usize,
 }

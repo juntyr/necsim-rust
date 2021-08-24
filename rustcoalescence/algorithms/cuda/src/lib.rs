@@ -18,6 +18,7 @@ use necsim_core::{
 };
 use necsim_core_bond::NonNegativeF64;
 
+use necsim_impls_cuda::cogs::rng::CudaRng;
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::independent::{
         event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
@@ -66,36 +67,38 @@ impl AlgorithmArguments for CudaAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P> for CudaAlgorithm
+impl<O: Scenario<CudaRng<WyHash>>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
+    for CudaAlgorithm
 where
     O::Habitat: RustToCuda,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, WyHash>>: RustToCuda,
+    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>:
+        RustToCuda,
     O::TurnoverRate: RustToCuda,
     O::SpeciationProbability: RustToCuda,
     SimulationKernel<
         O::Habitat,
-        WyHash,
+        CudaRng<WyHash>,
         GlobalLineageReference,
         IndependentLineageStore<O::Habitat>,
         NeverEmigrationExit,
-        O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, WyHash>>,
+        O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
         IndependentCoalescenceSampler<O::Habitat>,
         O::TurnoverRate,
         O::SpeciationProbability,
         IndependentEventSampler<
             O::Habitat,
-            WyHash,
+            CudaRng<WyHash>,
             NeverEmigrationExit,
-            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, WyHash>>,
+            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
             O::TurnoverRate,
             O::SpeciationProbability,
         >,
         NeverImmigrationEntry,
         IndependentActiveLineageSampler<
             O::Habitat,
-            WyHash,
+            CudaRng<WyHash>,
             NeverEmigrationExit,
-            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, WyHash>>,
+            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
             O::TurnoverRate,
             O::SpeciationProbability,
             ExpEventTimeSampler,
@@ -104,28 +107,28 @@ where
         R::ReportDispersal,
     >: rustcoalescence_algorithms_cuda_kernel::Kernel<
         O::Habitat,
-        WyHash,
+        CudaRng<WyHash>,
         GlobalLineageReference,
         IndependentLineageStore<O::Habitat>,
         NeverEmigrationExit,
-        O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, WyHash>>,
+        O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
         IndependentCoalescenceSampler<O::Habitat>,
         O::TurnoverRate,
         O::SpeciationProbability,
         IndependentEventSampler<
             O::Habitat,
-            WyHash,
+            CudaRng<WyHash>,
             NeverEmigrationExit,
-            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, WyHash>>,
+            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
             O::TurnoverRate,
             O::SpeciationProbability,
         >,
         NeverImmigrationEntry,
         IndependentActiveLineageSampler<
             O::Habitat,
-            WyHash,
+            CudaRng<WyHash>,
             NeverEmigrationExit,
-            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, WyHash>>,
+            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
             O::TurnoverRate,
             O::SpeciationProbability,
             ExpEventTimeSampler,
@@ -137,7 +140,7 @@ where
     type Error = anyhow::Error;
     type LineageReference = GlobalLineageReference;
     type LineageStore = IndependentLineageStore<O::Habitat>;
-    type Rng = WyHash;
+    type Rng = CudaRng<WyHash>;
 
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
@@ -173,8 +176,8 @@ where
         };
 
         let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-            scenario.build::<InMemoryPackedAliasDispersalSampler<O::Habitat, WyHash>>();
-        let rng = WyHash::seed_from_u64(seed);
+            scenario.build::<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>();
+        let rng = CudaRng::from(WyHash::seed_from_u64(seed));
         let lineage_store = IndependentLineageStore::default();
         let emigration_exit = NeverEmigrationExit::default();
         let coalescence_sampler = IndependentCoalescenceSampler::default();
