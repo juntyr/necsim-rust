@@ -3,7 +3,7 @@ use std::{collections::VecDeque, convert::TryInto, num::NonZeroU64};
 use anyhow::{Context, Result};
 
 use rust_cuda::{
-    host::HostDeviceBoxMut,
+    host::HostDevicePointerMut,
     rustacuda::{
         function::{BlockSize, GridSize},
         memory::{CopyDestination, DeviceBox},
@@ -135,10 +135,14 @@ pub fn simulate<
     let mut total_steps_sum_host = 0_u64;
     let mut total_steps_sum_gpu = DeviceBox::new(&total_steps_sum_host)?;
 
-    let mut total_time_max =
-        HostDeviceBoxMut::new(&mut total_time_max_gpu, &mut total_time_max_host);
-    let mut total_steps_sum =
-        HostDeviceBoxMut::new(&mut total_steps_sum_gpu, &mut total_steps_sum_host);
+    let mut total_time_max = HostDevicePointerMut::new(
+        &mut total_time_max_gpu.as_device_ptr(),
+        &mut total_time_max_host,
+    );
+    let mut total_steps_sum = HostDevicePointerMut::new(
+        &mut total_steps_sum_gpu.as_device_ptr(),
+        &mut total_steps_sum_host,
+    );
 
     let mut task_list = ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
     let mut event_buffer: ExchangeWithCudaWrapper<

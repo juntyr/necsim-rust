@@ -18,6 +18,7 @@ use crate::cogs::{
 };
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]
@@ -25,7 +26,6 @@ use crate::cogs::{
 #[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(T: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(N: rust_cuda::common::RustToCuda))]
-#[derive(Debug)]
 pub struct IndependentEventSampler<
     H: Habitat,
     G: RngCore,
@@ -34,7 +34,6 @@ pub struct IndependentEventSampler<
     T: TurnoverRate<H>,
     N: SpeciationProbability<H>,
 > {
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
     min_spec_sample: Option<SpeciationSample>,
     marker: PhantomData<(H, G, X, D, T, N)>,
 }
