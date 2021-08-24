@@ -37,11 +37,8 @@ pub struct IndependentActiveLineageSampler<
     N: SpeciationProbability<H>,
     J: EventTimeSampler<H, G, T>,
 > {
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
     active_lineage: Option<Lineage>,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
     next_event_time: Option<PositiveF64>,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
     event_time_sampler: J,
     marker: PhantomData<(H, G, X, D, T, N)>,
 }

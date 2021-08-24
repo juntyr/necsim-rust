@@ -14,12 +14,10 @@ use rust_cuda::rustacuda::{
 
 use super::utils::MaybeSome;
 
-#[derive(rust_cuda::common::RustToCudaAsRust, rust_cuda::common::LendRustBorrowToCuda)]
+#[derive(rust_cuda::common::RustToCudaAsRust)]
 #[allow(clippy::module_name_repetitions)]
 pub struct ValueBuffer<T: StackOnly> {
-    #[r2cEmbed]
     mask: SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<bool>, 1_usize>,
-    #[r2cEmbed]
     buffer: SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<MaybeSome<T>>, 1_usize>,
 }
 
