@@ -4,8 +4,8 @@ use necsim_core::{
 };
 
 #[allow(clippy::module_name_repetitions)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 #[derive(Debug)]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 pub struct NonSpatialHabitat {
     extent: LandscapeExtent,
     deme: u32,

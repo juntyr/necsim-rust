@@ -13,9 +13,7 @@ use crate::array2d::Array2D;
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 pub struct InMemoryHabitat {
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
     habitat: Final<Box<[u32]>>,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
     u64_injection: Final<Box<[u64]>>,
     extent: LandscapeExtent,
 }
