@@ -13,7 +13,9 @@ use crate::cogs::{
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 pub struct SpatiallyImplicitDispersalSampler<G: RngCore> {
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     local: NonSpatialDispersalSampler<G>,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     meta: NonSpatialDispersalSampler<G>,
     local_migration_probability_per_generation: PositiveUnitF64,
 }
