@@ -37,9 +37,13 @@ pub struct IndependentActiveLineageSampler<
     N: SpeciationProbability<H>,
     J: EventTimeSampler<H, G, T>,
 > {
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", r2cEmbed(
+        Option<rust_cuda::utils::stack::StackOnlyWrapper<Lineage>>
+    ))]
     active_lineage: Option<Lineage>,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", r2cEmbed(
+        Option<rust_cuda::utils::stack::StackOnlyWrapper<PositiveF64>>
+    ))]
     next_event_time: Option<PositiveF64>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     event_time_sampler: J,
