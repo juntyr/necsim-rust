@@ -34,7 +34,9 @@ pub struct IndependentEventSampler<
     T: TurnoverRate<H>,
     N: SpeciationProbability<H>,
 > {
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", r2cEmbed(
+        Option<rust_cuda::utils::stack::StackOnlyWrapper<SpeciationSample>>
+    ))]
     min_spec_sample: Option<SpeciationSample>,
     marker: PhantomData<(H, G, X, D, T, N)>,
 }

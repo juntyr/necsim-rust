@@ -9,7 +9,9 @@ use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
 pub struct SpatiallyImplicitHabitat {
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     local: NonSpatialHabitat,
+    #[cfg_attr(feature = "cuda", r2cEmbed)]
     meta: NonSpatialHabitat,
     extent: LandscapeExtent,
 }
