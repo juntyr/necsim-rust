@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
-        Backup, CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LineageReference,
-        LocallyCoherentLineageStore, PeekableActiveLineageSampler, RngCore, SpeciationProbability,
+        ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler, EventSampler, Habitat,
+        LineageReference, LocallyCoherentLineageStore, RngCore, SpeciationProbability,
         TurnoverRate,
     },
     reporter::{NullReporter, Reporter},
@@ -31,7 +31,7 @@ pub fn simulate<
     N: SpeciationProbability<H>,
     O: Decomposition<H>,
     E: EventSampler<H, G, R, S, DomainEmigrationExit<H, O>, D, C, T, N>,
-    A: PeekableActiveLineageSampler<
+    A: ActiveLineageSampler<
         H,
         G,
         R,

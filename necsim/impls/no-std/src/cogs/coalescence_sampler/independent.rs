@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, CoalescenceRngSample, CoalescenceSampler, Habitat},
+    cogs::{coalescence_sampler::CoalescenceRngSample, Backup, CoalescenceSampler, Habitat},
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, LineageInteraction},
 };

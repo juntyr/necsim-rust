@@ -11,11 +11,14 @@ extern crate alloc;
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LineageReference, LineageStore, MinSpeciationTrackingEventSampler,
-        PeekableActiveLineageSampler, PrimeableRng, SingularActiveLineageSampler,
-        SpeciationProbability, SpeciationSample, TurnoverRate,
+        LineageReference, LineageStore, PrimeableRng, SpeciationProbability, TurnoverRate,
     },
     reporter::boolean::Boolean,
+};
+
+use necsim_impls_no_std::cogs::{
+    active_lineage_sampler::singular::SingularActiveLineageSampler,
+    event_sampler::tracking::{MinSpeciationTrackingEventSampler, SpeciationSample},
 };
 
 use rust_cuda::{common::RustToCuda, utils::stack::StackOnlyWrapper};
@@ -69,9 +72,7 @@ pub fn simulate<
     N: SpeciationProbability<H> + RustToCuda,
     E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
     I: ImmigrationEntry + RustToCuda,
-    A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
-        + PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
-        + RustToCuda,
+    A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
     ReportSpeciation: Boolean,
     ReportDispersal: Boolean,
 >(

@@ -4,8 +4,8 @@ use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, Habitat, MinSpeciationTrackingEventSampler,
-        PrimeableRng, SingularActiveLineageSampler, SpeciationProbability, TurnoverRate,
+        ActiveLineageSampler, DispersalSampler, Habitat, PrimeableRng, SpeciationProbability,
+        TurnoverRate,
     },
     lineage::{GlobalLineageReference, Lineage},
     reporter::{boolean::Boolean, Reporter},
@@ -15,12 +15,15 @@ use necsim_core::{
 use necsim_partitioning_core::LocalPartition;
 
 use crate::cogs::{
-    active_lineage_sampler::independent::{
-        event_time_sampler::EventTimeSampler, IndependentActiveLineageSampler,
+    active_lineage_sampler::{
+        independent::{event_time_sampler::EventTimeSampler, IndependentActiveLineageSampler},
+        singular::SingularActiveLineageSampler,
     },
     coalescence_sampler::independent::IndependentCoalescenceSampler,
     emigration_exit::never::NeverEmigrationExit,
-    event_sampler::independent::IndependentEventSampler,
+    event_sampler::{
+        independent::IndependentEventSampler, tracking::MinSpeciationTrackingEventSampler,
+    },
     immigration_entry::never::NeverImmigrationEntry,
     lineage_store::independent::IndependentLineageStore,
 };

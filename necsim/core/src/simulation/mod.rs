@@ -9,9 +9,8 @@ use core::num::Wrapping;
 use crate::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        Habitat, ImmigrationEntry, LineageReference, LineageStore,
-        OptionallyPeekableActiveLineageSampler, PeekableActiveLineageSampler, RngCore,
-        SpeciationProbability, TurnoverRate,
+        Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
+        TurnoverRate,
     },
     reporter::Reporter,
 };
@@ -31,7 +30,7 @@ impl<
         N: SpeciationProbability<H>,
         E: EventSampler<H, G, R, S, X, D, C, T, N>,
         I: ImmigrationEntry,
-        A: PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
+        A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
     > Simulation<H, G, R, S, X, D, C, T, N, E, I, A>
 {
     #[allow(clippy::inline_always)]
@@ -90,15 +89,17 @@ impl<
 
         while !early_stop(self, steps) {
             // Peek the time of the next local event
-            let optional_next_event_time = self.with_mut_split_active_lineage_sampler_and_rng(
-                |active_lineage_sampler, simulation, rng| {
-                    active_lineage_sampler.peek_optional_time_of_next_event(
-                        &simulation.habitat,
-                        &simulation.turnover_rate,
-                        rng,
-                    )
-                },
-            );
+            let optional_next_event_time = self
+                .with_mut_split_active_lineage_sampler_and_rng(
+                    |active_lineage_sampler, simulation, rng| {
+                        active_lineage_sampler.peek_time_of_next_event(
+                            &simulation.habitat,
+                            &simulation.turnover_rate,
+                            rng,
+                        )
+                    },
+                )
+                .ok();
 
             // Check if an immigration event has to be processed before the next local event
             if let Some(migrating_lineage) = self

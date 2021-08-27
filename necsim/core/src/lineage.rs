@@ -8,7 +8,10 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use necsim_core_bond::{NonNegativeF64, NonZeroOneU64, PositiveF64};
 
 use crate::{
-    cogs::{BackedUp, Backup, CoalescenceRngSample, Habitat, LineageReference},
+    cogs::{
+        backup::BackedUp, coalescence_sampler::CoalescenceRngSample, Backup, Habitat,
+        LineageReference,
+    },
     landscape::{IndexedLocation, Location},
 };
 

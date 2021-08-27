@@ -1,5 +1,8 @@
 use necsim_core::{
-    cogs::{CoalescenceRngSample, Habitat, LineageReference, LocallyCoherentLineageStore},
+    cogs::{
+        coalescence_sampler::CoalescenceRngSample, Habitat, LineageReference,
+        LocallyCoherentLineageStore,
+    },
     landscape::{IndexedLocation, Location},
     lineage::LineageInteraction,
 };

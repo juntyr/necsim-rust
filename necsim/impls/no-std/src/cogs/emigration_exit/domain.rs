@@ -4,8 +4,8 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::{
     cogs::{
-        Backup, CoalescenceRngSample, EmigrationExit, Habitat, LineageReference,
-        LocallyCoherentLineageStore, RngCore,
+        coalescence_sampler::CoalescenceRngSample, Backup, EmigrationExit, Habitat,
+        LineageReference, LocallyCoherentLineageStore, RngCore,
     },
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, MigratingLineage},

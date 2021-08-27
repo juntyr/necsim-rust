@@ -1,13 +1,8 @@
 #![deny(clippy::pedantic)]
-#![allow(clippy::useless_attribute)]
 #![no_std]
 #![feature(core_intrinsics)]
-#![feature(stmt_expr_attributes)]
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
-#![feature(total_cmp)]
-#![feature(specialization)]
-#![feature(option_result_unwrap_unchecked)]
 
 #[doc(hidden)]
 pub extern crate alloc;

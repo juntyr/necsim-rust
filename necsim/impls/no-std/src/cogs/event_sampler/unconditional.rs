@@ -2,11 +2,12 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        Backup, CoalescenceRngSample, CoalescenceSampler, DispersalSampler, EmigrationExit,
-        EventSampler, Habitat, LineageReference, LocallyCoherentLineageStore, RngCore,
-        SpeciationProbability, TurnoverRate,
+        coalescence_sampler::CoalescenceRngSample, event_sampler::EventHandler, Backup,
+        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat,
+        LineageReference, LocallyCoherentLineageStore, RngCore, SpeciationProbability,
+        TurnoverRate,
     },
-    event::{DispersalEvent, PackedEvent, SpeciationEvent},
+    event::{DispersalEvent, SpeciationEvent},
     lineage::Lineage,
     simulation::partial::event_sampler::PartialSimulation,
 };
@@ -76,13 +77,13 @@ impl<
     for UnconditionalEventSampler<H, G, R, S, X, D, C, T, N>
 {
     #[must_use]
-    #[allow(clippy::shadow_unrelated)]
-    #[debug_ensures(ret.as_ref().map_or(true, |event: &PackedEvent| {
-        event.global_lineage_reference == old(
-            global_reference.clone()
-        )
-    }), "event occurs for lineage_reference")]
-    fn sample_event_for_lineage_at_event_time_or_emigrate(
+    fn sample_event_for_lineage_at_event_time_or_emigrate<
+        Q,
+        Aux,
+        FS: FnOnce(SpeciationEvent, Aux) -> Q,
+        FD: FnOnce(DispersalEvent, Aux) -> Q,
+        FE: FnOnce(Aux) -> Q,
+    >(
         &mut self,
         Lineage {
             global_reference,
@@ -92,7 +93,13 @@ impl<
         event_time: PositiveF64,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N>,
         rng: &mut G,
-    ) -> Option<PackedEvent> {
+        EventHandler {
+            speciation,
+            dispersal,
+            emigration,
+        }: EventHandler<FS, FD, FE>,
+        auxiliary: Aux,
+    ) -> Q {
         use necsim_core::cogs::RngSampler;
 
         if rng.sample_event(
@@ -103,14 +110,14 @@ impl<
                     &simulation.habitat,
                 ),
         ) {
-            Some(
+            speciation(
                 SpeciationEvent {
                     origin: dispersal_origin,
                     prior_time,
                     event_time,
                     global_lineage_reference: global_reference,
-                }
-                .into(),
+                },
+                auxiliary,
             )
         } else {
             let dispersal_target = simulation.dispersal_sampler.sample_dispersal_from_location(
@@ -120,39 +127,46 @@ impl<
             );
 
             // Check for emigration and return None iff lineage emigrated
-            let (global_reference, dispersal_origin, dispersal_target, prior_time, event_time) =
-                simulation.with_mut_split_emigration_exit(|emigration_exit, simulation| {
-                    emigration_exit.optionally_emigrate(
-                        global_reference,
-                        dispersal_origin,
-                        dispersal_target,
-                        prior_time,
-                        event_time,
-                        simulation,
-                        rng,
-                    )
-                })?;
-
-            let (dispersal_target, interaction) = simulation
-                .coalescence_sampler
-                .sample_interaction_at_location(
+            if let Some((
+                global_reference,
+                dispersal_origin,
+                dispersal_target,
+                prior_time,
+                event_time,
+            )) = simulation.with_mut_split_emigration_exit(|emigration_exit, simulation| {
+                emigration_exit.optionally_emigrate(
+                    global_reference,
+                    dispersal_origin,
                     dispersal_target,
-                    &simulation.habitat,
-                    &simulation.lineage_store,
-                    CoalescenceRngSample::new(rng),
-                );
-
-            Some(
-                DispersalEvent {
-                    origin: dispersal_origin,
                     prior_time,
                     event_time,
-                    global_lineage_reference: global_reference,
-                    target: dispersal_target,
-                    interaction,
-                }
-                .into(),
-            )
+                    simulation,
+                    rng,
+                )
+            }) {
+                let (dispersal_target, interaction) = simulation
+                    .coalescence_sampler
+                    .sample_interaction_at_location(
+                        dispersal_target,
+                        &simulation.habitat,
+                        &simulation.lineage_store,
+                        CoalescenceRngSample::new(rng),
+                    );
+
+                dispersal(
+                    DispersalEvent {
+                        origin: dispersal_origin,
+                        prior_time,
+                        event_time,
+                        global_lineage_reference: global_reference,
+                        target: dispersal_target,
+                        interaction,
+                    },
+                    auxiliary,
+                )
+            } else {
+                emigration(auxiliary)
+            }
         }
     }
 }

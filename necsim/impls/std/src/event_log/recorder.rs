@@ -134,8 +134,8 @@ impl EventLogRecorder {
         bincode::serialize_into(
             &mut buf_writer,
             &EventLogHeader::new(
-                self.buffer[0].event_time,
-                self.buffer[self.buffer.len() - 1].event_time,
+                self.buffer[0].event_time(),
+                self.buffer[self.buffer.len() - 1].event_time(),
                 self.buffer.len(),
                 self.record_speciation,
                 self.record_dispersal,
