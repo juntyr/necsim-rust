@@ -14,17 +14,41 @@ use crate::{
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PackedEvent {
-    pub global_lineage_reference: GlobalLineageReference,
-    pub prior_time: NonNegativeF64, // time of the previous event
-    pub event_time: PositiveF64,    // time of this event
-    pub origin: IndexedLocation,
-    pub r#type: EventType,
+    global_lineage_reference: GlobalLineageReference,
+    prior_time: NonNegativeF64, // time of the previous event
+    event_time: PositiveF64,    // time of this event
+    origin: IndexedLocation,
+    target: Option<IndexedLocation>,
+    interaction: LineageInteraction,
+}
+
+impl PackedEvent {
+    #[must_use]
+    #[inline]
+    pub fn event_time(&self) -> PositiveF64 {
+        self.event_time
+    }
 }
 
 #[allow(dead_code)]
 const EXCESSIVE_OPTION_PACKED_EVENT_ERROR: [(); 1 - {
     const ASSERT: bool =
         core::mem::size_of::<Option<PackedEvent>>() == core::mem::size_of::<PackedEvent>();
+    ASSERT
+} as usize] = [];
+
+#[allow(dead_code)]
+const EXCESSIVE_PACKED_EVENT_ERROR: [(); 1 - {
+    const ASSERT: bool = {
+        const SPECIATION_SIZE: usize = core::mem::size_of::<SpeciationEvent>();
+        const DISPERSAL_SIZE: usize = core::mem::size_of::<DispersalEvent>();
+
+        if SPECIATION_SIZE > DISPERSAL_SIZE {
+            SPECIATION_SIZE
+        } else {
+            DISPERSAL_SIZE
+        }
+    } == core::mem::size_of::<PackedEvent>();
     ASSERT
 } as usize] = [];
 
@@ -97,7 +121,8 @@ impl From<SpeciationEvent> for PackedEvent {
             prior_time: event.prior_time,
             event_time: event.event_time,
             origin: event.origin,
-            r#type: EventType::Speciation,
+            target: None,
+            interaction: LineageInteraction::None,
         }
     }
 }
@@ -109,10 +134,8 @@ impl From<DispersalEvent> for PackedEvent {
             prior_time: event.prior_time,
             event_time: event.event_time,
             origin: event.origin,
-            r#type: EventType::Dispersal(Dispersal {
-                target: event.target,
-                interaction: event.interaction,
-            }),
+            target: Some(event.target),
+            interaction: event.interaction,
         }
     }
 }
@@ -128,24 +151,23 @@ impl From<TypedEvent> for PackedEvent {
 
 impl From<PackedEvent> for TypedEvent {
     fn from(event: PackedEvent) -> Self {
-        match event.r#type {
-            EventType::Speciation => Self::Speciation(SpeciationEvent {
-                global_lineage_reference: event.global_lineage_reference,
-                prior_time: event.prior_time,
-                event_time: event.event_time,
-                origin: event.origin,
-            }),
-            EventType::Dispersal(Dispersal {
-                target,
-                interaction,
-            }) => Self::Dispersal(DispersalEvent {
+        #[allow(clippy::option_if_let_else)]
+        if let Some(target) = event.target {
+            Self::Dispersal(DispersalEvent {
                 global_lineage_reference: event.global_lineage_reference,
                 prior_time: event.prior_time,
                 event_time: event.event_time,
                 origin: event.origin,
                 target,
-                interaction,
-            }),
+                interaction: event.interaction,
+            })
+        } else {
+            Self::Speciation(SpeciationEvent {
+                global_lineage_reference: event.global_lineage_reference,
+                prior_time: event.prior_time,
+                event_time: event.event_time,
+                origin: event.origin,
+            })
         }
     }
 }
@@ -153,12 +175,14 @@ impl From<PackedEvent> for TypedEvent {
 impl Eq for PackedEvent {}
 
 impl PartialEq for PackedEvent {
-    // `Event`s are equal when they have the same `origin`, `event_time` and
-    //  `r#type` (`global_lineage_reference` and `prior_time` are ignored)
+    // `Event`s are equal when they have the same `origin`, `event_time`,
+    //  `target` and `interaction`
+    // (`global_lineage_reference` and `prior_time` are ignored)
     fn eq(&self, other: &Self) -> bool {
         self.origin == other.origin
             && self.event_time == other.event_time
-            && self.r#type == other.r#type
+            && self.target == other.target
+            && self.interaction == other.interaction
     }
 }
 
@@ -167,23 +191,26 @@ impl Ord for PackedEvent {
         // Order `Event`s in lexicographical order:
         //  (1) event_time                       /=\
         //  (2) origin                  different | events
-        //  (3) r#type (target and interaction)  \=/
+        //  (3) target and interaction           \=/
         //  (4) prior_time              parent + offspring
         //  (5) global_lineage_reference
-        match self.event_time.cmp(&other.event_time) {
-            Ordering::Equal => {
-                match (&self.origin, &self.r#type).cmp(&(&other.origin, &other.r#type)) {
-                    Ordering::Equal => match self.prior_time.cmp(&other.prior_time) {
-                        Ordering::Equal => self
-                            .global_lineage_reference
-                            .cmp(&other.global_lineage_reference),
-                        ordering => ordering,
-                    },
-                    ordering => ordering,
-                }
-            },
-            ordering => ordering,
-        }
+
+        (
+            &self.event_time,
+            &self.origin,
+            &self.target,
+            &self.interaction,
+            &self.prior_time,
+            &self.global_lineage_reference,
+        )
+            .cmp(&(
+                &other.event_time,
+                &other.origin,
+                &other.target,
+                &other.interaction,
+                &other.prior_time,
+                &other.global_lineage_reference,
+            ))
     }
 }
 
@@ -194,12 +221,14 @@ impl PartialOrd for PackedEvent {
 }
 
 impl Hash for PackedEvent {
-    // `Event`s are equal when they have the same `origin`, `event_time` and
-    //  `r#type` (`global_lineage_reference` and `prior_time` are ignored)
+    // `Event`s are equal when they have the same `origin`, `event_time`,
+    //  `target` and `interaction`
+    // (`global_lineage_reference` and `prior_time` are ignored)
     fn hash<S: Hasher>(&self, state: &mut S) {
         self.origin.hash(state);
         self.event_time.hash(state);
-        self.r#type.hash(state);
+        self.target.hash(state);
+        self.interaction.hash(state);
     }
 }
 

@@ -1,9 +1,8 @@
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit,
-        EmptyActiveLineageSamplerError, GloballyCoherentLineageStore, Habitat, ImmigrationEntry,
-        LineageReference, PeekableActiveLineageSampler, RngCore, SpeciationProbability,
-        TurnoverRate,
+        active_lineage_sampler::EmptyActiveLineageSamplerError, ActiveLineageSampler,
+        CoalescenceSampler, DispersalSampler, EmigrationExit, GloballyCoherentLineageStore,
+        Habitat, ImmigrationEntry, LineageReference, RngCore, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineager_sampler::PartialSimulation,
@@ -145,24 +144,7 @@ impl<
 
         self.last_event_time = event_time;
     }
-}
 
-#[contract_trait]
-impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: GloballyCoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: DispersalSampler<H, G>,
-        C: CoalescenceSampler<H, R, S>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-        E: GillespieEventSampler<H, G, R, S, X, D, C, T, N>,
-        I: ImmigrationEntry,
-    > PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
-    for GillespieActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
-{
     fn peek_time_of_next_event(
         &mut self,
         _habitat: &H,

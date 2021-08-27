@@ -2,11 +2,11 @@ use core::num::Wrapping;
 
 use crate::{
     cogs::{
-        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
-        TurnoverRate,
+        event_sampler::EventHandler, ActiveLineageSampler, CoalescenceSampler, DispersalSampler,
+        EmigrationExit, EventSampler, Habitat, ImmigrationEntry, LineageReference, LineageStore,
+        RngCore, SpeciationProbability, TurnoverRate,
     },
-    event::TypedEvent,
+    event::{DispersalEvent, SpeciationEvent},
     reporter::Reporter,
     simulation::Simulation,
 };
@@ -42,41 +42,38 @@ pub fn simulate_and_report_local_step_or_finish<
                 |simulation, rng, chosen_lineage, event_time| {
                     // Sample the next `event` for the `chosen_lineage`
                     //  or emigrate the `chosen_lineage`
-                    simulation
-                        .with_mut_split_event_sampler(|event_sampler, simulation| {
-                            event_sampler.sample_event_for_lineage_at_event_time_or_emigrate(
-                                chosen_lineage,
-                                event_time,
-                                simulation,
-                                rng,
-                            )
-                        })
-                        .map_or_else(
-                            || {
-                                emigration = true;
-                                None
-                            },
-                            |event| {
-                                match event.into() {
-                                    TypedEvent::Speciation(event) => {
-                                        // Report the local speciation event
-                                        reporter.report_speciation((&event).into());
+                    simulation.with_mut_split_event_sampler(|event_sampler, simulation| {
+                        event_sampler.sample_event_for_lineage_at_event_time_or_emigrate(
+                            chosen_lineage,
+                            event_time,
+                            simulation,
+                            rng,
+                            EventHandler {
+                                speciation: |event: SpeciationEvent, reporter: &mut P| {
+                                    // Report the local speciation event
+                                    reporter.report_speciation((&event).into());
 
+                                    None
+                                },
+                                dispersal: |event: DispersalEvent, reporter: &mut P| {
+                                    // Report the local dispersal event
+                                    reporter.report_dispersal((&event).into());
+
+                                    if event.interaction.is_coalescence() {
                                         None
-                                    },
-                                    TypedEvent::Dispersal(event) => {
-                                        // Report the local dispersal event
-                                        reporter.report_dispersal((&event).into());
+                                    } else {
+                                        Some(event.target)
+                                    }
+                                },
+                                emigration: |_| {
+                                    emigration = true;
 
-                                        if event.interaction.is_coalescence() {
-                                            None
-                                        } else {
-                                            Some(event.target)
-                                        }
-                                    },
-                                }
+                                    None
+                                },
                             },
+                            reporter,
                         )
+                    })
                 },
             )
         },
