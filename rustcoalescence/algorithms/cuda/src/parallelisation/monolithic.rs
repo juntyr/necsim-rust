@@ -17,9 +17,7 @@ use rust_cuda::{
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LineageReference, LineageStore, MinSpeciationTrackingEventSampler,
-        PeekableActiveLineageSampler, PrimeableRng, SingularActiveLineageSampler,
-        SpeciationProbability, SpeciationSample, TurnoverRate,
+        LineageReference, LineageStore, PrimeableRng, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     reporter::{boolean::Boolean, Reporter},
@@ -27,11 +25,17 @@ use necsim_core::{
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
-use necsim_impls_no_std::parallelisation::independent::{
-    monolithic::reporter::{
-        WaterLevelReporterConstructor, WaterLevelReporterProxy, WaterLevelReporterStrategy,
+use necsim_impls_no_std::{
+    cogs::{
+        active_lineage_sampler::singular::SingularActiveLineageSampler,
+        event_sampler::tracking::{MinSpeciationTrackingEventSampler, SpeciationSample},
     },
-    DedupCache, EventSlice,
+    parallelisation::independent::{
+        monolithic::reporter::{
+            WaterLevelReporterConstructor, WaterLevelReporterProxy, WaterLevelReporterStrategy,
+        },
+        DedupCache, EventSlice,
+    },
 };
 use necsim_partitioning_core::LocalPartition;
 
@@ -56,7 +60,6 @@ pub fn simulate<
     E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
     I: ImmigrationEntry + RustToCuda,
     A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
-        + PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
         + RustToCuda,
     P: Reporter,
     L: LocalPartition<P>,

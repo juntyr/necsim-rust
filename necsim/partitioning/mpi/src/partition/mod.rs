@@ -16,9 +16,9 @@ mod parallel;
 mod root;
 mod utils;
 
-#[allow(clippy::module_name_repetitions)]
+#[allow(clippy::useless_attribute, clippy::module_name_repetitions)]
 pub use parallel::MpiParallelPartition;
-#[allow(clippy::module_name_repetitions)]
+#[allow(clippy::useless_attribute, clippy::module_name_repetitions)]
 pub use root::MpiRootPartition;
 
 #[allow(clippy::module_name_repetitions)]

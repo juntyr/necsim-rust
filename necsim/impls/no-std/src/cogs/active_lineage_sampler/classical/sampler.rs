@@ -2,9 +2,9 @@ use core::num::NonZeroU64;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, EmigrationExit, EmptyActiveLineageSamplerError,
-        Habitat, ImmigrationEntry, LineageReference, LocallyCoherentLineageStore,
-        PeekableActiveLineageSampler, RngCore, SpeciationProbability,
+        active_lineage_sampler::EmptyActiveLineageSamplerError, ActiveLineageSampler,
+        DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry, LineageReference,
+        LocallyCoherentLineageStore, RngCore, SpeciationProbability,
     },
     lineage::Lineage,
     simulation::partial::active_lineager_sampler::PartialSimulation,
@@ -153,43 +153,7 @@ impl<
 
         self.active_lineage_references.push(lineage_reference);
     }
-}
 
-#[contract_trait]
-impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: LocallyCoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: DispersalSampler<H, G>,
-        N: SpeciationProbability<H>,
-        I: ImmigrationEntry,
-    >
-    PeekableActiveLineageSampler<
-        H,
-        G,
-        R,
-        S,
-        X,
-        D,
-        UnconditionalCoalescenceSampler<H, R, S>,
-        UniformTurnoverRate,
-        N,
-        UnconditionalEventSampler<
-            H,
-            G,
-            R,
-            S,
-            X,
-            D,
-            UnconditionalCoalescenceSampler<H, R, S>,
-            UniformTurnoverRate,
-            N,
-        >,
-        I,
-    > for ClassicalActiveLineageSampler<H, G, R, S, X, D, N, I>
-{
     fn peek_time_of_next_event(
         &mut self,
         _habitat: &H,

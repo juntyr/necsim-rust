@@ -1,11 +1,14 @@
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LineageReference, LineageStore, MinSpeciationTrackingEventSampler,
-        PeekableActiveLineageSampler, PrimeableRng, SingularActiveLineageSampler,
-        SpeciationProbability, TurnoverRate,
+        LineageReference, LineageStore, PrimeableRng, SpeciationProbability, TurnoverRate,
     },
     reporter::boolean::Boolean,
+};
+
+use necsim_impls_no_std::cogs::{
+    active_lineage_sampler::singular::SingularActiveLineageSampler,
+    event_sampler::tracking::MinSpeciationTrackingEventSampler,
 };
 
 use rust_cuda::{
@@ -35,9 +38,7 @@ pub struct SimulationKernel<
     N: SpeciationProbability<H> + RustToCuda,
     E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
     I: ImmigrationEntry + RustToCuda,
-    A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
-        + PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
-        + RustToCuda,
+    A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
     ReportSpeciation: Boolean,
     ReportDispersal: Boolean,
 > {
@@ -61,9 +62,7 @@ impl<
         N: SpeciationProbability<H> + RustToCuda,
         E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
         I: ImmigrationEntry + RustToCuda,
-        A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
-            + PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
-            + RustToCuda,
+        A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
         ReportSpeciation: Boolean,
         ReportDispersal: Boolean,
     > SimulationKernel<H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
@@ -96,9 +95,7 @@ impl<
         N: SpeciationProbability<H> + RustToCuda,
         E: MinSpeciationTrackingEventSampler<H, G, R, S, X, D, C, T, N> + RustToCuda,
         I: ImmigrationEntry + RustToCuda,
-        A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
-            + PeekableActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
-            + RustToCuda,
+        A: SingularActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
         ReportSpeciation: Boolean,
         ReportDispersal: Boolean,
     > Launcher

@@ -1,11 +1,11 @@
 use necsim_core::cogs::{
-    DispersalSampler, EmigrationExit, Habitat, PrimeableRng, SingularActiveLineageSampler,
-    SpeciationProbability, TurnoverRate,
+    DispersalSampler, EmigrationExit, Habitat, PrimeableRng, SpeciationProbability, TurnoverRate,
 };
 
 use necsim_core::lineage::{GlobalLineageReference, Lineage};
 
 use crate::cogs::{
+    active_lineage_sampler::singular::SingularActiveLineageSampler,
     coalescence_sampler::independent::IndependentCoalescenceSampler,
     event_sampler::independent::IndependentEventSampler,
     immigration_entry::never::NeverImmigrationEntry,

@@ -1,7 +1,8 @@
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, EmigrationExit, EmptyActiveLineageSamplerError,
-        Habitat, PeekableActiveLineageSampler, PrimeableRng, SpeciationProbability, TurnoverRate,
+        active_lineage_sampler::EmptyActiveLineageSamplerError, ActiveLineageSampler,
+        DispersalSampler, EmigrationExit, Habitat, PrimeableRng, SpeciationProbability,
+        TurnoverRate,
     },
     lineage::{GlobalLineageReference, Lineage},
     simulation::partial::active_lineager_sampler::PartialSimulation,
@@ -108,32 +109,7 @@ impl<
     ) {
         self.active_lineage = Some(lineage);
     }
-}
 
-#[contract_trait]
-impl<
-        H: Habitat,
-        G: PrimeableRng,
-        X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
-        D: DispersalSampler<H, G>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-        J: EventTimeSampler<H, G, T>,
-    >
-    PeekableActiveLineageSampler<
-        H,
-        G,
-        GlobalLineageReference,
-        IndependentLineageStore<H>,
-        X,
-        D,
-        IndependentCoalescenceSampler<H>,
-        T,
-        N,
-        IndependentEventSampler<H, G, X, D, T, N>,
-        NeverImmigrationEntry,
-    > for IndependentActiveLineageSampler<H, G, X, D, T, N, J>
-{
     #[inline]
     fn peek_time_of_next_event(
         &mut self,
