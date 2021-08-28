@@ -1,5 +1,7 @@
 use core::cmp::{Ord, Ordering};
 
+use serde::{Deserialize, Serialize};
+
 use necsim_core_bond::ClosedUnitF64;
 
 use crate::{
@@ -26,8 +28,7 @@ pub trait CoalescenceSampler<H: Habitat, R: LineageReference<H>, S: LineageStore
     ) -> (IndexedLocation, LineageInteraction);
 }
 
-#[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct CoalescenceRngSample(ClosedUnitF64);
 
 #[contract_trait]

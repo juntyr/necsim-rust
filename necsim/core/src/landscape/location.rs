@@ -1,9 +1,8 @@
 use core::num::NonZeroU32;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "mpi", derive(rsmpi::traits::Equivalence))]
 #[repr(C)]
 pub struct Location {
     x: u32,
@@ -35,25 +34,27 @@ impl From<IndexedLocation> for Location {
     }
 }
 
-#[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Copy, Hash, Debug, Serialize, Deserialize)]
+#[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Copy, Hash, Debug)]
 #[repr(transparent)]
 struct LocationIndex(NonZeroU32);
 
-#[cfg(feature = "mpi")]
-unsafe impl rsmpi::traits::Equivalence for LocationIndex {
-    type Out = rsmpi::datatype::SystemDatatype;
+impl Serialize for LocationIndex {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        (self.0.get() - 1).serialize(serializer)
+    }
+}
 
-    fn equivalent_datatype() -> Self::Out {
-        use rsmpi::raw::FromRaw;
+impl<'de> Deserialize<'de> for LocationIndex {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let inner = u32::deserialize(deserializer)?;
 
-        unsafe { rsmpi::datatype::DatatypeRef::from_raw(rsmpi::ffi::RSMPI_UINT32_T) }
+        Ok(Self(unsafe { NonZeroU32::new_unchecked(inner + 1) }))
     }
 }
 
 // IndexedLocation uses a NonZeroU32 index internally to enable same-size
 //  Option optimisation
 #[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
 #[repr(C)]
 pub struct IndexedLocation {

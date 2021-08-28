@@ -18,7 +18,6 @@ impl fmt::Display for PositiveUnitF64Error {
 }
 
 #[derive(Copy, Clone, Deserialize, Serialize)]
-#[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 #[repr(transparent)]
 #[serde(try_from = "f64")]
 pub struct PositiveUnitF64(f64);

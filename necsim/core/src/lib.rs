@@ -7,10 +7,6 @@
 #[doc(hidden)]
 pub extern crate alloc;
 
-#[cfg(feature = "mpi")]
-#[doc(hidden)]
-extern crate rsmpi as mpi;
-
 #[macro_use]
 extern crate contracts;
 
