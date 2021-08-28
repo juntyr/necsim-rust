@@ -23,7 +23,6 @@ impl fmt::Display for NonNegativeF64Error {
 
 #[allow(clippy::unsafe_derive_deserialize)]
 #[derive(Copy, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "mpi", derive(mpi::traits::Equivalence))]
 #[repr(transparent)]
 #[serde(try_from = "f64")]
 pub struct NonNegativeF64(f64);
