@@ -25,28 +25,17 @@ impl fmt::Display for GlobalLineageReference {
     }
 }
 
-impl<'de> Deserialize<'de> for GlobalLineageReference {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let inner = u64::deserialize(deserializer)?;
-
-        Ok(Self(unsafe { NonZeroOneU64::new_unchecked(inner + 2) }))
-    }
-}
-
 impl Serialize for GlobalLineageReference {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         (self.0.get() - 2).serialize(serializer)
     }
 }
 
-#[cfg(feature = "mpi")]
-unsafe impl rsmpi::traits::Equivalence for GlobalLineageReference {
-    type Out = rsmpi::datatype::SystemDatatype;
+impl<'de> Deserialize<'de> for GlobalLineageReference {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let inner = u64::deserialize(deserializer)?;
 
-    fn equivalent_datatype() -> Self::Out {
-        use rsmpi::raw::FromRaw;
-
-        unsafe { rsmpi::datatype::DatatypeRef::from_raw(rsmpi::ffi::RSMPI_UINT64_T) }
+        Ok(Self(unsafe { NonZeroOneU64::new_unchecked(inner + 2) }))
     }
 }
 
@@ -149,15 +138,15 @@ impl Lineage {
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "mpi", derive(rsmpi::traits::Equivalence))]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[repr(C)]
 pub struct MigratingLineage {
     pub global_reference: GlobalLineageReference,
-    pub dispersal_origin: IndexedLocation,
-    pub dispersal_target: Location,
     pub prior_time: NonNegativeF64,
     pub event_time: PositiveF64,
     pub coalescence_rng_sample: CoalescenceRngSample,
+    pub dispersal_target: Location,
+    pub dispersal_origin: IndexedLocation,
 }
 
 #[contract_trait]

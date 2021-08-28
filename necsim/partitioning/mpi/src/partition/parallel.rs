@@ -28,7 +28,7 @@ use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_partitioning_core::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode};
 
 use crate::{
-    partition::utils::{reduce_lexicographic_min_time_partition, TimePartition},
+    partition::utils::{reduce_lexicographic_min_time_rank, MpiMigratingLineage},
     MpiPartitioning,
 };
 
@@ -184,7 +184,7 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
             {
                 #[allow(clippy::cast_sign_loss)]
                 let number_immigrants =
-                    status.count(MigratingLineage::equivalent_datatype()) as usize;
+                    status.count(MpiMigratingLineage::equivalent_datatype()) as usize;
 
                 let receive_start = immigration_buffer.len();
 
@@ -194,7 +194,19 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
                     immigration_buffer.set_len(receive_start + number_immigrants);
                 }
 
-                msg.matched_receive_into(&mut immigration_buffer[receive_start..]);
+                // Safety: `MpiMigratingLineage` is a transparent newtype wrapper around
+                //         `MigratingLineage`
+                let immigration_slice: &mut [MpiMigratingLineage] = unsafe {
+                    std::slice::from_raw_parts_mut(
+                        immigration_buffer
+                            .as_mut_ptr()
+                            .cast::<MpiMigratingLineage>()
+                            .add(receive_start),
+                        number_immigrants,
+                    )
+                };
+
+                msg.matched_receive_into(immigration_slice);
             }
         }
 
@@ -237,13 +249,22 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
 
                     std::mem::swap(emigration_buffer, local_emigration_buffer);
 
+                    // Safety: `MpiMigratingLineage` is a transparent newtype wrapper around
+                    //         `MigratingLineage`
+                    let local_emigration_slice: &[MpiMigratingLineage] = unsafe {
+                        std::slice::from_raw_parts(
+                            local_emigration_buffer.as_ptr().cast(),
+                            local_emigration_buffer.len(),
+                        )
+                    };
+
                     #[allow(clippy::cast_possible_wrap)]
                     let receiver_process = self.world.process_at_rank(rank as i32);
 
                     self.emigration_requests[rank_index] =
                         Some(receiver_process.immediate_synchronous_send_with_tag(
                             StaticScope,
-                            &local_emigration_buffer[..],
+                            local_emigration_slice,
                             MpiPartitioning::MPI_MIGRATION_TAG,
                         ));
                 }
@@ -268,18 +289,13 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
     fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64> {
         let local_partition_rank = self.get_partition_rank();
 
-        let global_min_time_partition = reduce_lexicographic_min_time_partition(
-            self.world,
-            TimePartition {
-                time: local_time,
-                partition: local_partition_rank,
-            },
-        );
+        let (global_min_time, global_min_rank) =
+            reduce_lexicographic_min_time_rank(self.world, local_time, local_partition_rank);
 
-        if global_min_time_partition.partition == local_partition_rank {
+        if global_min_rank == local_partition_rank {
             Ok(local_time)
         } else {
-            Err(global_min_time_partition.time)
+            Err(global_min_time)
         }
     }
 

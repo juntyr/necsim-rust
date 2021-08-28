@@ -1,80 +1,143 @@
 use std::os::raw::{c_int, c_void};
 
+use memoffset::offset_of;
 use mpi::{
-    collective::UnsafeUserOperation, datatype::Equivalence, ffi::MPI_Datatype,
-    topology::SystemCommunicator, traits::CommunicatorCollectives,
+    collective::UnsafeUserOperation,
+    datatype::{Equivalence, UserDatatype},
+    ffi::MPI_Datatype,
+    topology::SystemCommunicator,
+    traits::CommunicatorCollectives,
 };
 
+use necsim_core::lineage::MigratingLineage;
 use necsim_core_bond::PositiveF64;
 
-#[derive(mpi::traits::Equivalence, PartialEq, Copy, Clone)]
 #[repr(C)]
-pub struct TimePartition {
-    pub time: PositiveF64,
-    pub partition: u32,
+#[derive(Clone, Copy, mpi::traits::Equivalence)]
+struct TimeRank {
+    time: f64,
+    rank: u32,
 }
 
-pub fn reduce_lexicographic_min_time_partition(
+pub fn reduce_lexicographic_min_time_rank(
     world: SystemCommunicator,
-    time_partition: TimePartition,
-) -> TimePartition {
-    let local_time_partition = time_partition;
-    let mut global_min_time_partition = local_time_partition;
-
-    let operation = unsafe {
-        UnsafeUserOperation::commutative(unsafe_reduce_lexicographic_min_time_partition_op)
+    time: PositiveF64,
+    rank: u32,
+) -> (PositiveF64, u32) {
+    let local_time_rank = TimeRank {
+        time: time.get(),
+        rank,
     };
+    let mut global_min_time_rank = local_time_rank;
 
-    world.all_reduce_into(
-        &local_time_partition,
-        &mut global_min_time_partition,
-        &operation,
-    );
+    let operation =
+        unsafe { UnsafeUserOperation::commutative(unsafe_reduce_lexicographic_min_time_rank_op) };
 
-    global_min_time_partition
+    world.all_reduce_into(&local_time_rank, &mut global_min_time_rank, &operation);
+
+    // Safety: min time comes from reduction of all PositiveF64
+    let min_time = unsafe { PositiveF64::new_unchecked(global_min_time_rank.time) };
+    let min_rank = global_min_time_rank.rank;
+
+    (min_time, min_rank)
 }
 
 #[cfg(not(all(msmpi, target_arch = "x86")))]
-unsafe extern "C" fn unsafe_reduce_lexicographic_min_time_partition_op(
+unsafe extern "C" fn unsafe_reduce_lexicographic_min_time_rank_op(
     invec: *mut c_void,
     inoutvec: *mut c_void,
     len: *mut c_int,
     datatype: *mut MPI_Datatype,
 ) {
-    unsafe_reduce_lexicographic_min_time_partition_op_inner(invec, inoutvec, len, datatype);
+    unsafe_reduce_lexicographic_min_time_rank_op_inner(invec, inoutvec, len, datatype);
 }
 
 #[cfg(all(msmpi, target_arch = "x86"))]
-unsafe extern "stdcall" fn unsafe_reduce_lexicographic_min_time_partition_op(
+unsafe extern "stdcall" fn unsafe_reduce_lexicographic_min_time_rank_op(
     invec: *mut c_void,
     inoutvec: *mut c_void,
     len: *mut c_int,
     datatype: *mut MPI_Datatype,
 ) {
-    unsafe_reduce_lexicographic_min_time_partition_op_inner(invec, inoutvec, len, datatype);
+    unsafe_reduce_lexicographic_min_time_rank_op_inner(invec, inoutvec, len, datatype);
 }
 
 #[inline]
-unsafe fn unsafe_reduce_lexicographic_min_time_partition_op_inner(
+unsafe fn unsafe_reduce_lexicographic_min_time_rank_op_inner(
     invec: *mut c_void,
     inoutvec: *mut c_void,
     len: *mut c_int,
     datatype: *mut MPI_Datatype,
 ) {
     debug_assert!(*len == 1);
-    debug_assert!(*datatype == mpi::raw::AsRaw::as_raw(&TimePartition::equivalent_datatype()));
+    debug_assert!(*datatype == mpi::raw::AsRaw::as_raw(&TimeRank::equivalent_datatype()));
 
-    reduce_lexicographic_min_time_partition_inner(&*invec.cast(), &mut *inoutvec.cast());
+    reduce_lexicographic_min_time_rank_inner(&*invec.cast(), &mut *inoutvec.cast());
 }
 
 #[inline]
-fn reduce_lexicographic_min_time_partition_inner(
-    local: &TimePartition,
-    accumulator: &mut TimePartition,
-) {
+fn reduce_lexicographic_min_time_rank_inner(local: &TimeRank, accumulator: &mut TimeRank) {
     if (local.time < accumulator.time)
-        || (local.time == accumulator.time && local.partition < accumulator.partition)
+        || (local.time <= accumulator.time && local.rank < accumulator.rank)
     {
         *accumulator = *local;
+    }
+}
+
+#[repr(transparent)]
+pub struct MpiMigratingLineage(MigratingLineage);
+
+impl From<MigratingLineage> for MpiMigratingLineage {
+    fn from(
+        MigratingLineage {
+            global_reference,
+            prior_time,
+            event_time,
+            coalescence_rng_sample,
+            dispersal_target,
+            dispersal_origin,
+        }: MigratingLineage,
+    ) -> Self {
+        Self(MigratingLineage {
+            global_reference,
+            prior_time,
+            event_time,
+            coalescence_rng_sample,
+            dispersal_target,
+            dispersal_origin,
+        })
+    }
+}
+
+impl From<MpiMigratingLineage> for MigratingLineage {
+    fn from(lineage: MpiMigratingLineage) -> Self {
+        lineage.0
+    }
+}
+
+unsafe impl Equivalence for MpiMigratingLineage {
+    type Out = UserDatatype;
+
+    #[allow(clippy::cast_possible_wrap)]
+    fn equivalent_datatype() -> Self::Out {
+        UserDatatype::structured(
+            &[1, 1, 1, 1, 2, 3],
+            &[
+                offset_of!(MigratingLineage, global_reference) as mpi::Address,
+                offset_of!(MigratingLineage, prior_time) as mpi::Address,
+                offset_of!(MigratingLineage, event_time) as mpi::Address,
+                offset_of!(MigratingLineage, coalescence_rng_sample) as mpi::Address,
+                offset_of!(MigratingLineage, dispersal_target) as mpi::Address,
+                offset_of!(MigratingLineage, dispersal_origin) as mpi::Address,
+            ],
+            &[
+                u64::equivalent_datatype(),
+                f64::equivalent_datatype(),
+                f64::equivalent_datatype(),
+                f64::equivalent_datatype(),
+                u32::equivalent_datatype(),
+                u32::equivalent_datatype(),
+            ],
+        )
     }
 }
