@@ -15,40 +15,19 @@ pub fn ceil(val: f64) -> f64 {
 #[must_use]
 #[inline]
 pub fn ln(val: f64) -> f64 {
-    #[cfg(not(target_os = "cuda"))]
-    unsafe {
-        core::intrinsics::logf64(val)
-    }
-    #[cfg(target_os = "cuda")]
-    unsafe {
-        rust_cuda::device::nvptx::_log(val)
-    }
+    unsafe { core::intrinsics::logf64(val) }
 }
 
 #[must_use]
 #[inline]
 pub fn log2(val: f64) -> f64 {
-    #[cfg(not(target_os = "cuda"))]
-    unsafe {
-        core::intrinsics::log2f64(val)
-    }
-    #[cfg(target_os = "cuda")]
-    unsafe {
-        rust_cuda::device::nvptx::_log2(val)
-    }
+    unsafe { core::intrinsics::log2f64(val) }
 }
 
 #[must_use]
 #[inline]
 pub fn exp(val: f64) -> f64 {
-    #[cfg(not(target_os = "cuda"))]
-    unsafe {
-        core::intrinsics::expf64(val)
-    }
-    #[cfg(target_os = "cuda")]
-    unsafe {
-        rust_cuda::device::nvptx::_exp(val)
-    }
+    unsafe { core::intrinsics::expf64(val) }
 }
 
 #[must_use]
@@ -72,55 +51,23 @@ pub fn safe_sqrt(val: NonNegativeF64) -> NonNegativeF64 {
 #[must_use]
 #[inline]
 pub fn sin(val: f64) -> f64 {
-    #[cfg(not(target_os = "cuda"))]
-    unsafe {
-        core::intrinsics::sinf64(val)
-    }
-    #[cfg(target_os = "cuda")]
-    unsafe {
-        rust_cuda::device::nvptx::_sin(val)
-    }
+    unsafe { core::intrinsics::sinf64(val) }
 }
 
 #[must_use]
 #[inline]
 pub fn cos(val: f64) -> f64 {
-    #[cfg(not(target_os = "cuda"))]
-    unsafe {
-        core::intrinsics::cosf64(val)
-    }
-    #[cfg(target_os = "cuda")]
-    unsafe {
-        rust_cuda::device::nvptx::_cos(val)
-    }
+    unsafe { core::intrinsics::cosf64(val) }
 }
 
 #[must_use]
 #[inline]
 pub fn round(val: f64) -> f64 {
-    #[cfg(not(target_os = "cuda"))]
-    unsafe {
-        core::intrinsics::roundf64(val)
-    }
-    #[cfg(target_os = "cuda")]
-    unsafe {
-        rust_cuda::device::nvptx::_round(val)
-    }
+    unsafe { core::intrinsics::roundf64(val) }
 }
 
 #[must_use]
 #[inline]
 pub fn fract(val: f64) -> f64 {
-    #[cfg(not(target_os = "cuda"))]
-    unsafe {
-        val - core::intrinsics::truncf64(val)
-    }
-    #[cfg(target_os = "cuda")]
-    unsafe {
-        if val >= 0.0_f64 {
-            val - core::intrinsics::floorf64(val)
-        } else {
-            core::intrinsics::ceilf64(val) - val
-        }
-    }
+    unsafe { val - core::intrinsics::truncf64(val) }
 }
