@@ -1,12 +1,9 @@
 use core::{convert::AsMut, default::Default, ptr::copy_nonoverlapping};
 
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveF64};
+use necsim_core_f64::{cos, floor, ln, sin, sqrt};
 
-use crate::{
-    cogs::Habitat,
-    intrinsics::{cos, floor, ln, sin, sqrt},
-    landscape::IndexedLocation,
-};
+use crate::{cogs::Habitat, landscape::IndexedLocation};
 
 #[allow(clippy::module_name_repetitions)]
 pub trait RngCore: crate::cogs::Backup + Sized + Clone + core::fmt::Debug {

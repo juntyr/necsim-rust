@@ -4,9 +4,9 @@ use libm::atan2;
 
 use necsim_core::{
     cogs::{Backup, Habitat},
-    intrinsics::floor,
     landscape::Location,
 };
+use necsim_core_f64::floor;
 
 use crate::decomposition::Decomposition;
 
