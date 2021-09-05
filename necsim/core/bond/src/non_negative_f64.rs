@@ -9,6 +9,8 @@ use core::{
 
 use serde::{Deserialize, Serialize};
 
+use necsim_core_f64::F64Core;
+
 use crate::{ClosedUnitF64, PositiveF64};
 
 #[derive(Debug)]
@@ -84,6 +86,16 @@ impl NonNegativeF64 {
     #[must_use]
     pub const fn get(self) -> f64 {
         self.0
+    }
+
+    #[must_use]
+    pub fn neg_exp(self) -> ClosedUnitF64 {
+        unsafe { ClosedUnitF64::new_unchecked(F64Core::exp(-self.0)) }
+    }
+
+    #[must_use]
+    pub fn sqrt(self) -> NonNegativeF64 {
+        Self(F64Core::sqrt(self.0))
     }
 }
 

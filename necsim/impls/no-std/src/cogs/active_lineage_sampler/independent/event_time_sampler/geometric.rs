@@ -1,9 +1,9 @@
 use necsim_core::{
     cogs::{Habitat, HabitatPrimeableRng, PrimeableRng, RngSampler, TurnoverRate},
-    intrinsics::{floor, neg_exp},
     landscape::IndexedLocation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_f64::floor;
 
 use super::EventTimeSampler;
 
@@ -34,11 +34,11 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
         rng: &mut G,
         turnover_rate: &T,
     ) -> NonNegativeF64 {
-        let event_probability_per_step = neg_exp(
-            turnover_rate.get_turnover_rate_at_location(indexed_location.location(), habitat)
-                * self.delta_t,
-        )
-        .one_minus();
+        let event_probability_per_step = (turnover_rate
+            .get_turnover_rate_at_location(indexed_location.location(), habitat)
+            * self.delta_t)
+            .neg_exp()
+            .one_minus();
 
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]

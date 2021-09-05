@@ -2,7 +2,8 @@ use core::cmp::Ordering;
 
 use alloc::vec::Vec;
 
-use necsim_core::{cogs::RngCore, intrinsics::floor};
+use necsim_core::cogs::RngCore;
+use necsim_core_f64::floor;
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(non_snake_case)]

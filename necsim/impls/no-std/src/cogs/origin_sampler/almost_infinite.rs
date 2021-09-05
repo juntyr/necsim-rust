@@ -2,9 +2,9 @@ use core::{fmt, iter::Iterator};
 
 use necsim_core::{
     cogs::OriginSampler,
-    intrinsics::ceil,
     landscape::{IndexedLocation, LandscapeExtent, LocationIterator},
 };
+use necsim_core_f64::ceil;
 
 use crate::cogs::{
     habitat::almost_infinite::AlmostInfiniteHabitat, origin_sampler::pre_sampler::OriginPreSampler,
