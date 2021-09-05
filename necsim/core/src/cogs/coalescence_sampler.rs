@@ -65,7 +65,7 @@ impl CoalescenceRngSample {
     #[inline]
     #[debug_ensures(ret < length, "samples U(0, length - 1)")]
     pub fn sample_coalescence_index(self, length: u32) -> u32 {
-        use crate::intrinsics::floor;
+        use necsim_core_f64::floor;
 
         // attributes on expressions are experimental
         // see https://github.com/rust-lang/rust/issues/15701

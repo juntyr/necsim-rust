@@ -51,7 +51,7 @@ impl<I: Iterator<Item = u64>> OriginPreSampler<I> {
     #[must_use]
     #[debug_requires((0.0_f64..=1.0_f64).contains(&percentage), "percentage is in [0, 1]")]
     pub fn percentage(mut self, percentage: f64) -> OriginPreSampler<impl Iterator<Item = u64>> {
-        use necsim_core::intrinsics::{floor, ln};
+        use necsim_core_f64::{floor, ln};
 
         let inv_geometric_sample_rate = ln(1.0_f64 - percentage).recip();
 
@@ -66,12 +66,12 @@ impl<I: Iterator<Item = u64>> OriginPreSampler<I> {
                     return self.next();
                 }
 
-                *quasi_random = necsim_core::intrinsics::fract(*quasi_random + INV_PHI);
+                // q = (q + INV_PHI) % 1  where q >= 0
+                *quasi_random += INV_PHI;
+                *quasi_random -= floor(*quasi_random);
 
                 #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-                let skip =
-                    floor(necsim_core::intrinsics::ln(*quasi_random) * inv_geometric_sample_rate)
-                        as usize;
+                let skip = floor(ln(*quasi_random) * inv_geometric_sample_rate) as usize;
 
                 self.nth(skip)
             }),

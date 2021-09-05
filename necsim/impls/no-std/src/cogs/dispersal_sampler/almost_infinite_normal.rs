@@ -2,10 +2,10 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{Backup, DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
-    intrinsics::round,
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
+use necsim_core_f64::round;
 
 use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 

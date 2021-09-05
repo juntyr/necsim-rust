@@ -2,7 +2,7 @@ use necsim_core::cogs::RngCore;
 
 use alloc::vec::Vec;
 
-use necsim_core::intrinsics::floor;
+use necsim_core_f64::floor;
 
 pub mod packed;
 

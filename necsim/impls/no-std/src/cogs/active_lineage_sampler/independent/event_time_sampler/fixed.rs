@@ -1,9 +1,9 @@
 use necsim_core::{
     cogs::{Habitat, HabitatPrimeableRng, PrimeableRng, TurnoverRate},
-    intrinsics::floor,
     landscape::IndexedLocation,
 };
 use necsim_core_bond::NonNegativeF64;
+use necsim_core_f64::floor;
 
 use super::EventTimeSampler;
 

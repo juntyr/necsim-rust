@@ -1,9 +1,9 @@
 use necsim_core::{
     cogs::{Habitat, HabitatPrimeableRng, PrimeableRng, RngSampler, TurnoverRate},
-    intrinsics::{exp, floor, safe_sqrt},
     landscape::IndexedLocation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_f64::{exp, floor};
 
 use super::EventTimeSampler;
 
@@ -68,7 +68,7 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
                 // Fallback in case no_event_probability_per_step underflows
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let normal_as_poisson = rng
-                    .sample_2d_normal(lambda_per_step.get(), safe_sqrt(lambda_per_step))
+                    .sample_2d_normal(lambda_per_step.get(), lambda_per_step.sqrt())
                     .0
                     .max(0.0_f64) as u32;
 

@@ -3,9 +3,9 @@ use core::{marker::PhantomData, num::NonZeroU32};
 
 use necsim_core::{
     cogs::{Backup, Habitat},
-    intrinsics::{ceil, log2},
     landscape::{LandscapeExtent, Location},
 };
+use necsim_core_f64::{ceil, ln};
 
 use crate::decomposition::Decomposition;
 
@@ -75,7 +75,7 @@ impl<H: Habitat> EqualDecomposition<H> {
     fn next_log2(coord: u32) -> u8 {
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         if coord > 1 {
-            ceil(log2(f64::from(coord))) as u8
+            ceil(ln(f64::from(coord)) / core::f64::consts::LN_2) as u8
         } else {
             0
         }
