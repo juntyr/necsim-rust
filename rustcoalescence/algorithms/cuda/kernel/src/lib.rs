@@ -51,7 +51,7 @@ pub fn simulate<
     #[rustfmt::skip]
     #[kernel(pass = RustToCuda, jit)]
     task_list: &mut ShallowCopy<
-        necsim_impls_cuda::value_buffer::ValueBuffer<necsim_core::lineage::Lineage>,
+        necsim_impls_cuda::value_buffer::ValueBuffer<necsim_core::lineage::Lineage, true, true>,
     >,
     #[rustfmt::skip]
     #[kernel(pass = RustToCuda, jit)]
@@ -61,12 +61,12 @@ pub fn simulate<
     #[rustfmt::skip]
     #[kernel(pass = RustToCuda, jit)]
     min_spec_sample_buffer: &mut ShallowCopy<
-        necsim_impls_cuda::value_buffer::ValueBuffer<SpeciationSample>,
+        necsim_impls_cuda::value_buffer::ValueBuffer<SpeciationSample, false, true>,
     >,
     #[rustfmt::skip]
     #[kernel(pass = RustToCuda, jit)]
     next_event_time_buffer: &mut ShallowCopy<
-        necsim_impls_cuda::value_buffer::ValueBuffer<necsim_core_bond::PositiveF64>,
+        necsim_impls_cuda::value_buffer::ValueBuffer<necsim_core_bond::PositiveF64, false, true>,
     >,
     #[rustfmt::skip]
     #[kernel(pass = DeviceCopy)]
@@ -91,32 +91,28 @@ pub fn simulate<
                 .replace_active_lineage(task),
         );
 
-        min_spec_sample_buffer.with_value_for_core(|min_spec_sample| {
-            // Discard the prior sample (same reason as above)
-            simulation
-                .event_sampler_mut()
-                .replace_min_speciation(min_spec_sample);
+        // Discard the prior sample (the simulation is just a temporary local copy)
+        simulation.event_sampler_mut().replace_min_speciation(None);
 
-            let (time, steps) = simulation.simulate_incremental_early_stop(
-                |simulation, steps| {
-                    steps >= max_steps
-                        || simulation
-                            .peek_time_of_next_event()
-                            .map_or(true, |next_time| next_time >= max_next_event_time)
-                },
-                event_buffer_reporter,
-            );
+        let (time, steps) = simulation.simulate_incremental_early_stop(
+            |simulation, steps| {
+                steps >= max_steps
+                    || simulation
+                        .peek_time_of_next_event()
+                        .map_or(true, |next_time| next_time >= max_next_event_time)
+            },
+            event_buffer_reporter,
+        );
 
-            next_event_time_buffer.with_value_for_core(|_| simulation.peek_time_of_next_event());
+        next_event_time_buffer.put_value_for_core(simulation.peek_time_of_next_event());
 
-            if steps > 0 {
-                total_time_max
-                    .fetch_max(time.get().to_bits(), core::sync::atomic::Ordering::Relaxed);
-                total_steps_sum.fetch_add(steps, core::sync::atomic::Ordering::Relaxed);
-            }
+        if steps > 0 {
+            total_time_max.fetch_max(time.get().to_bits(), core::sync::atomic::Ordering::Relaxed);
+            total_steps_sum.fetch_add(steps, core::sync::atomic::Ordering::Relaxed);
+        }
 
-            simulation.event_sampler_mut().replace_min_speciation(None)
-        });
+        min_spec_sample_buffer
+            .put_value_for_core(simulation.event_sampler_mut().replace_min_speciation(None));
 
         simulation
             .active_lineage_sampler_mut()

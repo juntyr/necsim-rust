@@ -24,10 +24,12 @@ impl<T: StackOnly> MaybeSome<T> {
         self.0.assume_init_read()
     }
 
+    #[cfg(not(target_os = "cuda"))]
     pub(crate) unsafe fn assume_some_ref(&self) -> &T {
         self.0.assume_init_ref()
     }
 
+    #[cfg(not(target_os = "cuda"))]
     pub(crate) unsafe fn assume_some_mut(&mut self) -> &mut T {
         self.0.assume_init_mut()
     }
