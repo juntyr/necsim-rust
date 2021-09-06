@@ -28,17 +28,19 @@ use super::utils::MaybeSome;
 #[derive(rust_cuda::common::RustToCudaAsRust)]
 pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
     #[r2cEmbed]
-    speciation_mask: SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<bool>, 1_usize>,
+    speciation_mask:
+        SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<bool, true, true>, 1_usize>,
     #[r2cEmbed]
     speciation_buffer: SplitSliceOverCudaThreadsConstStride<
-        CudaExchangeBuffer<MaybeSome<SpeciationEvent>>,
+        CudaExchangeBuffer<MaybeSome<SpeciationEvent>, false, true>,
         1_usize,
     >,
     #[r2cEmbed]
-    dispersal_mask: SplitSliceOverCudaThreadsDynamicStride<CudaExchangeBuffer<bool>>,
+    dispersal_mask: SplitSliceOverCudaThreadsDynamicStride<CudaExchangeBuffer<bool, true, true>>,
     #[r2cEmbed]
-    dispersal_buffer:
-        SplitSliceOverCudaThreadsDynamicStride<CudaExchangeBuffer<MaybeSome<DispersalEvent>>>,
+    dispersal_buffer: SplitSliceOverCudaThreadsDynamicStride<
+        CudaExchangeBuffer<MaybeSome<DispersalEvent>, false, true>,
+    >,
     max_events: usize,
     event_counter: usize,
     marker: PhantomData<(ReportSpeciation, ReportDispersal)>,
@@ -117,11 +119,11 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
             .iter_mut()
             .zip(self.dispersal_buffer.iter())
         {
-            if ReportDispersal::VALUE && *mask {
-                reporter.report_dispersal(unsafe { dispersal.assume_some_ref() }.into());
+            if ReportDispersal::VALUE && *mask.read() {
+                reporter.report_dispersal(unsafe { dispersal.read().assume_some_ref() }.into());
             }
 
-            *mask = false;
+            mask.write(false);
         }
 
         for (mask, speciation) in self
@@ -129,11 +131,11 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
             .iter_mut()
             .zip(self.speciation_buffer.iter())
         {
-            if ReportSpeciation::VALUE && *mask {
-                reporter.report_speciation(unsafe { speciation.assume_some_ref() }.into());
+            if ReportSpeciation::VALUE && *mask.read() {
+                reporter.report_speciation(unsafe { speciation.read().assume_some_ref() }.into());
             }
 
-            *mask = false;
+            mask.write(false);
         }
     }
 }
@@ -144,19 +146,19 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
 {
     impl_report!(
         #[debug_requires(
-            !self.speciation_mask.get(0).copied().unwrap_or(true),
+            !self.speciation_mask.get(0).map(
+                rust_cuda::utils::exchange::buffer::CudaExchangeItem::read
+            ).copied().unwrap_or(true),
             "does not report extraneous speciation event"
         )]
         speciation(&mut self, event: Used) {
             if ReportSpeciation::VALUE {
                 if let Some(mask) = self.speciation_mask.get_mut(0) {
-                    *mask = true;
+                    mask.write(true);
 
-                    // TODO: Optimise out local memory usage for this clone
-
-                    * unsafe {
+                    unsafe {
                         self.speciation_buffer.get_unchecked_mut(0)
-                    } = MaybeSome::Some(event.clone());
+                    }.write(MaybeSome::Some(event.clone()));
                 }
             }
         }
@@ -170,11 +172,11 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
         dispersal(&mut self, event: Used) {
             if ReportDispersal::VALUE {
                 if let Some(mask) = self.dispersal_mask.get_mut(self.event_counter) {
-                    *mask = true;
+                    mask.write(true);
 
-                    * unsafe {
+                    unsafe {
                         self.dispersal_buffer.get_unchecked_mut(self.event_counter)
-                    } = MaybeSome::Some(event.clone());
+                    }.write(MaybeSome::Some(event.clone()));
                 }
 
                 self.event_counter += 1;
