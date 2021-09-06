@@ -2,7 +2,8 @@
 use core::iter::Iterator;
 
 use rust_cuda::utils::{
-    aliasing::r#const::SplitSliceOverCudaThreadsConstStride, exchange::buffer::CudaExchangeBuffer,
+    aliasing::r#const::SplitSliceOverCudaThreadsConstStride,
+    exchange::buffer::{CudaExchangeBuffer, CudaExchangeItem},
     stack::StackOnly,
 };
 
@@ -16,15 +17,16 @@ use super::utils::MaybeSome;
 
 #[derive(rust_cuda::common::RustToCudaAsRust)]
 #[allow(clippy::module_name_repetitions)]
-pub struct ValueBuffer<T: StackOnly> {
+pub struct ValueBuffer<T: StackOnly, const M2D: bool, const M2H: bool> {
     #[r2cEmbed]
-    mask: SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<bool>, 1_usize>,
+    mask: SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<bool, true, true>, 1_usize>,
     #[r2cEmbed]
-    buffer: SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<MaybeSome<T>>, 1_usize>,
+    buffer:
+        SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<MaybeSome<T>, M2D, M2H>, 1_usize>,
 }
 
 #[cfg(not(target_os = "cuda"))]
-impl<T: StackOnly> ValueBuffer<T> {
+impl<T: StackOnly, const M2D: bool, const M2H: bool> ValueBuffer<T, M2D, M2H> {
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     pub fn new(block_size: &BlockSize, grid_size: &GridSize) -> CudaResult<Self> {
@@ -55,21 +57,24 @@ impl<T: StackOnly> ValueBuffer<T> {
     pub fn is_empty(&self) -> bool {
         self.buffer.is_empty()
     }
+}
 
+#[cfg(not(target_os = "cuda"))]
+impl<T: StackOnly, const M2D: bool> ValueBuffer<T, M2D, true> {
     pub fn iter(&self) -> impl Iterator<Item = Option<&T>> {
         self.mask
             .iter()
             .zip(self.buffer.iter())
             .map(|(mask, maybe)| {
-                if *mask {
-                    Some(unsafe { maybe.assume_some_ref() })
+                if *mask.read() {
+                    Some(unsafe { maybe.read().assume_some_ref() })
                 } else {
                     None
                 }
             })
     }
 
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = ValueRefMut<T>> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = ValueRefMut<T, M2D>> {
         self.mask
             .iter_mut()
             .zip(self.buffer.iter_mut())
@@ -78,10 +83,16 @@ impl<T: StackOnly> ValueBuffer<T> {
 }
 
 #[cfg(target_os = "cuda")]
-impl<T: StackOnly> ValueBuffer<T> {
+impl<T: StackOnly> ValueBuffer<T, true, true> {
     pub fn with_value_for_core<F: FnOnce(Option<T>) -> Option<T>>(&mut self, inner: F) {
-        let value = if self.mask.get(0).copied().unwrap_or(false) {
-            Some(unsafe { self.buffer.get_unchecked(0).assume_some_read() })
+        let value = if self
+            .mask
+            .get(0)
+            .map(CudaExchangeItem::read)
+            .copied()
+            .unwrap_or(false)
+        {
+            Some(unsafe { self.buffer.get_unchecked(0).read().assume_some_read() })
         } else {
             None
         };
@@ -89,26 +100,59 @@ impl<T: StackOnly> ValueBuffer<T> {
         let result = inner(value);
 
         if let Some(mask) = self.mask.get_mut(0) {
-            *mask = result.is_some();
+            mask.write(result.is_some());
 
             if let Some(result) = result {
-                *unsafe { self.buffer.get_unchecked_mut(0) } = MaybeSome::Some(result);
+                unsafe { self.buffer.get_unchecked_mut(0) }.write(MaybeSome::Some(result));
             }
         }
     }
 }
 
-pub struct ValueRefMut<'v, T: StackOnly> {
-    mask: &'v mut bool,
-    value: &'v mut MaybeSome<T>,
+#[cfg(target_os = "cuda")]
+impl<T: StackOnly, const M2H: bool> ValueBuffer<T, true, M2H> {
+    pub fn take_value_for_core(&mut self) -> Option<T> {
+        #[allow(clippy::option_if_let_else)]
+        if let Some(mask) = self.mask.get_mut(0) {
+            mask.write(false);
+
+            if *mask.read() {
+                Some(unsafe { self.buffer.get_unchecked(0).read().assume_some_read() })
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
 }
 
-impl<'v, T: StackOnly> ValueRefMut<'v, T> {
-    pub fn take(&mut self) -> Option<T> {
-        if *self.mask {
-            *self.mask = false;
+#[cfg(target_os = "cuda")]
+impl<T: StackOnly, const M2D: bool> ValueBuffer<T, M2D, true> {
+    pub fn put_value_for_core(&mut self, value: Option<T>) {
+        if let Some(mask) = self.mask.get_mut(0) {
+            mask.write(value.is_some());
 
-            Some(unsafe { self.value.assume_some_read() })
+            if let Some(value) = value {
+                unsafe { self.buffer.get_unchecked_mut(0) }.write(MaybeSome::Some(value));
+            }
+        }
+    }
+}
+
+#[cfg(not(target_os = "cuda"))]
+pub struct ValueRefMut<'v, T: StackOnly, const M2D: bool> {
+    mask: &'v mut CudaExchangeItem<bool, true, true>,
+    value: &'v mut CudaExchangeItem<MaybeSome<T>, M2D, true>,
+}
+
+#[cfg(not(target_os = "cuda"))]
+impl<'v, T: StackOnly, const M2D: bool> ValueRefMut<'v, T, M2D> {
+    pub fn take(&mut self) -> Option<T> {
+        if *self.mask.read() {
+            self.mask.write(false);
+
+            Some(unsafe { self.value.read().assume_some_read() })
         } else {
             None
         }
@@ -116,33 +160,36 @@ impl<'v, T: StackOnly> ValueRefMut<'v, T> {
 
     #[must_use]
     pub fn as_ref(&self) -> Option<&T> {
-        if *self.mask {
-            Some(unsafe { self.value.assume_some_ref() })
+        if *self.mask.read() {
+            Some(unsafe { self.value.read().assume_some_ref() })
         } else {
             None
         }
     }
+}
 
+#[cfg(not(target_os = "cuda"))]
+impl<'v, T: StackOnly> ValueRefMut<'v, T, true> {
     #[must_use]
     pub fn as_mut(&mut self) -> Option<&mut T> {
-        if *self.mask {
-            Some(unsafe { self.value.assume_some_mut() })
+        if *self.mask.read() {
+            Some(unsafe { self.value.as_mut().assume_some_mut() })
         } else {
             None
         }
     }
 
     pub fn replace(&mut self, value: Option<T>) -> Option<T> {
-        let old = if *self.mask {
-            Some(unsafe { self.value.assume_some_read() })
+        let old = if *self.mask.read() {
+            Some(unsafe { self.value.read().assume_some_read() })
         } else {
             None
         };
 
-        *self.mask = value.is_some();
+        self.mask.write(value.is_some());
 
         if let Some(value) = value {
-            *self.value = MaybeSome::Some(value);
+            self.value.write(MaybeSome::Some(value));
         }
 
         old

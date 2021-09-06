@@ -22,12 +22,12 @@ use necsim_core::{
     reporter::{boolean::Boolean, Reporter},
     simulation::Simulation,
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::NonNegativeF64;
 
 use necsim_impls_no_std::{
     cogs::{
         active_lineage_sampler::singular::SingularActiveLineageSampler,
-        event_sampler::tracking::{MinSpeciationTrackingEventSampler, SpeciationSample},
+        event_sampler::tracking::MinSpeciationTrackingEventSampler,
     },
     parallelisation::independent::{
         monolithic::reporter::{
@@ -153,9 +153,9 @@ pub fn simulate<
         &grid_size,
         step_slice.get().try_into()?,
     )?)?;
-    let mut min_spec_sample_buffer: ExchangeWithCudaWrapper<ValueBuffer<SpeciationSample>> =
+    let mut min_spec_sample_buffer =
         ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
-    let mut next_event_time_buffer: ExchangeWithCudaWrapper<ValueBuffer<PositiveF64>> =
+    let mut next_event_time_buffer =
         ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
 
     let mut min_spec_samples = dedup_cache.construct(lineages.len());
