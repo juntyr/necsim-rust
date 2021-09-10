@@ -9,6 +9,9 @@ use hashbrown::HashMap;
 use necsim_core::cogs::{MathsCore, RngCore, RngSampler};
 use necsim_core_bond::PositiveF64;
 
+#[cfg(test)]
+mod tests;
+
 struct RejectionSamplingGroup<E: Eq + Hash + Copy> {
     events: Vec<E>,
     weights: Vec<u64>,
@@ -30,11 +33,6 @@ impl<E: Eq + Hash + Copy> RejectionSamplingGroup<E> {
             let index =
                 rng.sample_index(unsafe { NonZeroUsize::new_unchecked(self.weights.len()) });
             let height = rng.sample_u64() >> 11;
-
-            // >= 50% chance we hit the event bar in any case
-            if height >= (0x1_u64 << 52) {
-                return &self.events[index];
-            }
 
             if height < self.weights[index] {
                 return &self.events[index];
@@ -85,6 +83,7 @@ struct PositiveF64Decomposed {
     mantissa: u64,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 struct EventLocation {
     exponent: i16,
     group_index: usize,
