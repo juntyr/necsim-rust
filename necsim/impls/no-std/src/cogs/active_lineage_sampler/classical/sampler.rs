@@ -113,9 +113,10 @@ impl<
 
             self.last_event_time = next_event_time.into();
 
-            // Safety: +1 can never be zero
+            // Safety: The outer if statement has already shown that the number
+            //         of remaining lineages is non-zero
             let chosen_lineage_index = rng.sample_index(unsafe {
-                NonZeroUsize::new_unchecked(self.active_lineage_references.len() + 1)
+                NonZeroUsize::new_unchecked(self.active_lineage_references.len())
             });
             let chosen_lineage_reference = self
                 .active_lineage_references

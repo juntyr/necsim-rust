@@ -1,242 +1,150 @@
-use alloc::{vec, vec::Vec};
-use core::{
-    hash::Hash,
-    num::{NonZeroU128, NonZeroUsize},
+use core::marker::PhantomData;
+
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
+
+use necsim_core::{
+    cogs::{
+        Backup, CoalescenceSampler, DispersalSampler, EmigrationExit, GloballyCoherentLineageStore,
+        Habitat, ImmigrationEntry, LineageReference, MathsCore, RngCore, SpeciationProbability,
+        TurnoverRate,
+    },
+    landscape::Location,
 };
 
-use hashbrown::HashMap;
+use crate::cogs::event_sampler::gillespie::{GillespieEventSampler, GillespiePartialSimulation};
 
-use necsim_core::cogs::{MathsCore, RngCore, RngSampler};
-use necsim_core_bond::PositiveF64;
+use self::dynamic::DynamicAliasMethodSampler;
 
-#[cfg(test)]
-mod tests;
+mod dynamic;
+mod sampler;
 
-struct RejectionSamplingGroup<E: Eq + Hash + Copy> {
-    events: Vec<E>,
-    weights: Vec<u64>,
-    total_weight: u128,
+#[allow(clippy::module_name_repetitions)]
+#[allow(clippy::type_complexity)]
+pub struct AliasActiveLineageSampler<
+    M: MathsCore,
+    H: Habitat<M>,
+    G: RngCore<M>,
+    R: LineageReference<M, H>,
+    S: GloballyCoherentLineageStore<M, H, R>,
+    X: EmigrationExit<M, H, G, R, S>,
+    D: DispersalSampler<M, H, G>,
+    C: CoalescenceSampler<M, H, R, S>,
+    T: TurnoverRate<M, H>,
+    N: SpeciationProbability<M, H>,
+    E: GillespieEventSampler<M, H, G, R, S, X, D, C, T, N>,
+    I: ImmigrationEntry<M>,
+> {
+    alias_sampler: DynamicAliasMethodSampler<Location>,
+    number_active_lineages: usize,
+    last_event_time: NonNegativeF64,
+    marker: PhantomData<(M, H, G, R, S, X, D, C, T, N, E, I)>,
 }
 
-pub struct DynamicAliasMethodSampler<E: Eq + Hash + Copy> {
-    exponents: Vec<i16>,
-    groups: Vec<RejectionSamplingGroup<E>>,
-    lookup: HashMap<E, EventLocation>,
-    min_exponent: i16,
-    total_weight: u128,
-}
-
-impl<E: Eq + Hash + Copy> RejectionSamplingGroup<E> {
-    fn sample<M: MathsCore, G: RngCore<M>>(&self, rng: &mut G) -> &E {
-        loop {
-            // Safety: By construction, the group never contains zero elements
-            let index =
-                rng.sample_index(unsafe { NonZeroUsize::new_unchecked(self.weights.len()) });
-            let height = rng.sample_u64() >> 11;
-
-            if height < self.weights[index] {
-                return &self.events[index];
-            }
-        }
-    }
-
-    fn remove(mut self, index: usize, lookup: &mut HashMap<E, EventLocation>) -> Option<Self> {
-        self.events.swap_remove(index);
-        let weight = self.weights.swap_remove(index);
-
-        self.total_weight -= u128::from(weight);
-
-        if let Some(event) = self.events.get(index) {
-            if let Some(location) = lookup.get_mut(event) {
-                location.group_index = index;
-            }
-        }
-
-        if self.events.is_empty() {
-            None
-        } else {
-            Some(self)
-        }
-    }
-
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: RngCore<M>,
+        R: LineageReference<M, H>,
+        S: GloballyCoherentLineageStore<M, H, R>,
+        X: EmigrationExit<M, H, G, R, S>,
+        D: DispersalSampler<M, H, G>,
+        C: CoalescenceSampler<M, H, R, S>,
+        T: TurnoverRate<M, H>,
+        N: SpeciationProbability<M, H>,
+        E: GillespieEventSampler<M, H, G, R, S, X, D, C, T, N>,
+        I: ImmigrationEntry<M>,
+    > AliasActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
+{
     #[must_use]
-    fn add(&mut self, event: E, weight: u64) -> usize {
-        self.events.push(event);
-        self.weights.push(weight);
+    pub fn new(
+        partial_simulation: &GillespiePartialSimulation<M, H, G, R, S, D, C, T, N>,
+        event_sampler: &E,
+    ) -> Self {
+        let mut alias_sampler = DynamicAliasMethodSampler::new();
+        let mut number_active_lineages: usize = 0;
 
-        self.total_weight += u128::from(weight);
+        partial_simulation
+            .lineage_store
+            .iter_active_locations(&partial_simulation.habitat)
+            .for_each(|location| {
+                let number_active_lineages_at_location = partial_simulation
+                    .lineage_store
+                    .get_local_lineage_references_at_location_unordered(
+                        &location,
+                        &partial_simulation.habitat,
+                    )
+                    .len();
 
-        self.events.len() - 1
-    }
+                if number_active_lineages_at_location > 0 {
+                    // All lineages were just initially inserted into the lineage store,
+                    //  so all active lineages are in the lineage store
+                    if let Ok(event_rate_at_location) = PositiveF64::new(
+                        event_sampler
+                            .get_event_rate_at_location(&location, partial_simulation)
+                            .get(),
+                    ) {
+                        alias_sampler.add(location, event_rate_at_location);
 
-    fn new(event: E, weight: u64) -> Self {
-        Self {
-            events: vec![event],
-            weights: vec![weight],
-            total_weight: u128::from(weight),
-        }
-    }
-}
-
-struct PositiveF64Decomposed {
-    exponent: i16,
-    mantissa: u64,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-struct EventLocation {
-    exponent: i16,
-    group_index: usize,
-}
-
-impl<E: Eq + Hash + Copy> DynamicAliasMethodSampler<E> {
-    fn lookup_mut(&mut self, exponent: i16) -> Option<&mut RejectionSamplingGroup<E>> {
-        self.exponents
-            .iter()
-            .position(|e| *e == exponent)
-            .and_then(move |i| self.groups.get_mut(i))
-    }
-
-    fn lookup_take(&mut self, exponent: i16) -> Option<RejectionSamplingGroup<E>> {
-        self.exponents
-            .iter()
-            .position(|e| *e == exponent)
-            .map(|index| {
-                self.exponents.swap_remove(index);
-                self.groups.swap_remove(index)
-            })
-    }
-
-    fn decompose_weight(weight: PositiveF64) -> PositiveF64Decomposed {
-        let bits = weight.get().to_bits();
-
-        #[allow(clippy::cast_possible_truncation)]
-        let exponent: i16 = ((bits >> 52) & 0x7ff_u64) as i16;
-
-        let mantissa = if exponent == 0 {
-            (bits & 0x000f_ffff_ffff_ffff_u64) << 1
-        } else {
-            (bits & 0x000f_ffff_ffff_ffff_u64) | 0x0010_0000_0000_0000_u64
-        };
-
-        PositiveF64Decomposed {
-            exponent: exponent - (1023 + 52),
-            mantissa,
-        }
-    }
-
-    pub fn add(&mut self, event: E, weight: PositiveF64) {
-        self.remove(&event);
-
-        let weight_decomposed = Self::decompose_weight(weight);
-
-        #[allow(clippy::option_if_let_else)]
-        let group_index = if let Some(group) = self.lookup_mut(weight_decomposed.exponent) {
-            group.add(event, weight_decomposed.mantissa)
-        } else {
-            self.exponents.push(weight_decomposed.exponent);
-            self.groups.push(RejectionSamplingGroup::new(
-                event,
-                weight_decomposed.mantissa,
-            ));
-
-            let old_min_exponent = self.min_exponent;
-            self.min_exponent = self.exponents.iter().copied().min().unwrap_or(0_i16);
-
-            if self.min_exponent < old_min_exponent {
-                self.total_weight <<= i32::from(old_min_exponent) - i32::from(self.min_exponent);
-            }
-
-            0_usize
-        };
-
-        self.total_weight += u128::from(weight_decomposed.mantissa)
-            << (i32::from(weight_decomposed.exponent) - i32::from(self.min_exponent));
-
-        self.lookup.insert(
-            event,
-            EventLocation {
-                exponent: weight_decomposed.exponent,
-                group_index,
-            },
-        );
-    }
-
-    pub fn remove(&mut self, event: &E) {
-        if let Some(location) = self.lookup.remove(event) {
-            if let Some(group) = self.lookup_take(location.exponent) {
-                let exponent_shift = i32::from(location.exponent) - i32::from(self.min_exponent);
-
-                self.total_weight = self
-                    .total_weight
-                    .wrapping_sub(group.total_weight << exponent_shift);
-
-                if let Some(group) = group.remove(location.group_index, &mut self.lookup) {
-                    self.total_weight = self
-                        .total_weight
-                        .wrapping_add(group.total_weight << exponent_shift);
-
-                    self.exponents.push(location.exponent);
-                    self.groups.push(group);
-                } else {
-                    let old_min_exponent = self.min_exponent;
-                    self.min_exponent = self.exponents.iter().copied().min().unwrap_or(0_i16);
-
-                    if self.min_exponent > old_min_exponent {
-                        self.total_weight >>=
-                            i32::from(self.min_exponent) - i32::from(old_min_exponent);
+                        number_active_lineages += number_active_lineages_at_location;
                     }
                 }
-            }
-        }
-    }
-
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            exponents: Vec::new(),
-            groups: Vec::new(),
-            lookup: HashMap::new(),
-            min_exponent: 0_i16,
-            total_weight: 0_u128,
-        }
-    }
-
-    #[must_use]
-    pub fn with_capacity(capacity: usize) -> Self {
-        let capacity_log2_approx = (usize::BITS - capacity.leading_zeros()) as usize;
+            });
 
         Self {
-            exponents: Vec::with_capacity(capacity_log2_approx),
-            groups: Vec::with_capacity(capacity_log2_approx),
-            lookup: HashMap::with_capacity(capacity),
-            min_exponent: 0_i16,
-            total_weight: 0_u128,
+            alias_sampler,
+            number_active_lineages,
+            last_event_time: NonNegativeF64::zero(),
+            marker: PhantomData::<(M, H, G, R, S, X, D, C, T, N, E, I)>,
         }
-    }
-
-    pub fn sample<M: MathsCore, G: RngCore<M>>(&self, rng: &mut G) -> Option<&E> {
-        if let Some(total_weight) = NonZeroU128::new(self.total_weight) {
-            let cdf_sample = rng.sample_index_u128(total_weight);
-
-            let mut cdf_acc = 0_u128;
-
-            for (exponent, group) in self.exponents.iter().copied().zip(self.groups.iter()) {
-                cdf_acc +=
-                    group.total_weight << (i32::from(exponent) - i32::from(self.min_exponent));
-
-                if cdf_sample < cdf_acc {
-                    return Some(group.sample(rng));
-                }
-            }
-        }
-
-        None
     }
 }
 
-impl<E: Eq + Hash + Copy> Default for DynamicAliasMethodSampler<E> {
-    fn default() -> Self {
-        Self::new()
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: RngCore<M>,
+        R: LineageReference<M, H>,
+        S: GloballyCoherentLineageStore<M, H, R>,
+        X: EmigrationExit<M, H, G, R, S>,
+        D: DispersalSampler<M, H, G>,
+        C: CoalescenceSampler<M, H, R, S>,
+        T: TurnoverRate<M, H>,
+        N: SpeciationProbability<M, H>,
+        E: GillespieEventSampler<M, H, G, R, S, X, D, C, T, N>,
+        I: ImmigrationEntry<M>,
+    > core::fmt::Debug for AliasActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.debug_struct("AliasActiveLineageSampler")
+            .field("alias_sampler", &self.alias_sampler)
+            .field("number_active_lineages", &self.number_active_lineages)
+            .field("marker", &self.marker)
+            .finish()
+    }
+}
+
+#[contract_trait]
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: RngCore<M>,
+        R: LineageReference<M, H>,
+        S: GloballyCoherentLineageStore<M, H, R>,
+        X: EmigrationExit<M, H, G, R, S>,
+        D: DispersalSampler<M, H, G>,
+        C: CoalescenceSampler<M, H, R, S>,
+        T: TurnoverRate<M, H>,
+        N: SpeciationProbability<M, H>,
+        E: GillespieEventSampler<M, H, G, R, S, X, D, C, T, N>,
+        I: ImmigrationEntry<M>,
+    > Backup for AliasActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
+{
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            alias_sampler: self.alias_sampler.clone(),
+            number_active_lineages: self.number_active_lineages,
+            last_event_time: self.last_event_time,
+            marker: PhantomData::<(M, H, G, R, S, X, D, C, T, N, E, I)>,
+        }
     }
 }
