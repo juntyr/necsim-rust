@@ -266,7 +266,8 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodSampler<E> {
                     }
                 }
             } else {
-                unsafe { core::hint::unreachable_unchecked() }
+                // Safety: If the lookup refers to a group, it must exist
+                unsafe { core::hint::unreachable_unchecked() } // GRCOV_EXCL_LINE
             }
         }
     }
