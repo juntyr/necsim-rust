@@ -1,8 +1,7 @@
 use necsim_core::{
     cogs::{
-        active_lineage_sampler::EmptyActiveLineageSamplerError, ActiveLineageSampler,
-        DispersalSampler, EmigrationExit, Habitat, PrimeableRng, SpeciationProbability,
-        TurnoverRate,
+        ActiveLineageSampler, DispersalSampler, EmigrationExit, Habitat, PrimeableRng,
+        SpeciationProbability, TurnoverRate,
     },
     lineage::{GlobalLineageReference, Lineage},
     simulation::partial::active_lineager_sampler::PartialSimulation,
@@ -56,7 +55,7 @@ impl<
     #[must_use]
     #[allow(clippy::type_complexity)]
     #[inline]
-    fn pop_active_lineage_and_event_time(
+    fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> bool>(
         &mut self,
         simulation: &mut PartialSimulation<
             H,
@@ -71,17 +70,35 @@ impl<
             IndependentEventSampler<H, G, X, D, T, N>,
         >,
         rng: &mut G,
+        early_peek_stop: F,
     ) -> Option<(Lineage, PositiveF64)> {
-        let next_event_time = self
-            .peek_time_of_next_event(&simulation.habitat, &simulation.turnover_rate, rng)
-            .ok()?;
-        self.next_event_time = None;
+        if let Some(active_lineage) = &self.active_lineage {
+            // Check for extraneously simulated (inactive) lineages
+            let event_time = self
+                .event_time_sampler
+                .next_event_time_at_indexed_location_weakly_after(
+                    &active_lineage.indexed_location,
+                    active_lineage.last_event_time,
+                    &simulation.habitat,
+                    rng,
+                    &simulation.turnover_rate,
+                );
 
-        // Note: Option::take would be better but uses local memory
-        let lineage = self.active_lineage.clone()?;
-        self.active_lineage = None;
+            let next_event_time =
+                PositiveF64::max_after(active_lineage.last_event_time, event_time);
 
-        Some((lineage, next_event_time))
+            if early_peek_stop(next_event_time) {
+                return None;
+            }
+
+            // Note: Option::take would be better but uses local memory
+            let chosen_lineage = active_lineage.clone();
+            self.active_lineage = None;
+
+            Some((chosen_lineage, next_event_time))
+        } else {
+            None
+        }
     }
 
     #[debug_requires(
@@ -108,35 +125,5 @@ impl<
         _rng: &mut G,
     ) {
         self.active_lineage = Some(lineage);
-    }
-
-    #[inline]
-    fn peek_time_of_next_event(
-        &mut self,
-        habitat: &H,
-        turnover_rate: &T,
-        rng: &mut G,
-    ) -> Result<PositiveF64, EmptyActiveLineageSamplerError> {
-        if self.next_event_time.is_none() {
-            if let Some(active_lineage) = &self.active_lineage {
-                // Check for extraneously simulated (inactive) lineages
-                let next_event_time = self
-                    .event_time_sampler
-                    .next_event_time_at_indexed_location_weakly_after(
-                        &active_lineage.indexed_location,
-                        active_lineage.last_event_time,
-                        habitat,
-                        rng,
-                        turnover_rate,
-                    );
-
-                self.next_event_time = Some(PositiveF64::max_after(
-                    active_lineage.last_event_time,
-                    next_event_time,
-                ));
-            }
-        }
-
-        self.next_event_time.ok_or(EmptyActiveLineageSamplerError)
     }
 }

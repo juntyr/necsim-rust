@@ -6,7 +6,7 @@ use necsim_core::cogs::{
     Backup, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry, LineageReference,
     LocallyCoherentLineageStore, RngCore, SpeciationProbability,
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::NonNegativeF64;
 
 mod sampler;
 
@@ -24,7 +24,6 @@ pub struct ClassicalActiveLineageSampler<
 > {
     active_lineage_references: Vec<R>,
     last_event_time: NonNegativeF64,
-    next_event_time: Option<PositiveF64>,
     _marker: PhantomData<(H, G, S, X, D, N, I)>,
 }
 
@@ -51,7 +50,6 @@ impl<
                 })
                 .collect(),
             last_event_time: NonNegativeF64::zero(),
-            next_event_time: None,
             _marker: PhantomData::<(H, G, S, X, D, N, I)>,
         }
     }
@@ -73,7 +71,6 @@ impl<
         Self {
             active_lineage_references: self.active_lineage_references.clone(),
             last_event_time: self.last_event_time,
-            next_event_time: self.next_event_time,
             _marker: PhantomData::<(H, G, S, X, D, N, I)>,
         }
     }

@@ -1,8 +1,8 @@
 use necsim_core::{
     cogs::{
-        active_lineage_sampler::EmptyActiveLineageSamplerError, ActiveLineageSampler,
-        CoalescenceSampler, DispersalSampler, EmigrationExit, GloballyCoherentLineageStore,
-        Habitat, ImmigrationEntry, LineageReference, RngCore, SpeciationProbability, TurnoverRate,
+        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit,
+        GloballyCoherentLineageStore, Habitat, ImmigrationEntry, LineageReference, RngCore,
+        SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineager_sampler::PartialSimulation,
@@ -42,17 +42,23 @@ impl<
     }
 
     #[must_use]
-    fn pop_active_lineage_and_event_time(
+    fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> bool>(
         &mut self,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
+        early_peek_stop: F,
     ) -> Option<(Lineage, PositiveF64)> {
         use necsim_core::cogs::RngSampler;
 
-        let (chosen_active_location, chosen_event_time) = self.active_locations.pop()?;
+        let chosen_event_time = (*self.active_locations.peek()?.1).into();
 
-        let unique_event_time =
-            PositiveF64::max_after(self.last_event_time, chosen_event_time.into());
+        let next_event_time = PositiveF64::max_after(self.last_event_time, chosen_event_time);
+
+        if early_peek_stop(next_event_time) {
+            return None;
+        }
+
+        let chosen_active_location = self.active_locations.pop()?.0;
 
         let lineages_at_location = simulation
             .lineage_store
@@ -90,15 +96,15 @@ impl<
                 self.active_locations.push(
                     chosen_active_location,
                     EventTime::from(
-                        unique_event_time + rng.sample_exponential(event_rate_at_location),
+                        next_event_time + rng.sample_exponential(event_rate_at_location),
                     ),
                 );
             }
         }
 
-        self.last_event_time = unique_event_time.into();
+        self.last_event_time = next_event_time.into();
 
-        Some((chosen_lineage, unique_event_time))
+        Some((chosen_lineage, next_event_time))
     }
 
     #[debug_requires(
@@ -143,19 +149,5 @@ impl<
         }
 
         self.last_event_time = event_time;
-    }
-
-    fn peek_time_of_next_event(
-        &mut self,
-        _habitat: &H,
-        _turnover_rate: &T,
-        _rng: &mut G,
-    ) -> Result<PositiveF64, EmptyActiveLineageSamplerError> {
-        self.active_locations
-            .peek()
-            .map(|(_, next_event_time)| {
-                PositiveF64::max_after(self.last_event_time, (*next_event_time).into())
-            })
-            .ok_or(EmptyActiveLineageSamplerError)
     }
 }
