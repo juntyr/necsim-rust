@@ -35,7 +35,7 @@ impl<E: Eq + Hash + Clone> fmt::Debug for DynamicAliasMethodSampler<E> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("DynamicAliasMethodSampler")
             .field("exponents", &self.exponents)
-            .field("total_weight", &self.total_weight)
+            .field("total_weight", &self.total_weight().get())
             .finish()
     }
 }
@@ -138,6 +138,7 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodSampler<E> {
         let mut exponent: i16 = ((bits >> 52) & 0x7ff_u64) as i16;
 
         let mantissa = if exponent == 0 {
+            // Ensure that subnormal floats are presented internally as if they were normal
             #[allow(clippy::cast_possible_truncation)]
             let subnormal_exponent = (bits.leading_zeros() as i16) - 12;
             exponent -= subnormal_exponent;
@@ -145,6 +146,7 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodSampler<E> {
             // weight > 0 && exponent == 0 -> all bits before mantissa are zero
             bits << (bits.leading_zeros() - 11)
         } else {
+            // Add the implicit 1.x to the 0.x mantissa
             (bits & 0x000f_ffff_ffff_ffff_u64) | 0x0010_0000_0000_0000_u64
         };
 
@@ -160,8 +162,9 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodSampler<E> {
             return NonNegativeF64::zero();
         }
 
-        let mut excess_exponent = (mantissa.leading_zeros() as i16) - 75;
+        let mut excess_exponent = 75 - (mantissa.leading_zeros() as i16);
 
+        // Round up if the most significant bit being cut off is 1
         if excess_exponent > 0 && (mantissa & (1_u128 << (excess_exponent - 1))) != 0 {
             mantissa += 1_u128 << excess_exponent;
         }
@@ -170,10 +173,12 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodSampler<E> {
         exponent += excess_exponent;
 
         let bits = if exponent >= -1022 {
+            // Only keep the 52 bit mantissa for the normal float
             let mantissa_u64 = ((mantissa >> excess_exponent) & 0x000f_ffff_ffff_ffff_u128) as u64;
 
             (((exponent + 1023) as u64) << 52) | mantissa_u64
         } else {
+            // Reconstruct a subnormal float mantissa, its encoded exponent is 0
             let mantissa_u64 = ((mantissa >> (excess_exponent - 1022 - exponent))
                 & 0x000f_ffff_ffff_ffff_u128) as u64;
 
