@@ -8,9 +8,7 @@ use rust_cuda::{
 };
 
 use rust_cuda::{
-    common::RustToCuda,
-    host::LendToCuda,
-    utils::{exchange::wrapper::ExchangeWithCudaWrapper, stack::StackOnlyWrapper},
+    common::RustToCuda, host::LendToCuda, utils::exchange::wrapper::ExchangeWithCudaWrapper,
 };
 
 use necsim_core::{
@@ -130,9 +128,9 @@ pub fn simulate<
 
     let (grid_size, block_size, dedup_cache, step_slice) = config;
 
-    // Allocate and initialise the total_time_max and total_steps_sum atomics
-    let mut total_time_max = StackOnlyWrapper::from(AtomicU64::new(0.0_f64.to_bits()));
-    let mut total_steps_sum = StackOnlyWrapper::from(AtomicU64::new(0_u64));
+    // Initialise the total_time_max and total_steps_sum atomics
+    let mut total_time_max = AtomicU64::new(0.0_f64.to_bits()).into();
+    let mut total_steps_sum = AtomicU64::new(0_u64).into();
 
     let mut task_list = ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
     let mut event_buffer: ExchangeWithCudaWrapper<
@@ -237,7 +235,7 @@ pub fn simulate<
                                 next_event_time_buffer_cuda.as_mut(),
                                 total_time_max.as_ref(),
                                 total_steps_sum.as_ref(),
-                                step_slice.get(),
+                                step_slice.get().into(),
                                 level_time.into(),
                             )?;
 

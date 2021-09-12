@@ -70,12 +70,12 @@ pub fn simulate<
 
     let mut total_steps = 0_u64;
 
-    while local_partition.reduce_vote_continue(simulation.peek_time_of_next_event().is_some()) {
+    while local_partition.reduce_vote_continue(!simulation.is_done()) {
         // Get the next local emigration event time or +inf
         //  (we already know at least one partition has some next event time)
         let next_local_emigration_time = {
             let (_, new_steps) = simulation.simulate_incremental_early_stop(
-                |simulation, _| !simulation.emigration_exit().is_empty(),
+                |simulation, _, _| !simulation.emigration_exit().is_empty(),
                 &mut NullReporter,
             );
 
@@ -96,11 +96,7 @@ pub fn simulate<
             //  that event
             Ok(next_global_time) => {
                 let (_, new_steps) = simulation.simulate_incremental_early_stop(
-                    |simulation, _| {
-                        simulation
-                            .peek_time_of_next_event()
-                            .map_or(true, |next_time| next_time > next_global_time)
-                    },
+                    |_, _, next_event_time| next_event_time > next_global_time,
                     local_partition.get_reporter(),
                 );
 
@@ -118,11 +114,7 @@ pub fn simulate<
             // All other partitions get to simulate until just before this next migration event
             Err(next_global_time) => {
                 let (_, new_steps) = simulation.simulate_incremental_early_stop(
-                    |simulation, _| {
-                        simulation
-                            .peek_time_of_next_event()
-                            .map_or(true, |next_time| next_time >= next_global_time)
-                    },
+                    |_, _, next_event_time| next_event_time >= next_global_time,
                     local_partition.get_reporter(),
                 );
 

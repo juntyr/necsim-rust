@@ -23,7 +23,7 @@ use necsim_impls_no_std::cogs::{
     event_sampler::tracking::{MinSpeciationTrackingEventSampler, SpeciationSample},
 };
 
-use rust_cuda::{common::RustToCuda, utils::stack::StackOnlyWrapper};
+use rust_cuda::common::RustToCuda;
 
 #[rust_cuda::common::kernel(pub use link_kernel! as impl Kernel<KernelArgs> for SimulationKernel)]
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
@@ -44,45 +44,43 @@ pub fn simulate<
     ReportDispersal: Boolean,
 >(
     #[rustfmt::skip]
-    #[kernel(pass = RustToCuda, jit)]
+    #[kernel(pass = LendRustToCuda, jit)]
     simulation: &mut ShallowCopy<
         necsim_core::simulation::Simulation<H, G, R, S, X, D, C, T, N, E, I, A>,
     >,
     #[rustfmt::skip]
-    #[kernel(pass = RustToCuda, jit)]
+    #[kernel(pass = LendRustToCuda, jit)]
     task_list: &mut ShallowCopy<
         necsim_impls_cuda::value_buffer::ValueBuffer<necsim_core::lineage::Lineage, true, true>,
     >,
     #[rustfmt::skip]
-    #[kernel(pass = RustToCuda, jit)]
+    #[kernel(pass = LendRustToCuda, jit)]
     event_buffer_reporter: &mut ShallowCopy<
         necsim_impls_cuda::event_buffer::EventBuffer<ReportSpeciation, ReportDispersal>,
     >,
     #[rustfmt::skip]
-    #[kernel(pass = RustToCuda, jit)]
+    #[kernel(pass = LendRustToCuda, jit)]
     min_spec_sample_buffer: &mut ShallowCopy<
         necsim_impls_cuda::value_buffer::ValueBuffer<SpeciationSample, false, true>,
     >,
     #[rustfmt::skip]
-    #[kernel(pass = RustToCuda, jit)]
+    #[kernel(pass = LendRustToCuda, jit)]
     next_event_time_buffer: &mut ShallowCopy<
         necsim_impls_cuda::value_buffer::ValueBuffer<necsim_core_bond::PositiveF64, false, true>,
     >,
     #[rustfmt::skip]
-    #[kernel(pass = DeviceCopy)]
-    total_time_max: &StackOnlyWrapper<core::sync::atomic::AtomicU64>,
+    #[kernel(pass = SafeDeviceCopy)]
+    total_time_max: &core::sync::atomic::AtomicU64,
     #[rustfmt::skip]
-    #[kernel(pass = DeviceCopy)]
-    total_steps_sum: &StackOnlyWrapper<core::sync::atomic::AtomicU64>,
+    #[kernel(pass = SafeDeviceCopy)]
+    total_steps_sum: &core::sync::atomic::AtomicU64,
     #[rustfmt::skip]
-    #[kernel(pass = DeviceCopy)]
+    #[kernel(pass = SafeDeviceCopy)]
     max_steps: u64,
     #[rustfmt::skip]
-    #[kernel(pass = DeviceCopy)]
-    max_next_event_time: StackOnlyWrapper<necsim_core_bond::NonNegativeF64>,
+    #[kernel(pass = SafeDeviceCopy)]
+    max_next_event_time: necsim_core_bond::NonNegativeF64,
 ) {
-    let max_next_event_time = max_next_event_time.into_inner();
-
     task_list.with_value_for_core(|task| {
         // Discard the prior task (the simulation is just a temporary local copy)
         core::mem::drop(
@@ -94,17 +92,18 @@ pub fn simulate<
         // Discard the prior sample (the simulation is just a temporary local copy)
         simulation.event_sampler_mut().replace_min_speciation(None);
 
+        let mut final_next_event_time = None;
+
         let (time, steps) = simulation.simulate_incremental_early_stop(
-            |simulation, steps| {
-                steps >= max_steps
-                    || simulation
-                        .peek_time_of_next_event()
-                        .map_or(true, |next_time| next_time >= max_next_event_time)
+            |_, steps, next_event_time| {
+                final_next_event_time = Some(next_event_time);
+
+                steps >= max_steps || next_event_time >= max_next_event_time
             },
             event_buffer_reporter,
         );
 
-        next_event_time_buffer.put_value_for_core(simulation.peek_time_of_next_event());
+        next_event_time_buffer.put_value_for_core(final_next_event_time);
 
         if steps > 0 {
             total_time_max.fetch_max(time.get().to_bits(), core::sync::atomic::Ordering::Relaxed);

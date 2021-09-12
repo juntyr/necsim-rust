@@ -1,2 +1,2 @@
-pub mod immigration;
-pub mod local;
+mod immigration;
+mod local;
