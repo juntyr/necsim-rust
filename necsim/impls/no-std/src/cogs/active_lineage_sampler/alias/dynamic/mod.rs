@@ -265,6 +265,8 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodSampler<E> {
                             i32::from(self.min_exponent) - i32::from(old_min_exponent);
                     }
                 }
+            } else {
+                unsafe { core::hint::unreachable_unchecked() }
             }
         }
     }
