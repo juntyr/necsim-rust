@@ -1,11 +1,10 @@
+use alloc::collections::BinaryHeap;
+use core::cmp::Reverse;
+
 use necsim_core::{
     cogs::{Backup, ImmigrationEntry},
     lineage::MigratingLineage,
 };
-
-use alloc::collections::BinaryHeap;
-use core::cmp::Reverse;
-use necsim_core_bond::PositiveF64;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
@@ -29,19 +28,8 @@ impl Backup for BufferedImmigrationEntry {
 #[contract_trait]
 impl ImmigrationEntry for BufferedImmigrationEntry {
     #[must_use]
-    fn next_optional_immigration(
-        &mut self,
-        optional_next_event_time: Option<PositiveF64>,
-    ) -> Option<MigratingLineage> {
-        let next_immigration = self.immigrants.peek()?;
-
-        if let Some(next_event_time) = optional_next_event_time {
-            if next_immigration.0.event_time > next_event_time {
-                return None;
-            }
-        }
-
-        self.immigrants.pop().map(|rev| rev.0)
+    fn next_optional_immigration(&mut self) -> Option<MigratingLineage> {
+        self.immigrants.pop().map(|immigrant| immigrant.0)
     }
 
     #[must_use]

@@ -127,13 +127,13 @@ pub fn simulate<
         // [Report all events below the water level] + Advance the water level
         proxy.advance_water_level(level_time);
 
+        let mut previous_next_event_time = None;
+
         // Simulate all slow lineages until they have finished or exceeded the new water
         //  level
         while !slow_lineages.is_empty()
             || simulation.active_lineage_sampler().number_active_lineages() > 0
         {
-            let previous_next_event_time = simulation.peek_time_of_next_event();
-
             let previous_task = simulation
                 .active_lineage_sampler_mut()
                 .replace_active_lineage(slow_lineages.pop_front());
@@ -157,12 +157,13 @@ pub fn simulate<
                 }
             }
 
+            previous_next_event_time = None;
+
             let (new_time, new_steps) = simulation.simulate_incremental_early_stop(
-                |simulation, steps| {
-                    steps >= step_slice.get()
-                        || simulation
-                            .peek_time_of_next_event()
-                            .map_or(true, |next_time| next_time >= level_time)
+                |_, steps, next_event_time| {
+                    previous_next_event_time = Some(next_event_time);
+
+                    steps >= step_slice.get() || next_event_time >= level_time
                 },
                 &mut proxy,
             );

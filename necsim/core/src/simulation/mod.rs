@@ -33,43 +33,11 @@ impl<
         A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
     > Simulation<H, G, R, S, X, D, C, T, N, E, I, A>
 {
-    #[allow(clippy::inline_always)]
-    #[inline(always)]
-    pub fn peek_time_of_next_event(&mut self) -> Option<PositiveF64> {
-        let next_immigration_time = self
-            .immigration_entry
-            .peek_next_immigration()
-            .map(|migrating_lineage| migrating_lineage.event_time);
-        let next_local_time = self
-            .active_lineage_sampler
-            .peek_time_of_next_event(&self.habitat, &self.turnover_rate, &mut self.rng)
-            .ok();
-
-        match (next_immigration_time, next_local_time) {
-            (Some(next_immigration_time), Some(next_local_time)) => {
-                Some(next_immigration_time.min(next_local_time))
-            },
-            (Some(next_event_time), _) | (_, Some(next_event_time)) => Some(next_event_time),
-            (None, None) => None,
-        }
+    pub fn is_done(&self) -> bool {
+        self.active_lineage_sampler.number_active_lineages() == 0
+            && self.immigration_entry.peek_next_immigration().is_none()
     }
-}
 
-impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: LineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: DispersalSampler<H, G>,
-        C: CoalescenceSampler<H, R, S>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-        E: EventSampler<H, G, R, S, X, D, C, T, N>,
-        I: ImmigrationEntry,
-        A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
-    > Simulation<H, G, R, S, X, D, C, T, N, E, I, A>
-{
     pub fn get_balanced_remaining_work(&self) -> Wrapping<u64> {
         let local_remaining =
             Wrapping(self.active_lineage_sampler().number_active_lineages() as u64);
@@ -78,56 +46,75 @@ impl<
     }
 
     #[inline]
-    pub fn simulate_incremental_early_stop<F: FnMut(&mut Self, u64) -> bool, P: Reporter>(
+    pub fn simulate_incremental_early_stop<
+        F: FnMut(&Self, u64, PositiveF64) -> bool,
+        P: Reporter,
+    >(
         &mut self,
         mut early_stop: F,
         reporter: &mut P,
     ) -> (NonNegativeF64, u64) {
         let mut steps = 0_u64;
 
-        reporter.report_progress(&self.get_balanced_remaining_work().0.into());
-
-        while !early_stop(self, steps) {
-            // Peek the time of the next local event
-            let optional_next_event_time = self
-                .with_mut_split_active_lineage_sampler_and_rng(
-                    |active_lineage_sampler, simulation, rng| {
-                        active_lineage_sampler.peek_time_of_next_event(
-                            &simulation.habitat,
-                            &simulation.turnover_rate,
-                            rng,
-                        )
-                    },
-                )
-                .ok();
-
-            // Check if an immigration event has to be processed before the next local event
-            if let Some(migrating_lineage) = self
-                .immigration_entry_mut()
-                .next_optional_immigration(optional_next_event_time)
-            {
-                process::immigration::simulate_and_report_immigration_step(
-                    self,
-                    reporter,
-                    migrating_lineage,
-                );
-            } else if !process::local::simulate_and_report_local_step_or_finish(self, reporter) {
-                reporter.report_progress(&self.get_balanced_remaining_work().0.into());
-
-                break;
-            }
-
+        loop {
             reporter.report_progress(&self.get_balanced_remaining_work().0.into());
+
+            let next_immigration_time = self
+                .immigration_entry
+                .peek_next_immigration()
+                .map(|lineage| lineage.event_time);
+
+            let self_ptr = self as *const Self;
+
+            let old_rng = unsafe { self.rng.backup_unchecked() };
+            let mut do_early_stop = false;
+
+            let early_peek_stop = |next_event_time| {
+                // Safety: We are only passing in an immutable reference
+                do_early_stop = early_stop(unsafe { &*self_ptr }, steps, next_event_time);
+
+                if do_early_stop {
+                    return true;
+                }
+
+                if let Some(next_immigration_time) = next_immigration_time {
+                    return next_immigration_time <= next_event_time;
+                }
+
+                false
+            };
+
+            if !self
+                .simulate_and_report_local_step_or_early_stop_or_finish(reporter, early_peek_stop)
+            {
+                if do_early_stop {
+                    // Early stop, reset the RNG to before the event time peek to eliminate side
+                    // effects
+                    break self.rng = old_rng;
+                }
+
+                // Check for migration as the alternative to finishing the simulation
+                if let Some(migrating_lineage) =
+                    self.immigration_entry_mut().next_optional_immigration()
+                {
+                    self.simulate_and_report_immigration_step(reporter, migrating_lineage);
+                } else {
+                    // Neither a local nor immigration event -> finish the simulation
+                    break;
+                }
+            }
 
             steps += 1;
         }
+
+        reporter.report_progress(&self.get_balanced_remaining_work().0.into());
 
         (self.active_lineage_sampler.get_last_event_time(), steps)
     }
 
     #[inline]
     pub fn simulate<P: Reporter>(mut self, reporter: &mut P) -> (NonNegativeF64, u64, G) {
-        let (time, steps) = self.simulate_incremental_early_stop(|_, _| false, reporter);
+        let (time, steps) = self.simulate_incremental_early_stop(|_, _, _| false, reporter);
 
         (time, steps, self.rng)
     }

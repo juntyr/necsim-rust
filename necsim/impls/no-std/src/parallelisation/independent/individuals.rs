@@ -95,7 +95,7 @@ pub fn simulate<
         }
 
         let (new_time, new_steps) = simulation
-            .simulate_incremental_early_stop(|_, steps| steps >= step_slice.get(), &mut proxy);
+            .simulate_incremental_early_stop(|_, steps, _| steps >= step_slice.get(), &mut proxy);
 
         total_steps += new_steps;
         max_time = max_time.max(new_time);

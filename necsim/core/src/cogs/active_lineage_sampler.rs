@@ -32,14 +32,20 @@ pub trait ActiveLineageSampler<
     #[must_use]
     fn get_last_event_time(&self) -> NonNegativeF64;
 
-    #[must_use]
     #[debug_ensures(match ret {
         Some(_) => {
             self.number_active_lineages() ==
             old(self.number_active_lineages()) - 1
         },
-        None => old(self.number_active_lineages()) == 0,
-    }, "removes an active lineage if some left")]
+        None => {
+            self.number_active_lineages() ==
+            old(self.number_active_lineages())
+        },
+    }, "removes an active lineage if `Some(_)` returned")]
+    #[debug_ensures(
+        old(self.number_active_lineages()) == 0 -> ret.is_none(),
+        "returns `None` of no lineages are left"
+    )]
     #[debug_ensures(
         ret.is_some() -> ret.as_ref().unwrap().1 > old(self.get_last_event_time()),
         "event occurs later than last event time"
@@ -47,10 +53,11 @@ pub trait ActiveLineageSampler<
     #[debug_ensures(if let Some((ref _lineage, event_time)) = ret {
         self.get_last_event_time() == event_time
     } else { true }, "updates the time of the last event")]
-    fn pop_active_lineage_and_event_time(
+    fn pop_active_lineage_and_event_time<P: FnOnce(PositiveF64) -> bool>(
         &mut self,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
+        early_peek_stop: P,
     ) -> Option<(Lineage, PositiveF64)>;
 
     #[debug_ensures(
@@ -66,6 +73,7 @@ pub trait ActiveLineageSampler<
 
     #[inline]
     fn with_next_active_lineage_and_event_time<
+        P: FnOnce(PositiveF64) -> bool,
         F: FnOnce(
             &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
             &mut G,
@@ -76,10 +84,11 @@ pub trait ActiveLineageSampler<
         &mut self,
         simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
+        early_peek_stop: P,
         inner: F,
     ) -> bool {
         if let Some((chosen_lineage, event_time)) =
-            self.pop_active_lineage_and_event_time(simulation, rng)
+            self.pop_active_lineage_and_event_time(simulation, rng, early_peek_stop)
         {
             let global_reference = chosen_lineage.global_reference.clone();
 
@@ -100,18 +109,4 @@ pub trait ActiveLineageSampler<
             false
         }
     }
-
-    #[debug_ensures(
-        ret.is_err() == (self.number_active_lineages() == 0),
-        "only returns Err when no more lineages remain"
-    )]
-    fn peek_time_of_next_event(
-        &mut self,
-        habitat: &H,
-        turnover_rate: &T,
-        rng: &mut G,
-    ) -> Result<PositiveF64, EmptyActiveLineageSamplerError>;
 }
-
-#[allow(clippy::module_name_repetitions)]
-pub struct EmptyActiveLineageSamplerError;
