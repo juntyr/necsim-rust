@@ -8,6 +8,13 @@ use crate::{cogs::Habitat, landscape::IndexedLocation};
 #[allow(clippy::module_name_repetitions)]
 pub trait RngCore: crate::cogs::Backup + Sized + Clone + core::fmt::Debug {
     type Seed: AsMut<[u8]> + Default + Sized;
+    type State: AsMut<[u8]> + Default + Sized;
+
+    #[must_use]
+    fn from_state(state: Self::State) -> Self;
+
+    #[must_use]
+    fn into_state(self) -> Self::State;
 
     #[must_use]
     fn from_seed(seed: Self::Seed) -> Self;

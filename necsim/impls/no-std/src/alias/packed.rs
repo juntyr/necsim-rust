@@ -8,7 +8,6 @@ use necsim_core_f64::floor;
 #[allow(clippy::module_name_repetitions)]
 #[allow(non_snake_case)]
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "cuda", derive(rustacuda_derive::DeviceCopy))]
 #[repr(C)]
 pub struct AliasMethodSamplerAtom<E: Copy + PartialEq> {
     E: E,

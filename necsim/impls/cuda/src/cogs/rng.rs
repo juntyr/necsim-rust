@@ -22,6 +22,17 @@ impl<R: RngCore + StackOnly> Backup for CudaRng<R> {
 
 impl<R: RngCore + StackOnly> RngCore for CudaRng<R> {
     type Seed = <R as RngCore>::Seed;
+    type State = <R as RngCore>::State;
+
+    #[must_use]
+    fn from_state(state: Self::State) -> Self {
+        Self(R::from_state(state))
+    }
+
+    #[must_use]
+    fn into_state(self) -> Self::State {
+        R::into_state(self.0)
+    }
 
     #[must_use]
     #[inline]
