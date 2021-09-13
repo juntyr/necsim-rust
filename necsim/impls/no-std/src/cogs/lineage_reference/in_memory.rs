@@ -9,9 +9,6 @@ use necsim_core::cogs::{Backup, Habitat, LineageReference};
 #[allow(clippy::module_name_repetitions)]
 pub struct InMemoryLineageReference(NonZeroUsize);
 
-#[cfg(feature = "cuda")]
-unsafe impl rustacuda_core::DeviceCopy for InMemoryLineageReference {}
-
 #[contract_trait]
 impl Backup for InMemoryLineageReference {
     unsafe fn backup_unchecked(&self) -> Self {
