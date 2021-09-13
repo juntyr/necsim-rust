@@ -1,14 +1,10 @@
 use core::mem::MaybeUninit;
 
-use rust_cuda::{rustacuda_core::DeviceCopy, utils::stack::StackOnly};
+use rust_cuda::utils::stack::StackOnly;
 
 #[repr(C)]
 #[doc(hidden)]
 pub struct MaybeSome<T: StackOnly>(MaybeUninit<T>);
-
-// Safety: Any type that is fully on the stack without any references
-//         to the heap can be safely copied to the GPU
-unsafe impl<T: StackOnly> DeviceCopy for MaybeSome<T> {}
 
 impl<T: StackOnly> MaybeSome<T> {
     #[cfg(not(target_os = "cuda"))]
