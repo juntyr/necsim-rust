@@ -66,50 +66,12 @@ impl<
             self.last_event_time = next_event_time.into();
 
             // Note: In practice, this should always return Some
-            let chosen_location = self.alias_sampler.sample(rng)?.clone();
-
-            let lineages_at_location = simulation
-                .lineage_store
-                .get_local_lineage_references_at_location_unordered(
-                    &chosen_location,
-                    &simulation.habitat,
-                );
-            let number_lineages_left_at_location = lineages_at_location.len() - 1;
-
-            // Safety: `lineages_at_location` must be >0 since
-            //         `chosen_active_location` can only be selected in that case
-            let chosen_lineage_index_at_location = rng
-                .sample_index(unsafe { NonZeroUsize::new_unchecked(lineages_at_location.len()) });
-            let chosen_lineage_reference =
-                lineages_at_location[chosen_lineage_index_at_location].clone();
+            let chosen_lineage_reference = self.alias_sampler.sample_pop(rng)?;
 
             let chosen_lineage = simulation
                 .lineage_store
                 .extract_lineage_globally_coherent(chosen_lineage_reference, &simulation.habitat);
             self.number_active_lineages -= 1;
-
-            self.alias_sampler.remove(&chosen_location);
-
-            if number_lineages_left_at_location > 0 {
-                if let Ok(event_rate_at_location) = PositiveF64::new(
-                    simulation
-                        .with_split_event_sampler(|event_sampler, simulation| {
-                            GillespiePartialSimulation::without_emigration_exit(
-                                simulation,
-                                |simulation| {
-                                    // All active lineages which are left, which now excludes
-                                    //  chosen_lineage_reference, are still in the lineage store
-                                    event_sampler
-                                        .get_event_rate_at_location(&chosen_location, simulation)
-                                },
-                            )
-                        })
-                        .get(),
-                ) {
-                    self.alias_sampler
-                        .add(chosen_location, event_rate_at_location);
-                }
-            }
 
             Some((chosen_lineage, next_event_time))
         } else {
@@ -134,25 +96,16 @@ impl<
     ) {
         self.last_event_time = lineage.last_event_time;
 
-        let location = lineage.indexed_location.location().clone();
+        //let location = lineage.indexed_location.location().clone();
 
-        let _lineage_reference = simulation
+        let rate = simulation.turnover_rate.get_turnover_rate_at_location(lineage.indexed_location.location(), &simulation.habitat);
+
+        let lineage_reference = simulation
             .lineage_store
             .insert_lineage_globally_coherent(lineage, &simulation.habitat);
 
-        if let Ok(event_rate_at_location) = PositiveF64::new(
-            simulation
-                .with_split_event_sampler(|event_sampler, simulation| {
-                    GillespiePartialSimulation::without_emigration_exit(simulation, |simulation| {
-                        // All active lineage references, including lineage_reference,
-                        //  are now (back) in the lineage store
-                        event_sampler.get_event_rate_at_location(&location, simulation)
-                    })
-                })
-                .get(),
-        ) {
-            self.alias_sampler.remove(&location);
-            self.alias_sampler.add(location, event_rate_at_location);
+        if let Ok(event_rate) = PositiveF64::new(rate.get()) {
+            self.alias_sampler.add_push(lineage_reference, event_rate);
 
             self.number_active_lineages += 1;
         }

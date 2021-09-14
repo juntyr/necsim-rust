@@ -1,10 +1,5 @@
 use alloc::{vec, vec::Vec};
-use core::{
-    cmp::Ordering,
-    fmt,
-    hash::Hash,
-    num::{NonZeroU128, NonZeroUsize},
-};
+use core::{cmp::Ordering, fmt, hash::Hash, num::{NonZeroU128, NonZeroUsize}};
 
 use hashbrown::HashMap;
 
@@ -29,6 +24,17 @@ pub struct DynamicAliasMethodSampler<E: Eq + Hash + Clone> {
     lookup: HashMap<E, EventLocation>,
     min_exponent: i16,
     total_weight: u128,
+
+    add_exist: usize,
+    add_new: usize,
+    remove_remain: usize,
+    remove_pop: usize,
+}
+
+impl<E: Eq + Hash + Clone> Drop for DynamicAliasMethodSampler<E> {
+    fn drop(&mut self) {
+        info!("\n\n{} {} {} {}\n\n", self.add_exist, self.add_new, self.remove_remain, self.remove_pop);
+    }
 }
 
 impl<E: Eq + Hash + Clone> fmt::Debug for DynamicAliasMethodSampler<E> {
@@ -51,6 +57,26 @@ impl<E: Eq + Hash> RejectionSamplingGroup<E> {
             // 53rd bit of weight is always 1, so sampling chance >= 50%
             if height < self.weights[index] {
                 return &self.events[index];
+            }
+        }
+    }
+
+    fn sample_pop<M: MathsCore, G: RngCore<M>>(&mut self, rng: &mut G) -> (Option<&mut Self>, E) {
+        loop {
+            // Safety: By construction, the group never contains zero elements
+            let index =
+                rng.sample_index(unsafe { NonZeroUsize::new_unchecked(self.weights.len()) });
+            let height = rng.sample_u64() >> 11;
+
+            // 53rd bit of weight is always 1, so sampling chance >= 50%
+            if height < self.weights[index] {
+                let old_weight = self.weights.swap_remove(index);
+
+                self.total_weight -= u128::from(old_weight);
+
+                let old_event = self.events.swap_remove(index);
+
+                return (if self.events.is_empty() { None } else { Some(self) }, old_event);
             }
         }
     }
@@ -129,6 +155,8 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodSampler<E> {
         }
 
         Err(self.exponents.len())
+
+        //self.exponents.binary_search_by_key(&Reverse(exponent), |&num| Reverse(num))
     }
 
     fn decompose_weight(weight: PositiveF64) -> PositiveF64Decomposed {
@@ -196,14 +224,17 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodSampler<E> {
 
         let weight_decomposed = Self::decompose_weight(weight);
 
-        #[allow(clippy::option_if_let_else)]
         let group_index = match self.lookup_group_index(weight_decomposed.exponent) {
             Ok(i) => {
+                self.add_exist += 1;
+
                 let group_mut = unsafe { self.groups.get_unchecked_mut(i) };
 
                 group_mut.add(event.clone(), weight_decomposed.mantissa)
             },
             Err(i) => {
+                self.add_new += 1;
+
                 self.exponents.insert(i, weight_decomposed.exponent);
                 self.groups.insert(
                     i,
@@ -250,10 +281,14 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodSampler<E> {
                 if let Some(group) =
                     unsafe { group_mut.remove_inplace(location.group_index, &mut self.lookup) }
                 {
+                    self.remove_remain += 1;
+
                     self.total_weight = self
                         .total_weight
                         .wrapping_add(group.total_weight << exponent_shift);
                 } else {
+                    self.remove_pop += 1;
+
                     self.groups.remove(i);
                     self.exponents.remove(i);
 
@@ -280,6 +315,11 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodSampler<E> {
             lookup: HashMap::new(),
             min_exponent: 0_i16,
             total_weight: 0_u128,
+
+            add_exist: 0,
+            add_new: 0,
+            remove_pop: 0,
+            remove_remain: 0,
         }
     }
 
@@ -294,6 +334,11 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodSampler<E> {
             lookup: HashMap::with_capacity(capacity),
             min_exponent: 0_i16,
             total_weight: 0_u128,
+
+            add_exist: 0,
+            add_new: 0,
+            remove_pop: 0,
+            remove_remain: 0,
         }
     }
 
@@ -316,8 +361,91 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodSampler<E> {
         None
     }
 
+    pub fn sample_pop<M: MathsCore, G: RngCore<M>>(&mut self, rng: &mut G) -> Option<E> {
+        if let Some(total_weight) = NonZeroU128::new(self.total_weight) {
+            let cdf_sample = rng.sample_index_u128(total_weight);
+
+            let mut cdf_acc = 0_u128;
+
+            for (i, (exponent, group)) in self.exponents.iter().copied().zip(self.groups.iter_mut()).enumerate() {
+                cdf_acc +=
+                    group.total_weight << (i32::from(exponent) - i32::from(self.min_exponent));
+
+                if cdf_sample < cdf_acc {
+                    let exponent_shift = i32::from(exponent) - i32::from(self.min_exponent);
+
+                    self.total_weight = self
+                        .total_weight
+                        .wrapping_sub(group.total_weight << exponent_shift);
+
+                    let (group, sample) = group.sample_pop(rng);
+
+                    if let Some(group) = group {
+                        self.remove_remain += 1;
+
+                        self.total_weight = self
+                            .total_weight
+                            .wrapping_add(group.total_weight << exponent_shift);
+                    } else {
+                        self.remove_pop += 1;
+
+                        self.groups.remove(i);
+                        self.exponents.remove(i);
+
+                        let old_min_exponent = self.min_exponent;
+                        self.min_exponent = self.exponents.last().copied().unwrap_or(0_i16);
+
+                        if self.min_exponent > old_min_exponent {
+                            self.total_weight >>=
+                                i32::from(self.min_exponent) - i32::from(old_min_exponent);
+                        }
+                    }
+
+                    return Some(sample);
+                }
+            }
+        }
+
+        None
+    }
+
+    pub fn add_push(&mut self, event: E, weight: PositiveF64) {
+        let weight_decomposed = Self::decompose_weight(weight);
+
+        match self.lookup_group_index(weight_decomposed.exponent) {
+            Ok(i) => {
+                self.add_exist += 1;
+
+                let group_mut = unsafe { self.groups.get_unchecked_mut(i) };
+
+                let _ = group_mut.add(event, weight_decomposed.mantissa);
+            },
+            Err(i) => {
+                self.add_new += 1;
+
+                self.exponents.insert(i, weight_decomposed.exponent);
+                self.groups.insert(
+                    i,
+                    RejectionSamplingGroup::new(event, weight_decomposed.mantissa),
+                );
+
+                let old_min_exponent = self.min_exponent;
+                self.min_exponent = self.exponents.last().copied().unwrap_or(0_i16);
+
+                if self.min_exponent < old_min_exponent {
+                    self.total_weight <<=
+                        i32::from(old_min_exponent) - i32::from(self.min_exponent);
+                }
+            },
+        };
+
+        self.total_weight += u128::from(weight_decomposed.mantissa)
+            << (i32::from(weight_decomposed.exponent) - i32::from(self.min_exponent));
+    }
+
     #[must_use]
     pub fn total_weight(&self) -> NonNegativeF64 {
+        // A tiny performance potential
         Self::compose_weight(self.min_exponent, self.total_weight)
     }
 }

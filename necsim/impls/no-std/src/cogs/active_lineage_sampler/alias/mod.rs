@@ -8,7 +8,6 @@ use necsim_core::{
         Habitat, ImmigrationEntry, LineageReference, MathsCore, RngCore, SpeciationProbability,
         TurnoverRate,
     },
-    landscape::Location,
 };
 
 use crate::cogs::event_sampler::gillespie::{GillespieEventSampler, GillespiePartialSimulation};
@@ -34,7 +33,7 @@ pub struct AliasActiveLineageSampler<
     E: GillespieEventSampler<M, H, G, R, S, X, D, C, T, N>,
     I: ImmigrationEntry<M>,
 > {
-    alias_sampler: DynamicAliasMethodSampler<Location>,
+    alias_sampler: DynamicAliasMethodSampler<R>,
     number_active_lineages: usize,
     last_event_time: NonNegativeF64,
     marker: PhantomData<(M, H, G, R, S, X, D, C, T, N, E, I)>,
@@ -65,28 +64,15 @@ impl<
 
         partial_simulation
             .lineage_store
-            .iter_active_locations(&partial_simulation.habitat)
-            .for_each(|location| {
-                let number_active_lineages_at_location = partial_simulation
-                    .lineage_store
-                    .get_local_lineage_references_at_location_unordered(
-                        &location,
-                        &partial_simulation.habitat,
-                    )
-                    .len();
+            .iter_local_lineage_references()
+            .for_each(|reference| {
+                let location = partial_simulation.lineage_store[reference.clone()].indexed_location.location();
+                let rate = partial_simulation.turnover_rate.get_turnover_rate_at_location(location, &partial_simulation.habitat);
 
-                if number_active_lineages_at_location > 0 {
-                    // All lineages were just initially inserted into the lineage store,
-                    //  so all active lineages are in the lineage store
-                    if let Ok(event_rate_at_location) = PositiveF64::new(
-                        event_sampler
-                            .get_event_rate_at_location(&location, partial_simulation)
-                            .get(),
-                    ) {
-                        alias_sampler.add(location, event_rate_at_location);
+                if let Ok(event_rate) = PositiveF64::new(rate.get()) {
+                    alias_sampler.add_push(reference, event_rate);
 
-                        number_active_lineages += number_active_lineages_at_location;
-                    }
+                    number_active_lineages += 1;
                 }
             });
 
