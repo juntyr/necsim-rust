@@ -11,7 +11,7 @@ extern crate serde_derive_state;
 use std::collections::VecDeque;
 
 use necsim_core::{
-    cogs::RngCore,
+    cogs::SeedableRng,
     lineage::{GlobalLineageReference, Lineage},
     reporter::Reporter,
     simulation::Simulation,

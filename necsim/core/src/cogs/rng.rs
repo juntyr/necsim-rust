@@ -1,24 +1,27 @@
 use core::{convert::AsMut, default::Default, ptr::copy_nonoverlapping};
 
+use serde::{de::DeserializeOwned, Serialize};
+
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveF64};
 use necsim_core_f64::{cos, floor, ln, sin, sqrt};
 
 use crate::{cogs::Habitat, landscape::IndexedLocation};
 
 #[allow(clippy::module_name_repetitions)]
-pub trait RngCore: crate::cogs::Backup + Sized + Clone + core::fmt::Debug {
+pub trait RngCore:
+    crate::cogs::Backup + Sized + Clone + core::fmt::Debug + Serialize + DeserializeOwned
+{
     type Seed: AsMut<[u8]> + Default + Sized;
-    type State: AsMut<[u8]> + Default + Sized;
-
-    #[must_use]
-    fn from_state(state: Self::State) -> Self;
-
-    #[must_use]
-    fn into_state(self) -> Self::State;
 
     #[must_use]
     fn from_seed(seed: Self::Seed) -> Self;
 
+    #[must_use]
+    fn sample_u64(&mut self) -> u64;
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub trait SeedableRng: RngCore {
     #[must_use]
     fn seed_from_u64(mut state: u64) -> Self {
         // Implementation from:
@@ -49,10 +52,9 @@ pub trait RngCore: crate::cogs::Backup + Sized + Clone + core::fmt::Debug {
 
         Self::from_seed(seed)
     }
-
-    #[must_use]
-    fn sample_u64(&mut self) -> u64;
 }
+
+impl<R: RngCore> SeedableRng for R {}
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[allow(clippy::module_name_repetitions)]

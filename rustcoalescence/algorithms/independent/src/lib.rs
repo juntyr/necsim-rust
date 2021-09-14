@@ -11,7 +11,7 @@ use arguments::{
     ProbabilisticParallelismMode,
 };
 use necsim_core::{
-    cogs::RngCore,
+    cogs::SeedableRng,
     lineage::{GlobalLineageReference, Lineage},
     reporter::Reporter,
     simulation::Simulation,
