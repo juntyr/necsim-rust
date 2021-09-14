@@ -1,7 +1,9 @@
 use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
 
+use serde::{Deserialize, Serialize};
+
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SeaHash {
     seed: u64,
     location: u64,
@@ -18,39 +20,6 @@ impl Backup for SeaHash {
 
 impl RngCore for SeaHash {
     type Seed = [u8; 8];
-    type State = [u8; 32];
-
-    #[must_use]
-    fn from_state(state: Self::State) -> Self {
-        let mut seed = <[u8; 8]>::default();
-        let mut location = <[u8; 8]>::default();
-        let mut time = <[u8; 8]>::default();
-        let mut offset = <[u8; 8]>::default();
-
-        seed.copy_from_slice(&state[0..8]);
-        location.copy_from_slice(&state[8..16]);
-        time.copy_from_slice(&state[16..24]);
-        offset.copy_from_slice(&state[24..32]);
-
-        Self {
-            seed: u64::from_le_bytes(seed),
-            location: u64::from_le_bytes(location),
-            time: u64::from_le_bytes(time),
-            offset: u64::from_le_bytes(offset),
-        }
-    }
-
-    #[must_use]
-    fn into_state(self) -> Self::State {
-        let mut state = [0_u8; 32];
-
-        state[0..8].copy_from_slice(&self.seed.to_le_bytes());
-        state[8..16].copy_from_slice(&self.location.to_le_bytes());
-        state[16..24].copy_from_slice(&self.time.to_le_bytes());
-        state[24..32].copy_from_slice(&self.offset.to_le_bytes());
-
-        state
-    }
 
     #[must_use]
     #[inline]

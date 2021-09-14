@@ -1,7 +1,7 @@
 use std::{hint::unreachable_unchecked, marker::PhantomData};
 
 use necsim_core::{
-    cogs::{GloballyCoherentLineageStore, LineageStore, RngCore, SplittableRng},
+    cogs::{GloballyCoherentLineageStore, LineageStore, SeedableRng, SplittableRng},
     reporter::Reporter,
     simulation::Simulation,
 };

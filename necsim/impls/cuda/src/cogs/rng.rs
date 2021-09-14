@@ -1,6 +1,8 @@
 use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
 use rust_cuda::utils::stack::StackOnly;
 
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, rust_cuda::common::RustToCudaAsRust)]
 pub struct CudaRng<R: RngCore + StackOnly>(R);
@@ -22,17 +24,6 @@ impl<R: RngCore + StackOnly> Backup for CudaRng<R> {
 
 impl<R: RngCore + StackOnly> RngCore for CudaRng<R> {
     type Seed = <R as RngCore>::Seed;
-    type State = <R as RngCore>::State;
-
-    #[must_use]
-    fn from_state(state: Self::State) -> Self {
-        Self(R::from_state(state))
-    }
-
-    #[must_use]
-    fn into_state(self) -> Self::State {
-        R::into_state(self.0)
-    }
 
     #[must_use]
     #[inline]
@@ -51,5 +42,19 @@ impl<R: PrimeableRng + StackOnly> PrimeableRng for CudaRng<R> {
     #[inline]
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         self.0.prime_with(location_index, time_index);
+    }
+}
+
+impl<R: RngCore + StackOnly> Serialize for CudaRng<R> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de, R: RngCore + StackOnly> Deserialize<'de> for CudaRng<R> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let inner = R::deserialize(deserializer)?;
+
+        Ok(Self(inner))
     }
 }

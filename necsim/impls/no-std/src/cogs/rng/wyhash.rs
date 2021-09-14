@@ -1,5 +1,7 @@
 use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
 
+use serde::{Deserialize, Serialize};
+
 // WyHash constants
 // https://docs.rs/wyhash/0.5.0/src/wyhash/functions.rs.html
 const P0: u64 = 0xa076_1d64_78bd_642f;
@@ -8,7 +10,7 @@ const P2: u64 = 0x8ebc_6af0_9c88_c6e3;
 const P5: u64 = 0xeb44_acca_b455_d165;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[repr(C)]
 pub struct WyHash {
     seed: u64,
@@ -24,31 +26,6 @@ impl Backup for WyHash {
 
 impl RngCore for WyHash {
     type Seed = [u8; 8];
-    type State = [u8; 16];
-
-    #[must_use]
-    fn from_state(inner: Self::State) -> Self {
-        let mut seed = <[u8; 8]>::default();
-        let mut state = <[u8; 8]>::default();
-
-        seed.copy_from_slice(&inner[0..8]);
-        state.copy_from_slice(&inner[8..16]);
-
-        Self {
-            seed: u64::from_le_bytes(seed),
-            state: u64::from_le_bytes(state),
-        }
-    }
-
-    #[must_use]
-    fn into_state(self) -> Self::State {
-        let mut inner = [0_u8; 16];
-
-        inner[0..8].copy_from_slice(&self.seed.to_le_bytes());
-        inner[8..16].copy_from_slice(&self.state.to_le_bytes());
-
-        inner
-    }
 
     #[must_use]
     #[inline]
