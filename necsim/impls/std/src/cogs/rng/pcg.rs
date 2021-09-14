@@ -1,16 +1,14 @@
 use std::fmt;
 
-use pcg_rand::{
-    multiplier::{DefaultMultiplier, Multiplier},
-    outputmix::{DXsMMixin, OutputMixin},
-    seeds::PcgSeeder,
-    PCGStateInfo, Pcg64,
-};
+use pcg_rand::{seeds::PcgSeeder, PCGStateInfo, Pcg64};
 use rand_core::{RngCore as _, SeedableRng};
+use serde::{Deserialize, Serialize};
 
 use necsim_core::cogs::{Backup, RngCore, SplittableRng};
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Serialize, Deserialize)]
+#[serde(from = "PcgState", into = "PcgState")]
 pub struct Pcg(Pcg64);
 
 impl Clone for Pcg {
@@ -36,41 +34,6 @@ impl Backup for Pcg {
 
 impl RngCore for Pcg {
     type Seed = [u8; 16];
-    type State = [u8; 32];
-
-    #[must_use]
-    fn from_state(inner: Self::State) -> Self {
-        let mut state = <[u8; 16]>::default();
-        let mut increment = <[u8; 16]>::default();
-
-        state.copy_from_slice(&inner[0..16]);
-        increment.copy_from_slice(&inner[16..32]);
-
-        let state_info = PCGStateInfo {
-            state: u128::from_le_bytes(state),
-            increment: u128::from_le_bytes(increment),
-            multiplier: DefaultMultiplier::multiplier(),
-            internal_width: u128::BITS as usize,
-            output_width: u64::BITS as usize,
-            output_mixin: <DXsMMixin as OutputMixin<u128, u64>>::SERIALIZER_ID.into(),
-        };
-
-        let pcg = Pcg64::restore_state_with_no_verification(state_info);
-
-        Self(pcg)
-    }
-
-    #[must_use]
-    fn into_state(self) -> Self::State {
-        let state_info = self.0.get_state();
-
-        let mut inner = [0_u8; 32];
-
-        inner[0..16].copy_from_slice(&state_info.state.to_le_bytes());
-        inner[16..32].copy_from_slice(&state_info.increment.to_le_bytes());
-
-        inner
-    }
 
     #[must_use]
     #[inline]
@@ -108,5 +71,43 @@ impl SplittableRng for Pcg {
         state.increment = (u128::from(stream) << 1) | 1;
 
         Self(Pcg64::restore_state_with_no_verification(state))
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename = "Pcg")]
+struct PcgState {
+    state: u128,
+    increment: u128,
+}
+
+impl From<Pcg> for PcgState {
+    fn from(rng: Pcg) -> Self {
+        let state_info = rng.0.get_state();
+
+        Self {
+            state: state_info.state,
+            increment: state_info.increment,
+        }
+    }
+}
+
+impl From<PcgState> for Pcg {
+    fn from(state: PcgState) -> Self {
+        use pcg_rand::{
+            multiplier::{DefaultMultiplier, Multiplier},
+            outputmix::{DXsMMixin, OutputMixin},
+        };
+
+        let state_info = PCGStateInfo {
+            state: state.state,
+            increment: state.increment,
+            multiplier: DefaultMultiplier::multiplier(),
+            internal_width: u128::BITS as usize,
+            output_width: u64::BITS as usize,
+            output_mixin: <DXsMMixin as OutputMixin<u128, u64>>::SERIALIZER_ID.into(),
+        };
+
+        Self(Pcg64::restore_state_with_no_verification(state_info))
     }
 }

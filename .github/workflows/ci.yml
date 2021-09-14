@@ -8,6 +8,9 @@ on:
     branches:
       - '*'
 
+env:
+  TERM: xterm-color
+
 jobs:
   check:
     name: Check
@@ -36,26 +39,17 @@ jobs:
     steps:
       - name: Checkout the Repository
         uses: actions/checkout@v2
-
-      - name: Install CUDA
-        run: |
-          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
-          sudo mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600
-          sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
-          sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /"
-          sudo apt-get update -q
-          sudo apt-get install cuda -y --no-install-recommends
       
       - name: Install OpenMPI
-        run: sudo apt-get install libopenmpi-dev -y --no-install-recommends
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install libopenmpi-dev -y --no-install-recommends
 
       - name: Install the Rust toolchain
         run: cargo install ptx-linker -f
       
       - name: Run the test-suite
-        run: |
-          LIBRARY_PATH="$LD_LIBRARY_PATH" cargo test \
-            --workspace --no-fail-fast
+        run: cargo test --workspace --no-fail-fast
 
   fmt:
     name: Rustfmt
