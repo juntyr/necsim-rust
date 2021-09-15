@@ -1,9 +1,7 @@
-use core::num::NonZeroUsize;
-
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit,
-        GloballyCoherentLineageStore, Habitat, ImmigrationEntry, LineageReference, MathsCore,
+        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
+        Habitat, ImmigrationEntry, LineageReference, LocallyCoherentLineageStore, MathsCore,
         RngCore, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
@@ -12,9 +10,7 @@ use necsim_core::{
 
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
-use crate::cogs::event_sampler::gillespie::{GillespieEventSampler, GillespiePartialSimulation};
-
-use super::AliasActiveLineageSampler;
+use super::IndividualAliasActiveLineageSampler;
 
 #[contract_trait]
 impl<
@@ -22,16 +18,16 @@ impl<
         H: Habitat<M>,
         G: RngCore<M>,
         R: LineageReference<M, H>,
-        S: GloballyCoherentLineageStore<M, H, R>,
+        S: LocallyCoherentLineageStore<M, H, R>,
         X: EmigrationExit<M, H, G, R, S>,
         D: DispersalSampler<M, H, G>,
         C: CoalescenceSampler<M, H, R, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-        E: GillespieEventSampler<M, H, G, R, S, X, D, C, T, N>,
+        E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
     > ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
-    for AliasActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
+    for IndividualAliasActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -65,29 +61,21 @@ impl<
 
             self.last_event_time = next_event_time.into();
 
-            // Note: In practice, this should always return Some
+            // Note: This should always be Some
             let chosen_lineage_reference = self.alias_sampler.sample_pop(rng)?;
 
-            let chosen_lineage = simulation
+            let lineage = simulation
                 .lineage_store
-                .extract_lineage_globally_coherent(chosen_lineage_reference, &simulation.habitat);
+                .extract_lineage_locally_coherent(chosen_lineage_reference, &simulation.habitat);
+
             self.number_active_lineages -= 1;
 
-            Some((chosen_lineage, next_event_time))
+            Some((lineage, next_event_time))
         } else {
             None
         }
     }
 
-    #[debug_requires(
-        simulation.lineage_store.get_local_lineage_references_at_location_unordered(
-            lineage.indexed_location.location(), &simulation.habitat
-        ).len() < (
-            simulation.habitat.get_habitat_at_location(
-                lineage.indexed_location.location()
-            ) as usize
-        ), "location has habitat capacity for the lineage"
-    )]
     fn push_active_lineage(
         &mut self,
         lineage: Lineage,
@@ -96,13 +84,14 @@ impl<
     ) {
         self.last_event_time = lineage.last_event_time;
 
-        //let location = lineage.indexed_location.location().clone();
-
-        let rate = simulation.turnover_rate.get_turnover_rate_at_location(lineage.indexed_location.location(), &simulation.habitat);
+        let rate = simulation.turnover_rate.get_turnover_rate_at_location(
+            lineage.indexed_location.location(),
+            &simulation.habitat,
+        );
 
         let lineage_reference = simulation
             .lineage_store
-            .insert_lineage_globally_coherent(lineage, &simulation.habitat);
+            .insert_lineage_locally_coherent(lineage, &simulation.habitat);
 
         if let Ok(event_rate) = PositiveF64::new(rate.get()) {
             self.alias_sampler.add_push(lineage_reference, event_rate);
