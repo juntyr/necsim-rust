@@ -1,10 +1,12 @@
 #[cfg(not(target_os = "cuda"))]
 use core::iter::Iterator;
 
-use rust_cuda::utils::{
-    aliasing::r#const::SplitSliceOverCudaThreadsConstStride,
-    exchange::buffer::{CudaExchangeBuffer, CudaExchangeItem},
-    stack::StackOnly,
+use rust_cuda::{
+    memory::StackOnly,
+    utils::{
+        aliasing::SplitSliceOverCudaThreadsConstStride,
+        exchange::buffer::{CudaExchangeBuffer, CudaExchangeItem},
+    },
 };
 
 #[cfg(not(target_os = "cuda"))]
@@ -15,7 +17,7 @@ use rust_cuda::rustacuda::{
 
 use super::utils::MaybeSome;
 
-#[derive(rust_cuda::common::RustToCudaAsRust)]
+#[derive(rust_cuda::common::LendRustToCuda)]
 #[allow(clippy::module_name_repetitions)]
 pub struct ValueBuffer<T: StackOnly, const M2D: bool, const M2H: bool> {
     #[r2cEmbed]

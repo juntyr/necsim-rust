@@ -39,7 +39,7 @@ impl From<AliasSamplerRange> for Range<usize> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]
 pub struct InMemoryPackedAliasDispersalSampler<H: Habitat, G: RngCore> {

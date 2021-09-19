@@ -10,7 +10,7 @@ use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 pub struct NonSpatialDispersalSampler<G: RngCore> {
     marker: PhantomData<G>,
 }

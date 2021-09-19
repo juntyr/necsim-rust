@@ -7,7 +7,7 @@ use necsim_core::{
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
 pub struct IndependentLineageStore<H: Habitat> {
     marker: PhantomData<H>,

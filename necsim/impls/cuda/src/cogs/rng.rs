@@ -1,10 +1,11 @@
 use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
-use rust_cuda::utils::stack::StackOnly;
+
+use rust_cuda::memory::StackOnly;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug, rust_cuda::common::RustToCudaAsRust)]
+#[derive(Clone, Debug, rust_cuda::common::LendRustToCuda)]
 pub struct CudaRng<R: RngCore + StackOnly>(R);
 
 impl<R: RngCore + StackOnly> From<R> for CudaRng<R> {
