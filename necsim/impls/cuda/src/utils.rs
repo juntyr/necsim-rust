@@ -1,6 +1,6 @@
 use core::mem::MaybeUninit;
 
-use rust_cuda::utils::stack::StackOnly;
+use rust_cuda::memory::StackOnly;
 
 #[repr(C)]
 #[doc(hidden)]

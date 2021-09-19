@@ -5,7 +5,7 @@ use necsim_core::{
 use necsim_core_bond::ClosedUnitF64;
 
 #[derive(Debug)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[allow(clippy::module_name_repetitions)]
 pub struct UniformSpeciationProbability {
     speciation_probability: ClosedUnitF64,

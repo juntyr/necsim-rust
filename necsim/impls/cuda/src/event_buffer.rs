@@ -7,10 +7,7 @@ use rust_cuda::rustacuda::{
 };
 
 use rust_cuda::utils::{
-    aliasing::{
-        dynamic::SplitSliceOverCudaThreadsDynamicStride,
-        r#const::SplitSliceOverCudaThreadsConstStride,
-    },
+    aliasing::{SplitSliceOverCudaThreadsConstStride, SplitSliceOverCudaThreadsDynamicStride},
     exchange::buffer::CudaExchangeBuffer,
 };
 
@@ -25,7 +22,7 @@ use necsim_core::impl_report;
 use super::utils::MaybeSome;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(rust_cuda::common::RustToCudaAsRust)]
+#[derive(rust_cuda::common::LendRustToCuda)]
 pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
     #[r2cEmbed]
     speciation_mask:
