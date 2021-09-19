@@ -9,7 +9,7 @@ use super::EventTimeSampler;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 pub struct GeometricEventTimeSampler {
     delta_t: PositiveF64,
 }

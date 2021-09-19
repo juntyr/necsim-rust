@@ -11,7 +11,7 @@ use crate::array2d::Array2D;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::RustToCudaAsRust))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 pub struct InMemoryHabitat {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     habitat: Final<Box<[u32]>>,

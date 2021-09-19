@@ -8,7 +8,7 @@ use rust_cuda::{
 };
 
 use rust_cuda::{
-    common::RustToCuda, host::LendToCuda, utils::exchange::wrapper::ExchangeWithCudaWrapper,
+    common::RustToCuda, host::LendToCuda, utils::exchange::wrapper::ExchangeWrapperOnHost,
 };
 
 use necsim_core::{
@@ -132,8 +132,8 @@ pub fn simulate<
     let mut total_time_max = AtomicU64::new(0.0_f64.to_bits()).into();
     let mut total_steps_sum = AtomicU64::new(0_u64).into();
 
-    let mut task_list = ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
-    let mut event_buffer: ExchangeWithCudaWrapper<
+    let mut task_list = ExchangeWrapperOnHost::new(ValueBuffer::new(&block_size, &grid_size)?)?;
+    let mut event_buffer: ExchangeWrapperOnHost<
         EventBuffer<
             <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<
                 L::IsLive,
@@ -146,15 +146,15 @@ pub fn simulate<
                 L,
             >>::WaterLevelReporter as Reporter>::ReportDispersal,
         >,
-    > = ExchangeWithCudaWrapper::new(EventBuffer::new(
+    > = ExchangeWrapperOnHost::new(EventBuffer::new(
         &block_size,
         &grid_size,
         step_slice.get().try_into()?,
     )?)?;
     let mut min_spec_sample_buffer =
-        ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
+        ExchangeWrapperOnHost::new(ValueBuffer::new(&block_size, &grid_size)?)?;
     let mut next_event_time_buffer =
-        ExchangeWithCudaWrapper::new(ValueBuffer::new(&block_size, &grid_size)?)?;
+        ExchangeWrapperOnHost::new(ValueBuffer::new(&block_size, &grid_size)?)?;
 
     let mut min_spec_samples = dedup_cache.construct(lineages.len());
 
@@ -220,12 +220,12 @@ pub fn simulate<
 
                             // Move the task list, event buffer and min speciation sample buffer to
                             // CUDA
-                            let mut event_buffer_cuda = event_buffer.move_to_cuda()?;
+                            let mut event_buffer_cuda = event_buffer.move_to_device()?;
                             let mut min_spec_sample_buffer_cuda =
-                                min_spec_sample_buffer.move_to_cuda()?;
+                                min_spec_sample_buffer.move_to_device()?;
                             let mut next_event_time_buffer_cuda =
-                                next_event_time_buffer.move_to_cuda()?;
-                            let mut task_list_cuda = task_list.move_to_cuda()?;
+                                next_event_time_buffer.move_to_device()?;
+                            let mut task_list_cuda = task_list.move_to_device()?;
 
                             kernel.simulate_raw(
                                 simulation_cuda_repr.as_mut(),
