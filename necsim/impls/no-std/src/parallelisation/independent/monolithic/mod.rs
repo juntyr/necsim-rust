@@ -1,6 +1,7 @@
 use alloc::collections::VecDeque;
 use core::num::{NonZeroU64, Wrapping};
-use necsim_core_bond::NonNegativeF64;
+
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::{
     cogs::{
@@ -61,7 +62,7 @@ pub fn simulate<
         NeverImmigrationEntry,
         IndependentActiveLineageSampler<H, G, NeverEmigrationExit, D, T, N, J>,
     >,
-    lineages: VecDeque<Lineage>,
+    lineages: VecDeque<(Lineage, NonNegativeF64)>,
     dedup_cache: DedupCache,
     step_slice: NonZeroU64,
     event_slice: EventSlice,
@@ -95,7 +96,7 @@ pub fn simulate<
             // Full event rate lambda with speciation
             slow_lineages
                 .iter()
-                .map(|lineage| {
+                .map(|(lineage, _)| {
                     simulation.turnover_rate().get_turnover_rate_at_location(
                         lineage.indexed_location.location(),
                         simulation.habitat(),
@@ -106,7 +107,7 @@ pub fn simulate<
             // Only speciation event rate lambda * nu
             slow_lineages
                 .iter()
-                .map(|lineage| {
+                .map(|(lineage, _)| {
                     let location = lineage.indexed_location.location();
 
                     simulation
@@ -127,16 +128,28 @@ pub fn simulate<
         // [Report all events below the water level] + Advance the water level
         proxy.advance_water_level(level_time);
 
-        let mut previous_next_event_time = None;
+        let mut previous_next_event_time: Option<PositiveF64> = None;
 
         // Simulate all slow lineages until they have finished or exceeded the new water
         //  level
         while !slow_lineages.is_empty()
             || simulation.active_lineage_sampler().number_active_lineages() > 0
         {
+            let next_slow_lineage = loop {
+                match slow_lineages.pop_front() {
+                    None => break None,
+                    Some((slow_lineage, next_event)) if next_event < level_time => {
+                        break Some(slow_lineage)
+                    },
+                    Some((fast_lineage, next_event)) => {
+                        fast_lineages.push_back((fast_lineage, next_event));
+                    },
+                }
+            };
+
             let previous_task = simulation
                 .active_lineage_sampler_mut()
-                .replace_active_lineage(slow_lineages.pop_front());
+                .replace_active_lineage(next_slow_lineage);
 
             let previous_speciation_sample =
                 simulation.event_sampler_mut().replace_min_speciation(None);
@@ -150,9 +163,9 @@ pub fn simulate<
                 if !duplicate_individual {
                     // Reclassify lineages as either slow (still below water) or fast
                     if previous_next_event_time < level_time {
-                        slow_lineages.push_back(previous_task);
+                        slow_lineages.push_back((previous_task, previous_next_event_time.into()));
                     } else {
-                        fast_lineages.push_back(previous_task);
+                        fast_lineages.push_back((previous_task, previous_next_event_time.into()));
                     }
                 }
             }

@@ -79,7 +79,7 @@ pub fn simulate<
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
     >,
     config: (GridSize, BlockSize, DedupCache, NonZeroU64),
-    lineages: VecDeque<Lineage>,
+    lineages: VecDeque<(Lineage, NonNegativeF64)>,
     event_slice: EventSlice,
     local_partition: &'l mut L,
 ) -> Result<(NonNegativeF64, u64)>
@@ -177,7 +177,7 @@ pub fn simulate<
                             // Full event rate lambda with speciation
                             slow_lineages
                                 .iter()
-                                .map(|lineage| {
+                                .map(|(lineage, _)| {
                                     cpu_turnover_rate.get_turnover_rate_at_location(
                                         lineage.indexed_location.location(),
                                         &cpu_habitat,
@@ -188,7 +188,7 @@ pub fn simulate<
                             // Only speciation event rate lambda * nu
                             slow_lineages
                                 .iter()
-                                .map(|lineage| {
+                                .map(|(lineage, _)| {
                                     let location = lineage.indexed_location.location();
 
                                     cpu_turnover_rate
@@ -215,7 +215,21 @@ pub fn simulate<
                         while !slow_lineages.is_empty() {
                             // Upload the new tasks from the front of the task queue
                             for mut task in task_list.iter_mut() {
-                                task.replace(slow_lineages.pop_front());
+                                let next_slow_lineage = loop {
+                                    match slow_lineages.pop_front() {
+                                        None => break None,
+                                        Some((slow_lineage, next_event))
+                                            if next_event < level_time =>
+                                        {
+                                            break Some(slow_lineage)
+                                        },
+                                        Some((fast_lineage, next_event)) => {
+                                            fast_lineages.push_back((fast_lineage, next_event));
+                                        },
+                                    }
+                                };
+
+                                task.replace(next_slow_lineage);
                             }
 
                             // Move the task list, event buffer and min speciation sample buffer to
@@ -263,9 +277,9 @@ pub fn simulate<
                                         // Reclassify lineages as either slow (still below water) or
                                         // fast
                                         if next_event_time < level_time {
-                                            slow_lineages.push_back(task);
+                                            slow_lineages.push_back((task, next_event_time.into()));
                                         } else {
-                                            fast_lineages.push_back(task);
+                                            fast_lineages.push_back((task, next_event_time.into()));
                                         }
                                     }
                                 }
