@@ -149,11 +149,16 @@ where
         pre_sampler: OriginPreSampler<I>,
         local_partition: &mut P,
     ) -> Result<(NonNegativeF64, u64), Self::Error> {
-        let lineages: VecDeque<Lineage> = match args.parallelism_mode {
+        let lineages: VecDeque<(Lineage, NonNegativeF64)> = match args.parallelism_mode {
             // Apply no lineage origin partitioning in the `Monolithic` mode
             ParallelismMode::Monolithic(..) => scenario
                 .sample_habitat(pre_sampler)
-                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                .map(|indexed_location| {
+                    (
+                        Lineage::new(indexed_location, scenario.habitat()),
+                        NonNegativeF64::zero(),
+                    )
+                })
                 .collect(),
             // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
             ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { partition, .. }) => {
@@ -161,7 +166,12 @@ where
                     .sample_habitat(
                         pre_sampler.partition(partition.rank(), partition.partitions().get()),
                     )
-                    .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                    .map(|indexed_location| {
+                        (
+                            Lineage::new(indexed_location, scenario.habitat()),
+                            NonNegativeF64::zero(),
+                        )
+                    })
                     .collect()
             },
             // Apply lineage origin partitioning in the `IsolatedLandscape` mode
@@ -170,7 +180,12 @@ where
                     scenario.sample_habitat(pre_sampler),
                     &O::decompose(scenario.habitat(), partition.rank(), partition.partitions()),
                 )
-                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
+                .map(|indexed_location| {
+                    (
+                        Lineage::new(indexed_location, scenario.habitat()),
+                        NonNegativeF64::zero(),
+                    )
+                })
                 .collect()
             },
         };
