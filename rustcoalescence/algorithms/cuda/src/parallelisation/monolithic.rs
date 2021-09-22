@@ -60,6 +60,7 @@ pub fn simulate<
         + RustToCuda,
     P: Reporter,
     L: LocalPartition<P>,
+    LI: IntoIterator<Item = Lineage>,
 >(
     mut simulation: Simulation<H, G, R, S, X, D, C, T, N, E, I, A>,
     mut kernel: SimulationKernel<
@@ -79,7 +80,7 @@ pub fn simulate<
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
     >,
     config: (GridSize, BlockSize, DedupCache, NonZeroU64),
-    lineages: VecDeque<(Lineage, NonNegativeF64)>,
+    lineages: LI,
     event_slice: EventSlice,
     local_partition: &'l mut L,
 ) -> Result<(NonNegativeF64, u64)>
@@ -115,10 +116,22 @@ pub fn simulate<
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
     >,
 {
-    // Ensure that the progress bar starts with the expected target
-    local_partition.report_progress_sync(lineages.len() as u64);
+    let mut slow_lineages = lineages
+        .into_iter()
+        .map(|lineage| {
+            // We only need a strict lower bound here,
+            //  i.e. that the next event >= pessimistic_next_event_time
+            let pessimistic_next_event_time = lineage.last_event_time;
 
-    let event_slice = event_slice.capacity(lineages.len());
+            (lineage, pessimistic_next_event_time)
+        })
+        .collect::<VecDeque<_>>();
+    let mut fast_lineages = VecDeque::new();
+
+    // Ensure that the progress bar starts with the expected target
+    local_partition.report_progress_sync(slow_lineages.len() as u64);
+
+    let event_slice = event_slice.capacity(slow_lineages.len());
 
     let mut proxy = <WaterLevelReporterStrategy as WaterLevelReporterConstructor<
         L::IsLive,
@@ -156,10 +169,7 @@ pub fn simulate<
     let mut next_event_time_buffer =
         ExchangeWrapperOnHost::new(ValueBuffer::new(&block_size, &grid_size)?)?;
 
-    let mut min_spec_samples = dedup_cache.construct(lineages.len());
-
-    let mut slow_lineages = lineages;
-    let mut fast_lineages = VecDeque::new();
+    let mut min_spec_samples = dedup_cache.construct(slow_lineages.len());
 
     let mut level_time = NonNegativeF64::zero();
 
