@@ -1,5 +1,8 @@
 use alloc::{collections::VecDeque, vec::Vec};
-use core::num::{NonZeroU64, Wrapping};
+use core::{
+    iter::FromIterator,
+    num::{NonZeroU64, Wrapping},
+};
 use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::{
@@ -47,6 +50,7 @@ pub fn simulate<
     J: EventTimeSampler<H, G, T>,
     R: Reporter,
     P: LocalPartition<R>,
+    L: IntoIterator<Item = Lineage>,
 >(
     mut simulation: Simulation<
         H,
@@ -62,11 +66,12 @@ pub fn simulate<
         NeverImmigrationEntry,
         IndependentActiveLineageSampler<H, G, IndependentEmigrationExit<H, C, E>, D, T, N, J>,
     >,
-    mut lineages: VecDeque<Lineage>,
+    lineages: L,
     dedup_cache: DedupCache,
     step_slice: NonZeroU64,
     local_partition: &mut P,
 ) -> (NonNegativeF64, u64) {
+    let mut lineages = VecDeque::from_iter(lineages);
     let mut proxy = IgnoreProgressReporterProxy::from(local_partition);
     let mut min_spec_samples = dedup_cache.construct(lineages.len());
 

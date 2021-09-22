@@ -4,8 +4,6 @@
 #[macro_use]
 extern crate serde_derive_state;
 
-use std::{collections::VecDeque, hint::unreachable_unchecked};
-
 use arguments::{
     IndependentArguments, IsolatedParallelismMode, MonolithicParallelismMode, ParallelismMode,
     ProbabilisticParallelismMode,
@@ -81,16 +79,11 @@ impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
                 event_slice, ..
             })
             | ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { event_slice, .. }) => {
-                let lineages: VecDeque<(Lineage, NonNegativeF64)> = match args.parallelism_mode {
+                let lineages: Vec<Lineage> = match args.parallelism_mode {
                     // Apply no lineage origin partitioning in the `Monolithic` mode
                     ParallelismMode::Monolithic(..) => scenario
                         .sample_habitat(pre_sampler)
-                        .map(|indexed_location| {
-                            (
-                                Lineage::new(indexed_location, scenario.habitat()),
-                                NonNegativeF64::zero(),
-                            )
-                        })
+                        .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
                         .collect(),
                     // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
                     ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode {
@@ -100,12 +93,7 @@ impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
                         .sample_habitat(
                             pre_sampler.partition(partition.rank(), partition.partitions().get()),
                         )
-                        .map(|indexed_location| {
-                            (
-                                Lineage::new(indexed_location, scenario.habitat()),
-                                NonNegativeF64::zero(),
-                            )
-                        })
+                        .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
                         .collect(),
                     // Apply lineage origin partitioning in the `IsolatedLandscape` mode
                     ParallelismMode::IsolatedLandscape(IsolatedParallelismMode {
@@ -115,14 +103,9 @@ impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
                         scenario.sample_habitat(pre_sampler),
                         &O::decompose(scenario.habitat(), partition.rank(), partition.partitions()),
                     )
-                    .map(|indexed_location| {
-                        (
-                            Lineage::new(indexed_location, scenario.habitat()),
-                            NonNegativeF64::zero(),
-                        )
-                    })
+                    .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
                     .collect(),
-                    _ => unsafe { unreachable_unchecked() },
+                    _ => unsafe { std::hint::unreachable_unchecked() },
                 };
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
@@ -163,7 +146,7 @@ impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
                 ))
             },
             ParallelismMode::Individuals => {
-                let lineages: VecDeque<Lineage> = scenario
+                let lineages: Vec<Lineage> = scenario
                     .sample_habitat(pre_sampler.partition(
                         local_partition.get_partition_rank(),
                         local_partition.get_number_of_partitions().get(),
@@ -212,7 +195,7 @@ impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
                     local_partition.get_partition_rank(),
                     local_partition.get_number_of_partitions(),
                 );
-                let lineages: VecDeque<Lineage> = DecompositionOriginSampler::new(
+                let lineages: Vec<Lineage> = DecompositionOriginSampler::new(
                     scenario.sample_habitat(pre_sampler),
                     &decomposition,
                 )
@@ -265,7 +248,7 @@ impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
                     local_partition.get_partition_rank(),
                     local_partition.get_number_of_partitions(),
                 );
-                let lineages: VecDeque<Lineage> = DecompositionOriginSampler::new(
+                let lineages: Vec<Lineage> = DecompositionOriginSampler::new(
                     scenario.sample_habitat(pre_sampler),
                     &decomposition,
                 )

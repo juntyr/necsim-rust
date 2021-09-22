@@ -47,6 +47,7 @@ pub fn simulate<
     J: EventTimeSampler<H, G, T>,
     R: Reporter,
     P: LocalPartition<R>,
+    L: IntoIterator<Item = Lineage>,
 >(
     mut simulation: Simulation<
         H,
@@ -62,31 +63,40 @@ pub fn simulate<
         NeverImmigrationEntry,
         IndependentActiveLineageSampler<H, G, NeverEmigrationExit, D, T, N, J>,
     >,
-    lineages: VecDeque<(Lineage, NonNegativeF64)>,
+    lineages: L,
     dedup_cache: DedupCache,
     step_slice: NonZeroU64,
     event_slice: EventSlice,
     local_partition: &mut P,
 ) -> (NonNegativeF64, u64) {
+    let mut slow_lineages = lineages
+        .into_iter()
+        .map(|lineage| {
+            // We only need a strict lower bound here,
+            //  i.e. that the next event >= pessimistic_next_event_time
+            let pessimistic_next_event_time = lineage.last_event_time;
+
+            (lineage, pessimistic_next_event_time)
+        })
+        .collect::<VecDeque<_>>();
+    let mut fast_lineages = VecDeque::new();
+
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(
-        (Wrapping(lineages.len() as u64) + simulation.get_balanced_remaining_work()).0,
+        (Wrapping(slow_lineages.len() as u64) + simulation.get_balanced_remaining_work()).0,
     );
 
-    let event_slice = event_slice.capacity(lineages.len());
+    let event_slice = event_slice.capacity(slow_lineages.len());
 
     let mut proxy = <WaterLevelReporterStrategy as WaterLevelReporterConstructor<
         P::IsLive,
         R,
         P,
     >>::WaterLevelReporter::new(event_slice.get(), local_partition);
-    let mut min_spec_samples = dedup_cache.construct(lineages.len());
+    let mut min_spec_samples = dedup_cache.construct(slow_lineages.len());
 
     let mut total_steps = 0_u64;
     let mut max_time = NonNegativeF64::zero();
-
-    let mut slow_lineages = lineages;
-    let mut fast_lineages = VecDeque::new();
 
     let mut level_time = NonNegativeF64::zero();
 
