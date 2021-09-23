@@ -26,4 +26,5 @@ RUN sudo apt-get update -q && \
     sudo rm -rf /var/lib/{apt,dpkg,cache,log}/
 
 RUN cargo install ptx-linker -f && \
-    cargo install cargo-mpirun -f
+    cargo install cargo-mpirun -f && \
+    cargo install cargo-reaper --git https://github.com/MomoLangenstein/grim-reaper -f
