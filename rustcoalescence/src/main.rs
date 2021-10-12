@@ -1,7 +1,6 @@
 #![deny(clippy::pedantic)]
 #![feature(associated_type_bounds)]
 #![feature(unwrap_infallible)]
-#![feature(core_intrinsics)]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 
@@ -17,7 +16,6 @@ use structopt::StructOpt;
 
 mod args;
 mod cli;
-mod f64_core;
 mod maps;
 mod minimal_logger;
 mod reporter;

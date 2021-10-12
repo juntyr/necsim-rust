@@ -1,5 +1,6 @@
 #![deny(clippy::pedantic)]
 #![no_std]
+#![cfg_attr(not(feature = "custom"), feature(core_intrinsics))]
 
 pub trait F64Core {
     #[must_use]
@@ -80,6 +81,11 @@ pub fn round(val: f64) -> f64 {
 impl F64Core for f64 {
     #[inline]
     fn floor(self) -> f64 {
+        #[cfg(not(feature = "custom"))]
+        link! { floor => unsafe fn test_floor(x: f64) -> f64 {
+            core::intrinsics::floorf64(x)
+        } }
+
         extern "Rust" {
             #[link_name = "necsim_core_f64_floor"]
             fn floor_impl(x: f64) -> f64;
@@ -90,6 +96,11 @@ impl F64Core for f64 {
 
     #[inline]
     fn ceil(self) -> f64 {
+        #[cfg(not(feature = "custom"))]
+        link! { ceil => unsafe fn test_ceil(x: f64) -> f64 {
+            core::intrinsics::ceilf64(x)
+        } }
+
         extern "Rust" {
             #[link_name = "necsim_core_f64_ceil"]
             fn ceil_impl(x: f64) -> f64;
@@ -100,6 +111,11 @@ impl F64Core for f64 {
 
     #[inline]
     fn ln(self) -> f64 {
+        #[cfg(not(feature = "custom"))]
+        link! { ln => unsafe fn test_ln(x: f64) -> f64 {
+            core::intrinsics::logf64(x)
+        } }
+
         extern "Rust" {
             #[link_name = "necsim_core_f64_ln"]
             fn ln_impl(x: f64) -> f64;
@@ -110,6 +126,11 @@ impl F64Core for f64 {
 
     #[inline]
     fn exp(self) -> f64 {
+        #[cfg(not(feature = "custom"))]
+        link! { exp => unsafe fn test_exp(x: f64) -> f64 {
+            core::intrinsics::expf64(x)
+        } }
+
         extern "Rust" {
             #[link_name = "necsim_core_f64_exp"]
             fn exp_impl(x: f64) -> f64;
@@ -120,6 +141,11 @@ impl F64Core for f64 {
 
     #[inline]
     fn sqrt(self) -> f64 {
+        #[cfg(not(feature = "custom"))]
+        link! { sqrt => unsafe fn test_sqrt(x: f64) -> f64 {
+            core::intrinsics::sqrtf64(x)
+        } }
+
         extern "Rust" {
             #[link_name = "necsim_core_f64_sqrt"]
             fn sqrt_impl(x: f64) -> f64;
@@ -130,6 +156,11 @@ impl F64Core for f64 {
 
     #[inline]
     fn sin(self) -> f64 {
+        #[cfg(not(feature = "custom"))]
+        link! { sin => unsafe fn test_sin(x: f64) -> f64 {
+            core::intrinsics::sinf64(x)
+        } }
+
         extern "Rust" {
             #[link_name = "necsim_core_f64_sin"]
             fn sin_impl(x: f64) -> f64;
@@ -140,6 +171,11 @@ impl F64Core for f64 {
 
     #[inline]
     fn cos(self) -> f64 {
+        #[cfg(not(feature = "custom"))]
+        link! { cos => unsafe fn test_cos(x: f64) -> f64 {
+            core::intrinsics::cosf64(x)
+        } }
+
         extern "Rust" {
             #[link_name = "necsim_core_f64_cos"]
             fn cos_impl(x: f64) -> f64;
@@ -150,6 +186,11 @@ impl F64Core for f64 {
 
     #[inline]
     fn round(self) -> f64 {
+        #[cfg(not(feature = "custom"))]
+        link! { round => unsafe fn test_round(x: f64) -> f64 {
+            core::intrinsics::roundf64(x)
+        } }
+
         extern "Rust" {
             #[link_name = "necsim_core_f64_round"]
             fn round_impl(x: f64) -> f64;
