@@ -12,13 +12,8 @@ use necsim_partitioning_core::{
 };
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Default)]
 pub struct LiveMonolithicPartitioning(());
-
-impl Default for LiveMonolithicPartitioning {
-    fn default() -> Self {
-        Self(())
-    }
-}
 
 #[contract_trait]
 impl Partitioning for LiveMonolithicPartitioning {

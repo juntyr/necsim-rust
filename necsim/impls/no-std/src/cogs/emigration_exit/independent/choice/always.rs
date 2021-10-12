@@ -7,14 +7,8 @@ use necsim_core_bond::PositiveF64;
 use super::EmigrationChoice;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct AlwaysEmigrationChoice([u8; 0]);
-
-impl Default for AlwaysEmigrationChoice {
-    fn default() -> Self {
-        Self([])
-    }
-}
 
 #[contract_trait]
 impl Backup for AlwaysEmigrationChoice {
