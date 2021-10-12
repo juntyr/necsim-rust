@@ -1,9 +1,5 @@
 #![deny(clippy::pedantic)]
 #![no_std]
-#![feature(core_intrinsics)]
-
-#[macro_use]
-extern crate default_env;
 
 pub trait F64Core {
     #[must_use]
@@ -22,6 +18,15 @@ pub trait F64Core {
     fn cos(self) -> f64;
     #[must_use]
     fn round(self) -> f64;
+}
+
+#[macro_export]
+macro_rules! link {
+    ($func:ident => $item:item) => {
+        #[inline]
+        #[export_name = concat!("necsim_core_f64_", stringify!($func))]
+        $item
+    };
 }
 
 #[must_use]
@@ -75,14 +80,8 @@ pub fn round(val: f64) -> f64 {
 impl F64Core for f64 {
     #[inline]
     fn floor(self) -> f64 {
-        #[no_mangle]
-        #[inline]
-        unsafe fn _floor_intrinsic(x: f64) -> f64 {
-            core::intrinsics::floorf64(x)
-        }
-
         extern "Rust" {
-            #[link_name = default_env!("NECSIM_CORE_F64_LINK_FLOOR", "_floor_intrinsic")]
+            #[link_name = "necsim_core_f64_floor"]
             fn floor_impl(x: f64) -> f64;
         }
 
@@ -91,14 +90,8 @@ impl F64Core for f64 {
 
     #[inline]
     fn ceil(self) -> f64 {
-        #[no_mangle]
-        #[inline]
-        unsafe fn _ceil_intrinsic(x: f64) -> f64 {
-            core::intrinsics::ceilf64(x)
-        }
-
         extern "Rust" {
-            #[link_name = default_env!("NECSIM_CORE_F64_LINK_CEIL", "_ceil_intrinsic")]
+            #[link_name = "necsim_core_f64_ceil"]
             fn ceil_impl(x: f64) -> f64;
         }
 
@@ -107,14 +100,8 @@ impl F64Core for f64 {
 
     #[inline]
     fn ln(self) -> f64 {
-        #[no_mangle]
-        #[inline]
-        unsafe fn _ln_intrinsic(x: f64) -> f64 {
-            core::intrinsics::logf64(x)
-        }
-
         extern "Rust" {
-            #[link_name = default_env!("NECSIM_CORE_F64_LINK_LN", "_ln_intrinsic")]
+            #[link_name = "necsim_core_f64_ln"]
             fn ln_impl(x: f64) -> f64;
         }
 
@@ -123,14 +110,8 @@ impl F64Core for f64 {
 
     #[inline]
     fn exp(self) -> f64 {
-        #[no_mangle]
-        #[inline]
-        unsafe fn _exp_intrinsic(x: f64) -> f64 {
-            core::intrinsics::expf64(x)
-        }
-
         extern "Rust" {
-            #[link_name = default_env!("NECSIM_CORE_F64_LINK_EXP", "_exp_intrinsic")]
+            #[link_name = "necsim_core_f64_exp"]
             fn exp_impl(x: f64) -> f64;
         }
 
@@ -139,14 +120,8 @@ impl F64Core for f64 {
 
     #[inline]
     fn sqrt(self) -> f64 {
-        #[no_mangle]
-        #[inline]
-        unsafe fn _sqrt_intrinsic(x: f64) -> f64 {
-            core::intrinsics::sqrtf64(x)
-        }
-
         extern "Rust" {
-            #[link_name = default_env!("NECSIM_CORE_F64_LINK_SQRT", "_sqrt_intrinsic")]
+            #[link_name = "necsim_core_f64_sqrt"]
             fn sqrt_impl(x: f64) -> f64;
         }
 
@@ -155,14 +130,8 @@ impl F64Core for f64 {
 
     #[inline]
     fn sin(self) -> f64 {
-        #[no_mangle]
-        #[inline]
-        unsafe fn _sin_intrinsic(x: f64) -> f64 {
-            core::intrinsics::sinf64(x)
-        }
-
         extern "Rust" {
-            #[link_name = default_env!("NECSIM_CORE_F64_LINK_SIN", "_sin_intrinsic")]
+            #[link_name = "necsim_core_f64_sin"]
             fn sin_impl(x: f64) -> f64;
         }
 
@@ -171,14 +140,8 @@ impl F64Core for f64 {
 
     #[inline]
     fn cos(self) -> f64 {
-        #[no_mangle]
-        #[inline]
-        unsafe fn _cos_intrinsic(x: f64) -> f64 {
-            core::intrinsics::cosf64(x)
-        }
-
         extern "Rust" {
-            #[link_name = default_env!("NECSIM_CORE_F64_LINK_COS", "_cos_intrinsic")]
+            #[link_name = "necsim_core_f64_cos"]
             fn cos_impl(x: f64) -> f64;
         }
 
@@ -187,14 +150,8 @@ impl F64Core for f64 {
 
     #[inline]
     fn round(self) -> f64 {
-        #[no_mangle]
-        #[inline]
-        unsafe fn _round_intrinsic(x: f64) -> f64 {
-            core::intrinsics::roundf64(x)
-        }
-
         extern "Rust" {
-            #[link_name = default_env!("NECSIM_CORE_F64_LINK_ROUND", "_round_intrinsic")]
+            #[link_name = "necsim_core_f64_round"]
             fn round_impl(x: f64) -> f64;
         }
 

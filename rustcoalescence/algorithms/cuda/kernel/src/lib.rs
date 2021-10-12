@@ -7,6 +7,7 @@
 #![cfg_attr(target_os = "cuda", feature(asm))]
 #![cfg_attr(target_os = "cuda", feature(stdsimd))]
 #![cfg_attr(target_os = "cuda", feature(const_float_bits_conv))]
+#![cfg_attr(target_os = "cuda", feature(core_intrinsics))]
 
 extern crate alloc;
 
@@ -157,8 +158,17 @@ mod cuda_prelude {
 }
 
 #[cfg(target_os = "cuda")]
-#[no_mangle]
-unsafe fn nvptx_ln(x: f64) -> f64 {
+necsim_core_f64::link! { floor => unsafe fn nvptx_floor(x: f64) -> f64 {
+    core::intrinsics::floorf64(x)
+} }
+
+#[cfg(target_os = "cuda")]
+necsim_core_f64::link! { ceil => unsafe fn nvptx_ceil(x: f64) -> f64 {
+    core::intrinsics::ceilf64(x)
+} }
+
+#[cfg(target_os = "cuda")]
+necsim_core_f64::link! { ln => unsafe fn nvptx_ln(x: f64) -> f64 {
     const FRAC_1_LOG2_E: f64 = 1.0_f64 / core::f64::consts::LOG2_E;
 
     #[allow(clippy::cast_possible_truncation)]
@@ -169,11 +179,10 @@ unsafe fn nvptx_ln(x: f64) -> f64 {
 
     // f / log_2(e)
     f64::from(f) * FRAC_1_LOG2_E
-}
+} }
 
 #[cfg(target_os = "cuda")]
-#[no_mangle]
-unsafe fn nvptx_exp(x: f64) -> f64 {
+necsim_core_f64::link! { exp => unsafe fn nvptx_exp(x: f64) -> f64 {
     #[allow(clippy::cast_possible_truncation)]
     let x: f32 = (x * core::f64::consts::LOG2_E) as f32;
     let f: f32;
@@ -181,11 +190,15 @@ unsafe fn nvptx_exp(x: f64) -> f64 {
     asm!("ex2.approx.f32 {}, {};", out(reg32) f, in(reg32) x, options(pure, nomem, nostack));
 
     f64::from(f)
-}
+} }
 
 #[cfg(target_os = "cuda")]
-#[no_mangle]
-unsafe fn nvptx_sin(x: f64) -> f64 {
+necsim_core_f64::link! { sqrt => unsafe fn nvptx_sqrt(x: f64) -> f64 {
+    core::intrinsics::sqrtf64(x)
+} }
+
+#[cfg(target_os = "cuda")]
+necsim_core_f64::link! { sin => unsafe fn nvptx_sin(x: f64) -> f64 {
     #[allow(clippy::cast_possible_truncation)]
     let x: f32 = x as f32;
     let f: f32;
@@ -193,11 +206,10 @@ unsafe fn nvptx_sin(x: f64) -> f64 {
     asm!("sin.approx.f32 {}, {};", out(reg32) f, in(reg32) x, options(pure, nomem, nostack));
 
     f64::from(f)
-}
+} }
 
 #[cfg(target_os = "cuda")]
-#[no_mangle]
-unsafe fn nvptx_cos(x: f64) -> f64 {
+necsim_core_f64::link! { cos => unsafe fn nvptx_cos(x: f64) -> f64 {
     #[allow(clippy::cast_possible_truncation)]
     let x: f32 = x as f32;
     let f: f32;
@@ -205,11 +217,10 @@ unsafe fn nvptx_cos(x: f64) -> f64 {
     asm!("cos.approx.f32 {}, {};", out(reg32) f, in(reg32) x, options(pure, nomem, nostack));
 
     f64::from(f)
-}
+} }
 
 #[cfg(target_os = "cuda")]
-#[no_mangle]
-unsafe fn nvptx_round(x: f64) -> f64 {
+necsim_core_f64::link! { round => unsafe fn nvptx_round(x: f64) -> f64 {
     const ROUND_TRUNC_OFFSET: f64 = 0.5_f64 - 0.25_f64 * f64::EPSILON;
 
     let offset: f64;
@@ -221,4 +232,4 @@ unsafe fn nvptx_round(x: f64) -> f64 {
     asm!("cvt.rzi.f64.f64 {}, {};", out(reg64) round, in(reg64) overshot, options(pure, nomem, nostack));
 
     round
-}
+} }
