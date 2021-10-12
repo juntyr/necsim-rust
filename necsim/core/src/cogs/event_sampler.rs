@@ -2,7 +2,7 @@ use necsim_core_bond::PositiveF64;
 
 use super::{
     CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, LineageReference, LineageStore,
-    RngCore, SpeciationProbability, TurnoverRate,
+    RngCore, SpeciationProbability, TurnoverRate, F64Core
 };
 use crate::{
     event::{DispersalEvent, SpeciationEvent},
@@ -19,15 +19,16 @@ pub struct EventHandler<S, D, E> {
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait EventSampler<
-    H: Habitat,
-    G: RngCore,
-    R: LineageReference<H>,
-    S: LineageStore<H, R>,
-    X: EmigrationExit<H, G, R, S>,
-    D: DispersalSampler<H, G>,
-    C: CoalescenceSampler<H, R, S>,
-    T: TurnoverRate<H>,
-    N: SpeciationProbability<H>,
+    F: F64Core,
+    H: Habitat<F>,
+    G: RngCore<F>,
+    R: LineageReference<F, H>,
+    S: LineageStore<F, H, R>,
+    X: EmigrationExit<F, H, G, R, S>,
+    D: DispersalSampler<F, H, G>,
+    C: CoalescenceSampler<F, H, R, S>,
+    T: TurnoverRate<F, H>,
+    N: SpeciationProbability<F, H>,
 >: crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
@@ -41,7 +42,7 @@ pub trait EventSampler<
         &mut self,
         lineage: Lineage,
         event_time: PositiveF64,
-        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N>,
+        simulation: &mut PartialSimulation<F, H, G, R, S, X, D, C, T, N>,
         rng: &mut G,
         handler: EventHandler<FS, FD, FE>,
         auxiliary: Aux,

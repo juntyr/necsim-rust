@@ -1,6 +1,6 @@
 use core::ops::Index;
 
-use super::{Habitat, LineageReference, OriginSampler};
+use super::{Habitat, LineageReference, OriginSampler, F64Core};
 use crate::{
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},
@@ -8,13 +8,13 @@ use crate::{
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
+pub trait LineageStore<F: F64Core, H: Habitat<F>, R: LineageReference<F, H>>:
     crate::cogs::Backup + Sized + core::fmt::Debug
 {
     type LineageReferenceIterator<'a>: Iterator<Item = R>;
 
     #[must_use]
-    fn from_origin_sampler<'h, O: OriginSampler<'h, Habitat = H>>(origin_sampler: O) -> Self
+    fn from_origin_sampler<'h, O: OriginSampler<'h, F, Habitat = H>>(origin_sampler: O) -> Self
     where
         H: 'h;
 
@@ -28,8 +28,8 @@ pub trait LineageStore<H: Habitat, R: LineageReference<H>>:
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
-pub trait LocallyCoherentLineageStore<H: Habitat, R: LineageReference<H>>:
-    LineageStore<H, R> + Index<R, Output = Lineage>
+pub trait LocallyCoherentLineageStore<F: F64Core, H: Habitat<F>, R: LineageReference<F, H>>:
+    LineageStore<F, H, R> + Index<R, Output = Lineage>
 {
     #[must_use]
     #[debug_requires(
@@ -84,8 +84,8 @@ pub trait LocallyCoherentLineageStore<H: Habitat, R: LineageReference<H>>:
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
-pub trait GloballyCoherentLineageStore<H: Habitat, R: LineageReference<H>>:
-    LocallyCoherentLineageStore<H, R>
+pub trait GloballyCoherentLineageStore<F: F64Core, H: Habitat<F>, R: LineageReference<F, H>>:
+    LocallyCoherentLineageStore<F, H, R>
 {
     type LocationIterator<'a>: Iterator<Item = Location>;
 

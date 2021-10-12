@@ -2,10 +2,9 @@ use alloc::boxed::Box;
 use core::{marker::PhantomData, num::NonZeroU32};
 
 use necsim_core::{
-    cogs::{Backup, Habitat},
+    cogs::{F64Core, Backup, Habitat},
     landscape::{LandscapeExtent, Location},
 };
-use necsim_core_f64::{ceil, ln};
 
 use crate::decomposition::Decomposition;
 
@@ -17,7 +16,7 @@ mod test;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct EqualDecomposition<H: Habitat> {
+pub struct EqualDecomposition<F: F64Core, H: Habitat<F>> {
     rank: u32,
     partitions: NonZeroU32,
 
@@ -26,11 +25,11 @@ pub struct EqualDecomposition<H: Habitat> {
 
     indices: Box<[u64]>,
 
-    _marker: PhantomData<H>,
+    _marker: PhantomData<(F, H)>,
 }
 
 #[contract_trait]
-impl<H: Habitat> Backup for EqualDecomposition<H> {
+impl<F: F64Core, H: Habitat<F>> Backup for EqualDecomposition<F, H> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             rank: self.rank,
@@ -44,7 +43,7 @@ impl<H: Habitat> Backup for EqualDecomposition<H> {
 }
 
 #[contract_trait]
-impl<H: Habitat> Decomposition<H> for EqualDecomposition<H> {
+impl<F: F64Core, H: Habitat<F>> Decomposition<F, H> for EqualDecomposition<F, H> {
     fn get_subdomain_rank(&self) -> u32 {
         self.rank
     }
@@ -71,11 +70,11 @@ impl<H: Habitat> Decomposition<H> for EqualDecomposition<H> {
     }
 }
 
-impl<H: Habitat> EqualDecomposition<H> {
+impl<F: F64Core, H: Habitat<F>> EqualDecomposition<F, H> {
     fn next_log2(coord: u32) -> u8 {
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         if coord > 1 {
-            ceil(ln(f64::from(coord)) / core::f64::consts::LN_2) as u8
+            F::ceil(F::ln(f64::from(coord)) / core::f64::consts::LN_2) as u8
         } else {
             0
         }

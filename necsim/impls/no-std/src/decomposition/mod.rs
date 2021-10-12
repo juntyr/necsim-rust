@@ -1,7 +1,7 @@
 use core::num::NonZeroU32;
 
 use necsim_core::{
-    cogs::{Backup, Habitat},
+    cogs::{Backup, Habitat, F64Core},
     landscape::Location,
 };
 
@@ -12,7 +12,7 @@ pub mod radial;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait Decomposition<H: Habitat>: Backup + Sized + core::fmt::Debug {
+pub trait Decomposition<F: F64Core, H: Habitat<F>>: Backup + Sized + core::fmt::Debug {
     #[debug_ensures(
         ret < self.get_number_of_subdomains().get(),
         "subdomain rank is in range [0, self.get_number_of_subdomains())"

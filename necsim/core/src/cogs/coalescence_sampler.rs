@@ -1,11 +1,11 @@
 use core::cmp::{Ord, Ordering};
 
-use serde::{Deserialize, Serialize};
-
 use necsim_core_bond::ClosedUnitF64;
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
-    cogs::{Backup, RngCore},
+    cogs::{Backup, RngCore, F64Core},
     landscape::{IndexedLocation, Location},
     lineage::LineageInteraction,
 };
@@ -14,7 +14,7 @@ use super::{Habitat, LineageReference, LineageStore};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait CoalescenceSampler<H: Habitat, R: LineageReference<H>, S: LineageStore<H, R>>:
+pub trait CoalescenceSampler<F: F64Core, H: Habitat<F>, R: LineageReference<F, H>, S: LineageStore<F, H, R>>:
     crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
@@ -55,7 +55,7 @@ impl Eq for CoalescenceRngSample {}
 impl CoalescenceRngSample {
     #[must_use]
     #[inline]
-    pub fn new<G: RngCore>(rng: &mut G) -> Self {
+    pub fn new<F: F64Core, G: RngCore<F>>(rng: &mut G) -> Self {
         use crate::cogs::RngSampler;
 
         Self(rng.sample_uniform())
@@ -64,9 +64,7 @@ impl CoalescenceRngSample {
     #[must_use]
     #[inline]
     #[debug_ensures(ret < length, "samples U(0, length - 1)")]
-    pub fn sample_coalescence_index(self, length: u32) -> u32 {
-        use necsim_core_f64::floor;
-
+    pub fn sample_coalescence_index<F: F64Core>(self, length: u32) -> u32 {
         // attributes on expressions are experimental
         // see https://github.com/rust-lang/rust/issues/15701
         #[allow(
@@ -74,7 +72,7 @@ impl CoalescenceRngSample {
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let index = floor(self.0.get() * f64::from(length)) as u32;
+        let index = F::floor(self.0.get() * f64::from(length)) as u32;
         index
     }
 }

@@ -89,13 +89,13 @@ impl NonNegativeF64 {
     }
 
     #[must_use]
-    pub fn neg_exp(self) -> ClosedUnitF64 {
-        unsafe { ClosedUnitF64::new_unchecked(F64Core::exp(-self.0)) }
+    pub fn neg_exp<F: F64Core>(self) -> ClosedUnitF64 {
+        unsafe { ClosedUnitF64::new_unchecked(F::exp(-self.0)) }
     }
 
     #[must_use]
-    pub fn sqrt(self) -> NonNegativeF64 {
-        Self(F64Core::sqrt(self.0))
+    pub fn sqrt<F: F64Core>(self) -> NonNegativeF64 {
+        Self(F::sqrt(self.0))
     }
 }
 

@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Habitat, LineageStore, LocallyCoherentLineageStore, OriginSampler},
+    cogs::{Habitat, LineageStore, LocallyCoherentLineageStore, OriginSampler, F64Core},
     landscape::IndexedLocation,
     lineage::{GlobalLineageReference, Lineage},
 };
@@ -9,10 +9,10 @@ use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use super::ClassicalLineageStore;
 
 #[contract_trait]
-impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for ClassicalLineageStore<H> {
+impl<F: F64Core, H: Habitat<F>> LineageStore<F, H, InMemoryLineageReference> for ClassicalLineageStore<F, H> {
     type LineageReferenceIterator<'a> = impl Iterator<Item = InMemoryLineageReference>;
 
-    fn from_origin_sampler<'h, O: OriginSampler<'h, Habitat = H>>(origin_sampler: O) -> Self
+    fn from_origin_sampler<'h, O: OriginSampler<'h, F, Habitat = H>>(origin_sampler: O) -> Self
     where
         H: 'h,
     {
@@ -37,8 +37,8 @@ impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for ClassicalLineageS
 }
 
 #[contract_trait]
-impl<H: Habitat> LocallyCoherentLineageStore<H, InMemoryLineageReference>
-    for ClassicalLineageStore<H>
+impl<F: F64Core, H: Habitat<F>> LocallyCoherentLineageStore<F, H, InMemoryLineageReference>
+    for ClassicalLineageStore<F, H>
 {
     #[must_use]
     fn get_global_lineage_reference_at_indexed_location(

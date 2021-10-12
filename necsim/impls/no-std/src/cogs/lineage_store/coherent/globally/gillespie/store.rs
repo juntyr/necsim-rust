@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
         GloballyCoherentLineageStore, Habitat, LineageStore, LocallyCoherentLineageStore,
-        OriginSampler,
+        OriginSampler, F64Core
     },
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},
@@ -12,11 +12,11 @@ use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use super::GillespieLineageStore;
 
 #[contract_trait]
-impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for GillespieLineageStore<H> {
+impl<F: F64Core, H: Habitat<F>> LineageStore<F, H, InMemoryLineageReference> for GillespieLineageStore<F, H> {
     #[allow(clippy::type_complexity)]
     type LineageReferenceIterator<'a> = impl Iterator<Item = InMemoryLineageReference>;
 
-    fn from_origin_sampler<'h, O: OriginSampler<'h, Habitat = H>>(origin_sampler: O) -> Self
+    fn from_origin_sampler<'h, O: OriginSampler<'h, F, Habitat = H>>(origin_sampler: O) -> Self
     where
         H: 'h,
     {
@@ -41,8 +41,8 @@ impl<H: Habitat> LineageStore<H, InMemoryLineageReference> for GillespieLineageS
 }
 
 #[contract_trait]
-impl<H: Habitat> LocallyCoherentLineageStore<H, InMemoryLineageReference>
-    for GillespieLineageStore<H>
+impl<F: F64Core, H: Habitat<F>> LocallyCoherentLineageStore<F, H, InMemoryLineageReference>
+    for GillespieLineageStore<F, H>
 {
     #[must_use]
     fn get_global_lineage_reference_at_indexed_location(
@@ -118,8 +118,8 @@ impl<H: Habitat> LocallyCoherentLineageStore<H, InMemoryLineageReference>
 }
 
 #[contract_trait]
-impl<H: Habitat> GloballyCoherentLineageStore<H, InMemoryLineageReference>
-    for GillespieLineageStore<H>
+impl<F: F64Core, H: Habitat<F>> GloballyCoherentLineageStore<F, H, InMemoryLineageReference>
+    for GillespieLineageStore<F, H>
 {
     type LocationIterator<'a> = impl Iterator<Item = Location>;
 

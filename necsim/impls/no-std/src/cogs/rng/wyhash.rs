@@ -1,4 +1,4 @@
-use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
+use necsim_core::cogs::{Backup, PrimeableRng, RngCore, F64Core};
 
 use serde::{Deserialize, Serialize};
 
@@ -24,7 +24,7 @@ impl Backup for WyHash {
     }
 }
 
-impl RngCore for WyHash {
+impl<F: F64Core> RngCore<F> for WyHash {
     type Seed = [u8; 8];
 
     #[must_use]
@@ -50,7 +50,7 @@ impl RngCore for WyHash {
     }
 }
 
-impl PrimeableRng for WyHash {
+impl<F: F64Core> PrimeableRng<F> for WyHash {
     #[inline]
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         let location_index = seahash_diffuse(location_index);
