@@ -2,7 +2,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use super::{
     CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, ImmigrationEntry,
-    LineageReference, LineageStore, RngCore, SpeciationProbability, TurnoverRate,
+    LineageReference, LineageStore, RngCore, SpeciationProbability, TurnoverRate, F64Core,
 };
 
 use crate::{
@@ -13,17 +13,18 @@ use crate::{
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait ActiveLineageSampler<
-    H: Habitat,
-    G: RngCore,
-    R: LineageReference<H>,
-    S: LineageStore<H, R>,
-    X: EmigrationExit<H, G, R, S>,
-    D: DispersalSampler<H, G>,
-    C: CoalescenceSampler<H, R, S>,
-    T: TurnoverRate<H>,
-    N: SpeciationProbability<H>,
-    E: EventSampler<H, G, R, S, X, D, C, T, N>,
-    I: ImmigrationEntry,
+    F: F64Core,
+    H: Habitat<F>,
+    G: RngCore<F>,
+    R: LineageReference<F, H>,
+    S: LineageStore<F, H, R>,
+    X: EmigrationExit<F, H, G, R, S>,
+    D: DispersalSampler<F, H, G>,
+    C: CoalescenceSampler<F, H, R, S>,
+    T: TurnoverRate<F, H>,
+    N: SpeciationProbability<F, H>,
+    E: EventSampler<F, H, G, R, S, X, D, C, T, N>,
+    I: ImmigrationEntry<F>,
 >: crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
@@ -55,7 +56,7 @@ pub trait ActiveLineageSampler<
     } else { true }, "updates the time of the last event")]
     fn pop_active_lineage_and_event_time<P: FnOnce(PositiveF64) -> bool>(
         &mut self,
-        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
+        simulation: &mut PartialSimulation<F, H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
         early_peek_stop: P,
     ) -> Option<(Lineage, PositiveF64)>;
@@ -67,25 +68,25 @@ pub trait ActiveLineageSampler<
     fn push_active_lineage(
         &mut self,
         lineage: Lineage,
-        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
+        simulation: &mut PartialSimulation<F, H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
     );
 
     #[inline]
     fn with_next_active_lineage_and_event_time<
         P: FnOnce(PositiveF64) -> bool,
-        F: FnOnce(
-            &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
+        W: FnOnce(
+            &mut PartialSimulation<F, H, G, R, S, X, D, C, T, N, E>,
             &mut G,
             Lineage,
             PositiveF64,
         ) -> Option<IndexedLocation>,
     >(
         &mut self,
-        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N, E>,
+        simulation: &mut PartialSimulation<F, H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
         early_peek_stop: P,
-        inner: F,
+        inner: W,
     ) -> bool {
         if let Some((chosen_lineage, event_time)) =
             self.pop_active_lineage_and_event_time(simulation, rng, early_peek_stop)

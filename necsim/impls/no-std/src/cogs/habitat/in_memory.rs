@@ -3,7 +3,7 @@ use alloc::{boxed::Box, vec::Vec};
 use r#final::Final;
 
 use necsim_core::{
-    cogs::{Backup, Habitat},
+    cogs::{Backup, Habitat, F64Core},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -32,7 +32,7 @@ impl Backup for InMemoryHabitat {
 }
 
 #[contract_trait]
-impl Habitat for InMemoryHabitat {
+impl<F: F64Core> Habitat<F> for InMemoryHabitat {
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
         &self.extent

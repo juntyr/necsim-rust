@@ -2,7 +2,7 @@ use alloc::collections::BinaryHeap;
 use core::cmp::Reverse;
 
 use necsim_core::{
-    cogs::{Backup, ImmigrationEntry},
+    cogs::{Backup, ImmigrationEntry, F64Core},
     lineage::MigratingLineage,
 };
 
@@ -26,7 +26,7 @@ impl Backup for BufferedImmigrationEntry {
 }
 
 #[contract_trait]
-impl ImmigrationEntry for BufferedImmigrationEntry {
+impl<F: F64Core> ImmigrationEntry<F> for BufferedImmigrationEntry {
     #[must_use]
     fn next_optional_immigration(&mut self) -> Option<MigratingLineage> {
         self.immigrants.pop().map(|immigrant| immigrant.0)

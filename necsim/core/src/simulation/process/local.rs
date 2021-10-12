@@ -6,7 +6,7 @@ use crate::{
     cogs::{
         event_sampler::EventHandler, ActiveLineageSampler, CoalescenceSampler, DispersalSampler,
         EmigrationExit, EventSampler, Habitat, ImmigrationEntry, LineageReference, LineageStore,
-        RngCore, SpeciationProbability, TurnoverRate,
+        RngCore, SpeciationProbability, TurnoverRate, F64Core
     },
     event::{DispersalEvent, SpeciationEvent},
     reporter::Reporter,
@@ -14,27 +14,28 @@ use crate::{
 };
 
 impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: LineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: DispersalSampler<H, G>,
-        C: CoalescenceSampler<H, R, S>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-        E: EventSampler<H, G, R, S, X, D, C, T, N>,
-        I: ImmigrationEntry,
-        A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
-    > Simulation<H, G, R, S, X, D, C, T, N, E, I, A>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: LineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: DispersalSampler<F, H, G>,
+        C: CoalescenceSampler<F, H, R, S>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+        E: EventSampler<F, H, G, R, S, X, D, C, T, N>,
+        I: ImmigrationEntry<F>,
+        A: ActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>,
+    > Simulation<F, H, G, R, S, X, D, C, T, N, E, I, A>
 {
     pub(in super::super) fn simulate_and_report_local_step_or_early_stop_or_finish<
         P: Reporter,
-        F: FnOnce(PositiveF64) -> bool,
+        W: FnOnce(PositiveF64) -> bool,
     >(
         &mut self,
         reporter: &mut P,
-        early_peek: F,
+        early_peek: W,
     ) -> bool {
         let mut emigration = false;
 

@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, Habitat},
+    cogs::{Backup, Habitat, F64Core},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -74,7 +74,7 @@ impl Backup for SpatiallyImplicitHabitat {
 }
 
 #[contract_trait]
-impl Habitat for SpatiallyImplicitHabitat {
+impl<F: F64Core> Habitat<F> for SpatiallyImplicitHabitat {
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
         &self.extent

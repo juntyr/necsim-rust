@@ -1,9 +1,9 @@
-use necsim_core::{cogs::Habitat, landscape::Location};
+use necsim_core::{cogs::{Habitat, F64Core}, landscape::Location};
 
 use super::InMemoryCumulativeDispersalSampler;
 
 impl InMemoryCumulativeDispersalSampler {
-    pub(super) fn explicit_only_valid_targets_dispersal_contract<H: Habitat>(
+    pub(super) fn explicit_only_valid_targets_dispersal_contract<F: F64Core, H: Habitat<F>>(
         &self,
         habitat: &H,
     ) -> bool {

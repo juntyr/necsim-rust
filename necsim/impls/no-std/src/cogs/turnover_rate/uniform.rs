@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, Habitat, TurnoverRate},
+    cogs::{Backup, Habitat, TurnoverRate, F64Core},
     landscape::Location,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -17,7 +17,7 @@ impl Backup for UniformTurnoverRate {
 }
 
 #[contract_trait]
-impl<H: Habitat> TurnoverRate<H> for UniformTurnoverRate {
+impl<F: F64Core, H: Habitat<F>> TurnoverRate<F, H> for UniformTurnoverRate {
     #[must_use]
     #[inline]
     fn get_turnover_rate_at_location(&self, _location: &Location, _habitat: &H) -> NonNegativeF64 {

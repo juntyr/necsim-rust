@@ -1,3 +1,5 @@
+pub use necsim_core_f64::F64Core;
+
 pub mod backup;
 pub use backup::Backup;
 

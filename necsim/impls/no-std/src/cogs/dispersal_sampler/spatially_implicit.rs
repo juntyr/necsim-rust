@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
+    cogs::{Backup, DispersalSampler, Habitat, RngCore, SeparableDispersalSampler, F64Core},
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, PositiveUnitF64};
@@ -12,15 +12,15 @@ use crate::cogs::{
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-pub struct SpatiallyImplicitDispersalSampler<G: RngCore> {
+pub struct SpatiallyImplicitDispersalSampler<F: F64Core, G: RngCore<F>> {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
-    local: NonSpatialDispersalSampler<G>,
+    local: NonSpatialDispersalSampler<F, G>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
-    meta: NonSpatialDispersalSampler<G>,
+    meta: NonSpatialDispersalSampler<F, G>,
     local_migration_probability_per_generation: PositiveUnitF64,
 }
 
-impl<G: RngCore> SpatiallyImplicitDispersalSampler<G> {
+impl<F: F64Core, G: RngCore<F>> SpatiallyImplicitDispersalSampler<F, G> {
     #[must_use]
     pub fn new(local_migration_probability_per_generation: PositiveUnitF64) -> Self {
         Self {
@@ -32,7 +32,7 @@ impl<G: RngCore> SpatiallyImplicitDispersalSampler<G> {
 }
 
 #[contract_trait]
-impl<G: RngCore> Backup for SpatiallyImplicitDispersalSampler<G> {
+impl<F: F64Core, G: RngCore<F>> Backup for SpatiallyImplicitDispersalSampler<F, G> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             local: self.local.backup_unchecked(),
@@ -44,8 +44,8 @@ impl<G: RngCore> Backup for SpatiallyImplicitDispersalSampler<G> {
 }
 
 #[contract_trait]
-impl<G: RngCore> DispersalSampler<SpatiallyImplicitHabitat, G>
-    for SpatiallyImplicitDispersalSampler<G>
+impl<F: F64Core, G: RngCore<F>> DispersalSampler<F, SpatiallyImplicitHabitat, G>
+    for SpatiallyImplicitDispersalSampler<F, G>
 {
     #[must_use]
     #[debug_requires(
@@ -88,8 +88,8 @@ impl<G: RngCore> DispersalSampler<SpatiallyImplicitHabitat, G>
 }
 
 #[contract_trait]
-impl<G: RngCore> SeparableDispersalSampler<SpatiallyImplicitHabitat, G>
-    for SpatiallyImplicitDispersalSampler<G>
+impl<F: F64Core, G: RngCore<F>> SeparableDispersalSampler<F, SpatiallyImplicitHabitat, G>
+    for SpatiallyImplicitDispersalSampler<F, G>
 {
     #[must_use]
     #[debug_requires(

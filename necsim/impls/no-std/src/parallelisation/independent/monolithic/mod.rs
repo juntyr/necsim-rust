@@ -6,7 +6,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, DispersalSampler, Habitat, PrimeableRng, SpeciationProbability,
-        TurnoverRate,
+        TurnoverRate, F64Core
     },
     lineage::{GlobalLineageReference, Lineage},
     reporter::{boolean::Boolean, Reporter},
@@ -39,17 +39,19 @@ use reporter::{
 
 #[allow(clippy::type_complexity, clippy::too_many_lines)]
 pub fn simulate<
-    H: Habitat,
-    G: PrimeableRng,
-    D: DispersalSampler<H, G>,
-    T: TurnoverRate<H>,
-    N: SpeciationProbability<H>,
+    F: F64Core,
+    H: Habitat<F>,
+    G: PrimeableRng<F>,
+    D: DispersalSampler<F, H, G>,
+    T: TurnoverRate<F, H>,
+    N: SpeciationProbability<F, H>,
     J: EventTimeSampler<H, G, T>,
     R: Reporter,
     P: LocalPartition<R>,
     L: IntoIterator<Item = Lineage>,
 >(
     mut simulation: Simulation<
+        F,
         H,
         G,
         GlobalLineageReference,

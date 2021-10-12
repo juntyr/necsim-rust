@@ -6,7 +6,7 @@ use hashbrown::hash_map::HashMap;
 use slab::Slab;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, OriginSampler},
+    cogs::{Backup, Habitat, OriginSampler, F64Core},
     landscape::IndexedLocation,
     lineage::{GlobalLineageReference, Lineage},
 };
@@ -17,7 +17,7 @@ mod store;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct GillespieLineageStore<H: Habitat> {
+pub struct GillespieLineageStore<F: F64Core, H: Habitat<F>> {
     lineages_store: Slab<Lineage>,
     location_to_lineage_references: Array2D<Vec<InMemoryLineageReference>>,
     indexed_location_to_lineage_reference:
@@ -25,7 +25,7 @@ pub struct GillespieLineageStore<H: Habitat> {
     _marker: PhantomData<H>,
 }
 
-impl<H: Habitat> Index<InMemoryLineageReference> for GillespieLineageStore<H> {
+impl<F: F64Core, H: Habitat<F>> Index<InMemoryLineageReference> for GillespieLineageStore<F, H> {
     type Output = Lineage;
 
     #[must_use]
@@ -38,9 +38,9 @@ impl<H: Habitat> Index<InMemoryLineageReference> for GillespieLineageStore<H> {
     }
 }
 
-impl<'h, H: 'h + Habitat> GillespieLineageStore<H> {
+impl<'h, F: F64Core, H: 'h + Habitat<F>> GillespieLineageStore<F, H> {
     #[must_use]
-    pub fn new<O: OriginSampler<'h, Habitat = H>>(mut origin_sampler: O) -> Self {
+    pub fn new<O: OriginSampler<'h, F, Habitat = H>>(mut origin_sampler: O) -> Self {
         #[allow(clippy::cast_possible_truncation)]
         let lineages_amount_hint = origin_sampler.full_upper_bound_size_hint() as usize;
 
@@ -91,7 +91,7 @@ impl<'h, H: 'h + Habitat> GillespieLineageStore<H> {
 }
 
 #[contract_trait]
-impl<H: Habitat> Backup for GillespieLineageStore<H> {
+impl<F: F64Core, H: Habitat<F>> Backup for GillespieLineageStore<F, H> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             lineages_store: self.lineages_store.clone(),
