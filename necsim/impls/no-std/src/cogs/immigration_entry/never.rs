@@ -4,15 +4,9 @@ use necsim_core::{
 };
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 pub struct NeverImmigrationEntry([u8; 0]);
-
-impl Default for NeverImmigrationEntry {
-    fn default() -> Self {
-        Self([])
-    }
-}
 
 #[contract_trait]
 impl Backup for NeverImmigrationEntry {

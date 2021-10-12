@@ -8,14 +8,8 @@ use necsim_core::{
 use crate::decomposition::Decomposition;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct MonolithicDecomposition(());
-
-impl Default for MonolithicDecomposition {
-    fn default() -> Self {
-        Self(())
-    }
-}
 
 #[contract_trait]
 impl Backup for MonolithicDecomposition {

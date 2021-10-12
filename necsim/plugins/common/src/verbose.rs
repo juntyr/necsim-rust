@@ -3,6 +3,7 @@ use std::fmt;
 use necsim_core::{impl_report, reporter::Reporter};
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Default)]
 pub struct VerboseReporter(());
 
 impl fmt::Debug for VerboseReporter {
@@ -29,10 +30,4 @@ impl Reporter for VerboseReporter {
     impl_report!(progress(&mut self, remaining: Used) {
         info!("Remaining: {}", remaining);
     });
-}
-
-impl Default for VerboseReporter {
-    fn default() -> Self {
-        Self(())
-    }
 }
