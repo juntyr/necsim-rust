@@ -8,15 +8,9 @@ use necsim_core_f64::floor;
 use super::EventTimeSampler;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 pub struct FixedEventTimeSampler([u8; 0]);
-
-impl Default for FixedEventTimeSampler {
-    fn default() -> Self {
-        Self([])
-    }
-}
 
 #[contract_trait]
 impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>

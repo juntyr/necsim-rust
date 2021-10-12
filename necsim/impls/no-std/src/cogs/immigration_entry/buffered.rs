@@ -7,7 +7,7 @@ use necsim_core::{
 };
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct BufferedImmigrationEntry {
     immigrants: BinaryHeap<Reverse<MigratingLineage>>,
 }
@@ -35,14 +35,6 @@ impl ImmigrationEntry for BufferedImmigrationEntry {
     #[must_use]
     fn peek_next_immigration(&self) -> Option<&MigratingLineage> {
         self.immigrants.peek().map(|immigrant| &immigrant.0)
-    }
-}
-
-impl Default for BufferedImmigrationEntry {
-    fn default() -> Self {
-        Self {
-            immigrants: BinaryHeap::new(),
-        }
     }
 }
 

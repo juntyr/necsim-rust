@@ -9,6 +9,7 @@ use necsim_core::{
 use necsim_core_bond::NonNegativeF64;
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Default)]
 pub struct EventCounterReporter {
     last_parent_prior_time: Option<NonNegativeF64>,
     last_speciation_event: Option<SpeciationEvent>,
@@ -155,23 +156,4 @@ impl Reporter for EventCounterReporter {
 
         log::info!("{}", event_summary);
     });
-}
-
-impl Default for EventCounterReporter {
-    fn default() -> Self {
-        Self {
-            last_parent_prior_time: None,
-            last_speciation_event: None,
-            last_dispersal_event: None,
-
-            raw_total: 0,
-            speciation: 0,
-            out_dispersal: 0,
-            self_dispersal: 0,
-            out_coalescence: 0,
-            self_coalescence: 0,
-            late_dispersal_coalescence: 0,
-            late_coalescence: 0,
-        }
-    }
 }

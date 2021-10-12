@@ -4,7 +4,7 @@
 #![feature(iter_advance_by)]
 #![feature(option_result_unwrap_unchecked)]
 #![feature(drain_filter)]
-#![feature(min_type_alias_impl_trait)]
+#![feature(type_alias_impl_trait)]
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
 #![feature(specialization)]
