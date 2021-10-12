@@ -3,10 +3,9 @@ use core::num::NonZeroU32;
 use libm::atan2;
 
 use necsim_core::{
-    cogs::{Backup, Habitat},
+    cogs::{Backup, Habitat, F64Core},
     landscape::Location,
 };
-use necsim_core_f64::floor;
 
 use crate::decomposition::Decomposition;
 
@@ -35,7 +34,7 @@ impl Backup for RadialDecomposition {
 }
 
 #[contract_trait]
-impl<H: Habitat> Decomposition<H> for RadialDecomposition {
+impl<F: F64Core, H: Habitat<F>> Decomposition<F, H> for RadialDecomposition {
     fn get_subdomain_rank(&self) -> u32 {
         self.rank
     }
@@ -60,7 +59,7 @@ impl<H: Habitat> Decomposition<H> for RadialDecomposition {
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         {
-            (floor(f64::from(self.partitions.get()) * fraction) as u32)
+            (F::floor(f64::from(self.partitions.get()) * fraction) as u32)
                 .min(self.partitions.get() - 1)
         }
     }

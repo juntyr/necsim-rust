@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        GloballyCoherentLineageStore, LineageStore, LocallyCoherentLineageStore, OriginSampler,
+        GloballyCoherentLineageStore, LineageStore, LocallyCoherentLineageStore, OriginSampler, F64Core,
     },
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},
@@ -13,11 +13,11 @@ use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 use super::AlmostInfiniteLineageStore;
 
 #[contract_trait]
-impl LineageStore<AlmostInfiniteHabitat, InMemoryLineageReference> for AlmostInfiniteLineageStore {
+impl<F: F64Core> LineageStore<F, AlmostInfiniteHabitat, InMemoryLineageReference> for AlmostInfiniteLineageStore<F> {
     #[allow(clippy::type_complexity)]
     type LineageReferenceIterator<'a> = impl Iterator<Item = InMemoryLineageReference>;
 
-    fn from_origin_sampler<'h, O: OriginSampler<'h, Habitat = AlmostInfiniteHabitat>>(
+    fn from_origin_sampler<'h, O: OriginSampler<'h, F, Habitat = AlmostInfiniteHabitat>>(
         origin_sampler: O,
     ) -> Self {
         Self::new(origin_sampler)
@@ -41,8 +41,8 @@ impl LineageStore<AlmostInfiniteHabitat, InMemoryLineageReference> for AlmostInf
 }
 
 #[contract_trait]
-impl LocallyCoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
-    for AlmostInfiniteLineageStore
+impl<F: F64Core> LocallyCoherentLineageStore<F, AlmostInfiniteHabitat, InMemoryLineageReference>
+    for AlmostInfiniteLineageStore<F>
 {
     #[must_use]
     #[debug_requires(indexed_location.index() == 0, "only one lineage per location")]
@@ -94,8 +94,8 @@ impl LocallyCoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference
 }
 
 #[contract_trait]
-impl GloballyCoherentLineageStore<AlmostInfiniteHabitat, InMemoryLineageReference>
-    for AlmostInfiniteLineageStore
+impl<F: F64Core> GloballyCoherentLineageStore<F, AlmostInfiniteHabitat, InMemoryLineageReference>
+    for AlmostInfiniteLineageStore<F>
 {
     type LocationIterator<'a> = impl Iterator<Item = Location>;
 

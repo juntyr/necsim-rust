@@ -2,7 +2,7 @@ use necsim_core::{
     cogs::{
         ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler, EventSampler, Habitat,
         LineageReference, LocallyCoherentLineageStore, RngCore, SpeciationProbability,
-        TurnoverRate,
+        TurnoverRate, F64Core
     },
     reporter::{NullReporter, Reporter},
     simulation::Simulation,
@@ -21,17 +21,19 @@ use crate::{
 
 #[allow(clippy::type_complexity)]
 pub fn simulate<
-    H: Habitat,
-    G: RngCore,
-    R: LineageReference<H>,
-    S: LocallyCoherentLineageStore<H, R>,
-    D: DispersalSampler<H, G>,
-    C: CoalescenceSampler<H, R, S>,
-    T: TurnoverRate<H>,
-    N: SpeciationProbability<H>,
-    O: Decomposition<H>,
-    E: EventSampler<H, G, R, S, DomainEmigrationExit<H, O>, D, C, T, N>,
+    F: F64Core,
+    H: Habitat<F>,
+    G: RngCore<F>,
+    R: LineageReference<F, H>,
+    S: LocallyCoherentLineageStore<F, H, R>,
+    D: DispersalSampler<F, H, G>,
+    C: CoalescenceSampler<F, H, R, S>,
+    T: TurnoverRate<F, H>,
+    N: SpeciationProbability<F, H>,
+    O: Decomposition<F, H>,
+    E: EventSampler<F, H, G, R, S, DomainEmigrationExit<H, O>, D, C, T, N>,
     A: ActiveLineageSampler<
+        F,
         H,
         G,
         R,
@@ -48,6 +50,7 @@ pub fn simulate<
     L: LocalPartition<P>,
 >(
     mut simulation: Simulation<
+        F,
         H,
         G,
         R,

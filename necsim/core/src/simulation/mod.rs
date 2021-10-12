@@ -10,28 +10,30 @@ use crate::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
         Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
-        TurnoverRate,
+        TurnoverRate, F64Core,
     },
     reporter::Reporter,
 };
 
-pub use builder::Simulation;
+#[allow(clippy::useless_attribute, clippy::module_name_repetitions)]
+pub use builder::{Simulation, SimulationBuilder};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: LineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: DispersalSampler<H, G>,
-        C: CoalescenceSampler<H, R, S>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-        E: EventSampler<H, G, R, S, X, D, C, T, N>,
-        I: ImmigrationEntry,
-        A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
-    > Simulation<H, G, R, S, X, D, C, T, N, E, I, A>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: LineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: DispersalSampler<F, H, G>,
+        C: CoalescenceSampler<F, H, R, S>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+        E: EventSampler<F, H, G, R, S, X, D, C, T, N>,
+        I: ImmigrationEntry<F>,
+        A: ActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>,
+    > Simulation<F, H, G, R, S, X, D, C, T, N, E, I, A>
 {
     pub fn is_done(&self) -> bool {
         self.active_lineage_sampler.number_active_lineages() == 0
@@ -47,11 +49,11 @@ impl<
 
     #[inline]
     pub fn simulate_incremental_early_stop<
-        F: FnMut(&Self, u64, PositiveF64) -> bool,
+        W: FnMut(&Self, u64, PositiveF64) -> bool,
         P: Reporter,
     >(
         &mut self,
-        mut early_stop: F,
+        mut early_stop: W,
         reporter: &mut P,
     ) -> (NonNegativeF64, u64) {
         let mut steps = 0_u64;

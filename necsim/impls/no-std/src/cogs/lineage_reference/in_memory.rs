@@ -1,6 +1,6 @@
 use core::{hash::Hash, num::NonZeroUsize};
 
-use necsim_core::cogs::{Backup, Habitat, LineageReference};
+use necsim_core::cogs::{Backup, Habitat, LineageReference, F64Core};
 
 // InMemoryLineageReference uses a NonZeroUsize internally to enable same-size
 // Option optimisation
@@ -16,7 +16,7 @@ impl Backup for InMemoryLineageReference {
     }
 }
 
-impl<H: Habitat> LineageReference<H> for InMemoryLineageReference {}
+impl<F: F64Core, H: Habitat<F>> LineageReference<F, H> for InMemoryLineageReference {}
 
 impl From<usize> for InMemoryLineageReference {
     fn from(reference: usize) -> Self {

@@ -1,11 +1,11 @@
 use alloc::vec::Vec;
 use core::{marker::PhantomData, num::NonZeroU32};
 
-use necsim_core::cogs::Habitat;
+use necsim_core::cogs::{Habitat, F64Core};
 
 use super::EqualDecomposition;
 
-impl<H: Habitat> EqualDecomposition<H> {
+impl<F: F64Core, H: Habitat<F>> EqualDecomposition<F, H> {
     /// # Errors
     ///
     /// Returns `Ok(Self)` iff the `habitat` can be partitioned into

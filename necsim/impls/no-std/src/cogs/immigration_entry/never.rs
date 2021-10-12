@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, ImmigrationEntry},
+    cogs::{Backup, ImmigrationEntry, F64Core},
     lineage::MigratingLineage,
 };
 
@@ -16,7 +16,7 @@ impl Backup for NeverImmigrationEntry {
 }
 
 #[contract_trait]
-impl ImmigrationEntry for NeverImmigrationEntry {
+impl<F: F64Core> ImmigrationEntry<F> for NeverImmigrationEntry {
     #[must_use]
     #[inline]
     #[debug_ensures(ret.is_none(), "no lineage ever immigrates")]

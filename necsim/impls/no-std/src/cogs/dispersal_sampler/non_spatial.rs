@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, Habitat, RngCore, SeparableDispersalSampler},
+    cogs::{Backup, DispersalSampler, Habitat, RngCore, SeparableDispersalSampler, F64Core},
     landscape::Location,
 };
 use necsim_core_bond::ClosedUnitF64;
@@ -11,21 +11,21 @@ use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-pub struct NonSpatialDispersalSampler<G: RngCore> {
-    marker: PhantomData<G>,
+pub struct NonSpatialDispersalSampler<F: F64Core, G: RngCore<F>> {
+    marker: PhantomData<(F, G)>,
 }
 
-impl<G: RngCore> Default for NonSpatialDispersalSampler<G> {
+impl<F: F64Core, G: RngCore<F>> Default for NonSpatialDispersalSampler<F, G> {
     #[must_use]
     fn default() -> Self {
         Self {
-            marker: PhantomData::<G>,
+            marker: PhantomData::<(F, G)>,
         }
     }
 }
 
 #[contract_trait]
-impl<G: RngCore> Backup for NonSpatialDispersalSampler<G> {
+impl<F: F64Core, G: RngCore<F>> Backup for NonSpatialDispersalSampler<F, G> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             marker: PhantomData::<G>,
@@ -34,7 +34,7 @@ impl<G: RngCore> Backup for NonSpatialDispersalSampler<G> {
 }
 
 #[contract_trait]
-impl<G: RngCore> DispersalSampler<NonSpatialHabitat, G> for NonSpatialDispersalSampler<G> {
+impl<F: F64Core, G: RngCore<F>> DispersalSampler<F, NonSpatialHabitat, G> for NonSpatialDispersalSampler<F, G> {
     #[must_use]
     #[inline]
     fn sample_dispersal_from_location(
@@ -61,7 +61,7 @@ impl<G: RngCore> DispersalSampler<NonSpatialHabitat, G> for NonSpatialDispersalS
 }
 
 #[contract_trait]
-impl<G: RngCore> SeparableDispersalSampler<NonSpatialHabitat, G> for NonSpatialDispersalSampler<G> {
+impl<F: F64Core, G: RngCore<F>> SeparableDispersalSampler<F, NonSpatialHabitat, G> for NonSpatialDispersalSampler<F, G> {
     #[must_use]
     #[debug_requires((
         u64::from(habitat.get_extent().width()) * u64::from(habitat.get_extent().height())

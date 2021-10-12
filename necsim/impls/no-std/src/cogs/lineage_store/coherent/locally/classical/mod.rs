@@ -4,7 +4,7 @@ use hashbrown::hash_map::HashMap;
 use slab::Slab;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, OriginSampler},
+    cogs::{Backup, Habitat, OriginSampler, F64Core},
     landscape::IndexedLocation,
     lineage::Lineage,
 };
@@ -15,13 +15,13 @@ mod store;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct ClassicalLineageStore<H: Habitat> {
+pub struct ClassicalLineageStore<F: F64Core, H: Habitat<F>> {
     lineages_store: Slab<Lineage>,
     indexed_location_to_lineage_reference: HashMap<IndexedLocation, InMemoryLineageReference>,
-    _marker: PhantomData<H>,
+    _marker: PhantomData<(F, H)>,
 }
 
-impl<H: Habitat> Index<InMemoryLineageReference> for ClassicalLineageStore<H> {
+impl<F: F64Core, H: Habitat<F>> Index<InMemoryLineageReference> for ClassicalLineageStore<F, H> {
     type Output = Lineage;
 
     #[must_use]
@@ -34,9 +34,9 @@ impl<H: Habitat> Index<InMemoryLineageReference> for ClassicalLineageStore<H> {
     }
 }
 
-impl<'h, H: 'h + Habitat> ClassicalLineageStore<H> {
+impl<'h, F: F64Core, H: 'h + Habitat<F>> ClassicalLineageStore<F, H> {
     #[must_use]
-    pub fn new<O: OriginSampler<'h, Habitat = H>>(mut origin_sampler: O) -> Self {
+    pub fn new<O: OriginSampler<'h, F, Habitat = H>>(mut origin_sampler: O) -> Self {
         #[allow(clippy::cast_possible_truncation)]
         let lineages_amount_hint = origin_sampler.full_upper_bound_size_hint() as usize;
 
@@ -64,7 +64,7 @@ impl<'h, H: 'h + Habitat> ClassicalLineageStore<H> {
 }
 
 #[contract_trait]
-impl<H: Habitat> Backup for ClassicalLineageStore<H> {
+impl<F: F64Core, H: Habitat<F>> Backup for ClassicalLineageStore<F, H> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             lineages_store: self.lineages_store.clone(),

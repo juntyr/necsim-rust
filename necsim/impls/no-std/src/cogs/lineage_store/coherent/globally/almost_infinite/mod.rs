@@ -1,10 +1,11 @@
 use core::ops::Index;
+use core::marker::PhantomData;
 
 use hashbrown::hash_map::HashMap;
 use slab::Slab;
 
 use necsim_core::{
-    cogs::{Backup, OriginSampler},
+    cogs::{Backup, OriginSampler, F64Core},
     landscape::Location,
     lineage::Lineage,
 };
@@ -18,12 +19,13 @@ mod store;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct AlmostInfiniteLineageStore {
+pub struct AlmostInfiniteLineageStore<F: F64Core> {
     lineages_store: Slab<Lineage>,
     location_to_lineage_reference: HashMap<Location, InMemoryLineageReference>,
+    _marker: PhantomData<F>,
 }
 
-impl Index<InMemoryLineageReference> for AlmostInfiniteLineageStore {
+impl<F: F64Core> Index<InMemoryLineageReference> for AlmostInfiniteLineageStore<F> {
     type Output = Lineage;
 
     #[must_use]
@@ -36,9 +38,9 @@ impl Index<InMemoryLineageReference> for AlmostInfiniteLineageStore {
     }
 }
 
-impl AlmostInfiniteLineageStore {
+impl<F: F64Core> AlmostInfiniteLineageStore<F> {
     #[must_use]
-    pub fn new<'h, O: OriginSampler<'h, Habitat = AlmostInfiniteHabitat>>(
+    pub fn new<'h, O: OriginSampler<'h, F, Habitat = AlmostInfiniteHabitat>>(
         mut origin_sampler: O,
     ) -> Self {
         #[allow(clippy::cast_possible_truncation)]
@@ -62,16 +64,18 @@ impl AlmostInfiniteLineageStore {
         Self {
             lineages_store,
             location_to_lineage_reference: location_to_lineage_references,
+            _marker: PhantomData::<F>,
         }
     }
 }
 
 #[contract_trait]
-impl Backup for AlmostInfiniteLineageStore {
+impl<F: F64Core> Backup for AlmostInfiniteLineageStore<F> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             lineages_store: self.lineages_store.clone(),
             location_to_lineage_reference: self.location_to_lineage_reference.clone(),
+            _marker: PhantomData::<F>,
         }
     }
 }

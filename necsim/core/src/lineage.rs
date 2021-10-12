@@ -3,6 +3,7 @@ use core::{
     fmt,
 };
 
+use necsim_core_f64::F64Core;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use necsim_core_bond::{NonNegativeF64, NonZeroOneU64, PositiveF64};
@@ -46,7 +47,7 @@ impl Backup for GlobalLineageReference {
     }
 }
 
-impl<H: Habitat> LineageReference<H> for GlobalLineageReference {}
+impl<F: F64Core, H: Habitat<F>> LineageReference<F, H> for GlobalLineageReference {}
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialOrd, Ord)]
@@ -124,7 +125,7 @@ impl Lineage {
         "stores the indexed_location"
     )]
     #[debug_ensures(ret.last_event_time == 0.0_f64, "starts at t_0 = 0.0")]
-    pub fn new<H: Habitat>(indexed_location: IndexedLocation, habitat: &H) -> Self {
+    pub fn new<F: F64Core, H: Habitat<F>>(indexed_location: IndexedLocation, habitat: &H) -> Self {
         Self {
             global_reference: GlobalLineageReference(unsafe {
                 NonZeroOneU64::new_unchecked(

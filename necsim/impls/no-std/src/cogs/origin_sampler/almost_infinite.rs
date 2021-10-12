@@ -1,10 +1,9 @@
 use core::{fmt, iter::Iterator};
 
 use necsim_core::{
-    cogs::OriginSampler,
+    cogs::{OriginSampler, F64Core},
     landscape::{IndexedLocation, LandscapeExtent, LocationIterator},
 };
-use necsim_core_f64::ceil;
 
 use crate::cogs::{
     habitat::almost_infinite::AlmostInfiniteHabitat, origin_sampler::pre_sampler::OriginPreSampler,
@@ -13,7 +12,7 @@ use crate::cogs::{
 const HABITAT_CENTRE: u32 = u32::MAX / 2;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct AlmostInfiniteOriginSampler<'h, I: Iterator<Item = u64>> {
+pub struct AlmostInfiniteOriginSampler<'h, F: F64Core, I: Iterator<Item = u64>> {
     pre_sampler: OriginPreSampler<I>,
     last_index: u64,
     location_iterator: LocationIterator,

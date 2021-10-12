@@ -6,10 +6,65 @@ use core::{marker::PhantomData, num::Wrapping};
 use crate::cogs::{
     ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
     Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
-    TurnoverRate,
+    TurnoverRate, F64Core,
 };
 
-#[derive(TypedBuilder, Debug)]
+#[derive(Debug)]
+#[allow(clippy::module_name_repetitions)]
+pub struct SimulationBuilder<
+    F: F64Core,
+    H: Habitat<F>,
+    G: RngCore<F>,
+    R: LineageReference<F, H>,
+    S: LineageStore<F, H, R>,
+    X: EmigrationExit<F, H, G, R, S>,
+    D: DispersalSampler<F, H, G>,
+    C: CoalescenceSampler<F, H, R, S>,
+    T: TurnoverRate<F, H>,
+    N: SpeciationProbability<F, H>,
+    E: EventSampler<F, H, G, R, S, X, D, C, T, N>,
+    I: ImmigrationEntry<F>,
+    A: ActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>,
+> {
+    pub f64_core: PhantomData<F>,
+    pub habitat: H,
+    pub lineage_reference: PhantomData<R>,
+    pub lineage_store: S,
+    pub dispersal_sampler: D,
+    pub coalescence_sampler: C,
+    pub turnover_rate: T,
+    pub speciation_probability: N,
+    pub emigration_exit: X,
+    pub event_sampler: E,
+    pub active_lineage_sampler: A,
+    pub rng: G,
+    pub immigration_entry: I,
+}
+
+impl<
+    F: F64Core,
+    H: Habitat<F>,
+    G: RngCore<F>,
+    R: LineageReference<F, H>,
+    S: LineageStore<F, H, R>,
+    X: EmigrationExit<F, H, G, R, S>,
+    D: DispersalSampler<F, H, G>,
+    C: CoalescenceSampler<F, H, R, S>,
+    T: TurnoverRate<F, H>,
+    N: SpeciationProbability<F, H>,
+    E: EventSampler<F, H, G, R, S, X, D, C, T, N>,
+    I: ImmigrationEntry<F>,
+    A: ActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>,
+> SimulationBuilder<F, H, G, R, S, X, D, C, T, N, E, I, A> {
+    #[allow(clippy::type_complexity)]
+    pub fn build(self) -> Simulation<F, H, G, R, S, X, D, C, T, N, E, I, A> {
+        let SimulationBuilder { f64_core, habitat, lineage_reference, lineage_store, dispersal_sampler, coalescence_sampler, turnover_rate, speciation_probability, emigration_exit, event_sampler, active_lineage_sampler, rng, immigration_entry } = self;
+
+        Simulation { f64_core, habitat, lineage_reference, lineage_store, dispersal_sampler, coalescence_sampler, turnover_rate, speciation_probability, emigration_exit, event_sampler, active_lineage_sampler, rng, immigration_entry, migration_balance: Wrapping(0_u64) }
+    }
+}
+
+#[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]
@@ -24,19 +79,21 @@ use crate::cogs::{
 #[cfg_attr(feature = "cuda", r2cBound(A: rust_cuda::common::RustToCuda))]
 #[repr(C)]
 pub struct Simulation<
-    H: Habitat,
-    G: RngCore,
-    R: LineageReference<H>,
-    S: LineageStore<H, R>,
-    X: EmigrationExit<H, G, R, S>,
-    D: DispersalSampler<H, G>,
-    C: CoalescenceSampler<H, R, S>,
-    T: TurnoverRate<H>,
-    N: SpeciationProbability<H>,
-    E: EventSampler<H, G, R, S, X, D, C, T, N>,
-    I: ImmigrationEntry,
-    A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
+    F: F64Core,
+    H: Habitat<F>,
+    G: RngCore<F>,
+    R: LineageReference<F, H>,
+    S: LineageStore<F, H, R>,
+    X: EmigrationExit<F, H, G, R, S>,
+    D: DispersalSampler<F, H, G>,
+    C: CoalescenceSampler<F, H, R, S>,
+    T: TurnoverRate<F, H>,
+    N: SpeciationProbability<F, H>,
+    E: EventSampler<F, H, G, R, S, X, D, C, T, N>,
+    I: ImmigrationEntry<F>,
+    A: ActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>,
 > {
+    pub(super) f64_core: PhantomData<F>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) habitat: H,
     pub(super) lineage_reference: PhantomData<R>,
@@ -61,31 +118,32 @@ pub struct Simulation<
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) immigration_entry: I,
     #[cfg_attr(feature = "cuda", r2cIgnore)]
-    #[builder(default = Wrapping(0), setter(skip))]
     pub(super) migration_balance: Wrapping<u64>,
 }
 
 impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: LineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: DispersalSampler<H, G>,
-        C: CoalescenceSampler<H, R, S>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-        E: EventSampler<H, G, R, S, X, D, C, T, N>,
-        I: ImmigrationEntry,
-        A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
-    > Simulation<H, G, R, S, X, D, C, T, N, E, I, A>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: LineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: DispersalSampler<F, H, G>,
+        C: CoalescenceSampler<F, H, R, S>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+        E: EventSampler<F, H, G, R, S, X, D, C, T, N>,
+        I: ImmigrationEntry<F>,
+        A: ActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>,
+    > Simulation<F, H, G, R, S, X, D, C, T, N, E, I, A>
 {
     #[inline]
     pub fn with_mut_split_active_lineage_sampler_and_rng<
         Q,
-        F: FnOnce(
+        W: FnOnce(
             &mut A,
             &mut super::partial::active_lineager_sampler::PartialSimulation<
+                F,
                 H,
                 G,
                 R,
@@ -101,7 +159,7 @@ impl<
         ) -> Q,
     >(
         &mut self,
-        func: F,
+        func: W,
     ) -> Q {
         // Cast &self to a &PartialSimulation without the active lineage sampler
         //  and rng
@@ -110,6 +168,7 @@ impl<
         let partial_simulation = unsafe {
             &mut *(self as *mut Self)
                 .cast::<super::partial::active_lineager_sampler::PartialSimulation<
+                    F,
                     H,
                     G,
                     R,
@@ -133,14 +192,14 @@ impl<
     #[inline]
     pub fn with_mut_split_event_sampler_and_rng<
         Q,
-        F: FnOnce(
+        W: FnOnce(
             &mut E,
-            &super::partial::event_sampler::PartialSimulation<H, G, R, S, X, D, C, T, N>,
+            &super::partial::event_sampler::PartialSimulation<F, H, G, R, S, X, D, C, T, N>,
             &mut G,
         ) -> Q,
     >(
         &mut self,
-        func: F,
+        func: W,
     ) -> Q {
         // Cast &self to a &PartialSimulation without the event sampler and rng
         //  (the active lineage sampler is also removed implicitly)
@@ -148,6 +207,7 @@ impl<
         //  subsequence of Self's type and layout
         let partial_simulation = unsafe {
             &mut *(self as *mut Self).cast::<super::partial::event_sampler::PartialSimulation<
+                F,
                 H,
                 G,
                 R,

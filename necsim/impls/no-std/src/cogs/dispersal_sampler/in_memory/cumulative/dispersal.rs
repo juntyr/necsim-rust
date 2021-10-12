@@ -1,12 +1,12 @@
 use necsim_core::{
-    cogs::{DispersalSampler, Habitat, RngCore},
+    cogs::{DispersalSampler, Habitat, RngCore, F64Core},
     landscape::Location,
 };
 
 use super::InMemoryCumulativeDispersalSampler;
 
 #[contract_trait]
-impl<H: Habitat, G: RngCore> DispersalSampler<H, G> for InMemoryCumulativeDispersalSampler {
+impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> DispersalSampler<F, H, G> for InMemoryCumulativeDispersalSampler {
     #[must_use]
     fn sample_dispersal_from_location(
         &self,

@@ -1,7 +1,7 @@
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::{
-    cogs::{Habitat, LineageReference, LineageStore, RngCore},
+    cogs::{Habitat, LineageReference, LineageStore, RngCore, F64Core},
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
     simulation::partial::emigration_exit::PartialSimulation,
@@ -13,7 +13,7 @@ use crate::{
     clippy::too_many_arguments
 )]
 #[contract_trait]
-pub trait EmigrationExit<H: Habitat, G: RngCore, R: LineageReference<H>, S: LineageStore<H, R>>:
+pub trait EmigrationExit<F: F64Core, H: Habitat<F>, G: RngCore<F>, R: LineageReference<F, H>, S: LineageStore<F, H, R>>:
     crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
@@ -40,7 +40,7 @@ pub trait EmigrationExit<H: Habitat, G: RngCore, R: LineageReference<H>, S: Line
         dispersal_target: Location,
         prior_time: NonNegativeF64,
         event_time: PositiveF64,
-        simulation: &mut PartialSimulation<H, G, R, S>,
+        simulation: &mut PartialSimulation<F, H, G, R, S>,
         rng: &mut G,
     ) -> Option<(
         GlobalLineageReference,

@@ -1,61 +1,87 @@
-use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
+use core::fmt;
+use core::marker::PhantomData;
+
+use necsim_core::cogs::{Backup, PrimeableRng, RngCore, F64Core};
 
 use rust_cuda::memory::StackOnly;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug, rust_cuda::common::LendRustToCuda)]
-pub struct CudaRng<R: RngCore + StackOnly>(R);
+#[derive(rust_cuda::common::LendRustToCuda)]
+pub struct CudaRng<F: F64Core, R: RngCore<F> + StackOnly> {
+    inner: R,
+    marker: PhantomData<F>,
+}
 
-impl<R: RngCore + StackOnly> From<R> for CudaRng<R> {
+impl<F: F64Core, R: RngCore<F> + StackOnly> Clone for CudaRng<F, R> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            marker: PhantomData,
+        }
+    }
+}
+
+impl<F: F64Core, R: RngCore<F> + StackOnly> fmt::Debug for CudaRng<F, R> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_tuple(stringify!(CudaRng))
+            .field(&self.inner)
+            .finish()
+    }
+}
+
+impl<F: F64Core, R: RngCore<F> + StackOnly> From<R> for CudaRng<F, R> {
     #[must_use]
     #[inline]
     fn from(rng: R) -> Self {
-        Self(rng)
+        Self { inner: rng, marker: PhantomData }
     }
 }
 
 #[contract_trait]
-impl<R: RngCore + StackOnly> Backup for CudaRng<R> {
+impl<F: F64Core, R: RngCore<F> + StackOnly> Backup for CudaRng<F, R> {
     unsafe fn backup_unchecked(&self) -> Self {
         self.clone()
     }
 }
 
-impl<R: RngCore + StackOnly> RngCore for CudaRng<R> {
-    type Seed = <R as RngCore>::Seed;
+impl<F: F64Core, R: RngCore<F> + StackOnly> RngCore<F> for CudaRng<F, R> {
+    type Seed = <R as RngCore<F>>::Seed;
 
     #[must_use]
     #[inline]
     fn from_seed(seed: Self::Seed) -> Self {
-        Self(R::from_seed(seed))
+        Self {
+            inner: R::from_seed(seed),
+            marker: PhantomData,
+        }
     }
 
     #[must_use]
     #[inline]
     fn sample_u64(&mut self) -> u64 {
-        self.0.sample_u64()
+        self.inner.sample_u64()
     }
 }
 
-impl<R: PrimeableRng + StackOnly> PrimeableRng for CudaRng<R> {
+impl<F: F64Core, R: PrimeableRng<F> + StackOnly> PrimeableRng<F> for CudaRng<F, R> {
     #[inline]
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
-        self.0.prime_with(location_index, time_index);
+        self.inner.prime_with(location_index, time_index);
     }
 }
 
-impl<R: RngCore + StackOnly> Serialize for CudaRng<R> {
+impl<F: F64Core, R: RngCore<F> + StackOnly> Serialize for CudaRng<F, R> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.0.serialize(serializer)
+        self.inner.serialize(serializer)
     }
 }
 
-impl<'de, R: RngCore + StackOnly> Deserialize<'de> for CudaRng<R> {
+impl<'de, F: F64Core, R: RngCore<F> + StackOnly> Deserialize<'de> for CudaRng<F, R> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let inner = R::deserialize(deserializer)?;
 
-        Ok(Self(inner))
+        Ok(Self { inner, marker: PhantomData })
     }
 }

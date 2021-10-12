@@ -4,7 +4,7 @@ use crate::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
         Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
-        TurnoverRate,
+        TurnoverRate, F64Core
     },
     event::DispersalEvent,
     lineage::{Lineage, MigratingLineage},
@@ -13,19 +13,20 @@ use crate::{
 };
 
 impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: LineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: DispersalSampler<H, G>,
-        C: CoalescenceSampler<H, R, S>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-        E: EventSampler<H, G, R, S, X, D, C, T, N>,
-        I: ImmigrationEntry,
-        A: ActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>,
-    > Simulation<H, G, R, S, X, D, C, T, N, E, I, A>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: LineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: DispersalSampler<F, H, G>,
+        C: CoalescenceSampler<F, H, R, S>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+        E: EventSampler<F, H, G, R, S, X, D, C, T, N>,
+        I: ImmigrationEntry<F>,
+        A: ActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>,
+    > Simulation<F, H, G, R, S, X, D, C, T, N, E, I, A>
 {
     pub(in super::super) fn simulate_and_report_immigration_step<P: Reporter>(
         &mut self,

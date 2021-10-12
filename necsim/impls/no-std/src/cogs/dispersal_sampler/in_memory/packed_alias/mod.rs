@@ -4,7 +4,7 @@ use core::{marker::PhantomData, ops::Range};
 use r#final::Final;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, RngCore},
+    cogs::{Backup, Habitat, RngCore, F64Core},
     landscape::Location,
 };
 
@@ -42,17 +42,17 @@ impl From<AliasSamplerRange> for Range<usize> {
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]
-pub struct InMemoryPackedAliasDispersalSampler<H: Habitat, G: RngCore> {
+pub struct InMemoryPackedAliasDispersalSampler<F: F64Core, H: Habitat<F>, G: RngCore<F>> {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     alias_dispersal_ranges: Final<Array2D<AliasSamplerRange>>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     alias_dispersal_buffer: Final<Box<[AliasMethodSamplerAtom<usize>]>>,
-    marker: PhantomData<(H, G)>,
+    marker: PhantomData<(F, H, G)>,
 }
 
 #[contract_trait]
-impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G>
-    for InMemoryPackedAliasDispersalSampler<H, G>
+impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> InMemoryDispersalSampler<F, H, G>
+    for InMemoryPackedAliasDispersalSampler<F, H, G>
 {
     /// Creates a new `InMemoryPackedAliasDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
@@ -107,7 +107,7 @@ impl<H: Habitat, G: RngCore> InMemoryDispersalSampler<H, G>
     }
 }
 
-impl<H: Habitat, G: RngCore> core::fmt::Debug for InMemoryPackedAliasDispersalSampler<H, G> {
+impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> core::fmt::Debug for InMemoryPackedAliasDispersalSampler<F, H, G> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct("InMemoryPackedAliasDispersalSampler")
             .field("alias_dispersal_ranges", &self.alias_dispersal_ranges)
@@ -124,12 +124,12 @@ impl<H: Habitat, G: RngCore> core::fmt::Debug for InMemoryPackedAliasDispersalSa
 }
 
 #[contract_trait]
-impl<H: Habitat, G: RngCore> Backup for InMemoryPackedAliasDispersalSampler<H, G> {
+impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> Backup for InMemoryPackedAliasDispersalSampler<F, H, G> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             alias_dispersal_ranges: Final::new(self.alias_dispersal_ranges.clone()),
             alias_dispersal_buffer: Final::new(self.alias_dispersal_buffer.clone()),
-            marker: PhantomData::<(H, G)>,
+            marker: PhantomData::<(F, H, G)>,
         }
     }
 }
