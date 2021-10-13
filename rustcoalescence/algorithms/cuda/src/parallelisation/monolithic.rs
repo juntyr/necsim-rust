@@ -13,8 +13,9 @@ use rust_cuda::{
 
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, DispersalSampler, EmigrationExit, F64Core, Habitat, ImmigrationEntry,
-        LineageReference, LineageStore, PrimeableRng, SpeciationProbability, TurnoverRate,
+        CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+        LineageReference, LineageStore, MathsCore, PrimeableRng, SpeciationProbability,
+        TurnoverRate,
     },
     lineage::Lineage,
     reporter::{boolean::Boolean, Reporter},
@@ -45,27 +46,27 @@ use crate::kernel::SimulationKernel;
 #[allow(clippy::type_complexity, clippy::too_many_lines)]
 pub fn simulate<
     'l,
-    F: F64Core,
-    H: Habitat<F> + RustToCuda,
-    G: PrimeableRng<F> + RustToCuda,
-    R: LineageReference<F, H>,
-    S: LineageStore<F, H, R> + RustToCuda,
-    X: EmigrationExit<F, H, G, R, S> + RustToCuda,
-    D: DispersalSampler<F, H, G> + RustToCuda,
-    C: CoalescenceSampler<F, H, R, S> + RustToCuda,
-    T: TurnoverRate<F, H> + RustToCuda,
-    N: SpeciationProbability<F, H> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<F, H, G, R, S, X, D, C, T, N> + RustToCuda,
-    I: ImmigrationEntry<F> + RustToCuda,
-    A: SingularActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>
+    M: MathsCore,
+    H: Habitat<M> + RustToCuda,
+    G: PrimeableRng<M> + RustToCuda,
+    R: LineageReference<M, H>,
+    S: LineageStore<M, H, R> + RustToCuda,
+    X: EmigrationExit<M, H, G, R, S> + RustToCuda,
+    D: DispersalSampler<M, H, G> + RustToCuda,
+    C: CoalescenceSampler<M, H, R, S> + RustToCuda,
+    T: TurnoverRate<M, H> + RustToCuda,
+    N: SpeciationProbability<M, H> + RustToCuda,
+    E: MinSpeciationTrackingEventSampler<M, H, G, R, S, X, D, C, T, N> + RustToCuda,
+    I: ImmigrationEntry<M> + RustToCuda,
+    A: SingularActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
         + RustToCuda,
     P: Reporter,
     L: LocalPartition<P>,
     LI: IntoIterator<Item = Lineage>,
 >(
-    mut simulation: Simulation<F, H, G, R, S, X, D, C, T, N, E, I, A>,
+    mut simulation: Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A>,
     mut kernel: SimulationKernel<
-        F,
+        M,
         H,
         G,
         R,
@@ -87,7 +88,7 @@ pub fn simulate<
     local_partition: &'l mut L,
 ) -> Result<(NonNegativeF64, u64)>
     where SimulationKernel<
-        F,
+        M,
         H,
         G,
         R,
@@ -103,7 +104,7 @@ pub fn simulate<
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
     >: rustcoalescence_algorithms_cuda_kernel::Kernel<
-        F,
+        M,
         H,
         G,
         R,

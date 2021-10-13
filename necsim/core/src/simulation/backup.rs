@@ -2,32 +2,32 @@ use core::marker::PhantomData;
 
 use crate::cogs::{
     backup::BackedUp, ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler,
-    EmigrationExit, EventSampler, F64Core, Habitat, ImmigrationEntry, LineageReference,
-    LineageStore, RngCore, SpeciationProbability, TurnoverRate,
+    EmigrationExit, EventSampler, Habitat, ImmigrationEntry, LineageReference, LineageStore,
+    MathsCore, RngCore, SpeciationProbability, TurnoverRate,
 };
 
 use super::Simulation;
 
 #[contract_trait]
 impl<
-        F: F64Core,
-        H: Habitat<F>,
-        G: RngCore<F>,
-        R: LineageReference<F, H>,
-        S: LineageStore<F, H, R>,
-        X: EmigrationExit<F, H, G, R, S>,
-        D: DispersalSampler<F, H, G>,
-        C: CoalescenceSampler<F, H, R, S>,
-        T: TurnoverRate<F, H>,
-        N: SpeciationProbability<F, H>,
-        E: EventSampler<F, H, G, R, S, X, D, C, T, N>,
-        I: ImmigrationEntry<F>,
-        A: ActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>,
-    > Backup for Simulation<F, H, G, R, S, X, D, C, T, N, E, I, A>
+        M: MathsCore,
+        H: Habitat<M>,
+        G: RngCore<M>,
+        R: LineageReference<M, H>,
+        S: LineageStore<M, H, R>,
+        X: EmigrationExit<M, H, G, R, S>,
+        D: DispersalSampler<M, H, G>,
+        C: CoalescenceSampler<M, H, R, S>,
+        T: TurnoverRate<M, H>,
+        N: SpeciationProbability<M, H>,
+        E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+        I: ImmigrationEntry<M>,
+        A: ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>,
+    > Backup for Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Simulation {
-            f64_core: PhantomData::<F>,
+            maths: PhantomData::<M>,
             habitat: self.habitat.backup_unchecked(),
             lineage_reference: PhantomData::<R>,
             lineage_store: self.lineage_store.backup_unchecked(),
@@ -46,26 +46,26 @@ impl<
 }
 
 impl<
-        F: F64Core,
-        H: Habitat<F>,
-        G: RngCore<F>,
-        R: LineageReference<F, H>,
-        S: LineageStore<F, H, R>,
-        X: EmigrationExit<F, H, G, R, S>,
-        D: DispersalSampler<F, H, G>,
-        C: CoalescenceSampler<F, H, R, S>,
-        T: TurnoverRate<F, H>,
-        N: SpeciationProbability<F, H>,
-        E: EventSampler<F, H, G, R, S, X, D, C, T, N>,
-        I: ImmigrationEntry<F>,
-        A: ActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>,
-    > BackedUp<Simulation<F, H, G, R, S, X, D, C, T, N, E, I, A>>
+        M: MathsCore,
+        H: Habitat<M>,
+        G: RngCore<M>,
+        R: LineageReference<M, H>,
+        S: LineageStore<M, H, R>,
+        X: EmigrationExit<M, H, G, R, S>,
+        D: DispersalSampler<M, H, G>,
+        C: CoalescenceSampler<M, H, R, S>,
+        T: TurnoverRate<M, H>,
+        N: SpeciationProbability<M, H>,
+        E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+        I: ImmigrationEntry<M>,
+        A: ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>,
+    > BackedUp<Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A>>
 {
     #[allow(clippy::type_complexity)]
-    pub fn resume(&self) -> Simulation<F, H, G, R, S, X, D, C, T, N, E, I, A> {
+    pub fn resume(&self) -> Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A> {
         unsafe {
             Simulation {
-                f64_core: PhantomData::<F>,
+                maths: PhantomData::<M>,
                 habitat: self.0.habitat.backup_unchecked(),
                 lineage_reference: PhantomData::<R>,
                 lineage_store: self.0.lineage_store.backup_unchecked(),

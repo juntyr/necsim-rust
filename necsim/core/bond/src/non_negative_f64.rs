@@ -9,7 +9,7 @@ use core::{
 
 use serde::{Deserialize, Serialize};
 
-use necsim_core_f64::F64Core;
+use necsim_core_maths::MathsCore;
 
 use crate::{ClosedUnitF64, PositiveF64};
 
@@ -89,13 +89,13 @@ impl NonNegativeF64 {
     }
 
     #[must_use]
-    pub fn neg_exp<F: F64Core>(self) -> ClosedUnitF64 {
-        unsafe { ClosedUnitF64::new_unchecked(F::exp(-self.0)) }
+    pub fn neg_exp<M: MathsCore>(self) -> ClosedUnitF64 {
+        unsafe { ClosedUnitF64::new_unchecked(M::exp(-self.0)) }
     }
 
     #[must_use]
-    pub fn sqrt<F: F64Core>(self) -> NonNegativeF64 {
-        Self(F::sqrt(self.0))
+    pub fn sqrt<M: MathsCore>(self) -> NonNegativeF64 {
+        Self(M::sqrt(self.0))
     }
 }
 

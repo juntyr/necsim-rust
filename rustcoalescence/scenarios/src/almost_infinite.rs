@@ -2,7 +2,7 @@ use std::num::NonZeroU32;
 
 use serde::Deserialize;
 
-use necsim_core::cogs::{DispersalSampler, F64Core, LineageStore, RngCore};
+use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
 use necsim_core_bond::{NonNegativeF64, PositiveUnitF64};
 
 use necsim_impls_no_std::{
@@ -23,11 +23,11 @@ use necsim_impls_no_std::{
 use crate::{Scenario, ScenarioArguments};
 
 #[allow(clippy::module_name_repetitions)]
-pub struct AlmostInfiniteScenario<F: F64Core, G: RngCore<F>> {
+pub struct AlmostInfiniteScenario<M: MathsCore, G: RngCore<M>> {
     radius: u32,
 
-    habitat: AlmostInfiniteHabitat<F>,
-    dispersal_sampler: AlmostInfiniteNormalDispersalSampler<F, G>,
+    habitat: AlmostInfiniteHabitat<M>,
+    dispersal_sampler: AlmostInfiniteNormalDispersalSampler<M, G>,
     turnover_rate: UniformTurnoverRate,
     speciation_probability: UniformSpeciationProbability,
 }
@@ -40,20 +40,20 @@ pub struct AlmostInfiniteArguments {
     pub sigma: NonNegativeF64,
 }
 
-impl<F: F64Core, G: RngCore<F>> ScenarioArguments for AlmostInfiniteScenario<F, G> {
+impl<M: MathsCore, G: RngCore<M>> ScenarioArguments for AlmostInfiniteScenario<M, G> {
     type Arguments = AlmostInfiniteArguments;
 }
 
-impl<F: F64Core, G: RngCore<F>> Scenario<F, G> for AlmostInfiniteScenario<F, G> {
+impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteScenario<M, G> {
     type Decomposition = RadialDecomposition;
-    type DispersalSampler<D: DispersalSampler<F, Self::Habitat, G>> =
-        AlmostInfiniteNormalDispersalSampler<F, G>;
+    type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
+        AlmostInfiniteNormalDispersalSampler<M, G>;
     type Error = !;
-    type Habitat = AlmostInfiniteHabitat<F>;
+    type Habitat = AlmostInfiniteHabitat<M>;
     type LineageReference = InMemoryLineageReference;
-    type LineageStore<L: LineageStore<F, Self::Habitat, Self::LineageReference>> =
-        AlmostInfiniteLineageStore<F>;
-    type OriginSampler<'h, I: Iterator<Item = u64>> = AlmostInfiniteOriginSampler<'h, F, I>;
+    type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>> =
+        AlmostInfiniteLineageStore<M>;
+    type OriginSampler<'h, I: Iterator<Item = u64>> = AlmostInfiniteOriginSampler<'h, M, I>;
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
 
@@ -77,7 +77,7 @@ impl<F: F64Core, G: RngCore<F>> Scenario<F, G> for AlmostInfiniteScenario<F, G> 
         })
     }
 
-    fn build<D: DispersalSampler<F, Self::Habitat, G>>(
+    fn build<D: DispersalSampler<M, Self::Habitat, G>>(
         self,
     ) -> (
         Self::Habitat,
@@ -95,7 +95,7 @@ impl<F: F64Core, G: RngCore<F>> Scenario<F, G> for AlmostInfiniteScenario<F, G> 
 
     fn sample_habitat<I: Iterator<Item = u64>>(
         &self,
-        pre_sampler: OriginPreSampler<F, I>,
+        pre_sampler: OriginPreSampler<M, I>,
     ) -> Self::OriginSampler<'_, I> {
         AlmostInfiniteOriginSampler::new(pre_sampler, &self.habitat, self.radius)
     }

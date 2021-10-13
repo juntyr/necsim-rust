@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        Backup, DispersalSampler, EmigrationExit, F64Core, Habitat, PrimeableRng,
+        Backup, DispersalSampler, EmigrationExit, Habitat, MathsCore, PrimeableRng,
         SpeciationProbability, TurnoverRate,
     },
     lineage::{GlobalLineageReference, Lineage},
@@ -28,14 +28,14 @@ use event_time_sampler::EventTimeSampler;
 #[cfg_attr(feature = "cuda", r2cBound(N: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(J: rust_cuda::common::RustToCuda))]
 pub struct IndependentActiveLineageSampler<
-    F: F64Core,
-    H: Habitat<F>,
-    G: PrimeableRng<F>,
-    X: EmigrationExit<F, H, G, GlobalLineageReference, IndependentLineageStore<F, H>>,
-    D: DispersalSampler<F, H, G>,
-    T: TurnoverRate<F, H>,
-    N: SpeciationProbability<F, H>,
-    J: EventTimeSampler<F, H, G, T>,
+    M: MathsCore,
+    H: Habitat<M>,
+    G: PrimeableRng<M>,
+    X: EmigrationExit<M, H, G, GlobalLineageReference, IndependentLineageStore<M, H>>,
+    D: DispersalSampler<M, H, G>,
+    T: TurnoverRate<M, H>,
+    N: SpeciationProbability<M, H>,
+    J: EventTimeSampler<M, H, G, T>,
 > {
     #[cfg_attr(feature = "cuda", r2cEmbed(
         Option<rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<Lineage>>
@@ -43,47 +43,47 @@ pub struct IndependentActiveLineageSampler<
     active_lineage: Option<Lineage>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     event_time_sampler: J,
-    marker: PhantomData<(F, H, G, X, D, T, N)>,
+    marker: PhantomData<(M, H, G, X, D, T, N)>,
 }
 
 impl<
-        F: F64Core,
-        H: Habitat<F>,
-        G: PrimeableRng<F>,
-        X: EmigrationExit<F, H, G, GlobalLineageReference, IndependentLineageStore<F, H>>,
-        D: DispersalSampler<F, H, G>,
-        T: TurnoverRate<F, H>,
-        N: SpeciationProbability<F, H>,
-        J: EventTimeSampler<F, H, G, T>,
-    > IndependentActiveLineageSampler<F, H, G, X, D, T, N, J>
+        M: MathsCore,
+        H: Habitat<M>,
+        G: PrimeableRng<M>,
+        X: EmigrationExit<M, H, G, GlobalLineageReference, IndependentLineageStore<M, H>>,
+        D: DispersalSampler<M, H, G>,
+        T: TurnoverRate<M, H>,
+        N: SpeciationProbability<M, H>,
+        J: EventTimeSampler<M, H, G, T>,
+    > IndependentActiveLineageSampler<M, H, G, X, D, T, N, J>
 {
     #[must_use]
     pub fn empty(event_time_sampler: J) -> Self {
         Self {
             active_lineage: None,
             event_time_sampler,
-            marker: PhantomData::<(F, H, G, X, D, T, N)>,
+            marker: PhantomData::<(M, H, G, X, D, T, N)>,
         }
     }
 }
 
 #[contract_trait]
 impl<
-        F: F64Core,
-        H: Habitat<F>,
-        G: PrimeableRng<F>,
-        X: EmigrationExit<F, H, G, GlobalLineageReference, IndependentLineageStore<F, H>>,
-        D: DispersalSampler<F, H, G>,
-        T: TurnoverRate<F, H>,
-        N: SpeciationProbability<F, H>,
-        J: EventTimeSampler<F, H, G, T>,
-    > Backup for IndependentActiveLineageSampler<F, H, G, X, D, T, N, J>
+        M: MathsCore,
+        H: Habitat<M>,
+        G: PrimeableRng<M>,
+        X: EmigrationExit<M, H, G, GlobalLineageReference, IndependentLineageStore<M, H>>,
+        D: DispersalSampler<M, H, G>,
+        T: TurnoverRate<M, H>,
+        N: SpeciationProbability<M, H>,
+        J: EventTimeSampler<M, H, G, T>,
+    > Backup for IndependentActiveLineageSampler<M, H, G, X, D, T, N, J>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             active_lineage: self.active_lineage.clone(),
             event_time_sampler: self.event_time_sampler.clone(),
-            marker: PhantomData::<(F, H, G, X, D, T, N)>,
+            marker: PhantomData::<(M, H, G, X, D, T, N)>,
         }
     }
 }

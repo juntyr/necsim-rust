@@ -5,7 +5,7 @@ use core::{
 };
 
 use necsim_core::{
-    cogs::{F64Core, Habitat, OriginSampler},
+    cogs::{Habitat, MathsCore, OriginSampler},
     landscape::{IndexedLocation, LocationIterator},
 };
 
@@ -14,15 +14,15 @@ use crate::cogs::{
 };
 
 #[allow(clippy::module_name_repetitions)]
-pub struct InMemoryOriginSampler<'h, F: F64Core, I: Iterator<Item = u64>> {
-    pre_sampler: OriginPreSampler<F, I>,
+pub struct InMemoryOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
+    pre_sampler: OriginPreSampler<M, I>,
     last_index: u64,
     location_iterator: Peekable<LocationIterator>,
     next_location_index: u32,
-    habitat: &'h InMemoryHabitat<F>,
+    habitat: &'h InMemoryHabitat<M>,
 }
 
-impl<'h, F: F64Core, I: Iterator<Item = u64>> fmt::Debug for InMemoryOriginSampler<'h, F, I> {
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug for InMemoryOriginSampler<'h, M, I> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct(stringify!(InMemoryOriginSampler))
             .field("pre_sampler", &self.pre_sampler)
@@ -34,9 +34,9 @@ impl<'h, F: F64Core, I: Iterator<Item = u64>> fmt::Debug for InMemoryOriginSampl
     }
 }
 
-impl<'h, F: F64Core, I: Iterator<Item = u64>> InMemoryOriginSampler<'h, F, I> {
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> InMemoryOriginSampler<'h, M, I> {
     #[must_use]
-    pub fn new(pre_sampler: OriginPreSampler<F, I>, habitat: &'h InMemoryHabitat<F>) -> Self {
+    pub fn new(pre_sampler: OriginPreSampler<M, I>, habitat: &'h InMemoryHabitat<M>) -> Self {
         Self {
             pre_sampler,
             last_index: 0_u64,
@@ -48,10 +48,10 @@ impl<'h, F: F64Core, I: Iterator<Item = u64>> InMemoryOriginSampler<'h, F, I> {
 }
 
 #[contract_trait]
-impl<'h, F: F64Core, I: Iterator<Item = u64>> OriginSampler<'h, F>
-    for InMemoryOriginSampler<'h, F, I>
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> OriginSampler<'h, M>
+    for InMemoryOriginSampler<'h, M, I>
 {
-    type Habitat = InMemoryHabitat<F>;
+    type Habitat = InMemoryHabitat<M>;
 
     fn habitat(&self) -> &'h Self::Habitat {
         self.habitat
@@ -70,7 +70,7 @@ impl<'h, F: F64Core, I: Iterator<Item = u64>> OriginSampler<'h, F>
     }
 }
 
-impl<'h, F: F64Core, I: Iterator<Item = u64>> Iterator for InMemoryOriginSampler<'h, F, I> {
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator for InMemoryOriginSampler<'h, M, I> {
     type Item = IndexedLocation;
 
     fn next(&mut self) -> Option<Self::Item> {

@@ -2,8 +2,8 @@ use core::num::NonZeroU64;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, EmigrationExit, F64Core, Habitat, ImmigrationEntry,
-        LineageReference, LocallyCoherentLineageStore, RngCore, SpeciationProbability,
+        ActiveLineageSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+        LineageReference, LocallyCoherentLineageStore, MathsCore, RngCore, SpeciationProbability,
     },
     lineage::Lineage,
     simulation::partial::active_lineager_sampler::PartialSimulation,
@@ -20,41 +20,41 @@ use super::ClassicalActiveLineageSampler;
 
 #[contract_trait]
 impl<
-        F: F64Core,
-        H: Habitat<F>,
-        G: RngCore<F>,
-        R: LineageReference<F, H>,
-        S: LocallyCoherentLineageStore<F, H, R>,
-        X: EmigrationExit<F, H, G, R, S>,
-        D: DispersalSampler<F, H, G>,
-        N: SpeciationProbability<F, H>,
-        I: ImmigrationEntry<F>,
+        M: MathsCore,
+        H: Habitat<M>,
+        G: RngCore<M>,
+        R: LineageReference<M, H>,
+        S: LocallyCoherentLineageStore<M, H, R>,
+        X: EmigrationExit<M, H, G, R, S>,
+        D: DispersalSampler<M, H, G>,
+        N: SpeciationProbability<M, H>,
+        I: ImmigrationEntry<M>,
     >
     ActiveLineageSampler<
-        F,
+        M,
         H,
         G,
         R,
         S,
         X,
         D,
-        UnconditionalCoalescenceSampler<F, H, R, S>,
+        UnconditionalCoalescenceSampler<M, H, R, S>,
         UniformTurnoverRate,
         N,
         UnconditionalEventSampler<
-            F,
+            M,
             H,
             G,
             R,
             S,
             X,
             D,
-            UnconditionalCoalescenceSampler<F, H, R, S>,
+            UnconditionalCoalescenceSampler<M, H, R, S>,
             UniformTurnoverRate,
             N,
         >,
         I,
-    > for ClassicalActiveLineageSampler<F, H, G, R, S, X, D, N, I>
+    > for ClassicalActiveLineageSampler<M, H, G, R, S, X, D, N, I>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -67,34 +67,34 @@ impl<
 
     #[must_use]
     #[allow(clippy::type_complexity)]
-    fn pop_active_lineage_and_event_time<W: FnOnce(PositiveF64) -> bool>(
+    fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> bool>(
         &mut self,
         simulation: &mut PartialSimulation<
-            F,
+            M,
             H,
             G,
             R,
             S,
             X,
             D,
-            UnconditionalCoalescenceSampler<F, H, R, S>,
+            UnconditionalCoalescenceSampler<M, H, R, S>,
             UniformTurnoverRate,
             N,
             UnconditionalEventSampler<
-                F,
+                M,
                 H,
                 G,
                 R,
                 S,
                 X,
                 D,
-                UnconditionalCoalescenceSampler<F, H, R, S>,
+                UnconditionalCoalescenceSampler<M, H, R, S>,
                 UniformTurnoverRate,
                 N,
             >,
         >,
         rng: &mut G,
-        early_peek_stop: W,
+        early_peek_stop: F,
     ) -> Option<(Lineage, PositiveF64)> {
         use necsim_core::cogs::RngSampler;
 
@@ -133,25 +133,25 @@ impl<
         &mut self,
         lineage: Lineage,
         simulation: &mut PartialSimulation<
-            F,
+            M,
             H,
             G,
             R,
             S,
             X,
             D,
-            UnconditionalCoalescenceSampler<F, H, R, S>,
+            UnconditionalCoalescenceSampler<M, H, R, S>,
             UniformTurnoverRate,
             N,
             UnconditionalEventSampler<
-                F,
+                M,
                 H,
                 G,
                 R,
                 S,
                 X,
                 D,
-                UnconditionalCoalescenceSampler<F, H, R, S>,
+                UnconditionalCoalescenceSampler<M, H, R, S>,
                 UniformTurnoverRate,
                 N,
             >,

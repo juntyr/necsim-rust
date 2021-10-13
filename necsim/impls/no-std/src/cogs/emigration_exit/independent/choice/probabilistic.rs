@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, F64Core, Habitat},
+    cogs::{Backup, Habitat, MathsCore},
     landscape::IndexedLocation,
 };
 use necsim_core_bond::{ClosedUnitF64, PositiveF64};
@@ -29,7 +29,7 @@ impl Backup for ProbabilisticEmigrationChoice {
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>> EmigrationChoice<F, H> for ProbabilisticEmigrationChoice {
+impl<M: MathsCore, H: Habitat<M>> EmigrationChoice<M, H> for ProbabilisticEmigrationChoice {
     fn should_lineage_emigrate(
         &self,
         _indexed_location: &IndexedLocation,

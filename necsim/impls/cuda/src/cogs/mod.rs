@@ -1,2 +1,2 @@
-pub mod f64_core;
+pub mod maths;
 pub mod rng;

@@ -5,7 +5,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, F64Core, Habitat, PrimeableRng,
+        ActiveLineageSampler, DispersalSampler, Habitat, MathsCore, PrimeableRng,
         SpeciationProbability, TurnoverRate,
     },
     lineage::{GlobalLineageReference, Lineage},
@@ -39,31 +39,31 @@ use reporter::{
 
 #[allow(clippy::type_complexity, clippy::too_many_lines)]
 pub fn simulate<
-    F: F64Core,
-    H: Habitat<F>,
-    G: PrimeableRng<F>,
-    D: DispersalSampler<F, H, G>,
-    T: TurnoverRate<F, H>,
-    N: SpeciationProbability<F, H>,
-    J: EventTimeSampler<F, H, G, T>,
+    M: MathsCore,
+    H: Habitat<M>,
+    G: PrimeableRng<M>,
+    D: DispersalSampler<M, H, G>,
+    T: TurnoverRate<M, H>,
+    N: SpeciationProbability<M, H>,
+    J: EventTimeSampler<M, H, G, T>,
     R: Reporter,
     P: LocalPartition<R>,
     L: IntoIterator<Item = Lineage>,
 >(
     mut simulation: Simulation<
-        F,
+        M,
         H,
         G,
         GlobalLineageReference,
-        IndependentLineageStore<F, H>,
+        IndependentLineageStore<M, H>,
         NeverEmigrationExit,
         D,
-        IndependentCoalescenceSampler<F, H>,
+        IndependentCoalescenceSampler<M, H>,
         T,
         N,
-        IndependentEventSampler<F, H, G, NeverEmigrationExit, D, T, N>,
+        IndependentEventSampler<M, H, G, NeverEmigrationExit, D, T, N>,
         NeverImmigrationEntry,
-        IndependentActiveLineageSampler<F, H, G, NeverEmigrationExit, D, T, N, J>,
+        IndependentActiveLineageSampler<M, H, G, NeverEmigrationExit, D, T, N, J>,
     >,
     lineages: L,
     dedup_cache: DedupCache,

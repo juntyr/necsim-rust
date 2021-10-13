@@ -3,8 +3,8 @@ use core::marker::PhantomData;
 use alloc::vec::Vec;
 
 use necsim_core::cogs::{
-    Backup, DispersalSampler, EmigrationExit, F64Core, Habitat, ImmigrationEntry, LineageReference,
-    LocallyCoherentLineageStore, RngCore, SpeciationProbability,
+    Backup, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry, LineageReference,
+    LocallyCoherentLineageStore, MathsCore, RngCore, SpeciationProbability,
 };
 use necsim_core_bond::NonNegativeF64;
 
@@ -13,33 +13,33 @@ mod sampler;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct ClassicalActiveLineageSampler<
-    F: F64Core,
-    H: Habitat<F>,
-    G: RngCore<F>,
-    R: LineageReference<F, H>,
-    S: LocallyCoherentLineageStore<F, H, R>,
-    X: EmigrationExit<F, H, G, R, S>,
-    D: DispersalSampler<F, H, G>,
-    N: SpeciationProbability<F, H>,
-    I: ImmigrationEntry<F>,
+    M: MathsCore,
+    H: Habitat<M>,
+    G: RngCore<M>,
+    R: LineageReference<M, H>,
+    S: LocallyCoherentLineageStore<M, H, R>,
+    X: EmigrationExit<M, H, G, R, S>,
+    D: DispersalSampler<M, H, G>,
+    N: SpeciationProbability<M, H>,
+    I: ImmigrationEntry<M>,
 > {
     active_lineage_references: Vec<R>,
     last_event_time: NonNegativeF64,
     #[allow(clippy::type_complexity)]
-    _marker: PhantomData<(F, H, G, S, X, D, N, I)>,
+    _marker: PhantomData<(M, H, G, S, X, D, N, I)>,
 }
 
 impl<
-        F: F64Core,
-        H: Habitat<F>,
-        G: RngCore<F>,
-        R: LineageReference<F, H>,
-        S: LocallyCoherentLineageStore<F, H, R>,
-        X: EmigrationExit<F, H, G, R, S>,
-        D: DispersalSampler<F, H, G>,
-        N: SpeciationProbability<F, H>,
-        I: ImmigrationEntry<F>,
-    > ClassicalActiveLineageSampler<F, H, G, R, S, X, D, N, I>
+        M: MathsCore,
+        H: Habitat<M>,
+        G: RngCore<M>,
+        R: LineageReference<M, H>,
+        S: LocallyCoherentLineageStore<M, H, R>,
+        X: EmigrationExit<M, H, G, R, S>,
+        D: DispersalSampler<M, H, G>,
+        N: SpeciationProbability<M, H>,
+        I: ImmigrationEntry<M>,
+    > ClassicalActiveLineageSampler<M, H, G, R, S, X, D, N, I>
 {
     #[must_use]
     pub fn new(lineage_store: &S) -> Self {
@@ -53,29 +53,29 @@ impl<
                 })
                 .collect(),
             last_event_time: NonNegativeF64::zero(),
-            _marker: PhantomData::<(F, H, G, S, X, D, N, I)>,
+            _marker: PhantomData::<(M, H, G, S, X, D, N, I)>,
         }
     }
 }
 
 #[contract_trait]
 impl<
-        F: F64Core,
-        H: Habitat<F>,
-        G: RngCore<F>,
-        R: LineageReference<F, H>,
-        S: LocallyCoherentLineageStore<F, H, R>,
-        X: EmigrationExit<F, H, G, R, S>,
-        D: DispersalSampler<F, H, G>,
-        N: SpeciationProbability<F, H>,
-        I: ImmigrationEntry<F>,
-    > Backup for ClassicalActiveLineageSampler<F, H, G, R, S, X, D, N, I>
+        M: MathsCore,
+        H: Habitat<M>,
+        G: RngCore<M>,
+        R: LineageReference<M, H>,
+        S: LocallyCoherentLineageStore<M, H, R>,
+        X: EmigrationExit<M, H, G, R, S>,
+        D: DispersalSampler<M, H, G>,
+        N: SpeciationProbability<M, H>,
+        I: ImmigrationEntry<M>,
+    > Backup for ClassicalActiveLineageSampler<M, H, G, R, S, X, D, N, I>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             active_lineage_references: self.active_lineage_references.clone(),
             last_event_time: self.last_event_time,
-            _marker: PhantomData::<(F, H, G, S, X, D, N, I)>,
+            _marker: PhantomData::<(M, H, G, S, X, D, N, I)>,
         }
     }
 }

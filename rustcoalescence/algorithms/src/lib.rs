@@ -1,7 +1,7 @@
 #![deny(clippy::pedantic)]
 
 use necsim_core::{
-    cogs::{F64Core, LineageReference, LineageStore, RngCore},
+    cogs::{LineageReference, LineageStore, MathsCore, RngCore},
     reporter::Reporter,
 };
 use necsim_core_bond::NonNegativeF64;
@@ -15,15 +15,15 @@ pub trait AlgorithmArguments {
     type Arguments;
 }
 
-pub trait Algorithm<O: Scenario<Self::F64Core, Self::Rng>, R: Reporter, P: LocalPartition<R>>:
+pub trait Algorithm<O: Scenario<Self::MathsCore, Self::Rng>, R: Reporter, P: LocalPartition<R>>:
     Sized + AlgorithmArguments
 {
     type Error;
 
-    type F64Core: F64Core;
-    type Rng: RngCore<Self::F64Core>;
-    type LineageReference: LineageReference<Self::F64Core, O::Habitat>;
-    type LineageStore: LineageStore<Self::F64Core, O::Habitat, Self::LineageReference>;
+    type MathsCore: MathsCore;
+    type Rng: RngCore<Self::MathsCore>;
+    type LineageReference: LineageReference<Self::MathsCore, O::Habitat>;
+    type LineageStore: LineageStore<Self::MathsCore, O::Habitat, Self::LineageReference>;
 
     /// # Errors
     ///
@@ -32,7 +32,7 @@ pub trait Algorithm<O: Scenario<Self::F64Core, Self::Rng>, R: Reporter, P: Local
         args: Self::Arguments,
         seed: u64,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::F64Core, I>,
+        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         local_partition: &mut P,
     ) -> Result<(NonNegativeF64, u64), Self::Error>;
 }

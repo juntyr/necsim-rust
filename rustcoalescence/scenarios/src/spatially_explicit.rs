@@ -2,7 +2,7 @@ use std::{marker::PhantomData, num::NonZeroU32};
 
 use thiserror::Error;
 
-use necsim_core::cogs::{DispersalSampler, F64Core, Habitat, LineageStore, RngCore};
+use necsim_core::cogs::{DispersalSampler, Habitat, LineageStore, MathsCore, RngCore};
 use necsim_core_bond::PositiveUnitF64;
 
 use necsim_impls_no_std::{
@@ -25,8 +25,8 @@ use necsim_impls_std::cogs::dispersal_sampler::in_memory::error::InMemoryDispers
 use crate::{Scenario, ScenarioArguments};
 
 #[allow(clippy::module_name_repetitions)]
-pub struct SpatiallyExplicitScenario<F: F64Core, G: RngCore<F>> {
-    habitat: InMemoryHabitat<F>,
+pub struct SpatiallyExplicitScenario<M: MathsCore, G: RngCore<M>> {
+    habitat: InMemoryHabitat<M>,
     dispersal_map: Array2D<f64>,
     turnover_rate: UniformTurnoverRate,
     speciation_probability: UniformSpeciationProbability,
@@ -45,18 +45,18 @@ pub struct InMemoryArguments {
 #[allow(clippy::module_name_repetitions)]
 pub struct NonNegativeF64Error(f64);
 
-impl<F: F64Core, G: RngCore<F>> ScenarioArguments for SpatiallyExplicitScenario<F, G> {
+impl<M: MathsCore, G: RngCore<M>> ScenarioArguments for SpatiallyExplicitScenario<M, G> {
     type Arguments = InMemoryArguments;
 }
 
-impl<F: F64Core, G: RngCore<F>> Scenario<F, G> for SpatiallyExplicitScenario<F, G> {
-    type Decomposition = EqualDecomposition<F, Self::Habitat>;
-    type DispersalSampler<D: DispersalSampler<F, Self::Habitat, G>> = D;
+impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitScenario<M, G> {
+    type Decomposition = EqualDecomposition<M, Self::Habitat>;
+    type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> = D;
     type Error = InMemoryDispersalSamplerError;
-    type Habitat = InMemoryHabitat<F>;
+    type Habitat = InMemoryHabitat<M>;
     type LineageReference = InMemoryLineageReference;
-    type LineageStore<L: LineageStore<F, Self::Habitat, Self::LineageReference>> = L;
-    type OriginSampler<'h, I: Iterator<Item = u64>> = InMemoryOriginSampler<'h, F, I>;
+    type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>> = L;
+    type OriginSampler<'h, I: Iterator<Item = u64>> = InMemoryOriginSampler<'h, M, I>;
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
 
@@ -91,7 +91,7 @@ impl<F: F64Core, G: RngCore<F>> Scenario<F, G> for SpatiallyExplicitScenario<F, 
         })
     }
 
-    fn build<D: InMemoryDispersalSampler<F, Self::Habitat, G>>(
+    fn build<D: InMemoryDispersalSampler<M, Self::Habitat, G>>(
         self,
     ) -> (
         Self::Habitat,
@@ -111,7 +111,7 @@ impl<F: F64Core, G: RngCore<F>> Scenario<F, G> for SpatiallyExplicitScenario<F, 
 
     fn sample_habitat<I: Iterator<Item = u64>>(
         &self,
-        pre_sampler: OriginPreSampler<F, I>,
+        pre_sampler: OriginPreSampler<M, I>,
     ) -> Self::OriginSampler<'_, I> {
         InMemoryOriginSampler::new(pre_sampler, &self.habitat)
     }

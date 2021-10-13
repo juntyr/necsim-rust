@@ -6,7 +6,7 @@ use necsim_core::{
     simulation::SimulationBuilder,
 };
 use necsim_core_bond::NonNegativeF64;
-use necsim_core_f64::IntrinsicsF64Core;
+use necsim_core_maths::IntrinsicsMathsCore;
 
 use necsim_impls_no_std::{
     cogs::{
@@ -45,8 +45,8 @@ impl AlgorithmArguments for ClassicalAlgorithm {
 #[allow(clippy::type_complexity)]
 impl<
         O: Scenario<
-            IntrinsicsF64Core,
-            Pcg<IntrinsicsF64Core>,
+            IntrinsicsMathsCore,
+            Pcg<IntrinsicsMathsCore>,
             LineageReference = InMemoryLineageReference,
             TurnoverRate = UniformTurnoverRate,
         >,
@@ -54,21 +54,21 @@ impl<
         P: LocalPartition<R>,
     > Algorithm<O, R, P> for ClassicalAlgorithm
 where
-    O::LineageStore<ClassicalLineageStore<IntrinsicsF64Core, O::Habitat>>:
-        LocallyCoherentLineageStore<IntrinsicsF64Core, O::Habitat, InMemoryLineageReference>,
+    O::LineageStore<ClassicalLineageStore<IntrinsicsMathsCore, O::Habitat>>:
+        LocallyCoherentLineageStore<IntrinsicsMathsCore, O::Habitat, InMemoryLineageReference>,
 {
     type Error = !;
-    type F64Core = IntrinsicsF64Core;
     type LineageReference = InMemoryLineageReference;
-    type LineageStore = O::LineageStore<ClassicalLineageStore<Self::F64Core, O::Habitat>>;
-    type Rng = Pcg<Self::F64Core>;
+    type LineageStore = O::LineageStore<ClassicalLineageStore<Self::MathsCore, O::Habitat>>;
+    type MathsCore = IntrinsicsMathsCore;
+    type Rng = Pcg<Self::MathsCore>;
 
     #[allow(clippy::too_many_lines)]
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::F64Core, I>,
+        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         local_partition: &mut P,
     ) -> Result<(NonNegativeF64, u64), Self::Error> {
         match args.parallelism_mode {
@@ -78,9 +78,9 @@ where
                     Self::LineageStore::from_origin_sampler(scenario.sample_habitat(pre_sampler));
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
                     scenario.build::<InMemoryAliasDispersalSampler<
-                        Self::F64Core,
+                        Self::MathsCore,
                         O::Habitat,
-                        Pcg<Self::F64Core>,
+                        Pcg<Self::MathsCore>,
                     >>();
                 let coalescence_sampler = UnconditionalCoalescenceSampler::default();
                 let emigration_exit = NeverEmigrationExit::default();
@@ -89,7 +89,7 @@ where
                 let active_lineage_sampler = ClassicalActiveLineageSampler::new(&lineage_store);
 
                 let simulation = SimulationBuilder {
-                    f64_core: PhantomData::<Self::F64Core>,
+                    maths: PhantomData::<Self::MathsCore>,
                     habitat,
                     lineage_reference: PhantomData::<Self::LineageReference>,
                     lineage_store,
@@ -126,9 +126,9 @@ where
                     ));
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
                     scenario.build::<InMemoryAliasDispersalSampler<
-                        Self::F64Core,
+                        Self::MathsCore,
                         O::Habitat,
-                        Pcg<Self::F64Core>,
+                        Pcg<Self::MathsCore>,
                     >>();
                 let coalescence_sampler = UnconditionalCoalescenceSampler::default();
                 let emigration_exit = DomainEmigrationExit::new(decomposition);
@@ -137,7 +137,7 @@ where
                 let active_lineage_sampler = ClassicalActiveLineageSampler::new(&lineage_store);
 
                 let simulation = SimulationBuilder {
-                    f64_core: PhantomData::<Self::F64Core>,
+                    maths: PhantomData::<Self::MathsCore>,
                     habitat,
                     lineage_reference: PhantomData::<Self::LineageReference>,
                     lineage_store,

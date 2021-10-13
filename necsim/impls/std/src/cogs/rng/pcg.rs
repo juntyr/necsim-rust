@@ -4,39 +4,39 @@ use pcg_rand::{seeds::PcgSeeder, PCGStateInfo, Pcg64};
 use rand_core::{RngCore as _, SeedableRng};
 use serde::{Deserialize, Serialize};
 
-use necsim_core::cogs::{Backup, F64Core, RngCore, SplittableRng};
+use necsim_core::cogs::{Backup, MathsCore, RngCore, SplittableRng};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Serialize, Deserialize)]
 #[serde(from = "PcgState", into = "PcgState")]
-pub struct Pcg<F: F64Core> {
+pub struct Pcg<M: MathsCore> {
     inner: Pcg64,
-    marker: PhantomData<F>,
+    marker: PhantomData<M>,
 }
 
-impl<F: F64Core> Clone for Pcg<F> {
+impl<M: MathsCore> Clone for Pcg<M> {
     fn clone(&self) -> Self {
         Self {
             inner: Pcg64::restore_state_with_no_verification(self.inner.get_state()),
-            marker: PhantomData::<F>,
+            marker: PhantomData::<M>,
         }
     }
 }
 
-impl<F: F64Core> fmt::Debug for Pcg<F> {
+impl<M: MathsCore> fmt::Debug for Pcg<M> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("Pcg").finish()
     }
 }
 
 #[contract_trait]
-impl<F: F64Core> Backup for Pcg<F> {
+impl<M: MathsCore> Backup for Pcg<M> {
     unsafe fn backup_unchecked(&self) -> Self {
         self.clone()
     }
 }
 
-impl<F: F64Core> RngCore<F> for Pcg<F> {
+impl<M: MathsCore> RngCore<M> for Pcg<M> {
     type Seed = [u8; 16];
 
     #[must_use]
@@ -47,7 +47,7 @@ impl<F: F64Core> RngCore<F> for Pcg<F> {
                 u128::from_le_bytes(seed),
                 0_u128,
             )),
-            marker: PhantomData::<F>,
+            marker: PhantomData::<M>,
         }
     }
 
@@ -58,7 +58,7 @@ impl<F: F64Core> RngCore<F> for Pcg<F> {
     }
 }
 
-impl<F: F64Core> SplittableRng<F> for Pcg<F> {
+impl<M: MathsCore> SplittableRng<M> for Pcg<M> {
     #[allow(clippy::identity_op)]
     fn split(self) -> (Self, Self) {
         let mut left_state = self.inner.get_state();
@@ -69,11 +69,11 @@ impl<F: F64Core> SplittableRng<F> for Pcg<F> {
 
         let left = Self {
             inner: Pcg64::restore_state_with_no_verification(left_state),
-            marker: PhantomData::<F>,
+            marker: PhantomData::<M>,
         };
         let right = Self {
             inner: Pcg64::restore_state_with_no_verification(right_state),
-            marker: PhantomData::<F>,
+            marker: PhantomData::<M>,
         };
 
         (left, right)
@@ -85,7 +85,7 @@ impl<F: F64Core> SplittableRng<F> for Pcg<F> {
 
         Self {
             inner: Pcg64::restore_state_with_no_verification(state),
-            marker: PhantomData::<F>,
+            marker: PhantomData::<M>,
         }
     }
 }
@@ -97,8 +97,8 @@ struct PcgState {
     increment: u128,
 }
 
-impl<F: F64Core> From<Pcg<F>> for PcgState {
-    fn from(rng: Pcg<F>) -> Self {
+impl<M: MathsCore> From<Pcg<M>> for PcgState {
+    fn from(rng: Pcg<M>) -> Self {
         let state_info = rng.inner.get_state();
 
         Self {
@@ -108,7 +108,7 @@ impl<F: F64Core> From<Pcg<F>> for PcgState {
     }
 }
 
-impl<F: F64Core> From<PcgState> for Pcg<F> {
+impl<M: MathsCore> From<PcgState> for Pcg<M> {
     fn from(state: PcgState) -> Self {
         use pcg_rand::{
             multiplier::{DefaultMultiplier, Multiplier},
@@ -126,7 +126,7 @@ impl<F: F64Core> From<PcgState> for Pcg<F> {
 
         Self {
             inner: Pcg64::restore_state_with_no_verification(state_info),
-            marker: PhantomData::<F>,
+            marker: PhantomData::<M>,
         }
     }
 }

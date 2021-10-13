@@ -1,10 +1,10 @@
 use crate::landscape::{IndexedLocation, LandscapeExtent, Location};
 
-use super::F64Core;
+use super::MathsCore;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait Habitat<F: F64Core>: crate::cogs::Backup + core::fmt::Debug + Sized {
+pub trait Habitat<M: MathsCore>: crate::cogs::Backup + core::fmt::Debug + Sized {
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent;
 

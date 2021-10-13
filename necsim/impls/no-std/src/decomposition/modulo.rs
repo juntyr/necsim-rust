@@ -1,7 +1,7 @@
 use core::num::NonZeroU32;
 
 use necsim_core::{
-    cogs::{Backup, F64Core, Habitat},
+    cogs::{Backup, Habitat, MathsCore},
     landscape::Location,
 };
 
@@ -32,7 +32,7 @@ impl Backup for ModuloDecomposition {
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>> Decomposition<F, H> for ModuloDecomposition {
+impl<M: MathsCore, H: Habitat<M>> Decomposition<M, H> for ModuloDecomposition {
     fn get_subdomain_rank(&self) -> u32 {
         self.rank
     }

@@ -3,7 +3,7 @@ use core::{convert::TryFrom, num::NonZeroU32};
 use hashbrown::HashMap;
 
 use necsim_core::cogs::{Backup, Habitat};
-use necsim_core_f64::IntrinsicsF64Core;
+use necsim_core_maths::IntrinsicsMathsCore;
 
 use crate::{
     cogs::habitat::{non_spatial::NonSpatialHabitat, spatially_implicit::SpatiallyImplicitHabitat},
@@ -18,7 +18,7 @@ fn test_equal_area_decomposition() {
 
     for width in 1..=8 {
         for height in 1..=8 {
-            let habitat: NonSpatialHabitat<IntrinsicsF64Core> =
+            let habitat: NonSpatialHabitat<IntrinsicsMathsCore> =
                 NonSpatialHabitat::new((width, height), 1);
 
             for partition in 1..=(width * height + 1) {
@@ -93,7 +93,7 @@ fn test_equal_weight_decomposition() {
 
     for local in 1..=8 {
         for meta in 1..=8 {
-            let habitat: SpatiallyImplicitHabitat<IntrinsicsF64Core> =
+            let habitat: SpatiallyImplicitHabitat<IntrinsicsMathsCore> =
                 SpatiallyImplicitHabitat::new((8, 1), local, (8, 1), meta);
 
             for partition in 1..=(local * 8 + meta * 8 + 1) {
@@ -166,7 +166,7 @@ fn test_equal_weight_decomposition() {
 
 #[test]
 fn equal_area_stores_subdomain() {
-    let habitat: NonSpatialHabitat<IntrinsicsF64Core> = NonSpatialHabitat::new((100, 100), 100);
+    let habitat: NonSpatialHabitat<IntrinsicsMathsCore> = NonSpatialHabitat::new((100, 100), 100);
 
     let equal_area_decomposition =
         EqualDecomposition::area(&habitat, 42, NonZeroU32::new(100).unwrap())
@@ -182,7 +182,7 @@ fn equal_area_stores_subdomain() {
 
 #[test]
 fn equal_weight_stores_subdomain() {
-    let habitat: NonSpatialHabitat<IntrinsicsF64Core> = NonSpatialHabitat::new((100, 100), 100);
+    let habitat: NonSpatialHabitat<IntrinsicsMathsCore> = NonSpatialHabitat::new((100, 100), 100);
 
     let equal_area_decomposition =
         EqualDecomposition::area(&habitat, 24, NonZeroU32::new(1000).unwrap())

@@ -4,7 +4,7 @@ use hashbrown::hash_map::HashMap;
 use slab::Slab;
 
 use necsim_core::{
-    cogs::{Backup, F64Core, OriginSampler},
+    cogs::{Backup, MathsCore, OriginSampler},
     landscape::Location,
     lineage::Lineage,
 };
@@ -18,13 +18,13 @@ mod store;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct AlmostInfiniteLineageStore<F: F64Core> {
+pub struct AlmostInfiniteLineageStore<M: MathsCore> {
     lineages_store: Slab<Lineage>,
     location_to_lineage_reference: HashMap<Location, InMemoryLineageReference>,
-    _marker: PhantomData<F>,
+    _marker: PhantomData<M>,
 }
 
-impl<F: F64Core> Index<InMemoryLineageReference> for AlmostInfiniteLineageStore<F> {
+impl<M: MathsCore> Index<InMemoryLineageReference> for AlmostInfiniteLineageStore<M> {
     type Output = Lineage;
 
     #[must_use]
@@ -37,9 +37,9 @@ impl<F: F64Core> Index<InMemoryLineageReference> for AlmostInfiniteLineageStore<
     }
 }
 
-impl<F: F64Core> AlmostInfiniteLineageStore<F> {
+impl<M: MathsCore> AlmostInfiniteLineageStore<M> {
     #[must_use]
-    pub fn new<'h, O: OriginSampler<'h, F, Habitat = AlmostInfiniteHabitat<F>>>(
+    pub fn new<'h, O: OriginSampler<'h, M, Habitat = AlmostInfiniteHabitat<M>>>(
         mut origin_sampler: O,
     ) -> Self {
         #[allow(clippy::cast_possible_truncation)]
@@ -63,18 +63,18 @@ impl<F: F64Core> AlmostInfiniteLineageStore<F> {
         Self {
             lineages_store,
             location_to_lineage_reference: location_to_lineage_references,
-            _marker: PhantomData::<F>,
+            _marker: PhantomData::<M>,
         }
     }
 }
 
 #[contract_trait]
-impl<F: F64Core> Backup for AlmostInfiniteLineageStore<F> {
+impl<M: MathsCore> Backup for AlmostInfiniteLineageStore<M> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             lineages_store: self.lineages_store.clone(),
             location_to_lineage_reference: self.location_to_lineage_reference.clone(),
-            _marker: PhantomData::<F>,
+            _marker: PhantomData::<M>,
         }
     }
 }

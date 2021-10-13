@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{Backup, F64Core, PrimeableRng, RngCore};
+use necsim_core::cogs::{Backup, MathsCore, PrimeableRng, RngCore};
 
 use serde::{Deserialize, Serialize};
 
@@ -14,20 +14,20 @@ const P5: u64 = 0xeb44_acca_b455_d165;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[repr(C)]
-pub struct WyHash<F: F64Core> {
+pub struct WyHash<M: MathsCore> {
     seed: u64,
     state: u64,
-    marker: PhantomData<F>,
+    marker: PhantomData<M>,
 }
 
 #[contract_trait]
-impl<F: F64Core> Backup for WyHash<F> {
+impl<M: MathsCore> Backup for WyHash<M> {
     unsafe fn backup_unchecked(&self) -> Self {
         self.clone()
     }
 }
 
-impl<F: F64Core> RngCore<F> for WyHash<F> {
+impl<M: MathsCore> RngCore<M> for WyHash<M> {
     type Seed = [u8; 8];
 
     #[must_use]
@@ -38,7 +38,7 @@ impl<F: F64Core> RngCore<F> for WyHash<F> {
         Self {
             seed,
             state: seed,
-            marker: PhantomData::<F>,
+            marker: PhantomData::<M>,
         }
     }
 
@@ -57,7 +57,7 @@ impl<F: F64Core> RngCore<F> for WyHash<F> {
     }
 }
 
-impl<F: F64Core> PrimeableRng<F> for WyHash<F> {
+impl<M: MathsCore> PrimeableRng<M> for WyHash<M> {
     #[inline]
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         let location_index = seahash_diffuse(location_index);

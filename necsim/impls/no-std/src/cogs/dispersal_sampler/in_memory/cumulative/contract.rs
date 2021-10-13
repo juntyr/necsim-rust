@@ -1,12 +1,12 @@
 use necsim_core::{
-    cogs::{F64Core, Habitat},
+    cogs::{Habitat, MathsCore},
     landscape::Location,
 };
 
 use super::InMemoryCumulativeDispersalSampler;
 
 impl InMemoryCumulativeDispersalSampler {
-    pub(super) fn explicit_only_valid_targets_dispersal_contract<F: F64Core, H: Habitat<F>>(
+    pub(super) fn explicit_only_valid_targets_dispersal_contract<M: MathsCore, H: Habitat<M>>(
         &self,
         habitat: &H,
     ) -> bool {

@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use necsim_core::cogs::{F64Core, RngCore};
+use necsim_core::cogs::{MathsCore, RngCore};
 
 pub mod packed;
 
@@ -81,7 +81,7 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
     }
 
     #[debug_ensures(self.Es.contains(&ret), "returns one of the weighted events")]
-    pub fn sample_event<F: F64Core, G: RngCore<F>>(&self, rng: &mut G) -> E {
+    pub fn sample_event<M: MathsCore, G: RngCore<M>>(&self, rng: &mut G) -> E {
         use necsim_core::cogs::RngSampler;
 
         let x = rng.sample_uniform();
@@ -91,7 +91,7 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let i = F::floor(x.get() * (self.Es.len() as f64)) as usize; // index into events
+        let i = M::floor(x.get() * (self.Es.len() as f64)) as usize; // index into events
 
         #[allow(clippy::cast_precision_loss)]
         let y = x.get() * (self.Es.len() as f64) - (i as f64); // U(0,1) to compare against U[i]

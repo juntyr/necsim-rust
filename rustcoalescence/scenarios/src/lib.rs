@@ -9,7 +9,7 @@ extern crate log;
 use std::num::NonZeroU32;
 
 use necsim_core::cogs::{
-    DispersalSampler, F64Core, Habitat, LineageReference, LineageStore, OriginSampler, RngCore,
+    DispersalSampler, Habitat, LineageReference, LineageStore, MathsCore, OriginSampler, RngCore,
     SpeciationProbability, TurnoverRate,
 };
 use necsim_core_bond::PositiveUnitF64;
@@ -31,25 +31,25 @@ pub trait ScenarioArguments {
     type Arguments;
 }
 
-pub trait Scenario<F: F64Core, G: RngCore<F>>: Sized + ScenarioArguments {
+pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioArguments {
     type Error;
 
-    type Habitat: Habitat<F>;
-    type OriginSampler<'h, I: Iterator<Item = u64>>: OriginSampler<'h, F, Habitat = Self::Habitat>;
-    type Decomposition: Decomposition<F, Self::Habitat>;
-    type LineageReference: LineageReference<F, Self::Habitat>;
-    type LineageStore<L: LineageStore<F, Self::Habitat, Self::LineageReference>>: LineageStore<
-        F,
+    type Habitat: Habitat<M>;
+    type OriginSampler<'h, I: Iterator<Item = u64>>: OriginSampler<'h, M, Habitat = Self::Habitat>;
+    type Decomposition: Decomposition<M, Self::Habitat>;
+    type LineageReference: LineageReference<M, Self::Habitat>;
+    type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>>: LineageStore<
+        M,
         Self::Habitat,
         Self::LineageReference,
     >;
-    type DispersalSampler<D: DispersalSampler<F, Self::Habitat, G>>: DispersalSampler<
-        F,
+    type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>>: DispersalSampler<
+        M,
         Self::Habitat,
         G,
     >;
-    type TurnoverRate: TurnoverRate<F, Self::Habitat>;
-    type SpeciationProbability: SpeciationProbability<F, Self::Habitat>;
+    type TurnoverRate: TurnoverRate<M, Self::Habitat>;
+    type SpeciationProbability: SpeciationProbability<M, Self::Habitat>;
 
     /// # Errors
     ///
@@ -61,7 +61,7 @@ pub trait Scenario<F: F64Core, G: RngCore<F>>: Sized + ScenarioArguments {
 
     /// Inside rustcoalescence, I know that only specialised
     /// `InMemoryDispersalSampler` implementations will be requested.
-    fn build<D: InMemoryDispersalSampler<F, Self::Habitat, G>>(
+    fn build<D: InMemoryDispersalSampler<M, Self::Habitat, G>>(
         self,
     ) -> (
         Self::Habitat,
@@ -72,7 +72,7 @@ pub trait Scenario<F: F64Core, G: RngCore<F>>: Sized + ScenarioArguments {
 
     fn sample_habitat<I: Iterator<Item = u64>>(
         &self,
-        pre_sampler: OriginPreSampler<F, I>,
+        pre_sampler: OriginPreSampler<M, I>,
     ) -> Self::OriginSampler<'_, I>;
 
     fn habitat(&self) -> &Self::Habitat;
