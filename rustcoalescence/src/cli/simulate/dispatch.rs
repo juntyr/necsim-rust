@@ -82,10 +82,6 @@ macro_rules! impl_sealed_dispatch {
                     );
                 }
 
-                let pre_sampler = OriginPreSampler::all().percentage(
-                    common_args.sample_percentage.get()
-                );
-
                 let (time, steps): (NonNegativeF64, u64) = crate::match_scenario_algorithm!(
                     (common_args.algorithm, scenario => scenario)
                 {
@@ -95,7 +91,9 @@ macro_rules! impl_sealed_dispatch {
                             algorithm_args,
                             common_args.seed,
                             scenario,
-                            pre_sampler,
+                            OriginPreSampler::all().percentage(
+                                common_args.sample_percentage.get()
+                            ),
                             &mut *local_partition,
                         )
                         .into_ok()
@@ -106,7 +104,9 @@ macro_rules! impl_sealed_dispatch {
                             algorithm_args,
                             common_args.seed,
                             scenario,
-                            pre_sampler,
+                            OriginPreSampler::all().percentage(
+                                common_args.sample_percentage.get()
+                            ),
                             &mut *local_partition,
                         )
                         .into_ok()
@@ -117,7 +117,9 @@ macro_rules! impl_sealed_dispatch {
                             algorithm_args,
                             common_args.seed,
                             scenario,
-                            pre_sampler,
+                            OriginPreSampler::all().percentage(
+                                common_args.sample_percentage.get()
+                            ),
                             &mut *local_partition,
                         )
                         .into_ok()
@@ -128,7 +130,9 @@ macro_rules! impl_sealed_dispatch {
                             algorithm_args,
                             common_args.seed,
                             scenario,
-                            pre_sampler,
+                            OriginPreSampler::all().percentage(
+                                common_args.sample_percentage.get()
+                            ),
                             &mut *local_partition,
                         )
                         .into_ok()
@@ -139,7 +143,9 @@ macro_rules! impl_sealed_dispatch {
                             algorithm_args,
                             common_args.seed,
                             scenario,
-                            pre_sampler,
+                            OriginPreSampler::all().percentage(
+                                common_args.sample_percentage.get()
+                            ),
                             &mut *local_partition,
                         )?
                     }
