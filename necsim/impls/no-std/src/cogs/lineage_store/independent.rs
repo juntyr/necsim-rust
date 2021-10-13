@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, F64Core, Habitat, LineageStore, OriginSampler},
+    cogs::{Backup, Habitat, LineageStore, MathsCore, OriginSampler},
     lineage::{GlobalLineageReference, Lineage},
 };
 
@@ -9,34 +9,34 @@ use necsim_core::{
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
-pub struct IndependentLineageStore<F: F64Core, H: Habitat<F>> {
-    marker: PhantomData<(F, H)>,
+pub struct IndependentLineageStore<M: MathsCore, H: Habitat<M>> {
+    marker: PhantomData<(M, H)>,
 }
 
-impl<F: F64Core, H: Habitat<F>> Default for IndependentLineageStore<F, H> {
+impl<M: MathsCore, H: Habitat<M>> Default for IndependentLineageStore<M, H> {
     fn default() -> Self {
         Self {
-            marker: PhantomData::<(F, H)>,
+            marker: PhantomData::<(M, H)>,
         }
     }
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>> Backup for IndependentLineageStore<F, H> {
+impl<M: MathsCore, H: Habitat<M>> Backup for IndependentLineageStore<M, H> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
-            marker: PhantomData::<(F, H)>,
+            marker: PhantomData::<(M, H)>,
         }
     }
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>> LineageStore<F, H, GlobalLineageReference>
-    for IndependentLineageStore<F, H>
+impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, GlobalLineageReference>
+    for IndependentLineageStore<M, H>
 {
     type LineageReferenceIterator<'a> = core::iter::Empty<GlobalLineageReference>;
 
-    fn from_origin_sampler<'h, O: OriginSampler<'h, F, Habitat = H>>(_origin_sampler: O) -> Self
+    fn from_origin_sampler<'h, O: OriginSampler<'h, M, Habitat = H>>(_origin_sampler: O) -> Self
     where
         H: 'h,
     {

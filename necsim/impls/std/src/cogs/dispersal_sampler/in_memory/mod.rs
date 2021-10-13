@@ -1,4 +1,4 @@
-use necsim_core::cogs::{F64Core, Habitat, RngCore};
+use necsim_core::cogs::{Habitat, MathsCore, RngCore};
 use necsim_impls_no_std::array2d::Array2D;
 
 pub mod error;
@@ -12,8 +12,8 @@ use necsim_impls_no_std::cogs::dispersal_sampler::in_memory::{
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait InMemoryDispersalSampler<F: F64Core, H: Habitat<F>, G: RngCore<F>>:
-    InMemoryDispersalSamplerNoError<F, H, G> + Sized
+pub trait InMemoryDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>>:
+    InMemoryDispersalSamplerNoError<M, H, G> + Sized
 {
     #[debug_ensures(
         matches!(ret, Err(InMemoryDispersalSamplerError::InconsistentDispersalMapSize)) != (
@@ -36,8 +36,8 @@ pub trait InMemoryDispersalSampler<F: F64Core, H: Habitat<F>, G: RngCore<F>>:
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>, G: RngCore<F>, T: InMemoryDispersalSamplerNoError<F, H, G>>
-    InMemoryDispersalSampler<F, H, G> for T
+impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>, T: InMemoryDispersalSamplerNoError<M, H, G>>
+    InMemoryDispersalSampler<M, H, G> for T
 {
     /// Creates a new `T` from the `dispersal` map and extent of the habitat
     /// map.

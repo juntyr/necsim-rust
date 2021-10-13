@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use alloc::vec::Vec;
 
 use necsim_core::{
-    cogs::{Backup, F64Core, Habitat, RngCore},
+    cogs::{Backup, Habitat, MathsCore, RngCore},
     landscape::Location,
 };
 
@@ -16,14 +16,14 @@ mod dispersal;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct InMemoryAliasDispersalSampler<F: F64Core, H: Habitat<F>, G: RngCore<F>> {
+pub struct InMemoryAliasDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>> {
     alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
-    marker: PhantomData<(F, H, G)>,
+    marker: PhantomData<(M, H, G)>,
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> InMemoryDispersalSampler<F, H, G>
-    for InMemoryAliasDispersalSampler<F, H, G>
+impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, G>
+    for InMemoryAliasDispersalSampler<M, H, G>
 {
     /// Creates a new `InMemoryAliasDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
@@ -65,17 +65,17 @@ impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> InMemoryDispersalSampler<F, H, G>
 
         Self {
             alias_dispersal,
-            marker: PhantomData::<(F, H, G)>,
+            marker: PhantomData::<(M, H, G)>,
         }
     }
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> Backup for InMemoryAliasDispersalSampler<F, H, G> {
+impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Backup for InMemoryAliasDispersalSampler<M, H, G> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             alias_dispersal: self.alias_dispersal.clone(),
-            marker: PhantomData::<(F, H, G)>,
+            marker: PhantomData::<(M, H, G)>,
         }
     }
 }

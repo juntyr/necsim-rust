@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{F64Core, OriginSampler},
+    cogs::{MathsCore, OriginSampler},
     landscape::IndexedLocation,
 };
 
@@ -11,31 +11,31 @@ use crate::decomposition::Decomposition;
 #[derive(Debug)]
 pub struct DecompositionOriginSampler<
     'd,
-    F: F64Core,
-    O: OriginSampler<'d, F>,
-    D: Decomposition<F, O::Habitat>,
+    M: MathsCore,
+    O: OriginSampler<'d, M>,
+    D: Decomposition<M, O::Habitat>,
 > {
     origin_sampler: O,
     decomposition: &'d D,
-    _marker: PhantomData<F>,
+    _marker: PhantomData<M>,
 }
 
-impl<'d, F: F64Core, O: OriginSampler<'d, F>, D: Decomposition<F, O::Habitat>>
-    DecompositionOriginSampler<'d, F, O, D>
+impl<'d, M: MathsCore, O: OriginSampler<'d, M>, D: Decomposition<M, O::Habitat>>
+    DecompositionOriginSampler<'d, M, O, D>
 {
     #[must_use]
     pub fn new(origin_sampler: O, decomposition: &'d D) -> Self {
         Self {
             origin_sampler,
             decomposition,
-            _marker: PhantomData::<F>,
+            _marker: PhantomData::<M>,
         }
     }
 }
 
 #[contract_trait]
-impl<'d, F: F64Core, O: OriginSampler<'d, F>, D: Decomposition<F, O::Habitat>> OriginSampler<'d, F>
-    for DecompositionOriginSampler<'d, F, O, D>
+impl<'d, M: MathsCore, O: OriginSampler<'d, M>, D: Decomposition<M, O::Habitat>>
+    OriginSampler<'d, M> for DecompositionOriginSampler<'d, M, O, D>
 {
     type Habitat = O::Habitat;
 
@@ -56,8 +56,8 @@ impl<'d, F: F64Core, O: OriginSampler<'d, F>, D: Decomposition<F, O::Habitat>> O
     }
 }
 
-impl<'d, F: F64Core, O: OriginSampler<'d, F>, D: Decomposition<F, O::Habitat>> Iterator
-    for DecompositionOriginSampler<'d, F, O, D>
+impl<'d, M: MathsCore, O: OriginSampler<'d, M>, D: Decomposition<M, O::Habitat>> Iterator
+    for DecompositionOriginSampler<'d, M, O, D>
 {
     type Item = IndexedLocation;
 

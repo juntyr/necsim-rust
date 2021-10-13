@@ -1,7 +1,8 @@
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, DispersalSampler, EmigrationExit, F64Core, Habitat, ImmigrationEntry,
-        LineageReference, LineageStore, PrimeableRng, SpeciationProbability, TurnoverRate,
+        CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+        LineageReference, LineageStore, MathsCore, PrimeableRng, SpeciationProbability,
+        TurnoverRate,
     },
     reporter::boolean::Boolean,
 };
@@ -27,24 +28,24 @@ mod link;
 
 #[allow(clippy::type_complexity, clippy::module_name_repetitions)]
 pub struct SimulationKernel<
-    F: F64Core,
-    H: Habitat<F> + RustToCuda,
-    G: PrimeableRng<F> + RustToCuda,
-    R: LineageReference<F, H>,
-    S: LineageStore<F, H, R> + RustToCuda,
-    X: EmigrationExit<F, H, G, R, S> + RustToCuda,
-    D: DispersalSampler<F, H, G> + RustToCuda,
-    C: CoalescenceSampler<F, H, R, S> + RustToCuda,
-    T: TurnoverRate<F, H> + RustToCuda,
-    N: SpeciationProbability<F, H> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<F, H, G, R, S, X, D, C, T, N> + RustToCuda,
-    I: ImmigrationEntry<F> + RustToCuda,
-    A: SingularActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
+    M: MathsCore,
+    H: Habitat<M> + RustToCuda,
+    G: PrimeableRng<M> + RustToCuda,
+    R: LineageReference<M, H>,
+    S: LineageStore<M, H, R> + RustToCuda,
+    X: EmigrationExit<M, H, G, R, S> + RustToCuda,
+    D: DispersalSampler<M, H, G> + RustToCuda,
+    C: CoalescenceSampler<M, H, R, S> + RustToCuda,
+    T: TurnoverRate<M, H> + RustToCuda,
+    N: SpeciationProbability<M, H> + RustToCuda,
+    E: MinSpeciationTrackingEventSampler<M, H, G, R, S, X, D, C, T, N> + RustToCuda,
+    I: ImmigrationEntry<M> + RustToCuda,
+    A: SingularActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
     ReportSpeciation: Boolean,
     ReportDispersal: Boolean,
 > {
     kernel: TypedKernel<
-        dyn Kernel<F, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>,
+        dyn Kernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>,
     >,
     stream: CudaDropWrapper<Stream>,
     grid: GridSize,
@@ -52,26 +53,26 @@ pub struct SimulationKernel<
 }
 
 impl<
-        F: F64Core,
-        H: Habitat<F> + RustToCuda,
-        G: PrimeableRng<F> + RustToCuda,
-        R: LineageReference<F, H>,
-        S: LineageStore<F, H, R> + RustToCuda,
-        X: EmigrationExit<F, H, G, R, S> + RustToCuda,
-        D: DispersalSampler<F, H, G> + RustToCuda,
-        C: CoalescenceSampler<F, H, R, S> + RustToCuda,
-        T: TurnoverRate<F, H> + RustToCuda,
-        N: SpeciationProbability<F, H> + RustToCuda,
-        E: MinSpeciationTrackingEventSampler<F, H, G, R, S, X, D, C, T, N> + RustToCuda,
-        I: ImmigrationEntry<F> + RustToCuda,
-        A: SingularActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
+        M: MathsCore,
+        H: Habitat<M> + RustToCuda,
+        G: PrimeableRng<M> + RustToCuda,
+        R: LineageReference<M, H>,
+        S: LineageStore<M, H, R> + RustToCuda,
+        X: EmigrationExit<M, H, G, R, S> + RustToCuda,
+        D: DispersalSampler<M, H, G> + RustToCuda,
+        C: CoalescenceSampler<M, H, R, S> + RustToCuda,
+        T: TurnoverRate<M, H> + RustToCuda,
+        N: SpeciationProbability<M, H> + RustToCuda,
+        E: MinSpeciationTrackingEventSampler<M, H, G, R, S, X, D, C, T, N> + RustToCuda,
+        I: ImmigrationEntry<M> + RustToCuda,
+        A: SingularActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
         ReportSpeciation: Boolean,
         ReportDispersal: Boolean,
-    > SimulationKernel<F, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
+    > SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
 {
     pub fn try_new(stream: Stream, grid: GridSize, block: BlockSize) -> CudaResult<Self>
     where
-        Self: Kernel<F, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>,
+        Self: Kernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>,
     {
         let stream = CudaDropWrapper::from(stream);
         let kernel = Self::new_kernel()?;
@@ -86,26 +87,26 @@ impl<
 }
 
 impl<
-        F: F64Core,
-        H: Habitat<F> + RustToCuda,
-        G: PrimeableRng<F> + RustToCuda,
-        R: LineageReference<F, H>,
-        S: LineageStore<F, H, R> + RustToCuda,
-        X: EmigrationExit<F, H, G, R, S> + RustToCuda,
-        D: DispersalSampler<F, H, G> + RustToCuda,
-        C: CoalescenceSampler<F, H, R, S> + RustToCuda,
-        T: TurnoverRate<F, H> + RustToCuda,
-        N: SpeciationProbability<F, H> + RustToCuda,
-        E: MinSpeciationTrackingEventSampler<F, H, G, R, S, X, D, C, T, N> + RustToCuda,
-        I: ImmigrationEntry<F> + RustToCuda,
-        A: SingularActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
+        M: MathsCore,
+        H: Habitat<M> + RustToCuda,
+        G: PrimeableRng<M> + RustToCuda,
+        R: LineageReference<M, H>,
+        S: LineageStore<M, H, R> + RustToCuda,
+        X: EmigrationExit<M, H, G, R, S> + RustToCuda,
+        D: DispersalSampler<M, H, G> + RustToCuda,
+        C: CoalescenceSampler<M, H, R, S> + RustToCuda,
+        T: TurnoverRate<M, H> + RustToCuda,
+        N: SpeciationProbability<M, H> + RustToCuda,
+        E: MinSpeciationTrackingEventSampler<M, H, G, R, S, X, D, C, T, N> + RustToCuda,
+        I: ImmigrationEntry<M> + RustToCuda,
+        A: SingularActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
         ReportSpeciation: Boolean,
         ReportDispersal: Boolean,
     > Launcher
-    for SimulationKernel<F, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
+    for SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
 {
     type KernelTraitObject =
-        dyn Kernel<F, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>;
+        dyn Kernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>;
 
     fn get_config(&self) -> LaunchConfig {
         LaunchConfig {

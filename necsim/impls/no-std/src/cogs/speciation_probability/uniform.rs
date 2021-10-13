@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, F64Core, Habitat, SpeciationProbability},
+    cogs::{Backup, Habitat, MathsCore, SpeciationProbability},
     landscape::Location,
 };
 use necsim_core_bond::ClosedUnitF64;
@@ -30,7 +30,7 @@ impl Backup for UniformSpeciationProbability {
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>> SpeciationProbability<F, H> for UniformSpeciationProbability {
+impl<M: MathsCore, H: Habitat<M>> SpeciationProbability<M, H> for UniformSpeciationProbability {
     #[must_use]
     #[inline]
     fn get_speciation_probability_at_location(

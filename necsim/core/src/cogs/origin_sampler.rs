@@ -1,14 +1,14 @@
 use crate::{
-    cogs::{F64Core, Habitat},
+    cogs::{Habitat, MathsCore},
     landscape::IndexedLocation,
 };
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait OriginSampler<'h, F: F64Core>:
+pub trait OriginSampler<'h, M: MathsCore>:
     core::fmt::Debug + core::iter::Iterator<Item = IndexedLocation>
 {
-    type Habitat: 'h + Habitat<F>;
+    type Habitat: 'h + Habitat<M>;
 
     fn habitat(&self) -> &'h Self::Habitat;
 

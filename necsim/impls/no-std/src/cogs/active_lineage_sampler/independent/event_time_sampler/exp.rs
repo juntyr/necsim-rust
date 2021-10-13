@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{F64Core, Habitat, HabitatPrimeableRng, PrimeableRng, RngSampler, TurnoverRate},
+    cogs::{Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng, RngSampler, TurnoverRate},
     landscape::IndexedLocation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -24,8 +24,8 @@ impl ExpEventTimeSampler {
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>, G: PrimeableRng<F>, T: TurnoverRate<F, H>>
-    EventTimeSampler<F, H, G, T> for ExpEventTimeSampler
+impl<M: MathsCore, H: Habitat<M>, G: PrimeableRng<M>, T: TurnoverRate<M, H>>
+    EventTimeSampler<M, H, G, T> for ExpEventTimeSampler
 {
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
@@ -49,7 +49,7 @@ impl<F: F64Core, H: Habitat<F>, G: PrimeableRng<F>, T: TurnoverRate<F, H>>
         };
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let mut time_step = F::floor(time.get() / self.delta_t.get()) as u64;
+        let mut time_step = M::floor(time.get() / self.delta_t.get()) as u64;
 
         let mut event_time = NonNegativeF64::from(time_step) * self.delta_t;
         let mut time_slice_end = NonNegativeF64::from(time_step + 1) * self.delta_t;

@@ -1,12 +1,12 @@
 use necsim_core::{
-    cogs::{F64Core, Habitat},
+    cogs::{Habitat, MathsCore},
     landscape::Location,
 };
 
 use crate::array2d::Array2D;
 
 #[allow(clippy::module_name_repetitions)]
-pub fn explicit_in_memory_dispersal_check_contract<F: F64Core, H: Habitat<F>>(
+pub fn explicit_in_memory_dispersal_check_contract<M: MathsCore, H: Habitat<M>>(
     dispersal: &Array2D<f64>,
     habitat: &H,
 ) -> bool {

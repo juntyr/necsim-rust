@@ -1,4 +1,4 @@
-use necsim_core::cogs::{DispersalSampler, F64Core, Habitat, RngCore};
+use necsim_core::cogs::{DispersalSampler, Habitat, MathsCore, RngCore};
 
 use crate::array2d::Array2D;
 
@@ -14,8 +14,8 @@ use contract::explicit_in_memory_dispersal_check_contract;
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait InMemoryDispersalSampler<F: F64Core, H: Habitat<F>, G: RngCore<F>>:
-    DispersalSampler<F, H, G> + Sized
+pub trait InMemoryDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>>:
+    DispersalSampler<M, H, G> + Sized
 {
     #[debug_requires((
         dispersal.num_columns() == (

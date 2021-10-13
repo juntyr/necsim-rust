@@ -1,6 +1,6 @@
 use core::ops::Index;
 
-use super::{F64Core, Habitat, LineageReference, OriginSampler};
+use super::{Habitat, LineageReference, MathsCore, OriginSampler};
 use crate::{
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},
@@ -8,13 +8,13 @@ use crate::{
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait LineageStore<F: F64Core, H: Habitat<F>, R: LineageReference<F, H>>:
+pub trait LineageStore<M: MathsCore, H: Habitat<M>, R: LineageReference<M, H>>:
     crate::cogs::Backup + Sized + core::fmt::Debug
 {
     type LineageReferenceIterator<'a>: Iterator<Item = R>;
 
     #[must_use]
-    fn from_origin_sampler<'h, O: OriginSampler<'h, F, Habitat = H>>(origin_sampler: O) -> Self
+    fn from_origin_sampler<'h, O: OriginSampler<'h, M, Habitat = H>>(origin_sampler: O) -> Self
     where
         H: 'h;
 
@@ -28,8 +28,8 @@ pub trait LineageStore<F: F64Core, H: Habitat<F>, R: LineageReference<F, H>>:
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
-pub trait LocallyCoherentLineageStore<F: F64Core, H: Habitat<F>, R: LineageReference<F, H>>:
-    LineageStore<F, H, R> + Index<R, Output = Lineage>
+pub trait LocallyCoherentLineageStore<M: MathsCore, H: Habitat<M>, R: LineageReference<M, H>>:
+    LineageStore<M, H, R> + Index<R, Output = Lineage>
 {
     #[must_use]
     #[debug_requires(
@@ -84,8 +84,8 @@ pub trait LocallyCoherentLineageStore<F: F64Core, H: Habitat<F>, R: LineageRefer
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
-pub trait GloballyCoherentLineageStore<F: F64Core, H: Habitat<F>, R: LineageReference<F, H>>:
-    LocallyCoherentLineageStore<F, H, R>
+pub trait GloballyCoherentLineageStore<M: MathsCore, H: Habitat<M>, R: LineageReference<M, H>>:
+    LocallyCoherentLineageStore<M, H, R>
 {
     type LocationIterator<'a>: Iterator<Item = Location>;
 

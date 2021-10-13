@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{F64Core, Habitat, PrimeableRng, TurnoverRate},
+    cogs::{Habitat, MathsCore, PrimeableRng, TurnoverRate},
     landscape::IndexedLocation,
 };
 use necsim_core_bond::NonNegativeF64;
@@ -12,7 +12,7 @@ pub mod poisson;
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait EventTimeSampler<F: F64Core, H: Habitat<F>, G: PrimeableRng<F>, T: TurnoverRate<F, H>>:
+pub trait EventTimeSampler<M: MathsCore, H: Habitat<M>, G: PrimeableRng<M>, T: TurnoverRate<M, H>>:
     Clone + core::fmt::Debug
 {
     #[debug_requires(

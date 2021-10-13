@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        F64Core, GloballyCoherentLineageStore, Habitat, LineageReference, RngCore,
+        GloballyCoherentLineageStore, Habitat, LineageReference, MathsCore, RngCore,
         SeparableDispersalSampler, SpeciationProbability, TurnoverRate,
     },
     landscape::Location,
@@ -22,24 +22,24 @@ pub struct ProbabilityAtLocation {
 impl ProbabilityAtLocation {
     #[allow(clippy::type_complexity)]
     pub fn new<
-        F: F64Core,
-        H: Habitat<F>,
-        G: RngCore<F>,
-        R: LineageReference<F, H>,
-        S: GloballyCoherentLineageStore<F, H, R>,
-        D: SeparableDispersalSampler<F, H, G>,
-        T: TurnoverRate<F, H>,
-        N: SpeciationProbability<F, H>,
+        M: MathsCore,
+        H: Habitat<M>,
+        G: RngCore<M>,
+        R: LineageReference<M, H>,
+        S: GloballyCoherentLineageStore<M, H, R>,
+        D: SeparableDispersalSampler<M, H, G>,
+        T: TurnoverRate<M, H>,
+        N: SpeciationProbability<M, H>,
     >(
         location: &Location,
         simulation: &GillespiePartialSimulation<
-            F,
+            M,
             H,
             G,
             R,
             S,
             D,
-            ConditionalCoalescenceSampler<F, H, R, S>,
+            ConditionalCoalescenceSampler<M, H, R, S>,
             T,
             N,
         >,

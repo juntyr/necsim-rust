@@ -2,7 +2,7 @@ use core::cmp::Ordering;
 
 use alloc::vec::Vec;
 
-use necsim_core::cogs::{F64Core, RngCore};
+use necsim_core::cogs::{MathsCore, RngCore};
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(non_snake_case)]
@@ -91,7 +91,7 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
         old(alias_samplers).iter().map(|s| s.E).any(|e| e == ret),
         "returns one of the weighted events"
     )]
-    pub fn sample_event<F: F64Core, G: RngCore<F>>(
+    pub fn sample_event<M: MathsCore, G: RngCore<M>>(
         alias_samplers: &[AliasMethodSamplerAtom<E>],
         rng: &mut G,
     ) -> E {
@@ -104,7 +104,7 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let i = F::floor(x.get() * (alias_samplers.len() as f64)) as usize; // index into events
+        let i = M::floor(x.get() * (alias_samplers.len() as f64)) as usize; // index into events
 
         #[allow(clippy::cast_precision_loss)]
         let y = x.get() * (alias_samplers.len() as f64) - (i as f64); // U(0,1) to compare against U[i]

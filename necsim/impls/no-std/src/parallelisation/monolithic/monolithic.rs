@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler, F64Core, Habitat,
-        LineageReference, LocallyCoherentLineageStore, RngCore, SpeciationProbability,
+        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler, Habitat,
+        LineageReference, LocallyCoherentLineageStore, MathsCore, RngCore, SpeciationProbability,
         TurnoverRate,
     },
     reporter::Reporter,
@@ -17,22 +17,22 @@ use crate::cogs::{
 
 #[allow(clippy::type_complexity)]
 pub fn simulate<
-    F: F64Core,
-    H: Habitat<F>,
-    G: RngCore<F>,
-    R: LineageReference<F, H>,
-    S: LocallyCoherentLineageStore<F, H, R>,
-    D: DispersalSampler<F, H, G>,
-    C: CoalescenceSampler<F, H, R, S>,
-    T: TurnoverRate<F, H>,
-    N: SpeciationProbability<F, H>,
-    E: EventSampler<F, H, G, R, S, NeverEmigrationExit, D, C, T, N>,
-    A: ActiveLineageSampler<F, H, G, R, S, NeverEmigrationExit, D, C, T, N, E, NeverImmigrationEntry>,
+    M: MathsCore,
+    H: Habitat<M>,
+    G: RngCore<M>,
+    R: LineageReference<M, H>,
+    S: LocallyCoherentLineageStore<M, H, R>,
+    D: DispersalSampler<M, H, G>,
+    C: CoalescenceSampler<M, H, R, S>,
+    T: TurnoverRate<M, H>,
+    N: SpeciationProbability<M, H>,
+    E: EventSampler<M, H, G, R, S, NeverEmigrationExit, D, C, T, N>,
+    A: ActiveLineageSampler<M, H, G, R, S, NeverEmigrationExit, D, C, T, N, E, NeverImmigrationEntry>,
     P: Reporter,
     L: LocalPartition<P>,
 >(
     simulation: Simulation<
-        F,
+        M,
         H,
         G,
         R,

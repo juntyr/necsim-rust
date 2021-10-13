@@ -1,13 +1,15 @@
 use necsim_core_bond::NonNegativeF64;
 
 use crate::{
-    cogs::{F64Core, Habitat},
+    cogs::{Habitat, MathsCore},
     landscape::Location,
 };
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait TurnoverRate<F: F64Core, H: Habitat<F>>: crate::cogs::Backup + core::fmt::Debug {
+pub trait TurnoverRate<M: MathsCore, H: Habitat<M>>:
+    crate::cogs::Backup + core::fmt::Debug
+{
     #[must_use]
     #[debug_requires(habitat.contains(location), "location is inside habitat")]
     #[debug_ensures(

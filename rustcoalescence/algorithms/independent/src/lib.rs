@@ -17,7 +17,7 @@ use necsim_core::{
     simulation::SimulationBuilder,
 };
 use necsim_core_bond::NonNegativeF64;
-use necsim_core_f64::IntrinsicsF64Core;
+use necsim_core_maths::IntrinsicsMathsCore;
 
 use necsim_impls_no_std::{
     cogs::{
@@ -61,23 +61,23 @@ impl AlgorithmArguments for IndependentAlgorithm {
 
 #[allow(clippy::type_complexity)]
 impl<
-        O: Scenario<IntrinsicsF64Core, WyHash<IntrinsicsF64Core>>,
+        O: Scenario<IntrinsicsMathsCore, WyHash<IntrinsicsMathsCore>>,
         R: Reporter,
         P: LocalPartition<R>,
     > Algorithm<O, R, P> for IndependentAlgorithm
 {
     type Error = !;
-    type F64Core = IntrinsicsF64Core;
     type LineageReference = GlobalLineageReference;
-    type LineageStore = IndependentLineageStore<IntrinsicsF64Core, O::Habitat>;
-    type Rng = WyHash<IntrinsicsF64Core>;
+    type LineageStore = IndependentLineageStore<IntrinsicsMathsCore, O::Habitat>;
+    type MathsCore = IntrinsicsMathsCore;
+    type Rng = WyHash<IntrinsicsMathsCore>;
 
     #[allow(clippy::too_many_lines)]
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::F64Core, I>,
+        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         local_partition: &mut P,
     ) -> Result<(NonNegativeF64, u64), Self::Error> {
         match args.parallelism_mode {
@@ -117,9 +117,9 @@ impl<
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
                     scenario.build::<InMemoryAliasDispersalSampler<
-                        Self::F64Core,
+                        Self::MathsCore,
                         O::Habitat,
-                        WyHash<Self::F64Core>,
+                        WyHash<Self::MathsCore>,
                     >>();
                 let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
@@ -133,7 +133,7 @@ impl<
                 );
 
                 let simulation = SimulationBuilder {
-                    f64_core: PhantomData::<Self::F64Core>,
+                    maths: PhantomData::<Self::MathsCore>,
                     habitat,
                     lineage_reference: PhantomData::<GlobalLineageReference>,
                     lineage_store,
@@ -169,9 +169,9 @@ impl<
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
                     scenario.build::<InMemoryAliasDispersalSampler<
-                        Self::F64Core,
+                        Self::MathsCore,
                         O::Habitat,
-                        WyHash<Self::F64Core>,
+                        WyHash<Self::MathsCore>,
                     >>();
                 let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
@@ -184,7 +184,7 @@ impl<
                 );
 
                 let simulation = SimulationBuilder {
-                    f64_core: PhantomData::<Self::F64Core>,
+                    maths: PhantomData::<Self::MathsCore>,
                     habitat,
                     lineage_reference: PhantomData::<GlobalLineageReference>,
                     lineage_store,
@@ -223,9 +223,9 @@ impl<
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
                     scenario.build::<InMemoryAliasDispersalSampler<
-                        Self::F64Core,
+                        Self::MathsCore,
                         O::Habitat,
-                        WyHash<Self::F64Core>,
+                        WyHash<Self::MathsCore>,
                     >>();
                 let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
@@ -241,7 +241,7 @@ impl<
                 );
 
                 let simulation = SimulationBuilder {
-                    f64_core: PhantomData::<Self::F64Core>,
+                    maths: PhantomData::<Self::MathsCore>,
                     habitat,
                     lineage_reference: PhantomData::<GlobalLineageReference>,
                     lineage_store,
@@ -282,9 +282,9 @@ impl<
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
                     scenario.build::<InMemoryAliasDispersalSampler<
-                        Self::F64Core,
+                        Self::MathsCore,
                         O::Habitat,
-                        WyHash<Self::F64Core>,
+                        WyHash<Self::MathsCore>,
                     >>();
                 let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
@@ -300,7 +300,7 @@ impl<
                 );
 
                 let simulation = SimulationBuilder {
-                    f64_core: PhantomData::<Self::F64Core>,
+                    maths: PhantomData::<Self::MathsCore>,
                     habitat,
                     lineage_reference: PhantomData::<GlobalLineageReference>,
                     lineage_store,

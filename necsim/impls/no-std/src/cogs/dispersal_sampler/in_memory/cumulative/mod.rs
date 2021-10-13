@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, vec};
 
 use necsim_core::{
-    cogs::{Backup, F64Core, Habitat, RngCore},
+    cogs::{Backup, Habitat, MathsCore, RngCore},
     landscape::Location,
 };
 
@@ -18,7 +18,7 @@ pub struct InMemoryCumulativeDispersalSampler {
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> InMemoryDispersalSampler<F, H, G>
+impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, G>
     for InMemoryCumulativeDispersalSampler
 {
     /// Creates a new `InMemoryCumulativeDispersalSampler` from the

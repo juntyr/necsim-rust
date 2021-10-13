@@ -97,7 +97,7 @@ Please refer to [docs/simulate.ron](docs/simulate.ron) and [docs/replay.ron](doc
 necsim-rust consists of the following crates:
 - necsim/: this folder contains the core declaration of the simulation and implementation of its components
     - core/: `necsim-core` declares the core structs, simulation cogs traits, as well as the generic `Simulation`.
-        - f64/: `necsim-core-f64` declares the required `f64` intrinsics for simulating in a `no-std` environment, and provides a default implementation.
+        - maths/: `necsim-core-maths` declares the required `f64` intrinsics for simulating in a `no-std` environment, and provides a default implementation.
         - bond/: `necsim-core-bond` declares helper data types which guarantee a limited value range and are used for encoding preconditions through data types.
     - impls/:
         - no-std/: `necsim-impls-no-std` contains the implementations of cogs that **do not** require the Rust standard library

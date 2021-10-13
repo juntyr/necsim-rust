@@ -2,7 +2,7 @@ use alloc::boxed::Box;
 use core::{marker::PhantomData, num::NonZeroU32};
 
 use necsim_core::{
-    cogs::{Backup, F64Core, Habitat},
+    cogs::{Backup, Habitat, MathsCore},
     landscape::{LandscapeExtent, Location},
 };
 
@@ -16,7 +16,7 @@ mod test;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct EqualDecomposition<F: F64Core, H: Habitat<F>> {
+pub struct EqualDecomposition<M: MathsCore, H: Habitat<M>> {
     rank: u32,
     partitions: NonZeroU32,
 
@@ -25,11 +25,11 @@ pub struct EqualDecomposition<F: F64Core, H: Habitat<F>> {
 
     indices: Box<[u64]>,
 
-    _marker: PhantomData<(F, H)>,
+    _marker: PhantomData<(M, H)>,
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>> Backup for EqualDecomposition<F, H> {
+impl<M: MathsCore, H: Habitat<M>> Backup for EqualDecomposition<M, H> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             rank: self.rank,
@@ -37,13 +37,13 @@ impl<F: F64Core, H: Habitat<F>> Backup for EqualDecomposition<F, H> {
             extent: self.extent.clone(),
             morton: self.morton,
             indices: self.indices.clone(),
-            _marker: PhantomData::<(F, H)>,
+            _marker: PhantomData::<(M, H)>,
         }
     }
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>> Decomposition<F, H> for EqualDecomposition<F, H> {
+impl<M: MathsCore, H: Habitat<M>> Decomposition<M, H> for EqualDecomposition<M, H> {
     fn get_subdomain_rank(&self) -> u32 {
         self.rank
     }
@@ -70,11 +70,11 @@ impl<F: F64Core, H: Habitat<F>> Decomposition<F, H> for EqualDecomposition<F, H>
     }
 }
 
-impl<F: F64Core, H: Habitat<F>> EqualDecomposition<F, H> {
+impl<M: MathsCore, H: Habitat<M>> EqualDecomposition<M, H> {
     fn next_log2(coord: u32) -> u8 {
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         if coord > 1 {
-            F::ceil(F::ln(f64::from(coord)) / core::f64::consts::LN_2) as u8
+            M::ceil(M::ln(f64::from(coord)) / core::f64::consts::LN_2) as u8
         } else {
             0
         }
