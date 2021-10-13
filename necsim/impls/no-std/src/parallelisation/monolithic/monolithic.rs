@@ -1,8 +1,8 @@
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler, Habitat,
+        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler, F64Core, Habitat,
         LineageReference, LocallyCoherentLineageStore, RngCore, SpeciationProbability,
-        TurnoverRate, F64Core
+        TurnoverRate,
     },
     reporter::Reporter,
     simulation::Simulation,

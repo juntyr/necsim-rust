@@ -1,8 +1,8 @@
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use super::{
-    CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, ImmigrationEntry,
-    LineageReference, LineageStore, RngCore, SpeciationProbability, TurnoverRate, F64Core,
+    CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, F64Core, Habitat,
+    ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability, TurnoverRate,
 };
 
 use crate::{

@@ -1,4 +1,7 @@
-use crate::{cogs::{Habitat, F64Core}, landscape::IndexedLocation};
+use crate::{
+    cogs::{F64Core, Habitat},
+    landscape::IndexedLocation,
+};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]

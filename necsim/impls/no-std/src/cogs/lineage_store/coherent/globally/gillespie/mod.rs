@@ -6,7 +6,7 @@ use hashbrown::hash_map::HashMap;
 use slab::Slab;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, OriginSampler, F64Core},
+    cogs::{Backup, F64Core, Habitat, OriginSampler},
     landscape::IndexedLocation,
     lineage::{GlobalLineageReference, Lineage},
 };
@@ -22,7 +22,7 @@ pub struct GillespieLineageStore<F: F64Core, H: Habitat<F>> {
     location_to_lineage_references: Array2D<Vec<InMemoryLineageReference>>,
     indexed_location_to_lineage_reference:
         HashMap<IndexedLocation, (GlobalLineageReference, usize)>,
-    _marker: PhantomData<H>,
+    _marker: PhantomData<(F, H)>,
 }
 
 impl<F: F64Core, H: Habitat<F>> Index<InMemoryLineageReference> for GillespieLineageStore<F, H> {
@@ -85,7 +85,7 @@ impl<'h, F: F64Core, H: 'h + Habitat<F>> GillespieLineageStore<F, H> {
             lineages_store,
             location_to_lineage_references,
             indexed_location_to_lineage_reference,
-            _marker: PhantomData::<H>,
+            _marker: PhantomData::<(F, H)>,
         }
     }
 }
@@ -99,7 +99,7 @@ impl<F: F64Core, H: Habitat<F>> Backup for GillespieLineageStore<F, H> {
             indexed_location_to_lineage_reference: self
                 .indexed_location_to_lineage_reference
                 .clone(),
-            _marker: PhantomData::<H>,
+            _marker: PhantomData::<(F, H)>,
         }
     }
 }

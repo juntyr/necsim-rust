@@ -1,7 +1,7 @@
 use core::{fmt, iter::Iterator};
 
 use necsim_core::{
-    cogs::{OriginSampler, F64Core},
+    cogs::{F64Core, OriginSampler},
     landscape::{IndexedLocation, LandscapeExtent, LocationIterator},
 };
 
@@ -13,17 +13,17 @@ const HABITAT_CENTRE: u32 = u32::MAX / 2;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct AlmostInfiniteOriginSampler<'h, F: F64Core, I: Iterator<Item = u64>> {
-    pre_sampler: OriginPreSampler<I>,
+    pre_sampler: OriginPreSampler<F, I>,
     last_index: u64,
     location_iterator: LocationIterator,
     radius_squared: u64,
     upper_bound_size_hint: u64,
-    habitat: &'h AlmostInfiniteHabitat,
+    habitat: &'h AlmostInfiniteHabitat<F>,
 }
 
-impl<'h, I: Iterator<Item = u64>> fmt::Debug for AlmostInfiniteOriginSampler<'h, I> {
+impl<'h, F: F64Core, I: Iterator<Item = u64>> fmt::Debug for AlmostInfiniteOriginSampler<'h, F, I> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("AlmostInfiniteOriginSampler")
+        f.debug_struct(stringify!(AlmostInfiniteOriginSampler))
             .field("pre_sampler", &self.pre_sampler)
             .field("last_index", &self.last_index)
             .field("location_iterator", &self.location_iterator)
@@ -34,12 +34,12 @@ impl<'h, I: Iterator<Item = u64>> fmt::Debug for AlmostInfiniteOriginSampler<'h,
     }
 }
 
-impl<'h, I: Iterator<Item = u64>> AlmostInfiniteOriginSampler<'h, I> {
+impl<'h, F: F64Core, I: Iterator<Item = u64>> AlmostInfiniteOriginSampler<'h, F, I> {
     #[debug_requires(radius < (u32::MAX / 2), "sample circle fits into almost infinite habitat")]
     #[must_use]
     pub fn new(
-        pre_sampler: OriginPreSampler<I>,
-        habitat: &'h AlmostInfiniteHabitat,
+        pre_sampler: OriginPreSampler<F, I>,
+        habitat: &'h AlmostInfiniteHabitat<F>,
         radius: u32,
     ) -> Self {
         let sample_extent = LandscapeExtent::new(
@@ -50,7 +50,7 @@ impl<'h, I: Iterator<Item = u64>> AlmostInfiniteOriginSampler<'h, I> {
         );
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let upper_bound_size_hint = ceil(
+        let upper_bound_size_hint = F::ceil(
             f64::from(radius)
                 * f64::from(radius)
                 * core::f64::consts::PI
@@ -69,8 +69,10 @@ impl<'h, I: Iterator<Item = u64>> AlmostInfiniteOriginSampler<'h, I> {
 }
 
 #[contract_trait]
-impl<'h, I: Iterator<Item = u64>> OriginSampler<'h> for AlmostInfiniteOriginSampler<'h, I> {
-    type Habitat = AlmostInfiniteHabitat;
+impl<'h, F: F64Core, I: Iterator<Item = u64>> OriginSampler<'h, F>
+    for AlmostInfiniteOriginSampler<'h, F, I>
+{
+    type Habitat = AlmostInfiniteHabitat<F>;
 
     fn habitat(&self) -> &'h Self::Habitat {
         self.habitat
@@ -81,7 +83,7 @@ impl<'h, I: Iterator<Item = u64>> OriginSampler<'h> for AlmostInfiniteOriginSamp
     }
 }
 
-impl<'h, I: Iterator<Item = u64>> Iterator for AlmostInfiniteOriginSampler<'h, I> {
+impl<'h, F: F64Core, I: Iterator<Item = u64>> Iterator for AlmostInfiniteOriginSampler<'h, F, I> {
     type Item = IndexedLocation;
 
     fn next(&mut self) -> Option<Self::Item> {

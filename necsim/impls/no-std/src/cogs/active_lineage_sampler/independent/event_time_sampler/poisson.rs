@@ -1,9 +1,8 @@
 use necsim_core::{
-    cogs::{Habitat, HabitatPrimeableRng, PrimeableRng, RngSampler, TurnoverRate},
+    cogs::{F64Core, Habitat, HabitatPrimeableRng, PrimeableRng, RngSampler, TurnoverRate},
     landscape::IndexedLocation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
-use necsim_core_f64::{exp, floor};
 
 use super::EventTimeSampler;
 
@@ -25,8 +24,8 @@ impl PoissonEventTimeSampler {
 }
 
 #[contract_trait]
-impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
-    for PoissonEventTimeSampler
+impl<F: F64Core, H: Habitat<F>, G: PrimeableRng<F>, T: TurnoverRate<F, H>>
+    EventTimeSampler<F, H, G, T> for PoissonEventTimeSampler
 {
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
@@ -40,11 +39,11 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
         let lambda =
             turnover_rate.get_turnover_rate_at_location(indexed_location.location(), habitat);
         let lambda_per_step = lambda * self.delta_t;
-        let no_event_probability_per_step = exp(-lambda_per_step.get());
+        let no_event_probability_per_step = F::exp(-lambda_per_step.get());
 
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
-        let mut time_step = floor(time.get() / self.delta_t.get()) as u64;
+        let mut time_step = F::floor(time.get() / self.delta_t.get()) as u64;
 
         let (event_time, event_index) = loop {
             rng.prime_with_habitat(habitat, indexed_location, time_step);
@@ -68,7 +67,7 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
                 // Fallback in case no_event_probability_per_step underflows
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let normal_as_poisson = rng
-                    .sample_2d_normal(lambda_per_step.get(), lambda_per_step.sqrt())
+                    .sample_2d_normal(lambda_per_step.get(), lambda_per_step.sqrt::<F>())
                     .0
                     .max(0.0_f64) as u32;
 

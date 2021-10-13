@@ -1,6 +1,6 @@
 use core::ops::Index;
 
-use super::{Habitat, LineageReference, OriginSampler, F64Core};
+use super::{F64Core, Habitat, LineageReference, OriginSampler};
 use crate::{
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},

@@ -1,6 +1,6 @@
 use core::{hash::Hash, num::NonZeroUsize};
 
-use necsim_core::cogs::{Backup, Habitat, LineageReference, F64Core};
+use necsim_core::cogs::{Backup, F64Core, Habitat, LineageReference};
 
 // InMemoryLineageReference uses a NonZeroUsize internally to enable same-size
 // Option optimisation

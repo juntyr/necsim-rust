@@ -26,7 +26,7 @@ pub struct MetacommunityMigrationReporter {
 
 impl fmt::Debug for MetacommunityMigrationReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("MetacommunityMigrationReporter")
+        fmt.debug_struct(stringify!(MetacommunityMigrationReporter))
             .field("metacommunity", &self.metacommunity)
             .field("seed", &self.seed)
             .field("migrations", &self.migrations)

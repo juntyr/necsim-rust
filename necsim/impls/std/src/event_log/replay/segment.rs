@@ -23,7 +23,7 @@ pub struct SortedSegment {
 
 impl fmt::Debug for SortedSegment {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("SortedSegment")
+        fmt.debug_struct(stringify!(SortedSegment))
             .field("header", &self.header)
             .finish()
     }

@@ -1,9 +1,11 @@
+use core::marker::PhantomData;
+
 use alloc::{boxed::Box, vec::Vec};
 
 use r#final::Final;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, F64Core},
+    cogs::{Backup, F64Core, Habitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -12,27 +14,29 @@ use crate::array2d::Array2D;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-pub struct InMemoryHabitat {
+pub struct InMemoryHabitat<F: F64Core> {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     habitat: Final<Box<[u32]>>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     u64_injection: Final<Box<[u64]>>,
     extent: LandscapeExtent,
+    marker: PhantomData<F>,
 }
 
 #[contract_trait]
-impl Backup for InMemoryHabitat {
+impl<F: F64Core> Backup for InMemoryHabitat<F> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             habitat: Final::new(self.habitat.clone()),
             u64_injection: Final::new(self.u64_injection.clone()),
             extent: self.extent.clone(),
+            marker: PhantomData::<F>,
         }
     }
 }
 
 #[contract_trait]
-impl<F: F64Core> Habitat<F> for InMemoryHabitat {
+impl<F: F64Core> Habitat<F> for InMemoryHabitat<F> {
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
         &self.extent
@@ -64,7 +68,7 @@ impl<F: F64Core> Habitat<F> for InMemoryHabitat {
     }
 }
 
-impl InMemoryHabitat {
+impl<F: F64Core> InMemoryHabitat<F> {
     #[must_use]
     #[debug_ensures(
         old(habitat.num_columns()) == ret.get_extent().width() as usize &&
@@ -98,6 +102,7 @@ impl InMemoryHabitat {
             habitat: Final::new(habitat),
             u64_injection: Final::new(u64_injection),
             extent,
+            marker: PhantomData::<F>,
         }
     }
 }

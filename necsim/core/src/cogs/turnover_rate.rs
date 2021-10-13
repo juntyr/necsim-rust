@@ -1,6 +1,9 @@
 use necsim_core_bond::NonNegativeF64;
 
-use crate::{cogs::{Habitat, F64Core}, landscape::Location};
+use crate::{
+    cogs::{F64Core, Habitat},
+    landscape::Location,
+};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]

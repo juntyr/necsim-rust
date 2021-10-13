@@ -1,17 +1,20 @@
+use core::marker::PhantomData;
+
 use necsim_core::{
-    cogs::{Backup, Habitat, F64Core},
+    cogs::{Backup, F64Core, Habitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-pub struct NonSpatialHabitat {
+pub struct NonSpatialHabitat<F: F64Core> {
     extent: LandscapeExtent,
     deme: u32,
+    marker: PhantomData<F>,
 }
 
-impl NonSpatialHabitat {
+impl<F: F64Core> NonSpatialHabitat<F> {
     #[must_use]
     #[debug_ensures(
         ret.get_total_habitat() == old(u64::from(area.0) * u64::from(area.1) * u64::from(deme)),
@@ -21,6 +24,7 @@ impl NonSpatialHabitat {
         Self {
             extent: LandscapeExtent::new(0, 0, area.0, area.1),
             deme,
+            marker: PhantomData::<F>,
         }
     }
 
@@ -28,6 +32,7 @@ impl NonSpatialHabitat {
         Self {
             extent: LandscapeExtent::new(width, height, area.0, area.1),
             deme,
+            marker: PhantomData::<F>,
         }
     }
 
@@ -38,17 +43,18 @@ impl NonSpatialHabitat {
 }
 
 #[contract_trait]
-impl Backup for NonSpatialHabitat {
+impl<F: F64Core> Backup for NonSpatialHabitat<F> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             extent: self.extent.clone(),
             deme: self.deme,
+            marker: PhantomData::<F>,
         }
     }
 }
 
 #[contract_trait]
-impl<F: F64Core> Habitat<F> for NonSpatialHabitat {
+impl<F: F64Core> Habitat<F> for NonSpatialHabitat<F> {
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
         &self.extent

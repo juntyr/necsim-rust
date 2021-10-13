@@ -11,7 +11,7 @@ pub struct ExecutionTimeReporter {
 
 impl fmt::Debug for ExecutionTimeReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("ExecutionTimeReporter")
+        fmt.debug_struct(stringify!(ExecutionTimeReporter))
             .field(
                 "start_time",
                 &self

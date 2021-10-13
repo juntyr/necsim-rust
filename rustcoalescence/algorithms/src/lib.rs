@@ -1,7 +1,7 @@
 #![deny(clippy::pedantic)]
 
 use necsim_core::{
-    cogs::{LineageReference, LineageStore, RngCore},
+    cogs::{F64Core, LineageReference, LineageStore, RngCore},
     reporter::Reporter,
 };
 use necsim_core_bond::NonNegativeF64;
@@ -15,14 +15,15 @@ pub trait AlgorithmArguments {
     type Arguments;
 }
 
-pub trait Algorithm<O: Scenario<Self::Rng>, R: Reporter, P: LocalPartition<R>>:
+pub trait Algorithm<O: Scenario<Self::F64Core, Self::Rng>, R: Reporter, P: LocalPartition<R>>:
     Sized + AlgorithmArguments
 {
     type Error;
 
-    type Rng: RngCore;
-    type LineageReference: LineageReference<O::Habitat>;
-    type LineageStore: LineageStore<O::Habitat, Self::LineageReference>;
+    type F64Core: F64Core;
+    type Rng: RngCore<Self::F64Core>;
+    type LineageReference: LineageReference<Self::F64Core, O::Habitat>;
+    type LineageStore: LineageStore<Self::F64Core, O::Habitat, Self::LineageReference>;
 
     /// # Errors
     ///
@@ -31,7 +32,7 @@ pub trait Algorithm<O: Scenario<Self::Rng>, R: Reporter, P: LocalPartition<R>>:
         args: Self::Arguments,
         seed: u64,
         scenario: O,
-        pre_sampler: OriginPreSampler<I>,
+        pre_sampler: OriginPreSampler<Self::F64Core, I>,
         local_partition: &mut P,
     ) -> Result<(NonNegativeF64, u64), Self::Error>;
 }

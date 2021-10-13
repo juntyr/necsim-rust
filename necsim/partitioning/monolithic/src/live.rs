@@ -61,7 +61,7 @@ impl<R: Reporter> fmt::Debug for LiveMonolithicLocalPartition<R> {
             }
         }
 
-        fmt.debug_struct("LiveMonolithicLocalPartition")
+        fmt.debug_struct(stringify!(LiveMonolithicLocalPartition))
             .field("reporter", &self.reporter)
             .field("loopback", &LoopbackLen(self.loopback.len()))
             .finish()

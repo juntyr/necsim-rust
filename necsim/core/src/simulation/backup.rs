@@ -2,8 +2,8 @@ use core::marker::PhantomData;
 
 use crate::cogs::{
     backup::BackedUp, ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler,
-    EmigrationExit, EventSampler, Habitat, ImmigrationEntry, LineageReference, LineageStore,
-    RngCore, SpeciationProbability, TurnoverRate, F64Core
+    EmigrationExit, EventSampler, F64Core, Habitat, ImmigrationEntry, LineageReference,
+    LineageStore, RngCore, SpeciationProbability, TurnoverRate,
 };
 
 use super::Simulation;

@@ -27,7 +27,7 @@ impl<'p, R: Reporter, P: LocalPartition<R>> fmt::Debug
             }
         }
 
-        fmt.debug_struct("RecordedWaterLevelReporterProxy")
+        fmt.debug_struct(stringify!(RecordedWaterLevelReporterProxy))
             .field("water_level", &self.water_level)
             .finish()
     }

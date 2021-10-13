@@ -1,14 +1,13 @@
-use core::fmt;
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{Backup, PrimeableRng, RngCore, F64Core};
+use necsim_core::cogs::{Backup, F64Core, PrimeableRng, RngCore};
 
 use rust_cuda::memory::StackOnly;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(rust_cuda::common::LendRustToCuda)]
+#[derive(Debug, rust_cuda::common::LendRustToCuda)]
 pub struct CudaRng<F: F64Core, R: RngCore<F> + StackOnly> {
     inner: R,
     marker: PhantomData<F>,
@@ -23,19 +22,14 @@ impl<F: F64Core, R: RngCore<F> + StackOnly> Clone for CudaRng<F, R> {
     }
 }
 
-impl<F: F64Core, R: RngCore<F> + StackOnly> fmt::Debug for CudaRng<F, R> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_tuple(stringify!(CudaRng))
-            .field(&self.inner)
-            .finish()
-    }
-}
-
 impl<F: F64Core, R: RngCore<F> + StackOnly> From<R> for CudaRng<F, R> {
     #[must_use]
     #[inline]
     fn from(rng: R) -> Self {
-        Self { inner: rng, marker: PhantomData }
+        Self {
+            inner: rng,
+            marker: PhantomData,
+        }
     }
 }
 
@@ -82,6 +76,9 @@ impl<'de, F: F64Core, R: RngCore<F> + StackOnly> Deserialize<'de> for CudaRng<F,
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let inner = R::deserialize(deserializer)?;
 
-        Ok(Self { inner, marker: PhantomData })
+        Ok(Self {
+            inner,
+            marker: PhantomData,
+        })
     }
 }

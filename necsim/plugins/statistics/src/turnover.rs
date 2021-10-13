@@ -27,7 +27,7 @@ pub struct GlobalTurnoverReporter {
 
 impl fmt::Debug for GlobalTurnoverReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("GlobalTurnoverReporter")
+        fmt.debug_struct(stringify!(GlobalTurnoverReporter))
             .field("output", &self.output)
             .finish()
     }

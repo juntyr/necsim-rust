@@ -20,7 +20,7 @@ pub struct EventLogHeader {
 
 impl fmt::Debug for EventLogHeader {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("EventLogHeader")
+        fmt.debug_struct(stringify!(EventLogHeader))
             .field("min_time", &self.min_time)
             .field("max_time", &self.max_time)
             .field("length", &self.length)

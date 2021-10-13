@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, Habitat, RngCore, SeparableDispersalSampler, F64Core},
+    cogs::{Backup, DispersalSampler, F64Core, Habitat, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
 use necsim_core_bond::ClosedUnitF64;
@@ -28,19 +28,21 @@ impl<F: F64Core, G: RngCore<F>> Default for NonSpatialDispersalSampler<F, G> {
 impl<F: F64Core, G: RngCore<F>> Backup for NonSpatialDispersalSampler<F, G> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
-            marker: PhantomData::<G>,
+            marker: PhantomData::<(F, G)>,
         }
     }
 }
 
 #[contract_trait]
-impl<F: F64Core, G: RngCore<F>> DispersalSampler<F, NonSpatialHabitat, G> for NonSpatialDispersalSampler<F, G> {
+impl<F: F64Core, G: RngCore<F>> DispersalSampler<F, NonSpatialHabitat<F>, G>
+    for NonSpatialDispersalSampler<F, G>
+{
     #[must_use]
     #[inline]
     fn sample_dispersal_from_location(
         &self,
         _location: &Location,
-        habitat: &NonSpatialHabitat,
+        habitat: &NonSpatialHabitat<F>,
         rng: &mut G,
     ) -> Location {
         use necsim_core::cogs::RngSampler;
@@ -61,7 +63,9 @@ impl<F: F64Core, G: RngCore<F>> DispersalSampler<F, NonSpatialHabitat, G> for No
 }
 
 #[contract_trait]
-impl<F: F64Core, G: RngCore<F>> SeparableDispersalSampler<F, NonSpatialHabitat, G> for NonSpatialDispersalSampler<F, G> {
+impl<F: F64Core, G: RngCore<F>> SeparableDispersalSampler<F, NonSpatialHabitat<F>, G>
+    for NonSpatialDispersalSampler<F, G>
+{
     #[must_use]
     #[debug_requires((
         u64::from(habitat.get_extent().width()) * u64::from(habitat.get_extent().height())
@@ -69,7 +73,7 @@ impl<F: F64Core, G: RngCore<F>> SeparableDispersalSampler<F, NonSpatialHabitat, 
     fn sample_non_self_dispersal_from_location(
         &self,
         location: &Location,
-        habitat: &NonSpatialHabitat,
+        habitat: &NonSpatialHabitat<F>,
         rng: &mut G,
     ) -> Location {
         use necsim_core::cogs::RngSampler;
@@ -103,7 +107,7 @@ impl<F: F64Core, G: RngCore<F>> SeparableDispersalSampler<F, NonSpatialHabitat, 
     fn get_self_dispersal_probability_at_location(
         &self,
         _location: &Location,
-        habitat: &NonSpatialHabitat,
+        habitat: &NonSpatialHabitat<F>,
     ) -> ClosedUnitF64 {
         let self_dispersal = 1.0_f64
             / (f64::from(habitat.get_extent().width()) * f64::from(habitat.get_extent().height()));

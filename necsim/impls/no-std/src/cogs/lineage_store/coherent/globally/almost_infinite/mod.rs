@@ -1,11 +1,10 @@
-use core::ops::Index;
-use core::marker::PhantomData;
+use core::{marker::PhantomData, ops::Index};
 
 use hashbrown::hash_map::HashMap;
 use slab::Slab;
 
 use necsim_core::{
-    cogs::{Backup, OriginSampler, F64Core},
+    cogs::{Backup, F64Core, OriginSampler},
     landscape::Location,
     lineage::Lineage,
 };
@@ -40,7 +39,7 @@ impl<F: F64Core> Index<InMemoryLineageReference> for AlmostInfiniteLineageStore<
 
 impl<F: F64Core> AlmostInfiniteLineageStore<F> {
     #[must_use]
-    pub fn new<'h, O: OriginSampler<'h, F, Habitat = AlmostInfiniteHabitat>>(
+    pub fn new<'h, O: OriginSampler<'h, F, Habitat = AlmostInfiniteHabitat<F>>>(
         mut origin_sampler: O,
     ) -> Self {
         #[allow(clippy::cast_possible_truncation)]

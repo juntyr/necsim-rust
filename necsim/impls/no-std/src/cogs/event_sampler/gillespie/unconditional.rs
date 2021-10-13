@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         coalescence_sampler::CoalescenceRngSample, event_sampler::EventHandler, Backup,
-        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
+        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, F64Core,
         GloballyCoherentLineageStore, Habitat, LineageReference, RngCore, SpeciationProbability,
         TurnoverRate,
     },
@@ -19,65 +19,69 @@ use super::{GillespieEventSampler, GillespiePartialSimulation};
 #[allow(clippy::module_name_repetitions, clippy::type_complexity)]
 #[derive(Debug)]
 pub struct UnconditionalGillespieEventSampler<
-    H: Habitat,
-    G: RngCore,
-    R: LineageReference<H>,
-    S: GloballyCoherentLineageStore<H, R>,
-    X: EmigrationExit<H, G, R, S>,
-    D: DispersalSampler<H, G>,
-    C: CoalescenceSampler<H, R, S>,
-    T: TurnoverRate<H>,
-    N: SpeciationProbability<H>,
->(PhantomData<(H, G, R, S, X, D, C, T, N)>);
+    F: F64Core,
+    H: Habitat<F>,
+    G: RngCore<F>,
+    R: LineageReference<F, H>,
+    S: GloballyCoherentLineageStore<F, H, R>,
+    X: EmigrationExit<F, H, G, R, S>,
+    D: DispersalSampler<F, H, G>,
+    C: CoalescenceSampler<F, H, R, S>,
+    T: TurnoverRate<F, H>,
+    N: SpeciationProbability<F, H>,
+>(PhantomData<(F, H, G, R, S, X, D, C, T, N)>);
 
 impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: GloballyCoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: DispersalSampler<H, G>,
-        C: CoalescenceSampler<H, R, S>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-    > Default for UnconditionalGillespieEventSampler<H, G, R, S, X, D, C, T, N>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: GloballyCoherentLineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: DispersalSampler<F, H, G>,
+        C: CoalescenceSampler<F, H, R, S>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+    > Default for UnconditionalGillespieEventSampler<F, H, G, R, S, X, D, C, T, N>
 {
     fn default() -> Self {
-        Self(PhantomData::<(H, G, R, S, X, D, C, T, N)>)
+        Self(PhantomData::<(F, H, G, R, S, X, D, C, T, N)>)
     }
 }
 
 #[contract_trait]
 impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: GloballyCoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: DispersalSampler<H, G>,
-        C: CoalescenceSampler<H, R, S>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-    > Backup for UnconditionalGillespieEventSampler<H, G, R, S, X, D, C, T, N>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: GloballyCoherentLineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: DispersalSampler<F, H, G>,
+        C: CoalescenceSampler<F, H, R, S>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+    > Backup for UnconditionalGillespieEventSampler<F, H, G, R, S, X, D, C, T, N>
 {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(PhantomData::<(H, G, R, S, X, D, C, T, N)>)
+        Self(PhantomData::<(F, H, G, R, S, X, D, C, T, N)>)
     }
 }
 
 #[contract_trait]
 impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: GloballyCoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: DispersalSampler<H, G>,
-        C: CoalescenceSampler<H, R, S>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-    > EventSampler<H, G, R, S, X, D, C, T, N>
-    for UnconditionalGillespieEventSampler<H, G, R, S, X, D, C, T, N>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: GloballyCoherentLineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: DispersalSampler<F, H, G>,
+        C: CoalescenceSampler<F, H, R, S>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+    > EventSampler<F, H, G, R, S, X, D, C, T, N>
+    for UnconditionalGillespieEventSampler<F, H, G, R, S, X, D, C, T, N>
 {
     #[must_use]
     fn sample_event_for_lineage_at_event_time_or_emigrate<
@@ -94,7 +98,7 @@ impl<
             indexed_location: dispersal_origin,
         }: Lineage,
         event_time: PositiveF64,
-        simulation: &mut PartialSimulation<H, G, R, S, X, D, C, T, N>,
+        simulation: &mut PartialSimulation<F, H, G, R, S, X, D, C, T, N>,
         rng: &mut G,
         EventHandler {
             speciation,
@@ -176,23 +180,24 @@ impl<
 
 #[contract_trait]
 impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: GloballyCoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: DispersalSampler<H, G>,
-        C: CoalescenceSampler<H, R, S>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-    > GillespieEventSampler<H, G, R, S, X, D, C, T, N>
-    for UnconditionalGillespieEventSampler<H, G, R, S, X, D, C, T, N>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: GloballyCoherentLineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: DispersalSampler<F, H, G>,
+        C: CoalescenceSampler<F, H, R, S>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+    > GillespieEventSampler<F, H, G, R, S, X, D, C, T, N>
+    for UnconditionalGillespieEventSampler<F, H, G, R, S, X, D, C, T, N>
 {
     #[must_use]
     fn get_event_rate_at_location(
         &self,
         location: &Location,
-        simulation: &GillespiePartialSimulation<H, G, R, S, D, C, T, N>,
+        simulation: &GillespiePartialSimulation<F, H, G, R, S, D, C, T, N>,
     ) -> NonNegativeF64 {
         let population = NonNegativeF64::from(
             simulation

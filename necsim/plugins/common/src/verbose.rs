@@ -8,7 +8,7 @@ pub struct VerboseReporter(());
 
 impl fmt::Debug for VerboseReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("VerboseReporter").finish()
+        fmt.debug_struct(stringify!(VerboseReporter)).finish()
     }
 }
 

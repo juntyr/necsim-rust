@@ -35,7 +35,7 @@ impl<R: Reporter> fmt::Debug for RecordedMonolithicLocalPartition<R> {
             }
         }
 
-        fmt.debug_struct("RecordedMonolithicLocalPartition")
+        fmt.debug_struct(stringify!(RecordedMonolithicLocalPartition))
             .field("reporter", &self.reporter)
             .field("recorder", &self.recorder)
             .field("loopback", &LoopbackLen(self.loopback.len()))

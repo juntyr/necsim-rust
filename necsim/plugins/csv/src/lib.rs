@@ -27,7 +27,7 @@ pub struct CsvReporter {
 
 impl fmt::Debug for CsvReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("CsvReporter")
+        fmt.debug_struct(stringify!(CsvReporter))
             .field("output", &self.output)
             .finish()
     }

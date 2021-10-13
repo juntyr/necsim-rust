@@ -8,8 +8,8 @@ use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, Habitat, PrimeableRng, SpeciationProbability,
-        TurnoverRate, F64Core
+        ActiveLineageSampler, DispersalSampler, F64Core, Habitat, PrimeableRng,
+        SpeciationProbability, TurnoverRate,
     },
     event::DispersalEvent,
     landscape::IndexedLocation,
@@ -44,12 +44,12 @@ pub fn simulate<
     F: F64Core,
     H: Habitat<F>,
     C: Decomposition<F, H>,
-    E: EmigrationChoice<H>,
+    E: EmigrationChoice<F, H>,
     G: PrimeableRng<F>,
     D: DispersalSampler<F, H, G>,
     T: TurnoverRate<F, H>,
     N: SpeciationProbability<F, H>,
-    J: EventTimeSampler<H, G, T>,
+    J: EventTimeSampler<F, H, G, T>,
     R: Reporter,
     P: LocalPartition<R>,
     L: IntoIterator<Item = Lineage>,
@@ -59,15 +59,15 @@ pub fn simulate<
         H,
         G,
         GlobalLineageReference,
-        IndependentLineageStore<H>,
-        IndependentEmigrationExit<H, C, E>,
+        IndependentLineageStore<F, H>,
+        IndependentEmigrationExit<F, H, C, E>,
         D,
-        IndependentCoalescenceSampler<H>,
+        IndependentCoalescenceSampler<F, H>,
         T,
         N,
-        IndependentEventSampler<H, G, IndependentEmigrationExit<H, C, E>, D, T, N>,
+        IndependentEventSampler<F, H, G, IndependentEmigrationExit<F, H, C, E>, D, T, N>,
         NeverImmigrationEntry,
-        IndependentActiveLineageSampler<H, G, IndependentEmigrationExit<H, C, E>, D, T, N, J>,
+        IndependentActiveLineageSampler<F, H, G, IndependentEmigrationExit<F, H, C, E>, D, T, N, J>,
     >,
     lineages: L,
     dedup_cache: DedupCache,
@@ -155,7 +155,7 @@ pub fn simulate<
             } = immigrant;
 
             // Finish sampling the dispersal of the immigrating individual
-            let target_index = coalescence_rng_sample.sample_coalescence_index(
+            let target_index = coalescence_rng_sample.sample_coalescence_index::<F>(
                 simulation
                     .habitat()
                     .get_habitat_at_location(&dispersal_target),

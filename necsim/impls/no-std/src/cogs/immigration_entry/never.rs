@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, ImmigrationEntry, F64Core},
+    cogs::{Backup, F64Core, ImmigrationEntry},
     lineage::MigratingLineage,
 };
 

@@ -3,9 +3,10 @@ use std::{hint::unreachable_unchecked, marker::PhantomData};
 use necsim_core::{
     cogs::{LineageStore, LocallyCoherentLineageStore, SeedableRng, SplittableRng},
     reporter::Reporter,
-    simulation::Simulation,
+    simulation::SimulationBuilder,
 };
 use necsim_core_bond::NonNegativeF64;
+use necsim_core_f64::IntrinsicsF64Core;
 
 use necsim_impls_no_std::{
     cogs::{
@@ -44,7 +45,8 @@ impl AlgorithmArguments for ClassicalAlgorithm {
 #[allow(clippy::type_complexity)]
 impl<
         O: Scenario<
-            Pcg,
+            IntrinsicsF64Core,
+            Pcg<IntrinsicsF64Core>,
             LineageReference = InMemoryLineageReference,
             TurnoverRate = UniformTurnoverRate,
         >,
@@ -52,19 +54,21 @@ impl<
         P: LocalPartition<R>,
     > Algorithm<O, R, P> for ClassicalAlgorithm
 where
-    O::LineageStore<ClassicalLineageStore<O::Habitat>>:
-        LocallyCoherentLineageStore<O::Habitat, InMemoryLineageReference>,
+    O::LineageStore<ClassicalLineageStore<IntrinsicsF64Core, O::Habitat>>:
+        LocallyCoherentLineageStore<IntrinsicsF64Core, O::Habitat, InMemoryLineageReference>,
 {
     type Error = !;
+    type F64Core = IntrinsicsF64Core;
     type LineageReference = InMemoryLineageReference;
-    type LineageStore = O::LineageStore<ClassicalLineageStore<O::Habitat>>;
-    type Rng = Pcg;
+    type LineageStore = O::LineageStore<ClassicalLineageStore<Self::F64Core, O::Habitat>>;
+    type Rng = Pcg<Self::F64Core>;
 
+    #[allow(clippy::too_many_lines)]
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,
-        pre_sampler: OriginPreSampler<I>,
+        pre_sampler: OriginPreSampler<Self::F64Core, I>,
         local_partition: &mut P,
     ) -> Result<(NonNegativeF64, u64), Self::Error> {
         match args.parallelism_mode {
@@ -73,27 +77,33 @@ where
                 let lineage_store =
                     Self::LineageStore::from_origin_sampler(scenario.sample_habitat(pre_sampler));
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, Pcg>>();
+                    scenario.build::<InMemoryAliasDispersalSampler<
+                        Self::F64Core,
+                        O::Habitat,
+                        Pcg<Self::F64Core>,
+                    >>();
                 let coalescence_sampler = UnconditionalCoalescenceSampler::default();
                 let emigration_exit = NeverEmigrationExit::default();
                 let event_sampler = UnconditionalEventSampler::default();
                 let immigration_entry = NeverImmigrationEntry::default();
                 let active_lineage_sampler = ClassicalActiveLineageSampler::new(&lineage_store);
 
-                let simulation = Simulation::builder()
-                    .habitat(habitat)
-                    .rng(rng)
-                    .speciation_probability(speciation_probability)
-                    .dispersal_sampler(dispersal_sampler)
-                    .lineage_reference(PhantomData::<Self::LineageReference>)
-                    .lineage_store(lineage_store)
-                    .emigration_exit(emigration_exit)
-                    .coalescence_sampler(coalescence_sampler)
-                    .turnover_rate(turnover_rate)
-                    .event_sampler(event_sampler)
-                    .immigration_entry(immigration_entry)
-                    .active_lineage_sampler(active_lineage_sampler)
-                    .build();
+                let simulation = SimulationBuilder {
+                    f64_core: PhantomData::<Self::F64Core>,
+                    habitat,
+                    lineage_reference: PhantomData::<Self::LineageReference>,
+                    lineage_store,
+                    dispersal_sampler,
+                    coalescence_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    emigration_exit,
+                    event_sampler,
+                    active_lineage_sampler,
+                    rng,
+                    immigration_entry,
+                }
+                .build();
 
                 Ok(parallelisation::monolithic::monolithic::simulate(
                     simulation,
@@ -115,27 +125,33 @@ where
                         &decomposition,
                     ));
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, Pcg>>();
+                    scenario.build::<InMemoryAliasDispersalSampler<
+                        Self::F64Core,
+                        O::Habitat,
+                        Pcg<Self::F64Core>,
+                    >>();
                 let coalescence_sampler = UnconditionalCoalescenceSampler::default();
                 let emigration_exit = DomainEmigrationExit::new(decomposition);
                 let event_sampler = UnconditionalEventSampler::default();
                 let immigration_entry = BufferedImmigrationEntry::default();
                 let active_lineage_sampler = ClassicalActiveLineageSampler::new(&lineage_store);
 
-                let simulation = Simulation::builder()
-                    .habitat(habitat)
-                    .rng(rng)
-                    .speciation_probability(speciation_probability)
-                    .dispersal_sampler(dispersal_sampler)
-                    .lineage_reference(PhantomData::<Self::LineageReference>)
-                    .lineage_store(lineage_store)
-                    .emigration_exit(emigration_exit)
-                    .coalescence_sampler(coalescence_sampler)
-                    .turnover_rate(turnover_rate)
-                    .event_sampler(event_sampler)
-                    .immigration_entry(immigration_entry)
-                    .active_lineage_sampler(active_lineage_sampler)
-                    .build();
+                let simulation = SimulationBuilder {
+                    f64_core: PhantomData::<Self::F64Core>,
+                    habitat,
+                    lineage_reference: PhantomData::<Self::LineageReference>,
+                    lineage_store,
+                    dispersal_sampler,
+                    coalescence_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    emigration_exit,
+                    event_sampler,
+                    active_lineage_sampler,
+                    rng,
+                    immigration_entry,
+                }
+                .build();
 
                 match non_monolithic_parallelism_mode {
                     ParallelismMode::Monolithic => unsafe { unreachable_unchecked() },
