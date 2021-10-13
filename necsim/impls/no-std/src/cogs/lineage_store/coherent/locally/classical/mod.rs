@@ -4,7 +4,7 @@ use hashbrown::hash_map::HashMap;
 use slab::Slab;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, OriginSampler, F64Core},
+    cogs::{Backup, F64Core, Habitat, OriginSampler},
     landscape::IndexedLocation,
     lineage::Lineage,
 };
@@ -58,7 +58,7 @@ impl<'h, F: F64Core, H: 'h + Habitat<F>> ClassicalLineageStore<F, H> {
         Self {
             lineages_store,
             indexed_location_to_lineage_reference,
-            _marker: PhantomData::<H>,
+            _marker: PhantomData::<(F, H)>,
         }
     }
 }
@@ -71,7 +71,7 @@ impl<F: F64Core, H: Habitat<F>> Backup for ClassicalLineageStore<F, H> {
             indexed_location_to_lineage_reference: self
                 .indexed_location_to_lineage_reference
                 .clone(),
-            _marker: PhantomData::<H>,
+            _marker: PhantomData::<(F, H)>,
         }
     }
 }

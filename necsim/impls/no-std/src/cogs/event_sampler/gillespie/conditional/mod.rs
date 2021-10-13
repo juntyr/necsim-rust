@@ -3,9 +3,9 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         coalescence_sampler::CoalescenceRngSample, event_sampler::EventHandler, Backup,
-        CoalescenceSampler, EmigrationExit, EventSampler, GloballyCoherentLineageStore, Habitat,
-        LineageReference, RngCore, RngSampler, SeparableDispersalSampler, SpeciationProbability,
-        TurnoverRate,
+        CoalescenceSampler, EmigrationExit, EventSampler, F64Core, GloballyCoherentLineageStore,
+        Habitat, LineageReference, RngCore, RngSampler, SeparableDispersalSampler,
+        SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
     landscape::Location,
@@ -26,61 +26,65 @@ use probability::ProbabilityAtLocation;
 #[allow(clippy::module_name_repetitions, clippy::type_complexity)]
 #[derive(Debug)]
 pub struct ConditionalGillespieEventSampler<
-    H: Habitat,
-    G: RngCore,
-    R: LineageReference<H>,
-    S: GloballyCoherentLineageStore<H, R>,
-    X: EmigrationExit<H, G, R, S>,
-    D: SeparableDispersalSampler<H, G>,
-    T: TurnoverRate<H>,
-    N: SpeciationProbability<H>,
->(PhantomData<(H, G, R, S, X, D, T, N)>);
+    F: F64Core,
+    H: Habitat<F>,
+    G: RngCore<F>,
+    R: LineageReference<F, H>,
+    S: GloballyCoherentLineageStore<F, H, R>,
+    X: EmigrationExit<F, H, G, R, S>,
+    D: SeparableDispersalSampler<F, H, G>,
+    T: TurnoverRate<F, H>,
+    N: SpeciationProbability<F, H>,
+>(PhantomData<(F, H, G, R, S, X, D, T, N)>);
 
 impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: GloballyCoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: SeparableDispersalSampler<H, G>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-    > Default for ConditionalGillespieEventSampler<H, G, R, S, X, D, T, N>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: GloballyCoherentLineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: SeparableDispersalSampler<F, H, G>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+    > Default for ConditionalGillespieEventSampler<F, H, G, R, S, X, D, T, N>
 {
     fn default() -> Self {
-        Self(PhantomData::<(H, G, R, S, X, D, T, N)>)
+        Self(PhantomData::<(F, H, G, R, S, X, D, T, N)>)
     }
 }
 
 #[contract_trait]
 impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: GloballyCoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: SeparableDispersalSampler<H, G>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-    > Backup for ConditionalGillespieEventSampler<H, G, R, S, X, D, T, N>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: GloballyCoherentLineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: SeparableDispersalSampler<F, H, G>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+    > Backup for ConditionalGillespieEventSampler<F, H, G, R, S, X, D, T, N>
 {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(PhantomData::<(H, G, R, S, X, D, T, N)>)
+        Self(PhantomData::<(F, H, G, R, S, X, D, T, N)>)
     }
 }
 
 #[contract_trait]
 impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: GloballyCoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: SeparableDispersalSampler<H, G>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-    > EventSampler<H, G, R, S, X, D, ConditionalCoalescenceSampler<H, R, S>, T, N>
-    for ConditionalGillespieEventSampler<H, G, R, S, X, D, T, N>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: GloballyCoherentLineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: SeparableDispersalSampler<F, H, G>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+    > EventSampler<F, H, G, R, S, X, D, ConditionalCoalescenceSampler<F, H, R, S>, T, N>
+    for ConditionalGillespieEventSampler<F, H, G, R, S, X, D, T, N>
 {
     #[must_use]
     #[allow(clippy::type_complexity)]
@@ -99,13 +103,14 @@ impl<
         }: Lineage,
         event_time: PositiveF64,
         simulation: &mut PartialSimulation<
+            F,
             H,
             G,
             R,
             S,
             X,
             D,
-            ConditionalCoalescenceSampler<H, R, S>,
+            ConditionalCoalescenceSampler<F, H, R, S>,
             T,
             N,
         >,
@@ -218,16 +223,17 @@ impl<
 
 #[contract_trait]
 impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: GloballyCoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: SeparableDispersalSampler<H, G>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-    > GillespieEventSampler<H, G, R, S, X, D, ConditionalCoalescenceSampler<H, R, S>, T, N>
-    for ConditionalGillespieEventSampler<H, G, R, S, X, D, T, N>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: GloballyCoherentLineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: SeparableDispersalSampler<F, H, G>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+    > GillespieEventSampler<F, H, G, R, S, X, D, ConditionalCoalescenceSampler<F, H, R, S>, T, N>
+    for ConditionalGillespieEventSampler<F, H, G, R, S, X, D, T, N>
 {
     #[must_use]
     #[allow(clippy::type_complexity)]
@@ -235,12 +241,13 @@ impl<
         &self,
         location: &Location,
         simulation: &GillespiePartialSimulation<
+            F,
             H,
             G,
             R,
             S,
             D,
-            ConditionalCoalescenceSampler<H, R, S>,
+            ConditionalCoalescenceSampler<F, H, R, S>,
             T,
             N,
         >,

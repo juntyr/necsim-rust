@@ -4,23 +4,24 @@ use necsim_core_bond::{ClosedUnitF64, PositiveF64};
 
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat,
+        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, F64Core, Habitat,
         LineageReference, LineageStore, RngCore, SpeciationProbability, TurnoverRate,
     },
     landscape::IndexedLocation,
 };
 
 pub trait MinSpeciationTrackingEventSampler<
-    H: Habitat,
-    G: RngCore,
-    R: LineageReference<H>,
-    S: LineageStore<H, R>,
-    X: EmigrationExit<H, G, R, S>,
-    D: DispersalSampler<H, G>,
-    C: CoalescenceSampler<H, R, S>,
-    T: TurnoverRate<H>,
-    N: SpeciationProbability<H>,
->: EventSampler<H, G, R, S, X, D, C, T, N>
+    F: F64Core,
+    H: Habitat<F>,
+    G: RngCore<F>,
+    R: LineageReference<F, H>,
+    S: LineageStore<F, H, R>,
+    X: EmigrationExit<F, H, G, R, S>,
+    D: DispersalSampler<F, H, G>,
+    C: CoalescenceSampler<F, H, R, S>,
+    T: TurnoverRate<F, H>,
+    N: SpeciationProbability<F, H>,
+>: EventSampler<F, H, G, R, S, X, D, C, T, N>
 {
     fn replace_min_speciation(&mut self, new: Option<SpeciationSample>)
         -> Option<SpeciationSample>;

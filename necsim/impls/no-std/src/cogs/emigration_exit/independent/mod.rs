@@ -1,7 +1,10 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{coalescence_sampler::CoalescenceRngSample, Backup, EmigrationExit, Habitat, RngCore},
+    cogs::{
+        coalescence_sampler::CoalescenceRngSample, Backup, EmigrationExit, F64Core, Habitat,
+        RngCore,
+    },
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, MigratingLineage},
     simulation::partial::emigration_exit::PartialSimulation,
@@ -17,16 +20,21 @@ use choice::EmigrationChoice;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct IndependentEmigrationExit<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>> {
+pub struct IndependentEmigrationExit<
+    F: F64Core,
+    H: Habitat<F>,
+    C: Decomposition<F, H>,
+    E: EmigrationChoice<F, H>,
+> {
     decomposition: C,
     choice: E,
     emigrant: Option<(u32, MigratingLineage)>,
-    _marker: PhantomData<H>,
+    _marker: PhantomData<(F, H)>,
 }
 
 #[contract_trait]
-impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>> Backup
-    for IndependentEmigrationExit<H, C, E>
+impl<F: F64Core, H: Habitat<F>, C: Decomposition<F, H>, E: EmigrationChoice<F, H>> Backup
+    for IndependentEmigrationExit<F, H, C, E>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
@@ -38,15 +46,20 @@ impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>> Backup
                 .map(|(partition, migrating_lineage)| {
                     (*partition, migrating_lineage.backup_unchecked())
                 }),
-            _marker: PhantomData::<H>,
+            _marker: PhantomData::<(F, H)>,
         }
     }
 }
 
 #[contract_trait]
-impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>, G: RngCore>
-    EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>
-    for IndependentEmigrationExit<H, C, E>
+impl<
+        F: F64Core,
+        H: Habitat<F>,
+        C: Decomposition<F, H>,
+        E: EmigrationChoice<F, H>,
+        G: RngCore<F>,
+    > EmigrationExit<F, H, G, GlobalLineageReference, IndependentLineageStore<F, H>>
+    for IndependentEmigrationExit<F, H, C, E>
 {
     #[must_use]
     #[inline]
@@ -70,10 +83,11 @@ impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>, G: RngCore>
         prior_time: NonNegativeF64,
         event_time: PositiveF64,
         simulation: &mut PartialSimulation<
+            F,
             H,
             G,
             GlobalLineageReference,
-            IndependentLineageStore<H>,
+            IndependentLineageStore<F, H>,
         >,
         rng: &mut G,
     ) -> Option<(
@@ -119,14 +133,16 @@ impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>, G: RngCore>
     }
 }
 
-impl<H: Habitat, C: Decomposition<H>, E: EmigrationChoice<H>> IndependentEmigrationExit<H, C, E> {
+impl<F: F64Core, H: Habitat<F>, C: Decomposition<F, H>, E: EmigrationChoice<F, H>>
+    IndependentEmigrationExit<F, H, C, E>
+{
     #[must_use]
     pub fn new(decomposition: C, choice: E) -> Self {
         Self {
             decomposition,
             choice,
             emigrant: None,
-            _marker: PhantomData::<H>,
+            _marker: PhantomData::<(F, H)>,
         }
     }
 

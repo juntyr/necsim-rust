@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use alloc::vec::Vec;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, RngCore, F64Core},
+    cogs::{Backup, F64Core, Habitat, RngCore},
     landscape::Location,
 };
 
@@ -65,7 +65,7 @@ impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> InMemoryDispersalSampler<F, H, G>
 
         Self {
             alias_dispersal,
-            marker: PhantomData::<(H, G)>,
+            marker: PhantomData::<(F, H, G)>,
         }
     }
 }
@@ -75,7 +75,7 @@ impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> Backup for InMemoryAliasDispersal
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             alias_dispersal: self.alias_dispersal.clone(),
-            marker: PhantomData::<(H, G)>,
+            marker: PhantomData::<(F, H, G)>,
         }
     }
 }

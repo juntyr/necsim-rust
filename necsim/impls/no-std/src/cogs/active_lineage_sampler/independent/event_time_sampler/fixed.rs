@@ -1,9 +1,8 @@
 use necsim_core::{
-    cogs::{Habitat, HabitatPrimeableRng, PrimeableRng, TurnoverRate},
+    cogs::{F64Core, Habitat, HabitatPrimeableRng, PrimeableRng, TurnoverRate},
     landscape::IndexedLocation,
 };
 use necsim_core_bond::NonNegativeF64;
-use necsim_core_f64::floor;
 
 use super::EventTimeSampler;
 
@@ -13,8 +12,8 @@ use super::EventTimeSampler;
 pub struct FixedEventTimeSampler([u8; 0]);
 
 #[contract_trait]
-impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
-    for FixedEventTimeSampler
+impl<F: F64Core, H: Habitat<F>, G: PrimeableRng<F>, T: TurnoverRate<F, H>>
+    EventTimeSampler<F, H, G, T> for FixedEventTimeSampler
 {
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
@@ -30,7 +29,7 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
 
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
-        let time_step = floor(time.get() * lambda.get()) as u64 + 1;
+        let time_step = F::floor(time.get() * lambda.get()) as u64 + 1;
 
         rng.prime_with_habitat(habitat, indexed_location, time_step);
 

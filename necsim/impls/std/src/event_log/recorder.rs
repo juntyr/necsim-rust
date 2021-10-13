@@ -162,7 +162,7 @@ impl fmt::Debug for EventLogRecorder {
             }
         }
 
-        f.debug_struct("EventLogRecorder")
+        f.debug_struct(stringify!(EventLogRecorder))
             .field("segment_size", &self.segment_size)
             .field("directory", &self.directory)
             .field("segment_index", &self.segment_index)

@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, EmigrationExit, Habitat, PrimeableRng,
+        ActiveLineageSampler, DispersalSampler, EmigrationExit, F64Core, Habitat, PrimeableRng,
         SpeciationProbability, TurnoverRate,
     },
     lineage::{GlobalLineageReference, Lineage},
@@ -19,27 +19,29 @@ use super::{EventTimeSampler, IndependentActiveLineageSampler};
 
 #[contract_trait]
 impl<
-        H: Habitat,
-        G: PrimeableRng,
-        X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
-        D: DispersalSampler<H, G>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-        J: EventTimeSampler<H, G, T>,
+        F: F64Core,
+        H: Habitat<F>,
+        G: PrimeableRng<F>,
+        X: EmigrationExit<F, H, G, GlobalLineageReference, IndependentLineageStore<F, H>>,
+        D: DispersalSampler<F, H, G>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+        J: EventTimeSampler<F, H, G, T>,
     >
     ActiveLineageSampler<
+        F,
         H,
         G,
         GlobalLineageReference,
-        IndependentLineageStore<H>,
+        IndependentLineageStore<F, H>,
         X,
         D,
-        IndependentCoalescenceSampler<H>,
+        IndependentCoalescenceSampler<F, H>,
         T,
         N,
-        IndependentEventSampler<H, G, X, D, T, N>,
+        IndependentEventSampler<F, H, G, X, D, T, N>,
         NeverImmigrationEntry,
-    > for IndependentActiveLineageSampler<H, G, X, D, T, N, J>
+    > for IndependentActiveLineageSampler<F, H, G, X, D, T, N, J>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -55,22 +57,23 @@ impl<
     #[must_use]
     #[allow(clippy::type_complexity)]
     #[inline]
-    fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> bool>(
+    fn pop_active_lineage_and_event_time<W: FnOnce(PositiveF64) -> bool>(
         &mut self,
         simulation: &mut PartialSimulation<
+            F,
             H,
             G,
             GlobalLineageReference,
-            IndependentLineageStore<H>,
+            IndependentLineageStore<F, H>,
             X,
             D,
-            IndependentCoalescenceSampler<H>,
+            IndependentCoalescenceSampler<F, H>,
             T,
             N,
-            IndependentEventSampler<H, G, X, D, T, N>,
+            IndependentEventSampler<F, H, G, X, D, T, N>,
         >,
         rng: &mut G,
-        early_peek_stop: F,
+        early_peek_stop: W,
     ) -> Option<(Lineage, PositiveF64)> {
         if let Some(active_lineage) = &self.active_lineage {
             // Check for extraneously simulated (inactive) lineages
@@ -111,16 +114,17 @@ impl<
         &mut self,
         lineage: Lineage,
         _simulation: &mut PartialSimulation<
+            F,
             H,
             G,
             GlobalLineageReference,
-            IndependentLineageStore<H>,
+            IndependentLineageStore<F, H>,
             X,
             D,
-            IndependentCoalescenceSampler<H>,
+            IndependentCoalescenceSampler<F, H>,
             T,
             N,
-            IndependentEventSampler<H, G, X, D, T, N>,
+            IndependentEventSampler<F, H, G, X, D, T, N>,
         >,
         _rng: &mut G,
     ) {

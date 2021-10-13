@@ -1,8 +1,8 @@
 use core::marker::PhantomData;
 
 use crate::cogs::{
-    CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, LineageReference, LineageStore,
-    RngCore, SpeciationProbability, TurnoverRate, F64Core
+    CoalescenceSampler, DispersalSampler, EmigrationExit, F64Core, Habitat, LineageReference,
+    LineageStore, RngCore, SpeciationProbability, TurnoverRate,
 };
 
 #[repr(C)]

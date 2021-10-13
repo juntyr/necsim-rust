@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, Habitat, F64Core},
+    cogs::{Backup, F64Core, Habitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -8,15 +8,15 @@ use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-pub struct SpatiallyImplicitHabitat {
+pub struct SpatiallyImplicitHabitat<F: F64Core> {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
-    local: NonSpatialHabitat,
+    local: NonSpatialHabitat<F>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
-    meta: NonSpatialHabitat,
+    meta: NonSpatialHabitat<F>,
     extent: LandscapeExtent,
 }
 
-impl SpatiallyImplicitHabitat {
+impl<F: F64Core> SpatiallyImplicitHabitat<F> {
     #[must_use]
     #[debug_ensures(
         ret.get_total_habitat() == old(
@@ -52,18 +52,18 @@ impl SpatiallyImplicitHabitat {
     }
 
     #[must_use]
-    pub fn local(&self) -> &NonSpatialHabitat {
+    pub fn local(&self) -> &NonSpatialHabitat<F> {
         &self.local
     }
 
     #[must_use]
-    pub fn meta(&self) -> &NonSpatialHabitat {
+    pub fn meta(&self) -> &NonSpatialHabitat<F> {
         &self.meta
     }
 }
 
 #[contract_trait]
-impl Backup for SpatiallyImplicitHabitat {
+impl<F: F64Core> Backup for SpatiallyImplicitHabitat<F> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             local: self.local.backup_unchecked(),
@@ -74,7 +74,7 @@ impl Backup for SpatiallyImplicitHabitat {
 }
 
 #[contract_trait]
-impl<F: F64Core> Habitat<F> for SpatiallyImplicitHabitat {
+impl<F: F64Core> Habitat<F> for SpatiallyImplicitHabitat<F> {
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
         &self.extent

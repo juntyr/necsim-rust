@@ -6,8 +6,9 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::{
     cogs::{
-        Backup, CoalescenceSampler, DispersalSampler, EmigrationExit, GloballyCoherentLineageStore,
-        Habitat, ImmigrationEntry, LineageReference, RngCore, SpeciationProbability, TurnoverRate,
+        Backup, CoalescenceSampler, DispersalSampler, EmigrationExit, F64Core,
+        GloballyCoherentLineageStore, Habitat, ImmigrationEntry, LineageReference, RngCore,
+        SpeciationProbability, TurnoverRate,
     },
     landscape::Location,
 };
@@ -24,41 +25,43 @@ use event_time::EventTime;
 #[allow(clippy::module_name_repetitions)]
 #[allow(clippy::type_complexity)]
 pub struct GillespieActiveLineageSampler<
-    H: Habitat,
-    G: RngCore,
-    R: LineageReference<H>,
-    S: GloballyCoherentLineageStore<H, R>,
-    X: EmigrationExit<H, G, R, S>,
-    D: DispersalSampler<H, G>,
-    C: CoalescenceSampler<H, R, S>,
-    T: TurnoverRate<H>,
-    N: SpeciationProbability<H>,
-    E: GillespieEventSampler<H, G, R, S, X, D, C, T, N>,
-    I: ImmigrationEntry,
+    F: F64Core,
+    H: Habitat<F>,
+    G: RngCore<F>,
+    R: LineageReference<F, H>,
+    S: GloballyCoherentLineageStore<F, H, R>,
+    X: EmigrationExit<F, H, G, R, S>,
+    D: DispersalSampler<F, H, G>,
+    C: CoalescenceSampler<F, H, R, S>,
+    T: TurnoverRate<F, H>,
+    N: SpeciationProbability<F, H>,
+    E: GillespieEventSampler<F, H, G, R, S, X, D, C, T, N>,
+    I: ImmigrationEntry<F>,
 > {
     active_locations: KeyedPriorityQueue<Location, EventTime, BuildHasherDefault<FxHasher32>>,
     number_active_lineages: usize,
     last_event_time: NonNegativeF64,
-    marker: PhantomData<(H, G, R, S, X, D, C, T, N, E, I)>,
+    marker: PhantomData<(F, H, G, R, S, X, D, C, T, N, E, I)>,
 }
 
 impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: GloballyCoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: DispersalSampler<H, G>,
-        C: CoalescenceSampler<H, R, S>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-        E: GillespieEventSampler<H, G, R, S, X, D, C, T, N>,
-        I: ImmigrationEntry,
-    > GillespieActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: GloballyCoherentLineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: DispersalSampler<F, H, G>,
+        C: CoalescenceSampler<F, H, R, S>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+        E: GillespieEventSampler<F, H, G, R, S, X, D, C, T, N>,
+        I: ImmigrationEntry<F>,
+    > GillespieActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>
 {
     #[must_use]
     pub fn new(
-        partial_simulation: &GillespiePartialSimulation<H, G, R, S, D, C, T, N>,
+        partial_simulation: &GillespiePartialSimulation<F, H, G, R, S, D, C, T, N>,
         event_sampler: &E,
         rng: &mut G,
     ) -> Self {
@@ -102,55 +105,56 @@ impl<
             active_locations: KeyedPriorityQueue::from_iter(active_locations),
             number_active_lineages,
             last_event_time: NonNegativeF64::zero(),
-            marker: PhantomData::<(H, G, R, S, X, D, C, T, N, E, I)>,
+            marker: PhantomData::<(F, H, G, R, S, X, D, C, T, N, E, I)>,
         }
     }
 }
 
 impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: GloballyCoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: DispersalSampler<H, G>,
-        C: CoalescenceSampler<H, R, S>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-        E: GillespieEventSampler<H, G, R, S, X, D, C, T, N>,
-        I: ImmigrationEntry,
-    > core::fmt::Debug for GillespieActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: GloballyCoherentLineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: DispersalSampler<F, H, G>,
+        C: CoalescenceSampler<F, H, R, S>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+        E: GillespieEventSampler<F, H, G, R, S, X, D, C, T, N>,
+        I: ImmigrationEntry<F>,
+    > core::fmt::Debug for GillespieActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>
 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        f.debug_struct("GillespieActiveLineageSampler")
+        f.debug_struct(stringify!(GillespieActiveLineageSampler))
             .field("active_locations", &"PriorityQueue")
             .field("number_active_lineages", &self.number_active_lineages)
-            .field("marker", &self.marker)
             .finish()
     }
 }
 
 #[contract_trait]
 impl<
-        H: Habitat,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: GloballyCoherentLineageStore<H, R>,
-        X: EmigrationExit<H, G, R, S>,
-        D: DispersalSampler<H, G>,
-        C: CoalescenceSampler<H, R, S>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-        E: GillespieEventSampler<H, G, R, S, X, D, C, T, N>,
-        I: ImmigrationEntry,
-    > Backup for GillespieActiveLineageSampler<H, G, R, S, X, D, C, T, N, E, I>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: GloballyCoherentLineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: DispersalSampler<F, H, G>,
+        C: CoalescenceSampler<F, H, R, S>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+        E: GillespieEventSampler<F, H, G, R, S, X, D, C, T, N>,
+        I: ImmigrationEntry<F>,
+    > Backup for GillespieActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             active_locations: self.active_locations.clone(),
             number_active_lineages: self.number_active_lineages,
             last_event_time: self.last_event_time,
-            marker: PhantomData::<(H, G, R, S, X, D, C, T, N, E, I)>,
+            marker: PhantomData::<(F, H, G, R, S, X, D, C, T, N, E, I)>,
         }
     }
 }

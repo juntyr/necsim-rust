@@ -4,7 +4,7 @@ use core::{marker::PhantomData, ops::Range};
 use r#final::Final;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, RngCore, F64Core},
+    cogs::{Backup, F64Core, Habitat, RngCore},
     landscape::Location,
 };
 
@@ -102,12 +102,14 @@ impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> InMemoryDispersalSampler<F, H, G>
         Self {
             alias_dispersal_ranges: Final::new(alias_dispersal_ranges),
             alias_dispersal_buffer: Final::new(alias_dispersal_buffer.into_boxed_slice()),
-            marker: PhantomData::<(H, G)>,
+            marker: PhantomData::<(F, H, G)>,
         }
     }
 }
 
-impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> core::fmt::Debug for InMemoryPackedAliasDispersalSampler<F, H, G> {
+impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> core::fmt::Debug
+    for InMemoryPackedAliasDispersalSampler<F, H, G>
+{
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct("InMemoryPackedAliasDispersalSampler")
             .field("alias_dispersal_ranges", &self.alias_dispersal_ranges)
@@ -124,7 +126,9 @@ impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> core::fmt::Debug for InMemoryPack
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> Backup for InMemoryPackedAliasDispersalSampler<F, H, G> {
+impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> Backup
+    for InMemoryPackedAliasDispersalSampler<F, H, G>
+{
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             alias_dispersal_ranges: Final::new(self.alias_dispersal_ranges.clone()),

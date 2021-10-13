@@ -1,10 +1,15 @@
 use core::marker::PhantomData;
 
-use crate::cogs::{Habitat, LineageReference, LineageStore, RngCore, F64Core};
+use crate::cogs::{F64Core, Habitat, LineageReference, LineageStore, RngCore};
 
 #[repr(C)]
-pub struct PartialSimulation<F: F64Core, H: Habitat<F>, G: RngCore<F>, R: LineageReference<F, H>, S: LineageStore<F, H, R>>
-{
+pub struct PartialSimulation<
+    F: F64Core,
+    H: Habitat<F>,
+    G: RngCore<F>,
+    R: LineageReference<F, H>,
+    S: LineageStore<F, H, R>,
+> {
     pub f64_core: PhantomData<F>,
     pub habitat: H,
     pub lineage_reference: PhantomData<R>,

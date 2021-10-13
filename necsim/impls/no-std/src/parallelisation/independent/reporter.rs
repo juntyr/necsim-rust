@@ -11,7 +11,8 @@ pub struct IgnoreProgressReporterProxy<'p, R: Reporter, P: LocalPartition<R>> {
 
 impl<'p, R: Reporter, P: LocalPartition<R>> fmt::Debug for IgnoreProgressReporterProxy<'p, R, P> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("IgnoreProgressReporterProxy").finish()
+        fmt.debug_struct(stringify!(IgnoreProgressReporterProxy))
+            .finish()
     }
 }
 

@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, Habitat, RngCore, SeparableDispersalSampler, F64Core},
+    cogs::{Backup, DispersalSampler, F64Core, Habitat, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, PositiveUnitF64};
@@ -44,7 +44,7 @@ impl<F: F64Core, G: RngCore<F>> Backup for SpatiallyImplicitDispersalSampler<F, 
 }
 
 #[contract_trait]
-impl<F: F64Core, G: RngCore<F>> DispersalSampler<F, SpatiallyImplicitHabitat, G>
+impl<F: F64Core, G: RngCore<F>> DispersalSampler<F, SpatiallyImplicitHabitat<F>, G>
     for SpatiallyImplicitDispersalSampler<F, G>
 {
     #[must_use]
@@ -60,7 +60,7 @@ impl<F: F64Core, G: RngCore<F>> DispersalSampler<F, SpatiallyImplicitHabitat, G>
     fn sample_dispersal_from_location(
         &self,
         location: &Location,
-        habitat: &SpatiallyImplicitHabitat,
+        habitat: &SpatiallyImplicitHabitat<F>,
         rng: &mut G,
     ) -> Location {
         use necsim_core::cogs::RngSampler;
@@ -88,7 +88,7 @@ impl<F: F64Core, G: RngCore<F>> DispersalSampler<F, SpatiallyImplicitHabitat, G>
 }
 
 #[contract_trait]
-impl<F: F64Core, G: RngCore<F>> SeparableDispersalSampler<F, SpatiallyImplicitHabitat, G>
+impl<F: F64Core, G: RngCore<F>> SeparableDispersalSampler<F, SpatiallyImplicitHabitat<F>, G>
     for SpatiallyImplicitDispersalSampler<F, G>
 {
     #[must_use]
@@ -104,7 +104,7 @@ impl<F: F64Core, G: RngCore<F>> SeparableDispersalSampler<F, SpatiallyImplicitHa
     fn sample_non_self_dispersal_from_location(
         &self,
         location: &Location,
-        habitat: &SpatiallyImplicitHabitat,
+        habitat: &SpatiallyImplicitHabitat<F>,
         rng: &mut G,
     ) -> Location {
         use necsim_core::cogs::RngSampler;
@@ -140,7 +140,7 @@ impl<F: F64Core, G: RngCore<F>> SeparableDispersalSampler<F, SpatiallyImplicitHa
     fn get_self_dispersal_probability_at_location(
         &self,
         location: &Location,
-        habitat: &SpatiallyImplicitHabitat,
+        habitat: &SpatiallyImplicitHabitat<F>,
     ) -> ClosedUnitF64 {
         if habitat.local().contains(location) {
             self.local

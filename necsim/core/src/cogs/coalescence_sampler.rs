@@ -5,7 +5,7 @@ use necsim_core_bond::ClosedUnitF64;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    cogs::{Backup, RngCore, F64Core},
+    cogs::{Backup, F64Core, RngCore},
     landscape::{IndexedLocation, Location},
     lineage::LineageInteraction,
 };
@@ -14,8 +14,12 @@ use super::{Habitat, LineageReference, LineageStore};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait CoalescenceSampler<F: F64Core, H: Habitat<F>, R: LineageReference<F, H>, S: LineageStore<F, H, R>>:
-    crate::cogs::Backup + core::fmt::Debug
+pub trait CoalescenceSampler<
+    F: F64Core,
+    H: Habitat<F>,
+    R: LineageReference<F, H>,
+    S: LineageStore<F, H, R>,
+>: crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
     #[debug_requires(habitat.get_habitat_at_location(&location) > 0, "location is habitable")]

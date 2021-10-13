@@ -1,10 +1,11 @@
 use alloc::vec::Vec;
 use core::marker::PhantomData;
+
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample, Backup, EmigrationExit, Habitat,
+        coalescence_sampler::CoalescenceRngSample, Backup, EmigrationExit, F64Core, Habitat,
         LineageReference, LocallyCoherentLineageStore, RngCore,
     },
     landscape::{IndexedLocation, Location},
@@ -16,14 +17,14 @@ use crate::decomposition::Decomposition;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct DomainEmigrationExit<H: Habitat, C: Decomposition<H>> {
+pub struct DomainEmigrationExit<F: F64Core, H: Habitat<F>, C: Decomposition<F, H>> {
     decomposition: C,
     emigrants: Vec<(u32, MigratingLineage)>,
-    _marker: PhantomData<H>,
+    _marker: PhantomData<(F, H)>,
 }
 
 #[contract_trait]
-impl<H: Habitat, C: Decomposition<H>> Backup for DomainEmigrationExit<H, C> {
+impl<F: F64Core, H: Habitat<F>, C: Decomposition<F, H>> Backup for DomainEmigrationExit<F, H, C> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             decomposition: self.decomposition.backup_unchecked(),
@@ -34,19 +35,20 @@ impl<H: Habitat, C: Decomposition<H>> Backup for DomainEmigrationExit<H, C> {
                     (*partition, migrating_lineage.backup_unchecked())
                 })
                 .collect(),
-            _marker: PhantomData::<H>,
+            _marker: PhantomData::<(F, H)>,
         }
     }
 }
 
 #[contract_trait]
 impl<
-        H: Habitat,
-        C: Decomposition<H>,
-        G: RngCore,
-        R: LineageReference<H>,
-        S: LocallyCoherentLineageStore<H, R>,
-    > EmigrationExit<H, G, R, S> for DomainEmigrationExit<H, C>
+        F: F64Core,
+        H: Habitat<F>,
+        C: Decomposition<F, H>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: LocallyCoherentLineageStore<F, H, R>,
+    > EmigrationExit<F, H, G, R, S> for DomainEmigrationExit<F, H, C>
 {
     #[must_use]
     #[debug_ensures(ret.is_some() == (
@@ -61,7 +63,7 @@ impl<
         dispersal_target: Location,
         prior_time: NonNegativeF64,
         event_time: PositiveF64,
-        simulation: &mut PartialSimulation<H, G, R, S>,
+        simulation: &mut PartialSimulation<F, H, G, R, S>,
         rng: &mut G,
     ) -> Option<(
         GlobalLineageReference,
@@ -100,13 +102,13 @@ impl<
     }
 }
 
-impl<H: Habitat, C: Decomposition<H>> DomainEmigrationExit<H, C> {
+impl<F: F64Core, H: Habitat<F>, C: Decomposition<F, H>> DomainEmigrationExit<F, H, C> {
     #[must_use]
     pub fn new(decomposition: C) -> Self {
         Self {
             decomposition,
             emigrants: Vec::new(),
-            _marker: PhantomData::<H>,
+            _marker: PhantomData::<(F, H)>,
         }
     }
 
@@ -119,7 +121,7 @@ impl<H: Habitat, C: Decomposition<H>> DomainEmigrationExit<H, C> {
     }
 }
 
-impl<H: Habitat, C: Decomposition<H>> Iterator for DomainEmigrationExit<H, C> {
+impl<F: F64Core, H: Habitat<F>, C: Decomposition<F, H>> Iterator for DomainEmigrationExit<F, H, C> {
     type Item = (u32, MigratingLineage);
 
     fn next(&mut self) -> Option<Self::Item> {

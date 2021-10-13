@@ -32,7 +32,7 @@ impl<'p, R: Reporter, P: LocalPartition<R>> fmt::Debug for LiveWaterLevelReporte
             }
         }
 
-        fmt.debug_struct("LiveWaterLevelReporterProxy")
+        fmt.debug_struct(stringify!(LiveWaterLevelReporterProxy))
             .field("water_level", &self.water_level)
             .field("slow_events", &EventBufferLen(self.slow_events.len()))
             .field("fast_events", &EventBufferLen(self.fast_events.len()))

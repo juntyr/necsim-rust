@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample, Habitat, LineageReference,
+        coalescence_sampler::CoalescenceRngSample, F64Core, Habitat, LineageReference,
         LocallyCoherentLineageStore,
     },
     landscape::{IndexedLocation, Location},
@@ -9,17 +9,18 @@ use necsim_core::{
 
 #[must_use]
 pub fn sample_interaction_at_location<
-    H: Habitat,
-    R: LineageReference<H>,
-    S: LocallyCoherentLineageStore<H, R>,
+    F: F64Core,
+    H: Habitat<F>,
+    R: LineageReference<F, H>,
+    S: LocallyCoherentLineageStore<F, H, R>,
 >(
     location: Location,
     habitat: &H,
     lineage_store: &S,
     coalescence_rng_sample: CoalescenceRngSample,
 ) -> (IndexedLocation, LineageInteraction) {
-    let chosen_coalescence_index =
-        coalescence_rng_sample.sample_coalescence_index(habitat.get_habitat_at_location(&location));
+    let chosen_coalescence_index = coalescence_rng_sample
+        .sample_coalescence_index::<F>(habitat.get_habitat_at_location(&location));
 
     let indexed_location = IndexedLocation::new(location, chosen_coalescence_index);
 

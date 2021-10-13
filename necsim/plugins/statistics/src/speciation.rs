@@ -22,7 +22,7 @@ pub struct GlobalSpeciationReporter {
 
 impl fmt::Debug for GlobalSpeciationReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("GlobalSpeciationReporter")
+        fmt.debug_struct(stringify!(GlobalSpeciationReporter))
             .field("output", &self.output)
             .finish()
     }

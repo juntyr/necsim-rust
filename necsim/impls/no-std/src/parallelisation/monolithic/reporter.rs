@@ -25,7 +25,7 @@ impl<'p, R: Reporter, P: LocalPartition<R>> fmt::Debug for BufferingReporterProx
             }
         }
 
-        fmt.debug_struct("PartitionReporterProxy")
+        fmt.debug_struct(stringify!(BufferingReporterProxy))
             .field("event_buffer", &EventBufferLen(self.event_buffer.len()))
             .finish()
     }

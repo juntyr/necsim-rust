@@ -2,7 +2,7 @@ use std::num::NonZeroU32;
 
 use serde::Deserialize;
 
-use necsim_core::cogs::{DispersalSampler, LineageStore, RngCore};
+use necsim_core::cogs::{DispersalSampler, F64Core, LineageStore, RngCore};
 use necsim_core_bond::PositiveUnitF64;
 
 use necsim_impls_no_std::{
@@ -20,9 +20,9 @@ use necsim_impls_no_std::{
 use crate::{Scenario, ScenarioArguments};
 
 #[allow(clippy::module_name_repetitions)]
-pub struct NonSpatialScenario<G: RngCore> {
-    habitat: NonSpatialHabitat,
-    dispersal_sampler: NonSpatialDispersalSampler<G>,
+pub struct NonSpatialScenario<F: F64Core, G: RngCore<F>> {
+    habitat: NonSpatialHabitat<F>,
+    dispersal_sampler: NonSpatialDispersalSampler<F, G>,
     turnover_rate: UniformTurnoverRate,
     speciation_probability: UniformSpeciationProbability,
 }
@@ -35,18 +35,19 @@ pub struct NonSpatialArguments {
     pub deme: u32,
 }
 
-impl<G: RngCore> ScenarioArguments for NonSpatialScenario<G> {
+impl<F: F64Core, G: RngCore<F>> ScenarioArguments for NonSpatialScenario<F, G> {
     type Arguments = NonSpatialArguments;
 }
 
-impl<G: RngCore> Scenario<G> for NonSpatialScenario<G> {
+impl<F: F64Core, G: RngCore<F>> Scenario<F, G> for NonSpatialScenario<F, G> {
     type Decomposition = ModuloDecomposition;
-    type DispersalSampler<D: DispersalSampler<Self::Habitat, G>> = NonSpatialDispersalSampler<G>;
+    type DispersalSampler<D: DispersalSampler<F, Self::Habitat, G>> =
+        NonSpatialDispersalSampler<F, G>;
     type Error = !;
-    type Habitat = NonSpatialHabitat;
+    type Habitat = NonSpatialHabitat<F>;
     type LineageReference = InMemoryLineageReference;
-    type LineageStore<L: LineageStore<Self::Habitat, Self::LineageReference>> = L;
-    type OriginSampler<'h, I: Iterator<Item = u64>> = NonSpatialOriginSampler<'h, I>;
+    type LineageStore<L: LineageStore<F, Self::Habitat, Self::LineageReference>> = L;
+    type OriginSampler<'h, I: Iterator<Item = u64>> = NonSpatialOriginSampler<'h, F, I>;
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
 
@@ -68,7 +69,7 @@ impl<G: RngCore> Scenario<G> for NonSpatialScenario<G> {
         })
     }
 
-    fn build<D: DispersalSampler<Self::Habitat, G>>(
+    fn build<D: DispersalSampler<F, Self::Habitat, G>>(
         self,
     ) -> (
         Self::Habitat,
@@ -86,7 +87,7 @@ impl<G: RngCore> Scenario<G> for NonSpatialScenario<G> {
 
     fn sample_habitat<I: Iterator<Item = u64>>(
         &self,
-        pre_sampler: OriginPreSampler<I>,
+        pre_sampler: OriginPreSampler<F, I>,
     ) -> Self::OriginSampler<'_, I> {
         NonSpatialOriginSampler::new(pre_sampler, &self.habitat)
     }

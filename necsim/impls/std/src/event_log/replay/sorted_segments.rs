@@ -23,7 +23,7 @@ impl fmt::Debug for SortedSortedSegments {
             }
         }
 
-        let mut debug = fmt.debug_struct("SortedSortedSegments");
+        let mut debug = fmt.debug_struct(stringify!(SortedSortedSegments));
         debug.field("segments", &SortedSegmentFmt(self.segments.len()));
 
         if let (Some(last), Some(first)) = (self.segments.first(), self.segments.last()) {

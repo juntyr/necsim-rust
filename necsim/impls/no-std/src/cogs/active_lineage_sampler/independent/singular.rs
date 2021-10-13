@@ -1,5 +1,6 @@
 use necsim_core::cogs::{
-    DispersalSampler, EmigrationExit, Habitat, PrimeableRng, SpeciationProbability, TurnoverRate,
+    DispersalSampler, EmigrationExit, F64Core, Habitat, PrimeableRng, SpeciationProbability,
+    TurnoverRate,
 };
 
 use necsim_core::lineage::{GlobalLineageReference, Lineage};
@@ -15,27 +16,29 @@ use crate::cogs::{
 use super::{EventTimeSampler, IndependentActiveLineageSampler};
 
 impl<
-        H: Habitat,
-        G: PrimeableRng,
-        X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
-        D: DispersalSampler<H, G>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-        J: EventTimeSampler<H, G, T>,
+        F: F64Core,
+        H: Habitat<F>,
+        G: PrimeableRng<F>,
+        X: EmigrationExit<F, H, G, GlobalLineageReference, IndependentLineageStore<F, H>>,
+        D: DispersalSampler<F, H, G>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+        J: EventTimeSampler<F, H, G, T>,
     >
     SingularActiveLineageSampler<
+        F,
         H,
         G,
         GlobalLineageReference,
-        IndependentLineageStore<H>,
+        IndependentLineageStore<F, H>,
         X,
         D,
-        IndependentCoalescenceSampler<H>,
+        IndependentCoalescenceSampler<F, H>,
         T,
         N,
-        IndependentEventSampler<H, G, X, D, T, N>,
+        IndependentEventSampler<F, H, G, X, D, T, N>,
         NeverImmigrationEntry,
-    > for IndependentActiveLineageSampler<H, G, X, D, T, N, J>
+    > for IndependentActiveLineageSampler<F, H, G, X, D, T, N, J>
 {
     #[must_use]
     #[inline]

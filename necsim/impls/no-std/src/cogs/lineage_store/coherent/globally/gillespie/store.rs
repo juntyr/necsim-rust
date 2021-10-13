@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
-        GloballyCoherentLineageStore, Habitat, LineageStore, LocallyCoherentLineageStore,
-        OriginSampler, F64Core
+        F64Core, GloballyCoherentLineageStore, Habitat, LineageStore, LocallyCoherentLineageStore,
+        OriginSampler,
     },
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},
@@ -12,7 +12,9 @@ use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use super::GillespieLineageStore;
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>> LineageStore<F, H, InMemoryLineageReference> for GillespieLineageStore<F, H> {
+impl<F: F64Core, H: Habitat<F>> LineageStore<F, H, InMemoryLineageReference>
+    for GillespieLineageStore<F, H>
+{
     #[allow(clippy::type_complexity)]
     type LineageReferenceIterator<'a> = impl Iterator<Item = InMemoryLineageReference>;
 

@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, Habitat, SpeciationProbability, F64Core},
+    cogs::{Backup, F64Core, Habitat, SpeciationProbability},
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, PositiveUnitF64};
@@ -32,7 +32,9 @@ impl Backup for SpatiallyImplicitSpeciationProbability {
 }
 
 #[contract_trait]
-impl<F: F64Core> SpeciationProbability<F, SpatiallyImplicitHabitat> for SpatiallyImplicitSpeciationProbability {
+impl<F: F64Core> SpeciationProbability<F, SpatiallyImplicitHabitat<F>>
+    for SpatiallyImplicitSpeciationProbability
+{
     #[must_use]
     #[debug_requires(
         habitat.local().contains(location) || habitat.meta().contains(location),
@@ -42,7 +44,7 @@ impl<F: F64Core> SpeciationProbability<F, SpatiallyImplicitHabitat> for Spatiall
     fn get_speciation_probability_at_location(
         &self,
         location: &Location,
-        habitat: &SpatiallyImplicitHabitat,
+        habitat: &SpatiallyImplicitHabitat<F>,
     ) -> ClosedUnitF64 {
         if habitat.local().contains(location) {
             ClosedUnitF64::zero()

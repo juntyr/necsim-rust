@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, Habitat, RngCore, SeparableDispersalSampler, F64Core},
+    cogs::{Backup, DispersalSampler, F64Core, Habitat, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
@@ -44,20 +44,20 @@ impl<F: F64Core, G: RngCore<F>> Backup for AlmostInfiniteNormalDispersalSampler<
         Self {
             sigma: self.sigma,
             self_dispersal: self.self_dispersal,
-            marker: PhantomData::<G>,
+            marker: PhantomData::<(F, G)>,
         }
     }
 }
 
 #[contract_trait]
-impl<F: F64Core, G: RngCore<F>> DispersalSampler<F, AlmostInfiniteHabitat, G>
+impl<F: F64Core, G: RngCore<F>> DispersalSampler<F, AlmostInfiniteHabitat<F>, G>
     for AlmostInfiniteNormalDispersalSampler<F, G>
 {
     #[must_use]
     fn sample_dispersal_from_location(
         &self,
         location: &Location,
-        habitat: &AlmostInfiniteHabitat,
+        habitat: &AlmostInfiniteHabitat<F>,
         rng: &mut G,
     ) -> Location {
         use necsim_core::cogs::RngSampler;
@@ -87,14 +87,14 @@ impl<F: F64Core, G: RngCore<F>> DispersalSampler<F, AlmostInfiniteHabitat, G>
 }
 
 #[contract_trait]
-impl<F: F64Core, G: RngCore<F>> SeparableDispersalSampler<F, AlmostInfiniteHabitat, G>
+impl<F: F64Core, G: RngCore<F>> SeparableDispersalSampler<F, AlmostInfiniteHabitat<F>, G>
     for AlmostInfiniteNormalDispersalSampler<F, G>
 {
     #[must_use]
     fn sample_non_self_dispersal_from_location(
         &self,
         location: &Location,
-        habitat: &AlmostInfiniteHabitat,
+        habitat: &AlmostInfiniteHabitat<F>,
         rng: &mut G,
     ) -> Location {
         let mut target_location = self.sample_dispersal_from_location(location, habitat, rng);
@@ -111,7 +111,7 @@ impl<F: F64Core, G: RngCore<F>> SeparableDispersalSampler<F, AlmostInfiniteHabit
     fn get_self_dispersal_probability_at_location(
         &self,
         _location: &Location,
-        _habitat: &AlmostInfiniteHabitat,
+        _habitat: &AlmostInfiniteHabitat<F>,
     ) -> ClosedUnitF64 {
         self.self_dispersal
     }

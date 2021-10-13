@@ -3,8 +3,8 @@ use alloc::vec::Vec;
 use necsim_core::{
     cogs::{
         backup::BackedUp, ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler,
-        EventSampler, Habitat, LineageReference, LocallyCoherentLineageStore, RngCore,
-        SpeciationProbability, TurnoverRate, F64Core
+        EventSampler, F64Core, Habitat, LineageReference, LocallyCoherentLineageStore, RngCore,
+        SpeciationProbability, TurnoverRate,
     },
     lineage::MigratingLineage,
     reporter::Reporter,
@@ -36,14 +36,14 @@ pub fn simulate<
     T: TurnoverRate<F, H>,
     N: SpeciationProbability<F, H>,
     O: Decomposition<F, H>,
-    E: EventSampler<F, H, G, R, S, DomainEmigrationExit<H, O>, D, C, T, N>,
+    E: EventSampler<F, H, G, R, S, DomainEmigrationExit<F, H, O>, D, C, T, N>,
     A: ActiveLineageSampler<
         F,
         H,
         G,
         R,
         S,
-        DomainEmigrationExit<H, O>,
+        DomainEmigrationExit<F, H, O>,
         D,
         C,
         T,
@@ -60,7 +60,7 @@ pub fn simulate<
         G,
         R,
         S,
-        DomainEmigrationExit<H, O>,
+        DomainEmigrationExit<F, H, O>,
         D,
         C,
         T,

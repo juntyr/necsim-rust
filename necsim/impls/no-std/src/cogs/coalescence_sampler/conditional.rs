@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample, Backup, CoalescenceSampler,
+        coalescence_sampler::CoalescenceRngSample, Backup, CoalescenceSampler, F64Core,
         GloballyCoherentLineageStore, Habitat, LineageReference,
     },
     landscape::{IndexedLocation, Location},
@@ -15,31 +15,44 @@ use super::optional_coalescence;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct ConditionalCoalescenceSampler<
-    H: Habitat,
-    R: LineageReference<H>,
-    S: GloballyCoherentLineageStore<H, R>,
->(PhantomData<(H, R, S)>);
+    F: F64Core,
+    H: Habitat<F>,
+    R: LineageReference<F, H>,
+    S: GloballyCoherentLineageStore<F, H, R>,
+>(PhantomData<(F, H, R, S)>);
 
-impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>> Default
-    for ConditionalCoalescenceSampler<H, R, S>
+impl<
+        F: F64Core,
+        H: Habitat<F>,
+        R: LineageReference<F, H>,
+        S: GloballyCoherentLineageStore<F, H, R>,
+    > Default for ConditionalCoalescenceSampler<F, H, R, S>
 {
     fn default() -> Self {
-        Self(PhantomData::<(H, R, S)>)
+        Self(PhantomData::<(F, H, R, S)>)
     }
 }
 
 #[contract_trait]
-impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>> Backup
-    for ConditionalCoalescenceSampler<H, R, S>
+impl<
+        F: F64Core,
+        H: Habitat<F>,
+        R: LineageReference<F, H>,
+        S: GloballyCoherentLineageStore<F, H, R>,
+    > Backup for ConditionalCoalescenceSampler<F, H, R, S>
 {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(PhantomData::<(H, R, S)>)
+        Self(PhantomData::<(F, H, R, S)>)
     }
 }
 
 #[contract_trait]
-impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>>
-    CoalescenceSampler<H, R, S> for ConditionalCoalescenceSampler<H, R, S>
+impl<
+        F: F64Core,
+        H: Habitat<F>,
+        R: LineageReference<F, H>,
+        S: GloballyCoherentLineageStore<F, H, R>,
+    > CoalescenceSampler<F, H, R, S> for ConditionalCoalescenceSampler<F, H, R, S>
 {
     #[must_use]
     fn sample_interaction_at_location(
@@ -58,8 +71,12 @@ impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>>
     }
 }
 
-impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>>
-    ConditionalCoalescenceSampler<H, R, S>
+impl<
+        F: F64Core,
+        H: Habitat<F>,
+        R: LineageReference<F, H>,
+        S: GloballyCoherentLineageStore<F, H, R>,
+    > ConditionalCoalescenceSampler<F, H, R, S>
 {
     #[must_use]
     pub fn sample_coalescence_at_location(
@@ -74,7 +91,8 @@ impl<H: Habitat, R: LineageReference<H>, S: GloballyCoherentLineageStore<H, R>>
         #[allow(clippy::cast_possible_truncation)]
         let population = lineages_at_location.len() as u32;
 
-        let chosen_coalescence_index = coalescence_rng_sample.sample_coalescence_index(population);
+        let chosen_coalescence_index =
+            coalescence_rng_sample.sample_coalescence_index::<F>(population);
         let chosen_coalescence = lineages_at_location[chosen_coalescence_index as usize].clone();
 
         let lineage = &lineage_store[chosen_coalescence];

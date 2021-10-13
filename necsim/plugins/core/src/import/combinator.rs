@@ -27,7 +27,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
     for ReporterPluginVec<ReportSpeciation, ReportDispersal, ReportProgress>
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("ReporterPluginVec")
+        fmt.debug_struct(stringify!(ReporterPluginVec))
             .field("plugins", &self.plugins)
             .finish()
     }

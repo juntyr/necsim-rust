@@ -1,4 +1,7 @@
-use necsim_core::{cogs::{Habitat, F64Core}, landscape::Location};
+use necsim_core::{
+    cogs::{F64Core, Habitat},
+    landscape::Location,
+};
 
 use super::InMemoryCumulativeDispersalSampler;
 
