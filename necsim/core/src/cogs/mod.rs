@@ -1,4 +1,4 @@
-pub use necsim_core_f64::F64Core;
+pub use necsim_core_maths::MathsCore;
 
 pub mod backup;
 pub use backup::Backup;

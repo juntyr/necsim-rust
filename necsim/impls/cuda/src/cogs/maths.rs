@@ -1,12 +1,12 @@
-use necsim_core::cogs::F64Core;
+use necsim_core::cogs::MathsCore;
 
 #[derive(Clone, Debug)]
 #[allow(clippy::module_name_repetitions)]
-pub enum NvptxF64Core {}
+pub enum NvptxMathsCore {}
 
 // TODO: Ensure consistency for cached calculations on the CPU,
 //        maybe guard with linker error?
-impl F64Core for NvptxF64Core {
+impl MathsCore for NvptxMathsCore {
     #[inline]
     fn floor(x: f64) -> f64 {
         unsafe { core::intrinsics::floorf64(x) }

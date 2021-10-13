@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        F64Core, GloballyCoherentLineageStore, LineageStore, LocallyCoherentLineageStore,
+        GloballyCoherentLineageStore, LineageStore, LocallyCoherentLineageStore, MathsCore,
         OriginSampler,
     },
     landscape::{IndexedLocation, Location},
@@ -14,13 +14,13 @@ use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 use super::AlmostInfiniteLineageStore;
 
 #[contract_trait]
-impl<F: F64Core> LineageStore<F, AlmostInfiniteHabitat<F>, InMemoryLineageReference>
-    for AlmostInfiniteLineageStore<F>
+impl<M: MathsCore> LineageStore<M, AlmostInfiniteHabitat<M>, InMemoryLineageReference>
+    for AlmostInfiniteLineageStore<M>
 {
     #[allow(clippy::type_complexity)]
     type LineageReferenceIterator<'a> = impl Iterator<Item = InMemoryLineageReference>;
 
-    fn from_origin_sampler<'h, O: OriginSampler<'h, F, Habitat = AlmostInfiniteHabitat<F>>>(
+    fn from_origin_sampler<'h, O: OriginSampler<'h, M, Habitat = AlmostInfiniteHabitat<M>>>(
         origin_sampler: O,
     ) -> Self {
         Self::new(origin_sampler)
@@ -44,15 +44,16 @@ impl<F: F64Core> LineageStore<F, AlmostInfiniteHabitat<F>, InMemoryLineageRefere
 }
 
 #[contract_trait]
-impl<F: F64Core> LocallyCoherentLineageStore<F, AlmostInfiniteHabitat<F>, InMemoryLineageReference>
-    for AlmostInfiniteLineageStore<F>
+impl<M: MathsCore>
+    LocallyCoherentLineageStore<M, AlmostInfiniteHabitat<M>, InMemoryLineageReference>
+    for AlmostInfiniteLineageStore<M>
 {
     #[must_use]
     #[debug_requires(indexed_location.index() == 0, "only one lineage per location")]
     fn get_global_lineage_reference_at_indexed_location(
         &self,
         indexed_location: &IndexedLocation,
-        _habitat: &AlmostInfiniteHabitat<F>,
+        _habitat: &AlmostInfiniteHabitat<M>,
     ) -> Option<&GlobalLineageReference> {
         self.location_to_lineage_reference
             .get(indexed_location.location())
@@ -63,7 +64,7 @@ impl<F: F64Core> LocallyCoherentLineageStore<F, AlmostInfiniteHabitat<F>, InMemo
     fn insert_lineage_locally_coherent(
         &mut self,
         lineage: Lineage,
-        _habitat: &AlmostInfiniteHabitat<F>,
+        _habitat: &AlmostInfiniteHabitat<M>,
     ) -> InMemoryLineageReference {
         let location = lineage.indexed_location.location().clone();
 
@@ -84,7 +85,7 @@ impl<F: F64Core> LocallyCoherentLineageStore<F, AlmostInfiniteHabitat<F>, InMemo
     fn extract_lineage_locally_coherent(
         &mut self,
         reference: InMemoryLineageReference,
-        _habitat: &AlmostInfiniteHabitat<F>,
+        _habitat: &AlmostInfiniteHabitat<M>,
     ) -> Lineage {
         // We know from the trait preconditions that the lineage exists
         let lineage = self.lineages_store.remove(usize::from(reference));
@@ -97,15 +98,16 @@ impl<F: F64Core> LocallyCoherentLineageStore<F, AlmostInfiniteHabitat<F>, InMemo
 }
 
 #[contract_trait]
-impl<F: F64Core> GloballyCoherentLineageStore<F, AlmostInfiniteHabitat<F>, InMemoryLineageReference>
-    for AlmostInfiniteLineageStore<F>
+impl<M: MathsCore>
+    GloballyCoherentLineageStore<M, AlmostInfiniteHabitat<M>, InMemoryLineageReference>
+    for AlmostInfiniteLineageStore<M>
 {
     type LocationIterator<'a> = impl Iterator<Item = Location>;
 
     #[must_use]
     fn iter_active_locations(
         &self,
-        _habitat: &AlmostInfiniteHabitat<F>,
+        _habitat: &AlmostInfiniteHabitat<M>,
     ) -> Self::LocationIterator<'_> {
         self.lineages_store
             .iter()
@@ -117,7 +119,7 @@ impl<F: F64Core> GloballyCoherentLineageStore<F, AlmostInfiniteHabitat<F>, InMem
     fn get_local_lineage_references_at_location_unordered(
         &self,
         location: &Location,
-        _habitat: &AlmostInfiniteHabitat<F>,
+        _habitat: &AlmostInfiniteHabitat<M>,
     ) -> &[InMemoryLineageReference] {
         match self.location_to_lineage_reference.get(location) {
             Some(local_reference) => core::slice::from_ref(local_reference),

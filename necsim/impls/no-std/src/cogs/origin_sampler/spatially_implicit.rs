@@ -1,7 +1,7 @@
 use core::{fmt, iter::Iterator};
 
 use necsim_core::{
-    cogs::{F64Core, OriginSampler},
+    cogs::{MathsCore, OriginSampler},
     landscape::IndexedLocation,
 };
 
@@ -11,13 +11,13 @@ use crate::cogs::{
 };
 
 #[allow(clippy::module_name_repetitions)]
-pub struct SpatiallyImplicitOriginSampler<'h, F: F64Core, I: Iterator<Item = u64>> {
-    local_iterator: NonSpatialOriginSampler<'h, F, I>,
-    habitat: &'h SpatiallyImplicitHabitat<F>,
+pub struct SpatiallyImplicitOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
+    local_iterator: NonSpatialOriginSampler<'h, M, I>,
+    habitat: &'h SpatiallyImplicitHabitat<M>,
 }
 
-impl<'h, F: F64Core, I: Iterator<Item = u64>> fmt::Debug
-    for SpatiallyImplicitOriginSampler<'h, F, I>
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
+    for SpatiallyImplicitOriginSampler<'h, M, I>
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(SpatiallyImplicitOriginSampler))
@@ -27,11 +27,11 @@ impl<'h, F: F64Core, I: Iterator<Item = u64>> fmt::Debug
     }
 }
 
-impl<'h, F: F64Core, I: Iterator<Item = u64>> SpatiallyImplicitOriginSampler<'h, F, I> {
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> SpatiallyImplicitOriginSampler<'h, M, I> {
     #[must_use]
     pub fn new(
-        pre_sampler: OriginPreSampler<F, I>,
-        habitat: &'h SpatiallyImplicitHabitat<F>,
+        pre_sampler: OriginPreSampler<M, I>,
+        habitat: &'h SpatiallyImplicitHabitat<M>,
     ) -> Self {
         Self {
             local_iterator: NonSpatialOriginSampler::new(pre_sampler, habitat.local()),
@@ -41,10 +41,10 @@ impl<'h, F: F64Core, I: Iterator<Item = u64>> SpatiallyImplicitOriginSampler<'h,
 }
 
 #[contract_trait]
-impl<'h, F: F64Core, I: Iterator<Item = u64>> OriginSampler<'h, F>
-    for SpatiallyImplicitOriginSampler<'h, F, I>
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> OriginSampler<'h, M>
+    for SpatiallyImplicitOriginSampler<'h, M, I>
 {
-    type Habitat = SpatiallyImplicitHabitat<F>;
+    type Habitat = SpatiallyImplicitHabitat<M>;
 
     fn habitat(&self) -> &'h Self::Habitat {
         self.habitat
@@ -55,8 +55,8 @@ impl<'h, F: F64Core, I: Iterator<Item = u64>> OriginSampler<'h, F>
     }
 }
 
-impl<'h, F: F64Core, I: Iterator<Item = u64>> Iterator
-    for SpatiallyImplicitOriginSampler<'h, F, I>
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator
+    for SpatiallyImplicitOriginSampler<'h, M, I>
 {
     type Item = IndexedLocation;
 

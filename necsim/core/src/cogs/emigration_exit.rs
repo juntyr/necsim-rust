@@ -1,7 +1,7 @@
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::{
-    cogs::{F64Core, Habitat, LineageReference, LineageStore, RngCore},
+    cogs::{Habitat, LineageReference, LineageStore, MathsCore, RngCore},
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
     simulation::partial::emigration_exit::PartialSimulation,
@@ -14,11 +14,11 @@ use crate::{
 )]
 #[contract_trait]
 pub trait EmigrationExit<
-    F: F64Core,
-    H: Habitat<F>,
-    G: RngCore<F>,
-    R: LineageReference<F, H>,
-    S: LineageStore<F, H, R>,
+    M: MathsCore,
+    H: Habitat<M>,
+    G: RngCore<M>,
+    R: LineageReference<M, H>,
+    S: LineageStore<M, H, R>,
 >: crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
@@ -45,7 +45,7 @@ pub trait EmigrationExit<
         dispersal_target: Location,
         prior_time: NonNegativeF64,
         event_time: PositiveF64,
-        simulation: &mut PartialSimulation<F, H, G, R, S>,
+        simulation: &mut PartialSimulation<M, H, G, R, S>,
         rng: &mut G,
     ) -> Option<(
         GlobalLineageReference,

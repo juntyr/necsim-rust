@@ -5,7 +5,7 @@ use alloc::{boxed::Box, vec::Vec};
 use r#final::Final;
 
 use necsim_core::{
-    cogs::{Backup, F64Core, Habitat},
+    cogs::{Backup, Habitat, MathsCore},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -14,29 +14,29 @@ use crate::array2d::Array2D;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-pub struct InMemoryHabitat<F: F64Core> {
+pub struct InMemoryHabitat<M: MathsCore> {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     habitat: Final<Box<[u32]>>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     u64_injection: Final<Box<[u64]>>,
     extent: LandscapeExtent,
-    marker: PhantomData<F>,
+    marker: PhantomData<M>,
 }
 
 #[contract_trait]
-impl<F: F64Core> Backup for InMemoryHabitat<F> {
+impl<M: MathsCore> Backup for InMemoryHabitat<M> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             habitat: Final::new(self.habitat.clone()),
             u64_injection: Final::new(self.u64_injection.clone()),
             extent: self.extent.clone(),
-            marker: PhantomData::<F>,
+            marker: PhantomData::<M>,
         }
     }
 }
 
 #[contract_trait]
-impl<F: F64Core> Habitat<F> for InMemoryHabitat<F> {
+impl<M: MathsCore> Habitat<M> for InMemoryHabitat<M> {
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
         &self.extent
@@ -68,7 +68,7 @@ impl<F: F64Core> Habitat<F> for InMemoryHabitat<F> {
     }
 }
 
-impl<F: F64Core> InMemoryHabitat<F> {
+impl<M: MathsCore> InMemoryHabitat<M> {
     #[must_use]
     #[debug_ensures(
         old(habitat.num_columns()) == ret.get_extent().width() as usize &&
@@ -102,7 +102,7 @@ impl<F: F64Core> InMemoryHabitat<F> {
             habitat: Final::new(habitat),
             u64_injection: Final::new(u64_injection),
             extent,
-            marker: PhantomData::<F>,
+            marker: PhantomData::<M>,
         }
     }
 }

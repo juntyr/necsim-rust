@@ -8,7 +8,7 @@ use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, F64Core, Habitat, PrimeableRng,
+        ActiveLineageSampler, DispersalSampler, Habitat, MathsCore, PrimeableRng,
         SpeciationProbability, TurnoverRate,
     },
     event::DispersalEvent,
@@ -41,33 +41,33 @@ use super::{reporter::IgnoreProgressReporterProxy, DedupCache};
 
 #[allow(clippy::type_complexity)]
 pub fn simulate<
-    F: F64Core,
-    H: Habitat<F>,
-    C: Decomposition<F, H>,
-    E: EmigrationChoice<F, H>,
-    G: PrimeableRng<F>,
-    D: DispersalSampler<F, H, G>,
-    T: TurnoverRate<F, H>,
-    N: SpeciationProbability<F, H>,
-    J: EventTimeSampler<F, H, G, T>,
+    M: MathsCore,
+    H: Habitat<M>,
+    C: Decomposition<M, H>,
+    E: EmigrationChoice<M, H>,
+    G: PrimeableRng<M>,
+    D: DispersalSampler<M, H, G>,
+    T: TurnoverRate<M, H>,
+    N: SpeciationProbability<M, H>,
+    J: EventTimeSampler<M, H, G, T>,
     R: Reporter,
     P: LocalPartition<R>,
     L: IntoIterator<Item = Lineage>,
 >(
     mut simulation: Simulation<
-        F,
+        M,
         H,
         G,
         GlobalLineageReference,
-        IndependentLineageStore<F, H>,
-        IndependentEmigrationExit<F, H, C, E>,
+        IndependentLineageStore<M, H>,
+        IndependentEmigrationExit<M, H, C, E>,
         D,
-        IndependentCoalescenceSampler<F, H>,
+        IndependentCoalescenceSampler<M, H>,
         T,
         N,
-        IndependentEventSampler<F, H, G, IndependentEmigrationExit<F, H, C, E>, D, T, N>,
+        IndependentEventSampler<M, H, G, IndependentEmigrationExit<M, H, C, E>, D, T, N>,
         NeverImmigrationEntry,
-        IndependentActiveLineageSampler<F, H, G, IndependentEmigrationExit<F, H, C, E>, D, T, N, J>,
+        IndependentActiveLineageSampler<M, H, G, IndependentEmigrationExit<M, H, C, E>, D, T, N, J>,
     >,
     lineages: L,
     dedup_cache: DedupCache,
@@ -155,7 +155,7 @@ pub fn simulate<
             } = immigrant;
 
             // Finish sampling the dispersal of the immigrating individual
-            let target_index = coalescence_rng_sample.sample_coalescence_index::<F>(
+            let target_index = coalescence_rng_sample.sample_coalescence_index::<M>(
                 simulation
                     .habitat()
                     .get_habitat_at_location(&dispersal_target),

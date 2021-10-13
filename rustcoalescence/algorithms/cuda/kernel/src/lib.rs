@@ -12,8 +12,9 @@ extern crate alloc;
 
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, DispersalSampler, EmigrationExit, F64Core, Habitat, ImmigrationEntry,
-        LineageReference, LineageStore, PrimeableRng, SpeciationProbability, TurnoverRate,
+        CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+        LineageReference, LineageStore, MathsCore, PrimeableRng, SpeciationProbability,
+        TurnoverRate,
     },
     reporter::boolean::Boolean,
 };
@@ -28,26 +29,26 @@ use rust_cuda::common::RustToCuda;
 #[rust_cuda::common::kernel(pub use link_kernel! as impl Kernel<KernelArgs> for SimulationKernel)]
 #[allow(clippy::too_many_arguments)]
 pub fn simulate<
-    F: F64Core,
-    H: Habitat<F> + RustToCuda,
-    G: PrimeableRng<F> + RustToCuda,
-    R: LineageReference<F, H>,
-    S: LineageStore<F, H, R> + RustToCuda,
-    X: EmigrationExit<F, H, G, R, S> + RustToCuda,
-    D: DispersalSampler<F, H, G> + RustToCuda,
-    C: CoalescenceSampler<F, H, R, S> + RustToCuda,
-    T: TurnoverRate<F, H> + RustToCuda,
-    N: SpeciationProbability<F, H> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<F, H, G, R, S, X, D, C, T, N> + RustToCuda,
-    I: ImmigrationEntry<F> + RustToCuda,
-    A: SingularActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
+    M: MathsCore,
+    H: Habitat<M> + RustToCuda,
+    G: PrimeableRng<M> + RustToCuda,
+    R: LineageReference<M, H>,
+    S: LineageStore<M, H, R> + RustToCuda,
+    X: EmigrationExit<M, H, G, R, S> + RustToCuda,
+    D: DispersalSampler<M, H, G> + RustToCuda,
+    C: CoalescenceSampler<M, H, R, S> + RustToCuda,
+    T: TurnoverRate<M, H> + RustToCuda,
+    N: SpeciationProbability<M, H> + RustToCuda,
+    E: MinSpeciationTrackingEventSampler<M, H, G, R, S, X, D, C, T, N> + RustToCuda,
+    I: ImmigrationEntry<M> + RustToCuda,
+    A: SingularActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
     ReportSpeciation: Boolean,
     ReportDispersal: Boolean,
 >(
     #[rustfmt::skip]
     #[kernel(pass = LendRustToCuda, jit)]
     simulation: &mut ShallowCopy<
-        necsim_core::simulation::Simulation<F, H, G, R, S, X, D, C, T, N, E, I, A>,
+        necsim_core::simulation::Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A>,
     >,
     #[rustfmt::skip]
     #[kernel(pass = LendRustToCuda, jit)]

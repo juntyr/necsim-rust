@@ -5,12 +5,12 @@ use serde::{de::DeserializeOwned, Serialize};
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveF64};
 
 use crate::{
-    cogs::{F64Core, Habitat},
+    cogs::{Habitat, MathsCore},
     landscape::IndexedLocation,
 };
 
 #[allow(clippy::module_name_repetitions)]
-pub trait RngCore<F: F64Core>:
+pub trait RngCore<M: MathsCore>:
     crate::cogs::Backup + Sized + Clone + core::fmt::Debug + Serialize + DeserializeOwned
 {
     type Seed: AsMut<[u8]> + Default + Sized;
@@ -23,7 +23,7 @@ pub trait RngCore<F: F64Core>:
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub trait SeedableRng<F: F64Core>: RngCore<F> {
+pub trait SeedableRng<M: MathsCore>: RngCore<M> {
     #[must_use]
     fn seed_from_u64(mut state: u64) -> Self {
         // Implementation from:
@@ -56,12 +56,12 @@ pub trait SeedableRng<F: F64Core>: RngCore<F> {
     }
 }
 
-impl<F: F64Core, R: RngCore<F>> SeedableRng<F> for R {}
+impl<M: MathsCore, R: RngCore<M>> SeedableRng<M> for R {}
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
-pub trait RngSampler<F: F64Core>: RngCore<F> {
+pub trait RngSampler<M: MathsCore>: RngCore<M> {
     #[must_use]
     #[inline]
     fn sample_uniform(&mut self) -> ClosedUnitF64 {
@@ -83,7 +83,7 @@ pub trait RngSampler<F: F64Core>: RngCore<F> {
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let index = F::floor(self.sample_uniform().get() * (length as f64)) as usize;
+        let index = M::floor(self.sample_uniform().get() * (length as f64)) as usize;
         index
     }
 
@@ -98,14 +98,14 @@ pub trait RngSampler<F: F64Core>: RngCore<F> {
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let index = F::floor(self.sample_uniform().get() * f64::from(length)) as u32;
+        let index = M::floor(self.sample_uniform().get() * f64::from(length)) as u32;
         index
     }
 
     #[must_use]
     #[inline]
     fn sample_exponential(&mut self, lambda: PositiveF64) -> NonNegativeF64 {
-        let exp = -F::ln(self.sample_uniform().get()) / lambda.get();
+        let exp = -M::ln(self.sample_uniform().get()) / lambda.get();
 
         unsafe { NonNegativeF64::new_unchecked(exp) }
     }
@@ -123,10 +123,10 @@ pub trait RngSampler<F: F64Core>: RngCore<F> {
         let u0 = self.sample_uniform();
         let u1 = self.sample_uniform();
 
-        let r = F::sqrt(-2.0_f64 * F::ln(u0.get()));
+        let r = M::sqrt(-2.0_f64 * M::ln(u0.get()));
         let theta = -core::f64::consts::TAU * u1.get();
 
-        (r * F::sin(theta), r * F::cos(theta))
+        (r * M::sin(theta), r * M::cos(theta))
     }
 
     #[must_use]
@@ -138,15 +138,15 @@ pub trait RngSampler<F: F64Core>: RngCore<F> {
     }
 }
 
-impl<F: F64Core, R: RngCore<F>> RngSampler<F> for R {}
+impl<M: MathsCore, R: RngCore<M>> RngSampler<M> for R {}
 
 #[allow(clippy::module_name_repetitions)]
-pub trait PrimeableRng<F: F64Core>: RngCore<F> {
+pub trait PrimeableRng<M: MathsCore>: RngCore<M> {
     fn prime_with(&mut self, location_index: u64, time_index: u64);
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub trait HabitatPrimeableRng<F: F64Core, H: Habitat<F>>: PrimeableRng<F> {
+pub trait HabitatPrimeableRng<M: MathsCore, H: Habitat<M>>: PrimeableRng<M> {
     #[inline]
     fn prime_with_habitat(
         &mut self,
@@ -161,10 +161,10 @@ pub trait HabitatPrimeableRng<F: F64Core, H: Habitat<F>>: PrimeableRng<F> {
     }
 }
 
-impl<F: F64Core, R: PrimeableRng<F>, H: Habitat<F>> HabitatPrimeableRng<F, H> for R {}
+impl<M: MathsCore, R: PrimeableRng<M>, H: Habitat<M>> HabitatPrimeableRng<M, H> for R {}
 
 #[allow(clippy::module_name_repetitions)]
-pub trait SplittableRng<F: F64Core>: RngCore<F> {
+pub trait SplittableRng<M: MathsCore>: RngCore<M> {
     fn split(self) -> (Self, Self);
 
     fn split_to_stream(self, stream: u64) -> Self;

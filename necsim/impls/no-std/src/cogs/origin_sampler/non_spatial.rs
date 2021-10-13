@@ -5,7 +5,7 @@ use core::{
 };
 
 use necsim_core::{
-    cogs::{F64Core, Habitat, OriginSampler},
+    cogs::{Habitat, MathsCore, OriginSampler},
     landscape::{IndexedLocation, LocationIterator},
 };
 
@@ -14,15 +14,15 @@ use crate::cogs::{
 };
 
 #[allow(clippy::module_name_repetitions)]
-pub struct NonSpatialOriginSampler<'h, F: F64Core, I: Iterator<Item = u64>> {
-    pre_sampler: OriginPreSampler<F, I>,
+pub struct NonSpatialOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
+    pre_sampler: OriginPreSampler<M, I>,
     last_index: u64,
     location_iterator: Peekable<LocationIterator>,
     next_location_index: u32,
-    habitat: &'h NonSpatialHabitat<F>,
+    habitat: &'h NonSpatialHabitat<M>,
 }
 
-impl<'h, F: F64Core, I: Iterator<Item = u64>> fmt::Debug for NonSpatialOriginSampler<'h, F, I> {
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug for NonSpatialOriginSampler<'h, M, I> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct(stringify!(NonSpatialOriginSampler))
             .field("pre_sampler", &self.pre_sampler)
@@ -34,9 +34,9 @@ impl<'h, F: F64Core, I: Iterator<Item = u64>> fmt::Debug for NonSpatialOriginSam
     }
 }
 
-impl<'h, F: F64Core, I: Iterator<Item = u64>> NonSpatialOriginSampler<'h, F, I> {
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> NonSpatialOriginSampler<'h, M, I> {
     #[must_use]
-    pub fn new(pre_sampler: OriginPreSampler<F, I>, habitat: &'h NonSpatialHabitat<F>) -> Self {
+    pub fn new(pre_sampler: OriginPreSampler<M, I>, habitat: &'h NonSpatialHabitat<M>) -> Self {
         Self {
             pre_sampler,
             last_index: 0_u64,
@@ -48,10 +48,10 @@ impl<'h, F: F64Core, I: Iterator<Item = u64>> NonSpatialOriginSampler<'h, F, I> 
 }
 
 #[contract_trait]
-impl<'h, F: F64Core, I: Iterator<Item = u64>> OriginSampler<'h, F>
-    for NonSpatialOriginSampler<'h, F, I>
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> OriginSampler<'h, M>
+    for NonSpatialOriginSampler<'h, M, I>
 {
-    type Habitat = NonSpatialHabitat<F>;
+    type Habitat = NonSpatialHabitat<M>;
 
     fn habitat(&self) -> &'h Self::Habitat {
         self.habitat
@@ -70,7 +70,7 @@ impl<'h, F: F64Core, I: Iterator<Item = u64>> OriginSampler<'h, F>
     }
 }
 
-impl<'h, F: F64Core, I: Iterator<Item = u64>> Iterator for NonSpatialOriginSampler<'h, F, I> {
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator for NonSpatialOriginSampler<'h, M, I> {
     type Item = IndexedLocation;
 
     fn next(&mut self) -> Option<Self::Item> {

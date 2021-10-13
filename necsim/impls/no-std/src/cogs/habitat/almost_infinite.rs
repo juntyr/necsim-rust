@@ -1,39 +1,39 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, F64Core, Habitat},
+    cogs::{Backup, Habitat, MathsCore},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-pub struct AlmostInfiniteHabitat<F: F64Core> {
+pub struct AlmostInfiniteHabitat<M: MathsCore> {
     extent: LandscapeExtent,
-    marker: PhantomData<F>,
+    marker: PhantomData<M>,
 }
 
-impl<F: F64Core> Default for AlmostInfiniteHabitat<F> {
+impl<M: MathsCore> Default for AlmostInfiniteHabitat<M> {
     fn default() -> Self {
         Self {
             extent: LandscapeExtent::new(0_u32, 0_u32, u32::MAX, u32::MAX),
-            marker: PhantomData::<F>,
+            marker: PhantomData::<M>,
         }
     }
 }
 
 #[contract_trait]
-impl<F: F64Core> Backup for AlmostInfiniteHabitat<F> {
+impl<M: MathsCore> Backup for AlmostInfiniteHabitat<M> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             extent: self.extent.clone(),
-            marker: PhantomData::<F>,
+            marker: PhantomData::<M>,
         }
     }
 }
 
 #[contract_trait]
-impl<F: F64Core> Habitat<F> for AlmostInfiniteHabitat<F> {
+impl<M: MathsCore> Habitat<M> for AlmostInfiniteHabitat<M> {
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
         &self.extent

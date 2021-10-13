@@ -2,7 +2,7 @@ use std::num::NonZeroU32;
 
 use serde::Deserialize;
 
-use necsim_core::cogs::{DispersalSampler, F64Core, LineageStore, RngCore};
+use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
 use necsim_core_bond::PositiveUnitF64;
 
 use necsim_impls_no_std::{
@@ -22,9 +22,9 @@ use necsim_impls_no_std::{
 use crate::{Scenario, ScenarioArguments};
 
 #[allow(clippy::module_name_repetitions)]
-pub struct SpatiallyImplicitScenario<F: F64Core, G: RngCore<F>> {
-    habitat: SpatiallyImplicitHabitat<F>,
-    dispersal_sampler: SpatiallyImplicitDispersalSampler<F, G>,
+pub struct SpatiallyImplicitScenario<M: MathsCore, G: RngCore<M>> {
+    habitat: SpatiallyImplicitHabitat<M>,
+    dispersal_sampler: SpatiallyImplicitDispersalSampler<M, G>,
     turnover_rate: UniformTurnoverRate,
     speciation_probability: SpatiallyImplicitSpeciationProbability,
 }
@@ -42,19 +42,19 @@ pub struct SpatiallyImplicitArguments {
     pub migration_probability_per_generation: PositiveUnitF64,
 }
 
-impl<F: F64Core, G: RngCore<F>> ScenarioArguments for SpatiallyImplicitScenario<F, G> {
+impl<M: MathsCore, G: RngCore<M>> ScenarioArguments for SpatiallyImplicitScenario<M, G> {
     type Arguments = SpatiallyImplicitArguments;
 }
 
-impl<F: F64Core, G: RngCore<F>> Scenario<F, G> for SpatiallyImplicitScenario<F, G> {
+impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyImplicitScenario<M, G> {
     type Decomposition = ModuloDecomposition;
-    type DispersalSampler<D: DispersalSampler<F, Self::Habitat, G>> =
-        SpatiallyImplicitDispersalSampler<F, G>;
+    type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
+        SpatiallyImplicitDispersalSampler<M, G>;
     type Error = !;
-    type Habitat = SpatiallyImplicitHabitat<F>;
+    type Habitat = SpatiallyImplicitHabitat<M>;
     type LineageReference = InMemoryLineageReference;
-    type LineageStore<L: LineageStore<F, Self::Habitat, Self::LineageReference>> = L;
-    type OriginSampler<'h, I: Iterator<Item = u64>> = SpatiallyImplicitOriginSampler<'h, F, I>;
+    type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>> = L;
+    type OriginSampler<'h, I: Iterator<Item = u64>> = SpatiallyImplicitOriginSampler<'h, M, I>;
     type SpeciationProbability = SpatiallyImplicitSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
 
@@ -82,7 +82,7 @@ impl<F: F64Core, G: RngCore<F>> Scenario<F, G> for SpatiallyImplicitScenario<F, 
         })
     }
 
-    fn build<D: DispersalSampler<F, Self::Habitat, G>>(
+    fn build<D: DispersalSampler<M, Self::Habitat, G>>(
         self,
     ) -> (
         Self::Habitat,
@@ -100,7 +100,7 @@ impl<F: F64Core, G: RngCore<F>> Scenario<F, G> for SpatiallyImplicitScenario<F, 
 
     fn sample_habitat<I: Iterator<Item = u64>>(
         &self,
-        pre_sampler: OriginPreSampler<F, I>,
+        pre_sampler: OriginPreSampler<M, I>,
     ) -> Self::OriginSampler<'_, I> {
         SpatiallyImplicitOriginSampler::new(pre_sampler, &self.habitat)
     }

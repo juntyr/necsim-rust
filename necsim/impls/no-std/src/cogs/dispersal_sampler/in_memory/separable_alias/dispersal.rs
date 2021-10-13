@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{DispersalSampler, F64Core, Habitat, RngCore, SeparableDispersalSampler},
+    cogs::{DispersalSampler, Habitat, MathsCore, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
 use necsim_core_bond::ClosedUnitF64;
@@ -7,8 +7,8 @@ use necsim_core_bond::ClosedUnitF64;
 use super::InMemorySeparableAliasDispersalSampler;
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> DispersalSampler<F, H, G>
-    for InMemorySeparableAliasDispersalSampler<F, H, G>
+impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
+    for InMemorySeparableAliasDispersalSampler<M, H, G>
 {
     #[must_use]
     fn sample_dispersal_from_location(
@@ -35,8 +35,8 @@ impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> DispersalSampler<F, H, G>
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> SeparableDispersalSampler<F, H, G>
-    for InMemorySeparableAliasDispersalSampler<F, H, G>
+impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> SeparableDispersalSampler<M, H, G>
+    for InMemorySeparableAliasDispersalSampler<M, H, G>
 {
     #[must_use]
     fn sample_non_self_dispersal_from_location(

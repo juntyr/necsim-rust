@@ -9,7 +9,7 @@ use core::num::Wrapping;
 use crate::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        F64Core, Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore,
+        Habitat, ImmigrationEntry, LineageReference, LineageStore, MathsCore, RngCore,
         SpeciationProbability, TurnoverRate,
     },
     reporter::Reporter,
@@ -20,20 +20,20 @@ pub use builder::{Simulation, SimulationBuilder};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 impl<
-        F: F64Core,
-        H: Habitat<F>,
-        G: RngCore<F>,
-        R: LineageReference<F, H>,
-        S: LineageStore<F, H, R>,
-        X: EmigrationExit<F, H, G, R, S>,
-        D: DispersalSampler<F, H, G>,
-        C: CoalescenceSampler<F, H, R, S>,
-        T: TurnoverRate<F, H>,
-        N: SpeciationProbability<F, H>,
-        E: EventSampler<F, H, G, R, S, X, D, C, T, N>,
-        I: ImmigrationEntry<F>,
-        A: ActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>,
-    > Simulation<F, H, G, R, S, X, D, C, T, N, E, I, A>
+        M: MathsCore,
+        H: Habitat<M>,
+        G: RngCore<M>,
+        R: LineageReference<M, H>,
+        S: LineageStore<M, H, R>,
+        X: EmigrationExit<M, H, G, R, S>,
+        D: DispersalSampler<M, H, G>,
+        C: CoalescenceSampler<M, H, R, S>,
+        T: TurnoverRate<M, H>,
+        N: SpeciationProbability<M, H>,
+        E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+        I: ImmigrationEntry<M>,
+        A: ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>,
+    > Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A>
 {
     pub fn is_done(&self) -> bool {
         self.active_lineage_sampler.number_active_lineages() == 0
@@ -49,11 +49,11 @@ impl<
 
     #[inline]
     pub fn simulate_incremental_early_stop<
-        W: FnMut(&Self, u64, PositiveF64) -> bool,
+        F: FnMut(&Self, u64, PositiveF64) -> bool,
         P: Reporter,
     >(
         &mut self,
-        mut early_stop: W,
+        mut early_stop: F,
         reporter: &mut P,
     ) -> (NonNegativeF64, u64) {
         let mut steps = 0_u64;

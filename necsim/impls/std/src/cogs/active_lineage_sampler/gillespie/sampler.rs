@@ -1,8 +1,8 @@
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, F64Core,
-        GloballyCoherentLineageStore, Habitat, ImmigrationEntry, LineageReference, RngCore,
-        SpeciationProbability, TurnoverRate,
+        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit,
+        GloballyCoherentLineageStore, Habitat, ImmigrationEntry, LineageReference, MathsCore,
+        RngCore, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineager_sampler::PartialSimulation,
@@ -17,20 +17,20 @@ use super::{EventTime, GillespieActiveLineageSampler};
 
 #[contract_trait]
 impl<
-        F: F64Core,
-        H: Habitat<F>,
-        G: RngCore<F>,
-        R: LineageReference<F, H>,
-        S: GloballyCoherentLineageStore<F, H, R>,
-        X: EmigrationExit<F, H, G, R, S>,
-        D: DispersalSampler<F, H, G>,
-        C: CoalescenceSampler<F, H, R, S>,
-        T: TurnoverRate<F, H>,
-        N: SpeciationProbability<F, H>,
-        E: GillespieEventSampler<F, H, G, R, S, X, D, C, T, N>,
-        I: ImmigrationEntry<F>,
-    > ActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>
-    for GillespieActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>
+        M: MathsCore,
+        H: Habitat<M>,
+        G: RngCore<M>,
+        R: LineageReference<M, H>,
+        S: GloballyCoherentLineageStore<M, H, R>,
+        X: EmigrationExit<M, H, G, R, S>,
+        D: DispersalSampler<M, H, G>,
+        C: CoalescenceSampler<M, H, R, S>,
+        T: TurnoverRate<M, H>,
+        N: SpeciationProbability<M, H>,
+        E: GillespieEventSampler<M, H, G, R, S, X, D, C, T, N>,
+        I: ImmigrationEntry<M>,
+    > ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
+    for GillespieActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
 {
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -43,11 +43,11 @@ impl<
     }
 
     #[must_use]
-    fn pop_active_lineage_and_event_time<W: FnOnce(PositiveF64) -> bool>(
+    fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> bool>(
         &mut self,
-        simulation: &mut PartialSimulation<F, H, G, R, S, X, D, C, T, N, E>,
+        simulation: &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
-        early_peek_stop: W,
+        early_peek_stop: F,
     ) -> Option<(Lineage, PositiveF64)> {
         use necsim_core::cogs::RngSampler;
 
@@ -118,7 +118,7 @@ impl<
     fn push_active_lineage(
         &mut self,
         lineage: Lineage,
-        simulation: &mut PartialSimulation<F, H, G, R, S, X, D, C, T, N, E>,
+        simulation: &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
     ) {
         use necsim_core::cogs::RngSampler;
