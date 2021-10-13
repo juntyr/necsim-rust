@@ -6,7 +6,6 @@ use necsim_core_bond::PositiveF64;
 
 use crate::cache::DirectMappedCache;
 
-mod event_slice;
 mod reporter;
 
 pub mod individuals;
@@ -55,7 +54,8 @@ impl DedupCache {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[allow(clippy::unsafe_derive_deserialize)]
+#[derive(Copy, Clone, Debug, Deserialize)]
 pub enum EventSlice {
     Absolute(AbsoluteCapacity),
     Relative(RelativeCapacity),

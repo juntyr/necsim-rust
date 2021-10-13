@@ -18,7 +18,8 @@ fn into_ron_args(command_args: CommandArgs) -> String {
 
     let ron_args_trimmed = ron_args.trim();
 
-    let mut ron_args = String::from("#![enable(unwrap_newtypes)] #![enable(implicit_some)]");
+    let mut ron_args =
+        String::from("#![enable(unwrap_variant_newtypes, unwrap_newtypes, implicit_some)]");
     ron_args.reserve(ron_args_trimmed.len());
 
     if !ron_args_trimmed.starts_with('(') {
