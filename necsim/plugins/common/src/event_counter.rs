@@ -27,7 +27,7 @@ pub struct EventCounterReporter {
 
 impl fmt::Debug for EventCounterReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("EventReporter")
+        fmt.debug_struct(stringify!(EventCounterReporter))
             .field("speciation", &self.speciation)
             .field("out_dispersal", &self.out_dispersal)
             .field("self_dispersal", &self.self_dispersal)

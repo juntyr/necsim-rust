@@ -2,7 +2,7 @@ use alloc::boxed::Box;
 use core::{marker::PhantomData, num::NonZeroU32};
 
 use necsim_core::{
-    cogs::{F64Core, Backup, Habitat},
+    cogs::{Backup, F64Core, Habitat},
     landscape::{LandscapeExtent, Location},
 };
 
@@ -37,7 +37,7 @@ impl<F: F64Core, H: Habitat<F>> Backup for EqualDecomposition<F, H> {
             extent: self.extent.clone(),
             morton: self.morton,
             indices: self.indices.clone(),
-            _marker: PhantomData::<H>,
+            _marker: PhantomData::<(F, H)>,
         }
     }
 }

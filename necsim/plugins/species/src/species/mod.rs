@@ -38,7 +38,7 @@ pub struct SpeciesLocationsReporter {
 
 impl fmt::Debug for SpeciesLocationsReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("SpeciesLocationsReporter")
+        fmt.debug_struct(stringify!(SpeciesLocationsReporter))
             .field("output", &self.output)
             .field("table", &self.table)
             .finish()

@@ -5,6 +5,7 @@ use necsim_core::{
     simulation::partial::emigration_exit::PartialSimulation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_f64::F64Core;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Default)]
@@ -19,8 +20,13 @@ impl Backup for NeverEmigrationExit {
 }
 
 #[contract_trait]
-impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: LineageStore<H, R>>
-    EmigrationExit<H, G, R, S> for NeverEmigrationExit
+impl<
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: LineageStore<F, H, R>,
+    > EmigrationExit<F, H, G, R, S> for NeverEmigrationExit
 {
     #[must_use]
     #[inline]
@@ -32,7 +38,7 @@ impl<H: Habitat, G: RngCore, R: LineageReference<H>, S: LineageStore<H, R>>
         dispersal_target: Location,
         prior_time: NonNegativeF64,
         event_time: PositiveF64,
-        _simulation: &mut PartialSimulation<H, G, R, S>,
+        _simulation: &mut PartialSimulation<F, H, G, R, S>,
         _rng: &mut G,
     ) -> Option<(
         GlobalLineageReference,

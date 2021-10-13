@@ -4,6 +4,8 @@
 #[macro_use]
 extern crate serde_derive_state;
 
+use std::marker::PhantomData;
+
 use arguments::{
     IndependentArguments, IsolatedParallelismMode, MonolithicParallelismMode, ParallelismMode,
     ProbabilisticParallelismMode,
@@ -12,9 +14,10 @@ use necsim_core::{
     cogs::SeedableRng,
     lineage::{GlobalLineageReference, Lineage},
     reporter::Reporter,
-    simulation::Simulation,
+    simulation::SimulationBuilder,
 };
 use necsim_core_bond::NonNegativeF64;
+use necsim_core_f64::IntrinsicsF64Core;
 
 use necsim_impls_no_std::{
     cogs::{
@@ -57,20 +60,24 @@ impl AlgorithmArguments for IndependentAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
-    for IndependentAlgorithm
+impl<
+        O: Scenario<IntrinsicsF64Core, WyHash<IntrinsicsF64Core>>,
+        R: Reporter,
+        P: LocalPartition<R>,
+    > Algorithm<O, R, P> for IndependentAlgorithm
 {
     type Error = !;
+    type F64Core = IntrinsicsF64Core;
     type LineageReference = GlobalLineageReference;
-    type LineageStore = IndependentLineageStore<O::Habitat>;
-    type Rng = WyHash;
+    type LineageStore = IndependentLineageStore<IntrinsicsF64Core, O::Habitat>;
+    type Rng = WyHash<IntrinsicsF64Core>;
 
     #[allow(clippy::too_many_lines)]
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,
-        pre_sampler: OriginPreSampler<I>,
+        pre_sampler: OriginPreSampler<Self::F64Core, I>,
         local_partition: &mut P,
     ) -> Result<(NonNegativeF64, u64), Self::Error> {
         match args.parallelism_mode {
@@ -109,7 +116,11 @@ impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
                 };
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, WyHash>>();
+                    scenario.build::<InMemoryAliasDispersalSampler<
+                        Self::F64Core,
+                        O::Habitat,
+                        WyHash<Self::F64Core>,
+                    >>();
                 let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
@@ -121,20 +132,22 @@ impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
                     PoissonEventTimeSampler::new(args.delta_t),
                 );
 
-                let simulation = Simulation::builder()
-                    .habitat(habitat)
-                    .rng(rng)
-                    .speciation_probability(speciation_probability)
-                    .dispersal_sampler(dispersal_sampler)
-                    .lineage_reference(std::marker::PhantomData::<GlobalLineageReference>)
-                    .lineage_store(lineage_store)
-                    .emigration_exit(emigration_exit)
-                    .coalescence_sampler(coalescence_sampler)
-                    .turnover_rate(turnover_rate)
-                    .event_sampler(event_sampler)
-                    .immigration_entry(immigration_entry)
-                    .active_lineage_sampler(active_lineage_sampler)
-                    .build();
+                let simulation = SimulationBuilder {
+                    f64_core: PhantomData::<Self::F64Core>,
+                    habitat,
+                    lineage_reference: PhantomData::<GlobalLineageReference>,
+                    lineage_store,
+                    dispersal_sampler,
+                    coalescence_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    emigration_exit,
+                    event_sampler,
+                    active_lineage_sampler,
+                    rng,
+                    immigration_entry,
+                }
+                .build();
 
                 Ok(parallelisation::independent::monolithic::simulate(
                     simulation,
@@ -155,7 +168,11 @@ impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
                     .collect();
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, WyHash>>();
+                    scenario.build::<InMemoryAliasDispersalSampler<
+                        Self::F64Core,
+                        O::Habitat,
+                        WyHash<Self::F64Core>,
+                    >>();
                 let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
@@ -166,20 +183,22 @@ impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
                     PoissonEventTimeSampler::new(args.delta_t),
                 );
 
-                let simulation = Simulation::builder()
-                    .habitat(habitat)
-                    .rng(rng)
-                    .speciation_probability(speciation_probability)
-                    .dispersal_sampler(dispersal_sampler)
-                    .lineage_reference(std::marker::PhantomData::<GlobalLineageReference>)
-                    .lineage_store(lineage_store)
-                    .emigration_exit(emigration_exit)
-                    .coalescence_sampler(coalescence_sampler)
-                    .turnover_rate(turnover_rate)
-                    .event_sampler(event_sampler)
-                    .immigration_entry(immigration_entry)
-                    .active_lineage_sampler(active_lineage_sampler)
-                    .build();
+                let simulation = SimulationBuilder {
+                    f64_core: PhantomData::<Self::F64Core>,
+                    habitat,
+                    lineage_reference: PhantomData::<GlobalLineageReference>,
+                    lineage_store,
+                    dispersal_sampler,
+                    coalescence_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    emigration_exit,
+                    event_sampler,
+                    active_lineage_sampler,
+                    rng,
+                    immigration_entry,
+                }
+                .build();
 
                 Ok(parallelisation::independent::individuals::simulate(
                     simulation,
@@ -203,7 +222,11 @@ impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
                 .collect();
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, WyHash>>();
+                    scenario.build::<InMemoryAliasDispersalSampler<
+                        Self::F64Core,
+                        O::Habitat,
+                        WyHash<Self::F64Core>,
+                    >>();
                 let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
@@ -217,20 +240,22 @@ impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
                     PoissonEventTimeSampler::new(args.delta_t),
                 );
 
-                let simulation = Simulation::builder()
-                    .habitat(habitat)
-                    .rng(rng)
-                    .speciation_probability(speciation_probability)
-                    .dispersal_sampler(dispersal_sampler)
-                    .lineage_reference(std::marker::PhantomData::<GlobalLineageReference>)
-                    .lineage_store(lineage_store)
-                    .emigration_exit(emigration_exit)
-                    .coalescence_sampler(coalescence_sampler)
-                    .turnover_rate(turnover_rate)
-                    .event_sampler(event_sampler)
-                    .immigration_entry(immigration_entry)
-                    .active_lineage_sampler(active_lineage_sampler)
-                    .build();
+                let simulation = SimulationBuilder {
+                    f64_core: PhantomData::<Self::F64Core>,
+                    habitat,
+                    lineage_reference: PhantomData::<GlobalLineageReference>,
+                    lineage_store,
+                    dispersal_sampler,
+                    coalescence_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    emigration_exit,
+                    event_sampler,
+                    active_lineage_sampler,
+                    rng,
+                    immigration_entry,
+                }
+                .build();
 
                 Ok(parallelisation::independent::landscape::simulate(
                     simulation,
@@ -256,7 +281,11 @@ impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
                 .collect();
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<O::Habitat, WyHash>>();
+                    scenario.build::<InMemoryAliasDispersalSampler<
+                        Self::F64Core,
+                        O::Habitat,
+                        WyHash<Self::F64Core>,
+                    >>();
                 let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
@@ -270,20 +299,22 @@ impl<O: Scenario<WyHash>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
                     PoissonEventTimeSampler::new(args.delta_t),
                 );
 
-                let simulation = Simulation::builder()
-                    .habitat(habitat)
-                    .rng(rng)
-                    .speciation_probability(speciation_probability)
-                    .dispersal_sampler(dispersal_sampler)
-                    .lineage_reference(std::marker::PhantomData::<GlobalLineageReference>)
-                    .lineage_store(lineage_store)
-                    .emigration_exit(emigration_exit)
-                    .coalescence_sampler(coalescence_sampler)
-                    .turnover_rate(turnover_rate)
-                    .event_sampler(event_sampler)
-                    .immigration_entry(immigration_entry)
-                    .active_lineage_sampler(active_lineage_sampler)
-                    .build();
+                let simulation = SimulationBuilder {
+                    f64_core: PhantomData::<Self::F64Core>,
+                    habitat,
+                    lineage_reference: PhantomData::<GlobalLineageReference>,
+                    lineage_store,
+                    dispersal_sampler,
+                    coalescence_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    emigration_exit,
+                    event_sampler,
+                    active_lineage_sampler,
+                    rng,
+                    immigration_entry,
+                }
+                .build();
 
                 Ok(parallelisation::independent::landscape::simulate(
                     simulation,

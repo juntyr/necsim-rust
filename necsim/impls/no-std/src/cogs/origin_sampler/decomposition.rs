@@ -1,27 +1,41 @@
-use necsim_core::{cogs::OriginSampler, landscape::IndexedLocation};
+use core::marker::PhantomData;
+
+use necsim_core::{
+    cogs::{F64Core, OriginSampler},
+    landscape::IndexedLocation,
+};
 
 use crate::decomposition::Decomposition;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct DecompositionOriginSampler<'d, O: OriginSampler<'d>, D: Decomposition<O::Habitat>> {
+pub struct DecompositionOriginSampler<
+    'd,
+    F: F64Core,
+    O: OriginSampler<'d, F>,
+    D: Decomposition<F, O::Habitat>,
+> {
     origin_sampler: O,
     decomposition: &'d D,
+    _marker: PhantomData<F>,
 }
 
-impl<'d, O: OriginSampler<'d>, D: Decomposition<O::Habitat>> DecompositionOriginSampler<'d, O, D> {
+impl<'d, F: F64Core, O: OriginSampler<'d, F>, D: Decomposition<F, O::Habitat>>
+    DecompositionOriginSampler<'d, F, O, D>
+{
     #[must_use]
     pub fn new(origin_sampler: O, decomposition: &'d D) -> Self {
         Self {
             origin_sampler,
             decomposition,
+            _marker: PhantomData::<F>,
         }
     }
 }
 
 #[contract_trait]
-impl<'d, O: OriginSampler<'d>, D: Decomposition<O::Habitat>> OriginSampler<'d>
-    for DecompositionOriginSampler<'d, O, D>
+impl<'d, F: F64Core, O: OriginSampler<'d, F>, D: Decomposition<F, O::Habitat>> OriginSampler<'d, F>
+    for DecompositionOriginSampler<'d, F, O, D>
 {
     type Habitat = O::Habitat;
 
@@ -42,8 +56,8 @@ impl<'d, O: OriginSampler<'d>, D: Decomposition<O::Habitat>> OriginSampler<'d>
     }
 }
 
-impl<'d, O: OriginSampler<'d>, D: Decomposition<O::Habitat>> Iterator
-    for DecompositionOriginSampler<'d, O, D>
+impl<'d, F: F64Core, O: OriginSampler<'d, F>, D: Decomposition<F, O::Habitat>> Iterator
+    for DecompositionOriginSampler<'d, F, O, D>
 {
     type Item = IndexedLocation;
 

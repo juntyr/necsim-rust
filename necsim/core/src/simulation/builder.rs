@@ -1,12 +1,11 @@
-#![allow(clippy::used_underscore_binding)]
-#![allow(clippy::empty_enum)]
+#![allow(clippy::type_complexity)]
 
 use core::{marker::PhantomData, num::Wrapping};
 
 use crate::cogs::{
     ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-    Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
-    TurnoverRate, F64Core,
+    F64Core, Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore,
+    SpeciationProbability, TurnoverRate,
 };
 
 #[derive(Debug)]
@@ -42,25 +41,55 @@ pub struct SimulationBuilder<
 }
 
 impl<
-    F: F64Core,
-    H: Habitat<F>,
-    G: RngCore<F>,
-    R: LineageReference<F, H>,
-    S: LineageStore<F, H, R>,
-    X: EmigrationExit<F, H, G, R, S>,
-    D: DispersalSampler<F, H, G>,
-    C: CoalescenceSampler<F, H, R, S>,
-    T: TurnoverRate<F, H>,
-    N: SpeciationProbability<F, H>,
-    E: EventSampler<F, H, G, R, S, X, D, C, T, N>,
-    I: ImmigrationEntry<F>,
-    A: ActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>,
-> SimulationBuilder<F, H, G, R, S, X, D, C, T, N, E, I, A> {
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        R: LineageReference<F, H>,
+        S: LineageStore<F, H, R>,
+        X: EmigrationExit<F, H, G, R, S>,
+        D: DispersalSampler<F, H, G>,
+        C: CoalescenceSampler<F, H, R, S>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+        E: EventSampler<F, H, G, R, S, X, D, C, T, N>,
+        I: ImmigrationEntry<F>,
+        A: ActiveLineageSampler<F, H, G, R, S, X, D, C, T, N, E, I>,
+    > SimulationBuilder<F, H, G, R, S, X, D, C, T, N, E, I, A>
+{
     #[allow(clippy::type_complexity)]
     pub fn build(self) -> Simulation<F, H, G, R, S, X, D, C, T, N, E, I, A> {
-        let SimulationBuilder { f64_core, habitat, lineage_reference, lineage_store, dispersal_sampler, coalescence_sampler, turnover_rate, speciation_probability, emigration_exit, event_sampler, active_lineage_sampler, rng, immigration_entry } = self;
+        let SimulationBuilder {
+            f64_core,
+            habitat,
+            lineage_reference,
+            lineage_store,
+            dispersal_sampler,
+            coalescence_sampler,
+            turnover_rate,
+            speciation_probability,
+            emigration_exit,
+            event_sampler,
+            active_lineage_sampler,
+            rng,
+            immigration_entry,
+        } = self;
 
-        Simulation { f64_core, habitat, lineage_reference, lineage_store, dispersal_sampler, coalescence_sampler, turnover_rate, speciation_probability, emigration_exit, event_sampler, active_lineage_sampler, rng, immigration_entry, migration_balance: Wrapping(0_u64) }
+        Simulation {
+            f64_core,
+            habitat,
+            lineage_reference,
+            lineage_store,
+            dispersal_sampler,
+            coalescence_sampler,
+            turnover_rate,
+            speciation_probability,
+            emigration_exit,
+            event_sampler,
+            active_lineage_sampler,
+            rng,
+            immigration_entry,
+            migration_balance: Wrapping(0_u64),
+        }
     }
 }
 

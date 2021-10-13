@@ -53,7 +53,7 @@ pub struct MpiRootPartition<R: Reporter> {
 
 impl<R: Reporter> fmt::Debug for MpiRootPartition<R> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("MpiRootPartition").finish()
+        fmt.debug_struct(stringify!(MpiRootPartition)).finish()
     }
 }
 

@@ -1,9 +1,8 @@
 use necsim_core::{
-    cogs::{Habitat, HabitatPrimeableRng, PrimeableRng, RngSampler, TurnoverRate},
+    cogs::{F64Core, Habitat, HabitatPrimeableRng, PrimeableRng, RngSampler, TurnoverRate},
     landscape::IndexedLocation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
-use necsim_core_f64::floor;
 
 use super::EventTimeSampler;
 
@@ -22,8 +21,8 @@ impl GeometricEventTimeSampler {
 }
 
 #[contract_trait]
-impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
-    for GeometricEventTimeSampler
+impl<F: F64Core, H: Habitat<F>, G: PrimeableRng<F>, T: TurnoverRate<F, H>>
+    EventTimeSampler<F, H, G, T> for GeometricEventTimeSampler
 {
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
@@ -37,12 +36,12 @@ impl<H: Habitat, G: PrimeableRng, T: TurnoverRate<H>> EventTimeSampler<H, G, T>
         let event_probability_per_step = (turnover_rate
             .get_turnover_rate_at_location(indexed_location.location(), habitat)
             * self.delta_t)
-            .neg_exp()
+            .neg_exp::<F>()
             .one_minus();
 
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
-        let mut time_step = floor(time.get() / self.delta_t.get()) as u64 + 1;
+        let mut time_step = F::floor(time.get() / self.delta_t.get()) as u64 + 1;
 
         loop {
             rng.prime_with_habitat(habitat, indexed_location, time_step);

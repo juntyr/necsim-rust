@@ -18,7 +18,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
     for DynamicReporterContext<ReportSpeciation, ReportDispersal, ReportProgress>
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("DynamicReporterContext")
+        fmt.debug_struct(stringify!(DynamicReporterContext))
             .field("reporter", &self.reporter)
             .finish()
     }

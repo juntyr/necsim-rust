@@ -3,8 +3,8 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         coalescence_sampler::CoalescenceRngSample, event_sampler::EventHandler, Backup,
-        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, RngCore,
-        SpeciationProbability, TurnoverRate,
+        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, F64Core, Habitat,
+        RngCore, SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
     lineage::{GlobalLineageReference, Lineage},
@@ -29,75 +29,80 @@ use super::tracking::{MinSpeciationTrackingEventSampler, SpeciationSample};
 #[cfg_attr(feature = "cuda", r2cBound(T: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(N: rust_cuda::common::RustToCuda))]
 pub struct IndependentEventSampler<
-    H: Habitat,
-    G: RngCore,
-    X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
-    D: DispersalSampler<H, G>,
-    T: TurnoverRate<H>,
-    N: SpeciationProbability<H>,
+    F: F64Core,
+    H: Habitat<F>,
+    G: RngCore<F>,
+    X: EmigrationExit<F, H, G, GlobalLineageReference, IndependentLineageStore<F, H>>,
+    D: DispersalSampler<F, H, G>,
+    T: TurnoverRate<F, H>,
+    N: SpeciationProbability<F, H>,
 > {
     #[cfg_attr(feature = "cuda", r2cEmbed(
         Option<rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<SpeciationSample>>
     ))]
     min_spec_sample: Option<SpeciationSample>,
-    marker: PhantomData<(H, G, X, D, T, N)>,
+    marker: PhantomData<(F, H, G, X, D, T, N)>,
 }
 
 impl<
-        H: Habitat,
-        G: RngCore,
-        X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
-        D: DispersalSampler<H, G>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-    > Default for IndependentEventSampler<H, G, X, D, T, N>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        X: EmigrationExit<F, H, G, GlobalLineageReference, IndependentLineageStore<F, H>>,
+        D: DispersalSampler<F, H, G>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+    > Default for IndependentEventSampler<F, H, G, X, D, T, N>
 {
     fn default() -> Self {
         Self {
             min_spec_sample: None,
-            marker: PhantomData::<(H, G, X, D, T, N)>,
+            marker: PhantomData::<(F, H, G, X, D, T, N)>,
         }
     }
 }
 
 #[contract_trait]
 impl<
-        H: Habitat,
-        G: RngCore,
-        X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
-        D: DispersalSampler<H, G>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
-    > Backup for IndependentEventSampler<H, G, X, D, T, N>
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        X: EmigrationExit<F, H, G, GlobalLineageReference, IndependentLineageStore<F, H>>,
+        D: DispersalSampler<F, H, G>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
+    > Backup for IndependentEventSampler<F, H, G, X, D, T, N>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             min_spec_sample: self.min_spec_sample.clone(),
-            marker: PhantomData::<(H, G, X, D, T, N)>,
+            marker: PhantomData::<(F, H, G, X, D, T, N)>,
         }
     }
 }
 
 #[contract_trait]
 impl<
-        H: Habitat,
-        G: RngCore,
-        X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
-        D: DispersalSampler<H, G>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        X: EmigrationExit<F, H, G, GlobalLineageReference, IndependentLineageStore<F, H>>,
+        D: DispersalSampler<F, H, G>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
     >
     EventSampler<
+        F,
         H,
         G,
         GlobalLineageReference,
-        IndependentLineageStore<H>,
+        IndependentLineageStore<F, H>,
         X,
         D,
-        IndependentCoalescenceSampler<H>,
+        IndependentCoalescenceSampler<F, H>,
         T,
         N,
-    > for IndependentEventSampler<H, G, X, D, T, N>
+    > for IndependentEventSampler<F, H, G, X, D, T, N>
 {
     #[must_use]
     #[allow(clippy::type_complexity)]
@@ -117,13 +122,14 @@ impl<
         }: Lineage,
         event_time: PositiveF64,
         simulation: &mut PartialSimulation<
+            F,
             H,
             G,
             GlobalLineageReference,
-            IndependentLineageStore<H>,
+            IndependentLineageStore<F, H>,
             X,
             D,
-            IndependentCoalescenceSampler<H>,
+            IndependentCoalescenceSampler<F, H>,
             T,
             N,
         >,
@@ -216,24 +222,26 @@ impl<
 }
 
 impl<
-        H: Habitat,
-        G: RngCore,
-        X: EmigrationExit<H, G, GlobalLineageReference, IndependentLineageStore<H>>,
-        D: DispersalSampler<H, G>,
-        T: TurnoverRate<H>,
-        N: SpeciationProbability<H>,
+        F: F64Core,
+        H: Habitat<F>,
+        G: RngCore<F>,
+        X: EmigrationExit<F, H, G, GlobalLineageReference, IndependentLineageStore<F, H>>,
+        D: DispersalSampler<F, H, G>,
+        T: TurnoverRate<F, H>,
+        N: SpeciationProbability<F, H>,
     >
     MinSpeciationTrackingEventSampler<
+        F,
         H,
         G,
         GlobalLineageReference,
-        IndependentLineageStore<H>,
+        IndependentLineageStore<F, H>,
         X,
         D,
-        IndependentCoalescenceSampler<H>,
+        IndependentCoalescenceSampler<F, H>,
         T,
         N,
-    > for IndependentEventSampler<H, G, X, D, T, N>
+    > for IndependentEventSampler<F, H, G, X, D, T, N>
 {
     fn replace_min_speciation(
         &mut self,

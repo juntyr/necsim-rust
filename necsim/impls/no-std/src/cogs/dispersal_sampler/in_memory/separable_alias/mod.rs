@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use alloc::vec::Vec;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, RngCore, F64Core},
+    cogs::{Backup, F64Core, Habitat, RngCore},
     landscape::Location,
 };
 use necsim_core_bond::ClosedUnitF64;
@@ -20,7 +20,7 @@ mod dispersal;
 pub struct InMemorySeparableAliasDispersalSampler<F: F64Core, H: Habitat<F>, G: RngCore<F>> {
     alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
     self_dispersal: Array2D<ClosedUnitF64>,
-    _marker: PhantomData<(H, G)>,
+    _marker: PhantomData<(F, H, G)>,
 }
 
 #[contract_trait]
@@ -96,18 +96,20 @@ impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> InMemoryDispersalSampler<F, H, G>
         Self {
             alias_dispersal,
             self_dispersal,
-            _marker: PhantomData::<(H, G)>,
+            _marker: PhantomData::<(F, H, G)>,
         }
     }
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> Backup for InMemorySeparableAliasDispersalSampler<F, H, G> {
+impl<F: F64Core, H: Habitat<F>, G: RngCore<F>> Backup
+    for InMemorySeparableAliasDispersalSampler<F, H, G>
+{
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             alias_dispersal: self.alias_dispersal.clone(),
             self_dispersal: self.self_dispersal.clone(),
-            _marker: PhantomData::<(H, G)>,
+            _marker: PhantomData::<(F, H, G)>,
         }
     }
 }

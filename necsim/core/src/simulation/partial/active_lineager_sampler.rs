@@ -1,8 +1,8 @@
 use core::marker::PhantomData;
 
 use crate::cogs::{
-    CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, LineageReference,
-    LineageStore, RngCore, SpeciationProbability, TurnoverRate, F64Core
+    CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, F64Core, Habitat,
+    LineageReference, LineageStore, RngCore, SpeciationProbability, TurnoverRate,
 };
 
 #[repr(C)]
@@ -10,7 +10,7 @@ pub struct PartialSimulation<
     F: F64Core,
     H: Habitat<F>,
     G: RngCore<F>,
-    R: LineageReference<F,H>,
+    R: LineageReference<F, H>,
     S: LineageStore<F, H, R>,
     X: EmigrationExit<F, H, G, R, S>,
     D: DispersalSampler<F, H, G>,

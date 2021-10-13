@@ -4,7 +4,10 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveF64};
 
-use crate::{cogs::{Habitat, F64Core}, landscape::IndexedLocation};
+use crate::{
+    cogs::{F64Core, Habitat},
+    landscape::IndexedLocation,
+};
 
 #[allow(clippy::module_name_repetitions)]
 pub trait RngCore<F: F64Core>:

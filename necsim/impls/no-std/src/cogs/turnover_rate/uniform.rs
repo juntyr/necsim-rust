@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, Habitat, TurnoverRate, F64Core},
+    cogs::{Backup, F64Core, Habitat, TurnoverRate},
     landscape::Location,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};

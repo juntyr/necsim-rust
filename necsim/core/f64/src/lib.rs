@@ -2,7 +2,7 @@
 #![no_std]
 #![feature(core_intrinsics)]
 
-pub trait F64Core {
+pub trait F64Core: 'static + Clone + core::fmt::Debug {
     #[must_use]
     fn floor(x: f64) -> f64;
     #[must_use]
@@ -21,6 +21,7 @@ pub trait F64Core {
     fn round(x: f64) -> f64;
 }
 
+#[derive(Clone, Debug)]
 pub enum IntrinsicsF64Core {}
 
 impl F64Core for IntrinsicsF64Core {

@@ -5,8 +5,8 @@ use necsim_core_bond::PositiveF64;
 use crate::{
     cogs::{
         event_sampler::EventHandler, ActiveLineageSampler, CoalescenceSampler, DispersalSampler,
-        EmigrationExit, EventSampler, Habitat, ImmigrationEntry, LineageReference, LineageStore,
-        RngCore, SpeciationProbability, TurnoverRate, F64Core
+        EmigrationExit, EventSampler, F64Core, Habitat, ImmigrationEntry, LineageReference,
+        LineageStore, RngCore, SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
     reporter::Reporter,

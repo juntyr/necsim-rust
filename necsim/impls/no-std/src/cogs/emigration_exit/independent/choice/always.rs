@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, Habitat},
+    cogs::{Backup, F64Core, Habitat},
     landscape::IndexedLocation,
 };
 use necsim_core_bond::PositiveF64;
@@ -18,7 +18,7 @@ impl Backup for AlwaysEmigrationChoice {
 }
 
 #[contract_trait]
-impl<H: Habitat> EmigrationChoice<H> for AlwaysEmigrationChoice {
+impl<F: F64Core, H: Habitat<F>> EmigrationChoice<F, H> for AlwaysEmigrationChoice {
     fn should_lineage_emigrate(
         &self,
         _indexed_location: &IndexedLocation,

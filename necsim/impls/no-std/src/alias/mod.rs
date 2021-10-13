@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use necsim_core::cogs::{RngCore, F64Core};
+use necsim_core::cogs::{F64Core, RngCore};
 
 pub mod packed;
 

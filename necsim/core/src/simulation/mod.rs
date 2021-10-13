@@ -9,8 +9,8 @@ use core::num::Wrapping;
 use crate::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore, SpeciationProbability,
-        TurnoverRate, F64Core,
+        F64Core, Habitat, ImmigrationEntry, LineageReference, LineageStore, RngCore,
+        SpeciationProbability, TurnoverRate,
     },
     reporter::Reporter,
 };

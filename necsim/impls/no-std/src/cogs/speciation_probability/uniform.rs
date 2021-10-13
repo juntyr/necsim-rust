@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, Habitat, SpeciationProbability, F64Core},
+    cogs::{Backup, F64Core, Habitat, SpeciationProbability},
     landscape::Location,
 };
 use necsim_core_bond::ClosedUnitF64;

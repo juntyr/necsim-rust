@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{DispersalSampler, Habitat, RngCore, SeparableDispersalSampler, F64Core},
+    cogs::{DispersalSampler, F64Core, Habitat, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
 use necsim_core_bond::ClosedUnitF64;

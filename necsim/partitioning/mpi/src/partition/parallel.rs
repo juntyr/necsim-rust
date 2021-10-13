@@ -55,7 +55,7 @@ pub struct MpiParallelPartition<R: Reporter> {
 
 impl<R: Reporter> fmt::Debug for MpiParallelPartition<R> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("MpiParallelPartition").finish()
+        fmt.debug_struct(stringify!(MpiParallelPartition)).finish()
     }
 }
 

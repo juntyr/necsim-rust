@@ -3,7 +3,7 @@ use core::num::NonZeroU32;
 use libm::atan2;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, F64Core},
+    cogs::{Backup, F64Core, Habitat},
     landscape::Location,
 };
 

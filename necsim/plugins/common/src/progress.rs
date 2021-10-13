@@ -26,7 +26,7 @@ pub struct ProgressReporter {
 
 impl fmt::Debug for ProgressReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("ProgressReporter")
+        fmt.debug_struct(stringify!(ProgressReporter))
             .field("last_remaining", &self.last_remaining)
             .field("last_total", &self.last_total)
             .finish()

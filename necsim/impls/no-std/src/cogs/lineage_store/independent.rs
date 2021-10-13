@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, LineageStore, OriginSampler, F64Core},
+    cogs::{Backup, F64Core, Habitat, LineageStore, OriginSampler},
     lineage::{GlobalLineageReference, Lineage},
 };
 
@@ -16,7 +16,7 @@ pub struct IndependentLineageStore<F: F64Core, H: Habitat<F>> {
 impl<F: F64Core, H: Habitat<F>> Default for IndependentLineageStore<F, H> {
     fn default() -> Self {
         Self {
-            marker: PhantomData::<H>,
+            marker: PhantomData::<(F, H)>,
         }
     }
 }
@@ -25,13 +25,15 @@ impl<F: F64Core, H: Habitat<F>> Default for IndependentLineageStore<F, H> {
 impl<F: F64Core, H: Habitat<F>> Backup for IndependentLineageStore<F, H> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
-            marker: PhantomData::<H>,
+            marker: PhantomData::<(F, H)>,
         }
     }
 }
 
 #[contract_trait]
-impl<F: F64Core, H: Habitat<F>> LineageStore<F, H, GlobalLineageReference> for IndependentLineageStore<F, H> {
+impl<F: F64Core, H: Habitat<F>> LineageStore<F, H, GlobalLineageReference>
+    for IndependentLineageStore<F, H>
+{
     type LineageReferenceIterator<'a> = core::iter::Empty<GlobalLineageReference>;
 
     fn from_origin_sampler<'h, O: OriginSampler<'h, F, Habitat = H>>(_origin_sampler: O) -> Self

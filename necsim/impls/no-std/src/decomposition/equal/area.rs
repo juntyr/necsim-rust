@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use core::{marker::PhantomData, num::NonZeroU32};
 
-use necsim_core::cogs::{Habitat, F64Core};
+use necsim_core::cogs::{F64Core, Habitat};
 
 use super::EqualDecomposition;
 
@@ -58,7 +58,7 @@ impl<F: F64Core, H: Habitat<F>> EqualDecomposition<F, H> {
 
             indices: indices.into_boxed_slice(),
 
-            _marker: PhantomData::<H>,
+            _marker: PhantomData::<(F, H)>,
         };
 
         if (decomposition.indices.len() + 1) == (partitions.get() as usize) {
