@@ -8,15 +8,17 @@
 #[macro_use]
 extern crate serde_derive_state;
 
+use std::marker::PhantomData;
+
 use necsim_core::{
     cogs::SeedableRng,
     lineage::{GlobalLineageReference, Lineage},
     reporter::Reporter,
-    simulation::Simulation,
+    simulation::SimulationBuilder,
 };
 use necsim_core_bond::NonNegativeF64;
 
-use necsim_impls_cuda::cogs::rng::CudaRng;
+use necsim_impls_cuda::cogs::{f64_core::NvptxF64Core, rng::CudaRng};
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::independent::{
         event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
@@ -65,38 +67,67 @@ impl AlgorithmArguments for CudaAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<O: Scenario<CudaRng<WyHash>>, R: Reporter, P: LocalPartition<R>> Algorithm<O, R, P>
-    for CudaAlgorithm
+impl<
+        O: Scenario<NvptxF64Core, CudaRng<NvptxF64Core, WyHash<NvptxF64Core>>>,
+        R: Reporter,
+        P: LocalPartition<R>,
+    > Algorithm<O, R, P> for CudaAlgorithm
 where
     O::Habitat: RustToCuda,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>:
-        RustToCuda,
+    O::DispersalSampler<
+        InMemoryPackedAliasDispersalSampler<
+            NvptxF64Core,
+            O::Habitat,
+            CudaRng<NvptxF64Core, WyHash<NvptxF64Core>>,
+        >,
+    >: RustToCuda,
     O::TurnoverRate: RustToCuda,
     O::SpeciationProbability: RustToCuda,
     SimulationKernel<
+        NvptxF64Core,
         O::Habitat,
-        CudaRng<WyHash>,
+        CudaRng<NvptxF64Core, WyHash<NvptxF64Core>>,
         GlobalLineageReference,
-        IndependentLineageStore<O::Habitat>,
+        IndependentLineageStore<NvptxF64Core, O::Habitat>,
         NeverEmigrationExit,
-        O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
-        IndependentCoalescenceSampler<O::Habitat>,
+        O::DispersalSampler<
+            InMemoryPackedAliasDispersalSampler<
+                NvptxF64Core,
+                O::Habitat,
+                CudaRng<NvptxF64Core, WyHash<NvptxF64Core>>,
+            >,
+        >,
+        IndependentCoalescenceSampler<NvptxF64Core, O::Habitat>,
         O::TurnoverRate,
         O::SpeciationProbability,
         IndependentEventSampler<
+            NvptxF64Core,
             O::Habitat,
-            CudaRng<WyHash>,
+            CudaRng<NvptxF64Core, WyHash<NvptxF64Core>>,
             NeverEmigrationExit,
-            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
+            O::DispersalSampler<
+                InMemoryPackedAliasDispersalSampler<
+                    NvptxF64Core,
+                    O::Habitat,
+                    CudaRng<NvptxF64Core, WyHash<NvptxF64Core>>,
+                >,
+            >,
             O::TurnoverRate,
             O::SpeciationProbability,
         >,
         NeverImmigrationEntry,
         IndependentActiveLineageSampler<
+            NvptxF64Core,
             O::Habitat,
-            CudaRng<WyHash>,
+            CudaRng<NvptxF64Core, WyHash<NvptxF64Core>>,
             NeverEmigrationExit,
-            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
+            O::DispersalSampler<
+                InMemoryPackedAliasDispersalSampler<
+                    NvptxF64Core,
+                    O::Habitat,
+                    CudaRng<NvptxF64Core, WyHash<NvptxF64Core>>,
+                >,
+            >,
             O::TurnoverRate,
             O::SpeciationProbability,
             ExpEventTimeSampler,
@@ -104,29 +135,50 @@ where
         R::ReportSpeciation,
         R::ReportDispersal,
     >: rustcoalescence_algorithms_cuda_kernel::Kernel<
+        NvptxF64Core,
         O::Habitat,
-        CudaRng<WyHash>,
+        CudaRng<NvptxF64Core, WyHash<NvptxF64Core>>,
         GlobalLineageReference,
-        IndependentLineageStore<O::Habitat>,
+        IndependentLineageStore<NvptxF64Core, O::Habitat>,
         NeverEmigrationExit,
-        O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
-        IndependentCoalescenceSampler<O::Habitat>,
+        O::DispersalSampler<
+            InMemoryPackedAliasDispersalSampler<
+                NvptxF64Core,
+                O::Habitat,
+                CudaRng<NvptxF64Core, WyHash<NvptxF64Core>>,
+            >,
+        >,
+        IndependentCoalescenceSampler<NvptxF64Core, O::Habitat>,
         O::TurnoverRate,
         O::SpeciationProbability,
         IndependentEventSampler<
+            NvptxF64Core,
             O::Habitat,
-            CudaRng<WyHash>,
+            CudaRng<NvptxF64Core, WyHash<NvptxF64Core>>,
             NeverEmigrationExit,
-            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
+            O::DispersalSampler<
+                InMemoryPackedAliasDispersalSampler<
+                    NvptxF64Core,
+                    O::Habitat,
+                    CudaRng<NvptxF64Core, WyHash<NvptxF64Core>>,
+                >,
+            >,
             O::TurnoverRate,
             O::SpeciationProbability,
         >,
         NeverImmigrationEntry,
         IndependentActiveLineageSampler<
+            NvptxF64Core,
             O::Habitat,
-            CudaRng<WyHash>,
+            CudaRng<NvptxF64Core, WyHash<NvptxF64Core>>,
             NeverEmigrationExit,
-            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>,
+            O::DispersalSampler<
+                InMemoryPackedAliasDispersalSampler<
+                    NvptxF64Core,
+                    O::Habitat,
+                    CudaRng<NvptxF64Core, WyHash<NvptxF64Core>>,
+                >,
+            >,
             O::TurnoverRate,
             O::SpeciationProbability,
             ExpEventTimeSampler,
@@ -136,15 +188,16 @@ where
     >,
 {
     type Error = anyhow::Error;
+    type F64Core = NvptxF64Core;
     type LineageReference = GlobalLineageReference;
-    type LineageStore = IndependentLineageStore<O::Habitat>;
-    type Rng = CudaRng<WyHash>;
+    type LineageStore = IndependentLineageStore<Self::F64Core, O::Habitat>;
+    type Rng = CudaRng<Self::F64Core, WyHash<Self::F64Core>>;
 
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         seed: u64,
         scenario: O,
-        pre_sampler: OriginPreSampler<I>,
+        pre_sampler: OriginPreSampler<Self::F64Core, I>,
         local_partition: &mut P,
     ) -> Result<(NonNegativeF64, u64), Self::Error> {
         let lineages: Vec<Lineage> = match args.parallelism_mode {
@@ -174,7 +227,11 @@ where
         };
 
         let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-            scenario.build::<InMemoryPackedAliasDispersalSampler<O::Habitat, CudaRng<WyHash>>>();
+            scenario.build::<InMemoryPackedAliasDispersalSampler<
+                Self::F64Core,
+                O::Habitat,
+                CudaRng<Self::F64Core, WyHash<Self::F64Core>>,
+            >>();
         let rng = CudaRng::from(WyHash::seed_from_u64(seed));
         let lineage_store = IndependentLineageStore::default();
         let emigration_exit = NeverEmigrationExit::default();
@@ -185,20 +242,22 @@ where
         let active_lineage_sampler =
             IndependentActiveLineageSampler::empty(ExpEventTimeSampler::new(args.delta_t));
 
-        let simulation = Simulation::builder()
-            .habitat(habitat)
-            .rng(rng)
-            .speciation_probability(speciation_probability)
-            .dispersal_sampler(dispersal_sampler)
-            .lineage_reference(std::marker::PhantomData::<GlobalLineageReference>)
-            .lineage_store(lineage_store)
-            .emigration_exit(emigration_exit)
-            .coalescence_sampler(coalescence_sampler)
-            .turnover_rate(turnover_rate)
-            .event_sampler(event_sampler)
-            .immigration_entry(immigration_entry)
-            .active_lineage_sampler(active_lineage_sampler)
-            .build();
+        let simulation = SimulationBuilder {
+            f64_core: PhantomData::<Self::F64Core>,
+            habitat,
+            lineage_reference: PhantomData::<GlobalLineageReference>,
+            lineage_store,
+            dispersal_sampler,
+            coalescence_sampler,
+            turnover_rate,
+            speciation_probability,
+            emigration_exit,
+            event_sampler,
+            active_lineage_sampler,
+            rng,
+            immigration_entry,
+        }
+        .build();
 
         // Note: It seems to be more performant to spawn smaller blocks
         let block_size = BlockSize::x(args.block_size);
