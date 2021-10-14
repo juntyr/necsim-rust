@@ -32,7 +32,9 @@ pub trait CoalescenceSampler<
     ) -> (IndexedLocation, LineageInteraction);
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[allow(clippy::unsafe_derive_deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, TypeLayout)]
+#[repr(transparent)]
 pub struct CoalescenceRngSample(ClosedUnitF64);
 
 #[contract_trait]

@@ -22,7 +22,7 @@ impl fmt::Display for PositiveF64Error {
 }
 
 #[allow(clippy::unsafe_derive_deserialize)]
-#[derive(Copy, Clone, Serialize, Deserialize)]
+#[derive(Copy, Clone, Serialize, Deserialize, TypeLayout)]
 #[repr(transparent)]
 #[serde(try_from = "f64")]
 pub struct PositiveF64(f64);

@@ -11,7 +11,8 @@ pub trait Backup: Sized {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, TypeLayout)]
+#[repr(transparent)]
 pub struct BackedUp<T: Backup>(pub(crate) T);
 
 impl<T: Backup> Deref for BackedUp<T> {

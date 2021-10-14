@@ -12,7 +12,7 @@ impl fmt::Display for NonZeroOneU64Error {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, TypeLayout)]
 #[repr(transparent)]
 #[serde(try_from = "u64")]
 pub struct NonZeroOneU64(NonZeroU64);

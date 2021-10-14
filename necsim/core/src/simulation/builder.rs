@@ -93,7 +93,7 @@ impl<
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, TypeLayout)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]

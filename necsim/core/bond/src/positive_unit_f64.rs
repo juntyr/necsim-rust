@@ -17,7 +17,8 @@ impl fmt::Display for PositiveUnitF64Error {
     }
 }
 
-#[derive(Copy, Clone, Deserialize, Serialize)]
+#[allow(clippy::unsafe_derive_deserialize)]
+#[derive(Copy, Clone, Deserialize, Serialize, TypeLayout)]
 #[repr(transparent)]
 #[serde(try_from = "f64")]
 pub struct PositiveUnitF64(f64);
