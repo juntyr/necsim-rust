@@ -15,7 +15,7 @@ use crate::{
     landscape::{IndexedLocation, Location},
 };
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, TypeLayout)]
 #[repr(transparent)]
 pub struct GlobalLineageReference(NonZeroOneU64);
 
@@ -48,8 +48,8 @@ impl Backup for GlobalLineageReference {
 
 impl<M: MathsCore, H: Habitat<M>> LineageReference<M, H> for GlobalLineageReference {}
 
-#[allow(clippy::module_name_repetitions)]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialOrd, Ord)]
+#[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialOrd, Ord, TypeLayout)]
 #[repr(transparent)]
 pub struct LineageInteraction(u64);
 

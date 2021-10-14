@@ -4,6 +4,15 @@
 #![feature(const_fn_floating_point_arithmetic)]
 #![feature(const_float_bits_conv)]
 #![feature(const_float_classify)]
+#![feature(const_trait_impl)]
+#![feature(const_type_name)]
+#![feature(const_raw_ptr_deref)]
+#![feature(const_maybe_uninit_as_ptr)]
+#![feature(const_ptr_offset_from)]
+#![feature(const_mut_refs)]
+
+#[macro_use]
+extern crate const_type_layout;
 
 mod closed_unit_f64;
 mod non_negative_f64;

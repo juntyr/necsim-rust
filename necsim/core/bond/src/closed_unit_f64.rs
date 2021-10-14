@@ -21,7 +21,7 @@ impl fmt::Display for ClosedUnitF64Error {
 }
 
 #[allow(clippy::unsafe_derive_deserialize)]
-#[derive(Copy, Clone, Serialize, Deserialize)]
+#[derive(Copy, Clone, Serialize, Deserialize, TypeLayout)]
 #[repr(transparent)]
 #[serde(try_from = "f64")]
 pub struct ClosedUnitF64(f64);
