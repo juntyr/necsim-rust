@@ -103,7 +103,7 @@ impl core::hash::Hash for LineageInteraction {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, TypeLayout)]
 #[repr(C)]
 pub struct Lineage {
     pub global_reference: GlobalLineageReference,

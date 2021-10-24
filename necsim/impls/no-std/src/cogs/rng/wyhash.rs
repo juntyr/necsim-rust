@@ -11,8 +11,8 @@ const P1: u64 = 0xe703_7ed1_a0b4_28db;
 const P2: u64 = 0x8ebc_6af0_9c88_c6e3;
 const P5: u64 = 0xeb44_acca_b455_d165;
 
-#[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, TypeLayout)]
 #[repr(C)]
 pub struct WyHash<M: MathsCore> {
     seed: u64,
