@@ -37,8 +37,8 @@ impl Reporter for TskitTreeReporter {
                     self.store_individual_coalescence(&dispersal.global_lineage_reference, &parent, dispersal.prior_time);
                 }
             }
-        } else if let Some(parent) = &dispersal.interaction.parent() {
-            self.store_individual_coalescence(&dispersal.global_lineage_reference, parent, dispersal.event_time.into());
+        } else if let Some(parent) = dispersal.interaction.parent() {
+            self.store_individual_coalescence(&dispersal.global_lineage_reference, &parent, dispersal.event_time.into());
         }
 
         self.last_dispersal_event = Some(dispersal.clone());

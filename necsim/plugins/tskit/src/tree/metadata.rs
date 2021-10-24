@@ -5,7 +5,7 @@ use std::{
 };
 
 use necsim_core_bond::NonZeroOneU64;
-use tskit::metadata::{MetadataError, MetadataRoundtrip};
+use tskit::metadata::{IndividualMetadata, MetadataError, MetadataRoundtrip, NodeMetadata};
 
 use necsim_core::lineage::GlobalLineageReference;
 
@@ -46,6 +46,9 @@ impl MetadataRoundtrip for GlobalLineageMetadata {
         }))
     }
 }
+
+impl IndividualMetadata for GlobalLineageMetadata {}
+impl NodeMetadata for GlobalLineageMetadata {}
 
 impl GlobalLineageMetadata {
     pub fn new(reference: &GlobalLineageReference) -> &Self {

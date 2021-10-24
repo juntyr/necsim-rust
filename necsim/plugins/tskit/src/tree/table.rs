@@ -127,16 +127,16 @@ impl TskitTreeReporter {
         // Insert the lineage as an individual
         let individual_id = self
             .table
-            .add_individual_with_some_metadata(TSK_FLAGS_EMPTY, &location, parents, metadata)
+            .add_individual_with_metadata(TSK_FLAGS_EMPTY, &location, parents, metadata)
             .unwrap();
 
         // Create corresponding node
         let node_id = self
             .table
-            .add_node_with_some_metadata(
+            .add_node_with_metadata(
                 tskit::TSK_NODE_IS_SAMPLE,
                 time.get(),
-                tskit::TSK_NULL,
+                tskit::PopulationId::NULL,
                 individual_id,
                 metadata,
             )
