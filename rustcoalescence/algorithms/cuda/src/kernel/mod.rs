@@ -14,7 +14,7 @@ use necsim_impls_no_std::cogs::{
 
 use rust_cuda::{
     common::RustToCuda,
-    host::{CudaDropWrapper, LaunchConfig, Launcher, TypedKernel},
+    host::{CudaDropWrapper, LaunchConfig, LaunchPackage, Launcher, TypedKernel},
     rustacuda::{
         error::CudaResult,
         function::{BlockSize, Function, GridSize},
@@ -50,6 +50,7 @@ pub struct SimulationKernel<
     stream: CudaDropWrapper<Stream>,
     grid: GridSize,
     block: BlockSize,
+    watcher: (),
 }
 
 impl<
@@ -82,6 +83,7 @@ impl<
             stream,
             grid,
             block,
+            watcher: (),
         })
     }
 }
@@ -105,26 +107,26 @@ impl<
     > Launcher
     for SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
 {
+    type CompilationWatcher = ();
     type KernelTraitObject =
         dyn Kernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>;
 
-    fn get_config(&self) -> LaunchConfig {
-        LaunchConfig {
-            grid: self.grid.clone(),
-            block: self.block.clone(),
-            shared_memory_size: 0_u32,
+    fn get_launch_package(&mut self) -> LaunchPackage<Self> {
+        LaunchPackage {
+            config: LaunchConfig {
+                grid: self.grid.clone(),
+                block: self.block.clone(),
+                shared_memory_size: 0_u32,
+            },
+
+            kernel: &mut self.kernel,
+            stream: &mut self.stream,
+
+            watcher: &mut self.watcher,
         }
     }
 
-    fn get_stream(&self) -> &Stream {
-        &self.stream
-    }
-
-    fn get_kernel_mut(&mut self) -> &mut TypedKernel<Self::KernelTraitObject> {
-        &mut self.kernel
-    }
-
-    fn on_compile(&mut self, kernel: &Function) -> CudaResult<()> {
+    fn on_compile(kernel: &Function, _watcher: &mut Self::CompilationWatcher) -> CudaResult<()> {
         crate::info::print_kernel_function_attributes(kernel);
 
         Ok(())

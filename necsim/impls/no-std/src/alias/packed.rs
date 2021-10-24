@@ -6,7 +6,7 @@ use necsim_core::cogs::{MathsCore, RngCore};
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(non_snake_case)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, TypeLayout)]
 #[repr(C)]
 pub struct AliasMethodSamplerAtom<E: Copy + PartialEq> {
     E: E,

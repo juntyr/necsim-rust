@@ -5,7 +5,7 @@ use necsim_core::cogs::{Backup, Habitat, LineageReference, MathsCore};
 // InMemoryLineageReference uses a NonZeroUsize internally to enable same-size
 // Option optimisation
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, TypeLayout)]
 #[allow(clippy::module_name_repetitions)]
 pub struct InMemoryLineageReference(NonZeroUsize);
 

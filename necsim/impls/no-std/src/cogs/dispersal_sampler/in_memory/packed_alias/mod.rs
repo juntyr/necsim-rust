@@ -14,7 +14,7 @@ mod dispersal;
 
 use super::InMemoryDispersalSampler;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, TypeLayout)]
 #[allow(clippy::module_name_repetitions)]
 #[doc(hidden)]
 #[repr(C)]
