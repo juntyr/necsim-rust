@@ -6,20 +6,25 @@
 #![feature(panic_info_message)]
 #![feature(atomic_from_mut)]
 #![feature(asm)]
+#![feature(stdsimd)]
 
 extern crate alloc;
 
 #[macro_use]
 extern crate contracts;
 
-use core::sync::atomic::{AtomicU64, Ordering};
+use core::{
+    arch::nvptx,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 use necsim_core::{
-    cogs::{Backup, Habitat, PrimeableRng, RngCore, TurnoverRate},
+    cogs::{Backup, Habitat, MathsCore, PrimeableRng, SeedableRng, TurnoverRate},
     landscape::{IndexedLocation, Location},
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
+use necsim_impls_cuda::cogs::maths::NvptxMathsCore;
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::independent::event_time_sampler::{
         exp::ExpEventTimeSampler, poisson::PoissonEventTimeSampler, EventTimeSampler,
@@ -28,10 +33,7 @@ use necsim_impls_no_std::cogs::{
     rng::wyhash::WyHash,
 };
 
-use rust_cuda::{
-    common::{DeviceBoxConst, DeviceBoxMut},
-    device::{nvptx, utils},
-};
+use rust_cuda::{common::DeviceConstRef, device::utils, utils::device_copy::SafeDeviceCopyWrapper};
 
 #[global_allocator]
 static _GLOBAL_ALLOCATOR: utils::PTXAllocator = utils::PTXAllocator;
@@ -82,53 +84,60 @@ pub fn clock_timer_ns() -> u64 {
 }
 
 #[no_mangle]
+#[allow(clippy::missing_safety_doc)]
 pub unsafe extern "ptx-kernel" fn benchmark_poisson(
     seed: u64,
     lambda: PositiveF64,
     delta_t: PositiveF64,
-    limit: DeviceBoxConst<u128>,
-    total_cycles_sum: DeviceBoxMut<u64>,
-    total_time_sum: DeviceBoxMut<u64>,
+    limit: DeviceConstRef<[u8; 16]>,
+    total_cycles_sum: DeviceConstRef<SafeDeviceCopyWrapper<AtomicU64>>,
+    total_time_sum: DeviceConstRef<SafeDeviceCopyWrapper<AtomicU64>>,
 ) {
     benchmark_inter_event_times(
         PoissonEventTimeSampler::new(delta_t),
         seed,
         lambda,
-        *limit.as_ref(),
-        total_cycles_sum,
-        total_time_sum,
-    )
+        u128::from_le_bytes(*limit.as_ref()),
+        total_cycles_sum.as_ref().into_ref(),
+        total_time_sum.as_ref().into_ref(),
+    );
 }
 
 #[no_mangle]
+#[allow(clippy::missing_safety_doc)]
 pub unsafe extern "ptx-kernel" fn benchmark_exp(
     seed: u64,
     lambda: PositiveF64,
     delta_t: PositiveF64,
-    limit: DeviceBoxConst<u128>,
-    total_cycles_sum: DeviceBoxMut<u64>,
-    total_time_sum: DeviceBoxMut<u64>,
+    limit: DeviceConstRef<[u8; 16]>,
+    total_cycles_sum: DeviceConstRef<SafeDeviceCopyWrapper<AtomicU64>>,
+    total_time_sum: DeviceConstRef<SafeDeviceCopyWrapper<AtomicU64>>,
 ) {
     benchmark_inter_event_times(
         ExpEventTimeSampler::new(delta_t),
         seed,
         lambda,
-        *limit.as_ref(),
-        total_cycles_sum,
-        total_time_sum,
-    )
+        u128::from_le_bytes(*limit.as_ref()),
+        total_cycles_sum.as_ref().into_ref(),
+        total_time_sum.as_ref().into_ref(),
+    );
 }
 
 #[inline]
 fn benchmark_inter_event_times<
-    E: EventTimeSampler<NonSpatialHabitat, WyHash, UniformTurnoverRate>,
+    E: EventTimeSampler<
+        NvptxMathsCore,
+        NonSpatialHabitat<NvptxMathsCore>,
+        WyHash<NvptxMathsCore>,
+        UniformTurnoverRate,
+    >,
 >(
     event_time_sampler: E,
     seed: u64,
     lambda: PositiveF64,
     limit: u128,
-    mut total_cycles_sum: DeviceBoxMut<u64>,
-    mut total_time_sum: DeviceBoxMut<u64>,
+    total_cycles_sum: &AtomicU64,
+    total_time_sum: &AtomicU64,
 ) {
     let habitat = NonSpatialHabitat::new((1, 1), 1);
     let rng = WyHash::seed_from_u64(seed + (utils::index() as u64));
@@ -146,17 +155,18 @@ fn benchmark_inter_event_times<
         limit,
     );
 
-    AtomicU64::from_mut(total_cycles_sum.as_mut()).fetch_add(cycles, Ordering::Relaxed);
-    AtomicU64::from_mut(total_time_sum.as_mut()).fetch_add(time, Ordering::Relaxed);
+    total_cycles_sum.fetch_add(cycles, Ordering::Relaxed);
+    total_time_sum.fetch_add(time, Ordering::Relaxed);
 }
 
 #[inline]
 #[allow(clippy::needless_pass_by_value)]
 fn sample_exponential_inter_event_times<
-    H: Habitat,
-    G: PrimeableRng,
-    T: TurnoverRate<H>,
-    E: EventTimeSampler<H, G, T>,
+    M: MathsCore,
+    H: Habitat<M>,
+    G: PrimeableRng<M>,
+    T: TurnoverRate<M, H>,
+    E: EventTimeSampler<M, H, G, T>,
 >(
     habitat: H,
     mut rng: G,
@@ -206,7 +216,7 @@ impl Backup for UniformTurnoverRate {
 }
 
 #[contract_trait]
-impl<H: Habitat> TurnoverRate<H> for UniformTurnoverRate {
+impl<M: MathsCore, H: Habitat<M>> TurnoverRate<M, H> for UniformTurnoverRate {
     #[must_use]
     #[inline]
     fn get_turnover_rate_at_location(&self, _location: &Location, _habitat: &H) -> NonNegativeF64 {

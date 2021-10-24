@@ -1,9 +1,11 @@
-use std::{collections::VecDeque, fmt};
+use std::{collections::VecDeque, fmt, marker::PhantomData};
 
-use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+use necsim_core::cogs::{Backup, MathsCore, PrimeableRng, RngCore};
 
 #[derive(Clone)]
-pub struct InterceptingReporter<G: RngCore> {
+pub struct InterceptingReporter<M: MathsCore, G: RngCore<M>> {
     inner: G,
     buffer: VecDeque<u64>,
 
@@ -12,31 +14,33 @@ pub struct InterceptingReporter<G: RngCore> {
     snd_last_sequence_length: usize,
     cmp_sequence_length: usize,
     sequence_length: usize,
+
+    marker: PhantomData<M>,
 }
 
-impl<G: RngCore> fmt::Debug for InterceptingReporter<G> {
+impl<M: MathsCore, G: RngCore<M>> fmt::Debug for InterceptingReporter<M, G> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("InterceptingReporter")
+        fmt.debug_struct(stringify!(InterceptingReporter))
             .field("inner", &self.inner)
             .field("buffer", &self.buffer)
             .finish()
     }
 }
 
-impl<G: RngCore> InterceptingReporter<G> {
+impl<M: MathsCore, G: RngCore<M>> InterceptingReporter<M, G> {
     pub fn buffer(&mut self) -> &mut VecDeque<u64> {
         &mut self.buffer
     }
 }
 
 #[contract_trait]
-impl<G: RngCore> Backup for InterceptingReporter<G> {
+impl<M: MathsCore, G: RngCore<M>> Backup for InterceptingReporter<M, G> {
     unsafe fn backup_unchecked(&self) -> Self {
         self.clone()
     }
 }
 
-impl<G: RngCore> RngCore for InterceptingReporter<G> {
+impl<M: MathsCore, G: RngCore<M>> RngCore<M> for InterceptingReporter<M, G> {
     type Seed = G::Seed;
 
     #[must_use]
@@ -50,6 +54,8 @@ impl<G: RngCore> RngCore for InterceptingReporter<G> {
             snd_last_sequence_length: 0,
             cmp_sequence_length: 0,
             sequence_length: 0,
+
+            marker: PhantomData::<M>,
         }
     }
 
@@ -67,7 +73,7 @@ impl<G: RngCore> RngCore for InterceptingReporter<G> {
     }
 }
 
-impl<G: PrimeableRng> PrimeableRng for InterceptingReporter<G> {
+impl<M: MathsCore, G: PrimeableRng<M>> PrimeableRng<M> for InterceptingReporter<M, G> {
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         if Some((location_index, time_index)) == self.snd_last_reprime {
             self.cmp_sequence_length = self.snd_last_sequence_length;
@@ -82,6 +88,18 @@ impl<G: PrimeableRng> PrimeableRng for InterceptingReporter<G> {
 
         self.sequence_length = 0;
 
-        self.inner.prime_with(location_index, time_index)
+        self.inner.prime_with(location_index, time_index);
+    }
+}
+
+impl<M: MathsCore, R: RngCore<M>> Serialize for InterceptingReporter<M, R> {
+    fn serialize<S: Serializer>(&self, _serializer: S) -> Result<S::Ok, S::Error> {
+        unimplemented!()
+    }
+}
+
+impl<'de, M: MathsCore, R: RngCore<M>> Deserialize<'de> for InterceptingReporter<M, R> {
+    fn deserialize<D: Deserializer<'de>>(_deserializer: D) -> Result<Self, D::Error> {
+        unimplemented!()
     }
 }

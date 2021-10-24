@@ -5,7 +5,8 @@ use std::io::{self, BufWriter, Write};
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use structopt::StructOpt;
 
-use necsim_core::cogs::{PrimeableRng, RngCore as _};
+use necsim_core::cogs::{PrimeableRng, RngCore as _, SeedableRng as _};
+use necsim_core_maths::IntrinsicsMathsCore;
 use necsim_impls_no_std::cogs::rng::wyhash::WyHash;
 
 #[derive(Debug, StructOpt)]
@@ -42,7 +43,7 @@ fn main() -> io::Result<()> {
         HashMode::Update => {
             test_update_hash(u64::MIN, &mut stdout, options.raw_output)?;
             for _ in 0..options.limit {
-                test_update_hash(rng.next_u64(), &mut stdout, options.raw_output)?
+                test_update_hash(rng.next_u64(), &mut stdout, options.raw_output)?;
             }
             test_update_hash(u64::MAX, &mut stdout, options.raw_output)?;
         },
@@ -80,14 +81,15 @@ fn main() -> io::Result<()> {
 }
 
 fn test_update_hash<W: Write>(state: u64, writer: &mut W, raw_output: bool) -> io::Result<()> {
-    let mut rng_origin = WyHash::from_seed(state.to_le_bytes());
+    let mut rng_origin = WyHash::<IntrinsicsMathsCore>::from_seed(state.to_le_bytes());
     let hash_origin = optional_undiffuse(rng_origin.sample_u64(), raw_output);
 
     for i in 0..64 {
-        let mut rng_flipped = WyHash::from_seed((state ^ (0x1_u64 << i)).to_le_bytes());
+        let mut rng_flipped =
+            WyHash::<IntrinsicsMathsCore>::from_seed((state ^ (0x1_u64 << i)).to_le_bytes());
         let hash_flipped = optional_undiffuse(rng_flipped.sample_u64(), raw_output);
 
-        writeln!(writer, "{}", hash_origin ^ hash_flipped)?
+        writeln!(writer, "{}", hash_origin ^ hash_flipped)?;
     }
 
     Ok(())
@@ -101,7 +103,7 @@ fn test_prime_hash<W: Write>(
     raw_prime: bool,
     raw_output: bool,
 ) -> io::Result<()> {
-    let mut rng_origin = WyHash::seed_from_u64(seed);
+    let mut rng_origin = WyHash::<IntrinsicsMathsCore>::seed_from_u64(seed);
     rng_origin.prime_with(
         optional_undiffuse(location_index, raw_prime),
         optional_undiffuse(time_index, raw_prime),
@@ -109,17 +111,17 @@ fn test_prime_hash<W: Write>(
     let hash_origin = optional_undiffuse(rng_origin.sample_u64(), raw_output);
 
     for i in 0..64 {
-        let mut rng_flipped = WyHash::seed_from_u64(seed ^ (0x1_u64 << i));
+        let mut rng_flipped = WyHash::<IntrinsicsMathsCore>::seed_from_u64(seed ^ (0x1_u64 << i));
         rng_origin.prime_with(
             optional_undiffuse(location_index, raw_prime),
             optional_undiffuse(time_index, raw_prime),
         );
         let hash_flipped = optional_undiffuse(rng_flipped.sample_u64(), raw_output);
 
-        writeln!(writer, "{}", hash_origin ^ hash_flipped)?
+        writeln!(writer, "{}", hash_origin ^ hash_flipped)?;
     }
 
-    let mut rng_flipped = WyHash::seed_from_u64(seed);
+    let mut rng_flipped = WyHash::<IntrinsicsMathsCore>::seed_from_u64(seed);
 
     for i in 0..64 {
         rng_origin.prime_with(
@@ -128,7 +130,7 @@ fn test_prime_hash<W: Write>(
         );
         let hash_flipped = optional_undiffuse(rng_flipped.sample_u64(), raw_output);
 
-        writeln!(writer, "{}", hash_origin ^ hash_flipped)?
+        writeln!(writer, "{}", hash_origin ^ hash_flipped)?;
     }
 
     for i in 0..64 {
@@ -138,7 +140,7 @@ fn test_prime_hash<W: Write>(
         );
         let hash_flipped = optional_undiffuse(rng_flipped.sample_u64(), raw_output);
 
-        writeln!(writer, "{}", hash_origin ^ hash_flipped)?
+        writeln!(writer, "{}", hash_origin ^ hash_flipped)?;
     }
 
     Ok(())
