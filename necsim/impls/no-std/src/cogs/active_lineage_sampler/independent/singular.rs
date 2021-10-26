@@ -4,6 +4,7 @@ use necsim_core::cogs::{
 };
 
 use necsim_core::lineage::{GlobalLineageReference, Lineage};
+use necsim_core_bond::NonNegativeF64;
 
 use crate::cogs::{
     active_lineage_sampler::singular::SingularActiveLineageSampler,
@@ -48,6 +49,11 @@ impl<
         let old_active_lineage = self.active_lineage.clone();
 
         self.active_lineage = active_lineage;
+
+        self.last_event_time = match &self.active_lineage {
+            None => NonNegativeF64::zero(),
+            Some(lineage) => lineage.last_event_time,
+        };
 
         old_active_lineage
     }

@@ -1,10 +1,7 @@
 use std::{hint::unreachable_unchecked, marker::PhantomData};
 
 use necsim_core::{
-    cogs::{
-        GloballyCoherentLineageStore, LineageStore, SeedableRng, SeparableDispersalSampler,
-        SplittableRng,
-    },
+    cogs::{GloballyCoherentLineageStore, LineageStore, SeparableDispersalSampler, SplittableRng},
     reporter::Reporter,
     simulation::SimulationBuilder,
 };
@@ -77,14 +74,14 @@ where
     #[allow(clippy::shadow_unrelated, clippy::too_many_lines)]
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
-        seed: u64,
+        rng: Self::Rng,
         scenario: O,
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         local_partition: &mut P,
     ) -> Result<(NonNegativeF64, u64), Self::Error> {
         match args.parallelism_mode {
             ParallelismMode::Monolithic => {
-                let mut rng = Pcg::seed_from_u64(seed);
+                let mut rng = rng;
                 let lineage_store =
                     Self::LineageStore::from_origin_sampler(scenario.sample_habitat(pre_sampler));
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
@@ -159,8 +156,7 @@ where
                     local_partition.get_number_of_partitions(),
                 );
 
-                let mut rng = Pcg::seed_from_u64(seed)
-                    .split_to_stream(u64::from(local_partition.get_partition_rank()));
+                let mut rng = rng.split_to_stream(u64::from(local_partition.get_partition_rank()));
                 let lineage_store =
                     Self::LineageStore::from_origin_sampler(DecompositionOriginSampler::new(
                         scenario.sample_habitat(pre_sampler),

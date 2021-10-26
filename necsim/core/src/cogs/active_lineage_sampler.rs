@@ -65,6 +65,10 @@ pub trait ActiveLineageSampler<
         self.number_active_lineages() == old(self.number_active_lineages()) + 1,
         "adds an active lineage"
     )]
+    #[debug_ensures(
+        self.get_last_event_time() == old(lineage.last_event_time),
+        "updates the time of the last event"
+    )]
     fn push_active_lineage(
         &mut self,
         lineage: Lineage,

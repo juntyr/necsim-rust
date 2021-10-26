@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, fmt, path::PathBuf};
+use std::{convert::TryFrom, fmt, ops::Deref, path::PathBuf};
 
 use serde::{de::Deserializer, Deserialize};
 use serde_state::DeserializeState;
@@ -61,7 +61,17 @@ impl<'de> DeserializeState<'de, Partition> for SimulateArgs {
             common: CommonArgs {
                 speciation_probability_per_generation: raw.speciation_probability_per_generation,
                 sample_percentage: raw.sample_percentage,
-                seed: raw.seed,
+                rng: match raw.rng {
+                    RngRaw::Entropy => {
+                        let mut seed = [0_u8; 8];
+
+                        getrandom::getrandom(&mut seed).map_err(serde::de::Error::custom)?;
+
+                        Rng::Seed(u64::from_le_bytes(seed))
+                    },
+                    RngRaw::Seed(seed) => Rng::Seed(seed),
+                    RngRaw::State(state) => Rng::State(state),
+                },
                 algorithm: raw.algorithm,
             },
             event_log: raw.event_log,
@@ -82,7 +92,9 @@ struct SimulateArgsRaw {
     #[serde(alias = "sample")]
     sample_percentage: ClosedUnitF64,
 
-    seed: u64,
+    #[serde(alias = "randomness")]
+    #[serde(default)]
+    rng: RngRaw,
 
     #[serde(deserialize_state)]
     algorithm: Algorithm,
@@ -125,8 +137,54 @@ where
 pub struct CommonArgs {
     pub speciation_probability_per_generation: PositiveUnitF64,
     pub sample_percentage: ClosedUnitF64,
-    pub seed: u64,
+    pub rng: Rng,
     pub algorithm: Algorithm,
+}
+
+#[derive(Debug)]
+pub enum Rng {
+    Seed(u64),
+    State(HexString),
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+enum RngRaw {
+    Entropy,
+    Seed(u64),
+    State(HexString),
+}
+
+impl Default for RngRaw {
+    fn default() -> Self {
+        Self::Entropy
+    }
+}
+
+#[repr(transparent)]
+pub struct HexString(Box<[u8]>);
+
+impl fmt::Debug for HexString {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{:?}", hex::encode(&self.0))
+    }
+}
+
+impl<'de> Deserialize<'de> for HexString {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let data: Vec<u8> = hex::deserialize(deserializer)
+            .map_err(|err| serde::de::Error::custom(format!("Invalid hex string: {}", err)))?;
+
+        Ok(Self(data.into_boxed_slice()))
+    }
+}
+
+impl Deref for HexString {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 #[derive(Debug, DeserializeState)]

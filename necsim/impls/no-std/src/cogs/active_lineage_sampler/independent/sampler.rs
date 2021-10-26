@@ -49,9 +49,7 @@ impl<
     }
 
     fn get_last_event_time(&self) -> NonNegativeF64 {
-        self.active_lineage
-            .as_ref()
-            .map_or(NonNegativeF64::zero(), |lineage| lineage.last_event_time)
+        self.last_event_time
     }
 
     #[must_use]
@@ -94,9 +92,12 @@ impl<
                 return None;
             }
 
+            self.last_event_time = next_event_time.into();
+
             // Note: Option::take would be better but uses local memory
-            let chosen_lineage = active_lineage.clone();
+            let mut chosen_lineage = active_lineage.clone();
             self.active_lineage = None;
+            chosen_lineage.last_event_time = self.last_event_time;
 
             Some((chosen_lineage, next_event_time))
         } else {
@@ -128,6 +129,8 @@ impl<
         >,
         _rng: &mut G,
     ) {
+        self.last_event_time = lineage.last_event_time;
+
         self.active_lineage = Some(lineage);
     }
 }

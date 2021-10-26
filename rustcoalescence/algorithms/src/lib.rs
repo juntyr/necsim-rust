@@ -30,7 +30,7 @@ pub trait Algorithm<O: Scenario<Self::MathsCore, Self::Rng>, R: Reporter, P: Loc
     /// Returns a `Self::Error` if initialising or running the algorithm failed
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
-        seed: u64,
+        rng: Self::Rng,
         scenario: O,
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         local_partition: &mut P,

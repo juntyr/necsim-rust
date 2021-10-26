@@ -13,7 +13,6 @@ extern crate serde_derive_state;
 use std::marker::PhantomData;
 
 use necsim_core::{
-    cogs::SeedableRng,
     lineage::{GlobalLineageReference, Lineage},
     reporter::Reporter,
     simulation::SimulationBuilder,
@@ -197,24 +196,20 @@ where
 
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
-        seed: u64,
+        rng: Self::Rng,
         scenario: O,
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         local_partition: &mut P,
     ) -> Result<(NonNegativeF64, u64), Self::Error> {
         let lineages: Vec<Lineage> = match args.parallelism_mode {
             // Apply no lineage origin partitioning in the `Monolithic` mode
-            ParallelismMode::Monolithic(..) => scenario
-                .sample_habitat(pre_sampler)
-                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
-                .collect(),
+            ParallelismMode::Monolithic(..) => scenario.sample_habitat(pre_sampler).collect(),
             // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
             ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { partition, .. }) => {
                 scenario
                     .sample_habitat(
                         pre_sampler.partition(partition.rank(), partition.partitions().get()),
                     )
-                    .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
                     .collect()
             },
             // Apply lineage origin partitioning in the `IsolatedLandscape` mode
@@ -223,7 +218,6 @@ where
                     scenario.sample_habitat(pre_sampler),
                     &O::decompose(scenario.habitat(), partition.rank(), partition.partitions()),
                 )
-                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
                 .collect()
             },
         };
@@ -234,7 +228,6 @@ where
                 O::Habitat,
                 CudaRng<Self::MathsCore, WyHash<Self::MathsCore>>,
             >>();
-        let rng = CudaRng::from(WyHash::seed_from_u64(seed));
         let lineage_store = IndependentLineageStore::default();
         let emigration_exit = NeverEmigrationExit::default();
         let coalescence_sampler = IndependentCoalescenceSampler::default();

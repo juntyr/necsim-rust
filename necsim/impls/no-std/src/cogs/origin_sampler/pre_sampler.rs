@@ -37,8 +37,8 @@ impl<M: MathsCore, I: Iterator<Item = u64>> DerefMut for OriginPreSampler<M, I> 
 }
 
 impl<M: MathsCore, I: Iterator<Item = u64>> fmt::Debug for OriginPreSampler<M, I> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct(stringify!(OriginPreSampler))
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct(stringify!(OriginPreSampler))
             .field("proportion", &self.proportion)
             .finish()
     }

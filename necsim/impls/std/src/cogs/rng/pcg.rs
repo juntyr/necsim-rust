@@ -92,6 +92,7 @@ impl<M: MathsCore> SplittableRng<M> for Pcg<M> {
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename = "Pcg")]
+#[serde(deny_unknown_fields)]
 struct PcgState {
     state: u128,
     increment: u128,

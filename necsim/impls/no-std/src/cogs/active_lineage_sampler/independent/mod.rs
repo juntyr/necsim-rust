@@ -7,6 +7,7 @@ use necsim_core::{
     },
     lineage::{GlobalLineageReference, Lineage},
 };
+use necsim_core_bond::NonNegativeF64;
 
 use crate::cogs::lineage_store::independent::IndependentLineageStore;
 
@@ -41,6 +42,7 @@ pub struct IndependentActiveLineageSampler<
         Option<rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<Lineage>>
     ))]
     active_lineage: Option<Lineage>,
+    last_event_time: NonNegativeF64,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     event_time_sampler: J,
     marker: PhantomData<(M, H, G, X, D, T, N)>,
@@ -61,6 +63,7 @@ impl<
     pub fn empty(event_time_sampler: J) -> Self {
         Self {
             active_lineage: None,
+            last_event_time: NonNegativeF64::zero(),
             event_time_sampler,
             marker: PhantomData::<(M, H, G, X, D, T, N)>,
         }
@@ -82,6 +85,7 @@ impl<
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             active_lineage: self.active_lineage.clone(),
+            last_event_time: self.last_event_time,
             event_time_sampler: self.event_time_sampler.clone(),
             marker: PhantomData::<(M, H, G, X, D, T, N)>,
         }

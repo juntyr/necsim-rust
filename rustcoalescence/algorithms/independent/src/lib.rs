@@ -11,7 +11,6 @@ use arguments::{
     ProbabilisticParallelismMode,
 };
 use necsim_core::{
-    cogs::SeedableRng,
     lineage::{GlobalLineageReference, Lineage},
     reporter::Reporter,
     simulation::SimulationBuilder,
@@ -75,7 +74,7 @@ impl<
     #[allow(clippy::too_many_lines)]
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
-        seed: u64,
+        rng: Self::Rng,
         scenario: O,
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         local_partition: &mut P,
@@ -88,10 +87,9 @@ impl<
             | ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { event_slice, .. }) => {
                 let lineages: Vec<Lineage> = match args.parallelism_mode {
                     // Apply no lineage origin partitioning in the `Monolithic` mode
-                    ParallelismMode::Monolithic(..) => scenario
-                        .sample_habitat(pre_sampler)
-                        .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
-                        .collect(),
+                    ParallelismMode::Monolithic(..) => {
+                        scenario.sample_habitat(pre_sampler).collect()
+                    },
                     // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
                     ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode {
                         partition,
@@ -100,7 +98,6 @@ impl<
                         .sample_habitat(
                             pre_sampler.partition(partition.rank(), partition.partitions().get()),
                         )
-                        .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
                         .collect(),
                     // Apply lineage origin partitioning in the `IsolatedLandscape` mode
                     ParallelismMode::IsolatedLandscape(IsolatedParallelismMode {
@@ -110,7 +107,6 @@ impl<
                         scenario.sample_habitat(pre_sampler),
                         &O::decompose(scenario.habitat(), partition.rank(), partition.partitions()),
                     )
-                    .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
                     .collect(),
                     _ => unsafe { std::hint::unreachable_unchecked() },
                 };
@@ -121,7 +117,6 @@ impl<
                         O::Habitat,
                         WyHash<Self::MathsCore>,
                     >>();
-                let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
 
@@ -164,7 +159,6 @@ impl<
                         local_partition.get_partition_rank(),
                         local_partition.get_number_of_partitions().get(),
                     ))
-                    .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
                     .collect();
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
@@ -173,7 +167,6 @@ impl<
                         O::Habitat,
                         WyHash<Self::MathsCore>,
                     >>();
-                let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
                 let emigration_exit = NeverEmigrationExit::default();
@@ -218,7 +211,6 @@ impl<
                     scenario.sample_habitat(pre_sampler),
                     &decomposition,
                 )
-                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
                 .collect();
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
@@ -227,7 +219,6 @@ impl<
                         O::Habitat,
                         WyHash<Self::MathsCore>,
                     >>();
-                let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
                 let emigration_exit = IndependentEmigrationExit::new(
@@ -277,7 +268,6 @@ impl<
                     scenario.sample_habitat(pre_sampler),
                     &decomposition,
                 )
-                .map(|indexed_location| Lineage::new(indexed_location, scenario.habitat()))
                 .collect();
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
@@ -286,7 +276,6 @@ impl<
                         O::Habitat,
                         WyHash<Self::MathsCore>,
                     >>();
-                let rng = WyHash::seed_from_u64(seed);
                 let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
                 let emigration_exit = IndependentEmigrationExit::new(

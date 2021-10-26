@@ -40,7 +40,7 @@ impl<M: MathsCore> Index<InMemoryLineageReference> for AlmostInfiniteLineageStor
 impl<M: MathsCore> AlmostInfiniteLineageStore<M> {
     #[must_use]
     pub fn new<'h, O: OriginSampler<'h, M, Habitat = AlmostInfiniteHabitat<M>>>(
-        mut origin_sampler: O,
+        origin_sampler: O,
     ) -> Self {
         #[allow(clippy::cast_possible_truncation)]
         let lineages_amount_hint = origin_sampler.full_upper_bound_size_hint() as usize;
@@ -48,14 +48,13 @@ impl<M: MathsCore> AlmostInfiniteLineageStore<M> {
         let mut lineages_store = Slab::with_capacity(lineages_amount_hint);
         let mut location_to_lineage_references = HashMap::with_capacity(lineages_amount_hint);
 
-        while let Some(indexed_location) = origin_sampler.next() {
+        for lineage in origin_sampler {
             location_to_lineage_references.insert(
-                indexed_location.location().clone(),
+                lineage.indexed_location.location().clone(),
                 InMemoryLineageReference::from(lineages_store.len()),
             );
 
-            let _local_reference =
-                lineages_store.insert(Lineage::new(indexed_location, origin_sampler.habitat()));
+            let _local_reference = lineages_store.insert(lineage);
         }
 
         lineages_store.shrink_to_fit();

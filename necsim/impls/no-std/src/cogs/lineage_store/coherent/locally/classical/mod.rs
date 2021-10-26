@@ -36,7 +36,7 @@ impl<M: MathsCore, H: Habitat<M>> Index<InMemoryLineageReference> for ClassicalL
 
 impl<'h, M: MathsCore, H: 'h + Habitat<M>> ClassicalLineageStore<M, H> {
     #[must_use]
-    pub fn new<O: OriginSampler<'h, M, Habitat = H>>(mut origin_sampler: O) -> Self {
+    pub fn new<O: OriginSampler<'h, M, Habitat = H>>(origin_sampler: O) -> Self {
         #[allow(clippy::cast_possible_truncation)]
         let lineages_amount_hint = origin_sampler.full_upper_bound_size_hint() as usize;
 
@@ -45,11 +45,10 @@ impl<'h, M: MathsCore, H: 'h + Habitat<M>> ClassicalLineageStore<M, H> {
         let mut indexed_location_to_lineage_reference =
             HashMap::with_capacity(lineages_amount_hint);
 
-        while let Some(indexed_location) = origin_sampler.next() {
-            let lineage = Lineage::new(indexed_location.clone(), origin_sampler.habitat());
+        for lineage in origin_sampler {
+            let indexed_location = lineage.indexed_location.clone();
 
             let local_reference = InMemoryLineageReference::from(lineages_store.insert(lineage));
-
             indexed_location_to_lineage_reference.insert(indexed_location, local_reference);
         }
 

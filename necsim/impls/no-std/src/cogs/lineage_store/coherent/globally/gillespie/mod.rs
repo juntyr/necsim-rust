@@ -40,7 +40,7 @@ impl<M: MathsCore, H: Habitat<M>> Index<InMemoryLineageReference> for GillespieL
 
 impl<'h, M: MathsCore, H: 'h + Habitat<M>> GillespieLineageStore<M, H> {
     #[must_use]
-    pub fn new<O: OriginSampler<'h, M, Habitat = H>>(mut origin_sampler: O) -> Self {
+    pub fn new<O: OriginSampler<'h, M, Habitat = H>>(origin_sampler: O) -> Self {
         #[allow(clippy::cast_possible_truncation)]
         let lineages_amount_hint = origin_sampler.full_upper_bound_size_hint() as usize;
 
@@ -60,22 +60,22 @@ impl<'h, M: MathsCore, H: 'h + Habitat<M>> GillespieLineageStore<M, H> {
         let x_from = landscape_extent.x();
         let y_from = landscape_extent.y();
 
-        while let Some(indexed_location) = origin_sampler.next() {
-            let x_offset = indexed_location.location().x() - x_from;
-            let y_offset = indexed_location.location().y() - y_from;
+        for lineage in origin_sampler {
+            let x_offset = lineage.indexed_location.location().x() - x_from;
+            let y_offset = lineage.indexed_location.location().y() - y_from;
 
             let lineages_at_location =
                 &mut location_to_lineage_references[(y_offset as usize, x_offset as usize)];
 
-            let lineage = Lineage::new(indexed_location.clone(), origin_sampler.habitat());
-
-            let global_reference = lineage.global_reference.clone();
-            let local_reference = InMemoryLineageReference::from(lineages_store.insert(lineage));
-
+            // Insert the global lineage reference into the per-indexed-location
+            //  lookup
             indexed_location_to_lineage_reference.insert(
-                indexed_location,
-                (global_reference, lineages_at_location.len()),
+                lineage.indexed_location.clone(),
+                (lineage.global_reference.clone(), lineages_at_location.len()),
             );
+
+            // Insert the local lineage reference into the per-location lookup
+            let local_reference = InMemoryLineageReference::from(lineages_store.insert(lineage));
             lineages_at_location.push(local_reference);
         }
 
