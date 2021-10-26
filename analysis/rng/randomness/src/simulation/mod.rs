@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, num::NonZeroU32};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -76,7 +76,7 @@ impl<M: MathsCore, G: RngCore<M> + PrimeableRng<M>, const SIZE: u32> RngCore<M>
     fn from_seed(seed: Self::Seed) -> Self {
         let mut simulation = SimulationBuilder {
             maths: PhantomData::<M>,
-            habitat: NonSpatialHabitat::new((SIZE, SIZE), SIZE),
+            habitat: NonSpatialHabitat::new((SIZE, SIZE), NonZeroU32::new(SIZE).unwrap()),
             lineage_reference: PhantomData::<GlobalLineageReference>,
             lineage_store: IndependentLineageStore::default(),
             dispersal_sampler: NonSpatialDispersalSampler::default(),

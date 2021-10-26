@@ -113,7 +113,7 @@ fn simulate<R: Reporter>(options: &Options, mut reporter: R) {
     let rng = Pcg::<IntrinsicsMathsCore>::seed_from_u64(options.seed);
     let lineage_store =
         AlmostInfiniteLineageStore::from_origin_sampler(AlmostInfiniteOriginSampler::new(
-            OriginPreSampler::all().percentage(options.sample.get()),
+            OriginPreSampler::all().percentage(options.sample),
             &habitat,
             options.radius,
         ));
