@@ -118,9 +118,10 @@ impl<
                 .active_lineage_references
                 .swap_remove(chosen_lineage_index);
 
-            let chosen_lineage = simulation
+            let mut chosen_lineage = simulation
                 .lineage_store
                 .extract_lineage_locally_coherent(chosen_lineage_reference, &simulation.habitat);
+            chosen_lineage.last_event_time = self.last_event_time;
 
             Some((chosen_lineage, next_event_time))
         } else {

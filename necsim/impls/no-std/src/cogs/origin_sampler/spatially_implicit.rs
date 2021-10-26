@@ -2,7 +2,7 @@ use core::{fmt, iter::Iterator};
 
 use necsim_core::{
     cogs::{MathsCore, OriginSampler},
-    landscape::IndexedLocation,
+    lineage::Lineage,
 };
 
 use crate::cogs::{
@@ -58,7 +58,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> OriginSampler<'h, M>
 impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator
     for SpatiallyImplicitOriginSampler<'h, M, I>
 {
-    type Item = IndexedLocation;
+    type Item = Lineage;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.local_iterator.next()

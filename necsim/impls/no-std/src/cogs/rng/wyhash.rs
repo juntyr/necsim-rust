@@ -13,10 +13,12 @@ const P5: u64 = 0xeb44_acca_b455_d165;
 
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
 #[derive(Clone, Debug, Serialize, Deserialize, TypeLayout)]
+#[serde(deny_unknown_fields)]
 #[repr(C)]
 pub struct WyHash<M: MathsCore> {
     seed: u64,
     state: u64,
+    #[serde(skip)]
     marker: PhantomData<M>,
 }
 

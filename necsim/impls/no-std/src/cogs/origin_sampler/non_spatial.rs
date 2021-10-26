@@ -7,6 +7,7 @@ use core::{
 use necsim_core::{
     cogs::{Habitat, MathsCore, OriginSampler},
     landscape::{IndexedLocation, LocationIterator},
+    lineage::Lineage,
 };
 
 use crate::cogs::{
@@ -23,8 +24,8 @@ pub struct NonSpatialOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
 }
 
 impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug for NonSpatialOriginSampler<'h, M, I> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct(stringify!(NonSpatialOriginSampler))
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct(stringify!(NonSpatialOriginSampler))
             .field("pre_sampler", &self.pre_sampler)
             .field("last_index", &self.last_index)
             .field("location_iterator", &self.location_iterator)
@@ -71,7 +72,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> OriginSampler<'h, M>
 }
 
 impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator for NonSpatialOriginSampler<'h, M, I> {
-    type Item = IndexedLocation;
+    type Item = Lineage;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.habitat.get_deme() == 0 {
@@ -96,9 +97,9 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator for NonSpatialOriginSam
 
         self.next_location_index += u32::try_from(index_difference).unwrap();
 
-        Some(IndexedLocation::new(
-            next_location.clone(),
-            self.next_location_index,
+        Some(Lineage::new(
+            IndexedLocation::new(next_location.clone(), self.next_location_index),
+            self.habitat,
         ))
     }
 }

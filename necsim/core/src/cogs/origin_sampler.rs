@@ -1,12 +1,12 @@
 use crate::{
     cogs::{Habitat, MathsCore},
-    landscape::IndexedLocation,
+    lineage::Lineage,
 };
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait OriginSampler<'h, M: MathsCore>:
-    core::fmt::Debug + core::iter::Iterator<Item = IndexedLocation>
+    core::fmt::Debug + core::iter::Iterator<Item = Lineage>
 {
     type Habitat: 'h + Habitat<M>;
 

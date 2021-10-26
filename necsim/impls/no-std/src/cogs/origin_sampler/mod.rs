@@ -3,4 +3,5 @@ pub mod decomposition;
 pub mod in_memory;
 pub mod non_spatial;
 pub mod pre_sampler;
+pub mod resuming;
 pub mod spatially_implicit;

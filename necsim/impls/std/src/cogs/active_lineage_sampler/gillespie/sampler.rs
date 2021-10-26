@@ -59,6 +59,8 @@ impl<
             return None;
         }
 
+        self.last_event_time = next_event_time.into();
+
         let chosen_active_location = self.active_locations.pop()?.0;
 
         let lineages_at_location = simulation
@@ -73,9 +75,11 @@ impl<
         let chosen_lineage_reference =
             lineages_at_location[chosen_lineage_index_at_location].clone();
 
-        let chosen_lineage = simulation
+        let mut chosen_lineage = simulation
             .lineage_store
             .extract_lineage_globally_coherent(chosen_lineage_reference, &simulation.habitat);
+        chosen_lineage.last_event_time = self.last_event_time;
+
         self.number_active_lineages -= 1;
 
         if number_lineages_left_at_location > 0 {
@@ -103,8 +107,6 @@ impl<
             }
         }
 
-        self.last_event_time = next_event_time.into();
-
         Some((chosen_lineage, next_event_time))
     }
 
@@ -123,8 +125,9 @@ impl<
     ) {
         use necsim_core::cogs::RngSampler;
 
+        self.last_event_time = lineage.last_event_time;
+
         let location = lineage.indexed_location.location().clone();
-        let event_time = lineage.last_event_time;
 
         let _lineage_reference = simulation
             .lineage_store
@@ -143,12 +146,12 @@ impl<
         ) {
             self.active_locations.push(
                 location,
-                EventTime::from(event_time + rng.sample_exponential(event_rate_at_location)),
+                EventTime::from(
+                    self.last_event_time + rng.sample_exponential(event_rate_at_location),
+                ),
             );
 
             self.number_active_lineages += 1;
         }
-
-        self.last_event_time = event_time;
     }
 }

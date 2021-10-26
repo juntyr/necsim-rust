@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{MathsCore, OriginSampler},
-    landscape::IndexedLocation,
+    lineage::Lineage,
 };
 
 use crate::decomposition::Decomposition;
@@ -59,17 +59,17 @@ impl<'d, M: MathsCore, O: OriginSampler<'d, M>, D: Decomposition<M, O::Habitat>>
 impl<'d, M: MathsCore, O: OriginSampler<'d, M>, D: Decomposition<M, O::Habitat>> Iterator
     for DecompositionOriginSampler<'d, M, O, D>
 {
-    type Item = IndexedLocation;
+    type Item = Lineage;
 
     fn next(&mut self) -> Option<Self::Item> {
         #[allow(clippy::while_let_on_iterator)]
-        while let Some(indexed_location) = self.origin_sampler.next() {
+        while let Some(lineage) = self.origin_sampler.next() {
             if self.decomposition.map_location_to_subdomain_rank(
-                indexed_location.location(),
+                lineage.indexed_location.location(),
                 self.origin_sampler.habitat(),
             ) == self.decomposition.get_subdomain_rank()
             {
-                return Some(indexed_location);
+                return Some(lineage);
             }
         }
 

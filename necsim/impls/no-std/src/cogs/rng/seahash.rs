@@ -6,11 +6,13 @@ use serde::{Deserialize, Serialize};
 
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
 #[derive(Clone, Debug, Serialize, Deserialize, TypeLayout)]
+#[serde(deny_unknown_fields)]
 pub struct SeaHash<M: MathsCore> {
     seed: u64,
     location: u64,
     time: u64,
     offset: u64,
+    #[serde(skip)]
     marker: PhantomData<M>,
 }
 

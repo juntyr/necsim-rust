@@ -3,6 +3,7 @@ use core::{fmt, iter::Iterator};
 use necsim_core::{
     cogs::{MathsCore, OriginSampler},
     landscape::{IndexedLocation, LandscapeExtent, LocationIterator},
+    lineage::Lineage,
 };
 
 use crate::cogs::{
@@ -24,8 +25,8 @@ pub struct AlmostInfiniteOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>
 impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
     for AlmostInfiniteOriginSampler<'h, M, I>
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct(stringify!(AlmostInfiniteOriginSampler))
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct(stringify!(AlmostInfiniteOriginSampler))
             .field("pre_sampler", &self.pre_sampler)
             .field("last_index", &self.last_index)
             .field("location_iterator", &self.location_iterator)
@@ -86,7 +87,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> OriginSampler<'h, M>
 }
 
 impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator for AlmostInfiniteOriginSampler<'h, M, I> {
-    type Item = IndexedLocation;
+    type Item = Lineage;
 
     fn next(&mut self) -> Option<Self::Item> {
         let next_index = self.pre_sampler.next()?;
@@ -102,7 +103,10 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator for AlmostInfiniteOrigi
 
             if distance_squared <= self.radius_squared {
                 if index_difference == 0 {
-                    return Some(IndexedLocation::new(next_location, 0));
+                    return Some(Lineage::new(
+                        IndexedLocation::new(next_location, 0),
+                        self.habitat,
+                    ));
                 }
 
                 index_difference -= 1;

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 use rustcoalescence_algorithms::Algorithm;
 
@@ -12,9 +12,12 @@ use rustcoalescence_algorithms_monolithic::{
     skipping_gillespie::SkippingGillespieAlgorithm,
 };
 
-use necsim_core::reporter::{
-    boolean::{Boolean, False, True},
-    Reporter,
+use necsim_core::{
+    cogs::SeedableRng,
+    reporter::{
+        boolean::{Boolean, False, True},
+        Reporter,
+    },
 };
 use necsim_core_bond::NonNegativeF64;
 use necsim_impls_no_std::cogs::origin_sampler::pre_sampler::OriginPreSampler;
@@ -26,7 +29,9 @@ use rustcoalescence_scenarios::{
     Scenario,
 };
 
-use crate::args::{Algorithm as AlgorithmArgs, CommonArgs, Scenario as ScenarioArgs};
+use crate::args::{
+    Algorithm as AlgorithmArgs, CommonArgs, Rng as RngArgs, Scenario as ScenarioArgs,
+};
 
 pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>>(
     local_partition: Box<P>,
@@ -58,6 +63,24 @@ trait SimulateSealedBooleanDispatch<
 
 struct Dispatcher;
 
+macro_rules! initialise_and_simulate {
+    (
+        $algorithm:ident($common_args:ident, $algorithm_args:ident, $scenario:ident, $local_partition:ident)
+    ) => {
+        $algorithm::initialise_and_simulate(
+            $algorithm_args,
+            match $common_args.rng {
+                RngArgs::Seed(seed) => SeedableRng::seed_from_u64(seed),
+                RngArgs::State(state) => bincode::deserialize(&state)
+                    .context("Failed to initialise the RNG from the given state")?,
+            },
+            $scenario,
+            OriginPreSampler::all().percentage($common_args.sample_percentage.get()),
+            &mut *$local_partition,
+        )
+    };
+}
+
 macro_rules! impl_sealed_dispatch {
     ($report_speciation:ty, $report_dispersal:ty, $report_progress:ty) => {
         impl SimulateSealedBooleanDispatch<
@@ -86,69 +109,25 @@ macro_rules! impl_sealed_dispatch {
                     (common_args.algorithm, scenario => scenario)
                 {
                     #[cfg(feature = "rustcoalescence-algorithms-monolithic")]
-                    AlgorithmArgs::Classical(algorithm_args) => {
-                        ClassicalAlgorithm::initialise_and_simulate(
-                            algorithm_args,
-                            common_args.seed,
-                            scenario,
-                            OriginPreSampler::all().percentage(
-                                common_args.sample_percentage.get()
-                            ),
-                            &mut *local_partition,
-                        )
-                        .into_ok()
-                    },
+                    AlgorithmArgs::Classical(algorithm_args) => { initialise_and_simulate!(
+                        ClassicalAlgorithm(common_args, algorithm_args, scenario, local_partition)
+                    ).into_ok() },
                     #[cfg(feature = "rustcoalescence-algorithms-monolithic")]
-                    AlgorithmArgs::Gillespie(algorithm_args) => {
-                        GillespieAlgorithm::initialise_and_simulate(
-                            algorithm_args,
-                            common_args.seed,
-                            scenario,
-                            OriginPreSampler::all().percentage(
-                                common_args.sample_percentage.get()
-                            ),
-                            &mut *local_partition,
-                        )
-                        .into_ok()
-                    },
+                    AlgorithmArgs::Gillespie(algorithm_args) => { initialise_and_simulate!(
+                        GillespieAlgorithm(common_args, algorithm_args, scenario, local_partition)
+                    ).into_ok() },
                     #[cfg(feature = "rustcoalescence-algorithms-monolithic")]
-                    AlgorithmArgs::SkippingGillespie(algorithm_args) => {
-                        SkippingGillespieAlgorithm::initialise_and_simulate(
-                            algorithm_args,
-                            common_args.seed,
-                            scenario,
-                            OriginPreSampler::all().percentage(
-                                common_args.sample_percentage.get()
-                            ),
-                            &mut *local_partition,
-                        )
-                        .into_ok()
-                    },
+                    AlgorithmArgs::SkippingGillespie(algorithm_args) => { initialise_and_simulate!(
+                        SkippingGillespieAlgorithm(common_args, algorithm_args, scenario, local_partition)
+                    ).into_ok() },
                     #[cfg(feature = "rustcoalescence-algorithms-independent")]
-                    AlgorithmArgs::Independent(algorithm_args) => {
-                        IndependentAlgorithm::initialise_and_simulate(
-                            algorithm_args,
-                            common_args.seed,
-                            scenario,
-                            OriginPreSampler::all().percentage(
-                                common_args.sample_percentage.get()
-                            ),
-                            &mut *local_partition,
-                        )
-                        .into_ok()
-                    },
+                    AlgorithmArgs::Independent(algorithm_args) => { initialise_and_simulate!(
+                        IndependentAlgorithm(common_args, algorithm_args, scenario, local_partition)
+                    ).into_ok() },
                     #[cfg(feature = "rustcoalescence-algorithms-cuda")]
-                    AlgorithmArgs::Cuda(algorithm_args) => {
-                        CudaAlgorithm::initialise_and_simulate(
-                            algorithm_args,
-                            common_args.seed,
-                            scenario,
-                            OriginPreSampler::all().percentage(
-                                common_args.sample_percentage.get()
-                            ),
-                            &mut *local_partition,
-                        )?
-                    }
+                    AlgorithmArgs::Cuda(algorithm_args) => { initialise_and_simulate!(
+                        CudaAlgorithm(common_args, algorithm_args, scenario, local_partition)
+                    )? }
                     <=>
                     ScenarioArgs::SpatiallyExplicit(scenario_args) => {
                         SpatiallyExplicitScenario::initialise(
