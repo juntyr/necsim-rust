@@ -7,13 +7,25 @@
     /* selected of the initialisation of the random number generator */
     /* optional, default = Entropy */
     rng: (
-        /* initialises from OS-provided randomness */
+        /* seeds from OS-provided randomness */
+        /* infallible (unless the OS malfunctions) */
       | Entropy
-        /* initialises from the given 64bit seed */
+        /* seeds based on the given 64bit seed */
+        /* infallible */
       | Seed(u64)
-        /* tries to initialise from the given internal state,
-         * serialised as a base64 byte string */
-      | State(Base64)
+        /* seeds based on the given base32-string, which goes through a
+         *  sponge function to fit the RNG's seed size */
+        /* infallible */
+      | Sponge(Base32)
+        /* tries to set the RNG's state from the given base32-string */
+        /* fails if the the base32-string is not a valid RNG state
+         *  (use only for resuming a paused + unchanged simulation) */
+      | State(Base32)
+        /* combination of the State and Sponge initialisation methods
+         *  (a) try the State initialisation
+         *  (b) on failure, use the Sponge initialisation */
+        /* infallible */
+      | StateElseSponge(Base32)
     ),
 
     /* selection of the coalescence algorithm which is used */

@@ -61,17 +61,7 @@ impl<'de> DeserializeState<'de, Partition> for SimulateArgs {
             common: CommonArgs {
                 speciation_probability_per_generation: raw.speciation_probability_per_generation,
                 sample_percentage: raw.sample_percentage,
-                rng: match raw.rng {
-                    RngRaw::Entropy => {
-                        let mut seed = [0_u8; 8];
-
-                        getrandom::getrandom(&mut seed).map_err(serde::de::Error::custom)?;
-
-                        Rng::Seed(u64::from_le_bytes(seed))
-                    },
-                    RngRaw::Seed(seed) => Rng::Seed(seed),
-                    RngRaw::State(state) => Rng::State(state),
-                },
+                rng: raw.rng,
                 algorithm: raw.algorithm,
             },
             event_log: raw.event_log,
@@ -94,7 +84,7 @@ struct SimulateArgsRaw {
 
     #[serde(alias = "randomness")]
     #[serde(default)]
-    rng: RngRaw,
+    rng: Rng,
 
     #[serde(deserialize_state)]
     algorithm: Algorithm,
@@ -141,45 +131,59 @@ pub struct CommonArgs {
     pub algorithm: Algorithm,
 }
 
-#[derive(Debug)]
-pub enum Rng {
-    Seed(u64),
-    State(HexString),
-}
-
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-enum RngRaw {
+pub enum Rng {
     Entropy,
     Seed(u64),
-    State(HexString),
+    Sponge(Base32String),
+    State(Base32String),
+    StateElseSponge(Base32String),
 }
 
-impl Default for RngRaw {
+impl Default for Rng {
     fn default() -> Self {
         Self::Entropy
     }
 }
 
+#[derive(Clone)]
 #[repr(transparent)]
-pub struct HexString(Box<[u8]>);
+pub struct Base32String(Box<[u8]>);
 
-impl fmt::Debug for HexString {
+impl Base32String {
+    #[must_use]
+    pub fn new(bytes: &[u8]) -> Self {
+        Self(bytes.to_vec().into_boxed_slice())
+    }
+}
+
+impl fmt::Debug for Base32String {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "{:?}", hex::encode(&self.0))
+        write!(
+            fmt,
+            "base32: {:?}",
+            base32::encode(base32::Alphabet::Crockford, &self.0).to_ascii_lowercase()
+        )
     }
 }
 
-impl<'de> Deserialize<'de> for HexString {
+impl<'de> Deserialize<'de> for Base32String {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let data: Vec<u8> = hex::deserialize(deserializer)
-            .map_err(|err| serde::de::Error::custom(format!("Invalid hex string: {}", err)))?;
-
-        Ok(Self(data.into_boxed_slice()))
+        if let Some(data) = base32::decode(
+            base32::Alphabet::Crockford,
+            <&str>::deserialize(deserializer)?,
+        ) {
+            Ok(Self(data.into_boxed_slice()))
+        } else {
+            Err(serde::de::Error::custom(
+                "Invalid Crockford's Base32 string: must only contain alphanumeric characters.",
+            ))
+        }
     }
 }
 
-impl Deref for HexString {
+impl Deref for Base32String {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {

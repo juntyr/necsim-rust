@@ -1,7 +1,8 @@
-use std::io;
+use std::marker::PhantomData;
 
 use anyhow::{Context, Result};
-use tiny_keccak::{Hasher, Shake, Xof};
+use bincode::Options;
+use tiny_keccak::{Hasher, Keccak};
 
 use rustcoalescence_algorithms::Algorithm;
 
@@ -33,7 +34,7 @@ use rustcoalescence_scenarios::{
 };
 
 use crate::args::{
-    Algorithm as AlgorithmArgs, CommonArgs, Rng as RngArgs, Scenario as ScenarioArgs,
+    Algorithm as AlgorithmArgs, Base32String, CommonArgs, Rng as RngArgs, Scenario as ScenarioArgs,
 };
 
 pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>>(
@@ -64,56 +65,82 @@ trait SimulateSealedBooleanDispatch<
     ) -> Result<()>;
 }
 
-struct Sponge {
-    sponge: Shake,
-}
-
-impl Sponge {
-    fn new(bytes: &[u8]) -> Self {
-        let mut sponge = Shake::v128();
-        sponge.update(bytes);
-
-        Self { sponge }
-    }
-}
-
-impl io::Read for Sponge {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.sponge.squeeze(buf);
-
-        Ok(buf.len())
-    }
-}
-
 fn initialise_rng<M: MathsCore, G: SeedableRng<M>>(args: RngArgs) -> Result<G> {
-    match args {
-        RngArgs::Seed(seed) => Ok(SeedableRng::seed_from_u64(seed)),
-        RngArgs::State(state) => {
-            use bincode::{ErrorKind, Options};
-
-            let options = bincode::options()
-                .with_no_limit()
-                .with_little_endian()
-                .with_fixint_encoding()
-                .allow_trailing_bytes();
-
-            let mut cursor = io::Cursor::new(&*state);
-
-            match options.deserialize_from(cursor.get_mut()) {
-                Ok(_) if !cursor.is_empty() => (),
-                Ok(rng) => return Ok(rng),
-                Err(box ErrorKind::Io(err)) if err.kind() == io::ErrorKind::UnexpectedEof => (),
-                Err(err) => {
-                    return Err(err)
-                        .context("Failed to initialise the RNG from the given literal state")
-                },
-            }
-
-            options
-                .deserialize_from(Sponge::new(&state))
-                .context("Failed to initialise the RNG from the given sponge state")
-        },
+    #[derive(Debug)]
+    enum Rng {
+        Seed(u64),
+        Sponge(Base32String),
+        State(Base32String),
     }
+
+    enum Partial<M: MathsCore, G: SeedableRng<M>> {
+        Seed(u64),
+        Sponge(Base32String),
+        State { rng: G, marker: PhantomData<M> },
+    }
+
+    // TODO: Print the final RNG interpretation inside the parsed
+    //       simulation config
+    let (_args, partial) = match args {
+        RngArgs::Entropy => {
+            let mut entropy = G::Seed::default();
+            getrandom::getrandom(entropy.as_mut()).context("Failed to query for entropy")?;
+
+            (
+                Rng::Sponge(Base32String::new(entropy.as_mut())),
+                Partial::Sponge(Base32String::new(entropy.as_mut())),
+            )
+        },
+        RngArgs::Seed(seed) => (Rng::Seed(seed), Partial::Seed(seed)),
+        RngArgs::Sponge(sponge) => (Rng::Sponge(sponge.clone()), Partial::Sponge(sponge)),
+        RngArgs::State(state) => {
+            let rng = bincode::options()
+                .deserialize(&state)
+                .map_err(|_| anyhow::anyhow!("Failed to initialise the RNG from {:?}", state))?;
+
+            (
+                Rng::State(state),
+                Partial::State {
+                    rng,
+                    marker: PhantomData::<M>,
+                },
+            )
+        },
+        RngArgs::StateElseSponge(state) => match bincode::options().deserialize(&state) {
+            Ok(rng) => (
+                Rng::State(state),
+                Partial::State {
+                    rng,
+                    marker: PhantomData::<M>,
+                },
+            ),
+            Err(_) => (Rng::Sponge(state.clone()), Partial::Sponge(state.clone())),
+        },
+    };
+
+    // println!("DEBUG: {:?}", args);
+
+    let rng = match partial {
+        Partial::Seed(seed) => SeedableRng::seed_from_u64(seed),
+        Partial::Sponge(state) => {
+            let mut seed = G::Seed::default();
+
+            let mut sponge = Keccak::v256();
+            sponge.update(&state);
+            sponge.finalize(seed.as_mut());
+
+            G::from_seed(seed)
+        },
+        Partial::State { rng, .. } => rng,
+    };
+
+    // println!("DEBUG: {:?}", rng);
+    // println!(
+    //     "DEBUG: {:?}",
+    //     Base32String::new(&bincode::options().serialize(&rng).unwrap())
+    // );
+
+    Ok(rng)
 }
 
 macro_rules! initialise_and_simulate {

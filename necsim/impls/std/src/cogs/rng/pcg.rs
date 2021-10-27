@@ -25,7 +25,12 @@ impl<M: MathsCore> Clone for Pcg<M> {
 
 impl<M: MathsCore> fmt::Debug for Pcg<M> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("Pcg").finish()
+        let state = self.inner.get_state();
+
+        fmt.debug_struct("Pcg")
+            .field("state", &state.state)
+            .field("stream", &(state.increment >> 1))
+            .finish()
     }
 }
 
