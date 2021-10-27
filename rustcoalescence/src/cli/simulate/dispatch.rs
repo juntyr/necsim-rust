@@ -1,4 +1,7 @@
+use std::io;
+
 use anyhow::{Context, Result};
+use tiny_keccak::{Hasher, Shake, Xof};
 
 use rustcoalescence_algorithms::Algorithm;
 
@@ -13,7 +16,7 @@ use rustcoalescence_algorithms_monolithic::{
 };
 
 use necsim_core::{
-    cogs::SeedableRng,
+    cogs::{MathsCore, SeedableRng},
     reporter::{
         boolean::{Boolean, False, True},
         Reporter,
@@ -61,7 +64,57 @@ trait SimulateSealedBooleanDispatch<
     ) -> Result<()>;
 }
 
-struct Dispatcher;
+struct Sponge {
+    sponge: Shake,
+}
+
+impl Sponge {
+    fn new(bytes: &[u8]) -> Self {
+        let mut sponge = Shake::v128();
+        sponge.update(bytes);
+
+        Self { sponge }
+    }
+}
+
+impl io::Read for Sponge {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.sponge.squeeze(buf);
+
+        Ok(buf.len())
+    }
+}
+
+fn initialise_rng<M: MathsCore, G: SeedableRng<M>>(args: RngArgs) -> Result<G> {
+    match args {
+        RngArgs::Seed(seed) => Ok(SeedableRng::seed_from_u64(seed)),
+        RngArgs::State(state) => {
+            use bincode::{ErrorKind, Options};
+
+            let options = bincode::options()
+                .with_no_limit()
+                .with_little_endian()
+                .with_fixint_encoding()
+                .allow_trailing_bytes();
+
+            let mut cursor = io::Cursor::new(&*state);
+
+            match options.deserialize_from(cursor.get_mut()) {
+                Ok(_) if !cursor.is_empty() => (),
+                Ok(rng) => return Ok(rng),
+                Err(box ErrorKind::Io(err)) if err.kind() == io::ErrorKind::UnexpectedEof => (),
+                Err(err) => {
+                    return Err(err)
+                        .context("Failed to initialise the RNG from the given literal state")
+                },
+            }
+
+            options
+                .deserialize_from(Sponge::new(&state))
+                .context("Failed to initialise the RNG from the given sponge state")
+        },
+    }
+}
 
 macro_rules! initialise_and_simulate {
     (
@@ -69,17 +122,15 @@ macro_rules! initialise_and_simulate {
     ) => {
         $algorithm::initialise_and_simulate(
             $algorithm_args,
-            match $common_args.rng {
-                RngArgs::Seed(seed) => SeedableRng::seed_from_u64(seed),
-                RngArgs::State(state) => bincode::deserialize(&state)
-                    .context("Failed to initialise the RNG from the given state")?,
-            },
+            initialise_rng($common_args.rng)?,
             $scenario,
             OriginPreSampler::all().percentage($common_args.sample_percentage.get()),
             &mut *$local_partition,
         )
     };
 }
+
+struct Dispatcher;
 
 macro_rules! impl_sealed_dispatch {
     ($report_speciation:ty, $report_dispersal:ty, $report_progress:ty) => {
