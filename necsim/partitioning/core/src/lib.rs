@@ -8,13 +8,11 @@ extern crate alloc;
 #[macro_use]
 extern crate contracts;
 
-use core::num::NonZeroU32;
-
 use necsim_core::{
     lineage::MigratingLineage,
     reporter::{boolean::Boolean, Reporter},
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::{NonNegativeF64, Partition, PositiveF64};
 
 pub mod context;
 pub mod iterator;
@@ -35,17 +33,7 @@ pub trait Partitioning: Sized {
     )]
     fn is_root(&self) -> bool;
 
-    #[debug_ensures(
-        self.is_monolithic() == (ret.get() == 1),
-        "there is only one monolithic partition"
-    )]
-    fn get_number_of_partitions(&self) -> NonZeroU32;
-
-    #[debug_ensures(
-        ret < self.get_number_of_partitions().get(),
-        "rank is in range [0, number_of_partitions)"
-    )]
-    fn get_rank(&self) -> u32;
+    fn get_partition(&self) -> Partition;
 
     fn into_local_partition<R: Reporter, P: ReporterContext<Reporter = R>>(
         self,
@@ -72,13 +60,7 @@ pub trait LocalPartition<R: Reporter>: Sized {
 
     fn is_root(&self) -> bool;
 
-    #[debug_ensures(
-        ret < self.get_number_of_partitions().get(),
-        "partition rank is in range [0, self.get_number_of_partitions())"
-    )]
-    fn get_partition_rank(&self) -> u32;
-
-    fn get_number_of_partitions(&self) -> NonZeroU32;
+    fn get_partition(&self) -> Partition;
 
     fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(
         &mut self,

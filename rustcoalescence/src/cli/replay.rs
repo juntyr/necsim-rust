@@ -3,19 +3,15 @@ use log::LevelFilter;
 
 use necsim_core::{event::TypedEvent, reporter::Reporter};
 
-use necsim_partitioning_core::Partitioning;
 use necsim_plugins_core::match_any_reporter_plugin_vec;
 
 use crate::args::{CommandArgs, ReplayArgs};
 
-#[allow(clippy::module_name_repetitions, clippy::needless_pass_by_value)]
-pub fn replay_with_logger<P: Partitioning>(
-    replay_args: CommandArgs,
-    partitioning: P,
-) -> Result<()> {
+#[allow(clippy::module_name_repetitions)]
+pub fn replay_with_logger(replay_args: CommandArgs) -> Result<()> {
     log::set_max_level(LevelFilter::Info);
 
-    let replay_args = ReplayArgs::try_parse(replay_args, &partitioning)?;
+    let replay_args = ReplayArgs::try_parse(replay_args)?;
     info!("Parsed replay arguments:\n{:#?}", replay_args);
 
     info!("Starting event replay ...");

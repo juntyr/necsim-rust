@@ -6,7 +6,7 @@
 #[macro_use]
 extern crate contracts;
 
-use std::num::NonZeroU32;
+use std::{fmt, num::NonZeroU32};
 
 use mpi::{
     environment::Universe,
@@ -14,15 +14,14 @@ use mpi::{
     Tag,
 };
 
+use serde::{Deserialize, Deserializer};
 use thiserror::Error;
 
 use necsim_core::reporter::Reporter;
+use necsim_core_bond::Partition;
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_partitioning_core::{context::ReporterContext, Partitioning};
-use necsim_partitioning_monolithic::{
-    live::LiveMonolithicLocalPartition, recorded::RecordedMonolithicLocalPartition,
-};
 
 mod partition;
 
@@ -32,6 +31,8 @@ pub use partition::{MpiLocalPartition, MpiParallelPartition, MpiRootPartition};
 pub enum MpiPartitioningError {
     #[error("MPI has already been initialised.")]
     AlreadyInitialised,
+    #[error("MPI must be initialised with at least two partitions.")]
+    NoParallelism,
 }
 
 #[derive(Error, Debug)]
@@ -40,9 +41,24 @@ pub enum MpiLocalPartitionError {
     MissingEventLog,
 }
 
+static mut MPI_UNIVERSE: Option<Universe> = None;
+
 pub struct MpiPartitioning {
-    universe: Universe,
     world: SystemCommunicator,
+}
+
+impl fmt::Debug for MpiPartitioning {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct(stringify!(MpiPartitioning))
+            .field("world", &self.get_partition().size().get())
+            .finish()
+    }
+}
+
+impl<'de> Deserialize<'de> for MpiPartitioning {
+    fn deserialize<D: Deserializer<'de>>(_deserializer: D) -> Result<Self, D::Error> {
+        Self::initialise().map_err(serde::de::Error::custom)
+    }
 }
 
 impl MpiPartitioning {
@@ -53,18 +69,30 @@ impl MpiPartitioning {
     /// # Errors
     ///
     /// Returns `AlreadyInitialised` if MPI was already initialised.
+    /// Returns `NoParallelism` if the MPI world only consists of one or less
+    ///  partitions.
     pub fn initialise() -> Result<Self, MpiPartitioningError> {
-        mpi::initialize()
-            .map(|universe| Self {
-                world: universe.world(),
-                universe,
-            })
-            .ok_or(MpiPartitioningError::AlreadyInitialised)
+        let world = if let Some(universe) = unsafe { &MPI_UNIVERSE } {
+            universe.world()
+        } else if let Some(universe) = mpi::initialize() {
+            let universe = unsafe { MPI_UNIVERSE.insert(universe) };
+
+            universe.world()
+        } else {
+            return Err(MpiPartitioningError::AlreadyInitialised);
+        };
+
+        if world.size() > 1 {
+            Ok(Self { world })
+        } else {
+            Err(MpiPartitioningError::NoParallelism)
+        }
     }
 
+    #[allow(clippy::unused_self)]
     pub fn update_message_buffer_size(&mut self, size: usize) {
-        if !self.is_monolithic() {
-            self.universe.set_buffer_size(size);
+        if let Some(universe) = unsafe { MPI_UNIVERSE.as_mut() } {
+            universe.set_buffer_size(size);
         }
     }
 }
@@ -82,58 +110,54 @@ impl Partitioning for MpiPartitioning {
         self.world.rank() == MpiPartitioning::ROOT_RANK
     }
 
-    fn get_number_of_partitions(&self) -> NonZeroU32 {
+    fn get_partition(&self) -> Partition {
         #[allow(clippy::cast_sign_loss)]
-        NonZeroU32::new(self.world.size() as u32).unwrap()
-    }
+        let rank = self.world.rank() as u32;
+        #[allow(clippy::cast_sign_loss)]
+        let size = unsafe { NonZeroU32::new_unchecked(self.world.size() as u32) };
 
-    fn get_rank(&self) -> u32 {
-        #[allow(clippy::cast_sign_loss)]
-        (self.world.rank() as u32)
+        unsafe { Partition::new_unchecked(rank, size) }
     }
 
     /// # Errors
     ///
+    /// Returns `AlreadyInitialised` if MPI was already initialised.
+    /// Returns `NoParallelism` if the MPI world only consists of one or less
+    ///  partitions.
     /// Returns `MissingEventLog` if the local partition is non-monolithic and
-    /// the `auxiliary` event log is `None`.
+    ///  the `event_log` is `None`.
     fn into_local_partition<R: Reporter, P: ReporterContext<Reporter = R>>(
         self,
         reporter_context: P,
-        auxiliary: Self::Auxiliary,
+        event_log: Self::Auxiliary,
     ) -> anyhow::Result<Self::LocalPartition<R>> {
-        #[allow(clippy::option_if_let_else)]
-        if let Some(event_log) = auxiliary {
-            Ok(if self.world.size() <= 1 {
-                // recorded && is_monolithic
-                MpiLocalPartition::RecordedMonolithic(Box::new(
-                    RecordedMonolithicLocalPartition::try_from_context_and_recorder(
-                        reporter_context,
-                        event_log,
-                    )?,
-                ))
-            } else if self.world.rank() == MpiPartitioning::ROOT_RANK {
-                // recorded && !is_monolithic && is_root
-                MpiLocalPartition::Root(Box::new(MpiRootPartition::new(
-                    self.universe,
-                    self.world,
-                    reporter_context.try_build()?,
-                    event_log,
-                )))
-            } else {
-                // recorded && !is_monolithic && !is_root
-                MpiLocalPartition::Parallel(Box::new(MpiParallelPartition::new(
-                    self.universe,
-                    self.world,
-                    event_log,
-                )))
-            })
-        } else if self.world.size() <= 1 {
-            // !recorded && monolithic
-            Ok(MpiLocalPartition::LiveMonolithic(Box::new(
-                LiveMonolithicLocalPartition::try_from_context(reporter_context)?,
-            )))
+        // Only one MPI universe can exist, and only one can be used to
+        //  construct the local MPI partition
+        let universe = match unsafe { MPI_UNIVERSE.take() } {
+            Some(universe) => universe,
+            None => anyhow::bail!(MpiPartitioningError::AlreadyInitialised),
+        };
+
+        if self.world.size() <= 1 {
+            anyhow::bail!(MpiPartitioningError::NoParallelism);
+        }
+
+        let event_log = match event_log {
+            Some(event_log) => event_log,
+            None => anyhow::bail!(MpiLocalPartitionError::MissingEventLog),
+        };
+
+        if self.world.rank() == MpiPartitioning::ROOT_RANK {
+            Ok(MpiLocalPartition::Root(Box::new(MpiRootPartition::new(
+                universe,
+                self.world,
+                reporter_context.try_build()?,
+                event_log,
+            ))))
         } else {
-            Err(anyhow::Error::new(MpiLocalPartitionError::MissingEventLog))
+            Ok(MpiLocalPartition::Parallel(Box::new(
+                MpiParallelPartition::new(universe, self.world, event_log),
+            )))
         }
     }
 }

@@ -54,7 +54,7 @@ impl<
     #[debug_ensures(ret.is_some() == (
         old(self.decomposition.map_location_to_subdomain_rank(
             &dispersal_target, &simulation.habitat
-        )) == self.decomposition.get_subdomain_rank()
+        )) == self.decomposition.get_subdomain().rank()
     ), "lineage only emigrates to other subdomains")]
     fn optionally_emigrate(
         &mut self,
@@ -76,7 +76,7 @@ impl<
             .decomposition
             .map_location_to_subdomain_rank(&dispersal_target, &simulation.habitat);
 
-        if target_subdomain == self.decomposition.get_subdomain_rank() {
+        if target_subdomain == self.decomposition.get_subdomain().rank() {
             return Some((
                 global_reference,
                 dispersal_origin,

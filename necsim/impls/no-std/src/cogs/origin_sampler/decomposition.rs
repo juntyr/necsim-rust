@@ -51,7 +51,7 @@ impl<'d, M: MathsCore, O: OriginSampler<'d, M>, D: Decomposition<M, O::Habitat>>
         )]
         {
             ((self.origin_sampler.full_upper_bound_size_hint() as f64)
-                / f64::from(self.decomposition.get_number_of_subdomains().get())) as u64
+                / f64::from(self.decomposition.get_subdomain().size().get())) as u64
         }
     }
 }
@@ -67,7 +67,7 @@ impl<'d, M: MathsCore, O: OriginSampler<'d, M>, D: Decomposition<M, O::Habitat>>
             if self.decomposition.map_location_to_subdomain_rank(
                 lineage.indexed_location.location(),
                 self.origin_sampler.habitat(),
-            ) == self.decomposition.get_subdomain_rank()
+            ) == self.decomposition.get_subdomain().rank()
             {
                 return Some(lineage);
             }

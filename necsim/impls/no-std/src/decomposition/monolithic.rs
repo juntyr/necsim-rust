@@ -1,9 +1,8 @@
-use core::num::NonZeroU32;
-
 use necsim_core::{
     cogs::{Backup, Habitat, MathsCore},
     landscape::Location,
 };
+use necsim_core_bond::Partition;
 
 use crate::decomposition::Decomposition;
 
@@ -20,12 +19,8 @@ impl Backup for MonolithicDecomposition {
 
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>> Decomposition<M, H> for MonolithicDecomposition {
-    fn get_subdomain_rank(&self) -> u32 {
-        0_u32
-    }
-
-    fn get_number_of_subdomains(&self) -> NonZeroU32 {
-        unsafe { NonZeroU32::new_unchecked(1) }
+    fn get_subdomain(&self) -> Partition {
+        Partition::monolithic()
     }
 
     fn map_location_to_subdomain_rank(&self, _location: &Location, _habitat: &H) -> u32 {

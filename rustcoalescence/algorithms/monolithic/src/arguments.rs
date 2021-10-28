@@ -19,7 +19,7 @@ impl<'de> DeserializeState<'de, Partition> for MonolithicArguments {
         let parallelism_mode = match raw.parallelism_mode {
             Some(parallelism_mode) => parallelism_mode,
             None => {
-                if partition.partitions().get() > 1 {
+                if partition.size().get() > 1 {
                     ParallelismMode::Lockstep
                 } else {
                     ParallelismMode::Monolithic
@@ -68,7 +68,7 @@ impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
         let parallelism_mode = ParallelismMode::deserialize(deserializer)?;
 
         match parallelism_mode {
-            ParallelismMode::Monolithic if partition.partitions().get() > 1 => {
+            ParallelismMode::Monolithic if partition.size().get() > 1 => {
                 Err(D::Error::custom(format!(
                     "parallelism_mode {:?} is incompatible with non-monolithic partitioning.",
                     parallelism_mode
@@ -78,7 +78,7 @@ impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
             | ParallelismMode::Lockstep
             | ParallelismMode::OptimisticLockstep
             | ParallelismMode::Averaging(..)
-                if partition.partitions().get() == 1 =>
+                if partition.size().get() == 1 =>
             {
                 Err(D::Error::custom(format!(
                     "parallelism_mode {:?} is incompatible with monolithic partitioning.",

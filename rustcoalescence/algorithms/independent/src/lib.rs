@@ -95,9 +95,7 @@ impl<
                         partition,
                         ..
                     }) => scenario
-                        .sample_habitat(
-                            pre_sampler.partition(partition.rank(), partition.partitions().get()),
-                        )
+                        .sample_habitat(pre_sampler.partition(partition))
                         .collect(),
                     // Apply lineage origin partitioning in the `IsolatedLandscape` mode
                     ParallelismMode::IsolatedLandscape(IsolatedParallelismMode {
@@ -105,7 +103,7 @@ impl<
                         ..
                     }) => DecompositionOriginSampler::new(
                         scenario.sample_habitat(pre_sampler),
-                        &O::decompose(scenario.habitat(), partition.rank(), partition.partitions()),
+                        &O::decompose(scenario.habitat(), partition),
                     )
                     .collect(),
                     _ => unsafe { std::hint::unreachable_unchecked() },
@@ -155,10 +153,7 @@ impl<
             },
             ParallelismMode::Individuals => {
                 let lineages: Vec<Lineage> = scenario
-                    .sample_habitat(pre_sampler.partition(
-                        local_partition.get_partition_rank(),
-                        local_partition.get_number_of_partitions().get(),
-                    ))
+                    .sample_habitat(pre_sampler.partition(local_partition.get_partition()))
                     .collect();
 
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
@@ -202,11 +197,8 @@ impl<
                 ))
             },
             ParallelismMode::Landscape => {
-                let decomposition = O::decompose(
-                    scenario.habitat(),
-                    local_partition.get_partition_rank(),
-                    local_partition.get_number_of_partitions(),
-                );
+                let decomposition =
+                    O::decompose(scenario.habitat(), local_partition.get_partition());
                 let lineages: Vec<Lineage> = DecompositionOriginSampler::new(
                     scenario.sample_habitat(pre_sampler),
                     &decomposition,
@@ -259,11 +251,8 @@ impl<
             ParallelismMode::Probabilistic(ProbabilisticParallelismMode {
                 communication_probability,
             }) => {
-                let decomposition = O::decompose(
-                    scenario.habitat(),
-                    local_partition.get_partition_rank(),
-                    local_partition.get_number_of_partitions(),
-                );
+                let decomposition =
+                    O::decompose(scenario.habitat(), local_partition.get_partition());
                 let lineages: Vec<Lineage> = DecompositionOriginSampler::new(
                     scenario.sample_habitat(pre_sampler),
                     &decomposition,

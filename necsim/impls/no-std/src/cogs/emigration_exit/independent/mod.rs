@@ -68,7 +68,7 @@ impl<
         (
             old(self.decomposition.map_location_to_subdomain_rank(
                 &dispersal_target, &simulation.habitat
-            )) == self.decomposition.get_subdomain_rank()
+            )) == self.decomposition.get_subdomain().rank()
         ) || !old(self.choice.should_lineage_emigrate(
             &dispersal_origin,
             event_time,
@@ -101,7 +101,7 @@ impl<
             .decomposition
             .map_location_to_subdomain_rank(&dispersal_target, &simulation.habitat);
 
-        if (target_subdomain == self.decomposition.get_subdomain_rank())
+        if (target_subdomain == self.decomposition.get_subdomain().rank())
             || !self.choice.should_lineage_emigrate(
                 &dispersal_origin,
                 event_time,

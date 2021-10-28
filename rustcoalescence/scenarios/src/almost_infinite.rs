@@ -1,9 +1,7 @@
-use std::num::NonZeroU32;
-
 use serde::Deserialize;
 
 use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
-use necsim_core_bond::{NonNegativeF64, PositiveUnitF64};
+use necsim_core_bond::{NonNegativeF64, Partition, PositiveUnitF64};
 
 use necsim_impls_no_std::{
     cogs::{
@@ -100,12 +98,8 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteScenario<M, G
         AlmostInfiniteOriginSampler::new(pre_sampler, &self.habitat, self.radius)
     }
 
-    fn decompose(
-        _habitat: &Self::Habitat,
-        rank: u32,
-        partitions: NonZeroU32,
-    ) -> Self::Decomposition {
-        RadialDecomposition::new(rank, partitions)
+    fn decompose(_habitat: &Self::Habitat, subdomain: Partition) -> Self::Decomposition {
+        RadialDecomposition::new(subdomain)
     }
 
     fn habitat(&self) -> &Self::Habitat {

@@ -1,25 +1,23 @@
-use core::num::NonZeroU32;
-
 use libm::atan2;
 
 use necsim_core::{
     cogs::{Backup, Habitat, MathsCore},
     landscape::Location,
 };
+use necsim_core_bond::Partition;
 
 use crate::decomposition::Decomposition;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct RadialDecomposition {
-    rank: u32,
-    partitions: NonZeroU32,
+    subdomain: Partition,
 }
 
 impl RadialDecomposition {
     #[must_use]
-    pub fn new(rank: u32, partitions: NonZeroU32) -> Self {
-        Self { rank, partitions }
+    pub fn new(subdomain: Partition) -> Self {
+        Self { subdomain }
     }
 }
 
@@ -27,20 +25,15 @@ impl RadialDecomposition {
 impl Backup for RadialDecomposition {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
-            rank: self.rank,
-            partitions: self.partitions,
+            subdomain: self.subdomain,
         }
     }
 }
 
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>> Decomposition<M, H> for RadialDecomposition {
-    fn get_subdomain_rank(&self) -> u32 {
-        self.rank
-    }
-
-    fn get_number_of_subdomains(&self) -> NonZeroU32 {
-        self.partitions
+    fn get_subdomain(&self) -> Partition {
+        self.subdomain
     }
 
     fn map_location_to_subdomain_rank(&self, location: &Location, habitat: &H) -> u32 {
@@ -59,8 +52,8 @@ impl<M: MathsCore, H: Habitat<M>> Decomposition<M, H> for RadialDecomposition {
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         {
-            (M::floor(f64::from(self.partitions.get()) * fraction) as u32)
-                .min(self.partitions.get() - 1)
+            (M::floor(f64::from(self.subdomain.size().get()) * fraction) as u32)
+                .min(self.subdomain.size().get() - 1)
         }
     }
 }

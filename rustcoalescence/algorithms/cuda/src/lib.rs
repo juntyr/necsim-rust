@@ -207,16 +207,14 @@ where
             // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
             ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { partition, .. }) => {
                 scenario
-                    .sample_habitat(
-                        pre_sampler.partition(partition.rank(), partition.partitions().get()),
-                    )
+                    .sample_habitat(pre_sampler.partition(partition))
                     .collect()
             },
             // Apply lineage origin partitioning in the `IsolatedLandscape` mode
             ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { partition, .. }) => {
                 DecompositionOriginSampler::new(
                     scenario.sample_habitat(pre_sampler),
-                    &O::decompose(scenario.habitat(), partition.rank(), partition.partitions()),
+                    &O::decompose(scenario.habitat(), partition),
                 )
                 .collect()
             },
