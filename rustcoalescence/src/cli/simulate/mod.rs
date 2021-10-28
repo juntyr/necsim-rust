@@ -54,6 +54,9 @@ pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>, V: FnOnce(), L: F
         std::mem::drop(local_partition);
         std::mem::drop(common_args);
         std::mem::drop(scenario);
+        std::mem::drop(algorithm);
+        std::mem::drop(post_validation);
+        std::mem::drop(pre_launch);
 
         Err(anyhow::anyhow!(
             "rustcoalescence must be compiled to support at least one algorithm."
