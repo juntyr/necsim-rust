@@ -26,9 +26,19 @@ pub struct ProgressReporter {
 
 impl fmt::Debug for ProgressReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        struct Progress(u64, u64);
+
+        impl fmt::Debug for Progress {
+            fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+                write!(fmt, "{} / {}", self.0, self.1)
+            }
+        }
+
+        let total = self.last_total.load(Ordering::Acquire);
+        let remaining = self.last_remaining.load(Ordering::Acquire).min(total);
+
         fmt.debug_struct(stringify!(ProgressReporter))
-            .field("last_remaining", &self.last_remaining)
-            .field("last_total", &self.last_total)
+            .field("progress", &Progress(total - remaining, total))
             .finish()
     }
 }
