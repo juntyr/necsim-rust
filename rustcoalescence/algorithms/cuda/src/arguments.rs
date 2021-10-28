@@ -40,7 +40,7 @@ impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
             ParallelismMode::Monolithic(..)
             | ParallelismMode::IsolatedIndividuals(..)
             | ParallelismMode::IsolatedLandscape(..)
-                if partition.partitions().get() > 1 =>
+                if partition.size().get() > 1 =>
             {
                 Err(D::Error::custom(format!(
                     "parallelism_mode {:?} is incompatible with non-monolithic partitioning.",
@@ -74,7 +74,7 @@ impl<'de> DeserializeState<'de, Partition> for CudaArguments {
 
         let parallelism_mode = if let Some(parallelism_mode) = raw.parallelism_mode {
             parallelism_mode
-        } else if partition.partitions().get() > 1 {
+        } else if partition.size().get() > 1 {
             return Err(serde::de::Error::custom(
                 "The CUDA algorithm is (currently) incompatible with MPI partitioning.",
             ));

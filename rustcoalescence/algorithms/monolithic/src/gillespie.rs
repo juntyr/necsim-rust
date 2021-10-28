@@ -143,13 +143,11 @@ where
                 ))
             },
             non_monolithic_parallelism_mode => {
-                let decomposition = O::decompose(
-                    scenario.habitat(),
-                    local_partition.get_partition_rank(),
-                    local_partition.get_number_of_partitions(),
-                );
+                let decomposition =
+                    O::decompose(scenario.habitat(), local_partition.get_partition());
 
-                let mut rng = rng.split_to_stream(u64::from(local_partition.get_partition_rank()));
+                let mut rng =
+                    rng.split_to_stream(u64::from(local_partition.get_partition().rank()));
                 let lineage_store =
                     Self::LineageStore::from_origin_sampler(DecompositionOriginSampler::new(
                         scenario.sample_habitat(pre_sampler),

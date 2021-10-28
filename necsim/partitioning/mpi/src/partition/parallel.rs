@@ -22,7 +22,7 @@ use necsim_core::{
         Reporter,
     },
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::{NonNegativeF64, Partition, PositiveF64};
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_partitioning_core::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode};
@@ -137,16 +137,13 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
         false
     }
 
-    fn get_partition_rank(&self) -> u32 {
+    fn get_partition(&self) -> Partition {
         #[allow(clippy::cast_sign_loss)]
-        {
-            self.world.rank() as u32
-        }
-    }
+        let rank = self.world.rank() as u32;
+        #[allow(clippy::cast_sign_loss)]
+        let size = unsafe { NonZeroU32::new_unchecked(self.world.size() as u32) };
 
-    fn get_number_of_partitions(&self) -> NonZeroU32 {
-        #[allow(clippy::cast_sign_loss)]
-        NonZeroU32::new(self.world.size() as u32).unwrap()
+        unsafe { Partition::new_unchecked(rank, size) }
     }
 
     fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(
@@ -159,7 +156,7 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
             self.migration_buffers[partition as usize].push(emigrant);
         }
 
-        let self_rank_index = self.get_partition_rank() as usize;
+        let self_rank_index = self.get_partition().rank() as usize;
 
         let now = Instant::now();
 
@@ -211,7 +208,7 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
         }
 
         // Send outgoing emigrating lineages
-        for rank in 0..self.get_number_of_partitions().get() {
+        for rank in 0..self.get_partition().size().get() {
             let rank_index = rank as usize;
 
             if rank_index != self_rank_index
@@ -271,7 +268,7 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
             }
         }
 
-        ImmigrantPopIterator::new(&mut self.migration_buffers[self.get_partition_rank() as usize])
+        ImmigrantPopIterator::new(&mut self.migration_buffers[self.get_partition().rank() as usize])
     }
 
     fn reduce_vote_continue(&self, local_continue: bool) -> bool {
@@ -287,7 +284,7 @@ impl<R: Reporter> LocalPartition<R> for MpiParallelPartition<R> {
     }
 
     fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64> {
-        let local_partition_rank = self.get_partition_rank();
+        let local_partition_rank = self.get_partition().rank();
 
         let (global_min_time, global_min_rank) =
             reduce_lexicographic_min_time_rank(self.world, local_time, local_partition_rank);

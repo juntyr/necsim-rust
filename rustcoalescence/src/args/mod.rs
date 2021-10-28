@@ -47,6 +47,7 @@ pub struct SimulateArgs {
     pub common: CommonArgs,
     pub scenario: Scenario,
     pub algorithm: Algorithm,
+    pub partitioning: Partitioning,
     pub event_log: Option<EventLogRecorder>,
     pub reporters: AnyReporterPluginVec,
 }
@@ -66,6 +67,7 @@ impl<'de> DeserializeState<'de, Partition> for SimulateArgs {
             },
             scenario: raw.scenario,
             algorithm: raw.algorithm,
+            partitioning: raw.partitioning,
             event_log: raw.event_log,
             reporters: raw.reporters.into_iter().flatten().collect(),
         })
@@ -87,15 +89,18 @@ struct SimulateArgsRaw {
     #[serde(default)]
     rng: Rng,
 
+    scenario: Scenario,
+
     #[serde(deserialize_state)]
     algorithm: Algorithm,
+
+    #[serde(default)]
+    partitioning: Partitioning,
 
     #[serde(alias = "log")]
     #[serde(default)]
     #[serde(deserialize_state_with = "deserialize_state_event_log")]
     event_log: Option<EventLogRecorder>,
-
-    scenario: Scenario,
 
     reporters: Vec<ReporterPluginLibrary>,
 }
@@ -202,6 +207,42 @@ impl Deref for Base32String {
     }
 }
 
+#[derive(Debug, Deserialize)]
+pub enum Partitioning {
+    Monolithic(necsim_partitioning_monolithic::MonolithicPartitioning),
+    #[cfg(feature = "necsim-partitioning-mpi")]
+    #[serde(alias = "MPI")]
+    Mpi(necsim_partitioning_mpi::MpiPartitioning),
+}
+
+impl Partitioning {
+    pub fn is_root(&self) -> bool {
+        use necsim_partitioning_core::Partitioning;
+
+        match self {
+            Self::Monolithic(partitioning) => partitioning.is_root(),
+            #[cfg(feature = "necsim-partitioning-mpi")]
+            Self::Mpi(partitioning) => partitioning.is_root(),
+        }
+    }
+
+    pub fn get_partition(&self) -> Partition {
+        use necsim_partitioning_core::Partitioning;
+
+        match self {
+            Self::Monolithic(partitioning) => partitioning.get_partition(),
+            #[cfg(feature = "necsim-partitioning-mpi")]
+            Self::Mpi(partitioning) => partitioning.get_partition(),
+        }
+    }
+}
+
+impl Default for Partitioning {
+    fn default() -> Self {
+        Self::Monolithic(necsim_partitioning_monolithic::MonolithicPartitioning::default())
+    }
+}
+
 #[derive(Debug, DeserializeState)]
 #[serde(deserialize_state = "Partition")]
 pub enum Algorithm {
@@ -230,20 +271,20 @@ pub enum Algorithm {
 }
 
 impl fmt::Display for Algorithm {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         #[allow(unreachable_patterns)]
         match self {
             #[cfg(feature = "necsim-classical")]
-            Algorithm::Classical => f.write_str("Classical"),
+            Self::Classical => fmt.write_str("Classical"),
             #[cfg(feature = "necsim-gillespie")]
-            Algorithm::Gillespie => f.write_str("Gillespie"),
+            Self::Gillespie => fmt.write_str("Gillespie"),
             #[cfg(feature = "necsim-skipping-gillespie")]
-            Algorithm::SkippingGillespie(_) => f.write_str("Skipping-Gillespie"),
+            Self::SkippingGillespie(_) => fmt.write_str("Skipping-Gillespie"),
             #[cfg(feature = "necsim-cuda")]
-            Algorithm::Cuda(_) => f.write_str("CUDA"),
+            Self::Cuda(_) => fmt.write_str("CUDA"),
             #[cfg(feature = "necsim-independent")]
-            Algorithm::Independent(_) => f.write_str("Independent"),
-            _ => f.write_str("Unknown"),
+            Self::Independent(_) => fmt.write_str("Independent"),
+            _ => fmt.write_str("Unknown"),
         }
     }
 }
@@ -398,17 +439,11 @@ pub struct ReplayArgs {
     pub reporters: AnyReporterPluginVec,
 }
 
-impl<'de> DeserializeState<'de, Partition> for ReplayArgs {
-    fn deserialize_state<D>(partition: &mut Partition, deserializer: D) -> Result<Self, D::Error>
+impl<'de> Deserialize<'de> for ReplayArgs {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        if partition.partitions().get() > 1 {
-            return Err(serde::de::Error::custom(
-                "Simulation replay mode is incompatible with external parallelisation",
-            ));
-        }
-
         let raw = ReplayArgsRaw::deserialize(deserializer)?;
 
         let log = raw.logs;

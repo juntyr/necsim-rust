@@ -1,49 +1,14 @@
-use std::{fmt, num::NonZeroU32};
+use std::fmt;
 
 use necsim_core::{
     lineage::MigratingLineage,
     reporter::{boolean::True, FilteredReporter, Reporter},
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::{NonNegativeF64, Partition, PositiveF64};
 
 use necsim_partitioning_core::{
     context::ReporterContext, iterator::ImmigrantPopIterator, LocalPartition, MigrationMode,
-    Partitioning,
 };
-
-#[allow(clippy::module_name_repetitions)]
-#[derive(Default)]
-pub struct LiveMonolithicPartitioning(());
-
-#[contract_trait]
-impl Partitioning for LiveMonolithicPartitioning {
-    type Auxiliary = ();
-    type LocalPartition<R: Reporter> = LiveMonolithicLocalPartition<R>;
-
-    fn is_monolithic(&self) -> bool {
-        true
-    }
-
-    fn is_root(&self) -> bool {
-        true
-    }
-
-    fn get_number_of_partitions(&self) -> NonZeroU32 {
-        unsafe { NonZeroU32::new_unchecked(1) }
-    }
-
-    fn get_rank(&self) -> u32 {
-        0
-    }
-
-    fn into_local_partition<R: Reporter, P: ReporterContext<Reporter = R>>(
-        self,
-        reporter_context: P,
-        _auxiliary: Self::Auxiliary,
-    ) -> anyhow::Result<Self::LocalPartition<R>> {
-        LiveMonolithicLocalPartition::try_from_context(reporter_context)
-    }
-}
 
 #[allow(clippy::module_name_repetitions)]
 pub struct LiveMonolithicLocalPartition<R: Reporter> {
@@ -82,12 +47,8 @@ impl<R: Reporter> LocalPartition<R> for LiveMonolithicLocalPartition<R> {
         true
     }
 
-    fn get_partition_rank(&self) -> u32 {
-        0
-    }
-
-    fn get_number_of_partitions(&self) -> NonZeroU32 {
-        unsafe { NonZeroU32::new_unchecked(1) }
+    fn get_partition(&self) -> Partition {
+        Partition::monolithic()
     }
 
     fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(

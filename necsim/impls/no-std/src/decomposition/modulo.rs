@@ -1,23 +1,21 @@
-use core::num::NonZeroU32;
-
 use necsim_core::{
     cogs::{Backup, Habitat, MathsCore},
     landscape::Location,
 };
+use necsim_core_bond::Partition;
 
 use crate::decomposition::Decomposition;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct ModuloDecomposition {
-    rank: u32,
-    partitions: NonZeroU32,
+    subdomain: Partition,
 }
 
 impl ModuloDecomposition {
     #[must_use]
-    pub fn new(rank: u32, partitions: NonZeroU32) -> Self {
-        Self { rank, partitions }
+    pub fn new(subdomain: Partition) -> Self {
+        Self { subdomain }
     }
 }
 
@@ -25,20 +23,15 @@ impl ModuloDecomposition {
 impl Backup for ModuloDecomposition {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
-            rank: self.rank,
-            partitions: self.partitions,
+            subdomain: self.subdomain,
         }
     }
 }
 
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>> Decomposition<M, H> for ModuloDecomposition {
-    fn get_subdomain_rank(&self) -> u32 {
-        self.rank
-    }
-
-    fn get_number_of_subdomains(&self) -> NonZeroU32 {
-        self.partitions
+    fn get_subdomain(&self) -> Partition {
+        self.subdomain
     }
 
     fn map_location_to_subdomain_rank(&self, location: &Location, habitat: &H) -> u32 {
@@ -49,7 +42,7 @@ impl<M: MathsCore, H: Habitat<M>> Decomposition<M, H> for ModuloDecomposition {
 
         #[allow(clippy::cast_possible_truncation)]
         {
-            (location_index % u64::from(self.partitions.get())) as u32
+            (location_index % u64::from(self.subdomain.size().get())) as u32
         }
     }
 }

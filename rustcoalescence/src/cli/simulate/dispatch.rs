@@ -176,7 +176,7 @@ macro_rules! impl_sealed_dispatch {
                 post_validation: V,
                 pre_launch_orig: L,
             ) -> Result<()> {
-                let number_of_partitions = local_partition.get_number_of_partitions().get();
+                let number_of_partitions = local_partition.get_partition().size().get();
 
                 let pre_launch = || {
                     (pre_launch_orig)();

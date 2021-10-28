@@ -6,13 +6,11 @@
 #[macro_use]
 extern crate log;
 
-use std::num::NonZeroU32;
-
 use necsim_core::cogs::{
     DispersalSampler, Habitat, LineageReference, LineageStore, MathsCore, OriginSampler, RngCore,
     SpeciationProbability, TurnoverRate,
 };
-use necsim_core_bond::PositiveUnitF64;
+use necsim_core_bond::{Partition, PositiveUnitF64};
 
 use necsim_impls_no_std::{
     cogs::{
@@ -77,6 +75,5 @@ pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioArguments {
 
     fn habitat(&self) -> &Self::Habitat;
 
-    fn decompose(habitat: &Self::Habitat, rank: u32, partitions: NonZeroU32)
-        -> Self::Decomposition;
+    fn decompose(habitat: &Self::Habitat, subdomain: Partition) -> Self::Decomposition;
 }

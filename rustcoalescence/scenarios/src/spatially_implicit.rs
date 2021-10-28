@@ -1,9 +1,7 @@
-use std::num::NonZeroU32;
-
 use serde::Deserialize;
 
 use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
-use necsim_core_bond::PositiveUnitF64;
+use necsim_core_bond::{Partition, PositiveUnitF64};
 
 use necsim_impls_no_std::{
     cogs::{
@@ -105,12 +103,8 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyImplicitScenario<M
         SpatiallyImplicitOriginSampler::new(pre_sampler, &self.habitat)
     }
 
-    fn decompose(
-        _habitat: &Self::Habitat,
-        rank: u32,
-        partitions: NonZeroU32,
-    ) -> Self::Decomposition {
-        ModuloDecomposition::new(rank, partitions)
+    fn decompose(_habitat: &Self::Habitat, subdomain: Partition) -> Self::Decomposition {
+        ModuloDecomposition::new(subdomain)
     }
 
     fn habitat(&self) -> &Self::Habitat {

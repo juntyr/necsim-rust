@@ -28,6 +28,63 @@
       | StateElseSponge(Base32)
     ),
 
+    /* selection of the scenario which will be simulated */
+    scenario: (
+        /* spatially explicit scenario using habitat and dispersal maps */
+      | SpatiallyExplicit(
+          /* file path to a (WxH) TIFF file storing grayscale u32 habitat values */
+          habitat: (PathBuf),
+          /* file path to a (WxH x WxH) TIFF file storing grayscale f64 dispersal weights
+           * the ith row of the image stores dispersal from the habitat cell (i % W, i / W) */
+          dispersal: (PathBuf),
+          /* selection of the map loading mode
+           * optional, default = OffByOne */
+          mode: (
+              /* Fixes GDAL no-data value, habitat 0/1 rounding errors
+               *  and dispersal from/to non-habitat */
+            | FixMe
+              /* Fixes GDAL no-data value and habitat 0/1 rounding errors */
+            | OffByOne
+              /* Does not fix any habitat-dispersal discrepancies */
+            | Strict
+          ),
+      )
+        /* non-spatial scenario with homogeneous dispersal and a community size of
+         *  (area.0 * area.1 * deme) */
+      | NonSpatial(
+            /* width and height of the non-spatial landscape */
+            area: (u32, u32),
+            /* number of individuals which can live at the same habitat location */
+            deme: (u32),
+            /* if true, uses the InMemory scenario to emulate the NonSpatial scenario
+             * optional, default = false */
+            spatial: (bool),
+        )
+        /* spatially-implicit scenario with a non-spatial local and a non-spatial meta community
+         *  and dynamic migration from the meta to the local community */
+      | SpatiallyImplicit(
+            /* width and height of the non-spatial local landscape */
+            local_area: (u32, u32),
+            /* number of individuals which can live at the same local habitat location */
+            local_deme: (u32),
+            /* width and height of the non-spatial meta landscape */
+            meta_area: (u32, u32),
+            /* number of individuals which can live at the same meta habitat location */
+            meta_deme: (u32),
+            /* per-individual per-generation probability that the parent of an individual
+             *  in the local community migrated from the meta community */
+            migration: (0.0 < f64 <= 1.0),
+        )
+        /* (almost) infinite spatially-explicit scenario with Gaussian distributed dispersal
+         *  the entire infinite landscape is habitat but, without loss of generality, has deme 1 */
+      | AlmostInfinite(
+            /* radius of a circle from which individuals are sampled */
+            radius: (u32),
+            /* sigma for the Gaussian dispersal kernel N(0, sigma^2) */
+            sigma: (0.0 <= f64),
+        )
+    ),
+
     /* selection of the coalescence algorithm which is used */
     algorithm: (
         /* monolithic; picks a random individual for the next event; CPU-based */
@@ -235,8 +292,8 @@
               | IsolatedIndividuals(
                     /* selection of the single partition that will be simulated */
                     partition: Partition(
-                        rank: (u32 < partitions),
-                        partitions: (0 < u32),
+                        rank: (u32 < size),
+                        size: (0 < u32),
                     ),
                     /* average number of events between flushing the event buffer */
                     event_slice: (
@@ -261,8 +318,8 @@
               | IsolatedLandscape(
                     /* selection of the single partition that will be simulated */
                     partition: Partition(
-                        rank: (u32 < partitions),
-                        partitions: (0 < u32),
+                        rank: (u32 < size),
+                        size: (0 < u32),
                     ),
                     /* average number of events between flushing the event buffer */
                     event_slice: (
@@ -337,8 +394,8 @@
               | IsolatedIndividuals(
                     /* selection of the single partition that will be simulated */
                     partition: Partition(
-                        rank: (u32 < partitions),
-                        partitions: (0 < u32),
+                        rank: (u32 < size),
+                        size: (0 < u32),
                     ),
                     /* average number of events between flushing the event buffer */
                     event_slice: (
@@ -363,8 +420,8 @@
               | IsolatedLandscape(
                     /* selection of the single partition that will be simulated */
                     partition: Partition(
-                        rank: (u32 < partitions),
-                        partitions: (0 < u32),
+                        rank: (u32 < size),
+                        size: (0 < u32),
                     ),
                     /* average number of events between flushing the event buffer */
                     event_slice: (
@@ -404,6 +461,17 @@
         )
     ),
 
+    /* selection of the simulation partitioning strategy
+     * optional, default = Monolithic */
+    partitioning: (
+        /* the entire simulation is processed at once
+         * single-threaded, single-process */
+      | Monolithic()
+        /* the simulation is divided up inside an MPI universe
+         * single-threaded, multi-process */
+      | MPI()
+    ),
+
     /* selection of the event persistence strategy
      * optional, default = None */
     log: (
@@ -416,63 +484,6 @@
         /* events are reported live but not persisted
          * invalid when the simulation is internally parallelised */
       | None
-    ),
-
-    /* selection of the scenario which will be simulated */
-    scenario: (
-        /* spatially explicit scenario using habitat and dispersal maps */
-      | SpatiallyExplicit(
-          /* file path to a (WxH) TIFF file storing grayscale u32 habitat values */
-          habitat: (PathBuf),
-          /* file path to a (WxH x WxH) TIFF file storing grayscale f64 dispersal weights
-           * the ith row of the image stores dispersal from the habitat cell (i % W, i / W) */
-          dispersal: (PathBuf),
-          /* selection of the map loading mode
-           * optional, default = OffByOne */
-          mode: (
-              /* Fixes GDAL no-data value, habitat 0/1 rounding errors
-               *  and dispersal from/to non-habitat */
-            | FixMe
-              /* Fixes GDAL no-data value and habitat 0/1 rounding errors */
-            | OffByOne
-              /* Does not fix any habitat-dispersal discrepancies */
-            | Strict
-          ),
-      )
-        /* non-spatial scenario with homogeneous dispersal and a community size of
-         *  (area.0 * area.1 * deme) */
-      | NonSpatial(
-            /* width and height of the non-spatial landscape */
-            area: (u32, u32),
-            /* number of individuals which can live at the same habitat location */
-            deme: (u32),
-            /* if true, uses the InMemory scenario to emulate the NonSpatial scenario
-             * optional, default = false */
-            spatial: (bool),
-        )
-        /* spatially-implicit scenario with a non-spatial local and a non-spatial meta community
-         *  and dynamic migration from the meta to the local community */
-      | SpatiallyImplicit(
-            /* width and height of the non-spatial local landscape */
-            local_area: (u32, u32),
-            /* number of individuals which can live at the same local habitat location */
-            local_deme: (u32),
-            /* width and height of the non-spatial meta landscape */
-            meta_area: (u32, u32),
-            /* number of individuals which can live at the same meta habitat location */
-            meta_deme: (u32),
-            /* per-individual per-generation probability that the parent of an individual
-             *  in the local community migrated from the meta community */
-            migration: (0.0 < f64 <= 1.0),
-        )
-        /* (almost) infinite spatially-explicit scenario with Gaussian distributed dispersal
-         *  the entire infinite landscape is habitat but, without loss of generality, has deme 1 */
-      | AlmostInfinite(
-            /* radius of a circle from which individuals are sampled */
-            radius: (u32),
-            /* sigma for the Gaussian dispersal kernel N(0, sigma^2) */
-            sigma: (0.0 <= f64),
-        )
     ),
 
     /* selection of the reporters which will analyse the simulation

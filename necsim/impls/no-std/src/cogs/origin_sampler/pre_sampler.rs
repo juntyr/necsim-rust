@@ -5,6 +5,7 @@ use core::{
 };
 
 use necsim_core::cogs::MathsCore;
+use necsim_core_bond::Partition;
 
 const INV_PHI: f64 = 6.180_339_887_498_949e-1_f64;
 
@@ -87,14 +88,13 @@ impl<M: MathsCore, I: Iterator<Item = u64>> OriginPreSampler<M, I> {
 
     pub fn partition(
         mut self,
-        offset: u32,
-        stride: u32,
+        partition: Partition,
     ) -> OriginPreSampler<M, impl Iterator<Item = u64>> {
-        let _ = self.advance_by(offset as usize);
+        let _ = self.advance_by(partition.rank() as usize);
 
         OriginPreSampler {
-            proportion: self.proportion / f64::from(stride),
-            inner: self.inner.step_by(stride as usize),
+            proportion: self.proportion / f64::from(partition.size().get()),
+            inner: self.inner.step_by(partition.size().get() as usize),
             _marker: PhantomData::<M>,
         }
     }

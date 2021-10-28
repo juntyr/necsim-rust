@@ -50,7 +50,7 @@ impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
             ParallelismMode::Monolithic(..)
             | ParallelismMode::IsolatedIndividuals(..)
             | ParallelismMode::IsolatedLandscape(..)
-                if partition.partitions().get() > 1 =>
+                if partition.size().get() > 1 =>
             {
                 Err(D::Error::custom(format!(
                     "parallelism_mode {:?} is incompatible with non-monolithic partitioning.",
@@ -60,7 +60,7 @@ impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
             ParallelismMode::Individuals
             | ParallelismMode::Landscape
             | ParallelismMode::Probabilistic(..)
-                if partition.partitions().get() == 1 =>
+                if partition.size().get() == 1 =>
             {
                 Err(D::Error::custom(format!(
                     "parallelism_mode {:?} is incompatible with monolithic partitioning.",
@@ -91,7 +91,7 @@ impl<'de> DeserializeState<'de, Partition> for IndependentArguments {
         let parallelism_mode = match raw.parallelism_mode {
             Some(parallelism_mode) => parallelism_mode,
             None => {
-                if partition.partitions().get() > 1 {
+                if partition.size().get() > 1 {
                     ParallelismMode::Probabilistic(ProbabilisticParallelismMode {
                         communication_probability: ClosedUnitF64::new(0.25_f64).unwrap(),
                     })

@@ -1,9 +1,9 @@
-use std::{marker::PhantomData, num::NonZeroU32};
+use std::marker::PhantomData;
 
 use thiserror::Error;
 
 use necsim_core::cogs::{DispersalSampler, Habitat, LineageStore, MathsCore, RngCore};
-use necsim_core_bond::PositiveUnitF64;
+use necsim_core_bond::{Partition, PositiveUnitF64};
 
 use necsim_impls_no_std::{
     array2d::Array2D,
@@ -116,12 +116,8 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitScenario<M
         InMemoryOriginSampler::new(pre_sampler, &self.habitat)
     }
 
-    fn decompose(
-        habitat: &Self::Habitat,
-        rank: u32,
-        partitions: NonZeroU32,
-    ) -> Self::Decomposition {
-        match EqualDecomposition::weight(habitat, rank, partitions) {
+    fn decompose(habitat: &Self::Habitat, subdomain: Partition) -> Self::Decomposition {
+        match EqualDecomposition::weight(habitat, subdomain) {
             Ok(decomposition) => decomposition,
             Err(decomposition) => {
                 warn!(
@@ -129,7 +125,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitScenario<M
                      partition(s).",
                     habitat.get_extent().width(),
                     habitat.get_extent().height(),
-                    partitions.get(),
+                    subdomain.size().get(),
                 );
 
                 decomposition

@@ -3,6 +3,7 @@ use core::{convert::TryFrom, num::NonZeroU32};
 use hashbrown::HashMap;
 
 use necsim_core::cogs::{Backup, Habitat};
+use necsim_core_bond::Partition;
 use necsim_core_maths::IntrinsicsMathsCore;
 
 use crate::{
@@ -24,8 +25,7 @@ fn test_equal_area_decomposition() {
             for partition in 1..=(width * height + 1) {
                 let (successful, decomposition) = match EqualDecomposition::area(
                     &habitat,
-                    0,
-                    NonZeroU32::new(partition).unwrap(),
+                    Partition::try_new(0, NonZeroU32::new(partition).unwrap()).unwrap(),
                 ) {
                     Ok(decomposition) => (true, decomposition),
                     Err(decomposition) => (false, decomposition),
@@ -99,8 +99,7 @@ fn test_equal_weight_decomposition() {
             for partition in 1..=(local * 8 + meta * 8 + 1) {
                 let (successful, decomposition) = match EqualDecomposition::weight(
                     &habitat,
-                    0,
-                    NonZeroU32::new(partition).unwrap(),
+                    Partition::try_new(0, NonZeroU32::new(partition).unwrap()).unwrap(),
                 ) {
                     Ok(decomposition) => (true, decomposition),
                     Err(decomposition) => (false, decomposition),
@@ -168,30 +167,28 @@ fn test_equal_weight_decomposition() {
 fn equal_area_stores_subdomain() {
     let habitat: NonSpatialHabitat<IntrinsicsMathsCore> = NonSpatialHabitat::new((100, 100), 100);
 
-    let equal_area_decomposition =
-        EqualDecomposition::area(&habitat, 42, NonZeroU32::new(100).unwrap())
-            .unwrap()
-            .backup();
+    let equal_area_decomposition = EqualDecomposition::area(
+        &habitat,
+        Partition::try_new(42, NonZeroU32::new(100).unwrap()).unwrap(),
+    )
+    .unwrap()
+    .backup();
 
-    assert_eq!(equal_area_decomposition.get_subdomain_rank(), 42);
-    assert_eq!(
-        equal_area_decomposition.get_number_of_subdomains().get(),
-        100
-    );
+    assert_eq!(equal_area_decomposition.get_subdomain().rank(), 42);
+    assert_eq!(equal_area_decomposition.get_subdomain().size().get(), 100);
 }
 
 #[test]
 fn equal_weight_stores_subdomain() {
     let habitat: NonSpatialHabitat<IntrinsicsMathsCore> = NonSpatialHabitat::new((100, 100), 100);
 
-    let equal_area_decomposition =
-        EqualDecomposition::area(&habitat, 24, NonZeroU32::new(1000).unwrap())
-            .unwrap()
-            .backup();
+    let equal_area_decomposition = EqualDecomposition::area(
+        &habitat,
+        Partition::try_new(42, NonZeroU32::new(100).unwrap()).unwrap(),
+    )
+    .unwrap()
+    .backup();
 
-    assert_eq!(equal_area_decomposition.get_subdomain_rank(), 24);
-    assert_eq!(
-        equal_area_decomposition.get_number_of_subdomains().get(),
-        1000
-    );
+    assert_eq!(equal_area_decomposition.get_subdomain().rank(), 24);
+    assert_eq!(equal_area_decomposition.get_subdomain().size().get(), 1000);
 }

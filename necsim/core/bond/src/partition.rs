@@ -21,21 +21,38 @@ impl fmt::Display for PartitionRankOutOfBounds {
 #[serde(try_from = "PartitionRaw")]
 pub struct Partition {
     rank: u32,
-    partitions: NonZeroU32,
+    size: NonZeroU32,
 }
 
 impl Partition {
+    /// Creates a `Partition` from a `rank` and number of partitions.
+    ///
     /// # Errors
     ///
-    /// Returns `PartitionRankOutOfBounds` if `rank >= partitions`.
-    pub const fn try_new(
-        rank: u32,
-        partitions: NonZeroU32,
-    ) -> Result<Self, PartitionRankOutOfBounds> {
-        if rank < partitions.get() {
-            Ok(Self { rank, partitions })
+    /// Returns `PartitionRankOutOfBounds` if `rank >= size`.
+    pub const fn try_new(rank: u32, size: NonZeroU32) -> Result<Self, PartitionRankOutOfBounds> {
+        if rank < size.get() {
+            Ok(Self { rank, size })
         } else {
-            Err(PartitionRankOutOfBounds(rank, partitions.get() - 1))
+            Err(PartitionRankOutOfBounds(rank, size.get() - 1))
+        }
+    }
+
+    /// Creates a `Partition` from a `rank` and number of partitions.
+    ///
+    /// # Safety
+    ///
+    /// The number of partitions must be strictly greater than `rank`.
+    #[must_use]
+    pub const unsafe fn new_unchecked(rank: u32, size: NonZeroU32) -> Self {
+        Self { rank, size }
+    }
+
+    #[must_use]
+    pub const fn monolithic() -> Self {
+        Self {
+            rank: 0,
+            size: unsafe { NonZeroU32::new_unchecked(1) },
         }
     }
 
@@ -45,8 +62,8 @@ impl Partition {
     }
 
     #[must_use]
-    pub const fn partitions(self) -> NonZeroU32 {
-        self.partitions
+    pub const fn size(self) -> NonZeroU32 {
+        self.size
     }
 }
 
@@ -54,7 +71,7 @@ impl TryFrom<PartitionRaw> for Partition {
     type Error = PartitionRankOutOfBounds;
 
     fn try_from(raw: PartitionRaw) -> Result<Self, Self::Error> {
-        Self::try_new(raw.rank, raw.partitions)
+        Self::try_new(raw.rank, raw.size)
     }
 }
 
@@ -63,5 +80,5 @@ impl TryFrom<PartitionRaw> for Partition {
 #[serde(rename = "Partition")]
 struct PartitionRaw {
     rank: u32,
-    partitions: NonZeroU32,
+    size: NonZeroU32,
 }

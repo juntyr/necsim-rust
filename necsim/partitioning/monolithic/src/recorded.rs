@@ -1,4 +1,4 @@
-use std::{fmt, num::NonZeroU32};
+use std::fmt;
 
 use anyhow::Result;
 
@@ -10,7 +10,7 @@ use necsim_core::{
         FilteredReporter, Reporter,
     },
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::{NonNegativeF64, Partition, PositiveF64};
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 
@@ -57,12 +57,8 @@ impl<R: Reporter> LocalPartition<R> for RecordedMonolithicLocalPartition<R> {
         true
     }
 
-    fn get_partition_rank(&self) -> u32 {
-        0
-    }
-
-    fn get_number_of_partitions(&self) -> NonZeroU32 {
-        unsafe { NonZeroU32::new_unchecked(1) }
+    fn get_partition(&self) -> Partition {
+        Partition::monolithic()
     }
 
     fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(

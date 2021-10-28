@@ -1,5 +1,6 @@
 use alloc::boxed::Box;
-use core::{marker::PhantomData, num::NonZeroU32};
+use core::marker::PhantomData;
+use necsim_core_bond::Partition;
 
 use necsim_core::{
     cogs::{Backup, Habitat, MathsCore},
@@ -17,8 +18,7 @@ mod test;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct EqualDecomposition<M: MathsCore, H: Habitat<M>> {
-    rank: u32,
-    partitions: NonZeroU32,
+    subdomain: Partition,
 
     extent: LandscapeExtent,
     morton: (u8, u8),
@@ -32,8 +32,7 @@ pub struct EqualDecomposition<M: MathsCore, H: Habitat<M>> {
 impl<M: MathsCore, H: Habitat<M>> Backup for EqualDecomposition<M, H> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
-            rank: self.rank,
-            partitions: self.partitions,
+            subdomain: self.subdomain,
             extent: self.extent.clone(),
             morton: self.morton,
             indices: self.indices.clone(),
@@ -44,12 +43,8 @@ impl<M: MathsCore, H: Habitat<M>> Backup for EqualDecomposition<M, H> {
 
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>> Decomposition<M, H> for EqualDecomposition<M, H> {
-    fn get_subdomain_rank(&self) -> u32 {
-        self.rank
-    }
-
-    fn get_number_of_subdomains(&self) -> NonZeroU32 {
-        self.partitions
+    fn get_subdomain(&self) -> Partition {
+        self.subdomain
     }
 
     #[debug_requires(

@@ -1,7 +1,8 @@
 use alloc::vec::Vec;
-use core::{marker::PhantomData, num::NonZeroU32};
+use core::marker::PhantomData;
 
 use necsim_core::cogs::{Habitat, MathsCore};
+use necsim_core_bond::Partition;
 
 use super::EqualDecomposition;
 
@@ -9,11 +10,11 @@ impl<M: MathsCore, H: Habitat<M>> EqualDecomposition<M, H> {
     /// # Errors
     ///
     /// Returns `Ok(Self)` iff the `habitat` can be partitioned into
-    /// `partitions` by area, otherwise returns `Err(Self)`.
-    pub fn area(habitat: &H, rank: u32, partitions: NonZeroU32) -> Result<Self, Self> {
+    ///  `subdomain.size()` by area, otherwise returns `Err(Self)`.
+    pub fn area(habitat: &H, subdomain: Partition) -> Result<Self, Self> {
         let extent = habitat.get_extent().clone();
 
-        let mut indices = Vec::with_capacity(partitions.get() as usize);
+        let mut indices = Vec::with_capacity(subdomain.size().get() as usize);
 
         let morton_x = Self::next_log2(extent.width());
         let morton_y = Self::next_log2(extent.height());
@@ -37,7 +38,8 @@ impl<M: MathsCore, H: Habitat<M>> EqualDecomposition<M, H> {
             .enumerate()
             .filter_map(|(i, index)| {
                 #[allow(clippy::cast_possible_truncation)]
-                let next_rank = ((i as u64) * u64::from(partitions.get()) / num_indices) as u32;
+                let next_rank =
+                    ((i as u64) * u64::from(subdomain.size().get()) / num_indices) as u32;
 
                 if next_rank == last_rank {
                     None
@@ -50,8 +52,7 @@ impl<M: MathsCore, H: Habitat<M>> EqualDecomposition<M, H> {
             .collect();
 
         let decomposition = Self {
-            rank,
-            partitions,
+            subdomain,
 
             extent,
             morton: (morton_x, morton_y),
@@ -61,7 +62,7 @@ impl<M: MathsCore, H: Habitat<M>> EqualDecomposition<M, H> {
             _marker: PhantomData::<(M, H)>,
         };
 
-        if (decomposition.indices.len() + 1) == (partitions.get() as usize) {
+        if (decomposition.indices.len() + 1) == (subdomain.size().get() as usize) {
             Ok(decomposition)
         } else {
             Err(decomposition)

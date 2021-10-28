@@ -1,11 +1,8 @@
 use anyhow::{Context, Result};
+use serde::Deserialize;
 use serde_state::DeserializeState;
 
-use necsim_core_bond::Partition;
-
-use necsim_partitioning_core::Partitioning;
-
-use super::{CommandArgs, ReplayArgs, SimulateArgs};
+use super::{CommandArgs, Partitioning, ReplayArgs, SimulateArgs};
 
 /// Transform the `command_args` into a RON `String`
 fn into_ron_args(command_args: CommandArgs) -> String {
@@ -33,58 +30,97 @@ fn into_ron_args(command_args: CommandArgs) -> String {
     ron_args
 }
 
-fn try_parse_subcommand_arguments<'de, A: DeserializeState<'de, Partition>, P: Partitioning>(
-    subcommand: &str,
-    ron_args: &'de str,
-    partitioning: &P,
-) -> Result<A> {
-    let mut de_ron = ron::Deserializer::from_str(ron_args).context(format!(
-        "Failed to create the {} subcommand argument parser.",
-        subcommand
-    ))?;
-
-    let mut track = serde_path_to_error::Track::new();
-    let de = serde_path_to_error::Deserializer::new(&mut de_ron, &mut track);
-
-    let mut partition = Partition::try_new(
-        partitioning.get_rank(),
-        partitioning.get_number_of_partitions(),
-    )
-    .map_err(anyhow::Error::msg)?;
-
-    let args = match A::deserialize_state(&mut partition, de) {
-        Ok(args) => Ok(args),
-        Err(err) => {
-            let path = track.path();
-
-            Err(anyhow::Error::msg(format!(
-                "{}{}{}{}: {}",
-                subcommand,
-                if path.iter().count() >= 1 { "." } else { "" },
-                path,
-                if path.iter().count() >= 1 { "" } else { "*" },
-                err,
-            )))
-        },
-    }
-    .context(format!(
-        "Failed to parse the {} subcommand arguments.",
-        subcommand
-    ))?;
-
-    Ok(args)
+#[derive(Deserialize)]
+struct PartitioningOnly {
+    #[serde(default)]
+    partitioning: Partitioning,
 }
 
 impl SimulateArgs {
-    pub fn try_parse<P: Partitioning>(command_args: CommandArgs, partitioning: &P) -> Result<Self> {
-        // Parse and validate all command line arguments for a subcommand
-        try_parse_subcommand_arguments("simulate", &into_ron_args(command_args), partitioning)
+    pub fn try_parse(command_args: CommandArgs) -> Result<Self> {
+        let ron_args = into_ron_args(command_args);
+        let mut de_ron = ron::Deserializer::from_str(&ron_args)
+            .context("Failed to create the simulate subcommand argument parser.")?;
+
+        let mut track = serde_path_to_error::Track::new();
+        let de = serde_path_to_error::Deserializer::new(&mut de_ron, &mut track);
+
+        let PartitioningOnly { partitioning } = match PartitioningOnly::deserialize(de) {
+            Ok(args) => Ok(args),
+            Err(err) => {
+                let path = track.path();
+
+                Err(anyhow::Error::msg(format!(
+                    "simulate{}{}{}: {}",
+                    if path.iter().count() >= 1 { "." } else { "" },
+                    path,
+                    if path.iter().count() >= 1 { "" } else { "*" },
+                    err,
+                )))
+            },
+        }
+        .context("Failed to parse the simulate subcommand arguments.")?;
+
+        let mut partition = partitioning.get_partition();
+
+        // Only log to stdout/stderr if the partition is the root partition
+        log::set_max_level(if partitioning.is_root() {
+            log::LevelFilter::Info
+        } else {
+            log::LevelFilter::Off
+        });
+
+        let mut de_ron = ron::Deserializer::from_str(&ron_args)
+            .context("Failed to create the simulate subcommand argument parser.")?;
+
+        let mut track = serde_path_to_error::Track::new();
+        let de = serde_path_to_error::Deserializer::new(&mut de_ron, &mut track);
+
+        let args = match SimulateArgs::deserialize_state(&mut partition, de) {
+            Ok(args) => Ok(args),
+            Err(err) => {
+                let path = track.path();
+
+                Err(anyhow::Error::msg(format!(
+                    "simulate{}{}{}: {}",
+                    if path.iter().count() >= 1 { "." } else { "" },
+                    path,
+                    if path.iter().count() >= 1 { "" } else { "*" },
+                    err,
+                )))
+            },
+        }
+        .context("Failed to parse the simulate subcommand arguments.")?;
+
+        Ok(args)
     }
 }
 
 impl ReplayArgs {
-    pub fn try_parse<P: Partitioning>(command_args: CommandArgs, partitioning: &P) -> Result<Self> {
-        // Parse and validate all command line arguments for a subcommand
-        try_parse_subcommand_arguments("replay", &into_ron_args(command_args), partitioning)
+    pub fn try_parse(command_args: CommandArgs) -> Result<Self> {
+        let ron_args = into_ron_args(command_args);
+        let mut de_ron = ron::Deserializer::from_str(&ron_args)
+            .context("Failed to create the replay subcommand argument parser.")?;
+
+        let mut track = serde_path_to_error::Track::new();
+        let de = serde_path_to_error::Deserializer::new(&mut de_ron, &mut track);
+
+        let args = match ReplayArgs::deserialize(de) {
+            Ok(args) => Ok(args),
+            Err(err) => {
+                let path = track.path();
+
+                Err(anyhow::Error::msg(format!(
+                    "replay{}{}{}: {}",
+                    if path.iter().count() >= 1 { "." } else { "" },
+                    path,
+                    if path.iter().count() >= 1 { "" } else { "*" },
+                    err,
+                )))
+            },
+        }
+        .context("Failed to parse the replay subcommand arguments.")?;
+
+        Ok(args)
     }
 }
