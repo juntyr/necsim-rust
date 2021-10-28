@@ -184,7 +184,7 @@ fn equal_weight_stores_subdomain() {
 
     let equal_area_decomposition = EqualDecomposition::area(
         &habitat,
-        Partition::try_new(42, NonZeroU32::new(100).unwrap()).unwrap(),
+        Partition::try_new(24, NonZeroU32::new(1000).unwrap()).unwrap(),
     )
     .unwrap()
     .backup();
