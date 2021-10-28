@@ -153,6 +153,7 @@ pub struct Base32String(Box<[u8]>);
 
 impl Base32String {
     #[must_use]
+    #[allow(dead_code)]
     pub fn new(bytes: &[u8]) -> Self {
         Self(bytes.to_vec().into_boxed_slice())
     }
