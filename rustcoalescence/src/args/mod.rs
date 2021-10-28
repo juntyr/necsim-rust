@@ -45,8 +45,9 @@ pub struct CommandArgs {
 #[allow(clippy::module_name_repetitions)]
 pub struct SimulateArgs {
     pub common: CommonArgs,
-    pub event_log: Option<EventLogRecorder>,
     pub scenario: Scenario,
+    pub algorithm: Algorithm,
+    pub event_log: Option<EventLogRecorder>,
     pub reporters: AnyReporterPluginVec,
 }
 
@@ -62,10 +63,10 @@ impl<'de> DeserializeState<'de, Partition> for SimulateArgs {
                 speciation_probability_per_generation: raw.speciation_probability_per_generation,
                 sample_percentage: raw.sample_percentage,
                 rng: raw.rng,
-                algorithm: raw.algorithm,
             },
-            event_log: raw.event_log,
             scenario: raw.scenario,
+            algorithm: raw.algorithm,
+            event_log: raw.event_log,
             reporters: raw.reporters.into_iter().flatten().collect(),
         })
     }
@@ -128,7 +129,6 @@ pub struct CommonArgs {
     pub speciation_probability_per_generation: PositiveUnitF64,
     pub sample_percentage: ClosedUnitF64,
     pub rng: Rng,
-    pub algorithm: Algorithm,
 }
 
 #[derive(Debug, Deserialize)]
@@ -155,6 +155,16 @@ impl Base32String {
     #[must_use]
     pub fn new(bytes: &[u8]) -> Self {
         Self(bytes.to_vec().into_boxed_slice())
+    }
+}
+
+impl fmt::Display for Base32String {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            fmt,
+            "{:?}",
+            base32::encode(base32::Alphabet::Crockford, &self.0).to_ascii_lowercase()
+        )
     }
 }
 

@@ -3,7 +3,7 @@ use anyhow::Result;
 use necsim_core::reporter::Reporter;
 use necsim_partitioning_core::LocalPartition;
 
-use crate::args::{CommonArgs, Scenario as ScenarioArgs};
+use crate::args::{Algorithm as AlgorithmArgs, CommonArgs, Scenario as ScenarioArgs};
 
 #[cfg(not(feature = "necsim-partitioning-mpi"))]
 pub mod monolithic;
@@ -21,10 +21,13 @@ mod r#impl;
 mod dispatch;
 
 #[allow(clippy::module_name_repetitions)]
-pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>>(
+pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>, V: FnOnce(), L: FnOnce()>(
     local_partition: Box<P>,
     common_args: CommonArgs,
     scenario: ScenarioArgs,
+    algorithm: AlgorithmArgs,
+    post_validation: V,
+    pre_launch: L,
 ) -> Result<()> {
     #[cfg(any(
         feature = "rustcoalescence-algorithms-monolithic",
@@ -32,7 +35,14 @@ pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>>(
         feature = "rustcoalescence-algorithms-cuda"
     ))]
     {
-        dispatch::simulate_with_logger(local_partition, common_args, scenario)
+        dispatch::simulate_with_logger(
+            local_partition,
+            common_args,
+            scenario,
+            algorithm,
+            post_validation,
+            pre_launch,
+        )
     }
 
     #[cfg(not(any(
