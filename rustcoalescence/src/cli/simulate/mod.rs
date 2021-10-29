@@ -1,6 +1,7 @@
 use anyhow::Context;
 use derive_builder::Builder;
 use log::LevelFilter;
+use necsim_impls_std::lineage_file::loader::LineageFileLoader;
 use serde::Serialize;
 
 use necsim_core::lineage::Lineage;
@@ -9,7 +10,7 @@ use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 use crate::args::{
     parse::{into_ron_str, try_print},
     ser::BufferingSerializeResult,
-    CommandArgs, Pause, Sample, SampleDestiny,
+    CommandArgs, Pause, Sample, SampleDestiny, SampleOrigin,
 };
 
 mod dispatch;
@@ -79,17 +80,24 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
     }
 
     if let (Some(pause), SimulationResult::Paused { lineages, .. }) = (pause, result) {
-        match pause.destiny {
-            // TODO: Adapt the config sample
-            SampleDestiny::List => (),
-            SampleDestiny::Bincode(lineage_file) => lineage_file
-                .write(lineages.iter())
-                .context("Failed to write the remaining lineages.")?,
-        };
-
         let resume_str = normalised_args
             .sample(&Sample {
                 percentage: ClosedUnitF64::one(),
+                origin: match pause.destiny {
+                    SampleDestiny::List => SampleOrigin::List(lineages),
+                    SampleDestiny::Bincode(lineage_file) => {
+                        let path = lineage_file.path().to_owned();
+
+                        lineage_file
+                            .write(lineages.iter())
+                            .context("Failed to write the remaining lineages.")?;
+
+                        SampleOrigin::Bincode(
+                            LineageFileLoader::try_new(&path)
+                                .context("Failed to write the remaining lineages.")?,
+                        )
+                    },
+                },
             })
             .pause(&Option::<Pause>::None)
             .build()

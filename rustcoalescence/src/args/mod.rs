@@ -1,6 +1,7 @@
 #![allow(clippy::empty_enum)]
 
 use std::{
+    collections::HashSet,
     convert::TryFrom,
     fmt,
     fs::{self, File, OpenOptions},
@@ -13,9 +14,15 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_state::DeserializeState;
 use structopt::StructOpt;
 
-use necsim_core::cogs::{MathsCore, RngCore};
+use necsim_core::{
+    cogs::{MathsCore, RngCore},
+    lineage::Lineage,
+};
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
-use necsim_impls_std::{event_log::replay::EventLogReplay, lineage_file::saver::LineageFileSaver};
+use necsim_impls_std::{
+    event_log::replay::EventLogReplay,
+    lineage_file::{loader::LineageFileLoader, saver::LineageFileSaver},
+};
 use necsim_partitioning_core::partition::Partition;
 
 use rustcoalescence_scenarios::{
@@ -446,18 +453,15 @@ struct ReplayArgsRaw {
 #[serde(default)]
 #[serde(deny_unknown_fields)]
 pub struct Sample {
-    #[serde(default = "default_sample_percentage")]
     pub percentage: ClosedUnitF64,
-}
-
-fn default_sample_percentage() -> ClosedUnitF64 {
-    ClosedUnitF64::one()
+    pub origin: SampleOrigin,
 }
 
 impl Default for Sample {
     fn default() -> Self {
         Self {
-            percentage: default_sample_percentage(),
+            percentage: ClosedUnitF64::one(),
+            origin: SampleOrigin::Habitat,
         }
     }
 }
@@ -487,6 +491,67 @@ impl<'de> DeserializeState<'de, Partition> for Pause {
             config: raw.config,
             destiny: raw.destiny,
         })
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(try_from = "SampleOriginRaw")]
+pub enum SampleOrigin {
+    Habitat,
+    List(Vec<Lineage>),
+    Bincode(LineageFileLoader),
+}
+
+impl fmt::Debug for SampleOrigin {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        struct VecLineages(usize);
+
+        impl fmt::Debug for VecLineages {
+            fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+                write!(fmt, "Vec<Lineage; {}>", self.0)
+            }
+        }
+
+        match self {
+            Self::Habitat => fmt.debug_struct(stringify!(Habitat)).finish(),
+            Self::List(lineages) => fmt
+                .debug_tuple(stringify!(List))
+                .field(&VecLineages(lineages.len()))
+                .finish(),
+            Self::Bincode(loader) => fmt
+                .debug_tuple(stringify!(Bincode))
+                .field(&VecLineages(loader.get_lineages().len()))
+                .finish(),
+        }
+    }
+}
+
+impl TryFrom<SampleOriginRaw> for SampleOrigin {
+    type Error = anyhow::Error;
+
+    fn try_from(raw: SampleOriginRaw) -> Result<Self, Self::Error> {
+        let lineages = match &raw {
+            SampleOriginRaw::Habitat => return Ok(Self::Habitat),
+            SampleOriginRaw::List(lineages) => lineages.iter(),
+            SampleOriginRaw::Bincode(loader) => loader.get_lineages().iter(),
+        };
+
+        let mut global_references = HashSet::with_capacity(lineages.len());
+
+        for lineage in lineages {
+            if !global_references.insert(lineage.global_reference.clone()) {
+                anyhow::bail!(
+                    "duplicate lineage with reference {}",
+                    lineage.global_reference
+                );
+            }
+        }
+
+        match raw {
+            SampleOriginRaw::Habitat => Ok(Self::Habitat),
+            SampleOriginRaw::List(lineages) => Ok(Self::List(lineages)),
+            SampleOriginRaw::Bincode(loader) => Ok(Self::Bincode(loader)),
+        }
     }
 }
 
@@ -559,4 +624,11 @@ impl ResumeConfig {
 
         Ok(())
     }
+}
+
+#[derive(Debug, Deserialize)]
+enum SampleOriginRaw {
+    Habitat,
+    List(Vec<Lineage>),
+    Bincode(LineageFileLoader),
 }
