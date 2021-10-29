@@ -119,10 +119,14 @@ impl core::hash::Hash for LineageInteraction {
 
 #[allow(clippy::unsafe_derive_deserialize)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TypeLayout)]
+#[serde(deny_unknown_fields)]
 #[repr(C)]
 pub struct Lineage {
+    #[serde(alias = "id", alias = "ref")]
     pub global_reference: GlobalLineageReference,
+    #[serde(alias = "time")]
     pub last_event_time: NonNegativeF64,
+    #[serde(alias = "loc")]
     pub indexed_location: IndexedLocation,
 }
 

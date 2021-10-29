@@ -58,6 +58,11 @@ impl LineageFileSaver {
         })
     }
 
+    #[must_use]
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
     /// # Errors
     ///
     /// Fails if a the lineages could not be written to the file at `path`
@@ -83,6 +88,7 @@ impl TryFrom<LineageFileSaverRaw> for LineageFileSaver {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename = "LineageFileSaver")]
+#[serde(deny_unknown_fields)]
 struct LineageFileSaverRaw {
     file: PathBuf,
 }

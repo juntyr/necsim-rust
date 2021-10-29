@@ -3,13 +3,40 @@
      *  i.e. is the creator of a new unique species */
     speciation: (0.0 < f64 <= 1.0),
     /* selection of the sample of individuals that are simulatd */
-    /* optional, default = Sample(percentage: 1.0) */
+    /* optional, default = Sample(percentage: 1.0, origin: Habitat) */
     sample: Sample(
         /* percentage of individuals from the sample that are simulated */
         /* optional, default = 1.0 */
         percentage: (0.0 <= f64 <= 1.0),
+        /* selection of the base sample of individuals */
+        /* optional, default = Habitat */
+        origin: (
+            /* all individuals living inside the habitat are sampled */
+          | Habitat
+            /* ordered set of individuals that are sampled */
+          | List([
+                Lineage(
+                    /* UNIQUE reference of the individual */
+                    ref: (u64),
+                    /* time of the last event, 0.0 before the simulation */
+                    time: (0.0 <= f64),
+                    /* indexed location i@(x, y) of the individual */
+                    loc: (
+                        x: (u32),
+                        y: (u32),
+                        i: (u32),
+                    ),
+                )
+            ])
+            /* binary file containing an ordered set of individuals that
+             *  are sampled */
+          | Bincode(
+                /* file path to a binary file listing the individuals */
+                file: (PathBuf)
+            )
+        ),
     ),
-    /* selected of the initialisation of the random number generator */
+    /* selection of the initialisation of the random number generator */
     rng: (
         /* seeds from OS-provided randomness */
         /* infallible (unless the OS malfunctions) */

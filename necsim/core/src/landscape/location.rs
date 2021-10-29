@@ -6,6 +6,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 #[derive(
     Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize, TypeLayout,
 )]
+#[serde(deny_unknown_fields)]
 #[repr(C)]
 pub struct Location {
     x: u32,
@@ -43,6 +44,7 @@ impl From<IndexedLocation> for Location {
     Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize, TypeLayout,
 )]
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
+#[serde(from = "IndexedLocationRaw", into = "IndexedLocationRaw")]
 #[repr(C)]
 #[layout(free = "LocationIndex")]
 pub struct IndexedLocation {
@@ -100,5 +102,34 @@ impl<'de> Deserialize<'de> for LocationIndex {
         let inner = u32::deserialize(deserializer)?;
 
         Ok(Self(unsafe { NonZeroU32::new_unchecked(inner + 1) }))
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[repr(C)]
+struct IndexedLocationRaw {
+    x: u32,
+    y: u32,
+    #[serde(alias = "i")]
+    index: LocationIndex,
+}
+
+impl From<IndexedLocation> for IndexedLocationRaw {
+    fn from(val: IndexedLocation) -> Self {
+        Self {
+            x: val.location.x,
+            y: val.location.y,
+            index: val.index,
+        }
+    }
+}
+
+impl From<IndexedLocationRaw> for IndexedLocation {
+    fn from(raw: IndexedLocationRaw) -> Self {
+        Self {
+            location: Location::new(raw.x, raw.y),
+            index: raw.index,
+        }
     }
 }
