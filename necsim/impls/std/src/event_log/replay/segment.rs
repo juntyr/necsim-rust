@@ -32,7 +32,7 @@ impl fmt::Debug for SortedSegment {
 impl SortedSegment {
     /// # Errors
     ///
-    /// Fails if the path cannot be read as an event log segment
+    /// Fails if the `path` cannot be read as an event log segment
     pub fn try_new(path: &Path, capacity: usize) -> Result<Self> {
         let file = OpenOptions::new().read(true).write(false).open(path)?;
 

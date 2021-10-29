@@ -103,7 +103,8 @@ impl core::hash::Hash for LineageInteraction {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, TypeLayout)]
+#[allow(clippy::unsafe_derive_deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TypeLayout)]
 #[repr(C)]
 pub struct Lineage {
     pub global_reference: GlobalLineageReference,
