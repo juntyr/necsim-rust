@@ -28,11 +28,13 @@ use necsim_core::event::{DispersalEvent, PackedEvent, SpeciationEvent};
 
 use super::EventLogHeader;
 
+const SEGMENT_CAPACITY: usize = 1_000_000_usize;
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(serde::Deserialize)]
 #[serde(try_from = "PathBuf")]
 pub struct EventLogRecorder {
-    segment_size: usize,
+    segment_capacity: usize,
     directory: PathBuf,
     segment_index: usize,
     buffer: Vec<PackedEvent>,
@@ -75,13 +77,11 @@ impl EventLogRecorder {
             return Err(anyhow::anyhow!("{:?} is read-only.", path));
         }
 
-        let segment_size = 1_000_000_usize;
-
         Ok(Self {
-            segment_size,
+            segment_capacity: SEGMENT_CAPACITY,
             directory: path.to_owned(),
             segment_index: 0_usize,
-            buffer: Vec::with_capacity(segment_size),
+            buffer: Vec::with_capacity(SEGMENT_CAPACITY),
 
             record_speciation: false,
             record_dispersal: false,
@@ -103,7 +103,7 @@ impl EventLogRecorder {
 
         self.buffer.push(event.clone().into());
 
-        if self.buffer.len() >= self.segment_size {
+        if self.buffer.len() >= self.segment_capacity {
             std::mem::drop(self.sort_and_write_segment());
         }
     }
@@ -113,7 +113,7 @@ impl EventLogRecorder {
 
         self.buffer.push(event.clone().into());
 
-        if self.buffer.len() >= self.segment_size {
+        if self.buffer.len() >= self.segment_capacity {
             std::mem::drop(self.sort_and_write_segment());
         }
     }
@@ -163,7 +163,7 @@ impl fmt::Debug for EventLogRecorder {
         }
 
         f.debug_struct(stringify!(EventLogRecorder))
-            .field("segment_size", &self.segment_size)
+            .field("segment_capacity", &self.segment_capacity)
             .field("directory", &self.directory)
             .field("segment_index", &self.segment_index)
             .field("buffer", &EventBufferLen(self.buffer.len()))

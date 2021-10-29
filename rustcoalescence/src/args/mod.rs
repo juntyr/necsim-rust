@@ -7,7 +7,10 @@ use structopt::StructOpt;
 use necsim_core_bond::{ClosedUnitF64, Partition, PositiveUnitF64};
 
 use necsim_impls_no_std::array2d::Array2D;
-use necsim_impls_std::event_log::{recorder::EventLogRecorder, replay::EventLogReplay};
+use necsim_impls_std::{
+    event_log::{recorder::EventLogRecorder, replay::EventLogReplay},
+    lineage_file::loader::LineageFileLoader,
+};
 
 use rustcoalescence_scenarios::{
     almost_infinite::AlmostInfiniteArguments, non_spatial::NonSpatialArguments,
@@ -519,4 +522,27 @@ struct ReplayArgsRaw {
     #[serde(default)]
     mode: ReplayMode,
     reporters: Vec<ReporterPluginLibrary>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+#[serde(deny_unknown_fields)]
+struct Sample {
+    percentage: ClosedUnitF64,
+    origin: SampleOrigin,
+}
+
+impl Default for Sample {
+    fn default() -> Self {
+        Self {
+            percentage: ClosedUnitF64::one(),
+            origin: SampleOrigin::Habitat,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+enum SampleOrigin {
+    Habitat,
+    List(LineageFileLoader),
 }

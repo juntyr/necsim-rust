@@ -10,6 +10,8 @@ pub struct GlobbedSortedSegments {
     segments: Vec<SortedSegment>,
 }
 
+const SEGMENT_CAPACITY: usize = 100_000_usize;
+
 impl<'de> Deserialize<'de> for GlobbedSortedSegments {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let pattern = String::deserialize(deserializer)?;
@@ -31,22 +33,21 @@ impl<'de> Deserialize<'de> for GlobbedSortedSegments {
 
         let mut segments = Vec::with_capacity(paths.len().min(1));
 
-        let capacity: usize = 100_000;
-
         if paths.is_empty() {
             segments.push(
-                SortedSegment::try_new(&PathBuf::from(pattern), capacity)
+                SortedSegment::try_new(&PathBuf::from(pattern), SEGMENT_CAPACITY)
                     .map_err(serde::de::Error::custom)?,
             );
         } else if paths.len() == 1 {
             segments.push(
-                SortedSegment::try_new(&paths[0], capacity).map_err(serde::de::Error::custom)?,
+                SortedSegment::try_new(&paths[0], SEGMENT_CAPACITY)
+                    .map_err(serde::de::Error::custom)?,
             );
         } else {
             for path in paths {
                 if path.is_file() || !path.exists() {
                     segments.push(
-                        SortedSegment::try_new(&path, capacity)
+                        SortedSegment::try_new(&path, SEGMENT_CAPACITY)
                             .map_err(serde::de::Error::custom)?,
                     );
                 }
