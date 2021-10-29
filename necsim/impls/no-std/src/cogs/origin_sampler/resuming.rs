@@ -60,6 +60,8 @@ impl<
         habitat: &'h H,
         oob_lineage_generator: &'o mut O,
     ) -> Self {
+        // TODO: the output of this sampler could be further sampled, so the
+        //       oob generator might contain out-of-partition items
         Self {
             lineage_iterator,
             oob_lineage_generator,
