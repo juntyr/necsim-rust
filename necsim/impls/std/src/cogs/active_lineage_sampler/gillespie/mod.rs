@@ -68,22 +68,27 @@ impl<
         use necsim_core::cogs::RngSampler;
 
         let mut active_locations: Vec<(Location, EventTime)> = Vec::new();
-
         let mut number_active_lineages: usize = 0;
+        let mut last_event_time = NonNegativeF64::zero();
 
         partial_simulation
             .lineage_store
             .iter_active_locations(&partial_simulation.habitat)
             .for_each(|location| {
-                let number_active_lineages_at_location = partial_simulation
+                let active_lineages_at_location = partial_simulation
                     .lineage_store
                     .get_local_lineage_references_at_location_unordered(
                         &location,
                         &partial_simulation.habitat,
-                    )
-                    .len();
+                    );
 
-                if number_active_lineages_at_location > 0 {
+                for local_reference in active_lineages_at_location {
+                    last_event_time = last_event_time.max(
+                        partial_simulation.lineage_store[local_reference.clone()].last_event_time,
+                    );
+                }
+
+                if !active_lineages_at_location.is_empty() {
                     // All lineages were just initially inserted into the lineage store,
                     //  so all active lineages are in the lineage store
                     if let Ok(event_rate_at_location) = PositiveF64::new(
@@ -96,7 +101,7 @@ impl<
                             EventTime::from(rng.sample_exponential(event_rate_at_location)),
                         ));
 
-                        number_active_lineages += number_active_lineages_at_location;
+                        number_active_lineages += active_lineages_at_location.len();
                     }
                 }
             });
@@ -104,7 +109,7 @@ impl<
         Self {
             active_locations: KeyedPriorityQueue::from_iter(active_locations),
             number_active_lineages,
-            last_event_time: NonNegativeF64::zero(),
+            last_event_time,
             marker: PhantomData::<(M, H, G, R, S, X, D, C, T, N, E, I)>,
         }
     }

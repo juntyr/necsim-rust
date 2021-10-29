@@ -43,16 +43,17 @@ impl<
 {
     #[must_use]
     pub fn new(lineage_store: &S) -> Self {
+        let mut last_event_time = NonNegativeF64::zero();
+
         Self {
             active_lineage_references: lineage_store
                 .iter_local_lineage_references()
-                .filter(|local_reference| {
-                    lineage_store
-                        .get_lineage_for_local_reference(local_reference.clone())
-                        .is_some()
+                .inspect(|local_reference| {
+                    last_event_time =
+                        last_event_time.max(lineage_store[local_reference.clone()].last_event_time);
                 })
                 .collect(),
-            last_event_time: NonNegativeF64::zero(),
+            last_event_time,
             _marker: PhantomData::<(M, H, G, S, X, D, N, I)>,
         }
     }
