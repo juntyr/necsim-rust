@@ -52,6 +52,9 @@ impl<E: Eq + Hash> RejectionSamplingGroup<E> {
 
                 return (None, event);
             }
+
+            // Safety: If there is only one event, the pop must succeed
+            core::hint::unreachable_unchecked() // GRCOV_EXCL_LINE
         }
 
         loop {

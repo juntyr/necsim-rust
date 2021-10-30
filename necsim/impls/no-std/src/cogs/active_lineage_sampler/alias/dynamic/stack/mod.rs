@@ -46,6 +46,9 @@ impl<E: Eq + Hash> RejectionSamplingGroup<E> {
             if let Some(event) = self.events.pop() {
                 return (None, event);
             }
+
+            // Safety: If there is only one event, the pop must succeed
+            core::hint::unreachable_unchecked() // GRCOV_EXCL_LINE
         }
 
         loop {
