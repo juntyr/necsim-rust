@@ -131,7 +131,10 @@ fn add_remove_event_group() {
         .as_ref()
     );
 
-    assert!(group.remove(0, &mut HashMap::new()).is_none());
+    assert_eq!(
+        group.sample_pop(&mut HashMap::new(), &mut DummyRng::new(vec![0.0, 0.0])),
+        (None, 2_u8)
+    );
 }
 
 #[test]
@@ -530,6 +533,255 @@ fn add_remove_event_full() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
+fn add_update_event_full() {
+    let mut sampler = DynamicAliasMethodIndexedSampler::default();
+    assert_eq!(sampler.total_weight(), NonNegativeF64::zero());
+
+    // Create a new rejection sampling group
+    sampler.update_or_add(0_u8, PositiveF64::new(1.0_f64).unwrap());
+    assert_eq!(
+        sampler.total_weight(),
+        NonNegativeF64::new(1.0_f64).unwrap()
+    );
+
+    // Extend an existing rejection sampling group
+    sampler.update_or_add(1_u8, PositiveF64::new(1.5_f64).unwrap());
+    assert_eq!(
+        sampler.total_weight(),
+        NonNegativeF64::new(2.5_f64).unwrap()
+    );
+
+    assert_eq!(&sampler.exponents, &[0]);
+    assert_eq!(
+        &sampler.groups,
+        &[RejectionSamplingGroup {
+            events: alloc::vec![0_u8, 1_u8],
+            weights: alloc::vec![1_u64 << 52, 3_u64 << 51],
+            total_weight: 5_u128 << 51,
+        }]
+    );
+    assert_eq!(
+        sampler.lookup.get(&0_u8),
+        Some(EventLocation {
+            exponent: 0,
+            group_index: 0,
+        })
+        .as_ref()
+    );
+    assert_eq!(
+        sampler.lookup.get(&1_u8),
+        Some(EventLocation {
+            exponent: 0,
+            group_index: 1,
+        })
+        .as_ref()
+    );
+    assert_eq!(sampler.min_exponent, 0);
+    assert_eq!(sampler.total_weight, 5_u128 << 51);
+
+    // Update an existing event within the same rejection sampling group
+    sampler.update_or_add(1_u8, PositiveF64::new(1.0_f64).unwrap());
+    assert_eq!(
+        sampler.total_weight(),
+        NonNegativeF64::new(2.0_f64).unwrap()
+    );
+
+    assert_eq!(&sampler.exponents, &[0]);
+    assert_eq!(
+        &sampler.groups,
+        &[RejectionSamplingGroup {
+            events: alloc::vec![0_u8, 1_u8],
+            weights: alloc::vec![1_u64 << 52, 1_u64 << 52],
+            total_weight: 2_u128 << 52
+        }]
+    );
+    assert_eq!(
+        sampler.lookup.get(&0_u8),
+        Some(EventLocation {
+            exponent: 0,
+            group_index: 0,
+        })
+        .as_ref()
+    );
+    assert_eq!(
+        sampler.lookup.get(&1_u8),
+        Some(EventLocation {
+            exponent: 0,
+            group_index: 1,
+        })
+        .as_ref()
+    );
+    assert_eq!(sampler.min_exponent, 0);
+    assert_eq!(sampler.total_weight, 2_u128 << 52);
+
+    // Update an existing event to a new rejection sampling group
+    //  without removing the existing group or changing the min_exponent
+    sampler.update_or_add(1_u8, PositiveF64::new(2.0_f64).unwrap());
+    assert_eq!(
+        sampler.total_weight(),
+        NonNegativeF64::new(3.0_f64).unwrap()
+    );
+
+    assert_eq!(&sampler.exponents, &[1, 0]);
+    assert_eq!(
+        &sampler.groups,
+        &[
+            RejectionSamplingGroup {
+                events: alloc::vec![1_u8],
+                weights: alloc::vec![1_u64 << 52],
+                total_weight: 1_u128 << 52
+            },
+            RejectionSamplingGroup {
+                events: alloc::vec![0_u8],
+                weights: alloc::vec![1_u64 << 52],
+                total_weight: 1_u128 << 52
+            },
+        ]
+    );
+    assert_eq!(
+        sampler.lookup.get(&0_u8),
+        Some(EventLocation {
+            exponent: 0,
+            group_index: 0,
+        })
+        .as_ref()
+    );
+    assert_eq!(
+        sampler.lookup.get(&1_u8),
+        Some(EventLocation {
+            exponent: 1,
+            group_index: 0,
+        })
+        .as_ref()
+    );
+    assert_eq!(sampler.min_exponent, 0);
+    assert_eq!(sampler.total_weight, 3_u128 << 52);
+
+    // Update an existing event to a new rejection sampling group, with
+    //  removing the existing group but without changing the min_exponent
+    sampler.update_or_add(1_u8, PositiveF64::new(4.0_f64).unwrap());
+    assert_eq!(
+        sampler.total_weight(),
+        NonNegativeF64::new(5.0_f64).unwrap()
+    );
+
+    assert_eq!(&sampler.exponents, &[2, 0]);
+    assert_eq!(
+        &sampler.groups,
+        &[
+            RejectionSamplingGroup {
+                events: alloc::vec![1_u8],
+                weights: alloc::vec![1_u64 << 52],
+                total_weight: 1_u128 << 52
+            },
+            RejectionSamplingGroup {
+                events: alloc::vec![0_u8],
+                weights: alloc::vec![1_u64 << 52],
+                total_weight: 1_u128 << 52
+            },
+        ]
+    );
+    assert_eq!(
+        sampler.lookup.get(&0_u8),
+        Some(EventLocation {
+            exponent: 0,
+            group_index: 0,
+        })
+        .as_ref()
+    );
+    assert_eq!(
+        sampler.lookup.get(&1_u8),
+        Some(EventLocation {
+            exponent: 2,
+            group_index: 0,
+        })
+        .as_ref()
+    );
+    assert_eq!(sampler.min_exponent, 0);
+    assert_eq!(sampler.total_weight, 5_u128 << 52);
+
+    // Update an existing event to an existing rejection sampling group
+    //  with removing the existing group and changing the min_exponent
+    sampler.update_or_add(0_u8, PositiveF64::new(4.0_f64).unwrap());
+    assert_eq!(
+        sampler.total_weight(),
+        NonNegativeF64::new(8.0_f64).unwrap()
+    );
+
+    assert_eq!(&sampler.exponents, &[2]);
+    assert_eq!(
+        &sampler.groups,
+        &[RejectionSamplingGroup {
+            events: alloc::vec![1_u8, 0_u8],
+            weights: alloc::vec![1_u64 << 52, 1_u64 << 52],
+            total_weight: 2_u128 << 52
+        },]
+    );
+    assert_eq!(
+        sampler.lookup.get(&0_u8),
+        Some(EventLocation {
+            exponent: 2,
+            group_index: 1,
+        })
+        .as_ref()
+    );
+    assert_eq!(
+        sampler.lookup.get(&1_u8),
+        Some(EventLocation {
+            exponent: 2,
+            group_index: 0,
+        })
+        .as_ref()
+    );
+    assert_eq!(sampler.min_exponent, 2);
+    assert_eq!(sampler.total_weight, 2_u128 << 52);
+
+    // Update an existing event to an existing rejection sampling group
+    //  without removing the existing group but with changing the min_exponent
+    sampler.update_or_add(0_u8, PositiveF64::new(0.5_f64).unwrap());
+    assert_eq!(
+        sampler.total_weight(),
+        NonNegativeF64::new(4.5_f64).unwrap()
+    );
+
+    assert_eq!(&sampler.exponents, &[2, -1]);
+    assert_eq!(
+        &sampler.groups,
+        &[
+            RejectionSamplingGroup {
+                events: alloc::vec![1_u8],
+                weights: alloc::vec![1_u64 << 52],
+                total_weight: 1_u128 << 52
+            },
+            RejectionSamplingGroup {
+                events: alloc::vec![0_u8],
+                weights: alloc::vec![1_u64 << 52],
+                total_weight: 1_u128 << 52
+            },
+        ]
+    );
+    assert_eq!(
+        sampler.lookup.get(&0_u8),
+        Some(EventLocation {
+            exponent: -1,
+            group_index: 0,
+        })
+        .as_ref()
+    );
+    assert_eq!(
+        sampler.lookup.get(&1_u8),
+        Some(EventLocation {
+            exponent: 2,
+            group_index: 0,
+        })
+        .as_ref()
+    );
+    assert_eq!(sampler.min_exponent, -1);
+    assert_eq!(sampler.total_weight, 9_u128 << 52);
+}
+
+#[test]
 fn sample_single_group_full() {
     const N: usize = 10_000_000;
 
@@ -683,15 +935,6 @@ fn debug_display_sampler() {
         "DynamicAliasMethodIndexedSampler { exponents: [2, 1], total_weight: 20.0 }"
     );
 }
-
-// TODO: Add tests for
-// - group sample_pop -> None
-// - sampler update_or_add add new
-// - sampler update_or_add update existing same exponent
-// - sampler update_or_add update existing change exponent (removes group)
-// - sampler update_or_add update existing change exponent (removes group,
-//   changes min exponent)
-// - sampler update_or_add update existing change exponent (group remains)
 
 // GRCOV_EXCL_START
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

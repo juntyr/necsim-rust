@@ -46,6 +46,14 @@ impl<E: Eq + Hash> RejectionSamplingGroup<E> {
         lookup: &mut HashMap<E, EventLocation>,
         rng: &mut G,
     ) -> (Option<&mut Self>, E) {
+        if let [_event] = &self.events[..] {
+            if let Some(event) = self.events.pop() {
+                lookup.remove(&event);
+
+                return (None, event);
+            }
+        }
+
         loop {
             // Safety: By construction, the group never contains zero elements
             let index = rng.sample_index(NonZeroUsize::new_unchecked(self.weights.len()));
@@ -67,14 +75,7 @@ impl<E: Eq + Hash> RejectionSamplingGroup<E> {
                     }
                 }
 
-                return (
-                    if self.events.is_empty() {
-                        None
-                    } else {
-                        Some(self)
-                    },
-                    old_event,
-                );
+                return (Some(self), old_event);
             }
         }
     }
@@ -251,7 +252,11 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodIndexedSampler<E> {
 
     pub fn sample_pop<M: MathsCore, G: RngCore<M>>(&mut self, rng: &mut G) -> Option<E> {
         if let Some(total_weight) = NonZeroU128::new(self.total_weight) {
-            let cdf_sample = rng.sample_index_u128(total_weight);
+            let cdf_sample = if let [_group] = &self.groups[..] {
+                0_u128
+            } else {
+                rng.sample_index_u128(total_weight)
+            };
 
             let mut cdf_acc = 0_u128;
 
