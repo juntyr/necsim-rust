@@ -26,20 +26,6 @@ pub struct DynamicAliasMethodStackSampler<E: Eq + Hash + Clone> {
     groups: Vec<RejectionSamplingGroup<E>>,
     min_exponent: i16,
     total_weight: u128,
-
-    add_exist: usize,
-    add_new: usize,
-    remove_remain: usize,
-    remove_pop: usize,
-}
-
-impl<E: Eq + Hash + Clone> Drop for DynamicAliasMethodStackSampler<E> {
-    fn drop(&mut self) {
-        info!(
-            "\n\n{} {} {} {}\n\n",
-            self.add_exist, self.add_new, self.remove_remain, self.remove_pop
-        );
-    }
 }
 
 impl<E: Eq + Hash + Clone> fmt::Debug for DynamicAliasMethodStackSampler<E> {
@@ -81,13 +67,13 @@ impl<E: Eq + Hash> RejectionSamplingGroup<E> {
         }
     }
 
-    // #[cfg(test)]
-    // fn sample_pop<G: RngCore>(mut self, rng: &mut G) -> (Option<Self>, E) {
-    //     match unsafe { self.sample_pop_inplace(rng) } {
-    //         (Some(_), event) => (Some(self), event),
-    //         (None, event) => (None, event),
-    //     }
-    // }
+    #[cfg(test)]
+    fn sample_pop<M: MathsCore, G: RngCore<M>>(mut self, rng: &mut G) -> (Option<Self>, E) {
+        match unsafe { self.sample_pop_inplace(rng) } {
+            (Some(_), event) => (Some(self), event),
+            (None, event) => (None, event),
+        }
+    }
 
     fn add(&mut self, event: E, weight: u64) {
         self.events.push(event);
@@ -113,11 +99,6 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodStackSampler<E> {
             groups: Vec::new(),
             min_exponent: 0_i16,
             total_weight: 0_u128,
-
-            add_exist: 0,
-            add_new: 0,
-            remove_pop: 0,
-            remove_remain: 0,
         }
     }
 
@@ -131,11 +112,6 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodStackSampler<E> {
             groups: Vec::with_capacity(capacity_log2_approx),
             min_exponent: 0_i16,
             total_weight: 0_u128,
-
-            add_exist: 0,
-            add_new: 0,
-            remove_pop: 0,
-            remove_remain: 0,
         }
     }
 
@@ -165,14 +141,10 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodStackSampler<E> {
                     let (group, sample) = unsafe { group.sample_pop_inplace(rng) };
 
                     if let Some(group) = group {
-                        self.remove_remain += 1;
-
                         self.total_weight = self
                             .total_weight
                             .wrapping_add(group.total_weight << exponent_shift);
                     } else {
-                        self.remove_pop += 1;
-
                         self.groups.remove(i);
                         self.exponents.remove(i);
 
@@ -198,15 +170,11 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodStackSampler<E> {
 
         match self.lookup_group_index(weight_decomposed.exponent) {
             Ok(i) => {
-                self.add_exist += 1;
-
                 let group_mut = unsafe { self.groups.get_unchecked_mut(i) };
 
                 group_mut.add(event, weight_decomposed.mantissa);
             },
             Err(i) => {
-                self.add_new += 1;
-
                 self.exponents.insert(i, weight_decomposed.exponent);
                 self.groups.insert(
                     i,
