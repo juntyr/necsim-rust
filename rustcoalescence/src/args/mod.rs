@@ -18,7 +18,7 @@ use rustcoalescence_scenarios::{
 };
 
 #[cfg(any(
-    feature = "rustcoalescence-algorithms-monolithic",
+    feature = "rustcoalescence-algorithms-gillespie",
     feature = "rustcoalescence-algorithms-independent",
     feature = "rustcoalescence-algorithms-cuda"
 ))]
@@ -249,20 +249,17 @@ impl Default for Partitioning {
 #[derive(Debug, DeserializeState)]
 #[serde(deserialize_state = "Partition")]
 pub enum Algorithm {
-    #[cfg(feature = "rustcoalescence-algorithms-monolithic")]
+    #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
+    #[serde(alias = "Gillespie")]
     Classical(
         #[serde(deserialize_state)]
-        <rustcoalescence_algorithms_monolithic::classical::ClassicalAlgorithm as rustcoalescence_algorithms::AlgorithmArguments>::Arguments,
+        <rustcoalescence_algorithms_gillespie::classical::ClassicalAlgorithm as rustcoalescence_algorithms::AlgorithmArguments>::Arguments,
     ),
-    #[cfg(feature = "rustcoalescence-algorithms-monolithic")]
-    Gillespie(
+    #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
+    #[serde(alias = "SkippingGillespie")]
+    EventSkipping(
         #[serde(deserialize_state)]
-        <rustcoalescence_algorithms_monolithic::gillespie::GillespieAlgorithm as AlgorithmArguments>::Arguments,
-    ),
-    #[cfg(feature = "rustcoalescence-algorithms-monolithic")]
-    SkippingGillespie(
-        #[serde(deserialize_state)]
-        <rustcoalescence_algorithms_monolithic::skipping_gillespie::SkippingGillespieAlgorithm as AlgorithmArguments>::Arguments,
+        <rustcoalescence_algorithms_gillespie::event_skipping::EventSkippingAlgorithm as AlgorithmArguments>::Arguments,
     ),
     #[cfg(feature = "rustcoalescence-algorithms-cuda")]
     #[serde(alias = "CUDA")]
@@ -271,25 +268,6 @@ pub enum Algorithm {
     Independent(
         #[serde(deserialize_state)] <rustcoalescence_algorithms_independent::IndependentAlgorithm as AlgorithmArguments>::Arguments,
     ),
-}
-
-impl fmt::Display for Algorithm {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        #[allow(unreachable_patterns)]
-        match self {
-            #[cfg(feature = "necsim-classical")]
-            Self::Classical => fmt.write_str("Classical"),
-            #[cfg(feature = "necsim-gillespie")]
-            Self::Gillespie => fmt.write_str("Gillespie"),
-            #[cfg(feature = "necsim-skipping-gillespie")]
-            Self::SkippingGillespie(_) => fmt.write_str("Skipping-Gillespie"),
-            #[cfg(feature = "necsim-cuda")]
-            Self::Cuda(_) => fmt.write_str("CUDA"),
-            #[cfg(feature = "necsim-independent")]
-            Self::Independent(_) => fmt.write_str("Independent"),
-            _ => fmt.write_str("Unknown"),
-        }
-    }
 }
 
 #[derive(Debug, Deserialize)]

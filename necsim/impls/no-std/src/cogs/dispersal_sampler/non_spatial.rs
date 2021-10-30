@@ -1,4 +1,4 @@
-use core::marker::PhantomData;
+use core::{marker::PhantomData, num::NonZeroUsize};
 
 use necsim_core::{
     cogs::{Backup, DispersalSampler, Habitat, MathsCore, RngCore, SeparableDispersalSampler},
@@ -50,7 +50,10 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, NonSpatialHabitat<M>, G>
         let habitat_index_max =
             (habitat.get_extent().width() as usize) * (habitat.get_extent().height() as usize);
 
-        let dispersal_target_index = rng.sample_index(habitat_index_max);
+        // Safety: `habitat_index_max` is zero iff the habitat is 0x0, in which
+        //         case the location cannot be in the landscape
+        let dispersal_target_index =
+            rng.sample_index(unsafe { NonZeroUsize::new_unchecked(habitat_index_max) });
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
@@ -84,8 +87,10 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, NonSpatialHabitat
             * (habitat.get_extent().width() as usize)
             + (location.x() as usize);
 
+        // Safety: by PRE, `habitat_index_max` > 1
         let dispersal_target_index = {
-            let dispersal_target_index = rng.sample_index(habitat_index_max - 1);
+            let dispersal_target_index =
+                rng.sample_index(unsafe { NonZeroUsize::new_unchecked(habitat_index_max - 1) });
 
             if dispersal_target_index >= current_location_index {
                 dispersal_target_index + 1

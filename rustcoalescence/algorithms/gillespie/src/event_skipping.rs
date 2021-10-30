@@ -10,6 +10,7 @@ use necsim_core_maths::IntrinsicsMathsCore;
 
 use necsim_impls_no_std::{
     cogs::{
+        active_lineage_sampler::alias::location::LocationAliasActiveLineageSampler,
         coalescence_sampler::conditional::ConditionalCoalescenceSampler,
         dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
         emigration_exit::{domain::DomainEmigrationExit, never::NeverEmigrationExit},
@@ -25,9 +26,7 @@ use necsim_impls_no_std::{
     },
     parallelisation,
 };
-use necsim_impls_std::cogs::{
-    active_lineage_sampler::gillespie::GillespieActiveLineageSampler, rng::pcg::Pcg,
-};
+use necsim_impls_std::cogs::rng::pcg::Pcg;
 use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_algorithms::{Algorithm, AlgorithmArguments};
@@ -38,9 +37,9 @@ use crate::arguments::{
 };
 
 #[allow(clippy::module_name_repetitions, clippy::empty_enum)]
-pub struct SkippingGillespieAlgorithm {}
+pub struct EventSkippingAlgorithm {}
 
-impl AlgorithmArguments for SkippingGillespieAlgorithm {
+impl AlgorithmArguments for EventSkippingAlgorithm {
     type Arguments = MonolithicArguments;
 }
 
@@ -53,7 +52,7 @@ impl<
         >,
         R: Reporter,
         P: LocalPartition<R>,
-    > Algorithm<O, R, P> for SkippingGillespieAlgorithm
+    > Algorithm<O, R, P> for EventSkippingAlgorithm
 where
     O::LineageStore<GillespieLineageStore<IntrinsicsMathsCore, O::Habitat>>:
         GloballyCoherentLineageStore<IntrinsicsMathsCore, O::Habitat, InMemoryLineageReference>,
@@ -81,21 +80,20 @@ where
     ) -> Result<(NonNegativeF64, u64), Self::Error> {
         match args.parallelism_mode {
             ParallelismMode::Monolithic => {
-                let mut rng = rng;
                 let lineage_store =
                     Self::LineageStore::from_origin_sampler(scenario.sample_habitat(pre_sampler));
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
                     scenario.build::<InMemorySeparableAliasDispersalSampler<
                         Self::MathsCore,
                         O::Habitat,
-                        Pcg<Self::MathsCore>,
+                        Self::Rng,
                     >>();
                 let coalescence_sampler = ConditionalCoalescenceSampler::default();
                 let emigration_exit = NeverEmigrationExit::default();
                 let event_sampler = ConditionalGillespieEventSampler::default();
                 let immigration_entry = NeverImmigrationEntry::default();
 
-                // Pack a PartialSimulation to initialise the GillespieActiveLineageSampler
+                // Pack a PartialSimulation to initialise the active lineage sampler
                 let partial_simulation = GillespiePartialSimulation {
                     maths: PhantomData::<Self::MathsCore>,
                     habitat,
@@ -108,11 +106,8 @@ where
                     _rng: PhantomData::<Pcg<Self::MathsCore>>,
                 };
 
-                let active_lineage_sampler = GillespieActiveLineageSampler::new(
-                    &partial_simulation,
-                    &event_sampler,
-                    &mut rng,
-                );
+                let active_lineage_sampler =
+                    LocationAliasActiveLineageSampler::new(&partial_simulation, &event_sampler);
 
                 // Unpack the PartialSimulation to create the full Simulation
                 let GillespiePartialSimulation {
@@ -153,8 +148,7 @@ where
                 let decomposition =
                     O::decompose(scenario.habitat(), local_partition.get_partition());
 
-                let mut rng =
-                    rng.split_to_stream(u64::from(local_partition.get_partition().rank()));
+                let rng = rng.split_to_stream(u64::from(local_partition.get_partition().rank()));
                 let lineage_store =
                     Self::LineageStore::from_origin_sampler(DecompositionOriginSampler::new(
                         scenario.sample_habitat(pre_sampler),
@@ -164,14 +158,14 @@ where
                     scenario.build::<InMemorySeparableAliasDispersalSampler<
                         Self::MathsCore,
                         O::Habitat,
-                        Pcg<Self::MathsCore>,
+                        Self::Rng,
                     >>();
                 let coalescence_sampler = ConditionalCoalescenceSampler::default();
                 let emigration_exit = DomainEmigrationExit::new(decomposition);
                 let event_sampler = ConditionalGillespieEventSampler::default();
                 let immigration_entry = BufferedImmigrationEntry::default();
 
-                // Pack a PartialSimulation to initialise the GillespieActiveLineageSampler
+                // Pack a PartialSimulation to initialise the active lineage sampler
                 let partial_simulation = GillespiePartialSimulation {
                     maths: PhantomData::<Self::MathsCore>,
                     habitat,
@@ -184,11 +178,8 @@ where
                     _rng: PhantomData::<Pcg<Self::MathsCore>>,
                 };
 
-                let active_lineage_sampler = GillespieActiveLineageSampler::new(
-                    &partial_simulation,
-                    &event_sampler,
-                    &mut rng,
-                );
+                let active_lineage_sampler =
+                    LocationAliasActiveLineageSampler::new(&partial_simulation, &event_sampler);
 
                 // Unpack the PartialSimulation to create the full Simulation
                 let GillespiePartialSimulation {
