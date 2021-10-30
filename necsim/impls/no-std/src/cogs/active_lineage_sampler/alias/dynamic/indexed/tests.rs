@@ -684,6 +684,16 @@ fn debug_display_sampler() {
     );
 }
 
+// TODO: Add tests for
+// - group sample_pop -> None
+// - sampler update_or_add add new
+// - sampler update_or_add update existing same exponent
+// - sampler update_or_add update existing change exponent (removes group)
+// - sampler update_or_add update existing change exponent (removes group,
+//   changes min exponent)
+// - sampler update_or_add update existing change exponent (group remains)
+
+// GRCOV_EXCL_START
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct DummyRng(Vec<u64>);
 
@@ -720,3 +730,4 @@ impl Backup for DummyRng {
         Self(self.0.clone())
     }
 }
+// GRCOV_EXCL_STOP
