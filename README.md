@@ -50,7 +50,7 @@ If you also want to use the CUDA-based algorithm, it is **required** that you al
 
 To install `rustcoalescence`, you need to decide which algorithms you want to compile with it. You can enable the provided algorithms by enabling their corresponding features. For instance, to compile all CPU-based algorithms, you can use
 ```shell
-> cargo install --path rustcoalescence --locked --features rustcoalescence-algorithms-monolithic --features rustcoalescence-algorithms-independent
+> cargo install --path rustcoalescence --locked --features rustcoalescence-algorithms-gillespie --features rustcoalescence-algorithms-independent
 ```
 To install with CUDA support, you first need to ensure that the dynamic CUDA libraries are in the `LD_LIBRARY_PATH` and enable the `rustcoalescence-algorithms-cuda` feature:
 ```shell
@@ -117,10 +117,9 @@ necsim-rust consists of the following crates:
     - linker/: `rustcoalescence-linker` is a custom linker used during the compilation.
     - scenarios/: `rustcoalescence-scenarios` contains the glue code to put together the cogs for the built-in scenarios. It is specifically built only for reducing code duplication in rustcoalescence, not for giving a minimal example of how to construct a simulation.
     - algorithms/:
-        - monolithic/: `rustcoalescence-algorithms-monolithic contains the glue code to put together the cogs for the three **monolithic** coalescence algorithms. It is specifically built only for reducing code duplication in rustcoalescence, not for giving a minimal example of how to construct a simulation.
-            - src/classical: `ClassicalAlgorithm` is a good allrounder that approximates exponential inter-event times with a Geometric distribution and only supports uniform turnover rates
-            - src/gillespie: `GillespieAlgorithm` is a mathematically correct Gillespie-algorithm-based implementation
-            - src/skipping_gillespie: `SkippingGillespieAlgorithm` is a mathematically correct Gillespie-algorithm-based implementation that skips self-dispersal events without coalescence. Therefore, it is very fast on habitats with high self-dispersal probabilities.
+        - gillespie/: `rustcoalescence-algorithms-gillespie` contains the glue code to put together the cogs for the two **monolithic Gillespie** coalescence algorithms. It is specifically built only for reducing code duplication in rustcoalescence, not for giving a minimal example of how to construct a simulation.
+            - src/classical: `ClassicalAlgorithm` is a good allrounder that is built on Gillespie's "next-reaction" method. While it includes a specialised implementation for uniform turnover rates, it generally uses a dynamic alias method sampler (individual-based) to pick the next event. Therefore, it performs better on habitats with a high probability to disperse to a different location (i.e. small per-location demes).
+            - src/event_skipping: `EventSkippingAlgorithm` is a specialised mathematically correct algorithm that skips self-dispersal events without coalescence. It is built on Gillespie's "next-reaction" method and uses a dynamic alias method sampler (location-based) to pick the next event. Therefore, it is very fast on habitats with high self-dispersal probabilities (i.e. large per-location demes), or when the speciation probability is very small.
         - independent/: `rustcoalescence-algorithms-independent` contains the glue code to put together the cogs for the **independent** coalescence algorithm on the CPU. The algorithm treats the simulation as an embarrassingly parallel problem. It can also be used to simulate subdomains of the simulation separately and piece the results back afterwards without loss of consistency.
         - cuda/: `rustcoalescence-algorithms-cuda` contains the glue code to put together the cogs for the **independent** coalescence algorithm on a CUDA 3.5 capable GPU. The algorithm treats the simulation as an embarrassingly parallel problem. It can also be used to simulate subdomains of the simulation separately and piece the results back afterwards without loss of consistency.
 

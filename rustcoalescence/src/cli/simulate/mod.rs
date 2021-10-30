@@ -13,7 +13,7 @@ use crate::{
 mod r#impl;
 
 #[cfg(any(
-    feature = "rustcoalescence-algorithms-monolithic",
+    feature = "rustcoalescence-algorithms-gillespie",
     feature = "rustcoalescence-algorithms-independent",
     feature = "rustcoalescence-algorithms-cuda"
 ))]
@@ -83,7 +83,7 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
 }
 
 #[cfg(not(any(
-    feature = "rustcoalescence-algorithms-monolithic",
+    feature = "rustcoalescence-algorithms-gillespie",
     feature = "rustcoalescence-algorithms-independent",
     feature = "rustcoalescence-algorithms-cuda"
 )))]
