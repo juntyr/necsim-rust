@@ -46,15 +46,11 @@ impl<E: Eq + Hash> RejectionSamplingGroup<E> {
         lookup: &mut HashMap<E, EventLocation>,
         rng: &mut G,
     ) -> (Option<&mut Self>, E) {
-        if let [_event] = &self.events[..] {
-            if let Some(event) = self.events.pop() {
-                lookup.remove(&event);
-
-                return (None, event);
-            }
+        if let [event] = &self.events[..] {
+            lookup.remove(event);
 
             // Safety: If there is only one event, the pop must succeed
-            core::hint::unreachable_unchecked() // GRCOV_EXCL_LINE
+            return (None, self.events.pop().unwrap_unchecked());
         }
 
         loop {
