@@ -6,13 +6,12 @@ use rustcoalescence_algorithms::Algorithm;
 
 #[cfg(feature = "rustcoalescence-algorithms-cuda")]
 use rustcoalescence_algorithms_cuda::CudaAlgorithm;
+#[cfg(feature = "rustcoalescence-algorithms-gillespie")]
+use rustcoalescence_algorithms_gillespie::{
+    classical::ClassicalAlgorithm, event_skipping::EventSkippingAlgorithm,
+};
 #[cfg(feature = "rustcoalescence-algorithms-independent")]
 use rustcoalescence_algorithms_independent::IndependentAlgorithm;
-#[cfg(feature = "rustcoalescence-algorithms-monolithic")]
-use rustcoalescence_algorithms_monolithic::{
-    classical::ClassicalAlgorithm, gillespie::GillespieAlgorithm,
-    skipping_gillespie::SkippingGillespieAlgorithm,
-};
 
 use necsim_core::{
     cogs::{MathsCore, SeedableRng},
@@ -194,23 +193,16 @@ macro_rules! impl_sealed_dispatch {
                 let (time, steps): (NonNegativeF64, u64) = crate::match_scenario_algorithm!(
                     (algorithm, scenario => scenario)
                 {
-                    #[cfg(feature = "rustcoalescence-algorithms-monolithic")]
+                    #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
                     AlgorithmArgs::Classical(algorithm_args) => { initialise_and_simulate!(
                         ClassicalAlgorithm(
                             common_args, algorithm_args, scenario, local_partition,
                             post_validation, pre_launch
                         )
                     ).into_ok() },
-                    #[cfg(feature = "rustcoalescence-algorithms-monolithic")]
-                    AlgorithmArgs::Gillespie(algorithm_args) => { initialise_and_simulate!(
-                        GillespieAlgorithm(
-                            common_args, algorithm_args, scenario, local_partition,
-                            post_validation, pre_launch
-                        )
-                    ).into_ok() },
-                    #[cfg(feature = "rustcoalescence-algorithms-monolithic")]
-                    AlgorithmArgs::SkippingGillespie(algorithm_args) => { initialise_and_simulate!(
-                        SkippingGillespieAlgorithm(
+                    #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
+                    AlgorithmArgs::EventSkipping(algorithm_args) => { initialise_and_simulate!(
+                        EventSkippingAlgorithm(
                             common_args, algorithm_args, scenario, local_partition,
                             post_validation, pre_launch
                         )

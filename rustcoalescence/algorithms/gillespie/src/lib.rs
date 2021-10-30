@@ -1,5 +1,7 @@
 #![deny(clippy::pedantic)]
 #![feature(never_type)]
+#![allow(incomplete_features)]
+#![feature(specialization)]
 
 #[macro_use]
 extern crate serde_derive_state;
@@ -7,5 +9,4 @@ extern crate serde_derive_state;
 mod arguments;
 
 pub mod classical;
-pub mod gillespie;
-pub mod skipping_gillespie;
+pub mod event_skipping;
