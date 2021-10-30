@@ -24,19 +24,11 @@ impl fmt::Debug for DemoReporter {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[serde(default)]
 struct DemoReporterArgs {
     ignore: HashSet<Location>,
-}
-
-impl Default for DemoReporterArgs {
-    fn default() -> Self {
-        Self {
-            ignore: HashSet::new(),
-        }
-    }
 }
 
 impl From<DemoReporterArgs> for DemoReporter {
