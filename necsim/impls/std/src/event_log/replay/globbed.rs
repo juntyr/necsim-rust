@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{num::NonZeroUsize, path::PathBuf};
 
 use glob::MatchOptions;
 use serde::{Deserialize, Deserializer};
@@ -10,7 +10,8 @@ pub struct GlobbedSortedSegments {
     segments: Vec<SortedSegment>,
 }
 
-const SEGMENT_CAPACITY: usize = 100_000_usize;
+// Safety: 1 is non-zero
+const SEGMENT_INIT_CAPACITY: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(1) };
 
 impl<'de> Deserialize<'de> for GlobbedSortedSegments {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
@@ -35,19 +36,19 @@ impl<'de> Deserialize<'de> for GlobbedSortedSegments {
 
         if paths.is_empty() {
             segments.push(
-                SortedSegment::try_new(&PathBuf::from(pattern), SEGMENT_CAPACITY)
+                SortedSegment::try_new(&PathBuf::from(pattern), SEGMENT_INIT_CAPACITY)
                     .map_err(serde::de::Error::custom)?,
             );
         } else if paths.len() == 1 {
             segments.push(
-                SortedSegment::try_new(&paths[0], SEGMENT_CAPACITY)
+                SortedSegment::try_new(&paths[0], SEGMENT_INIT_CAPACITY)
                     .map_err(serde::de::Error::custom)?,
             );
         } else {
             for path in paths {
                 if path.is_file() || !path.exists() {
                     segments.push(
-                        SortedSegment::try_new(&path, SEGMENT_CAPACITY)
+                        SortedSegment::try_new(&path, SEGMENT_INIT_CAPACITY)
                             .map_err(serde::de::Error::custom)?,
                     );
                 }

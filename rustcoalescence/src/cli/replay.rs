@@ -19,11 +19,11 @@ pub fn replay_with_logger(replay_args: CommandArgs) -> Result<()> {
     match_any_reporter_plugin_vec!(replay_args.reporters => |mut reporter| {
         reporter.initialise().map_err(anyhow::Error::msg)?;
 
-        let mut remaining = replay_args.log.length() as u64;
+        let mut remaining = replay_args.event_log.length() as u64;
 
         reporter.report_progress(&remaining.into());
 
-        for event in replay_args.log {
+        for event in replay_args.event_log {
             remaining -= 1;
             reporter.report_progress(&remaining.into());
 

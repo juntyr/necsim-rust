@@ -37,7 +37,7 @@ pub enum MpiPartitioningError {
 
 #[derive(Error, Debug)]
 pub enum MpiLocalPartitionError {
-    #[error("MPI needs a valid event log path.")]
+    #[error("MPI partitioning must be used with an event log.")]
     MissingEventLog,
 }
 
