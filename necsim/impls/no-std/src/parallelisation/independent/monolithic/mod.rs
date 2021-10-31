@@ -50,7 +50,7 @@ pub fn simulate<
     P: LocalPartition<R>,
     L: IntoIterator<Item = Lineage>,
 >(
-    mut simulation: Simulation<
+    simulation: &mut Simulation<
         M,
         H,
         G,
@@ -69,8 +69,9 @@ pub fn simulate<
     dedup_cache: DedupCache,
     step_slice: NonZeroU64,
     event_slice: EventSlice,
+    pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
-) -> (NonNegativeF64, u64) {
+) -> ((NonNegativeF64, u64), impl IntoIterator<Item = Lineage>) {
     let mut slow_lineages = lineages
         .into_iter()
         .map(|lineage| {
@@ -98,11 +99,23 @@ pub fn simulate<
     let mut min_spec_samples = dedup_cache.construct(slow_lineages.len());
 
     let mut total_steps = 0_u64;
-    let mut max_time = NonNegativeF64::zero();
+    #[allow(clippy::or_fun_call)]
+    let mut max_time = slow_lineages
+        .iter()
+        .map(|(lineage, _)| lineage.last_event_time)
+        .max()
+        .unwrap_or(NonNegativeF64::zero());
 
-    let mut level_time = NonNegativeF64::zero();
+    #[allow(clippy::or_fun_call)]
+    let mut level_time = slow_lineages
+        .iter()
+        .map(|(lineage, _)| lineage.last_event_time)
+        .min()
+        .unwrap_or(NonNegativeF64::zero());
 
-    while !slow_lineages.is_empty() {
+    while !slow_lineages.is_empty()
+        && pause_before.map_or(true, |pause_before| level_time < pause_before)
+    {
         // Calculate a new water-level time which all individuals should reach
         let total_event_rate: NonNegativeF64 = if R::ReportDispersal::VALUE {
             // Full event rate lambda with speciation
@@ -136,6 +149,10 @@ pub fn simulate<
         };
 
         level_time += NonNegativeF64::from(event_slice.get()) / total_event_rate;
+
+        if let Some(pause_before) = pause_before {
+            level_time = level_time.min(pause_before);
+        }
 
         // [Report all events below the water level] + Advance the water level
         proxy.advance_water_level(level_time);
@@ -212,7 +229,12 @@ pub fn simulate<
     // [Report all remaining events]
     proxy.finalise();
 
-    local_partition.report_progress_sync(0_u64);
+    local_partition.report_progress_sync(
+        (Wrapping(slow_lineages.len() as u64) + simulation.get_balanced_remaining_work()).0,
+    );
 
-    local_partition.reduce_global_time_steps(max_time, total_steps)
+    (
+        local_partition.reduce_global_time_steps(max_time, total_steps),
+        slow_lineages.into_iter().map(|(lineage, _)| lineage),
+    )
 }

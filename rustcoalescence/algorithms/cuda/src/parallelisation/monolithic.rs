@@ -64,7 +64,7 @@ pub fn simulate<
     L: LocalPartition<P>,
     LI: IntoIterator<Item = Lineage>,
 >(
-    mut simulation: Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A>,
+    simulation: &mut Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A>,
     mut kernel: SimulationKernel<
         M,
         H,
@@ -85,8 +85,9 @@ pub fn simulate<
     config: (GridSize, BlockSize, DedupCache, NonZeroU64),
     lineages: LI,
     event_slice: EventSlice,
+    pause_before: Option<NonNegativeF64>,
     local_partition: &'l mut L,
-) -> Result<(NonNegativeF64, u64)>
+) -> Result<((NonNegativeF64, u64), impl IntoIterator<Item = Lineage>)>
     where SimulationKernel<
         M,
         H,
@@ -146,8 +147,15 @@ pub fn simulate<
 
     let (grid_size, block_size, dedup_cache, step_slice) = config;
 
+    #[allow(clippy::or_fun_call)]
+    let intial_max_time = slow_lineages
+        .iter()
+        .map(|(lineage, _)| lineage.last_event_time)
+        .max()
+        .unwrap_or(NonNegativeF64::zero());
+
     // Initialise the total_time_max and total_steps_sum atomics
-    let mut total_time_max = AtomicU64::new(0.0_f64.to_bits()).into();
+    let mut total_time_max = AtomicU64::new(intial_max_time.get().to_bits()).into();
     let mut total_steps_sum = AtomicU64::new(0_u64).into();
 
     let mut task_list = ExchangeWrapperOnHost::new(ValueBuffer::new(&block_size, &grid_size)?)?;
@@ -176,7 +184,12 @@ pub fn simulate<
 
     let mut min_spec_samples = dedup_cache.construct(slow_lineages.len());
 
-    let mut level_time = NonNegativeF64::zero();
+    #[allow(clippy::or_fun_call)]
+    let mut level_time = slow_lineages
+        .iter()
+        .map(|(lineage, _)| lineage.last_event_time)
+        .min()
+        .unwrap_or(NonNegativeF64::zero());
 
     let cpu_habitat = simulation.habitat().backup();
     let cpu_turnover_rate = simulation.turnover_rate().backup();
@@ -187,7 +200,9 @@ pub fn simulate<
             // TODO: Pipeline async launches and callbacks of simulation/event analysis
             simulation
                 .lend_to_cuda_mut(|mut simulation_cuda_repr| -> Result<()> {
-                    while !slow_lineages.is_empty() {
+                    while !slow_lineages.is_empty()
+                        && pause_before.map_or(true, |pause_before| level_time < pause_before)
+                    {
                         let total_event_rate: NonNegativeF64 = if P::ReportDispersal::VALUE {
                             // Full event rate lambda with speciation
                             slow_lineages
@@ -221,6 +236,10 @@ pub fn simulate<
                         };
 
                         level_time += NonNegativeF64::from(event_slice.get()) / total_event_rate;
+
+                        if let Some(pause_before) = pause_before {
+                            level_time = level_time.min(pause_before);
+                        }
 
                         // [Report all events below the water level] + Advance the water level
                         proxy.advance_water_level(level_time);
@@ -329,7 +348,10 @@ pub fn simulate<
     };
     let total_steps_sum = total_steps_sum.into_inner().into_inner();
 
-    local_partition.report_progress_sync(0_u64);
+    local_partition.report_progress_sync(slow_lineages.len() as u64);
 
-    Ok(local_partition.reduce_global_time_steps(total_time_max, total_steps_sum))
+    Ok((
+        local_partition.reduce_global_time_steps(total_time_max, total_steps_sum),
+        slow_lineages.into_iter().map(|(lineage, _)| lineage),
+    ))
 }

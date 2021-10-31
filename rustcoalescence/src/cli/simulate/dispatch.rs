@@ -31,7 +31,8 @@ use rustcoalescence_scenarios::{
 };
 
 use crate::args::{
-    Algorithm as AlgorithmArgs, Base32String, CommonArgs, Rng as RngArgs, Scenario as ScenarioArgs,
+    Algorithm as AlgorithmArgs, Base32String, CommonArgs, Pause as PauseArgs, Rng as RngArgs,
+    Scenario as ScenarioArgs,
 };
 
 pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>, V: FnOnce(), L: FnOnce()>(
@@ -39,6 +40,7 @@ pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>, V: FnOnce(), L: F
     common_args: CommonArgs,
     scenario: ScenarioArgs,
     algorithm: AlgorithmArgs,
+    pause: Option<PauseArgs>,
     post_validation: V,
     pre_launch: L,
 ) -> Result<()> {
@@ -47,6 +49,7 @@ pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>, V: FnOnce(), L: F
         common_args,
         scenario,
         algorithm,
+        pause.map(|pause| pause.before),
         post_validation,
         pre_launch,
     )
@@ -72,6 +75,7 @@ trait SimulateSealedBooleanDispatch<
         common_args: CommonArgs,
         scenario: ScenarioArgs,
         algorithm: AlgorithmArgs,
+        pause_before: Option<NonNegativeF64>,
         post_validation: V,
         pre_launch: L,
     ) -> Result<()>;
@@ -134,6 +138,7 @@ macro_rules! initialise_and_simulate {
             $common_args:ident,
             $algorithm_args:ident,
             $scenario:ident,
+            $pause_before:ident,
             $local_partition:ident,
             $post_validation:ident,
             $pre_launch:ident
@@ -150,6 +155,7 @@ macro_rules! initialise_and_simulate {
             rng,
             $scenario,
             OriginPreSampler::all().percentage($common_args.sample_percentage.get()),
+            $pause_before,
             &mut *$local_partition,
         )
     }};
@@ -172,6 +178,7 @@ macro_rules! impl_sealed_dispatch {
                 common_args: CommonArgs,
                 scenario: ScenarioArgs,
                 algorithm: AlgorithmArgs,
+                pause_before: Option<NonNegativeF64>,
                 post_validation: V,
                 pre_launch_orig: L,
             ) -> Result<()> {
@@ -196,28 +203,28 @@ macro_rules! impl_sealed_dispatch {
                     #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
                     AlgorithmArgs::Classical(algorithm_args) => { initialise_and_simulate!(
                         ClassicalAlgorithm(
-                            common_args, algorithm_args, scenario, local_partition,
+                            common_args, algorithm_args, scenario, pause_before, local_partition,
                             post_validation, pre_launch
                         )
                     ).into_ok() },
                     #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
                     AlgorithmArgs::EventSkipping(algorithm_args) => { initialise_and_simulate!(
                         EventSkippingAlgorithm(
-                            common_args, algorithm_args, scenario, local_partition,
+                            common_args, algorithm_args, scenario, pause_before, local_partition,
                             post_validation, pre_launch
                         )
                     ).into_ok() },
                     #[cfg(feature = "rustcoalescence-algorithms-independent")]
                     AlgorithmArgs::Independent(algorithm_args) => { initialise_and_simulate!(
                         IndependentAlgorithm(
-                            common_args, algorithm_args, scenario, local_partition,
+                            common_args, algorithm_args, scenario, pause_before, local_partition,
                             post_validation, pre_launch
                         )
                     ).into_ok() },
                     #[cfg(feature = "rustcoalescence-algorithms-cuda")]
                     AlgorithmArgs::Cuda(algorithm_args) => { initialise_and_simulate!(
                         CudaAlgorithm(
-                            common_args, algorithm_args, scenario, local_partition,
+                            common_args, algorithm_args, scenario, pause_before, local_partition,
                             post_validation, pre_launch
                         )
                     )? }
@@ -302,6 +309,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
         _common_args: CommonArgs,
         _scenario: ScenarioArgs,
         _algorithm: AlgorithmArgs,
+        _pause_before: Option<NonNegativeF64>,
         _post_validation: V,
         _pre_launch: L,
     ) -> Result<()> {

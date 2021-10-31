@@ -58,11 +58,13 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
             ).with_context(|| "Failed to initialise the local monolithic partition.")? {
                 MonolithicLocalPartition::Live(partition) => dispatch::simulate_with_logger(
                     partition, simulate_args.common, simulate_args.scenario,
-                    simulate_args.algorithm, post_validation, pre_launch,
+                    simulate_args.algorithm, simulate_args.pause,
+                    post_validation, pre_launch,
                 ),
                 MonolithicLocalPartition::Recorded(partition) => dispatch::simulate_with_logger(
                     partition, simulate_args.common, simulate_args.scenario,
-                    simulate_args.algorithm, post_validation, pre_launch,
+                    simulate_args.algorithm, simulate_args.pause,
+                    post_validation, pre_launch,
                 ),
             },
             #[cfg(feature = "necsim-partitioning-mpi")]
@@ -71,11 +73,13 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
             ).with_context(|| "Failed to initialise the local MPI partition.")? {
                 MpiLocalPartition::Root(partition) => dispatch::simulate_with_logger(
                     partition, simulate_args.common, simulate_args.scenario,
-                    simulate_args.algorithm, post_validation, pre_launch,
+                    simulate_args.algorithm, simulate_args.pause,
+                    post_validation, pre_launch,
                 ),
                 MpiLocalPartition::Parallel(partition) => dispatch::simulate_with_logger(
                     partition, simulate_args.common, simulate_args.scenario,
-                    simulate_args.algorithm, post_validation, pre_launch,
+                    simulate_args.algorithm, simulate_args.pause,
+                    post_validation, pre_launch,
                 ),
             },
         }

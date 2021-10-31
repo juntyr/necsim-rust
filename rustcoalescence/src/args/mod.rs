@@ -4,7 +4,7 @@ use serde::{de::Deserializer, Deserialize};
 use serde_state::DeserializeState;
 use structopt::StructOpt;
 
-use necsim_core_bond::{ClosedUnitF64, Partition, PositiveUnitF64};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, Partition, PositiveUnitF64};
 
 use necsim_impls_no_std::array2d::Array2D;
 use necsim_impls_std::{
@@ -53,6 +53,7 @@ pub struct SimulateArgs {
     pub partitioning: Partitioning,
     pub event_log: Option<EventLogRecorder>,
     pub reporters: AnyReporterPluginVec,
+    pub pause: Option<Pause>,
 }
 
 impl<'de> DeserializeState<'de, Partition> for SimulateArgs {
@@ -73,6 +74,7 @@ impl<'de> DeserializeState<'de, Partition> for SimulateArgs {
             partitioning: raw.partitioning,
             event_log: raw.event_log,
             reporters: raw.reporters.into_iter().flatten().collect(),
+            pause: raw.pause,
         })
     }
 }
@@ -106,6 +108,10 @@ struct SimulateArgsRaw {
     event_log: Option<EventLogRecorder>,
 
     reporters: Vec<ReporterPluginLibrary>,
+
+    #[serde(default)]
+    #[serde(deserialize_state)]
+    pause: Option<Pause>,
 }
 
 fn deserialize_state_event_log<'de, D>(
@@ -532,4 +538,33 @@ impl Default for Sample {
 enum SampleOrigin {
     Habitat,
     List(LineageFileLoader),
+}
+
+#[derive(Debug)]
+pub struct Pause {
+    pub before: NonNegativeF64,
+}
+
+impl<'de> DeserializeState<'de, Partition> for Pause {
+    fn deserialize_state<D: Deserializer<'de>>(
+        partition: &mut Partition,
+        deserializer: D,
+    ) -> Result<Self, D::Error> {
+        let raw = PauseRaw::deserialize(deserializer)?;
+
+        if partition.size().get() > 1 {
+            return Err(serde::de::Error::custom(
+                "Parallel pausing is not yet supported.",
+            ));
+        }
+
+        Ok(Pause { before: raw.before })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[serde(rename = "Pause")]
+pub struct PauseRaw {
+    pub before: NonNegativeF64,
 }
