@@ -31,7 +31,7 @@ pub fn simulate<
     P: Reporter,
     L: LocalPartition<P>,
 >(
-    simulation: Simulation<
+    simulation: &mut Simulation<
         M,
         H,
         G,
@@ -46,14 +46,20 @@ pub fn simulate<
         NeverImmigrationEntry,
         A,
     >,
+    pause_before: Option<NonNegativeF64>,
     local_partition: &mut L,
 ) -> (NonNegativeF64, u64) {
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(simulation.get_balanced_remaining_work().0);
 
-    let (time, steps, _rng) = simulation.simulate(local_partition.get_reporter());
+    let (time, steps) = simulation.simulate_incremental_early_stop(
+        |_, _, next_event_time| {
+            pause_before.map_or(false, |pause_before| next_event_time >= pause_before)
+        },
+        local_partition.get_reporter(),
+    );
 
-    local_partition.report_progress_sync(0_u64);
+    local_partition.report_progress_sync(simulation.get_balanced_remaining_work().0);
 
     local_partition.reduce_global_time_steps(time, steps)
 }

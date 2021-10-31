@@ -199,6 +199,7 @@ where
         rng: Self::Rng,
         scenario: O,
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
     ) -> Result<(NonNegativeF64, u64), Self::Error> {
         let lineages: Vec<Lineage> = match args.parallelism_mode {
@@ -235,7 +236,7 @@ where
         let active_lineage_sampler =
             IndependentActiveLineageSampler::empty(ExpEventTimeSampler::new(args.delta_t));
 
-        let simulation = SimulationBuilder {
+        let mut simulation = SimulationBuilder {
             maths: PhantomData::<Self::MathsCore>,
             habitat,
             lineage_reference: PhantomData::<GlobalLineageReference>,
@@ -274,13 +275,15 @@ where
             )?;
 
             parallelisation::monolithic::simulate(
-                simulation,
+                &mut simulation,
                 kernel,
                 (grid_size, block_size, args.dedup_cache, args.step_slice),
                 lineages,
                 event_slice,
+                pause_before,
                 local_partition,
             )
+            .map(|(result, _)| result)
         })
     }
 }

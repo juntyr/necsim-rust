@@ -76,6 +76,7 @@ where
         rng: Self::Rng,
         scenario: O,
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
     ) -> Result<(NonNegativeF64, u64), Self::Error> {
         match args.parallelism_mode {
@@ -122,7 +123,7 @@ where
                     _rng: _,
                 } = partial_simulation;
 
-                let simulation = SimulationBuilder {
+                let mut simulation = SimulationBuilder {
                     maths: PhantomData::<Self::MathsCore>,
                     habitat,
                     lineage_reference: PhantomData::<Self::LineageReference>,
@@ -140,7 +141,8 @@ where
                 .build();
 
                 Ok(parallelisation::monolithic::monolithic::simulate(
-                    simulation,
+                    &mut simulation,
+                    pause_before,
                     local_partition,
                 ))
             },
@@ -194,7 +196,7 @@ where
                     _rng: _,
                 } = partial_simulation;
 
-                let simulation = SimulationBuilder {
+                let mut simulation = SimulationBuilder {
                     maths: PhantomData::<Self::MathsCore>,
                     habitat,
                     lineage_reference: PhantomData::<Self::LineageReference>,
@@ -215,26 +217,26 @@ where
                     ParallelismMode::Monolithic => unsafe { unreachable_unchecked() },
                     ParallelismMode::Optimistic(OptimisticParallelismMode { delta_sync }) => {
                         Ok(parallelisation::monolithic::optimistic::simulate(
-                            simulation,
+                            &mut simulation,
                             delta_sync,
                             local_partition,
                         ))
                     },
                     ParallelismMode::Lockstep => {
                         Ok(parallelisation::monolithic::lockstep::simulate(
-                            simulation,
+                            &mut simulation,
                             local_partition,
                         ))
                     },
                     ParallelismMode::OptimisticLockstep => {
                         Ok(parallelisation::monolithic::optimistic_lockstep::simulate(
-                            simulation,
+                            &mut simulation,
                             local_partition,
                         ))
                     },
                     ParallelismMode::Averaging(AveragingParallelismMode { delta_sync }) => {
                         Ok(parallelisation::monolithic::averaging::simulate(
-                            simulation,
+                            &mut simulation,
                             delta_sync,
                             local_partition,
                         ))
