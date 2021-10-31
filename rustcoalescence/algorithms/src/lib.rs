@@ -33,6 +33,7 @@ pub trait Algorithm<O: Scenario<Self::MathsCore, Self::Rng>, R: Reporter, P: Loc
         rng: Self::Rng,
         scenario: O,
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
     ) -> Result<(NonNegativeF64, u64), Self::Error>;
 }

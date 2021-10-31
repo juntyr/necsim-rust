@@ -115,9 +115,7 @@ impl<
     }
 
     #[inline]
-    pub fn simulate<P: Reporter>(mut self, reporter: &mut P) -> (NonNegativeF64, u64, G) {
-        let (time, steps) = self.simulate_incremental_early_stop(|_, _, _| false, reporter);
-
-        (time, steps, self.rng)
+    pub fn simulate<P: Reporter>(mut self, reporter: &mut P) -> (NonNegativeF64, u64) {
+        self.simulate_incremental_early_stop(|_, _, _| false, reporter)
     }
 }

@@ -77,6 +77,7 @@ impl<
         rng: Self::Rng,
         scenario: O,
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
     ) -> Result<(NonNegativeF64, u64), Self::Error> {
         match args.parallelism_mode {
@@ -125,7 +126,7 @@ impl<
                     PoissonEventTimeSampler::new(args.delta_t),
                 );
 
-                let simulation = SimulationBuilder {
+                let mut simulation = SimulationBuilder {
                     maths: PhantomData::<Self::MathsCore>,
                     habitat,
                     lineage_reference: PhantomData::<GlobalLineageReference>,
@@ -143,13 +144,15 @@ impl<
                 .build();
 
                 Ok(parallelisation::independent::monolithic::simulate(
-                    simulation,
+                    &mut simulation,
                     lineages,
                     args.dedup_cache,
                     args.step_slice,
                     event_slice,
+                    pause_before,
                     local_partition,
-                ))
+                )
+                .0)
             },
             ParallelismMode::Individuals => {
                 let lineages: Vec<Lineage> = scenario
@@ -171,7 +174,7 @@ impl<
                     PoissonEventTimeSampler::new(args.delta_t),
                 );
 
-                let simulation = SimulationBuilder {
+                let mut simulation = SimulationBuilder {
                     maths: PhantomData::<Self::MathsCore>,
                     habitat,
                     lineage_reference: PhantomData::<GlobalLineageReference>,
@@ -189,12 +192,13 @@ impl<
                 .build();
 
                 Ok(parallelisation::independent::individuals::simulate(
-                    simulation,
+                    &mut simulation,
                     lineages,
                     args.dedup_cache,
                     args.step_slice,
                     local_partition,
-                ))
+                )
+                .0)
             },
             ParallelismMode::Landscape => {
                 let decomposition =
@@ -223,7 +227,7 @@ impl<
                     PoissonEventTimeSampler::new(args.delta_t),
                 );
 
-                let simulation = SimulationBuilder {
+                let mut simulation = SimulationBuilder {
                     maths: PhantomData::<Self::MathsCore>,
                     habitat,
                     lineage_reference: PhantomData::<GlobalLineageReference>,
@@ -241,12 +245,13 @@ impl<
                 .build();
 
                 Ok(parallelisation::independent::landscape::simulate(
-                    simulation,
+                    &mut simulation,
                     lineages,
                     args.dedup_cache,
                     args.step_slice,
                     local_partition,
-                ))
+                )
+                .0)
             },
             ParallelismMode::Probabilistic(ProbabilisticParallelismMode {
                 communication_probability,
@@ -277,7 +282,7 @@ impl<
                     PoissonEventTimeSampler::new(args.delta_t),
                 );
 
-                let simulation = SimulationBuilder {
+                let mut simulation = SimulationBuilder {
                     maths: PhantomData::<Self::MathsCore>,
                     habitat,
                     lineage_reference: PhantomData::<GlobalLineageReference>,
@@ -295,12 +300,13 @@ impl<
                 .build();
 
                 Ok(parallelisation::independent::landscape::simulate(
-                    simulation,
+                    &mut simulation,
                     lineages,
                     args.dedup_cache,
                     args.step_slice,
                     local_partition,
-                ))
+                )
+                .0)
             },
         }
     }

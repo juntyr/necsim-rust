@@ -54,7 +54,7 @@ pub fn simulate<
     P: LocalPartition<R>,
     L: IntoIterator<Item = Lineage>,
 >(
-    mut simulation: Simulation<
+    simulation: &mut Simulation<
         M,
         H,
         G,
@@ -73,7 +73,7 @@ pub fn simulate<
     dedup_cache: DedupCache,
     step_slice: NonZeroU64,
     local_partition: &mut P,
-) -> (NonNegativeF64, u64) {
+) -> ((NonNegativeF64, u64), impl IntoIterator<Item = Lineage>) {
     let mut lineages = VecDeque::from_iter(lineages);
     let mut proxy = IgnoreProgressReporterProxy::from(local_partition);
     let mut min_spec_samples = dedup_cache.construct(lineages.len());
@@ -192,7 +192,10 @@ pub fn simulate<
 
     proxy.local_partition().report_progress_sync(0_u64);
 
-    proxy
-        .local_partition()
-        .reduce_global_time_steps(max_time, total_steps)
+    (
+        proxy
+            .local_partition()
+            .reduce_global_time_steps(max_time, total_steps),
+        lineages,
+    )
 }

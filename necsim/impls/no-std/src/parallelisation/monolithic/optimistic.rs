@@ -54,7 +54,7 @@ pub fn simulate<
     P: Reporter,
     L: LocalPartition<P>,
 >(
-    mut simulation: Simulation<
+    simulation: &mut Simulation<
         M,
         H,
         G,
@@ -122,7 +122,7 @@ pub fn simulate<
                 .reduce_vote_continue(immigrants != last_immigrants)
             {
                 // Roll back the simulation to the last backup, clear out all generated events
-                simulation = simulation_backup.resume();
+                *simulation = simulation_backup.resume();
                 proxy.clear_events();
 
                 // Back up the previous immigrating lineages in last_immigrants

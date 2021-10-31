@@ -49,7 +49,7 @@ pub fn simulate<
     P: Reporter,
     L: LocalPartition<P>,
 >(
-    mut simulation: Simulation<
+    simulation: &mut Simulation<
         M,
         H,
         G,

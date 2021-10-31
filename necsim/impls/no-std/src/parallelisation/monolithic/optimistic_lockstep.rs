@@ -49,7 +49,7 @@ pub fn simulate<
     P: Reporter,
     L: LocalPartition<P>,
 >(
-    mut simulation: Simulation<
+    simulation: &mut Simulation<
         M,
         H,
         G,
@@ -92,7 +92,7 @@ pub fn simulate<
         .unwrap_or_else(PositiveF64::infinity);
 
         // Roll back the simulation to the latest safe point
-        simulation = simulation_backup.resume();
+        *simulation = simulation_backup.resume();
 
         match local_partition.reduce_vote_min_time(next_local_emigration_time) {
             // The partition with the next emigration event gets to simulate until and inclusive
