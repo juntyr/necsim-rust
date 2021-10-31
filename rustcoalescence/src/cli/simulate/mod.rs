@@ -95,7 +95,9 @@ mod dispatch {
     use necsim_core::reporter::Reporter;
     use necsim_partitioning_core::LocalPartition;
 
-    use crate::args::{Algorithm as AlgorithmArgs, CommonArgs, Scenario as ScenarioArgs};
+    use crate::args::{
+        Algorithm as AlgorithmArgs, CommonArgs, Pause as PauseArgs, Scenario as ScenarioArgs,
+    };
 
     #[allow(clippy::boxed_local, clippy::needless_pass_by_value)]
     pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>, V: FnOnce(), L: FnOnce()>(
@@ -103,6 +105,7 @@ mod dispatch {
         _common_args: CommonArgs,
         _scenario: ScenarioArgs,
         _algorithm: AlgorithmArgs,
+        _pause: Option<PauseArgs>,
         _post_validation: V,
         _pre_launch: L,
     ) -> anyhow::Result<()> {
