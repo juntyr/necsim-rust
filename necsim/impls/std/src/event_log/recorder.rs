@@ -19,22 +19,22 @@ use std::{
     fmt,
     fs::{self, OpenOptions},
     io::BufWriter,
+    num::NonZeroUsize,
     path::{Path, PathBuf},
 };
 
 use anyhow::{Error, Result};
+use serde::Deserialize;
 
 use necsim_core::event::{DispersalEvent, PackedEvent, SpeciationEvent};
 
 use super::EventLogHeader;
 
-const SEGMENT_CAPACITY: usize = 1_000_000_usize;
-
 #[allow(clippy::module_name_repetitions)]
-#[derive(serde::Deserialize)]
-#[serde(try_from = "PathBuf")]
+#[derive(Deserialize)]
+#[serde(try_from = "EventLogRecorderRaw")]
 pub struct EventLogRecorder {
-    segment_capacity: usize,
+    segment_capacity: NonZeroUsize,
     directory: PathBuf,
     segment_index: usize,
     buffer: Vec<PackedEvent>,
@@ -43,11 +43,11 @@ pub struct EventLogRecorder {
     record_dispersal: bool,
 }
 
-impl TryFrom<PathBuf> for EventLogRecorder {
+impl TryFrom<EventLogRecorderRaw> for EventLogRecorder {
     type Error = Error;
 
-    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
-        Self::try_new(&path)
+    fn try_from(raw: EventLogRecorderRaw) -> Result<Self, Self::Error> {
+        Self::try_new(&raw.directory, raw.capacity)
     }
 }
 
@@ -61,8 +61,9 @@ impl Drop for EventLogRecorder {
 
 impl EventLogRecorder {
     /// # Errors
+    ///
     /// Fails to construct iff `path` is not a writable directory.
-    pub fn try_new(path: &Path) -> Result<Self> {
+    pub fn try_new(path: &Path, segment_capacity: NonZeroUsize) -> Result<Self> {
         if !path.exists() {
             fs::create_dir_all(path)?;
         }
@@ -78,14 +79,37 @@ impl EventLogRecorder {
         }
 
         Ok(Self {
-            segment_capacity: SEGMENT_CAPACITY,
+            segment_capacity,
             directory: path.to_owned(),
             segment_index: 0_usize,
-            buffer: Vec::with_capacity(SEGMENT_CAPACITY),
+            buffer: Vec::with_capacity(segment_capacity.get()),
 
             record_speciation: false,
             record_dispersal: false,
         })
+    }
+
+    /// # Errors
+    ///
+    /// Fails to construct iff `path` is not a writable directory.
+    pub fn r#move(mut self, path: &Path) -> Result<Self> {
+        if !path.exists() {
+            fs::create_dir_all(path)?;
+        }
+
+        let metadata = fs::metadata(path)?;
+
+        if !metadata.is_dir() {
+            return Err(anyhow::anyhow!("{:?} is not a directory.", path));
+        }
+
+        if metadata.permissions().readonly() {
+            return Err(anyhow::anyhow!("{:?} is read-only.", path));
+        }
+
+        self.directory = path.to_owned();
+
+        Ok(self)
     }
 
     #[must_use]
@@ -103,7 +127,7 @@ impl EventLogRecorder {
 
         self.buffer.push(event.clone().into());
 
-        if self.buffer.len() >= self.segment_capacity {
+        if self.buffer.len() >= self.segment_capacity.get() {
             std::mem::drop(self.sort_and_write_segment());
         }
     }
@@ -113,7 +137,7 @@ impl EventLogRecorder {
 
         self.buffer.push(event.clone().into());
 
-        if self.buffer.len() >= self.segment_capacity {
+        if self.buffer.len() >= self.segment_capacity.get() {
             std::mem::drop(self.sort_and_write_segment());
         }
     }
@@ -169,4 +193,17 @@ impl fmt::Debug for EventLogRecorder {
             .field("buffer", &EventBufferLen(self.buffer.len()))
             .finish()
     }
+}
+
+#[derive(Deserialize)]
+#[serde(rename = "EventLog")]
+#[serde(deny_unknown_fields)]
+struct EventLogRecorderRaw {
+    directory: PathBuf,
+    #[serde(default = "default_event_log_recorder_segment_capacity")]
+    capacity: NonZeroUsize,
+}
+
+fn default_event_log_recorder_segment_capacity() -> NonZeroUsize {
+    NonZeroUsize::new(1_000_000_usize).unwrap()
 }

@@ -94,5 +94,5 @@ struct LineageFileLoaderRaw {
 }
 
 fn default_lineage_file_stream_capacity() -> usize {
-    100_000
+    100_000_usize
 }

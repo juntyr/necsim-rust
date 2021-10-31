@@ -431,15 +431,19 @@
     /* selection of the event persistence strategy
      * optional, default = None */
     log: (
-        /* file path to a directory in which a log of all events will be saved
-         * implies that events will not be reported live, but can be replayed later
-         * required when the simulation is internally parellelised */
-      | Some(PathBuf)
-        /* equivalent to Some(PathBuf) */
-      | (PathBuf)
-        /* events are reported live but not persisted
+        /* events are reported live but not persisted to disk
          * invalid when the simulation is internally parallelised */
       | None
+        /* events are not reported live, but saved on disk
+         *  so that they can be replayed later
+         * required when the simulation is internally parellelised */
+      | EventLog(
+            /* file path to a directory in which a log of all events will be saved */
+            directory: (PathBuf),
+            /* event capacity of each log segment */
+            /* optional, default = 1000000 */
+            capacity: (0 < usize),
+        )
     ),
 
     /* selection of the reporters which will analyse the simulation

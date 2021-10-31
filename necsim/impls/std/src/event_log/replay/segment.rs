@@ -4,6 +4,7 @@ use std::{
     fmt,
     fs::{File, OpenOptions},
     io::BufReader,
+    num::NonZeroUsize,
     path::Path,
 };
 
@@ -18,7 +19,7 @@ pub struct SortedSegment {
     header: EventLogHeader,
     reader: BufReader<File>,
     buffer: VecDeque<PackedEvent>,
-    capacity: usize,
+    capacity: NonZeroUsize,
 }
 
 impl fmt::Debug for SortedSegment {
@@ -33,14 +34,14 @@ impl SortedSegment {
     /// # Errors
     ///
     /// Fails if the `path` cannot be read as an event log segment
-    pub fn try_new(path: &Path, capacity: usize) -> Result<Self> {
+    pub fn try_new(path: &Path, capacity: NonZeroUsize) -> Result<Self> {
         let file = OpenOptions::new().read(true).write(false).open(path)?;
 
         let mut buf_reader = BufReader::new(file);
 
         let header: EventLogHeader = bincode::deserialize_from(&mut buf_reader)?;
 
-        let mut buffer = VecDeque::with_capacity(header.length.min(capacity));
+        let mut buffer = VecDeque::with_capacity(header.length.min(capacity.get()));
 
         if let Ok(event) = bincode::deserialize_from(&mut buf_reader) {
             buffer.push_back(event);
@@ -52,6 +53,10 @@ impl SortedSegment {
             buffer,
             capacity,
         })
+    }
+
+    pub fn set_capacity(&mut self, capacity: NonZeroUsize) {
+        self.capacity = capacity;
     }
 
     #[must_use]
@@ -72,7 +77,7 @@ impl Iterator for SortedSegment {
         let next_event = self.buffer.pop_front();
 
         if next_event.is_some() && self.buffer.is_empty() {
-            for _ in 0..self.capacity {
+            for _ in 0..self.capacity.get() {
                 if let Ok(event) = bincode::deserialize_from(&mut self.reader) {
                     self.buffer.push_back(event);
                 } else {

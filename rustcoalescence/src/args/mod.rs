@@ -115,19 +115,21 @@ fn deserialize_state_event_log<'de, D>(
 where
     D: Deserializer<'de>,
 {
-    use serde::de::Error;
+    let event_log = match <Option<EventLogRecorder>>::deserialize(deserializer)? {
+        Some(event_log) => event_log,
+        None => return Ok(None),
+    };
 
-    let event_log_path = <Option<PathBuf>>::deserialize(deserializer)?;
+    if partition.size().get() <= 1 {
+        return Ok(Some(event_log));
+    }
 
-    match event_log_path {
-        Some(mut event_log_path) => {
-            event_log_path.push(partition.rank().to_string());
+    let mut directory = event_log.directory().to_owned();
+    directory.push(partition.rank().to_string());
 
-            let event_log = EventLogRecorder::try_new(&event_log_path).map_err(D::Error::custom)?;
-
-            Ok(Some(event_log))
-        },
-        None => Ok(None),
+    match event_log.r#move(&directory) {
+        Ok(event_log) => Ok(Some(event_log)),
+        Err(err) => Err(serde::de::Error::custom(err)),
     }
 }
 
@@ -416,7 +418,7 @@ struct NonSpatialArgsRaw {
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
 pub struct ReplayArgs {
-    pub log: EventLogReplay,
+    pub event_log: EventLogReplay,
     pub reporters: AnyReporterPluginVec,
 }
 
@@ -427,7 +429,7 @@ impl<'de> Deserialize<'de> for ReplayArgs {
     {
         let raw = ReplayArgsRaw::deserialize(deserializer)?;
 
-        let log = raw.logs;
+        let event_log = raw.event_log;
         let reporters = raw.reporters.into_iter().flatten().collect();
 
         let (report_speciation, report_dispersal) = match &reporters {
@@ -450,28 +452,34 @@ impl<'de> Deserialize<'de> for ReplayArgs {
         };
 
         let valid = if report_speciation
-            && !log.with_speciation()
+            && !event_log.with_speciation()
             && report_dispersal
-            && !log.with_dispersal()
+            && !event_log.with_dispersal()
         {
             Err(
                 "The reporters require speciation and dispersal events, but the event log cannot \
                  provide either.",
             )
-        } else if report_speciation && !log.with_speciation() {
+        } else if report_speciation && !event_log.with_speciation() {
             Err("The reporters require speciation events, but the event log cannot provide them.")
-        } else if report_dispersal && !log.with_dispersal() {
+        } else if report_dispersal && !event_log.with_dispersal() {
             Err("The reporters require dispersal events, but the event log cannot provide them.")
         } else {
             Ok(())
         };
 
         match (valid, raw.mode) {
-            (Ok(_), _) => Ok(Self { log, reporters }),
+            (Ok(_), _) => Ok(Self {
+                event_log,
+                reporters,
+            }),
             (Err(error), ReplayMode::WarnOnly) => {
                 warn!("{}", error);
 
-                Ok(Self { log, reporters })
+                Ok(Self {
+                    event_log,
+                    reporters,
+                })
             },
             (Err(error), ReplayMode::Strict) => Err(serde::de::Error::custom(error)),
         }
@@ -496,7 +504,8 @@ impl Default for ReplayMode {
 #[allow(clippy::module_name_repetitions)]
 #[serde(deny_unknown_fields)]
 struct ReplayArgsRaw {
-    logs: EventLogReplay,
+    #[serde(alias = "log")]
+    event_log: EventLogReplay,
     #[serde(default)]
     mode: ReplayMode,
     reporters: Vec<ReporterPluginLibrary>,

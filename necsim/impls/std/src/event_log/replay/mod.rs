@@ -1,5 +1,6 @@
+use std::{collections::BinaryHeap, convert::TryFrom, iter::FromIterator, num::NonZeroUsize};
+
 use serde::Deserialize;
-use std::{collections::BinaryHeap, convert::TryFrom, iter::FromIterator};
 
 use necsim_core::event::PackedEvent;
 
@@ -13,7 +14,7 @@ use sorted_segments::SortedSortedSegments;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Deserialize)]
-#[serde(try_from = "Vec<GlobbedSortedSegments>")]
+#[serde(try_from = "EventLogReplayRaw")]
 pub struct EventLogReplay {
     frontier: BinaryHeap<SortedSortedSegments>,
 
@@ -21,11 +22,20 @@ pub struct EventLogReplay {
     with_dispersal: bool,
 }
 
-impl TryFrom<Vec<GlobbedSortedSegments>> for EventLogReplay {
+impl TryFrom<EventLogReplayRaw> for EventLogReplay {
     type Error = anyhow::Error;
 
-    fn try_from(vec: Vec<GlobbedSortedSegments>) -> Result<Self, Self::Error> {
-        vec.into_iter().flatten().collect()
+    fn try_from(raw: EventLogReplayRaw) -> Result<Self, Self::Error> {
+        let capacity = raw.capacity;
+
+        raw.segments
+            .into_iter()
+            .flatten()
+            .map(|mut segment| {
+                segment.set_capacity(capacity);
+                segment
+            })
+            .collect()
     }
 }
 
@@ -143,4 +153,17 @@ impl Iterator for EventLogReplay {
 
         next_event
     }
+}
+
+#[derive(Deserialize)]
+#[serde(rename = "EventLog")]
+#[serde(deny_unknown_fields)]
+struct EventLogReplayRaw {
+    segments: Vec<GlobbedSortedSegments>,
+    #[serde(default = "default_event_log_replay_segment_capacity")]
+    capacity: NonZeroUsize,
+}
+
+fn default_event_log_replay_segment_capacity() -> NonZeroUsize {
+    NonZeroUsize::new(100_000_usize).unwrap()
 }
