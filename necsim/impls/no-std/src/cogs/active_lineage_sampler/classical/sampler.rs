@@ -56,9 +56,22 @@ impl<
         I,
     > for ClassicalActiveLineageSampler<M, H, G, R, S, X, D, N, I>
 {
+    type LineageIterator<'a> = impl Iterator<Item = &'a Lineage>;
+
     #[must_use]
     fn number_active_lineages(&self) -> usize {
         self.active_lineage_references.len()
+    }
+
+    #[must_use]
+    fn iter_active_lineages_ordered<'a>(
+        &'a self,
+        _habitat: &'a H,
+        lineage_store: &'a S,
+    ) -> Self::LineageIterator<'a> {
+        self.active_lineage_references
+            .iter()
+            .map(move |local_reference| &lineage_store[local_reference.clone()])
     }
 
     fn get_last_event_time(&self) -> NonNegativeF64 {
