@@ -56,6 +56,10 @@ impl SortedSegment {
     }
 
     pub fn set_capacity(&mut self, capacity: NonZeroUsize) {
+        if let Some(additional) = capacity.get().checked_sub(self.capacity.get()) {
+            self.buffer.reserve(additional);
+        }
+
         self.capacity = capacity;
     }
 
