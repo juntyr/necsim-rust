@@ -33,9 +33,27 @@ impl<
     > ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
     for LocationAliasActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
 {
+    type LineageIterator<'a> = impl Iterator<Item = &'a Lineage>;
+
     #[must_use]
     fn number_active_lineages(&self) -> usize {
         self.number_active_lineages
+    }
+
+    #[must_use]
+    fn iter_active_lineages_ordered<'a>(
+        &'a self,
+        habitat: &'a H,
+        lineage_store: &'a S,
+    ) -> Self::LineageIterator<'a> {
+        self.alias_sampler
+            .iter_all_events_ordered()
+            .flat_map(move |location| {
+                lineage_store
+                    .get_local_lineage_references_at_location_unordered(location, habitat)
+                    .iter()
+                    .map(move |local_reference| &lineage_store[local_reference.clone()])
+            })
     }
 
     #[must_use]

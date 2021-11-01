@@ -38,6 +38,10 @@ impl<E: Eq + Hash + Clone> fmt::Debug for DynamicAliasMethodStackSampler<E> {
 }
 
 impl<E: Eq + Hash> RejectionSamplingGroup<E> {
+    fn iter(&self) -> impl Iterator<Item = &E> {
+        self.events.iter()
+    }
+
     unsafe fn sample_pop_inplace<M: MathsCore, G: RngCore<M>>(
         &mut self,
         rng: &mut G,
@@ -111,6 +115,10 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodStackSampler<E> {
             min_exponent: 0_i16,
             total_weight: 0_u128,
         }
+    }
+
+    pub fn iter_all_events_ordered(&self) -> impl Iterator<Item = &E> {
+        self.groups.iter().flat_map(RejectionSamplingGroup::iter)
     }
 
     pub fn sample_pop<M: MathsCore, G: RngCore<M>>(&mut self, rng: &mut G) -> Option<E> {
