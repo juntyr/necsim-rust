@@ -12,6 +12,12 @@ impl fmt::Debug for VerboseReporter {
     }
 }
 
+impl serde::Serialize for VerboseReporter {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_unit()
+    }
+}
+
 impl<'de> serde::Deserialize<'de> for VerboseReporter {
     fn deserialize<D: serde::Deserializer<'de>>(_deserializer: D) -> Result<Self, D::Error> {
         Ok(Self::default())

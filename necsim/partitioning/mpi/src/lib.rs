@@ -13,7 +13,7 @@ use mpi::{
     topology::{Communicator, Rank, SystemCommunicator},
     Tag,
 };
-use serde::Deserialize;
+use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 use serde_derive_state::DeserializeState;
 use serde_state::{DeserializeState, Deserializer};
 use thiserror::Error;
@@ -53,6 +53,14 @@ impl fmt::Debug for MpiPartitioning {
         fmt.debug_struct(stringify!(MpiPartitioning))
             .field("world", &self.get_partition().size().get())
             .finish()
+    }
+}
+
+impl Serialize for MpiPartitioning {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut args = serializer.serialize_struct(stringify!(MpiPartitioning), 1)?;
+        args.serialize_field("world", &self.get_partition().size())?;
+        args.end()
     }
 }
 

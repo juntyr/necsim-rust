@@ -6,7 +6,7 @@ use std::{
     path::PathBuf,
 };
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use necsim_core::{
     event::{DispersalEvent, SpeciationEvent},
@@ -33,7 +33,16 @@ impl fmt::Debug for GlobalTurnoverReporter {
     }
 }
 
-#[derive(Deserialize)]
+impl serde::Serialize for GlobalTurnoverReporter {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        GlobalTurnoverReporterArgs {
+            output: self.output.clone(),
+        }
+        .serialize(serializer)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct GlobalTurnoverReporterArgs {
     output: PathBuf,

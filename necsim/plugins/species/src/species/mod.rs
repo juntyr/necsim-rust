@@ -1,7 +1,7 @@
 use std::{collections::HashMap, convert::TryFrom, fmt, path::PathBuf};
 
 use rusqlite::Connection;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use necsim_core::{
     event::{DispersalEvent, SpeciationEvent},
@@ -45,7 +45,17 @@ impl fmt::Debug for SpeciesLocationsReporter {
     }
 }
 
-#[derive(Deserialize)]
+impl serde::Serialize for SpeciesLocationsReporter {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        SpeciesLocationsReporterArgs {
+            output: self.output.clone(),
+            table: self.table.clone(),
+        }
+        .serialize(serializer)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct SpeciesLocationsReporterArgs {
     output: PathBuf,

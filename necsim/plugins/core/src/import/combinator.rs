@@ -2,7 +2,10 @@ use std::{
     fmt,
     iter::{FromIterator, IntoIterator},
     marker::PhantomData,
+    path::Path,
 };
+
+use serde::{Serialize, Serializer};
 
 use necsim_core::{
     impl_finalise, impl_report,
@@ -12,7 +15,7 @@ use necsim_core::{
     },
 };
 
-use crate::import::ReporterPlugin;
+use crate::{export::Reporters, import::ReporterPlugin};
 
 pub struct ReporterPluginVec<
     ReportSpeciation: Boolean,
@@ -213,4 +216,45 @@ macro_rules! match_any_reporter_plugin_vec {
             ReportSpeciationReportDispersalReportProgress(mut $inner) => $code,
         }
     }};
+}
+
+impl Serialize for AnyReporterPluginVec {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        #[derive(Serialize)]
+        struct Plugin<'r> {
+            library: &'r Path,
+            reporters: Vec<Reporters<'r>>,
+        }
+
+        let plugins = match_any_reporter_plugin_vec! { self => |vec| { &*vec.plugins } };
+
+        let mut previous_library = None;
+        let mut previous_reporters = Vec::new();
+
+        let mut plugin_libraries = Vec::new();
+
+        for reporter_plugin in plugins.iter() {
+            if let Some(previous_library) = previous_library {
+                if previous_library != reporter_plugin.library.path {
+                    plugin_libraries.push(Plugin {
+                        library: previous_library,
+                        reporters: std::mem::take(&mut previous_reporters),
+                    });
+                }
+            }
+
+            previous_library = Some(&reporter_plugin.library.path);
+
+            previous_reporters.push(Reporters::DynReporter(&**reporter_plugin.reporter));
+        }
+
+        if let Some(previous_library) = previous_library {
+            plugin_libraries.push(Plugin {
+                library: previous_library,
+                reporters: previous_reporters,
+            });
+        }
+
+        plugin_libraries.serialize(serializer)
+    }
 }

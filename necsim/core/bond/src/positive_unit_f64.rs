@@ -20,7 +20,7 @@ impl fmt::Display for PositiveUnitF64Error {
 #[allow(clippy::unsafe_derive_deserialize)]
 #[derive(Copy, Clone, Deserialize, Serialize, TypeLayout)]
 #[repr(transparent)]
-#[serde(try_from = "f64")]
+#[serde(try_from = "f64", into = "f64")]
 pub struct PositiveUnitF64(f64);
 
 impl TryFrom<f64> for PositiveUnitF64 {
@@ -28,6 +28,12 @@ impl TryFrom<f64> for PositiveUnitF64 {
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
         Self::new(value)
+    }
+}
+
+impl From<PositiveUnitF64> for f64 {
+    fn from(val: PositiveUnitF64) -> Self {
+        val.get()
     }
 }
 

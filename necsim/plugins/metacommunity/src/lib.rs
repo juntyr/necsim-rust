@@ -6,7 +6,7 @@ extern crate log;
 use std::{collections::HashSet, fmt, num::NonZeroU64};
 
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use necsim_core::{event::SpeciationEvent, impl_finalise, impl_report, reporter::Reporter};
 
@@ -34,13 +34,23 @@ impl fmt::Debug for MetacommunityMigrationReporter {
     }
 }
 
-#[derive(Debug, Deserialize)]
+impl serde::Serialize for MetacommunityMigrationReporter {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        MetacommunityMigrationReporterArgs {
+            metacommunity: self.metacommunity,
+            seed: self.seed,
+        }
+        .serialize(serializer)
+    }
+}
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 enum Metacommunity {
     Infinite,
     Finite(NonZeroU64),
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct MetacommunityMigrationReporterArgs {
     metacommunity: Metacommunity,

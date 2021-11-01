@@ -1,6 +1,6 @@
 use std::{convert::TryFrom, fmt, ops::Deref, path::PathBuf};
 
-use serde::{de::Deserializer, Deserialize};
+use serde::{de::Deserializer, ser::SerializeStruct, Deserialize, Serialize, Serializer};
 use serde_state::DeserializeState;
 use structopt::StructOpt;
 
@@ -83,6 +83,7 @@ impl<'de> DeserializeState<'de, Partition> for SimulateArgs {
 #[allow(clippy::module_name_repetitions)]
 #[serde(deny_unknown_fields)]
 #[serde(deserialize_state = "Partition")]
+#[serde(rename = "Simulate")]
 struct SimulateArgsRaw {
     #[serde(alias = "speciation")]
     speciation_probability_per_generation: PositiveUnitF64,
@@ -112,6 +113,31 @@ struct SimulateArgsRaw {
     #[serde(default)]
     #[serde(deserialize_state)]
     pause: Option<Pause>,
+}
+
+impl Serialize for SimulateArgs {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut args = serializer.serialize_struct("Simulate", 6)?;
+
+        // Notes:
+        // - sample should be set to 100% for resuming a paused simulation
+        // - pause should be set to None for resuming a paused simulation
+
+        args.serialize_field(
+            "speciation",
+            &self.common.speciation_probability_per_generation,
+        )?;
+        args.serialize_field("sample", &self.common.sample_percentage)?;
+        args.serialize_field("rng", &self.common.rng)?;
+        // TODO scenario
+        // TODO algorithm
+        args.serialize_field("partitioning", &self.partitioning)?;
+        args.serialize_field("log", &self.event_log)?;
+        args.serialize_field("reporters", &self.reporters)?;
+        args.serialize_field("pause", &self.pause)?;
+
+        args.end()
+    }
 }
 
 fn deserialize_state_event_log<'de, D>(
@@ -147,7 +173,7 @@ pub struct CommonArgs {
     pub rng: Rng,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub enum Rng {
     Entropy,
@@ -210,6 +236,14 @@ impl<'de> Deserialize<'de> for Base32String {
     }
 }
 
+impl Serialize for Base32String {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        base32::encode(base32::Alphabet::Crockford, &self.0)
+            .to_ascii_lowercase()
+            .serialize(serializer)
+    }
+}
+
 impl Deref for Base32String {
     type Target = [u8];
 
@@ -218,7 +252,7 @@ impl Deref for Base32String {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Partitioning {
     Monolithic(necsim_partitioning_monolithic::MonolithicPartitioning),
     #[cfg(feature = "necsim-partitioning-mpi")]
@@ -509,6 +543,7 @@ impl Default for ReplayMode {
 #[derive(Deserialize)]
 #[allow(clippy::module_name_repetitions)]
 #[serde(deny_unknown_fields)]
+#[serde(rename = "Replay")]
 struct ReplayArgsRaw {
     #[serde(alias = "log")]
     event_log: EventLogReplay,
@@ -540,7 +575,7 @@ enum SampleOrigin {
     List(LineageFileLoader),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Pause {
     pub before: NonNegativeF64,
 }
