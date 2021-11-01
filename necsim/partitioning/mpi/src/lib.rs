@@ -13,8 +13,9 @@ use mpi::{
     topology::{Communicator, Rank, SystemCommunicator},
     Tag,
 };
-
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
+use serde_derive_state::DeserializeState;
+use serde_state::{DeserializeState, Deserializer};
 use thiserror::Error;
 
 use necsim_core::reporter::Reporter;
@@ -56,8 +57,15 @@ impl fmt::Debug for MpiPartitioning {
 }
 
 impl<'de> Deserialize<'de> for MpiPartitioning {
-    fn deserialize<D: Deserializer<'de>>(_deserializer: D) -> Result<Self, D::Error> {
-        Self::initialise().map_err(serde::de::Error::custom)
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let partitioning = Self::initialise().map_err(serde::de::Error::custom)?;
+
+        let _raw = MpiPartitioningRaw::deserialize_state(
+            &mut partitioning.get_partition().size(),
+            deserializer,
+        )?;
+
+        Ok(partitioning)
     }
 }
 
@@ -159,5 +167,35 @@ impl Partitioning for MpiPartitioning {
                 MpiParallelPartition::new(universe, self.world, event_log),
             )))
         }
+    }
+}
+
+#[derive(DeserializeState)]
+#[serde(rename = "MpiPartitioning")]
+#[serde(deny_unknown_fields)]
+#[serde(deserialize_state = "NonZeroU32")]
+#[allow(dead_code)]
+struct MpiPartitioningRaw {
+    #[serde(deserialize_state_with = "deserialize_state_mpi_world")]
+    #[serde(default)]
+    world: Option<NonZeroU32>,
+}
+
+fn deserialize_state_mpi_world<'de, D>(
+    mpi_world: &mut NonZeroU32,
+    deserializer: D,
+) -> Result<Option<NonZeroU32>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let maybe_world = Option::<NonZeroU32>::deserialize(deserializer)?;
+
+    match maybe_world {
+        None => Ok(None),
+        Some(world) if world == *mpi_world => Ok(Some(world)),
+        Some(_) => Err(serde::de::Error::custom(format!(
+            "mismatch with MPI world size of {}",
+            mpi_world
+        ))),
     }
 }
