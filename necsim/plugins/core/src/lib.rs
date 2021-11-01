@@ -11,6 +11,9 @@ pub use erased_serde;
 pub use log;
 #[cfg(feature = "export")]
 #[doc(hidden)]
+pub use process_path;
+#[cfg(feature = "export")]
+#[doc(hidden)]
 pub use serde;
 
 #[cfg(feature = "export")]

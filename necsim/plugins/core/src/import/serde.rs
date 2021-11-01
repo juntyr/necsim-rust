@@ -43,6 +43,7 @@ impl<'de> Deserialize<'de> for ReporterPluginLibrary {
 #[derive(serde::Deserialize)]
 #[serde(try_from = "PathBuf")]
 pub(crate) struct PluginLibrary {
+    pub(crate) path: PathBuf,
     pub(crate) library: Library,
     pub(crate) declaration: ReporterPluginDeclaration,
 }
@@ -52,7 +53,7 @@ impl TryFrom<PathBuf> for PluginLibrary {
 
     fn try_from(library_path: PathBuf) -> Result<Self, Self::Error> {
         // Load the plugin library into memory
-        let library = unsafe { Library::new(library_path) }
+        let library = unsafe { Library::new(library_path.clone()) }
             .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
 
         // Load the plugin declaration symbol
@@ -91,7 +92,10 @@ impl TryFrom<PathBuf> for PluginLibrary {
             (declaration.init)(log::logger(), log::max_level());
         }
 
+        let path = unsafe { (declaration.library_path)() }.unwrap_or(library_path);
+
         Ok(Self {
+            path,
             library,
             declaration,
         })

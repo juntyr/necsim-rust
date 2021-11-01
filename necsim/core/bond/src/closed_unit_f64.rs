@@ -23,7 +23,7 @@ impl fmt::Display for ClosedUnitF64Error {
 #[allow(clippy::unsafe_derive_deserialize)]
 #[derive(Copy, Clone, Serialize, Deserialize, TypeLayout)]
 #[repr(transparent)]
-#[serde(try_from = "f64")]
+#[serde(try_from = "f64", into = "f64")]
 pub struct ClosedUnitF64(f64);
 
 impl TryFrom<f64> for ClosedUnitF64 {
@@ -31,6 +31,12 @@ impl TryFrom<f64> for ClosedUnitF64 {
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
         Self::new(value)
+    }
+}
+
+impl From<ClosedUnitF64> for f64 {
+    fn from(val: ClosedUnitF64) -> Self {
+        val.get()
     }
 }
 

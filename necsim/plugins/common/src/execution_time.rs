@@ -30,6 +30,12 @@ impl fmt::Debug for ExecutionTimeReporter {
     }
 }
 
+impl serde::Serialize for ExecutionTimeReporter {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_unit()
+    }
+}
+
 impl<'de> serde::Deserialize<'de> for ExecutionTimeReporter {
     fn deserialize<D: serde::Deserializer<'de>>(_deserializer: D) -> Result<Self, D::Error> {
         Ok(Self::default())

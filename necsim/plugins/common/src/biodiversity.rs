@@ -17,6 +17,12 @@ impl fmt::Debug for BiodiversityReporter {
     }
 }
 
+impl serde::Serialize for BiodiversityReporter {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_unit()
+    }
+}
+
 impl<'de> serde::Deserialize<'de> for BiodiversityReporter {
     fn deserialize<D: serde::Deserializer<'de>>(_deserializer: D) -> Result<Self, D::Error> {
         Ok(Self::default())

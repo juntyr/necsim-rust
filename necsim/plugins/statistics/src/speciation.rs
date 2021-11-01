@@ -6,7 +6,7 @@ use std::{
     path::PathBuf,
 };
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use necsim_core::{event::SpeciationEvent, impl_finalise, impl_report, reporter::Reporter};
 
@@ -28,7 +28,16 @@ impl fmt::Debug for GlobalSpeciationReporter {
     }
 }
 
-#[derive(Deserialize)]
+impl serde::Serialize for GlobalSpeciationReporter {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        GlobalSpeciationReporterArgs {
+            output: self.output.clone(),
+        }
+        .serialize(serializer)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct GlobalSpeciationReporterArgs {
     output: PathBuf,

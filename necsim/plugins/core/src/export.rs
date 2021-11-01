@@ -5,6 +5,10 @@ use necsim_core::reporter::{
     Reporter,
 };
 
+pub trait SerializeableReporter: Reporter + erased_serde::Serialize {
+    fn reporter_name(&self) -> &'static str;
+}
+
 pub struct ReporterPluginDeclaration {
     pub rustc_version: &'static str,
     pub core_version: &'static str,
@@ -16,6 +20,8 @@ pub struct ReporterPluginDeclaration {
             &mut dyn erased_serde::Deserializer,
         )
             -> Result<ManuallyDrop<UnsafeReporterPlugin>, erased_serde::Error>,
+
+    pub library_path: unsafe extern "C" fn() -> Option<::std::path::PathBuf>,
 
     pub drop: unsafe extern "C" fn(ManuallyDrop<UnsafeReporterPlugin>),
 }
@@ -30,7 +36,7 @@ pub struct ReporterPluginFilter {
 
 impl ReporterPluginFilter {
     #[must_use]
-    pub fn from_reporter<R: Reporter>() -> Self {
+    pub fn from_reporter<R: SerializeableReporter>() -> Self {
         Self {
             report_speciation: R::ReportSpeciation::VALUE,
             report_dispersal: R::ReportDispersal::VALUE,
@@ -39,18 +45,22 @@ impl ReporterPluginFilter {
     }
 }
 
+pub type DynReporterPlugin = dyn SerializeableReporter<
+    ReportSpeciation = True,
+    ReportDispersal = True,
+    ReportProgress = True,
+>;
+
 #[repr(C)]
 pub struct UnsafeReporterPlugin {
-    pub(crate) reporter:
-        Box<dyn Reporter<ReportSpeciation = True, ReportDispersal = True, ReportProgress = True>>,
-
+    pub(crate) reporter: Box<DynReporterPlugin>,
     pub(crate) filter: ReporterPluginFilter,
 }
 
-impl<R: Reporter> From<R> for UnsafeReporterPlugin {
+impl<R: SerializeableReporter> From<R> for UnsafeReporterPlugin {
     fn from(reporter: R) -> Self {
         let boxed_reporter: Box<
-            dyn Reporter<
+            dyn SerializeableReporter<
                 ReportSpeciation = R::ReportSpeciation,
                 ReportDispersal = R::ReportDispersal,
                 ReportProgress = R::ReportProgress,
@@ -98,6 +108,17 @@ macro_rules! export_plugin {
             }).map(::std::mem::ManuallyDrop::new)
         }
 
+        $(impl $crate::export::SerializeableReporter for $plugin {
+            fn reporter_name(&self) -> &'static str {
+                stringify!($name)
+            }
+        })*
+
+        #[doc(hidden)]
+        extern "C" fn __necsim_reporter_plugin_library_path() -> Option<::std::path::PathBuf> {
+            ::necsim_plugins_core::process_path::get_dylib_path()
+        }
+
         #[doc(hidden)]
         extern "C" fn __necsim_reporter_plugin_drop(
             plugin: ::std::mem::ManuallyDrop<$crate::export::UnsafeReporterPlugin>,
@@ -114,7 +135,33 @@ macro_rules! export_plugin {
 
                 init: __necsim_reporter_plugin_init,
                 deserialise: __necsim_reporter_plugin_deserialise,
+                library_path: __necsim_reporter_plugin_library_path,
                 drop: __necsim_reporter_plugin_drop,
             };
     };
+}
+
+pub enum Reporters<'r> {
+    DynReporter(&'r DynReporterPlugin),
+}
+
+impl<'r> serde::Serialize for Reporters<'r> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        struct Reporter<'r>(&'r DynReporterPlugin);
+
+        impl<'r> serde::Serialize for Reporter<'r> {
+            fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+                erased_serde::serialize(self.0, serializer)
+            }
+        }
+
+        let Self::DynReporter(reporter) = self;
+
+        serializer.serialize_newtype_variant(
+            "Reporters",
+            0,
+            reporter.reporter_name(),
+            &Reporter(*reporter),
+        )
+    }
 }

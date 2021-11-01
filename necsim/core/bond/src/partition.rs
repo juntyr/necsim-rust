@@ -1,6 +1,6 @@
 use core::{convert::TryFrom, fmt, num::NonZeroU32};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
@@ -17,7 +17,7 @@ impl fmt::Display for PartitionRankOutOfBounds {
 }
 
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
-#[derive(Copy, Clone, Debug, Deserialize, TypeLayout)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, TypeLayout)]
 #[serde(try_from = "PartitionRaw")]
 pub struct Partition {
     rank: u32,
