@@ -1,9 +1,7 @@
 use std::{fmt, mem::ManuallyDrop, rc::Rc};
 
-use necsim_core::reporter::{boolean::True, Reporter};
-
 use crate::{
-    export::{ReporterPluginFilter, UnsafeReporterPlugin},
+    export::{DynReporterPlugin, ReporterPluginFilter, UnsafeReporterPlugin},
     import::serde::PluginLibrary,
 };
 
@@ -11,9 +9,7 @@ use crate::{
 pub struct ReporterPlugin {
     pub(crate) library: Rc<PluginLibrary>,
 
-    pub(crate) reporter: ManuallyDrop<
-        Box<dyn Reporter<ReportSpeciation = True, ReportDispersal = True, ReportProgress = True>>,
-    >,
+    pub(crate) reporter: ManuallyDrop<Box<DynReporterPlugin>>,
     pub(crate) filter: ReporterPluginFilter,
 
     pub(crate) finalised: bool,

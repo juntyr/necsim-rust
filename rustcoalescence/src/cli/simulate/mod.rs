@@ -25,7 +25,17 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
 
     let simulate_args = SimulateArgs::try_parse(simulate_args)?;
 
+    let config = ron::ser::PrettyConfig::default().decimal_floats(true);
+
+    println!("{:=^80}", "");
+    println!(
+        "{}",
+        ron::ser::to_string_pretty(&simulate_args, config).unwrap()
+    );
+    println!("{:=^80}", "");
+
     let simulate_args_info = format!("{:#?}", simulate_args);
+
     let post_validation = move || {
         info!("Parsed simulation arguments:\n{}", simulate_args_info);
     };

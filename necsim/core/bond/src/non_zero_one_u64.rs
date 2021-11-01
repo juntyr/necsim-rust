@@ -14,7 +14,7 @@ impl fmt::Display for NonZeroOneU64Error {
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, TypeLayout)]
 #[repr(transparent)]
-#[serde(try_from = "u64")]
+#[serde(try_from = "u64", into = "u64")]
 pub struct NonZeroOneU64(NonZeroU64);
 
 impl NonZeroOneU64 {
@@ -49,6 +49,12 @@ impl TryFrom<u64> for NonZeroOneU64 {
 
     fn try_from(value: u64) -> Result<Self, Self::Error> {
         Self::new(value)
+    }
+}
+
+impl From<NonZeroOneU64> for u64 {
+    fn from(val: NonZeroOneU64) -> Self {
+        val.get()
     }
 }
 

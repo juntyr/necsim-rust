@@ -7,7 +7,7 @@ extern crate contracts;
 
 use std::fmt;
 
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use necsim_core::{
     impl_report,
@@ -37,9 +37,15 @@ impl fmt::Debug for MonolithicPartitioning {
     }
 }
 
+impl Serialize for MonolithicPartitioning {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_unit()
+    }
+}
+
 impl<'de> Deserialize<'de> for MonolithicPartitioning {
     fn deserialize<D: Deserializer<'de>>(_deserializer: D) -> Result<Self, D::Error> {
-        Ok(Self(()))
+        Ok(Self::default())
     }
 }
 

@@ -24,7 +24,7 @@ use std::{
 };
 
 use anyhow::{Error, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize, Serializer};
 
 use necsim_core::event::{DispersalEvent, PackedEvent, SpeciationEvent};
 
@@ -48,6 +48,16 @@ impl TryFrom<EventLogRecorderRaw> for EventLogRecorder {
 
     fn try_from(raw: EventLogRecorderRaw) -> Result<Self, Self::Error> {
         Self::try_new(&raw.directory, raw.capacity)
+    }
+}
+
+impl Serialize for EventLogRecorder {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        EventLogRecorderRaw {
+            directory: self.directory.clone(),
+            capacity: self.segment_capacity,
+        }
+        .serialize(serializer)
     }
 }
 
@@ -195,7 +205,7 @@ impl fmt::Debug for EventLogRecorder {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename = "EventLog")]
 #[serde(deny_unknown_fields)]
 struct EventLogRecorderRaw {

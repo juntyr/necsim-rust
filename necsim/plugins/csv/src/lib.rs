@@ -8,7 +8,7 @@ use std::{
     path::PathBuf,
 };
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use necsim_core::{
     impl_finalise, impl_report, landscape::IndexedLocation, lineage::GlobalLineageReference,
@@ -33,7 +33,16 @@ impl fmt::Debug for CsvReporter {
     }
 }
 
-#[derive(Deserialize)]
+impl serde::Serialize for CsvReporter {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        CsvReporterArgs {
+            output: self.output.clone(),
+        }
+        .serialize(serializer)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct CsvReporterArgs {
     output: PathBuf,

@@ -6,7 +6,7 @@ use std::{
     path::PathBuf,
 };
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use necsim_core::{event::DispersalEvent, impl_finalise, impl_report, reporter::Reporter};
 
@@ -28,7 +28,16 @@ impl fmt::Debug for GlobalCoverageReporter {
     }
 }
 
-#[derive(Deserialize)]
+impl serde::Serialize for GlobalCoverageReporter {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        GlobalCoverageReporterArgs {
+            output: self.output.clone(),
+        }
+        .serialize(serializer)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct GlobalCoverageReporterArgs {
     output: PathBuf,
