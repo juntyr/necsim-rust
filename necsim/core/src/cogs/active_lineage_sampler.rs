@@ -27,8 +27,17 @@ pub trait ActiveLineageSampler<
     I: ImmigrationEntry<M>,
 >: crate::cogs::Backup + core::fmt::Debug
 {
+    type LineageIterator<'a>: Iterator<Item = &'a Lineage>;
+
     #[must_use]
     fn number_active_lineages(&self) -> usize;
+
+    #[must_use]
+    fn iter_active_lineages_ordered<'a>(
+        &'a self,
+        habitat: &'a H,
+        lineage_store: &'a S,
+    ) -> Self::LineageIterator<'a>;
 
     #[must_use]
     fn get_last_event_time(&self) -> NonNegativeF64;

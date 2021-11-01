@@ -41,6 +41,10 @@ impl<E: Eq + Hash + Clone> fmt::Debug for DynamicAliasMethodIndexedSampler<E> {
 }
 
 impl<E: Eq + Hash> RejectionSamplingGroup<E> {
+    fn iter(&self) -> impl Iterator<Item = &E> {
+        self.events.iter()
+    }
+
     unsafe fn sample_pop_inplace<M: MathsCore, G: RngCore<M>>(
         &mut self,
         lookup: &mut HashMap<E, EventLocation>,
@@ -149,6 +153,90 @@ struct EventLocation {
 }
 
 impl<E: Eq + Hash + Clone> DynamicAliasMethodIndexedSampler<E> {
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            exponents: Vec::new(),
+            groups: Vec::new(),
+            lookup: HashMap::new(),
+            min_exponent: 0_i16,
+            total_weight: 0_u128,
+        }
+    }
+
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn with_capacity(capacity: usize) -> Self {
+        let capacity_log2_approx = (usize::BITS - capacity.leading_zeros()) as usize;
+
+        Self {
+            exponents: Vec::with_capacity(capacity_log2_approx),
+            groups: Vec::with_capacity(capacity_log2_approx),
+            lookup: HashMap::with_capacity(capacity),
+            min_exponent: 0_i16,
+            total_weight: 0_u128,
+        }
+    }
+
+    pub fn iter_all_events_ordered(&self) -> impl Iterator<Item = &E> {
+        self.groups.iter().flat_map(RejectionSamplingGroup::iter)
+    }
+
+    pub fn sample_pop<M: MathsCore, G: RngCore<M>>(&mut self, rng: &mut G) -> Option<E> {
+        if let Some(total_weight) = NonZeroU128::new(self.total_weight) {
+            let cdf_sample = if let [_group] = &self.groups[..] {
+                0_u128
+            } else {
+                rng.sample_index_u128(total_weight)
+            };
+
+            let mut cdf_acc = 0_u128;
+
+            for (i, (exponent, group)) in self
+                .exponents
+                .iter()
+                .copied()
+                .zip(self.groups.iter_mut())
+                .enumerate()
+            {
+                cdf_acc +=
+                    group.total_weight << (i32::from(exponent) - i32::from(self.min_exponent));
+
+                if cdf_sample < cdf_acc {
+                    let exponent_shift = i32::from(exponent) - i32::from(self.min_exponent);
+
+                    self.total_weight = self
+                        .total_weight
+                        .wrapping_sub(group.total_weight << exponent_shift);
+
+                    let (group, sample) =
+                        unsafe { group.sample_pop_inplace(&mut self.lookup, rng) };
+
+                    if let Some(group) = group {
+                        self.total_weight = self
+                            .total_weight
+                            .wrapping_add(group.total_weight << exponent_shift);
+                    } else {
+                        self.groups.remove(i);
+                        self.exponents.remove(i);
+
+                        let old_min_exponent = self.min_exponent;
+                        self.min_exponent = self.exponents.last().copied().unwrap_or(0_i16);
+
+                        if self.min_exponent > old_min_exponent {
+                            self.total_weight >>=
+                                i32::from(self.min_exponent) - i32::from(old_min_exponent);
+                        }
+                    }
+
+                    return Some(sample);
+                }
+            }
+        }
+
+        None
+    }
+
     pub fn update_or_add(&mut self, event: E, weight: PositiveF64) {
         let weight_decomposed = super::decompose_weight(weight);
 
@@ -222,86 +310,6 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodIndexedSampler<E> {
                 unsafe { core::hint::unreachable_unchecked() } // GRCOV_EXCL_LINE
             }
         }
-    }
-
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            exponents: Vec::new(),
-            groups: Vec::new(),
-            lookup: HashMap::new(),
-            min_exponent: 0_i16,
-            total_weight: 0_u128,
-        }
-    }
-
-    #[must_use]
-    #[allow(dead_code)]
-    pub fn with_capacity(capacity: usize) -> Self {
-        let capacity_log2_approx = (usize::BITS - capacity.leading_zeros()) as usize;
-
-        Self {
-            exponents: Vec::with_capacity(capacity_log2_approx),
-            groups: Vec::with_capacity(capacity_log2_approx),
-            lookup: HashMap::with_capacity(capacity),
-            min_exponent: 0_i16,
-            total_weight: 0_u128,
-        }
-    }
-
-    pub fn sample_pop<M: MathsCore, G: RngCore<M>>(&mut self, rng: &mut G) -> Option<E> {
-        if let Some(total_weight) = NonZeroU128::new(self.total_weight) {
-            let cdf_sample = if let [_group] = &self.groups[..] {
-                0_u128
-            } else {
-                rng.sample_index_u128(total_weight)
-            };
-
-            let mut cdf_acc = 0_u128;
-
-            for (i, (exponent, group)) in self
-                .exponents
-                .iter()
-                .copied()
-                .zip(self.groups.iter_mut())
-                .enumerate()
-            {
-                cdf_acc +=
-                    group.total_weight << (i32::from(exponent) - i32::from(self.min_exponent));
-
-                if cdf_sample < cdf_acc {
-                    let exponent_shift = i32::from(exponent) - i32::from(self.min_exponent);
-
-                    self.total_weight = self
-                        .total_weight
-                        .wrapping_sub(group.total_weight << exponent_shift);
-
-                    let (group, sample) =
-                        unsafe { group.sample_pop_inplace(&mut self.lookup, rng) };
-
-                    if let Some(group) = group {
-                        self.total_weight = self
-                            .total_weight
-                            .wrapping_add(group.total_weight << exponent_shift);
-                    } else {
-                        self.groups.remove(i);
-                        self.exponents.remove(i);
-
-                        let old_min_exponent = self.min_exponent;
-                        self.min_exponent = self.exponents.last().copied().unwrap_or(0_i16);
-
-                        if self.min_exponent > old_min_exponent {
-                            self.total_weight >>=
-                                i32::from(self.min_exponent) - i32::from(old_min_exponent);
-                        }
-                    }
-
-                    return Some(sample);
-                }
-            }
-        }
-
-        None
     }
 
     #[must_use]

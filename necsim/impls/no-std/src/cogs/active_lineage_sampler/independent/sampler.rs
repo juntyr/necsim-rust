@@ -43,9 +43,20 @@ impl<
         NeverImmigrationEntry,
     > for IndependentActiveLineageSampler<M, H, G, X, D, T, N, J>
 {
+    type LineageIterator<'a> = impl Iterator<Item = &'a Lineage>;
+
     #[must_use]
     fn number_active_lineages(&self) -> usize {
         self.active_lineage.is_some() as usize
+    }
+
+    #[must_use]
+    fn iter_active_lineages_ordered(
+        &self,
+        _habitat: &H,
+        _lineage_store: &IndependentLineageStore<M, H>,
+    ) -> Self::LineageIterator<'_> {
+        self.active_lineage.iter()
     }
 
     fn get_last_event_time(&self) -> NonNegativeF64 {
