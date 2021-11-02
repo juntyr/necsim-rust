@@ -1,9 +1,9 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_state::DeserializeState;
 
 use necsim_core_bond::{Partition, PositiveF64};
 
-#[derive(Debug)]
+#[derive(Serialize, Debug)]
 #[allow(clippy::module_name_repetitions)]
 pub struct MonolithicArguments {
     pub parallelism_mode: ParallelismMode,
@@ -39,17 +39,17 @@ struct MonolithicArgumentsRaw {
     parallelism_mode: Option<ParallelismMode>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct OptimisticParallelismMode {
     pub delta_sync: PositiveF64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct AveragingParallelismMode {
     pub delta_sync: PositiveF64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum ParallelismMode {
     Monolithic,
     Optimistic(OptimisticParallelismMode),
