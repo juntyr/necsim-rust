@@ -1,6 +1,6 @@
 use core::num::NonZeroUsize;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use necsim_core_bond::PositiveF64;
 
@@ -12,19 +12,19 @@ pub mod individuals;
 pub mod landscape;
 pub mod monolithic;
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AbsoluteCapacity {
     pub capacity: NonZeroUsize,
 }
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RelativeCapacity {
     pub factor: PositiveF64,
 }
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum DedupCache {
     Absolute(AbsoluteCapacity),
     Relative(RelativeCapacity),
@@ -55,7 +55,7 @@ impl DedupCache {
 }
 
 #[allow(clippy::unsafe_derive_deserialize)]
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum EventSlice {
     Absolute(AbsoluteCapacity),
     Relative(RelativeCapacity),

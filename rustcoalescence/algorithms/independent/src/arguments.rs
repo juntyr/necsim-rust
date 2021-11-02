@@ -1,33 +1,33 @@
 use std::num::NonZeroU64;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_state::DeserializeState;
 
 use necsim_core_bond::{ClosedUnitF64, Partition, PositiveF64};
 
 use necsim_impls_no_std::parallelisation::independent::{DedupCache, EventSlice, RelativeCapacity};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MonolithicParallelismMode {
     pub event_slice: EventSlice,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct IsolatedParallelismMode {
     pub event_slice: EventSlice,
     pub partition: Partition,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProbabilisticParallelismMode {
     #[serde(alias = "communication")]
     pub communication_probability: ClosedUnitF64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum ParallelismMode {
     Monolithic(MonolithicParallelismMode),
     IsolatedIndividuals(IsolatedParallelismMode),
@@ -72,7 +72,7 @@ impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 #[allow(clippy::module_name_repetitions)]
 pub struct IndependentArguments {
     pub delta_t: PositiveF64,
