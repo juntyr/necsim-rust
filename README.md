@@ -43,7 +43,7 @@ necsim-rust is written in the [Rust language](https://www.rust-lang.org/tools/in
 
 If you also want to use the CUDA-based algorithm, it is **required** that you also install the following:
 ```shell
-> cargo install ptx-linker -f
+> cargo install ptx-linker --force --locked
 ```
 
 ## Installation
