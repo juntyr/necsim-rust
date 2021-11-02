@@ -1,5 +1,6 @@
 use anyhow::Context;
 use log::LevelFilter;
+use ron::extensions::Extensions;
 
 use necsim_partitioning_core::Partitioning as _;
 use necsim_plugins_core::match_any_reporter_plugin_vec;
@@ -25,7 +26,13 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
 
     let simulate_args = SimulateArgs::try_parse(simulate_args)?;
 
-    let config = ron::ser::PrettyConfig::default().decimal_floats(true);
+    let config = ron::ser::PrettyConfig::default()
+        .decimal_floats(true)
+        .extensions(
+            Extensions::UNWRAP_VARIANT_NEWTYPES
+                | Extensions::UNWRAP_NEWTYPES
+                | Extensions::IMPLICIT_SOME,
+        );
 
     println!("{:=^80}", "");
     println!(
