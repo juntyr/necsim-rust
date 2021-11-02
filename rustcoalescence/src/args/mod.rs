@@ -130,7 +130,7 @@ impl Serialize for SimulateArgs {
         args.serialize_field("sample", &self.common.sample_percentage)?;
         args.serialize_field("rng", &self.common.rng)?;
         // TODO scenario
-        // TODO algorithm
+        args.serialize_field("algorithm", &self.algorithm)?;
         args.serialize_field("partitioning", &self.partitioning)?;
         args.serialize_field("log", &self.event_log)?;
         args.serialize_field("reporters", &self.reporters)?;
@@ -310,6 +310,40 @@ pub enum Algorithm {
     Independent(
         #[serde(deserialize_state)] <rustcoalescence_algorithms_independent::IndependentAlgorithm as AlgorithmArguments>::Arguments,
     ),
+}
+
+impl Serialize for Algorithm {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        #[allow(unreachable_patterns)]
+        match self {
+            #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
+            Self::Classical(args) => {
+                serializer.serialize_newtype_variant(stringify!(Algorithm), 0, "Classical", args)
+            },
+            #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
+            Self::EventSkipping(args) => serializer.serialize_newtype_variant(
+                stringify!(Algorithm),
+                1,
+                "EventSkipping",
+                args,
+            ),
+            #[cfg(feature = "rustcoalescence-algorithms-cuda")]
+            Self::Cuda(args) => {
+                serializer.serialize_newtype_variant(stringify!(Algorithm), 2, "CUDA", args)
+            },
+            #[cfg(feature = "rustcoalescence-algorithms-independent")]
+            Self::Independent(args) => {
+                serializer.serialize_newtype_variant(stringify!(Algorithm), 3, "Independent", args)
+            },
+            _ => {
+                std::mem::drop(serializer);
+
+                Err(serde::ser::Error::custom(
+                    "rustcoalescence must be compiled to support at least one algorithm",
+                ))
+            },
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
