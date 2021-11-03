@@ -19,14 +19,14 @@ pub struct Array2D<T> {
 }
 
 impl<T> core::fmt::Debug for Array2D<T> {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        f.debug_struct("Array2D")
-            .field(
-                "array",
-                &format_args!("Box [ {:p}; {} ]", &self.array, self.array.len()),
-            )
-            .field("num_rows", &self.num_rows)
-            .finish()
+    fn fmt(&self, fmt: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(
+            fmt,
+            "Array2D<{}; WxH = {}x{}>",
+            core::any::type_name::<T>(),
+            self.num_columns(),
+            self.num_rows()
+        )
     }
 }
 

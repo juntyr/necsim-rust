@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
 use necsim_core_bond::{NonNegativeF64, Partition, PositiveUnitF64};
@@ -30,9 +30,8 @@ pub struct AlmostInfiniteScenario<M: MathsCore, G: RngCore<M>> {
     speciation_probability: UniformSpeciationProbability,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
-#[serde(rename = "AlmostInfinite")]
 pub struct AlmostInfiniteArguments {
     pub radius: u32,
     pub sigma: NonNegativeF64,

@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, fmt, ops::Deref, path::PathBuf};
+use std::{fmt, ops::Deref};
 
 use serde::{de::Deserializer, ser::SerializeStruct, Deserialize, Serialize, Serializer};
 use serde_state::DeserializeState;
@@ -6,7 +6,6 @@ use structopt::StructOpt;
 
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, Partition, PositiveUnitF64};
 
-use necsim_impls_no_std::array2d::Array2D;
 use necsim_impls_std::{
     event_log::{recorder::EventLogRecorder, replay::EventLogReplay},
     lineage_file::loader::LineageFileLoader,
@@ -14,7 +13,7 @@ use necsim_impls_std::{
 
 use rustcoalescence_scenarios::{
     almost_infinite::AlmostInfiniteArguments, non_spatial::NonSpatialArguments,
-    spatially_explicit::InMemoryArguments, spatially_implicit::SpatiallyImplicitArguments,
+    spatially_explicit::SpatiallyExplicitArguments, spatially_implicit::SpatiallyImplicitArguments,
 };
 
 #[cfg(any(
@@ -117,11 +116,13 @@ struct SimulateArgsRaw {
 
 impl Serialize for SimulateArgs {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut args = serializer.serialize_struct("Simulate", 6)?;
+        let mut args = serializer.serialize_struct("Simulate", 9)?;
 
         // Notes:
         // - sample should be set to 100% for resuming a paused simulation
         // - pause should be set to None for resuming a paused simulation
+        // - serialization could be used to debug print a normalised config
+        // - serialization will be used to get the pause config
 
         args.serialize_field(
             "speciation",
@@ -129,7 +130,7 @@ impl Serialize for SimulateArgs {
         )?;
         args.serialize_field("sample", &self.common.sample_percentage)?;
         args.serialize_field("rng", &self.common.rng)?;
-        // TODO scenario
+        args.serialize_field("scenario", &self.scenario)?;
         args.serialize_field("algorithm", &self.algorithm)?;
         args.serialize_field("partitioning", &self.partitioning)?;
         args.serialize_field("log", &self.event_log)?;
@@ -346,147 +347,12 @@ impl Serialize for Algorithm {
     }
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(from = "ScenarioRaw")]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Scenario {
-    SpatiallyExplicit(InMemoryArguments),
+    SpatiallyExplicit(SpatiallyExplicitArguments),
     NonSpatial(NonSpatialArguments),
     SpatiallyImplicit(SpatiallyImplicitArguments),
     AlmostInfinite(AlmostInfiniteArguments),
-}
-
-impl From<ScenarioRaw> for Scenario {
-    fn from(raw: ScenarioRaw) -> Self {
-        match raw {
-            ScenarioRaw::SpatiallyExplicit(args) => {
-                Scenario::SpatiallyExplicit(InMemoryArguments {
-                    habitat_map: args.habitat_map,
-                    dispersal_map: args.dispersal_map,
-                })
-            },
-            ScenarioRaw::NonSpatial(args) => {
-                if args.spatial {
-                    let habitat_map =
-                        Array2D::filled_with(args.deme, args.area.1 as usize, args.area.0 as usize);
-
-                    let total_area = (args.area.0 as usize) * (args.area.1 as usize);
-
-                    let dispersal_map = Array2D::filled_with(1.0_f64, total_area, total_area);
-
-                    Scenario::SpatiallyExplicit(InMemoryArguments {
-                        habitat_map,
-                        dispersal_map,
-                    })
-                } else {
-                    Scenario::NonSpatial(NonSpatialArguments {
-                        area: args.area,
-                        deme: args.deme,
-                    })
-                }
-            },
-            ScenarioRaw::SpatiallyImplicit(args) => Scenario::SpatiallyImplicit(args),
-            ScenarioRaw::AlmostInfinite(args) => Scenario::AlmostInfinite(args),
-        }
-    }
-}
-
-#[derive(Debug, Deserialize)]
-enum ScenarioRaw {
-    SpatiallyExplicit(InMemoryArgs),
-    NonSpatial(NonSpatialArgsRaw),
-    SpatiallyImplicit(SpatiallyImplicitArguments),
-    AlmostInfinite(AlmostInfiniteArguments),
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(try_from = "InMemoryArgsRaw")]
-struct InMemoryArgs {
-    habitat_map: Array2D<u32>,
-    dispersal_map: Array2D<f64>,
-}
-
-impl TryFrom<InMemoryArgsRaw> for InMemoryArgs {
-    type Error = String;
-
-    fn try_from(raw: InMemoryArgsRaw) -> Result<Self, Self::Error> {
-        info!(
-            "Starting to load the dispersal map {:?} ...",
-            &raw.dispersal_map
-        );
-
-        let mut dispersal_map =
-            crate::maps::load_dispersal_map(&raw.dispersal_map, raw.loading_mode)
-                .map_err(|err| format!("{:?}", err))?;
-
-        info!(
-            "Successfully loaded the dispersal map {:?} with dimensions {}x{} [cols x rows].",
-            &raw.dispersal_map,
-            dispersal_map.num_columns(),
-            dispersal_map.num_rows()
-        );
-
-        info!(
-            "Starting to load the habitat map {:?} ...",
-            &raw.habitat_map
-        );
-
-        let habitat_map =
-            crate::maps::load_habitat_map(&raw.habitat_map, &mut dispersal_map, raw.loading_mode)
-                .map_err(|err| format!("{:?}", err))?;
-
-        info!(
-            "Successfully loaded the habitat map {:?} with dimensions {}x{} [cols x rows].",
-            &raw.habitat_map,
-            habitat_map.num_columns(),
-            habitat_map.num_rows()
-        );
-
-        Ok(InMemoryArgs {
-            habitat_map,
-            dispersal_map,
-        })
-    }
-}
-
-#[derive(Copy, Clone, Debug, Deserialize)]
-pub enum MapLoadingMode {
-    FixMe,
-    OffByOne,
-    Strict,
-}
-
-impl Default for MapLoadingMode {
-    fn default() -> Self {
-        Self::OffByOne
-    }
-}
-
-#[derive(Debug, Deserialize)]
-#[allow(clippy::module_name_repetitions)]
-#[serde(rename = "SpatiallyExplicit")]
-#[serde(deny_unknown_fields)]
-struct InMemoryArgsRaw {
-    #[serde(alias = "habitat")]
-    habitat_map: PathBuf,
-
-    #[serde(alias = "dispersal")]
-    dispersal_map: PathBuf,
-
-    #[serde(default)]
-    #[serde(alias = "mode")]
-    loading_mode: MapLoadingMode,
-}
-
-#[derive(Debug, Deserialize)]
-#[allow(clippy::module_name_repetitions)]
-#[serde(deny_unknown_fields)]
-#[serde(rename = "NonSpatial")]
-struct NonSpatialArgsRaw {
-    pub area: (u32, u32),
-    pub deme: u32,
-
-    #[serde(default)]
-    pub spatial: bool,
 }
 
 #[derive(Debug)]

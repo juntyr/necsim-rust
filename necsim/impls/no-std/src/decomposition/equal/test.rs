@@ -20,7 +20,7 @@ fn test_equal_area_decomposition() {
     for width in 1..=8 {
         for height in 1..=8 {
             let habitat: NonSpatialHabitat<IntrinsicsMathsCore> =
-                NonSpatialHabitat::new((width, height), 1);
+                NonSpatialHabitat::new((width, height), NonZeroU32::new(1).unwrap());
 
             for partition in 1..=(width * height + 1) {
                 let (successful, decomposition) = match EqualDecomposition::area(
@@ -94,7 +94,12 @@ fn test_equal_weight_decomposition() {
     for local in 1..=8 {
         for meta in 1..=8 {
             let habitat: SpatiallyImplicitHabitat<IntrinsicsMathsCore> =
-                SpatiallyImplicitHabitat::new((8, 1), local, (8, 1), meta);
+                SpatiallyImplicitHabitat::new(
+                    (8, 1),
+                    NonZeroU32::new(local).unwrap(),
+                    (8, 1),
+                    NonZeroU32::new(meta).unwrap(),
+                );
 
             for partition in 1..=(local * 8 + meta * 8 + 1) {
                 let (successful, decomposition) = match EqualDecomposition::weight(
@@ -165,7 +170,8 @@ fn test_equal_weight_decomposition() {
 
 #[test]
 fn equal_area_stores_subdomain() {
-    let habitat: NonSpatialHabitat<IntrinsicsMathsCore> = NonSpatialHabitat::new((100, 100), 100);
+    let habitat: NonSpatialHabitat<IntrinsicsMathsCore> =
+        NonSpatialHabitat::new((100, 100), NonZeroU32::new(100).unwrap());
 
     let equal_area_decomposition = EqualDecomposition::area(
         &habitat,
@@ -180,7 +186,8 @@ fn equal_area_stores_subdomain() {
 
 #[test]
 fn equal_weight_stores_subdomain() {
-    let habitat: NonSpatialHabitat<IntrinsicsMathsCore> = NonSpatialHabitat::new((100, 100), 100);
+    let habitat: NonSpatialHabitat<IntrinsicsMathsCore> =
+        NonSpatialHabitat::new((100, 100), NonZeroU32::new(100).unwrap());
 
     let equal_area_decomposition = EqualDecomposition::area(
         &habitat,

@@ -5,12 +5,11 @@ use tiff::{decoder::Decoder, tags::Tag};
 
 use necsim_impls_no_std::array2d::Array2D;
 
-#[path = "data_type.rs"]
-mod private;
+mod data_type;
 
 #[allow(clippy::module_name_repetitions)]
-pub trait TiffDataType: private::TiffDataType {}
-impl<T: private::TiffDataType> TiffDataType for T {}
+pub trait TiffDataType: data_type::TiffDataType {}
+impl<T: data_type::TiffDataType> TiffDataType for T {}
 
 #[allow(clippy::module_name_repetitions)]
 /// Loads a 2D map from TIFF file at `path` with the data type `D`.
