@@ -1,8 +1,5 @@
 #![deny(clippy::pedantic)]
-#![feature(associated_type_bounds)]
 #![feature(unwrap_infallible)]
-#![feature(box_patterns)]
-#![feature(cursor_remaining)]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 
@@ -18,10 +15,8 @@ use structopt::StructOpt;
 
 mod args;
 mod cli;
-mod maps;
 mod minimal_logger;
 mod reporter;
-mod tiff;
 
 use args::RustcoalescenceArgs;
 use minimal_logger::MinimalLogger;

@@ -1,3 +1,5 @@
+use core::num::NonZeroU32;
+
 use necsim_core::{
     cogs::{Backup, Habitat, MathsCore},
     landscape::{IndexedLocation, LandscapeExtent, Location},
@@ -20,16 +22,16 @@ impl<M: MathsCore> SpatiallyImplicitHabitat<M> {
     #[must_use]
     #[debug_ensures(
         ret.get_total_habitat() == old(
-            u64::from(local_area.0) * u64::from(local_area.1) * u64::from(local_deme)
-            + u64::from(meta_area.0) * u64::from(meta_area.1) * u64::from(meta_deme)
+            u64::from(local_area.0) * u64::from(local_area.1) * u64::from(local_deme.get())
+            + u64::from(meta_area.0) * u64::from(meta_area.1) * u64::from(meta_deme.get())
         ),
         "creates a habitat with a combined local and meta community size "
     )]
     pub fn new(
         local_area: (u32, u32),
-        local_deme: u32,
+        local_deme: NonZeroU32,
         meta_area: (u32, u32),
-        meta_deme: u32,
+        meta_deme: NonZeroU32,
     ) -> Self {
         let local = NonSpatialHabitat::new(local_area, local_deme);
         let meta = NonSpatialHabitat::new_with_offset(

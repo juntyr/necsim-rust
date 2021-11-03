@@ -1,13 +1,14 @@
 use std::path::Path;
 
 use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 
 use necsim_impls_no_std::array2d::Array2D;
 
-use crate::args::MapLoadingMode;
+mod tiff;
 
 pub fn load_dispersal_map(path: &Path, loading_mode: MapLoadingMode) -> Result<Array2D<f64>> {
-    crate::tiff::load_map_from_tiff::<f64>(
+    tiff::load_map_from_tiff::<f64>(
         path,
         match loading_mode {
             MapLoadingMode::FixMe | MapLoadingMode::OffByOne => false,
@@ -22,7 +23,7 @@ pub fn load_habitat_map(
     dispersal: &mut Array2D<f64>,
     loading_mode: MapLoadingMode,
 ) -> Result<Array2D<u32>> {
-    let mut habitat = crate::tiff::load_map_from_tiff::<u32>(
+    let mut habitat = tiff::load_map_from_tiff::<u32>(
         path,
         match loading_mode {
             MapLoadingMode::FixMe | MapLoadingMode::OffByOne => false,
@@ -41,6 +42,19 @@ pub fn load_habitat_map(
     };
 
     Ok(habitat)
+}
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+pub enum MapLoadingMode {
+    FixMe,
+    OffByOne,
+    Strict,
+}
+
+impl Default for MapLoadingMode {
+    fn default() -> Self {
+        Self::OffByOne
+    }
 }
 
 // Fix habitat rounding error by correcting 0/1 values to 0/1 based on dispersal
