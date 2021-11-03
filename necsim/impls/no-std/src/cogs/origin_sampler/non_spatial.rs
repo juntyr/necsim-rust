@@ -75,18 +75,14 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator for NonSpatialOriginSam
     type Item = Lineage;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.habitat.get_deme() == 0 {
-            return None;
-        }
-
         let next_index = self.pre_sampler.next()?;
         let mut index_difference = next_index - self.last_index;
         self.last_index = next_index;
 
         while u64::from(self.next_location_index) + index_difference
-            >= u64::from(self.habitat.get_deme())
+            >= u64::from(self.habitat.get_deme().get())
         {
-            index_difference -= u64::from(self.habitat.get_deme() - self.next_location_index);
+            index_difference -= u64::from(self.habitat.get_deme().get() - self.next_location_index);
 
             self.next_location_index = 0;
 

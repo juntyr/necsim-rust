@@ -1,4 +1,6 @@
-use serde::Deserialize;
+use std::num::NonZeroU32;
+
+use serde::{Deserialize, Serialize};
 
 use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
 use necsim_core_bond::{Partition, PositiveUnitF64};
@@ -27,14 +29,13 @@ pub struct SpatiallyImplicitScenario<M: MathsCore, G: RngCore<M>> {
     speciation_probability: SpatiallyImplicitSpeciationProbability,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
-#[serde(rename = "SpatiallyImplicit")]
 pub struct SpatiallyImplicitArguments {
     pub local_area: (u32, u32),
-    pub local_deme: u32,
+    pub local_deme: NonZeroU32,
     pub meta_area: (u32, u32),
-    pub meta_deme: u32,
+    pub meta_deme: NonZeroU32,
 
     #[serde(alias = "migration")]
     pub migration_probability_per_generation: PositiveUnitF64,

@@ -1,7 +1,8 @@
 #![deny(clippy::pedantic)]
+#![feature(associated_type_bounds)]
+#![feature(never_type)]
 #![allow(incomplete_features)]
 #![feature(generic_associated_types)]
-#![feature(never_type)]
 
 #[macro_use]
 extern crate log;

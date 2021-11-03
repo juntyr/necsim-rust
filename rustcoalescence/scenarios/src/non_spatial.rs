@@ -1,4 +1,6 @@
-use serde::Deserialize;
+use std::num::NonZeroU32;
+
+use serde::{Deserialize, Serialize};
 
 use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
 use necsim_core_bond::{Partition, PositiveUnitF64};
@@ -25,12 +27,11 @@ pub struct NonSpatialScenario<M: MathsCore, G: RngCore<M>> {
     speciation_probability: UniformSpeciationProbability,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
-#[serde(rename = "NonSpatial")]
 pub struct NonSpatialArguments {
     pub area: (u32, u32),
-    pub deme: u32,
+    pub deme: NonZeroU32,
 }
 
 impl<M: MathsCore, G: RngCore<M>> ScenarioArguments for NonSpatialScenario<M, G> {
