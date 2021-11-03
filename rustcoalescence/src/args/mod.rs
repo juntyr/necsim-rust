@@ -55,65 +55,6 @@ pub struct SimulateArgs {
     pub pause: Option<Pause>,
 }
 
-impl<'de> DeserializeState<'de, Partition> for SimulateArgs {
-    fn deserialize_state<D>(seed: &mut Partition, deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let raw = SimulateArgsRaw::deserialize_state(seed, deserializer)?;
-
-        Ok(Self {
-            common: CommonArgs {
-                speciation_probability_per_generation: raw.speciation_probability_per_generation,
-                sample_percentage: raw.sample_percentage,
-                rng: raw.rng,
-            },
-            scenario: raw.scenario,
-            algorithm: raw.algorithm,
-            partitioning: raw.partitioning,
-            event_log: raw.event_log,
-            reporters: raw.reporters.into_iter().flatten().collect(),
-            pause: raw.pause,
-        })
-    }
-}
-
-#[derive(DeserializeState)]
-#[allow(clippy::module_name_repetitions)]
-#[serde(deny_unknown_fields)]
-#[serde(deserialize_state = "Partition")]
-#[serde(rename = "Simulate")]
-struct SimulateArgsRaw {
-    #[serde(alias = "speciation")]
-    speciation_probability_per_generation: PositiveUnitF64,
-
-    #[serde(alias = "sample")]
-    sample_percentage: ClosedUnitF64,
-
-    #[serde(alias = "randomness")]
-    #[serde(default)]
-    rng: Rng,
-
-    scenario: Scenario,
-
-    #[serde(deserialize_state)]
-    algorithm: Algorithm,
-
-    #[serde(default)]
-    partitioning: Partitioning,
-
-    #[serde(alias = "log")]
-    #[serde(default)]
-    #[serde(deserialize_state_with = "deserialize_state_event_log")]
-    event_log: Option<EventLogRecorder>,
-
-    reporters: Vec<ReporterPluginLibrary>,
-
-    #[serde(default)]
-    #[serde(deserialize_state)]
-    pause: Option<Pause>,
-}
-
 impl Serialize for SimulateArgs {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut args = serializer.serialize_struct("Simulate", 9)?;

@@ -5,7 +5,7 @@ use std::{
     path::Path,
 };
 
-use serde::{Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use necsim_core::{
     impl_finalise, impl_report,
@@ -16,6 +16,8 @@ use necsim_core::{
 };
 
 use crate::{export::Reporters, import::ReporterPlugin};
+
+use super::ReporterPluginLibrary;
 
 pub struct ReporterPluginVec<
     ReportSpeciation: Boolean,
@@ -216,6 +218,14 @@ macro_rules! match_any_reporter_plugin_vec {
             ReportSpeciationReportDispersalReportProgress(mut $inner) => $code,
         }
     }};
+}
+
+impl<'de> Deserialize<'de> for AnyReporterPluginVec {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let plugins = Vec::<ReporterPluginLibrary>::deserialize(deserializer)?;
+
+        Ok(plugins.into_iter().flatten().collect())
+    }
 }
 
 impl Serialize for AnyReporterPluginVec {
