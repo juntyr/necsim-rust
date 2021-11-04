@@ -26,6 +26,7 @@ use rustcoalescence_algorithms::AlgorithmArguments;
 use necsim_plugins_core::import::{AnyReporterPluginVec, ReporterPluginLibrary};
 
 mod parse;
+mod ser;
 
 #[derive(Debug, StructOpt)]
 #[allow(clippy::module_name_repetitions)]
