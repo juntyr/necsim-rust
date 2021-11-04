@@ -8,6 +8,7 @@ extern crate contracts;
 
 use std::{fmt, num::NonZeroU32};
 
+use anyhow::Context;
 use mpi::{
     environment::Universe,
     topology::{Communicator, Rank, SystemCommunicator},
@@ -40,11 +41,12 @@ pub enum MpiPartitioningError {
 pub enum MpiLocalPartitionError {
     #[error("MPI partitioning must be used with an event log.")]
     MissingEventLog,
+    #[error("Invalid MPI event sub-log.")]
+    InvalidEventSubLog,
 }
 
-static mut MPI_UNIVERSE: Option<Universe> = None;
-
 pub struct MpiPartitioning {
+    universe: Universe,
     world: SystemCommunicator,
 }
 
@@ -88,27 +90,13 @@ impl MpiPartitioning {
     /// Returns `NoParallelism` if the MPI world only consists of one or less
     ///  partitions.
     pub fn initialise() -> Result<Self, MpiPartitioningError> {
-        let world = if let Some(universe) = unsafe { &MPI_UNIVERSE } {
-            universe.world()
-        } else if let Some(universe) = mpi::initialize() {
-            let universe = unsafe { MPI_UNIVERSE.insert(universe) };
-
-            universe.world()
-        } else {
-            return Err(MpiPartitioningError::AlreadyInitialised);
-        };
+        let universe = mpi::initialize().ok_or(MpiPartitioningError::AlreadyInitialised)?;
+        let world = universe.world();
 
         if world.size() > 1 {
-            Ok(Self { world })
+            Ok(Self { universe, world })
         } else {
             Err(MpiPartitioningError::NoParallelism)
-        }
-    }
-
-    #[allow(clippy::unused_self)]
-    pub fn update_message_buffer_size(&mut self, size: usize) {
-        if let Some(universe) = unsafe { MPI_UNIVERSE.as_mut() } {
-            universe.set_buffer_size(size);
         }
     }
 }
@@ -137,42 +125,41 @@ impl Partitioning for MpiPartitioning {
 
     /// # Errors
     ///
-    /// Returns `AlreadyInitialised` if MPI was already initialised.
-    /// Returns `NoParallelism` if the MPI world only consists of one or less
-    ///  partitions.
     /// Returns `MissingEventLog` if the local partition is non-monolithic and
     ///  the `event_log` is `None`.
+    /// Returns `InvalidEventSubLog` if creating a sub-`event_log` failed.
     fn into_local_partition<R: Reporter, P: ReporterContext<Reporter = R>>(
         self,
         reporter_context: P,
         event_log: Self::Auxiliary,
     ) -> anyhow::Result<Self::LocalPartition<R>> {
-        // Only one MPI universe can exist, and only one can be used to
-        //  construct the local MPI partition
-        let universe = match unsafe { MPI_UNIVERSE.take() } {
-            Some(universe) => universe,
-            None => anyhow::bail!(MpiPartitioningError::AlreadyInitialised),
-        };
-
-        if self.world.size() <= 1 {
-            anyhow::bail!(MpiPartitioningError::NoParallelism);
-        }
-
         let event_log = match event_log {
             Some(event_log) => event_log,
             None => anyhow::bail!(MpiLocalPartitionError::MissingEventLog),
         };
 
+        let mut directory = event_log.directory().to_owned();
+        directory.push(self.world.rank().to_string());
+
+        let event_log = match event_log.r#move(&directory) {
+            Ok(event_log) => event_log,
+            Err(err) => {
+                std::mem::forget(self);
+
+                return Err(err).context(MpiLocalPartitionError::InvalidEventSubLog);
+            },
+        };
+
         if self.world.rank() == MpiPartitioning::ROOT_RANK {
             Ok(MpiLocalPartition::Root(Box::new(MpiRootPartition::new(
-                universe,
+                self.universe,
                 self.world,
                 reporter_context.try_build()?,
                 event_log,
             ))))
         } else {
             Ok(MpiLocalPartition::Parallel(Box::new(
-                MpiParallelPartition::new(universe, self.world, event_log),
+                MpiParallelPartition::new(self.universe, self.world, event_log),
             )))
         }
     }

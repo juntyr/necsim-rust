@@ -1,6 +1,8 @@
-use std::{collections::BinaryHeap, convert::TryFrom, iter::FromIterator, num::NonZeroUsize};
+use std::{
+    collections::BinaryHeap, convert::TryFrom, iter::FromIterator, num::NonZeroUsize, path::Path,
+};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize, Serializer};
 
 use necsim_core::event::PackedEvent;
 
@@ -20,6 +22,31 @@ pub struct EventLogReplay {
 
     with_speciation: bool,
     with_dispersal: bool,
+}
+
+impl Serialize for EventLogReplay {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        #[derive(Serialize)]
+        struct EventLog<'r> {
+            segments: Vec<&'r Path>,
+            capacity: NonZeroUsize,
+        }
+
+        let mut segments = Vec::new();
+        let mut capacity = NonZeroUsize::new(1).unwrap();
+
+        for segs in &self.frontier {
+            for seg in segs.segments() {
+                segments.push(seg.path());
+
+                capacity = capacity.max(seg.capacity());
+            }
+        }
+
+        segments.sort();
+
+        EventLog { segments, capacity }.serialize(serializer)
+    }
 }
 
 impl TryFrom<EventLogReplayRaw> for EventLogReplay {
