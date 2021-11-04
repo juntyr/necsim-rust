@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use ron::{extensions::Extensions, ser::PrettyConfig};
 use serde::{de::IgnoredAny, Deserialize};
 use serde_state::DeserializeState;
 
@@ -6,24 +7,24 @@ use necsim_core_bond::{ClosedUnitF64, Partition, PositiveUnitF64};
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_plugins_core::import::AnyReporterPluginVec;
 
-use super::{
-    Algorithm, CommandArgs, CommonArgs, Partitioning, Pause, ReplayArgs, Rng, Scenario,
-    SimulateArgs,
-};
+use super::{Algorithm, CommandArgs, CommonArgs, Partitioning, Pause, Rng, Scenario, SimulateArgs};
 
 impl SimulateArgs {
     pub fn try_parse(command_args: CommandArgs) -> Result<Self> {
-        let ron_args = into_ron_args(command_args);
+        let ron_args = into_ron_str(command_args);
 
         // Check for the overall config stucture
         //  (1) are all required fields defined
         //  (2) are any unknown fields defined
-        let SimulateArgsFields { .. } = try_partial_parse("simulate", &ron_args)?;
+        let SimulateArgsFields { .. } = try_parse("simulate", &ron_args)?;
 
         // TODO: Check if the partitioning needs an event log
 
-        let SimulateArgsPartitioningOnly { partitioning } =
-            try_partial_parse("simulate", &ron_args)?;
+        // IDEA: (1) parse the event log
+        //       (2) pre-serialize it for resume config
+        //       (3) pass it to the partitions during deserialize
+
+        let SimulateArgsPartitioningOnly { partitioning } = try_parse("simulate", &ron_args)?;
         let mut partition = partitioning.get_partition();
 
         // Only log to stdout/stderr if the partition is the root partition
@@ -33,23 +34,21 @@ impl SimulateArgs {
             log::LevelFilter::Off
         });
 
-        // TODO: Where should the event log be moved based on its partitioning?
-
         let SimulateArgsCommon {
             speciation_probability_per_generation,
             sample_percentage,
             scenario,
             event_log,
             reporters,
-        } = try_partial_parse("simulate", &ron_args)?;
+        } = try_parse("simulate", &ron_args)?;
         let SimulateArgsStatePartition { algorithm, pause } =
-            try_partial_parse_state("simulate", &ron_args, &mut partition)?;
+            try_parse_state("simulate", &ron_args, &mut partition)?;
 
-        let SimulateArgsRngOnly { rng } = try_partial_parse("simulate", &ron_args)?;
+        let SimulateArgsRngOnly { rng } = try_parse("simulate", &ron_args)?;
 
         // TODO: Transform the RNG based on scenario + algorithms
 
-        Ok(SimulateArgs {
+        let args = SimulateArgs {
             common: CommonArgs {
                 speciation_probability_per_generation,
                 sample_percentage,
@@ -61,18 +60,14 @@ impl SimulateArgs {
             event_log,
             reporters,
             pause,
-        })
-    }
-}
+        };
 
-impl ReplayArgs {
-    pub fn try_parse(command_args: CommandArgs) -> Result<Self> {
-        try_partial_parse("replay", &into_ron_args(command_args))
+        Ok(args)
     }
 }
 
 /// Transform the `command_args` into a RON `String`
-fn into_ron_args(command_args: CommandArgs) -> String {
+pub fn into_ron_str(command_args: CommandArgs) -> String {
     let mut ron_args = String::new();
 
     for arg in command_args.args {
@@ -95,6 +90,18 @@ fn into_ron_args(command_args: CommandArgs) -> String {
     }
 
     ron_args
+}
+
+pub fn ron_config() -> PrettyConfig {
+    PrettyConfig::default()
+        .decimal_floats(true)
+        .struct_names(true)
+        .extensions(
+            Extensions::UNWRAP_VARIANT_NEWTYPES
+                | Extensions::UNWRAP_NEWTYPES
+                | Extensions::IMPLICIT_SOME,
+        )
+        .output_extensions(false)
 }
 
 #[derive(Deserialize)]
@@ -172,7 +179,8 @@ struct SimulateArgsRngOnly {
     rng: Rng,
 }
 
-fn try_partial_parse<'de, D: Deserialize<'de>>(subcommand: &str, ron_args: &'de str) -> Result<D> {
+#[allow(clippy::module_name_repetitions)]
+pub fn try_parse<'de, D: Deserialize<'de>>(subcommand: &str, ron_args: &'de str) -> Result<D> {
     let mut de_ron = ron::Deserializer::from_str(ron_args).with_context(|| {
         format!(
             "Failed to create the {} subcommand argument parser.",
@@ -201,7 +209,7 @@ fn try_partial_parse<'de, D: Deserialize<'de>>(subcommand: &str, ron_args: &'de 
     .with_context(|| format!("Failed to parse the {} subcommand arguments.", subcommand))
 }
 
-fn try_partial_parse_state<'de, D: DeserializeState<'de, Seed>, Seed: ?Sized>(
+pub fn try_parse_state<'de, D: DeserializeState<'de, Seed>, Seed: ?Sized>(
     subcommand: &str,
     ron_args: &'de str,
     seed: &'de mut Seed,

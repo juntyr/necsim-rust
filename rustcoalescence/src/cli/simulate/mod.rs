@@ -1,12 +1,17 @@
 use anyhow::Context;
 use log::LevelFilter;
-use ron::extensions::Extensions;
+use serde::Serialize;
 
+use necsim_core_bond::ClosedUnitF64;
 use necsim_partitioning_core::Partitioning as _;
 use necsim_plugins_core::match_any_reporter_plugin_vec;
 
 use crate::{
-    args::{CommandArgs, Partitioning, SimulateArgs},
+    args::{
+        parse::ron_config,
+        ser::{BufferingSerialize, BufferingSerializer},
+        CommandArgs, Partitioning, Pause, SimulateArgs,
+    },
     reporter::DynamicReporterContext,
 };
 
@@ -26,25 +31,17 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
 
     let simulate_args = SimulateArgs::try_parse(simulate_args)?;
 
-    let config = ron::ser::PrettyConfig::default()
-        .decimal_floats(true)
-        .extensions(
-            Extensions::UNWRAP_VARIANT_NEWTYPES
-                | Extensions::UNWRAP_NEWTYPES
-                | Extensions::IMPLICIT_SOME,
-        );
+    let partial_resume_args = PartialResumeArgs::from(&simulate_args)?;
 
-    println!("{:=^80}", "");
-    println!(
-        "{}",
-        ron::ser::to_string_pretty(&simulate_args, config).unwrap()
-    );
-    println!("{:=^80}", "");
-
-    let simulate_args_info = format!("{:#?}", simulate_args);
+    let config_str = ron::ser::to_string_pretty(&simulate_args, ron_config())
+        .context("Failed to normalise simulate subcommand arguments.")?;
 
     let post_validation = move || {
-        info!("Parsed simulation arguments:\n{}", simulate_args_info);
+        if log::log_enabled!(log::Level::Info) {
+            println!("\n{:=^80}\n", " Simulation Configuration ");
+            println!("{}", config_str.trim_start_matches("Simulate"));
+            println!("\n{:=^80}\n", " Simulation Configuration ");
+        }
     };
 
     let event_log_directory = simulate_args
@@ -100,7 +97,20 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
                 ),
             },
         }
-    })
+    })?;
+
+    let resume_args = ResumeArgs::from(partial_resume_args);
+
+    let resume_str = ron::ser::to_string_pretty(&resume_args, ron_config())
+        .context("Failed to generate config to resume the simulation.")?;
+
+    if log::log_enabled!(log::Level::Info) {
+        println!("\n{:=^80}\n", " Simulation Configuration ");
+        println!("{}", resume_str.trim_start_matches("Simulate"));
+        println!("\n{:=^80}\n", " Simulation Configuration ");
+    }
+
+    Ok(())
 }
 
 #[cfg(not(any(
@@ -127,5 +137,63 @@ mod dispatch {
         _pre_launch: L,
     ) -> anyhow::Result<()> {
         anyhow::bail!("rustcoalescence must be compiled to support at least one algorithm.")
+    }
+}
+
+struct PartialResumeArgs {
+    speciation: BufferingSerialize,
+    scenario: BufferingSerialize,
+    algorithm: BufferingSerialize,
+    partitioning: BufferingSerialize,
+    log: BufferingSerialize,
+    reporters: BufferingSerialize,
+}
+
+impl PartialResumeArgs {
+    fn from(args: &SimulateArgs) -> anyhow::Result<Self> {
+        (|| -> anyhow::Result<Self> {
+            Ok(Self {
+                speciation: args
+                    .common
+                    .speciation_probability_per_generation
+                    .serialize(BufferingSerializer)?,
+                scenario: args.scenario.serialize(BufferingSerializer)?,
+                algorithm: args.algorithm.serialize(BufferingSerializer)?,
+                partitioning: args.partitioning.serialize(BufferingSerializer)?,
+                log: args.event_log.serialize(BufferingSerializer)?,
+                reporters: args.reporters.serialize(BufferingSerializer)?,
+            })
+        })()
+        .context("Failed to generate simulation resume config.")
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename = "Simulate")]
+struct ResumeArgs {
+    speciation: BufferingSerialize,
+    sample: ClosedUnitF64,
+    // rng: Rng,
+    scenario: BufferingSerialize,
+    algorithm: BufferingSerialize,
+    partitioning: BufferingSerialize,
+    log: BufferingSerialize,
+    reporters: BufferingSerialize,
+    pause: Option<Pause>,
+}
+
+impl ResumeArgs {
+    fn from(partial: PartialResumeArgs) -> Self {
+        Self {
+            speciation: partial.speciation,
+            sample: ClosedUnitF64::one(),
+            // rng: Rng,
+            scenario: partial.scenario,
+            algorithm: partial.algorithm,
+            partitioning: partial.partitioning,
+            log: partial.log,
+            reporters: partial.reporters,
+            pause: None,
+        }
     }
 }

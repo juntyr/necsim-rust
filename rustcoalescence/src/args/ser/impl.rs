@@ -1,3 +1,5 @@
+use std::fmt;
+
 use serde::{
     ser::{
         Error, SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTuple,
@@ -6,9 +8,21 @@ use serde::{
     Serialize, Serializer,
 };
 
-pub struct DelayedSerializer;
+pub struct BufferingSerializer;
 
 pub struct StaticString(Box<str>);
+
+impl fmt::Debug for StaticString {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        (&*self.0).fmt(fmt)
+    }
+}
+
+impl fmt::Display for StaticString {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        (&*self.0).fmt(fmt)
+    }
+}
 
 impl StaticString {
     pub fn get(&self) -> &'static str {
@@ -22,7 +36,8 @@ impl From<&'static str> for StaticString {
     }
 }
 
-pub enum DelayedSerialization {
+#[derive(Debug)]
+pub enum BufferingSerialize {
     Bool(bool),
     I8(i8),
     I16(i16),
@@ -40,7 +55,7 @@ pub enum DelayedSerialization {
     Str(String),
     Bytes(Box<[u8]>),
     None,
-    Some(Box<DelayedSerialization>),
+    Some(Box<BufferingSerialize>),
     Unit,
     UnitStruct {
         name: StaticString,
@@ -52,53 +67,50 @@ pub enum DelayedSerialization {
     },
     NewtypeStruct {
         name: StaticString,
-        value: Box<DelayedSerialization>,
+        value: Box<BufferingSerialize>,
     },
     NewtypeVariant {
         name: StaticString,
         variant_index: u32,
         variant: StaticString,
-        value: Box<DelayedSerialization>,
+        value: Box<BufferingSerialize>,
     },
     Seq {
         len: Option<usize>,
-        elements: Box<[DelayedSerialization]>,
+        elements: Box<[BufferingSerialize]>,
     },
     Tuple {
         len: usize,
-        fields: Box<[DelayedSerialization]>,
+        fields: Box<[BufferingSerialize]>,
     },
     TupleStruct {
         name: StaticString,
         len: usize,
-        fields: Box<[DelayedSerialization]>,
+        fields: Box<[BufferingSerialize]>,
     },
     TupleVariant {
         name: StaticString,
         variant_index: u32,
         variant: StaticString,
         len: usize,
-        fields: Box<[DelayedSerialization]>,
+        fields: Box<[BufferingSerialize]>,
     },
     Map {
         len: Option<usize>,
-        entries: Box<[(Option<DelayedSerialization>, Option<DelayedSerialization>)]>,
+        entries: Box<[(Option<BufferingSerialize>, Option<BufferingSerialize>)]>,
     },
     Struct {
         name: StaticString,
         len: usize,
-        fields: Box<[(StaticString, Option<DelayedSerialization>)]>,
+        fields: Box<[(StaticString, Option<BufferingSerialize>)]>,
     },
     StructVariant {
         name: StaticString,
         variant_index: u32,
         variant: StaticString,
         len: usize,
-        fields: Box<[(StaticString, Option<DelayedSerialization>)]>,
+        fields: Box<[(StaticString, Option<BufferingSerialize>)]>,
     },
-    /* DelayedElement {
-     * key: String,
-     * }, */
 }
 
 #[derive(Debug)]
@@ -118,67 +130,67 @@ impl Error for CustomError {
     }
 }
 
-pub struct DelayedSequenceSerializer {
+pub struct BufferedSequenceSerializer {
     len: Option<usize>,
-    elements: Vec<DelayedSerialization>,
+    elements: Vec<BufferingSerialize>,
 }
 
-impl SerializeSeq for DelayedSequenceSerializer {
+impl SerializeSeq for BufferedSequenceSerializer {
     type Error = CustomError;
-    type Ok = DelayedSerialization;
+    type Ok = BufferingSerialize;
 
     fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
-        self.elements.push(value.serialize(DelayedSerializer)?);
+        self.elements.push(value.serialize(BufferingSerializer)?);
         Ok(())
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::Seq {
+        Ok(BufferingSerialize::Seq {
             len: self.len,
             elements: self.elements.into_boxed_slice(),
         })
     }
 }
 
-pub struct DelayedTupleSerializer {
+pub struct BufferedTupleSerializer {
     len: usize,
-    fields: Vec<DelayedSerialization>,
+    fields: Vec<BufferingSerialize>,
 }
 
-impl SerializeTuple for DelayedTupleSerializer {
+impl SerializeTuple for BufferedTupleSerializer {
     type Error = CustomError;
-    type Ok = DelayedSerialization;
+    type Ok = BufferingSerialize;
 
     fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
-        self.fields.push(value.serialize(DelayedSerializer)?);
+        self.fields.push(value.serialize(BufferingSerializer)?);
         Ok(())
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::Tuple {
+        Ok(BufferingSerialize::Tuple {
             len: self.len,
             fields: self.fields.into_boxed_slice(),
         })
     }
 }
 
-pub struct DelayedTupleStructSerializer {
+pub struct BufferedTupleStructSerializer {
     name: StaticString,
     len: usize,
-    fields: Vec<DelayedSerialization>,
+    fields: Vec<BufferingSerialize>,
 }
 
-impl SerializeTupleStruct for DelayedTupleStructSerializer {
+impl SerializeTupleStruct for BufferedTupleStructSerializer {
     type Error = CustomError;
-    type Ok = DelayedSerialization;
+    type Ok = BufferingSerialize;
 
     fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
-        self.fields.push(value.serialize(DelayedSerializer)?);
+        self.fields.push(value.serialize(BufferingSerializer)?);
         Ok(())
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::TupleStruct {
+        Ok(BufferingSerialize::TupleStruct {
             name: self.name,
             len: self.len,
             fields: self.fields.into_boxed_slice(),
@@ -186,25 +198,25 @@ impl SerializeTupleStruct for DelayedTupleStructSerializer {
     }
 }
 
-pub struct DelayedTupleVariantSerializer {
+pub struct BufferedTupleVariantSerializer {
     name: StaticString,
     variant_index: u32,
     variant: StaticString,
     len: usize,
-    fields: Vec<DelayedSerialization>,
+    fields: Vec<BufferingSerialize>,
 }
 
-impl SerializeTupleVariant for DelayedTupleVariantSerializer {
+impl SerializeTupleVariant for BufferedTupleVariantSerializer {
     type Error = CustomError;
-    type Ok = DelayedSerialization;
+    type Ok = BufferingSerialize;
 
     fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
-        self.fields.push(value.serialize(DelayedSerializer)?);
+        self.fields.push(value.serialize(BufferingSerializer)?);
         Ok(())
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::TupleVariant {
+        Ok(BufferingSerialize::TupleVariant {
             name: self.name,
             variant_index: self.variant_index,
             variant: self.variant,
@@ -214,24 +226,24 @@ impl SerializeTupleVariant for DelayedTupleVariantSerializer {
     }
 }
 
-pub struct DelayedMapSerializer {
+pub struct BufferedMapSerializer {
     len: Option<usize>,
-    entries: Vec<(Option<DelayedSerialization>, Option<DelayedSerialization>)>,
+    entries: Vec<(Option<BufferingSerialize>, Option<BufferingSerialize>)>,
 }
 
-impl SerializeMap for DelayedMapSerializer {
+impl SerializeMap for BufferedMapSerializer {
     type Error = CustomError;
-    type Ok = DelayedSerialization;
+    type Ok = BufferingSerialize;
 
     fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<(), Self::Error> {
         self.entries
-            .push((Some(key.serialize(DelayedSerializer)?), None));
+            .push((Some(key.serialize(BufferingSerializer)?), None));
         Ok(())
     }
 
     fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
         self.entries
-            .push((None, Some(value.serialize(DelayedSerializer)?)));
+            .push((None, Some(value.serialize(BufferingSerializer)?)));
         Ok(())
     }
 
@@ -241,29 +253,29 @@ impl SerializeMap for DelayedMapSerializer {
         value: &V,
     ) -> Result<(), Self::Error> {
         self.entries.push((
-            Some(key.serialize(DelayedSerializer)?),
-            Some(value.serialize(DelayedSerializer)?),
+            Some(key.serialize(BufferingSerializer)?),
+            Some(value.serialize(BufferingSerializer)?),
         ));
         Ok(())
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::Map {
+        Ok(BufferingSerialize::Map {
             len: self.len,
             entries: self.entries.into_boxed_slice(),
         })
     }
 }
 
-pub struct DelayedStructSerializer {
+pub struct BufferedStructSerializer {
     name: StaticString,
     len: usize,
-    fields: Vec<(StaticString, Option<DelayedSerialization>)>,
+    fields: Vec<(StaticString, Option<BufferingSerialize>)>,
 }
 
-impl SerializeStruct for DelayedStructSerializer {
+impl SerializeStruct for BufferedStructSerializer {
     type Error = CustomError;
-    type Ok = DelayedSerialization;
+    type Ok = BufferingSerialize;
 
     fn serialize_field<T: ?Sized + Serialize>(
         &mut self,
@@ -271,7 +283,7 @@ impl SerializeStruct for DelayedStructSerializer {
         value: &T,
     ) -> Result<(), Self::Error> {
         self.fields
-            .push((key.into(), Some(value.serialize(DelayedSerializer)?)));
+            .push((key.into(), Some(value.serialize(BufferingSerializer)?)));
         Ok(())
     }
 
@@ -281,7 +293,7 @@ impl SerializeStruct for DelayedStructSerializer {
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::Struct {
+        Ok(BufferingSerialize::Struct {
             name: self.name,
             len: self.len,
             fields: self.fields.into_boxed_slice(),
@@ -289,17 +301,17 @@ impl SerializeStruct for DelayedStructSerializer {
     }
 }
 
-pub struct DelayedStructVariantSerializer {
+pub struct BufferedStructVariantSerializer {
     name: StaticString,
     variant_index: u32,
     variant: StaticString,
     len: usize,
-    fields: Vec<(StaticString, Option<DelayedSerialization>)>,
+    fields: Vec<(StaticString, Option<BufferingSerialize>)>,
 }
 
-impl SerializeStructVariant for DelayedStructVariantSerializer {
+impl SerializeStructVariant for BufferedStructVariantSerializer {
     type Error = CustomError;
-    type Ok = DelayedSerialization;
+    type Ok = BufferingSerialize;
 
     fn serialize_field<T: ?Sized + Serialize>(
         &mut self,
@@ -307,7 +319,7 @@ impl SerializeStructVariant for DelayedStructVariantSerializer {
         value: &T,
     ) -> Result<(), Self::Error> {
         self.fields
-            .push((key.into(), Some(value.serialize(DelayedSerializer)?)));
+            .push((key.into(), Some(value.serialize(BufferingSerializer)?)));
         Ok(())
     }
 
@@ -317,7 +329,7 @@ impl SerializeStructVariant for DelayedStructVariantSerializer {
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::StructVariant {
+        Ok(BufferingSerialize::StructVariant {
             name: self.name,
             variant_index: self.variant_index,
             variant: self.variant,
@@ -327,95 +339,95 @@ impl SerializeStructVariant for DelayedStructVariantSerializer {
     }
 }
 
-impl Serializer for DelayedSerializer {
+impl Serializer for BufferingSerializer {
     type Error = CustomError;
-    type Ok = DelayedSerialization;
-    type SerializeMap = DelayedMapSerializer;
-    type SerializeSeq = DelayedSequenceSerializer;
-    type SerializeStruct = DelayedStructSerializer;
-    type SerializeStructVariant = DelayedStructVariantSerializer;
-    type SerializeTuple = DelayedTupleSerializer;
-    type SerializeTupleStruct = DelayedTupleStructSerializer;
-    type SerializeTupleVariant = DelayedTupleVariantSerializer;
+    type Ok = BufferingSerialize;
+    type SerializeMap = BufferedMapSerializer;
+    type SerializeSeq = BufferedSequenceSerializer;
+    type SerializeStruct = BufferedStructSerializer;
+    type SerializeStructVariant = BufferedStructVariantSerializer;
+    type SerializeTuple = BufferedTupleSerializer;
+    type SerializeTupleStruct = BufferedTupleStructSerializer;
+    type SerializeTupleVariant = BufferedTupleVariantSerializer;
 
     fn serialize_bool(self, v: bool) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::Bool(v))
+        Ok(BufferingSerialize::Bool(v))
     }
 
     fn serialize_i8(self, v: i8) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::I8(v))
+        Ok(BufferingSerialize::I8(v))
     }
 
     fn serialize_i16(self, v: i16) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::I16(v))
+        Ok(BufferingSerialize::I16(v))
     }
 
     fn serialize_i32(self, v: i32) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::I32(v))
+        Ok(BufferingSerialize::I32(v))
     }
 
     fn serialize_i64(self, v: i64) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::I64(v))
+        Ok(BufferingSerialize::I64(v))
     }
 
     fn serialize_i128(self, v: i128) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::I128(v))
+        Ok(BufferingSerialize::I128(v))
     }
 
     fn serialize_u8(self, v: u8) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::U8(v))
+        Ok(BufferingSerialize::U8(v))
     }
 
     fn serialize_u16(self, v: u16) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::U16(v))
+        Ok(BufferingSerialize::U16(v))
     }
 
     fn serialize_u32(self, v: u32) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::U32(v))
+        Ok(BufferingSerialize::U32(v))
     }
 
     fn serialize_u64(self, v: u64) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::U64(v))
+        Ok(BufferingSerialize::U64(v))
     }
 
     fn serialize_u128(self, v: u128) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::U128(v))
+        Ok(BufferingSerialize::U128(v))
     }
 
     fn serialize_f32(self, v: f32) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::F32(v))
+        Ok(BufferingSerialize::F32(v))
     }
 
     fn serialize_f64(self, v: f64) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::F64(v))
+        Ok(BufferingSerialize::F64(v))
     }
 
     fn serialize_char(self, v: char) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::Char(v))
+        Ok(BufferingSerialize::Char(v))
     }
 
     fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::Str(v.to_owned()))
+        Ok(BufferingSerialize::Str(v.to_owned()))
     }
 
     fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::Bytes(v.to_owned().into_boxed_slice()))
+        Ok(BufferingSerialize::Bytes(v.to_owned().into_boxed_slice()))
     }
 
     fn serialize_none(self) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::None)
+        Ok(BufferingSerialize::None)
     }
 
     fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::Some(Box::new(value.serialize(self)?)))
+        Ok(BufferingSerialize::Some(Box::new(value.serialize(self)?)))
     }
 
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::Unit)
+        Ok(BufferingSerialize::Unit)
     }
 
     fn serialize_unit_struct(self, name: &'static str) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::UnitStruct { name: name.into() })
+        Ok(BufferingSerialize::UnitStruct { name: name.into() })
     }
 
     fn serialize_unit_variant(
@@ -424,7 +436,7 @@ impl Serializer for DelayedSerializer {
         variant_index: u32,
         variant: &'static str,
     ) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::UnitVariant {
+        Ok(BufferingSerialize::UnitVariant {
             name: name.into(),
             variant_index,
             variant: variant.into(),
@@ -436,7 +448,7 @@ impl Serializer for DelayedSerializer {
         name: &'static str,
         value: &T,
     ) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::NewtypeStruct {
+        Ok(BufferingSerialize::NewtypeStruct {
             name: name.into(),
             value: Box::new(value.serialize(self)?),
         })
@@ -449,7 +461,7 @@ impl Serializer for DelayedSerializer {
         variant: &'static str,
         value: &T,
     ) -> Result<Self::Ok, Self::Error> {
-        Ok(DelayedSerialization::NewtypeVariant {
+        Ok(BufferingSerialize::NewtypeVariant {
             name: name.into(),
             variant_index,
             variant: variant.into(),
@@ -458,14 +470,14 @@ impl Serializer for DelayedSerializer {
     }
 
     fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
-        Ok(DelayedSequenceSerializer {
+        Ok(BufferedSequenceSerializer {
             len,
             elements: Vec::with_capacity(len.unwrap_or(0)),
         })
     }
 
     fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple, Self::Error> {
-        Ok(DelayedTupleSerializer {
+        Ok(BufferedTupleSerializer {
             len,
             fields: Vec::with_capacity(len),
         })
@@ -476,7 +488,7 @@ impl Serializer for DelayedSerializer {
         name: &'static str,
         len: usize,
     ) -> Result<Self::SerializeTupleStruct, Self::Error> {
-        Ok(DelayedTupleStructSerializer {
+        Ok(BufferedTupleStructSerializer {
             name: name.into(),
             len,
             fields: Vec::with_capacity(len),
@@ -490,7 +502,7 @@ impl Serializer for DelayedSerializer {
         variant: &'static str,
         len: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
-        Ok(DelayedTupleVariantSerializer {
+        Ok(BufferedTupleVariantSerializer {
             name: name.into(),
             variant_index,
             variant: variant.into(),
@@ -500,7 +512,7 @@ impl Serializer for DelayedSerializer {
     }
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
-        Ok(DelayedMapSerializer {
+        Ok(BufferedMapSerializer {
             len,
             entries: Vec::with_capacity(len.unwrap_or(0)),
         })
@@ -511,7 +523,7 @@ impl Serializer for DelayedSerializer {
         name: &'static str,
         len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
-        Ok(DelayedStructSerializer {
+        Ok(BufferedStructSerializer {
             name: name.into(),
             len,
             fields: Vec::with_capacity(len),
@@ -525,7 +537,7 @@ impl Serializer for DelayedSerializer {
         variant: &'static str,
         len: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error> {
-        Ok(DelayedStructVariantSerializer {
+        Ok(BufferedStructVariantSerializer {
             name: name.into(),
             variant_index,
             variant: variant.into(),
@@ -535,7 +547,7 @@ impl Serializer for DelayedSerializer {
     }
 }
 
-impl Serialize for DelayedSerialization {
+impl Serialize for BufferingSerialize {
     #[allow(clippy::too_many_lines)]
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
@@ -676,7 +688,6 @@ impl Serialize for DelayedSerialization {
 
                 struct_variant.end()
             },
-            // Self::DelayedElement { key: _key } => unimplemented!("TODO"),
         }
     }
 }

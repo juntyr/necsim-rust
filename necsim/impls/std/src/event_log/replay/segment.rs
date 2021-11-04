@@ -5,7 +5,7 @@ use std::{
     fs::{File, OpenOptions},
     io::BufReader,
     num::NonZeroUsize,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use anyhow::Result;
@@ -16,6 +16,7 @@ use crate::event_log::EventLogHeader;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct SortedSegment {
+    path: PathBuf,
     header: EventLogHeader,
     reader: BufReader<File>,
     buffer: VecDeque<PackedEvent>,
@@ -25,6 +26,7 @@ pub struct SortedSegment {
 impl fmt::Debug for SortedSegment {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(SortedSegment))
+            .field("path", &self.path)
             .field("header", &self.header)
             .finish()
     }
@@ -48,6 +50,7 @@ impl SortedSegment {
         }
 
         Ok(Self {
+            path: path.to_owned(),
             header,
             reader: buf_reader,
             buffer,
@@ -71,6 +74,16 @@ impl SortedSegment {
     #[must_use]
     pub fn length(&self) -> usize {
         self.header.length()
+    }
+
+    #[must_use]
+    pub fn capacity(&self) -> NonZeroUsize {
+        self.capacity
+    }
+
+    #[must_use]
+    pub fn path(&self) -> &Path {
+        &self.path
     }
 }
 

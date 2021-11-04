@@ -1,18 +1,27 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use log::LevelFilter;
 
 use necsim_core::{event::TypedEvent, reporter::Reporter};
 
 use necsim_plugins_core::match_any_reporter_plugin_vec;
 
-use crate::args::{CommandArgs, ReplayArgs};
+use crate::args::{
+    parse::{into_ron_str, ron_config, try_parse},
+    CommandArgs, ReplayArgs,
+};
 
 #[allow(clippy::module_name_repetitions)]
 pub fn replay_with_logger(replay_args: CommandArgs) -> Result<()> {
     log::set_max_level(LevelFilter::Info);
 
-    let replay_args = ReplayArgs::try_parse(replay_args)?;
-    info!("Parsed replay arguments:\n{:#?}", replay_args);
+    let replay_args: ReplayArgs = try_parse("replay", &into_ron_str(replay_args))?;
+
+    let config_str = ron::ser::to_string_pretty(&replay_args, ron_config())
+        .context("Failed to normalise replay subcommand arguments.")?;
+
+    println!("\n{:=^80}\n", " Replay Configuration ");
+    println!("{}", config_str.trim_start_matches("Replay"));
+    println!("\n{:=^80}\n", " Replay Configuration ");
 
     info!("Starting event replay ...");
 
