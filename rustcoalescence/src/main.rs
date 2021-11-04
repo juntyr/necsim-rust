@@ -10,7 +10,6 @@ extern crate serde_derive_state;
 extern crate log;
 
 use anyhow::{Context, Result};
-use log::LevelFilter;
 use structopt::StructOpt;
 
 mod args;
@@ -30,7 +29,7 @@ fn main() -> Result<()> {
     // Parse and validate all command line arguments
     let args = RustcoalescenceArgs::from_args();
 
-    let result = match args {
+    match args {
         RustcoalescenceArgs::Simulate(simulate_args) => {
             cli::simulate::simulate_with_logger(simulate_args)
                 .context("Failed to initialise or perform the simulation.")
@@ -38,12 +37,5 @@ fn main() -> Result<()> {
         RustcoalescenceArgs::Replay(replay_args) => {
             cli::replay::replay_with_logger(replay_args).context("Failed to replay the simulation.")
         },
-    };
-
-    // Hide non-root error messages
-    if log::max_level() == LevelFilter::Off {
-        Ok(())
-    } else {
-        result
     }
 }

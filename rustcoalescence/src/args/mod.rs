@@ -25,8 +25,8 @@ use rustcoalescence_algorithms::AlgorithmArguments;
 
 use necsim_plugins_core::import::{AnyReporterPluginVec, ReporterPluginLibrary};
 
-mod parse;
-mod ser;
+pub mod parse;
+pub mod ser;
 
 #[derive(Debug, StructOpt)]
 #[allow(clippy::module_name_repetitions)]
@@ -80,31 +80,6 @@ impl Serialize for SimulateArgs {
         args.serialize_field("pause", &self.pause)?;
 
         args.end()
-    }
-}
-
-fn deserialize_state_event_log<'de, D>(
-    partition: &mut Partition,
-    deserializer: D,
-) -> Result<Option<EventLogRecorder>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let event_log = match <Option<EventLogRecorder>>::deserialize(deserializer)? {
-        Some(event_log) => event_log,
-        None => return Ok(None),
-    };
-
-    if partition.size().get() <= 1 {
-        return Ok(Some(event_log));
-    }
-
-    let mut directory = event_log.directory().to_owned();
-    directory.push(partition.rank().to_string());
-
-    match event_log.r#move(&directory) {
-        Ok(event_log) => Ok(Some(event_log)),
-        Err(err) => Err(serde::de::Error::custom(err)),
     }
 }
 
@@ -297,10 +272,13 @@ pub enum Scenario {
     AlmostInfinite(AlmostInfiniteArguments),
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Debug)]
+#[serde(rename = "Replay")]
 #[allow(clippy::module_name_repetitions)]
 pub struct ReplayArgs {
+    #[serde(rename = "log", alias = "event_log")]
     pub event_log: EventLogReplay,
+    pub mode: ReplayMode,
     pub reporters: AnyReporterPluginVec,
 }
 
@@ -312,6 +290,7 @@ impl<'de> Deserialize<'de> for ReplayArgs {
         let raw = ReplayArgsRaw::deserialize(deserializer)?;
 
         let event_log = raw.event_log;
+        let mode = raw.mode;
         let reporters = raw.reporters.into_iter().flatten().collect();
 
         let (report_speciation, report_dispersal) = match &reporters {
@@ -350,9 +329,10 @@ impl<'de> Deserialize<'de> for ReplayArgs {
             Ok(())
         };
 
-        match (valid, raw.mode) {
+        match (valid, mode) {
             (Ok(_), _) => Ok(Self {
                 event_log,
+                mode,
                 reporters,
             }),
             (Err(error), ReplayMode::WarnOnly) => {
@@ -360,6 +340,7 @@ impl<'de> Deserialize<'de> for ReplayArgs {
 
                 Ok(Self {
                     event_log,
+                    mode,
                     reporters,
                 })
             },
@@ -368,10 +349,10 @@ impl<'de> Deserialize<'de> for ReplayArgs {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
 #[serde(deny_unknown_fields)]
-enum ReplayMode {
+pub enum ReplayMode {
     Strict,
     WarnOnly,
 }

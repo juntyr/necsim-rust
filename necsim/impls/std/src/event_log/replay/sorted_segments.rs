@@ -52,6 +52,10 @@ impl SortedSortedSegments {
     pub fn length(&self) -> usize {
         self.segments.iter().map(SortedSegment::length).sum()
     }
+
+    pub fn segments(&self) -> &[SortedSegment] {
+        &self.segments
+    }
 }
 
 impl Iterator for SortedSortedSegments {
