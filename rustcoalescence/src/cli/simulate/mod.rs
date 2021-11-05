@@ -1,5 +1,6 @@
 use anyhow::Context;
 use log::LevelFilter;
+use necsim_core::cogs::{MathsCore, RngCore};
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use serde::{de::IgnoredAny, Deserialize, Deserializer, Serialize};
 
@@ -11,7 +12,7 @@ use crate::{
     args::{
         parse::{into_ron_str, ron_config, try_parse, try_parse_state},
         ser::{BufferingSerialize, BufferingSerializer},
-        Algorithm, CommandArgs, CommonArgs, Partitioning, Pause, Rng, Scenario, SimulateArgs,
+        Algorithm, CommandArgs, Partitioning, Pause, Rng, Scenario,
     },
     reporter::DynamicReporterContext,
 };
@@ -69,96 +70,58 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
     let SimulateArgsStatePartition { algorithm, pause } =
         try_parse_state("simulate", &ron_args, &mut partition)?;
 
-    let SimulateArgsRngOnly { rng } = try_parse("simulate", &ron_args)?;
+    let partial_simulate_args = BufferingPartialSimulateArgs::new(
+        speciation_probability_per_generation,
+        sample_percentage,
+        &scenario,
+        &algorithm,
+        &partitioning,
+        &event_log,
+        &reporters,
+        &pause,
+    )?;
 
-    // TODO: Transform the RNG based on scenario + algorithms
+    let partial_resume_args = BufferingPartialResumeArgs::new(
+        speciation_probability_per_generation,
+        &scenario,
+        &algorithm,
+        &partitioning,
+        &event_log,
+        &reporters,
+    )?;
 
-    let simulate_args = SimulateArgs {
-        common: CommonArgs {
-            speciation_probability_per_generation,
-            sample_percentage,
-            rng,
-        },
-        scenario,
-        algorithm,
-        partitioning,
-        event_log,
-        reporters,
-        pause,
-    };
+    let pause_before = pause.map(|pause| pause.before);
 
-    let partial_resume_args = PartialResumeArgs::from(&simulate_args)?;
-
-    let config_str = ron::ser::to_string_pretty(&simulate_args, ron_config())
-        .context("Failed to normalise simulate subcommand arguments.")?;
-
-    let post_validation = move || {
-        if log::log_enabled!(log::Level::Info) {
-            println!("\n{:=^80}\n", " Simulation Configuration ");
-            println!("{}", config_str.trim_start_matches("Simulate"));
-            println!("\n{:=^80}\n", " Simulation Configuration ");
-        }
-    };
-
-    let event_log_directory = simulate_args
-        .event_log
-        .as_ref()
-        .map(|event_log| format!("{:?}", event_log));
-    let pre_launch = move || {
-        if partition.size().get() <= 1 {
-            info!("The simulation will be run in monolithic mode.");
-        } else {
-            info!(
-                "The simulation will be distributed across {} partitions.",
-                partition.size().get()
-            );
-        }
-
-        if let Some(event_log_directory) = event_log_directory {
-            info!(
-                "The simulation will log its events to {}.",
-                event_log_directory
-            );
-            warn!("Therefore, only progress will be reported live.");
-        } else {
-            info!("The simulation will report events live.");
-        }
-    };
-
-    let (time, steps) = match_any_reporter_plugin_vec!(simulate_args.reporters => |reporter| {
+    let (time, steps) = match_any_reporter_plugin_vec!(reporters => |reporter| {
         use necsim_partitioning_monolithic::MonolithicLocalPartition;
         #[cfg(feature = "necsim-partitioning-mpi")]
         use necsim_partitioning_mpi::MpiLocalPartition;
 
         // Initialise the local partition and the simulation
-        match simulate_args.partitioning {
+        match partitioning {
             Partitioning::Monolithic(partitioning) => match partitioning.into_local_partition(
-                DynamicReporterContext::new(reporter), simulate_args.event_log
+                DynamicReporterContext::new(reporter), event_log
             ).with_context(|| "Failed to initialise the local monolithic partition.")? {
                 MonolithicLocalPartition::Live(partition) => dispatch::simulate_with_logger(
-                    *partition, simulate_args.common, simulate_args.scenario,
-                    simulate_args.algorithm, simulate_args.pause,
-                    post_validation, pre_launch,
+                    *partition, speciation_probability_per_generation, sample_percentage,
+                    scenario, algorithm, pause_before, &ron_args, partial_simulate_args,
                 ),
                 MonolithicLocalPartition::Recorded(partition) => dispatch::simulate_with_logger(
-                    *partition, simulate_args.common, simulate_args.scenario,
-                    simulate_args.algorithm, simulate_args.pause,
-                    post_validation, pre_launch,
+                    *partition, speciation_probability_per_generation, sample_percentage,
+                    scenario, algorithm, pause_before, &ron_args, partial_simulate_args,
                 ),
             },
             #[cfg(feature = "necsim-partitioning-mpi")]
             Partitioning::Mpi(partitioning) => match partitioning.into_local_partition(
-                DynamicReporterContext::new(reporter), simulate_args.event_log
+                DynamicReporterContext::new(reporter), event_log
             ).with_context(|| "Failed to initialise the local MPI partition.")? {
                 MpiLocalPartition::Root(partition) => dispatch::simulate_with_logger(
-                    *partition, simulate_args.common, simulate_args.scenario,
-                    simulate_args.algorithm, simulate_args.pause,
-                    post_validation, pre_launch,
+                    *partition, speciation_probability_per_generation, sample_percentage,
+                    scenario, algorithm, pause_before, &ron_args, partial_simulate_args,
                 ),
                 MpiLocalPartition::Parallel(partition) => dispatch::simulate_with_logger(
-                    *partition, simulate_args.common, simulate_args.scenario,
-                    simulate_args.algorithm, simulate_args.pause,
-                    post_validation, pre_launch,
+                    *partition, speciation_probability_per_generation, sample_percentage,
+                    scenario, algorithm, pause_before, &ron_args, partial_simulate_args,
                 ),
             },
         }
@@ -191,28 +154,106 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
 )))]
 mod dispatch {
     use necsim_core::reporter::Reporter;
-    use necsim_core_bond::NonNegativeF64;
+    use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveUnitF64};
     use necsim_partitioning_core::LocalPartition;
 
-    use crate::args::{
-        Algorithm as AlgorithmArgs, CommonArgs, Pause as PauseArgs, Scenario as ScenarioArgs,
-    };
+    use crate::args::{Algorithm as AlgorithmArgs, Scenario as ScenarioArgs};
 
-    #[allow(clippy::needless_pass_by_value)]
-    pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>, V: FnOnce(), L: FnOnce()>(
+    use super::BufferingPartialSimulateArgs;
+
+    #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
+    pub(super) fn simulate_with_logger<R: Reporter, P: LocalPartition<R>>(
         _local_partition: P,
-        _common_args: CommonArgs,
+        _speciation_probability_per_generation: PositiveUnitF64,
+        _sample_percentage: ClosedUnitF64,
         _scenario: ScenarioArgs,
         _algorithm: AlgorithmArgs,
-        _pause: Option<PauseArgs>,
-        _post_validation: V,
-        _pre_launch: L,
+        _pause_before: Option<NonNegativeF64>,
+        _ron_args: &str,
+        _partial_simulate_args: BufferingPartialSimulateArgs,
     ) -> anyhow::Result<(NonNegativeF64, u64)> {
         anyhow::bail!("rustcoalescence must be compiled to support at least one algorithm.")
     }
 }
 
-struct PartialResumeArgs {
+#[allow(dead_code)]
+struct BufferingPartialSimulateArgs {
+    speciation: BufferingSerialize,
+    sample: BufferingSerialize,
+    scenario: BufferingSerialize,
+    algorithm: BufferingSerialize,
+    partitioning: BufferingSerialize,
+    log: BufferingSerialize,
+    reporters: BufferingSerialize,
+    pause: BufferingSerialize,
+}
+
+impl BufferingPartialSimulateArgs {
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        speciation: PositiveUnitF64,
+        sample: ClosedUnitF64,
+        scenario: &Scenario,
+        algorithm: &Algorithm,
+        partitioning: &Partitioning,
+        event_log: &Option<EventLogRecorder>,
+        reporters: &AnyReporterPluginVec,
+        pause: &Option<Pause>,
+    ) -> anyhow::Result<Self> {
+        (|| -> anyhow::Result<Self> {
+            Ok(Self {
+                speciation: speciation.serialize(BufferingSerializer)?,
+                sample: sample.serialize(BufferingSerializer)?,
+                scenario: scenario.serialize(BufferingSerializer)?,
+                algorithm: algorithm.serialize(BufferingSerializer)?,
+                partitioning: partitioning.serialize(BufferingSerializer)?,
+                log: event_log.serialize(BufferingSerializer)?,
+                reporters: reporters.serialize(BufferingSerializer)?,
+                pause: pause.serialize(BufferingSerializer)?,
+            })
+        })()
+        .context("Failed to normalise the simulation config.")
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename = "Simulate")]
+struct BufferingSimulateArgs {
+    speciation: BufferingSerialize,
+    sample: BufferingSerialize,
+    rng: BufferingSerialize,
+    scenario: BufferingSerialize,
+    algorithm: BufferingSerialize,
+    partitioning: BufferingSerialize,
+    log: BufferingSerialize,
+    reporters: BufferingSerialize,
+    pause: BufferingSerialize,
+}
+
+impl BufferingSimulateArgs {
+    #[allow(dead_code)]
+    fn new<M: MathsCore, G: RngCore<M>>(
+        partial: BufferingPartialSimulateArgs,
+        rng: &Rng<M, G>,
+    ) -> anyhow::Result<Self> {
+        (|| -> anyhow::Result<Self> {
+            Ok(Self {
+                speciation: partial.speciation,
+                sample: partial.sample,
+                rng: rng.serialize(BufferingSerializer)?,
+                scenario: partial.scenario,
+                algorithm: partial.algorithm,
+                partitioning: partial.partitioning,
+                log: partial.log,
+                reporters: partial.reporters,
+                pause: partial.pause,
+            })
+        })()
+        .context("Failed to normalise the simulation config.")
+    }
+}
+
+struct BufferingPartialResumeArgs {
     speciation: BufferingSerialize,
     scenario: BufferingSerialize,
     algorithm: BufferingSerialize,
@@ -221,22 +262,26 @@ struct PartialResumeArgs {
     reporters: BufferingSerialize,
 }
 
-impl PartialResumeArgs {
-    fn from(args: &SimulateArgs) -> anyhow::Result<Self> {
+impl BufferingPartialResumeArgs {
+    fn new(
+        speciation: PositiveUnitF64,
+        scenario: &Scenario,
+        algorithm: &Algorithm,
+        partitioning: &Partitioning,
+        event_log: &Option<EventLogRecorder>,
+        reporters: &AnyReporterPluginVec,
+    ) -> anyhow::Result<Self> {
         (|| -> anyhow::Result<Self> {
             Ok(Self {
-                speciation: args
-                    .common
-                    .speciation_probability_per_generation
-                    .serialize(BufferingSerializer)?,
-                scenario: args.scenario.serialize(BufferingSerializer)?,
-                algorithm: args.algorithm.serialize(BufferingSerializer)?,
-                partitioning: args.partitioning.serialize(BufferingSerializer)?,
-                log: args.event_log.serialize(BufferingSerializer)?,
-                reporters: args.reporters.serialize(BufferingSerializer)?,
+                speciation: speciation.serialize(BufferingSerializer)?,
+                scenario: scenario.serialize(BufferingSerializer)?,
+                algorithm: algorithm.serialize(BufferingSerializer)?,
+                partitioning: partitioning.serialize(BufferingSerializer)?,
+                log: event_log.serialize(BufferingSerializer)?,
+                reporters: reporters.serialize(BufferingSerializer)?,
             })
         })()
-        .context("Failed to generate simulation resume config.")
+        .context("Failed to generate the simulation resume config.")
     }
 }
 
@@ -255,7 +300,7 @@ struct ResumeArgs {
 }
 
 impl ResumeArgs {
-    fn from(partial: PartialResumeArgs) -> Self {
+    fn from(partial: BufferingPartialResumeArgs) -> Self {
         Self {
             speciation: partial.speciation,
             sample: ClosedUnitF64::one(),
@@ -364,12 +409,4 @@ struct SimulateArgsStatePartition {
     #[serde(default)]
     #[serde(deserialize_state)]
     pause: Option<Pause>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename = "Simulate")]
-struct SimulateArgsRngOnly {
-    #[serde(alias = "randomness")]
-    #[serde(default)]
-    rng: Rng,
 }

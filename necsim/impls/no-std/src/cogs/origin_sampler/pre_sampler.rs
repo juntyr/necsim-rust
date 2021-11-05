@@ -5,20 +5,19 @@ use core::{
 };
 
 use necsim_core::cogs::MathsCore;
-use necsim_core_bond::Partition;
+use necsim_core_bond::{ClosedUnitF64, Partition};
 
 const INV_PHI: f64 = 6.180_339_887_498_949e-1_f64;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct OriginPreSampler<M: MathsCore, I: Iterator<Item = u64>> {
     inner: I,
-    proportion: f64,
+    proportion: ClosedUnitF64,
     _marker: PhantomData<M>,
 }
 
 impl<M: MathsCore, I: Iterator<Item = u64>> OriginPreSampler<M, I> {
-    #[debug_ensures((0.0_f64..=1.0_f64).contains(&ret), "returns a proportion")]
-    pub fn get_sample_proportion(&self) -> f64 {
+    pub fn get_sample_proportion(&self) -> ClosedUnitF64 {
         self.proportion
     }
 }
@@ -50,7 +49,7 @@ impl<M: MathsCore> OriginPreSampler<M, RangeFrom<u64>> {
     pub fn all() -> Self {
         Self {
             inner: 0..,
-            proportion: 1.0_f64,
+            proportion: ClosedUnitF64::one(),
             _marker: PhantomData::<M>,
         }
     }
@@ -58,9 +57,11 @@ impl<M: MathsCore> OriginPreSampler<M, RangeFrom<u64>> {
 
 impl<M: MathsCore, I: Iterator<Item = u64>> OriginPreSampler<M, I> {
     #[must_use]
-    #[debug_requires((0.0_f64..=1.0_f64).contains(&percentage), "percentage is in [0, 1]")]
-    pub fn percentage(mut self, percentage: f64) -> OriginPreSampler<M, impl Iterator<Item = u64>> {
-        let inv_geometric_sample_rate = M::ln(1.0_f64 - percentage).recip();
+    pub fn percentage(
+        mut self,
+        percentage: ClosedUnitF64,
+    ) -> OriginPreSampler<M, impl Iterator<Item = u64>> {
+        let inv_geometric_sample_rate = M::ln(1.0_f64 - percentage.get()).recip();
 
         OriginPreSampler {
             proportion: self.proportion * percentage,
@@ -93,7 +94,7 @@ impl<M: MathsCore, I: Iterator<Item = u64>> OriginPreSampler<M, I> {
         let _ = self.advance_by(partition.rank() as usize);
 
         OriginPreSampler {
-            proportion: self.proportion / f64::from(partition.size().get()),
+            proportion: self.proportion / partition.size(),
             inner: self.inner.step_by(partition.size().get() as usize),
             _marker: PhantomData::<M>,
         }

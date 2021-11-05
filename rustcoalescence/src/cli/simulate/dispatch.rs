@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use bincode::Options;
+use serde::Deserialize;
 use tiny_keccak::{Hasher, Keccak};
 
 use rustcoalescence_algorithms::Algorithm;
@@ -14,10 +14,10 @@ use rustcoalescence_algorithms_gillespie::{
 use rustcoalescence_algorithms_independent::IndependentAlgorithm;
 
 use necsim_core::{
-    cogs::{MathsCore, SeedableRng},
-    reporter::Reporter,
+    cogs::{MathsCore, RngCore, SeedableRng},
+    reporter::{boolean::Boolean, Reporter},
 };
-use necsim_core_bond::NonNegativeF64;
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveUnitF64};
 use necsim_impls_no_std::cogs::origin_sampler::pre_sampler::OriginPreSampler;
 use necsim_partitioning_core::LocalPartition;
 
@@ -28,69 +28,79 @@ use rustcoalescence_scenarios::{
 };
 
 use crate::args::{
-    Algorithm as AlgorithmArgs, Base32String, CommonArgs, Pause as PauseArgs, Rng as RngArgs,
-    Scenario as ScenarioArgs,
+    parse::{ron_config, try_parse},
+    Algorithm as AlgorithmArgs, Rng as RngArgs, Scenario as ScenarioArgs,
 };
 
-pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>, V: FnOnce(), L: FnOnce()>(
+use super::{BufferingPartialSimulateArgs, BufferingSimulateArgs};
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn simulate_with_logger<R: Reporter, P: LocalPartition<R>>(
     mut local_partition: P,
-    common_args: CommonArgs,
+    speciation_probability_per_generation: PositiveUnitF64,
+    sample_percentage: ClosedUnitF64,
     scenario: ScenarioArgs,
     algorithm: AlgorithmArgs,
-    pause: Option<PauseArgs>,
-    post_validation: V,
-    pre_launch: L,
+    pause_before: Option<NonNegativeF64>,
+    ron_args: &str,
+    partial_simulate_args: BufferingPartialSimulateArgs,
 ) -> Result<(NonNegativeF64, u64)> {
-    let pause_before = pause.map(|pause| pause.before);
-
     let (time, steps) = crate::match_scenario_algorithm!(
         (algorithm, scenario => scenario)
     {
         #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
-        AlgorithmArgs::Classical(algorithm_args) => { initialise_and_simulate::<ClassicalAlgorithm, _, R, P, V, L>(
-            common_args, algorithm_args, scenario, pause_before, &mut local_partition,
-            post_validation, pre_launch
-        ) },
+        AlgorithmArgs::Classical(algorithm_args) => {
+            initialise_and_simulate::<ClassicalAlgorithm, _, R, P>(
+                &mut local_partition, sample_percentage, algorithm_args,
+                scenario, pause_before, ron_args, partial_simulate_args,
+            )
+        },
         #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
-        AlgorithmArgs::EventSkipping(algorithm_args) => { initialise_and_simulate::<EventSkippingAlgorithm, _, R, P, V, L>(
-            common_args, algorithm_args, scenario, pause_before, &mut local_partition,
-            post_validation, pre_launch
-        ) },
+        AlgorithmArgs::EventSkipping(algorithm_args) => {
+            initialise_and_simulate::<EventSkippingAlgorithm, _, R, P>(
+                &mut local_partition, sample_percentage, algorithm_args,
+                scenario, pause_before, ron_args, partial_simulate_args,
+            )
+        },
         #[cfg(feature = "rustcoalescence-algorithms-independent")]
-        AlgorithmArgs::Independent(algorithm_args) => { initialise_and_simulate::<IndependentAlgorithm, _, R, P, V, L>(
-            common_args, algorithm_args, scenario, pause_before, &mut local_partition,
-            post_validation, pre_launch
-        ) },
+        AlgorithmArgs::Independent(algorithm_args) => {
+            initialise_and_simulate::<IndependentAlgorithm, _, R, P>(
+                &mut local_partition, sample_percentage, algorithm_args,
+                scenario, pause_before, ron_args, partial_simulate_args,
+            )
+        },
         #[cfg(feature = "rustcoalescence-algorithms-cuda")]
-        AlgorithmArgs::Cuda(algorithm_args) => { initialise_and_simulate::<CudaAlgorithm, _, R, P, V, L>(
-            common_args, algorithm_args, scenario, pause_before, &mut local_partition,
-            post_validation, pre_launch
-        ) }
+        AlgorithmArgs::Cuda(algorithm_args) => {
+            initialise_and_simulate::<CudaAlgorithm, _, R, P>(
+                &mut local_partition, sample_percentage, algorithm_args,
+                scenario, pause_before, ron_args, partial_simulate_args,
+            )
+        }
         <=>
         ScenarioArgs::SpatiallyExplicit(scenario_args) => {
             SpatiallyExplicitScenario::initialise(
                 scenario_args,
-                common_args.speciation_probability_per_generation,
+                speciation_probability_per_generation,
             )?
         },
         ScenarioArgs::NonSpatial(scenario_args) => {
             NonSpatialScenario::initialise(
                 scenario_args,
-                common_args.speciation_probability_per_generation,
+                speciation_probability_per_generation,
             )
             .into_ok()
         },
         ScenarioArgs::AlmostInfinite(scenario_args) => {
             AlmostInfiniteScenario::initialise(
                 scenario_args,
-                common_args.speciation_probability_per_generation,
+                speciation_probability_per_generation,
             )
             .into_ok()
         },
         ScenarioArgs::SpatiallyImplicit(scenario_args) => {
             SpatiallyImplicitScenario::initialise(
                 scenario_args,
-                common_args.speciation_probability_per_generation,
+                speciation_probability_per_generation,
             )
             .into_ok()
         }
@@ -111,89 +121,79 @@ pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>, V: FnOnce(), L: F
     Ok((time, steps))
 }
 
+#[derive(Deserialize)]
+#[serde(bound = "")]
+#[serde(rename = "Simulate")]
+struct SimulateArgsRngOnly<M: MathsCore, G: RngCore<M>> {
+    #[serde(alias = "randomness")]
+    rng: RngArgs<M, G>,
+}
+
 fn initialise_and_simulate<
     A: Algorithm<O, R, P>,
     O: Scenario<A::MathsCore, A::Rng>,
     R: Reporter,
     P: LocalPartition<R>,
-    V: FnOnce(),
-    L: FnOnce(),
 >(
-    common_args: CommonArgs,
+    local_partition: &mut P,
+    sample_percentage: ClosedUnitF64,
     algorithm_args: A::Arguments,
     scenario: O,
     pause_before: Option<NonNegativeF64>,
-    local_partition: &mut P,
-    post_validation: V,
-    pre_launch: L,
+    ron_args: &str,
+    partial_simulate_args: BufferingPartialSimulateArgs,
 ) -> anyhow::Result<(NonNegativeF64, u64)>
 where
     Result<(NonNegativeF64, u64), A::Error>: anyhow::Context<(NonNegativeF64, u64), A::Error>,
 {
-    let (rng, rng_info) = initialise_rng(common_args.rng)?;
+    let SimulateArgsRngOnly { rng } = try_parse("simulate", ron_args)?;
 
-    (post_validation)();
-    (rng_info)();
-    (pre_launch)();
+    let simulate_args = BufferingSimulateArgs::new(partial_simulate_args, &rng)?;
+    let config_str = ron::ser::to_string_pretty(&simulate_args, ron_config())
+        .context("Failed to normalise the simulation config.")?;
+
+    if log::log_enabled!(log::Level::Info) {
+        println!("\n{:=^80}\n", " Simulation Configuration ");
+        println!("{}", config_str.trim_start_matches("Simulate"));
+        println!("\n{:=^80}\n", " Simulation Configuration ");
+    }
+
+    if local_partition.get_partition().size().get() <= 1 {
+        info!("The simulation will be run in monolithic mode.");
+    } else {
+        info!(
+            "The simulation will be distributed across {} partitions.",
+            local_partition.get_partition().size().get()
+        );
+    }
+
+    if P::IsLive::VALUE {
+        info!("The simulation will report all events live.");
+    } else {
+        warn!("The simulation will only report progress events live.");
+    }
+
+    let rng = match rng {
+        RngArgs::Seed(seed) => SeedableRng::seed_from_u64(seed),
+        RngArgs::Sponge(bytes) => {
+            let mut seed = <A::Rng as RngCore<A::MathsCore>>::Seed::default();
+
+            let mut sponge = Keccak::v256();
+            sponge.update(&bytes);
+            sponge.finalize(seed.as_mut());
+
+            RngCore::from_seed(seed)
+        },
+        RngArgs::State(state) => state.into(),
+    };
 
     A::initialise_and_simulate(
         algorithm_args,
         rng,
         scenario,
-        OriginPreSampler::all().percentage(common_args.sample_percentage.get()),
+        OriginPreSampler::all().percentage(sample_percentage),
         pause_before,
         local_partition,
     )
     .context("Failed to perform the simulation.")
-}
-
-fn seed_with_sponge<M: MathsCore, G: SeedableRng<M>>(bytes: &[u8]) -> G {
-    let mut seed = G::Seed::default();
-
-    let mut sponge = Keccak::v256();
-    sponge.update(bytes);
-    sponge.finalize(seed.as_mut());
-
-    G::from_seed(seed)
-}
-
-fn initialise_rng<M: MathsCore, G: SeedableRng<M>>(args: RngArgs) -> Result<(G, impl FnOnce())> {
-    #[derive(Debug)]
-    enum Rng {
-        Seed(u64),
-        Sponge(Base32String),
-        State(Base32String),
-    }
-
-    let (rng, args) = match args {
-        RngArgs::Entropy => {
-            let mut entropy = G::Seed::default();
-            getrandom::getrandom(entropy.as_mut())
-                .map_err(|err| anyhow::anyhow!("simulate.rng.Entropy: {}", err))
-                .context("Failed to validate the simulate subcommand arguments.")?;
-
-            (
-                seed_with_sponge(entropy.as_mut()),
-                Rng::Sponge(Base32String::new(entropy.as_mut())),
-            )
-        },
-        RngArgs::Seed(seed) => (G::seed_from_u64(seed), Rng::Seed(seed)),
-        RngArgs::Sponge(state) => (seed_with_sponge(&state), Rng::Sponge(state)),
-        RngArgs::State(state) => {
-            let rng = bincode::options()
-                .deserialize(&state)
-                .map_err(|_| anyhow::anyhow!("simulate.rng.State: invalid RNG state {}", state))
-                .context("Failed to validate the simulate subcommand arguments.")?;
-
-            (rng, Rng::State(state))
-        },
-        RngArgs::StateElseSponge(state) => match bincode::options().deserialize(&state) {
-            Ok(rng) => (rng, Rng::State(state)),
-            Err(_) => (seed_with_sponge(&state), Rng::Sponge(state)),
-        },
-    };
-
-    Ok((rng, move || {
-        info!("Initialised the RNG using the {:?} method.", args);
-    }))
 }
