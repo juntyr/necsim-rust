@@ -1,16 +1,17 @@
 use anyhow::Context;
 use log::LevelFilter;
-use serde::Serialize;
+use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use serde::{de::IgnoredAny, Deserialize, Deserializer, Serialize};
 
-use necsim_core_bond::ClosedUnitF64;
+use necsim_core_bond::{ClosedUnitF64, Partition, PositiveUnitF64};
 use necsim_partitioning_core::Partitioning as _;
-use necsim_plugins_core::match_any_reporter_plugin_vec;
+use necsim_plugins_core::{import::AnyReporterPluginVec, match_any_reporter_plugin_vec};
 
 use crate::{
     args::{
-        parse::ron_config,
+        parse::{into_ron_str, ron_config, try_parse, try_parse_state},
         ser::{BufferingSerialize, BufferingSerializer},
-        CommandArgs, Partitioning, Pause, SimulateArgs,
+        Algorithm, CommandArgs, CommonArgs, Partitioning, Pause, Rng, Scenario, SimulateArgs,
     },
     reporter::DynamicReporterContext,
 };
@@ -25,11 +26,66 @@ mod r#impl;
 ))]
 mod dispatch;
 
-#[allow(clippy::module_name_repetitions)]
+#[allow(clippy::module_name_repetitions, clippy::too_many_lines)]
 pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
     log::set_max_level(LevelFilter::Info);
 
-    let simulate_args = SimulateArgs::try_parse(simulate_args)?;
+    let ron_args = into_ron_str(simulate_args);
+
+    // Check for the overall config stucture
+    //  (1) are all required fields defined
+    //  (2) are any unknown fields defined
+    let SimulateArgsFields { .. } = try_parse("simulate", &ron_args)?;
+
+    let SimulateArgsPartitioningOnly { partitioning } = try_parse("simulate", &ron_args)?;
+    let mut partition = partitioning.get_partition();
+
+    // Only log to stdout/stderr if the partition is the root partition
+    log::set_max_level(if partitioning.is_root() {
+        log::LevelFilter::Info
+    } else {
+        log::LevelFilter::Off
+    });
+
+    let mut event_log_check = partitioning.get_event_log_check();
+
+    let SimulateArgsEventLogOnly { event_log } =
+        try_parse_state("simulate", &ron_args, &mut event_log_check)?;
+
+    match &event_log {
+        None => event_log_check.0,
+        Some(_) => event_log_check.1,
+    }
+    .map_err(|err| anyhow::anyhow!("simulate.*: {}", err))
+    .context("Failed to parse the simulate subcommand arguments.")?;
+
+    let SimulateArgsCommon {
+        speciation_probability_per_generation,
+        sample_percentage,
+        scenario,
+        reporters,
+    } = try_parse("simulate", &ron_args)?;
+
+    let SimulateArgsStatePartition { algorithm, pause } =
+        try_parse_state("simulate", &ron_args, &mut partition)?;
+
+    let SimulateArgsRngOnly { rng } = try_parse("simulate", &ron_args)?;
+
+    // TODO: Transform the RNG based on scenario + algorithms
+
+    let simulate_args = SimulateArgs {
+        common: CommonArgs {
+            speciation_probability_per_generation,
+            sample_percentage,
+            rng,
+        },
+        scenario,
+        algorithm,
+        partitioning,
+        event_log,
+        reporters,
+        pause,
+    };
 
     let partial_resume_args = PartialResumeArgs::from(&simulate_args)?;
 
@@ -49,6 +105,15 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
         .as_ref()
         .map(|event_log| format!("{:?}", event_log));
     let pre_launch = move || {
+        if partition.size().get() <= 1 {
+            info!("The simulation will be run in monolithic mode.");
+        } else {
+            info!(
+                "The simulation will be distributed across {} partitions.",
+                partition.size().get()
+            );
+        }
+
         if let Some(event_log_directory) = event_log_directory {
             info!(
                 "The simulation will log its events to {}.",
@@ -60,7 +125,7 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
         }
     };
 
-    match_any_reporter_plugin_vec!(simulate_args.reporters => |reporter| {
+    let (time, steps) = match_any_reporter_plugin_vec!(simulate_args.reporters => |reporter| {
         use necsim_partitioning_monolithic::MonolithicLocalPartition;
         #[cfg(feature = "necsim-partitioning-mpi")]
         use necsim_partitioning_mpi::MpiLocalPartition;
@@ -71,12 +136,12 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
                 DynamicReporterContext::new(reporter), simulate_args.event_log
             ).with_context(|| "Failed to initialise the local monolithic partition.")? {
                 MonolithicLocalPartition::Live(partition) => dispatch::simulate_with_logger(
-                    partition, simulate_args.common, simulate_args.scenario,
+                    *partition, simulate_args.common, simulate_args.scenario,
                     simulate_args.algorithm, simulate_args.pause,
                     post_validation, pre_launch,
                 ),
                 MonolithicLocalPartition::Recorded(partition) => dispatch::simulate_with_logger(
-                    partition, simulate_args.common, simulate_args.scenario,
+                    *partition, simulate_args.common, simulate_args.scenario,
                     simulate_args.algorithm, simulate_args.pause,
                     post_validation, pre_launch,
                 ),
@@ -86,18 +151,24 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
                 DynamicReporterContext::new(reporter), simulate_args.event_log
             ).with_context(|| "Failed to initialise the local MPI partition.")? {
                 MpiLocalPartition::Root(partition) => dispatch::simulate_with_logger(
-                    partition, simulate_args.common, simulate_args.scenario,
+                    *partition, simulate_args.common, simulate_args.scenario,
                     simulate_args.algorithm, simulate_args.pause,
                     post_validation, pre_launch,
                 ),
                 MpiLocalPartition::Parallel(partition) => dispatch::simulate_with_logger(
-                    partition, simulate_args.common, simulate_args.scenario,
+                    *partition, simulate_args.common, simulate_args.scenario,
                     simulate_args.algorithm, simulate_args.pause,
                     post_validation, pre_launch,
                 ),
             },
         }
     })?;
+
+    info!(
+        "The simulation finished at time {} after {} steps.\n",
+        time.get(),
+        steps
+    );
 
     let resume_args = ResumeArgs::from(partial_resume_args);
 
@@ -120,22 +191,23 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
 )))]
 mod dispatch {
     use necsim_core::reporter::Reporter;
+    use necsim_core_bond::NonNegativeF64;
     use necsim_partitioning_core::LocalPartition;
 
     use crate::args::{
         Algorithm as AlgorithmArgs, CommonArgs, Pause as PauseArgs, Scenario as ScenarioArgs,
     };
 
-    #[allow(clippy::boxed_local, clippy::needless_pass_by_value)]
+    #[allow(clippy::needless_pass_by_value)]
     pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>, V: FnOnce(), L: FnOnce()>(
-        _local_partition: Box<P>,
+        _local_partition: P,
         _common_args: CommonArgs,
         _scenario: ScenarioArgs,
         _algorithm: AlgorithmArgs,
         _pause: Option<PauseArgs>,
         _post_validation: V,
         _pre_launch: L,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<(NonNegativeF64, u64)> {
         anyhow::bail!("rustcoalescence must be compiled to support at least one algorithm.")
     }
 }
@@ -196,4 +268,108 @@ impl ResumeArgs {
             pause: None,
         }
     }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+#[serde(rename = "Simulate")]
+#[allow(dead_code)]
+struct SimulateArgsFields {
+    #[serde(alias = "speciation_probability_per_generation")]
+    speciation: IgnoredAny,
+
+    #[serde(alias = "sample_percentage")]
+    sample: IgnoredAny,
+
+    #[serde(alias = "randomness")]
+    #[serde(default)]
+    rng: IgnoredAny,
+
+    scenario: IgnoredAny,
+
+    algorithm: IgnoredAny,
+
+    #[serde(default)]
+    partitioning: IgnoredAny,
+
+    #[serde(alias = "event_log")]
+    #[serde(default)]
+    log: Option<IgnoredAny>,
+
+    reporters: Vec<IgnoredAny>,
+
+    #[serde(default)]
+    pause: Option<IgnoredAny>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename = "Simulate")]
+struct SimulateArgsPartitioningOnly {
+    #[serde(default)]
+    partitioning: Partitioning,
+}
+
+#[derive(DeserializeState)]
+#[serde(deserialize_state = "(anyhow::Result<()>, anyhow::Result<()>)")]
+#[serde(rename = "Simulate")]
+struct SimulateArgsEventLogOnly {
+    #[serde(alias = "log")]
+    #[serde(default)]
+    #[serde(deserialize_state_with = "deserialize_state_event_log")]
+    event_log: Option<EventLogRecorder>,
+}
+
+fn deserialize_state_event_log<'de, D: Deserializer<'de>>(
+    event_log_check: &mut (anyhow::Result<()>, anyhow::Result<()>),
+    deserializer: D,
+) -> Result<Option<EventLogRecorder>, D::Error> {
+    let maybe_event_log = <Option<EventLogRecorder>>::deserialize(deserializer)?;
+
+    if maybe_event_log.is_none() {
+        event_log_check
+            .0
+            .as_ref()
+            .map_err(serde::de::Error::custom)?;
+    } else {
+        event_log_check
+            .1
+            .as_ref()
+            .map_err(serde::de::Error::custom)?;
+    }
+
+    Ok(maybe_event_log)
+}
+
+#[derive(Deserialize)]
+#[serde(rename = "Simulate")]
+struct SimulateArgsCommon {
+    #[serde(alias = "speciation")]
+    speciation_probability_per_generation: PositiveUnitF64,
+
+    #[serde(alias = "sample")]
+    sample_percentage: ClosedUnitF64,
+
+    scenario: Scenario,
+
+    reporters: AnyReporterPluginVec,
+}
+
+#[derive(DeserializeState)]
+#[serde(deserialize_state = "Partition")]
+#[serde(rename = "Simulate")]
+struct SimulateArgsStatePartition {
+    #[serde(deserialize_state)]
+    algorithm: Algorithm,
+
+    #[serde(default)]
+    #[serde(deserialize_state)]
+    pause: Option<Pause>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename = "Simulate")]
+struct SimulateArgsRngOnly {
+    #[serde(alias = "randomness")]
+    #[serde(default)]
+    rng: Rng,
 }

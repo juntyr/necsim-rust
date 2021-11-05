@@ -15,10 +15,7 @@ use rustcoalescence_algorithms_independent::IndependentAlgorithm;
 
 use necsim_core::{
     cogs::{MathsCore, SeedableRng},
-    reporter::{
-        boolean::{Boolean, False, True},
-        Reporter,
-    },
+    reporter::Reporter,
 };
 use necsim_core_bond::NonNegativeF64;
 use necsim_impls_no_std::cogs::origin_sampler::pre_sampler::OriginPreSampler;
@@ -36,49 +33,118 @@ use crate::args::{
 };
 
 pub fn simulate_with_logger<R: Reporter, P: LocalPartition<R>, V: FnOnce(), L: FnOnce()>(
-    local_partition: Box<P>,
+    mut local_partition: P,
     common_args: CommonArgs,
     scenario: ScenarioArgs,
     algorithm: AlgorithmArgs,
     pause: Option<PauseArgs>,
     post_validation: V,
     pre_launch: L,
-) -> Result<()> {
-    Dispatcher::simulate_with_logger(
-        local_partition,
-        common_args,
-        scenario,
-        algorithm,
-        pause.map(|pause| pause.before),
-        post_validation,
-        pre_launch,
-    )
+) -> Result<(NonNegativeF64, u64)> {
+    let pause_before = pause.map(|pause| pause.before);
+
+    let (time, steps) = crate::match_scenario_algorithm!(
+        (algorithm, scenario => scenario)
+    {
+        #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
+        AlgorithmArgs::Classical(algorithm_args) => { initialise_and_simulate::<ClassicalAlgorithm, _, R, P, V, L>(
+            common_args, algorithm_args, scenario, pause_before, &mut local_partition,
+            post_validation, pre_launch
+        ) },
+        #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
+        AlgorithmArgs::EventSkipping(algorithm_args) => { initialise_and_simulate::<EventSkippingAlgorithm, _, R, P, V, L>(
+            common_args, algorithm_args, scenario, pause_before, &mut local_partition,
+            post_validation, pre_launch
+        ) },
+        #[cfg(feature = "rustcoalescence-algorithms-independent")]
+        AlgorithmArgs::Independent(algorithm_args) => { initialise_and_simulate::<IndependentAlgorithm, _, R, P, V, L>(
+            common_args, algorithm_args, scenario, pause_before, &mut local_partition,
+            post_validation, pre_launch
+        ) },
+        #[cfg(feature = "rustcoalescence-algorithms-cuda")]
+        AlgorithmArgs::Cuda(algorithm_args) => { initialise_and_simulate::<CudaAlgorithm, _, R, P, V, L>(
+            common_args, algorithm_args, scenario, pause_before, &mut local_partition,
+            post_validation, pre_launch
+        ) }
+        <=>
+        ScenarioArgs::SpatiallyExplicit(scenario_args) => {
+            SpatiallyExplicitScenario::initialise(
+                scenario_args,
+                common_args.speciation_probability_per_generation,
+            )?
+        },
+        ScenarioArgs::NonSpatial(scenario_args) => {
+            NonSpatialScenario::initialise(
+                scenario_args,
+                common_args.speciation_probability_per_generation,
+            )
+            .into_ok()
+        },
+        ScenarioArgs::AlmostInfinite(scenario_args) => {
+            AlmostInfiniteScenario::initialise(
+                scenario_args,
+                common_args.speciation_probability_per_generation,
+            )
+            .into_ok()
+        },
+        ScenarioArgs::SpatiallyImplicit(scenario_args) => {
+            SpatiallyImplicitScenario::initialise(
+                scenario_args,
+                common_args.speciation_probability_per_generation,
+            )
+            .into_ok()
+        }
+    })?;
+
+    if log::log_enabled!(log::Level::Info) {
+        println!("\n");
+        println!("{:=^80}", " Reporter Summary ");
+        println!();
+    }
+    local_partition.finalise_reporting();
+    if log::log_enabled!(log::Level::Info) {
+        println!();
+        println!("{:=^80}", " Reporter Summary ");
+        println!();
+    }
+
+    Ok((time, steps))
 }
 
-trait SimulateSealedBooleanDispatch<
-    ReportSpeciation: Boolean,
-    ReportDispersal: Boolean,
-    ReportProgress: Boolean,
->
+fn initialise_and_simulate<
+    A: Algorithm<O, R, P>,
+    O: Scenario<A::MathsCore, A::Rng>,
+    R: Reporter,
+    P: LocalPartition<R>,
+    V: FnOnce(),
+    L: FnOnce(),
+>(
+    common_args: CommonArgs,
+    algorithm_args: A::Arguments,
+    scenario: O,
+    pause_before: Option<NonNegativeF64>,
+    local_partition: &mut P,
+    post_validation: V,
+    pre_launch: L,
+) -> anyhow::Result<(NonNegativeF64, u64)>
+where
+    Result<(NonNegativeF64, u64), A::Error>: anyhow::Context<(NonNegativeF64, u64), A::Error>,
 {
-    fn simulate_with_logger<
-        R: Reporter<
-            ReportSpeciation = ReportSpeciation,
-            ReportDispersal = ReportDispersal,
-            ReportProgress = ReportProgress,
-        >,
-        P: LocalPartition<R>,
-        V: FnOnce(),
-        L: FnOnce(),
-    >(
-        local_partition: Box<P>,
-        common_args: CommonArgs,
-        scenario: ScenarioArgs,
-        algorithm: AlgorithmArgs,
-        pause_before: Option<NonNegativeF64>,
-        post_validation: V,
-        pre_launch: L,
-    ) -> Result<()>;
+    let (rng, rng_info) = initialise_rng(common_args.rng)?;
+
+    (post_validation)();
+    (rng_info)();
+    (pre_launch)();
+
+    A::initialise_and_simulate(
+        algorithm_args,
+        rng,
+        scenario,
+        OriginPreSampler::all().percentage(common_args.sample_percentage.get()),
+        pause_before,
+        local_partition,
+    )
+    .context("Failed to perform the simulation.")
 }
 
 fn seed_with_sponge<M: MathsCore, G: SeedableRng<M>>(bytes: &[u8]) -> G {
@@ -130,192 +196,4 @@ fn initialise_rng<M: MathsCore, G: SeedableRng<M>>(args: RngArgs) -> Result<(G, 
     Ok((rng, move || {
         info!("Initialised the RNG using the {:?} method.", args);
     }))
-}
-
-macro_rules! initialise_and_simulate {
-    (
-        $algorithm:ident(
-            $common_args:ident,
-            $algorithm_args:ident,
-            $scenario:ident,
-            $pause_before:ident,
-            $local_partition:ident,
-            $post_validation:ident,
-            $pre_launch:ident
-        )
-    ) => {{
-        let (rng, rng_info) = initialise_rng($common_args.rng)?;
-
-        ($post_validation)();
-        (rng_info)();
-        ($pre_launch)();
-
-        $algorithm::initialise_and_simulate(
-            $algorithm_args,
-            rng,
-            $scenario,
-            OriginPreSampler::all().percentage($common_args.sample_percentage.get()),
-            $pause_before,
-            &mut *$local_partition,
-        )
-    }};
-}
-
-struct Dispatcher;
-
-macro_rules! impl_sealed_dispatch {
-    ($report_speciation:ty, $report_dispersal:ty, $report_progress:ty) => {
-        impl SimulateSealedBooleanDispatch<
-            $report_speciation, $report_dispersal, $report_progress,
-        > for Dispatcher {
-            #[allow(clippy::too_many_lines, clippy::boxed_local)]
-            fn simulate_with_logger<R: Reporter<
-                ReportSpeciation = $report_speciation,
-                ReportDispersal = $report_dispersal,
-                ReportProgress = $report_progress
-            >, P: LocalPartition<R>, V: FnOnce(), L: FnOnce()>(
-                mut local_partition: Box<P>,
-                common_args: CommonArgs,
-                scenario: ScenarioArgs,
-                algorithm: AlgorithmArgs,
-                pause_before: Option<NonNegativeF64>,
-                post_validation: V,
-                pre_launch_orig: L,
-            ) -> Result<()> {
-                let number_of_partitions = local_partition.get_partition().size().get();
-
-                let pre_launch = || {
-                    (pre_launch_orig)();
-
-                    if number_of_partitions <= 1 {
-                        info!("The simulation will be run in monolithic mode.");
-                    } else {
-                        info!(
-                            "The simulation will be distributed across {} partitions.",
-                            number_of_partitions
-                        );
-                    }
-                };
-
-                let (time, steps): (NonNegativeF64, u64) = crate::match_scenario_algorithm!(
-                    (algorithm, scenario => scenario)
-                {
-                    #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
-                    AlgorithmArgs::Classical(algorithm_args) => { initialise_and_simulate!(
-                        ClassicalAlgorithm(
-                            common_args, algorithm_args, scenario, pause_before, local_partition,
-                            post_validation, pre_launch
-                        )
-                    ).into_ok() },
-                    #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
-                    AlgorithmArgs::EventSkipping(algorithm_args) => { initialise_and_simulate!(
-                        EventSkippingAlgorithm(
-                            common_args, algorithm_args, scenario, pause_before, local_partition,
-                            post_validation, pre_launch
-                        )
-                    ).into_ok() },
-                    #[cfg(feature = "rustcoalescence-algorithms-independent")]
-                    AlgorithmArgs::Independent(algorithm_args) => { initialise_and_simulate!(
-                        IndependentAlgorithm(
-                            common_args, algorithm_args, scenario, pause_before, local_partition,
-                            post_validation, pre_launch
-                        )
-                    ).into_ok() },
-                    #[cfg(feature = "rustcoalescence-algorithms-cuda")]
-                    AlgorithmArgs::Cuda(algorithm_args) => { initialise_and_simulate!(
-                        CudaAlgorithm(
-                            common_args, algorithm_args, scenario, pause_before, local_partition,
-                            post_validation, pre_launch
-                        )
-                    )? }
-                    <=>
-                    ScenarioArgs::SpatiallyExplicit(scenario_args) => {
-                        SpatiallyExplicitScenario::initialise(
-                            scenario_args,
-                            common_args.speciation_probability_per_generation,
-                        )?
-                    },
-                    ScenarioArgs::NonSpatial(scenario_args) => {
-                        NonSpatialScenario::initialise(
-                            scenario_args,
-                            common_args.speciation_probability_per_generation,
-                        )
-                        .into_ok()
-                    },
-                    ScenarioArgs::AlmostInfinite(scenario_args) => {
-                        AlmostInfiniteScenario::initialise(
-                            scenario_args,
-                            common_args.speciation_probability_per_generation,
-                        )
-                        .into_ok()
-                    },
-                    ScenarioArgs::SpatiallyImplicit(scenario_args) => {
-                        SpatiallyImplicitScenario::initialise(
-                            scenario_args,
-                            common_args.speciation_probability_per_generation,
-                        )
-                        .into_ok()
-                    }
-                });
-
-                if log::log_enabled!(log::Level::Info) {
-                    println!("\n");
-                    println!("{:=^80}", " Reporter Summary ");
-                    println!();
-                }
-                local_partition.finalise_reporting();
-                if log::log_enabled!(log::Level::Info) {
-                    println!();
-                    println!("{:=^80}", " Reporter Summary ");
-                    println!();
-                }
-
-                info!(
-                    "The simulation finished at time {} after {} steps.\n",
-                    time.get(),
-                    steps
-                );
-
-                Ok(())
-            }
-        }
-    };
-}
-
-impl_sealed_dispatch!(False, False, False);
-impl_sealed_dispatch!(False, True, False);
-impl_sealed_dispatch!(True, False, False);
-impl_sealed_dispatch!(True, True, False);
-impl_sealed_dispatch!(False, False, True);
-impl_sealed_dispatch!(False, True, True);
-impl_sealed_dispatch!(True, False, True);
-impl_sealed_dispatch!(True, True, True);
-
-impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolean>
-    SimulateSealedBooleanDispatch<ReportSpeciation, ReportDispersal, ReportProgress>
-    for Dispatcher
-{
-    default fn simulate_with_logger<
-        R: Reporter<
-            ReportSpeciation = ReportSpeciation,
-            ReportDispersal = ReportDispersal,
-            ReportProgress = ReportProgress,
-        >,
-        P: LocalPartition<R>,
-        V: FnOnce(),
-        L: FnOnce(),
-    >(
-        _local_partition: Box<P>,
-        _common_args: CommonArgs,
-        _scenario: ScenarioArgs,
-        _algorithm: AlgorithmArgs,
-        _pause_before: Option<NonNegativeF64>,
-        _post_validation: V,
-        _pre_launch: L,
-    ) -> Result<()> {
-        // Safety:
-        // - `Boolean` is sealed and must be either `False` or `True`
-        // - `SimulateSealedBooleanDispatch` is specialised for all combinations
-        unsafe { std::hint::unreachable_unchecked() }
-    }
 }
