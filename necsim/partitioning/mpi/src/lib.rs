@@ -6,7 +6,7 @@
 #[macro_use]
 extern crate contracts;
 
-use std::{fmt, num::NonZeroU32};
+use std::{fmt, mem::ManuallyDrop, num::NonZeroU32};
 
 use anyhow::Context;
 use mpi::{
@@ -39,14 +39,14 @@ pub enum MpiPartitioningError {
 
 #[derive(Error, Debug)]
 pub enum MpiLocalPartitionError {
-    #[error("MPI partitioning must be used with an event log.")]
+    #[error("MPI partitioning requires an event log.")]
     MissingEventLog,
-    #[error("Invalid MPI event sub-log.")]
+    #[error("Failed to create MPI event sub-log.")]
     InvalidEventSubLog,
 }
 
 pub struct MpiPartitioning {
-    universe: Universe,
+    universe: ManuallyDrop<Universe>,
     world: SystemCommunicator,
 }
 
@@ -90,7 +90,8 @@ impl MpiPartitioning {
     /// Returns `NoParallelism` if the MPI world only consists of one or less
     ///  partitions.
     pub fn initialise() -> Result<Self, MpiPartitioningError> {
-        let universe = mpi::initialize().ok_or(MpiPartitioningError::AlreadyInitialised)?;
+        let universe =
+            ManuallyDrop::new(mpi::initialize().ok_or(MpiPartitioningError::AlreadyInitialised)?);
         let world = universe.world();
 
         if world.size() > 1 {
@@ -141,25 +142,24 @@ impl Partitioning for MpiPartitioning {
         let mut directory = event_log.directory().to_owned();
         directory.push(self.world.rank().to_string());
 
-        let event_log = match event_log.r#move(&directory) {
-            Ok(event_log) => event_log,
-            Err(err) => {
-                std::mem::forget(self);
-
-                return Err(err).context(MpiLocalPartitionError::InvalidEventSubLog);
-            },
-        };
+        let event_log = event_log
+            .r#move(&directory)
+            .context(MpiLocalPartitionError::InvalidEventSubLog)?;
 
         if self.world.rank() == MpiPartitioning::ROOT_RANK {
             Ok(MpiLocalPartition::Root(Box::new(MpiRootPartition::new(
-                self.universe,
+                ManuallyDrop::into_inner(self.universe),
                 self.world,
                 reporter_context.try_build()?,
                 event_log,
             ))))
         } else {
             Ok(MpiLocalPartition::Parallel(Box::new(
-                MpiParallelPartition::new(self.universe, self.world, event_log),
+                MpiParallelPartition::new(
+                    ManuallyDrop::into_inner(self.universe),
+                    self.world,
+                    event_log,
+                ),
             )))
         }
     }

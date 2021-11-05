@@ -198,6 +198,19 @@ impl Partitioning {
             Self::Mpi(partitioning) => partitioning.get_partition(),
         }
     }
+
+    pub fn get_event_log_check(&self) -> (anyhow::Result<()>, anyhow::Result<()>) {
+        match self {
+            Self::Monolithic(_) => (Ok(()), Ok(())),
+            #[cfg(feature = "necsim-partitioning-mpi")]
+            Self::Mpi(_) => (
+                Err(anyhow::anyhow!(
+                    necsim_partitioning_mpi::MpiLocalPartitionError::MissingEventLog
+                )),
+                Ok(()),
+            ),
+        }
+    }
 }
 
 impl Default for Partitioning {
