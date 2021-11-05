@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use ron::{extensions::Extensions, ser::PrettyConfig};
-use serde::{de::IgnoredAny, Deserialize};
+use serde::{de::IgnoredAny, Deserialize, Deserializer};
 use serde_state::DeserializeState;
 
 use necsim_core_bond::{ClosedUnitF64, Partition, PositiveUnitF64};
@@ -18,12 +18,6 @@ impl SimulateArgs {
         //  (2) are any unknown fields defined
         let SimulateArgsFields { .. } = try_parse("simulate", &ron_args)?;
 
-        // TODO: Check if the partitioning needs an event log
-
-        // IDEA: (1) parse the event log
-        //       (2) pre-serialize it for resume config
-        //       (3) pass it to the partitions during deserialize
-
         let SimulateArgsPartitioningOnly { partitioning } = try_parse("simulate", &ron_args)?;
         let mut partition = partitioning.get_partition();
 
@@ -34,13 +28,25 @@ impl SimulateArgs {
             log::LevelFilter::Off
         });
 
+        let mut event_log_check = partitioning.get_event_log_check();
+
+        let SimulateArgsEventLogOnly { event_log } =
+            try_parse_state("simulate", &ron_args, &mut event_log_check)?;
+
+        match &event_log {
+            None => event_log_check.0,
+            Some(_) => event_log_check.1,
+        }
+        .map_err(|err| anyhow::anyhow!("simulate.*: {}", err))
+        .context("Failed to parse the simulate subcommand arguments.")?;
+
         let SimulateArgsCommon {
             speciation_probability_per_generation,
             sample_percentage,
             scenario,
-            event_log,
             reporters,
         } = try_parse("simulate", &ron_args)?;
+
         let SimulateArgsStatePartition { algorithm, pause } =
             try_parse_state("simulate", &ron_args, &mut partition)?;
 
@@ -137,9 +143,41 @@ struct SimulateArgsFields {
 }
 
 #[derive(Deserialize)]
+#[serde(rename = "Simulate")]
 struct SimulateArgsPartitioningOnly {
     #[serde(default)]
     partitioning: Partitioning,
+}
+
+#[derive(DeserializeState)]
+#[serde(deserialize_state = "(anyhow::Result<()>, anyhow::Result<()>)")]
+#[serde(rename = "Simulate")]
+struct SimulateArgsEventLogOnly {
+    #[serde(alias = "log")]
+    #[serde(default)]
+    #[serde(deserialize_state_with = "deserialize_state_event_log")]
+    event_log: Option<EventLogRecorder>,
+}
+
+fn deserialize_state_event_log<'de, D: Deserializer<'de>>(
+    event_log_check: &mut (anyhow::Result<()>, anyhow::Result<()>),
+    deserializer: D,
+) -> Result<Option<EventLogRecorder>, D::Error> {
+    let maybe_event_log = <Option<EventLogRecorder>>::deserialize(deserializer)?;
+
+    if maybe_event_log.is_none() {
+        event_log_check
+            .0
+            .as_ref()
+            .map_err(serde::de::Error::custom)?;
+    } else {
+        event_log_check
+            .1
+            .as_ref()
+            .map_err(serde::de::Error::custom)?;
+    }
+
+    Ok(maybe_event_log)
 }
 
 #[derive(Deserialize)]
@@ -152,10 +190,6 @@ struct SimulateArgsCommon {
     sample_percentage: ClosedUnitF64,
 
     scenario: Scenario,
-
-    #[serde(alias = "log")]
-    #[serde(default)]
-    event_log: Option<EventLogRecorder>,
 
     reporters: AnyReporterPluginVec,
 }
@@ -173,6 +207,7 @@ struct SimulateArgsStatePartition {
 }
 
 #[derive(Deserialize)]
+#[serde(rename = "Simulate")]
 struct SimulateArgsRngOnly {
     #[serde(alias = "randomness")]
     #[serde(default)]
@@ -196,14 +231,14 @@ pub fn try_parse<'de, D: Deserialize<'de>>(subcommand: &str, ron_args: &'de str)
         Err(err) => {
             let path = track.path();
 
-            Err(anyhow::Error::msg(format!(
+            Err(anyhow::anyhow!(
                 "{}{}{}{}: {}",
                 subcommand,
                 if path.iter().count() >= 1 { "." } else { "" },
                 path,
                 if path.iter().count() >= 1 { "" } else { "*" },
                 err,
-            )))
+            ))
         },
     }
     .with_context(|| format!("Failed to parse the {} subcommand arguments.", subcommand))
@@ -229,14 +264,14 @@ pub fn try_parse_state<'de, D: DeserializeState<'de, Seed>, Seed: ?Sized>(
         Err(err) => {
             let path = track.path();
 
-            Err(anyhow::Error::msg(format!(
+            Err(anyhow::anyhow!(
                 "{}{}{}{}: {}",
                 subcommand,
                 if path.iter().count() >= 1 { "." } else { "" },
                 path,
                 if path.iter().count() >= 1 { "" } else { "*" },
                 err,
-            )))
+            ))
         },
     }
     .with_context(|| format!("Failed to parse the {} subcommand arguments.", subcommand))
