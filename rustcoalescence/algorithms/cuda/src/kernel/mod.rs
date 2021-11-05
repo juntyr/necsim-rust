@@ -25,6 +25,7 @@ use rust_cuda::{
 use rustcoalescence_algorithms_cuda_kernel::Kernel;
 
 mod link;
+mod patch;
 
 #[allow(clippy::type_complexity, clippy::module_name_repetitions)]
 pub struct SimulationKernel<
