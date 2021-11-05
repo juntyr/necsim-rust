@@ -65,8 +65,8 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> OriginSampler<'h, M>
             clippy::cast_precision_loss
         )]
         {
-            ((self.habitat.get_total_habitat() as f64) * self.pre_sampler.get_sample_proportion())
-                as u64
+            ((self.habitat.get_total_habitat() as f64)
+                * self.pre_sampler.get_sample_proportion().get()) as u64
         }
     }
 }

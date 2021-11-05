@@ -57,7 +57,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteOriginSampler<'h, 
             f64::from(radius)
                 * f64::from(radius)
                 * core::f64::consts::PI
-                * pre_sampler.get_sample_proportion(),
+                * pre_sampler.get_sample_proportion().get(),
         ) as u64;
 
         Self {

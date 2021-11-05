@@ -3,7 +3,8 @@ use core::{
     convert::TryFrom,
     fmt,
     hash::{Hash, Hasher},
-    ops::Mul,
+    num::NonZeroU32,
+    ops::{Div, Mul},
 };
 
 use serde::{Deserialize, Serialize};
@@ -146,5 +147,13 @@ impl Mul for ClosedUnitF64 {
 
     fn mul(self, other: Self) -> Self {
         Self(self.0 * other.0)
+    }
+}
+
+impl Div<NonZeroU32> for ClosedUnitF64 {
+    type Output = Self;
+
+    fn div(self, rhs: NonZeroU32) -> Self::Output {
+        Self(self.0 / f64::from(rhs.get()))
     }
 }
