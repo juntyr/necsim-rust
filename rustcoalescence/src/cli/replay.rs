@@ -17,7 +17,7 @@ pub fn replay_with_logger(replay_args: CommandArgs) -> Result<()> {
     let replay_args: ReplayArgs = try_parse("replay", &into_ron_str(replay_args))?;
 
     let config_str = ron::ser::to_string_pretty(&replay_args, ron_config())
-        .context("Failed to normalise replay subcommand arguments.")?;
+        .context("Failed to normalise the event replay config.")?;
 
     println!("\n{:=^80}\n", " Replay Configuration ");
     println!("{}", config_str.trim_start_matches("Replay"));

@@ -1,14 +1,14 @@
-use std::{fmt, ops::Deref};
+use std::{fmt, marker::PhantomData, ops::Deref};
 
-use serde::{de::Deserializer, ser::SerializeStruct, Deserialize, Serialize, Serializer};
+use necsim_core::cogs::{MathsCore, RngCore};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_state::DeserializeState;
 use structopt::StructOpt;
 
-use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, Partition, PositiveUnitF64};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, Partition};
 
 use necsim_impls_std::{
-    event_log::{recorder::EventLogRecorder, replay::EventLogReplay},
-    lineage_file::loader::LineageFileLoader,
+    event_log::replay::EventLogReplay, lineage_file::loader::LineageFileLoader,
 };
 
 use rustcoalescence_scenarios::{
@@ -44,67 +44,96 @@ pub struct CommandArgs {
     pub args: Vec<String>,
 }
 
-#[derive(Debug)]
-#[allow(clippy::module_name_repetitions)]
-pub struct SimulateArgs {
-    pub common: CommonArgs,
-    pub scenario: Scenario,
-    pub algorithm: Algorithm,
-    pub partitioning: Partitioning,
-    pub event_log: Option<EventLogRecorder>,
-    pub reporters: AnyReporterPluginVec,
-    pub pause: Option<Pause>,
+#[allow(dead_code)]
+pub struct Base32RngState<M: MathsCore, G: RngCore<M>> {
+    state: Base32String,
+    rng: G,
+    marker: PhantomData<M>,
 }
 
-impl Serialize for SimulateArgs {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut args = serializer.serialize_struct("Simulate", 9)?;
-
-        // Notes:
-        // - sample should be set to 100% for resuming a paused simulation
-        // - pause should be set to None for resuming a paused simulation
-        // - serialization could be used to debug print a normalised config
-        // - serialization will be used to get the pause config
-
-        args.serialize_field(
-            "speciation",
-            &self.common.speciation_probability_per_generation,
-        )?;
-        args.serialize_field("sample", &self.common.sample_percentage)?;
-        args.serialize_field("rng", &self.common.rng)?;
-        args.serialize_field("scenario", &self.scenario)?;
-        args.serialize_field("algorithm", &self.algorithm)?;
-        args.serialize_field("partitioning", &self.partitioning)?;
-        args.serialize_field("log", &self.event_log)?;
-        args.serialize_field("reporters", &self.reporters)?;
-        args.serialize_field("pause", &self.pause)?;
-
-        args.end()
+impl<M: MathsCore, G: RngCore<M>> Base32RngState<M, G> {
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn into(self) -> G {
+        self.rng
     }
 }
 
-#[derive(Debug)]
-#[allow(clippy::module_name_repetitions)]
-pub struct CommonArgs {
-    pub speciation_probability_per_generation: PositiveUnitF64,
-    pub sample_percentage: ClosedUnitF64,
-    pub rng: Rng,
+impl<M: MathsCore, G: RngCore<M>> fmt::Debug for Base32RngState<M, G> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.state.fmt(fmt)
+    }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub enum Rng {
+impl<M: MathsCore, G: RngCore<M>> Serialize for Base32RngState<M, G> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.state.serialize(serializer)
+    }
+}
+
+impl<'de, M: MathsCore, G: RngCore<M>> Deserialize<'de> for Base32RngState<M, G> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let state = Base32String::deserialize(deserializer)?;
+
+        let rng = bincode::Options::deserialize(bincode::options(), &state)
+            .map_err(|_| serde::de::Error::custom(format!("invalid RNG state {}", state)))?;
+
+        Ok(Self {
+            state,
+            rng,
+            marker: PhantomData::<M>,
+        })
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(bound = "")]
+pub enum Rng<M: MathsCore, G: RngCore<M>> {
+    Seed(u64),
+    Sponge(Base32String),
+    State(Base32RngState<M, G>),
+}
+
+impl<'de, M: MathsCore, G: RngCore<M>> Deserialize<'de> for Rng<M, G> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let raw = RngRaw::<M, G>::deserialize(deserializer)?;
+
+        let rng = match raw {
+            RngRaw::Entropy => {
+                let mut entropy = G::Seed::default();
+
+                getrandom::getrandom(entropy.as_mut()).map_err(serde::de::Error::custom)?;
+
+                Self::Sponge(Base32String::new(entropy.as_mut()))
+            },
+            RngRaw::Seed(seed) => Self::Seed(seed),
+            RngRaw::Sponge(sponge) => Self::Sponge(sponge),
+            RngRaw::State(state) => Self::State(state),
+            RngRaw::StateElseSponge(state) => {
+                match bincode::Options::deserialize(bincode::options(), &state) {
+                    Ok(rng) => Self::State(Base32RngState {
+                        state,
+                        rng,
+                        marker: PhantomData::<M>,
+                    }),
+                    Err(_) => Self::Sponge(state),
+                }
+            },
+        };
+
+        Ok(rng)
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(bound = "")]
+#[serde(rename = "Rng")]
+pub enum RngRaw<M: MathsCore, G: RngCore<M>> {
     Entropy,
     Seed(u64),
     Sponge(Base32String),
-    State(Base32String),
+    State(Base32RngState<M, G>),
     StateElseSponge(Base32String),
-}
-
-impl Default for Rng {
-    fn default() -> Self {
-        Self::Entropy
-    }
 }
 
 #[derive(Clone)]

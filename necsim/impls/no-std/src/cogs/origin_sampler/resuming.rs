@@ -96,7 +96,7 @@ impl<
             clippy::cast_sign_loss
         )]
         let upper_bound_size_hint = M::ceil(
-            (self.lineage_iterator.len() as f64) * self.pre_sampler.get_sample_proportion(),
+            (self.lineage_iterator.len() as f64) * self.pre_sampler.get_sample_proportion().get(),
         ) as u64;
 
         upper_bound_size_hint
