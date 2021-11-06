@@ -1,10 +1,13 @@
 use anyhow::Context;
 use log::LevelFilter;
-use necsim_core::cogs::{MathsCore, RngCore};
+use necsim_core::{
+    cogs::{MathsCore, RngCore},
+    lineage::Lineage,
+};
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use serde::{de::IgnoredAny, Deserialize, Deserializer, Serialize};
 
-use necsim_core_bond::{ClosedUnitF64, Partition, PositiveUnitF64};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, Partition, PositiveUnitF64};
 use necsim_partitioning_core::Partitioning as _;
 use necsim_plugins_core::{import::AnyReporterPluginVec, match_any_reporter_plugin_vec};
 
@@ -12,7 +15,7 @@ use crate::{
     args::{
         parse::{into_ron_str, ron_config, try_parse, try_parse_state},
         ser::{BufferingSerialize, BufferingSerializer},
-        Algorithm, CommandArgs, Partitioning, Pause, Rng, Scenario,
+        Algorithm, Base32String, CommandArgs, Partitioning, Pause, Rng, SampleDestiny, Scenario,
     },
     reporter::DynamicReporterContext,
 };
@@ -90,9 +93,9 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
         &reporters,
     )?;
 
-    let pause_before = pause.map(|pause| pause.before);
+    let pause_before = pause.as_ref().map(|pause| pause.before);
 
-    let (time, steps) = match_any_reporter_plugin_vec!(reporters => |reporter| {
+    let result = match_any_reporter_plugin_vec!(reporters => |reporter| {
         use necsim_partitioning_monolithic::MonolithicLocalPartition;
         #[cfg(feature = "necsim-partitioning-mpi")]
         use necsim_partitioning_mpi::MpiLocalPartition;
@@ -127,21 +130,37 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
         }
     })?;
 
-    info!(
-        "The simulation finished at time {} after {} steps.\n",
-        time.get(),
-        steps
-    );
+    match &result {
+        SimulationResult::Done { time, steps } => info!(
+            "The simulation finished at time {} after {} steps.\n",
+            time.get(),
+            steps
+        ),
+        SimulationResult::Paused { time, steps, .. } => info!(
+            "The simulation paused at time {} after {} steps.\n",
+            time.get(),
+            steps
+        ),
+    }
 
-    let resume_args = ResumeArgs::from(partial_resume_args);
+    if let (Some(pause), SimulationResult::Paused { lineages, rng, .. }) = (pause, result) {
+        match pause.destiny {
+            // TODO: Adapt the config sample
+            SampleDestiny::List => (),
+            SampleDestiny::Serde(lineage_file) => lineage_file
+                .write(lineages.iter())
+                .context("Failed to write the remaining lineages.")?,
+        };
 
-    let resume_str = ron::ser::to_string_pretty(&resume_args, ron_config())
-        .context("Failed to generate config to resume the simulation.")?;
+        let resume_args = ResumeArgs::new(partial_resume_args, &rng)?;
 
-    if log::log_enabled!(log::Level::Info) {
-        println!("\n{:=^80}\n", " Simulation Configuration ");
-        println!("{}", resume_str.trim_start_matches("Simulate"));
-        println!("\n{:=^80}\n", " Simulation Configuration ");
+        let resume_str = ron::ser::to_string_pretty(&resume_args, ron_config())
+            .context("Failed to generate config to resume the simulation.")?;
+
+        pause
+            .config
+            .write(resume_str.trim_start_matches("Simulate"))
+            .context("Failed to write the config to resume the simulation.")?;
     }
 
     Ok(())
@@ -159,7 +178,7 @@ mod dispatch {
 
     use crate::args::{Algorithm as AlgorithmArgs, Scenario as ScenarioArgs};
 
-    use super::BufferingPartialSimulateArgs;
+    use super::{BufferingPartialSimulateArgs, SimulationResult};
 
     #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
     pub(super) fn simulate_with_logger<R: Reporter, P: LocalPartition<R>>(
@@ -171,7 +190,7 @@ mod dispatch {
         _pause_before: Option<NonNegativeF64>,
         _ron_args: &str,
         _partial_simulate_args: BufferingPartialSimulateArgs,
-    ) -> anyhow::Result<(NonNegativeF64, u64)> {
+    ) -> anyhow::Result<SimulationResult> {
         anyhow::bail!("rustcoalescence must be compiled to support at least one algorithm.")
     }
 }
@@ -281,7 +300,7 @@ impl BufferingPartialResumeArgs {
                 reporters: reporters.serialize(BufferingSerializer)?,
             })
         })()
-        .context("Failed to generate the simulation resume config.")
+        .context("Failed to generate config to resume the simulation.")
     }
 }
 
@@ -290,7 +309,7 @@ impl BufferingPartialResumeArgs {
 struct ResumeArgs {
     speciation: BufferingSerialize,
     sample: ClosedUnitF64,
-    // rng: Rng,
+    rng: BufferingSerialize,
     scenario: BufferingSerialize,
     algorithm: BufferingSerialize,
     partitioning: BufferingSerialize,
@@ -300,18 +319,21 @@ struct ResumeArgs {
 }
 
 impl ResumeArgs {
-    fn from(partial: BufferingPartialResumeArgs) -> Self {
-        Self {
-            speciation: partial.speciation,
-            sample: ClosedUnitF64::one(),
-            // rng: Rng,
-            scenario: partial.scenario,
-            algorithm: partial.algorithm,
-            partitioning: partial.partitioning,
-            log: partial.log,
-            reporters: partial.reporters,
-            pause: None,
-        }
+    fn new(partial: BufferingPartialResumeArgs, rng: &ResumingRng) -> anyhow::Result<Self> {
+        (|| -> anyhow::Result<Self> {
+            Ok(Self {
+                speciation: partial.speciation,
+                sample: ClosedUnitF64::one(),
+                rng: rng.serialize(BufferingSerializer)?,
+                scenario: partial.scenario,
+                algorithm: partial.algorithm,
+                partitioning: partial.partitioning,
+                log: partial.log,
+                reporters: partial.reporters,
+                pause: None,
+            })
+        })()
+        .context("Failed to generate config to resume the simulation.")
     }
 }
 
@@ -409,4 +431,25 @@ struct SimulateArgsStatePartition {
     #[serde(default)]
     #[serde(deserialize_state)]
     pause: Option<Pause>,
+}
+
+#[allow(dead_code)]
+enum SimulationResult {
+    Done {
+        time: NonNegativeF64,
+        steps: u64,
+    },
+    Paused {
+        time: NonNegativeF64,
+        steps: u64,
+        lineages: Vec<Lineage>,
+        rng: ResumingRng,
+    },
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename = "Rng")]
+#[allow(dead_code)]
+enum ResumingRng {
+    State(Base32String),
 }

@@ -1,4 +1,13 @@
-use std::{fmt, marker::PhantomData, ops::Deref};
+#![allow(clippy::empty_enum)]
+
+use std::{
+    convert::TryFrom,
+    fmt,
+    fs::{self, File, OpenOptions},
+    marker::PhantomData,
+    ops::Deref,
+    path::PathBuf,
+};
 
 use necsim_core::cogs::{MathsCore, RngCore};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -8,7 +17,8 @@ use structopt::StructOpt;
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, Partition};
 
 use necsim_impls_std::{
-    event_log::replay::EventLogReplay, lineage_file::loader::LineageFileLoader,
+    event_log::replay::EventLogReplay,
+    lineage_file::{loader::LineageFileLoader, saver::LineageFileSaver},
 };
 
 use rustcoalescence_scenarios::{
@@ -443,6 +453,8 @@ enum SampleOrigin {
 #[derive(Debug, Serialize)]
 pub struct Pause {
     pub before: NonNegativeF64,
+    pub config: ResumeConfig,
+    pub destiny: SampleDestiny,
 }
 
 impl<'de> DeserializeState<'de, Partition> for Pause {
@@ -458,7 +470,11 @@ impl<'de> DeserializeState<'de, Partition> for Pause {
             ));
         }
 
-        Ok(Pause { before: raw.before })
+        Ok(Pause {
+            before: raw.before,
+            config: raw.config,
+            destiny: raw.destiny,
+        })
     }
 }
 
@@ -467,4 +483,68 @@ impl<'de> DeserializeState<'de, Partition> for Pause {
 #[serde(rename = "Pause")]
 pub struct PauseRaw {
     pub before: NonNegativeF64,
+    pub config: ResumeConfig,
+    pub destiny: SampleDestiny,
+}
+
+// TODO: Only allow `List` if the input sample was also `List`
+#[derive(Debug, Serialize, Deserialize)]
+pub enum SampleDestiny {
+    List,
+    Serde(LineageFileSaver),
+}
+
+#[derive(Deserialize)]
+#[serde(try_from = "PathBuf")]
+pub struct ResumeConfig {
+    file: File,
+    path: PathBuf,
+    temp: bool,
+}
+
+impl Drop for ResumeConfig {
+    fn drop(&mut self) {
+        if self.temp {
+            std::mem::drop(fs::remove_file(self.path.clone()));
+        }
+    }
+}
+
+impl fmt::Debug for ResumeConfig {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.path.fmt(fmt)
+    }
+}
+
+impl Serialize for ResumeConfig {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.path.serialize(serializer)
+    }
+}
+
+impl TryFrom<PathBuf> for ResumeConfig {
+    type Error = anyhow::Error;
+
+    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
+        let file = OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&path)?;
+
+        Ok(Self {
+            file,
+            path,
+            temp: true,
+        })
+    }
+}
+
+impl ResumeConfig {
+    pub fn write(mut self, config: &str) -> anyhow::Result<()> {
+        std::io::Write::write_fmt(&mut self.file, format_args!("{}\n", config))?;
+
+        self.temp = false;
+
+        Ok(())
+    }
 }

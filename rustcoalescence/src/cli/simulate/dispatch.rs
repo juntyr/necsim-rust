@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use tiny_keccak::{Hasher, Keccak};
 
-use rustcoalescence_algorithms::Algorithm;
+use rustcoalescence_algorithms::{Algorithm, AlgorithmResult};
 
 #[cfg(feature = "rustcoalescence-algorithms-cuda")]
 use rustcoalescence_algorithms_cuda::CudaAlgorithm;
@@ -29,10 +29,10 @@ use rustcoalescence_scenarios::{
 
 use crate::args::{
     parse::{ron_config, try_parse},
-    Algorithm as AlgorithmArgs, Rng as RngArgs, Scenario as ScenarioArgs,
+    Algorithm as AlgorithmArgs, Base32String, Rng as RngArgs, Scenario as ScenarioArgs,
 };
 
-use super::{BufferingPartialSimulateArgs, BufferingSimulateArgs};
+use super::{BufferingPartialSimulateArgs, BufferingSimulateArgs, ResumingRng, SimulationResult};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn simulate_with_logger<R: Reporter, P: LocalPartition<R>>(
@@ -44,8 +44,8 @@ pub(super) fn simulate_with_logger<R: Reporter, P: LocalPartition<R>>(
     pause_before: Option<NonNegativeF64>,
     ron_args: &str,
     partial_simulate_args: BufferingPartialSimulateArgs,
-) -> Result<(NonNegativeF64, u64)> {
-    let (time, steps) = crate::match_scenario_algorithm!(
+) -> Result<SimulationResult> {
+    let result = crate::match_scenario_algorithm!(
         (algorithm, scenario => scenario)
     {
         #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
@@ -108,17 +108,31 @@ pub(super) fn simulate_with_logger<R: Reporter, P: LocalPartition<R>>(
 
     if log::log_enabled!(log::Level::Info) {
         println!("\n");
-        println!("{:=^80}", " Reporter Summary ");
+        println!(
+            "{:=^80}",
+            if matches!(result, SimulationResult::Done { .. }) {
+                " Reporter Summary "
+            } else {
+                " Partial Reporter Summary "
+            }
+        );
         println!();
     }
     local_partition.finalise_reporting();
     if log::log_enabled!(log::Level::Info) {
         println!();
-        println!("{:=^80}", " Reporter Summary ");
+        println!(
+            "{:=^80}",
+            if matches!(result, SimulationResult::Done { .. }) {
+                " Reporter Summary "
+            } else {
+                " Partial Reporter Summary "
+            }
+        );
         println!();
     }
 
-    Ok((time, steps))
+    Ok(result)
 }
 
 #[derive(Deserialize)]
@@ -142,9 +156,10 @@ fn initialise_and_simulate<
     pause_before: Option<NonNegativeF64>,
     ron_args: &str,
     partial_simulate_args: BufferingPartialSimulateArgs,
-) -> anyhow::Result<(NonNegativeF64, u64)>
+) -> anyhow::Result<SimulationResult>
 where
-    Result<(NonNegativeF64, u64), A::Error>: anyhow::Context<(NonNegativeF64, u64), A::Error>,
+    Result<AlgorithmResult<A::MathsCore, A::Rng>, A::Error>:
+        anyhow::Context<AlgorithmResult<A::MathsCore, A::Rng>, A::Error>,
 {
     let SimulateArgsRngOnly { rng } = try_parse("simulate", ron_args)?;
 
@@ -187,7 +202,7 @@ where
         RngArgs::State(state) => state.into(),
     };
 
-    A::initialise_and_simulate(
+    let result = A::initialise_and_simulate(
         algorithm_args,
         rng,
         scenario,
@@ -195,5 +210,26 @@ where
         pause_before,
         local_partition,
     )
-    .context("Failed to perform the simulation.")
+    .context("Failed to perform the simulation.")?;
+
+    match result {
+        AlgorithmResult::Done { time, steps } => Ok(SimulationResult::Done { time, steps }),
+        AlgorithmResult::Paused {
+            time,
+            steps,
+            lineages,
+            rng: paused_rng,
+            ..
+        } => {
+            let state = bincode::Options::serialize(bincode::options(), &paused_rng)
+                .context("Failed to generate config to resume the simulation.")?;
+
+            Ok(SimulationResult::Paused {
+                time,
+                steps,
+                lineages,
+                rng: ResumingRng::State(Base32String::new(&state)),
+            })
+        },
+    }
 }

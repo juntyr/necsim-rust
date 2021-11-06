@@ -35,7 +35,7 @@ use necsim_impls_no_std::cogs::{
 };
 use necsim_partitioning_core::LocalPartition;
 
-use rustcoalescence_algorithms::{Algorithm, AlgorithmArguments};
+use rustcoalescence_algorithms::{Algorithm, AlgorithmArguments, AlgorithmResult};
 use rustcoalescence_scenarios::Scenario;
 
 use rust_cuda::{
@@ -201,7 +201,7 @@ where
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<(NonNegativeF64, u64), Self::Error> {
+    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, Self::Error> {
         let lineages: Vec<Lineage> = match args.parallelism_mode {
             // Apply no lineage origin partitioning in the `Monolithic` mode
             ParallelismMode::Monolithic(..) => scenario.sample_habitat(pre_sampler).collect(),
@@ -267,7 +267,7 @@ where
             },
         };
 
-        with_initialised_cuda(args.device, || {
+        let ((time, steps), lineages) = with_initialised_cuda(args.device, || {
             let kernel = SimulationKernel::try_new(
                 Stream::new(StreamFlags::NON_BLOCKING, None)?,
                 grid_size.clone(),
@@ -283,7 +283,20 @@ where
                 pause_before,
                 local_partition,
             )
-            .map(|(result, _)| result)
-        })
+        })?;
+
+        let lineages: Vec<Lineage> = lineages.into_iter().collect();
+
+        if lineages.is_empty() {
+            Ok(AlgorithmResult::Done { time, steps })
+        } else {
+            Ok(AlgorithmResult::Paused {
+                time,
+                steps,
+                lineages,
+                rng: simulation.rng_mut().clone(),
+                marker: PhantomData,
+            })
+        }
     }
 }
