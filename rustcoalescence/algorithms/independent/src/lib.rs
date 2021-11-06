@@ -48,7 +48,7 @@ use necsim_partitioning_core::LocalPartition;
 
 mod arguments;
 
-use rustcoalescence_algorithms::{Algorithm, AlgorithmArguments};
+use rustcoalescence_algorithms::{Algorithm, AlgorithmArguments, AlgorithmResult};
 use rustcoalescence_scenarios::Scenario;
 
 #[allow(clippy::module_name_repetitions, clippy::empty_enum)]
@@ -79,7 +79,7 @@ impl<
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<(NonNegativeF64, u64), Self::Error> {
+    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, Self::Error> {
         match args.parallelism_mode {
             ParallelismMode::Monolithic(MonolithicParallelismMode { event_slice })
             | ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode {
@@ -143,7 +143,7 @@ impl<
                 }
                 .build();
 
-                Ok(parallelisation::independent::monolithic::simulate(
+                let ((time, steps), lineages) = parallelisation::independent::monolithic::simulate(
                     &mut simulation,
                     lineages,
                     args.dedup_cache,
@@ -151,8 +151,21 @@ impl<
                     event_slice,
                     pause_before,
                     local_partition,
-                )
-                .0)
+                );
+
+                let lineages: Vec<Lineage> = lineages.into_iter().collect();
+
+                if lineages.is_empty() {
+                    Ok(AlgorithmResult::Done { time, steps })
+                } else {
+                    Ok(AlgorithmResult::Paused {
+                        time,
+                        steps,
+                        lineages,
+                        rng: simulation.rng_mut().clone(),
+                        marker: PhantomData,
+                    })
+                }
             },
             ParallelismMode::Individuals => {
                 let lineages: Vec<Lineage> = scenario
@@ -191,14 +204,17 @@ impl<
                 }
                 .build();
 
-                Ok(parallelisation::independent::individuals::simulate(
-                    &mut simulation,
-                    lineages,
-                    args.dedup_cache,
-                    args.step_slice,
-                    local_partition,
-                )
-                .0)
+                let ((time, steps), _lineages) =
+                    parallelisation::independent::individuals::simulate(
+                        &mut simulation,
+                        lineages,
+                        args.dedup_cache,
+                        args.step_slice,
+                        local_partition,
+                    );
+
+                // TODO: Adapt for parallel pausing
+                Ok(AlgorithmResult::Done { time, steps })
             },
             ParallelismMode::Landscape => {
                 let decomposition =
@@ -244,14 +260,16 @@ impl<
                 }
                 .build();
 
-                Ok(parallelisation::independent::landscape::simulate(
+                let ((time, steps), _lineages) = parallelisation::independent::landscape::simulate(
                     &mut simulation,
                     lineages,
                     args.dedup_cache,
                     args.step_slice,
                     local_partition,
-                )
-                .0)
+                );
+
+                // TODO: Adapt for parallel pausing
+                Ok(AlgorithmResult::Done { time, steps })
             },
             ParallelismMode::Probabilistic(ProbabilisticParallelismMode {
                 communication_probability,
@@ -299,14 +317,16 @@ impl<
                 }
                 .build();
 
-                Ok(parallelisation::independent::landscape::simulate(
+                let ((time, steps), _lineages) = parallelisation::independent::landscape::simulate(
                     &mut simulation,
                     lineages,
                     args.dedup_cache,
                     args.step_slice,
                     local_partition,
-                )
-                .0)
+                );
+
+                // TODO: Adapt for parallel pausing
+                Ok(AlgorithmResult::Done { time, steps })
             },
         }
     }

@@ -1,7 +1,10 @@
 use std::{hint::unreachable_unchecked, marker::PhantomData};
 
 use necsim_core::{
-    cogs::{GloballyCoherentLineageStore, LineageStore, SeparableDispersalSampler, SplittableRng},
+    cogs::{
+        ActiveLineageSampler, GloballyCoherentLineageStore, LineageStore,
+        SeparableDispersalSampler, SplittableRng,
+    },
     reporter::Reporter,
     simulation::SimulationBuilder,
 };
@@ -29,7 +32,7 @@ use necsim_impls_no_std::{
 use necsim_impls_std::cogs::rng::pcg::Pcg;
 use necsim_partitioning_core::LocalPartition;
 
-use rustcoalescence_algorithms::{Algorithm, AlgorithmArguments};
+use rustcoalescence_algorithms::{Algorithm, AlgorithmArguments, AlgorithmResult};
 use rustcoalescence_scenarios::Scenario;
 
 use crate::arguments::{
@@ -78,7 +81,7 @@ where
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<(NonNegativeF64, u64), Self::Error> {
+    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, Self::Error> {
         match args.parallelism_mode {
             ParallelismMode::Monolithic => {
                 let lineage_store =
@@ -140,11 +143,30 @@ where
                 }
                 .build();
 
-                Ok(parallelisation::monolithic::monolithic::simulate(
+                let (time, steps) = parallelisation::monolithic::monolithic::simulate(
                     &mut simulation,
                     pause_before,
                     local_partition,
-                ))
+                );
+
+                if simulation.get_balanced_remaining_work().0 == 0 {
+                    Ok(AlgorithmResult::Done { time, steps })
+                } else {
+                    Ok(AlgorithmResult::Paused {
+                        time,
+                        steps,
+                        lineages: simulation
+                            .active_lineage_sampler()
+                            .iter_active_lineages_ordered(
+                                simulation.habitat(),
+                                simulation.lineage_store(),
+                            )
+                            .cloned()
+                            .collect(),
+                        rng: simulation.rng_mut().clone(),
+                        marker: PhantomData,
+                    })
+                }
             },
             non_monolithic_parallelism_mode => {
                 let decomposition =
@@ -213,35 +235,36 @@ where
                 }
                 .build();
 
-                match non_monolithic_parallelism_mode {
+                let (time, steps) = match non_monolithic_parallelism_mode {
                     ParallelismMode::Monolithic => unsafe { unreachable_unchecked() },
                     ParallelismMode::Optimistic(OptimisticParallelismMode { delta_sync }) => {
-                        Ok(parallelisation::monolithic::optimistic::simulate(
+                        parallelisation::monolithic::optimistic::simulate(
                             &mut simulation,
                             delta_sync,
                             local_partition,
-                        ))
+                        )
                     },
-                    ParallelismMode::Lockstep => {
-                        Ok(parallelisation::monolithic::lockstep::simulate(
-                            &mut simulation,
-                            local_partition,
-                        ))
-                    },
+                    ParallelismMode::Lockstep => parallelisation::monolithic::lockstep::simulate(
+                        &mut simulation,
+                        local_partition,
+                    ),
                     ParallelismMode::OptimisticLockstep => {
-                        Ok(parallelisation::monolithic::optimistic_lockstep::simulate(
+                        parallelisation::monolithic::optimistic_lockstep::simulate(
                             &mut simulation,
                             local_partition,
-                        ))
+                        )
                     },
                     ParallelismMode::Averaging(AveragingParallelismMode { delta_sync }) => {
-                        Ok(parallelisation::monolithic::averaging::simulate(
+                        parallelisation::monolithic::averaging::simulate(
                             &mut simulation,
                             delta_sync,
                             local_partition,
-                        ))
+                        )
                     },
-                }
+                };
+
+                // TODO: Adapt for parallel pausing
+                Ok(AlgorithmResult::Done { time, steps })
             },
         }
     }
