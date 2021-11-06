@@ -1,7 +1,10 @@
 #![deny(clippy::pedantic)]
 
+use std::marker::PhantomData;
+
 use necsim_core::{
     cogs::{LineageReference, LineageStore, MathsCore, RngCore},
+    lineage::Lineage,
     reporter::Reporter,
 };
 use necsim_core_bond::NonNegativeF64;
@@ -35,5 +38,19 @@ pub trait Algorithm<O: Scenario<Self::MathsCore, Self::Rng>, R: Reporter, P: Loc
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<(NonNegativeF64, u64), Self::Error>;
+    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, Self::Error>;
+}
+
+pub enum AlgorithmResult<M: MathsCore, G: RngCore<M>> {
+    Done {
+        time: NonNegativeF64,
+        steps: u64,
+    },
+    Paused {
+        time: NonNegativeF64,
+        steps: u64,
+        lineages: Vec<Lineage>,
+        rng: G,
+        marker: PhantomData<M>,
+    },
 }
