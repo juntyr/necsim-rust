@@ -20,18 +20,23 @@ use necsim_core::{
 use necsim_core_bond::NonNegativeF64;
 
 use necsim_impls_cuda::cogs::{maths::NvptxMathsCore, rng::CudaRng};
-use necsim_impls_no_std::cogs::{
-    active_lineage_sampler::independent::{
-        event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
+use necsim_impls_no_std::{
+    cogs::{
+        active_lineage_sampler::independent::{
+            event_time_sampler::exp::ExpEventTimeSampler, IndependentActiveLineageSampler,
+        },
+        coalescence_sampler::independent::IndependentCoalescenceSampler,
+        dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
+        emigration_exit::never::NeverEmigrationExit,
+        event_sampler::independent::IndependentEventSampler,
+        immigration_entry::never::NeverImmigrationEntry,
+        lineage_store::independent::IndependentLineageStore,
+        origin_sampler::{
+            decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
+        },
+        rng::wyhash::WyHash,
     },
-    coalescence_sampler::independent::IndependentCoalescenceSampler,
-    dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
-    emigration_exit::never::NeverEmigrationExit,
-    event_sampler::independent::IndependentEventSampler,
-    immigration_entry::never::NeverImmigrationEntry,
-    lineage_store::independent::IndependentLineageStore,
-    origin_sampler::{decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler},
-    rng::wyhash::WyHash,
+    parallelisation::Status,
 };
 use necsim_partitioning_core::LocalPartition;
 
@@ -267,7 +272,7 @@ where
             },
         };
 
-        let ((time, steps), lineages) = with_initialised_cuda(args.device, || {
+        let (status, time, steps, lineages) = with_initialised_cuda(args.device, || {
             let kernel = SimulationKernel::try_new(
                 Stream::new(StreamFlags::NON_BLOCKING, None)?,
                 grid_size.clone(),
@@ -285,18 +290,15 @@ where
             )
         })?;
 
-        let lineages: Vec<Lineage> = lineages.into_iter().collect();
-
-        if lineages.is_empty() {
-            Ok(AlgorithmResult::Done { time, steps })
-        } else {
-            Ok(AlgorithmResult::Paused {
+        match status {
+            Status::Done => Ok(AlgorithmResult::Done { time, steps }),
+            Status::Paused => Ok(AlgorithmResult::Paused {
                 time,
                 steps,
-                lineages,
+                lineages: lineages.into_iter().collect(),
                 rng: simulation.rng_mut().clone(),
                 marker: PhantomData,
-            })
+            }),
         }
     }
 }

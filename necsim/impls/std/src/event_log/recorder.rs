@@ -74,9 +74,7 @@ impl EventLogRecorder {
     ///
     /// Fails to construct iff `path` is not a writable directory.
     pub fn try_new(path: &Path, segment_capacity: NonZeroUsize) -> Result<Self> {
-        if !path.exists() {
-            fs::create_dir_all(path)?;
-        }
+        fs::create_dir_all(path)?;
 
         let metadata = fs::metadata(path)?;
 
@@ -85,7 +83,7 @@ impl EventLogRecorder {
         }
 
         if metadata.permissions().readonly() {
-            return Err(anyhow::anyhow!("{:?} is read-only.", path));
+            return Err(anyhow::anyhow!("{:?} is a read-only directory.", path));
         }
 
         Ok(Self {
@@ -103,9 +101,7 @@ impl EventLogRecorder {
     ///
     /// Fails to construct iff `path` is not a writable directory.
     pub fn r#move(mut self, path: &Path) -> Result<Self> {
-        if !path.exists() {
-            fs::create_dir_all(path)?;
-        }
+        fs::create_dir_all(path)?;
 
         let metadata = fs::metadata(path)?;
 
@@ -114,10 +110,24 @@ impl EventLogRecorder {
         }
 
         if metadata.permissions().readonly() {
-            return Err(anyhow::anyhow!("{:?} is read-only.", path));
+            return Err(anyhow::anyhow!("{:?} is a read-only directory.", path));
         }
 
         self.directory = path.to_owned();
+
+        Ok(self)
+    }
+
+    /// # Errors
+    ///
+    /// Fails to construct iff `path` is not an empty directory.
+    pub fn assert_empty(self) -> Result<Self> {
+        if fs::read_dir(&self.directory)?.next().is_some() {
+            return Err(anyhow::anyhow!(
+                "{:?} is not an empty directory.",
+                &self.directory
+            ));
+        }
 
         Ok(self)
     }

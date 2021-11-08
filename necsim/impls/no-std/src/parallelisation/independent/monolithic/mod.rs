@@ -15,18 +15,21 @@ use necsim_core::{
 
 use necsim_partitioning_core::LocalPartition;
 
-use crate::cogs::{
-    active_lineage_sampler::{
-        independent::{event_time_sampler::EventTimeSampler, IndependentActiveLineageSampler},
-        singular::SingularActiveLineageSampler,
+use crate::{
+    cogs::{
+        active_lineage_sampler::{
+            independent::{event_time_sampler::EventTimeSampler, IndependentActiveLineageSampler},
+            singular::SingularActiveLineageSampler,
+        },
+        coalescence_sampler::independent::IndependentCoalescenceSampler,
+        emigration_exit::never::NeverEmigrationExit,
+        event_sampler::{
+            independent::IndependentEventSampler, tracking::MinSpeciationTrackingEventSampler,
+        },
+        immigration_entry::never::NeverImmigrationEntry,
+        lineage_store::independent::IndependentLineageStore,
     },
-    coalescence_sampler::independent::IndependentCoalescenceSampler,
-    emigration_exit::never::NeverEmigrationExit,
-    event_sampler::{
-        independent::IndependentEventSampler, tracking::MinSpeciationTrackingEventSampler,
-    },
-    immigration_entry::never::NeverImmigrationEntry,
-    lineage_store::independent::IndependentLineageStore,
+    parallelisation::Status,
 };
 
 use crate::parallelisation::independent::{DedupCache, EventSlice};
@@ -71,7 +74,12 @@ pub fn simulate<
     event_slice: EventSlice,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
-) -> ((NonNegativeF64, u64), impl IntoIterator<Item = Lineage>) {
+) -> (
+    Status,
+    NonNegativeF64,
+    u64,
+    impl IntoIterator<Item = Lineage>,
+) {
     let mut slow_lineages = lineages
         .into_iter()
         .map(|lineage| {
@@ -233,8 +241,10 @@ pub fn simulate<
         (Wrapping(slow_lineages.len() as u64) + simulation.get_balanced_remaining_work()).0,
     );
 
-    (
-        local_partition.reduce_global_time_steps(max_time, total_steps),
-        slow_lineages.into_iter().map(|(lineage, _)| lineage),
-    )
+    let status = Status::paused(local_partition.reduce_vote_continue(!slow_lineages.is_empty()));
+    let (global_time, global_steps) =
+        local_partition.reduce_global_time_steps(max_time, total_steps);
+    let lineages = slow_lineages.into_iter().map(|(lineage, _)| lineage);
+
+    (status, global_time, global_steps, lineages)
 }
