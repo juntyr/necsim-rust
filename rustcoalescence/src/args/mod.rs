@@ -16,10 +16,7 @@ use structopt::StructOpt;
 
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, Partition};
 
-use necsim_impls_std::{
-    event_log::replay::EventLogReplay,
-    lineage_file::{loader::LineageFileLoader, saver::LineageFileSaver},
-};
+use necsim_impls_std::{event_log::replay::EventLogReplay, lineage_file::saver::LineageFileSaver};
 
 use rustcoalescence_scenarios::{
     almost_infinite::AlmostInfiniteArguments, non_spatial::NonSpatialArguments,
@@ -56,9 +53,17 @@ pub struct CommandArgs {
 
 #[allow(dead_code)]
 pub struct Base32RngState<M: MathsCore, G: RngCore<M>> {
-    state: Base32String,
     rng: G,
     marker: PhantomData<M>,
+}
+
+impl<M: MathsCore, G: RngCore<M>> From<G> for Base32RngState<M, G> {
+    fn from(rng: G) -> Self {
+        Self {
+            rng,
+            marker: PhantomData::<M>,
+        }
+    }
 }
 
 impl<M: MathsCore, G: RngCore<M>> Base32RngState<M, G> {
@@ -71,13 +76,19 @@ impl<M: MathsCore, G: RngCore<M>> Base32RngState<M, G> {
 
 impl<M: MathsCore, G: RngCore<M>> fmt::Debug for Base32RngState<M, G> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        self.state.fmt(fmt)
+        match bincode::Options::serialize(bincode::options(), &self.rng) {
+            Ok(state) => Base32String::new(&state).fmt(fmt),
+            Err(_) => fmt.write_str("InvalidRngState"),
+        }
     }
 }
 
 impl<M: MathsCore, G: RngCore<M>> Serialize for Base32RngState<M, G> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.state.serialize(serializer)
+        let state = bincode::Options::serialize(bincode::options(), &self.rng)
+            .map_err(serde::ser::Error::custom)?;
+
+        Base32String::new(&state).serialize(serializer)
     }
 }
 
@@ -89,7 +100,6 @@ impl<'de, M: MathsCore, G: RngCore<M>> Deserialize<'de> for Base32RngState<M, G>
             .map_err(|_| serde::de::Error::custom(format!("invalid RNG state {}", state)))?;
 
         Ok(Self {
-            state,
             rng,
             marker: PhantomData::<M>,
         })
@@ -122,7 +132,6 @@ impl<'de, M: MathsCore, G: RngCore<M>> Deserialize<'de> for Rng<M, G> {
             RngRaw::StateElseSponge(state) => {
                 match bincode::Options::deserialize(bincode::options(), &state) {
                     Ok(rng) => Self::State(Base32RngState {
-                        state,
                         rng,
                         marker: PhantomData::<M>,
                     }),
@@ -427,27 +436,24 @@ struct ReplayArgsRaw {
     reporters: Vec<ReporterPluginLibrary>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(default)]
 #[serde(deny_unknown_fields)]
-struct Sample {
-    percentage: ClosedUnitF64,
-    origin: SampleOrigin,
+pub struct Sample {
+    #[serde(default = "default_sample_percentage")]
+    pub percentage: ClosedUnitF64,
+}
+
+fn default_sample_percentage() -> ClosedUnitF64 {
+    ClosedUnitF64::one()
 }
 
 impl Default for Sample {
     fn default() -> Self {
         Self {
-            percentage: ClosedUnitF64::one(),
-            origin: SampleOrigin::Habitat,
+            percentage: default_sample_percentage(),
         }
     }
-}
-
-#[derive(Debug, Deserialize)]
-enum SampleOrigin {
-    Habitat,
-    List(LineageFileLoader),
 }
 
 #[derive(Debug, Serialize)]
@@ -491,7 +497,7 @@ pub struct PauseRaw {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum SampleDestiny {
     List,
-    Serde(LineageFileSaver),
+    Bincode(LineageFileSaver),
 }
 
 #[derive(Deserialize)]

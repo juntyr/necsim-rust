@@ -10,6 +10,7 @@ use serde::{
 
 pub struct BufferingSerializer;
 
+#[derive(Clone)]
 pub struct StaticString(Box<str>);
 
 impl fmt::Debug for StaticString {
@@ -36,7 +37,7 @@ impl From<&'static str> for StaticString {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum BufferingSerialize {
     Bool(bool),
     I8(i8),
@@ -113,20 +114,38 @@ pub enum BufferingSerialize {
     },
 }
 
-#[derive(Debug)]
-pub struct CustomError(String);
+#[derive(Clone, Debug)]
+pub struct BufferingError(String);
 
-impl std::fmt::Display for CustomError {
+impl std::fmt::Display for BufferingError {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         fmt.write_str(&self.0)
     }
 }
 
-impl std::error::Error for CustomError {}
+impl std::error::Error for BufferingError {}
 
-impl Error for CustomError {
+impl Error for BufferingError {
     fn custom<T: std::fmt::Display>(msg: T) -> Self {
-        CustomError(msg.to_string())
+        BufferingError(msg.to_string())
+    }
+}
+
+#[derive(Clone)]
+pub struct BufferingSerializeResult(Result<BufferingSerialize, BufferingError>);
+
+impl<S: Serialize> From<&S> for BufferingSerializeResult {
+    fn from(value: &S) -> Self {
+        Self(value.serialize(BufferingSerializer))
+    }
+}
+
+impl Serialize for BufferingSerializeResult {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match &self.0 {
+            Ok(buffered) => buffered.serialize(serializer),
+            Err(err) => Err(serde::ser::Error::custom(&err.0)),
+        }
     }
 }
 
@@ -136,7 +155,7 @@ pub struct BufferedSequenceSerializer {
 }
 
 impl SerializeSeq for BufferedSequenceSerializer {
-    type Error = CustomError;
+    type Error = BufferingError;
     type Ok = BufferingSerialize;
 
     fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
@@ -158,7 +177,7 @@ pub struct BufferedTupleSerializer {
 }
 
 impl SerializeTuple for BufferedTupleSerializer {
-    type Error = CustomError;
+    type Error = BufferingError;
     type Ok = BufferingSerialize;
 
     fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
@@ -181,7 +200,7 @@ pub struct BufferedTupleStructSerializer {
 }
 
 impl SerializeTupleStruct for BufferedTupleStructSerializer {
-    type Error = CustomError;
+    type Error = BufferingError;
     type Ok = BufferingSerialize;
 
     fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
@@ -207,7 +226,7 @@ pub struct BufferedTupleVariantSerializer {
 }
 
 impl SerializeTupleVariant for BufferedTupleVariantSerializer {
-    type Error = CustomError;
+    type Error = BufferingError;
     type Ok = BufferingSerialize;
 
     fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
@@ -232,7 +251,7 @@ pub struct BufferedMapSerializer {
 }
 
 impl SerializeMap for BufferedMapSerializer {
-    type Error = CustomError;
+    type Error = BufferingError;
     type Ok = BufferingSerialize;
 
     fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<(), Self::Error> {
@@ -274,7 +293,7 @@ pub struct BufferedStructSerializer {
 }
 
 impl SerializeStruct for BufferedStructSerializer {
-    type Error = CustomError;
+    type Error = BufferingError;
     type Ok = BufferingSerialize;
 
     fn serialize_field<T: ?Sized + Serialize>(
@@ -310,7 +329,7 @@ pub struct BufferedStructVariantSerializer {
 }
 
 impl SerializeStructVariant for BufferedStructVariantSerializer {
-    type Error = CustomError;
+    type Error = BufferingError;
     type Ok = BufferingSerialize;
 
     fn serialize_field<T: ?Sized + Serialize>(
@@ -340,7 +359,7 @@ impl SerializeStructVariant for BufferedStructVariantSerializer {
 }
 
 impl Serializer for BufferingSerializer {
-    type Error = CustomError;
+    type Error = BufferingError;
     type Ok = BufferingSerialize;
     type SerializeMap = BufferedMapSerializer;
     type SerializeSeq = BufferedSequenceSerializer;
