@@ -1,6 +1,5 @@
 #![deny(clippy::pedantic)]
 #![feature(unwrap_infallible)]
-#![feature(never_type)]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 

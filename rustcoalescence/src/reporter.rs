@@ -27,6 +27,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
 impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolean>
     DynamicReporterContext<ReportSpeciation, ReportDispersal, ReportProgress>
 {
+    #[allow(dead_code)]
     pub fn new(
         reporter: ReporterPluginVec<ReportSpeciation, ReportDispersal, ReportProgress>,
     ) -> Self {

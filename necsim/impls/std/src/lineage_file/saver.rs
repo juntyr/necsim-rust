@@ -38,7 +38,7 @@ impl fmt::Debug for LineageFileSaver {
 impl Serialize for LineageFileSaver {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         LineageFileSaverRaw {
-            path: self.path.clone(),
+            file: self.path.clone(),
         }
         .serialize(serializer)
     }
@@ -77,12 +77,12 @@ impl TryFrom<LineageFileSaverRaw> for LineageFileSaver {
     type Error = anyhow::Error;
 
     fn try_from(raw: LineageFileSaverRaw) -> Result<Self, Self::Error> {
-        Self::try_new(&raw.path)
+        Self::try_new(&raw.file)
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename = "LineageFileSaver")]
 struct LineageFileSaverRaw {
-    path: PathBuf,
+    file: PathBuf,
 }
