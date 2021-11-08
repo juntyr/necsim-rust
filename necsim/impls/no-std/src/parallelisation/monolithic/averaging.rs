@@ -17,6 +17,7 @@ use crate::{
         immigration_entry::buffered::BufferedImmigrationEntry,
     },
     decomposition::Decomposition,
+    parallelisation::Status,
 };
 
 #[allow(clippy::type_complexity)]
@@ -66,7 +67,7 @@ pub fn simulate<
     >,
     independent_time_slice: PositiveF64,
     local_partition: &mut L,
-) -> (NonNegativeF64, u64) {
+) -> (Status, NonNegativeF64, u64) {
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(simulation.get_balanced_remaining_work().0);
 
@@ -122,8 +123,10 @@ pub fn simulate<
 
     local_partition.report_progress_sync(0_u64);
 
-    local_partition.reduce_global_time_steps(
+    let (global_time, global_steps) = local_partition.reduce_global_time_steps(
         simulation.active_lineage_sampler().get_last_event_time(),
         total_steps,
-    )
+    );
+
+    (Status::Done, global_time, global_steps)
 }

@@ -28,11 +28,14 @@ use necsim_impls_no_std::{
         active_lineage_sampler::singular::SingularActiveLineageSampler,
         event_sampler::tracking::MinSpeciationTrackingEventSampler,
     },
-    parallelisation::independent::{
-        monolithic::reporter::{
-            WaterLevelReporterConstructor, WaterLevelReporterProxy, WaterLevelReporterStrategy,
+    parallelisation::{
+        independent::{
+            monolithic::reporter::{
+                WaterLevelReporterConstructor, WaterLevelReporterProxy, WaterLevelReporterStrategy,
+            },
+            DedupCache, EventSlice,
         },
-        DedupCache, EventSlice,
+        Status,
     },
 };
 use necsim_partitioning_core::LocalPartition;
@@ -87,7 +90,7 @@ pub fn simulate<
     event_slice: EventSlice,
     pause_before: Option<NonNegativeF64>,
     local_partition: &'l mut L,
-) -> Result<((NonNegativeF64, u64), impl IntoIterator<Item = Lineage>)>
+) -> Result<(Status, NonNegativeF64, u64, impl IntoIterator<Item = Lineage>)>
     where SimulationKernel<
         M,
         H,
@@ -350,8 +353,10 @@ pub fn simulate<
 
     local_partition.report_progress_sync(slow_lineages.len() as u64);
 
-    Ok((
-        local_partition.reduce_global_time_steps(total_time_max, total_steps_sum),
-        slow_lineages.into_iter().map(|(lineage, _)| lineage),
-    ))
+    let status = Status::paused(local_partition.reduce_vote_continue(!slow_lineages.is_empty()));
+    let (global_time, global_steps) =
+        local_partition.reduce_global_time_steps(total_time_max, total_steps_sum);
+    let lineages = slow_lineages.into_iter().map(|(lineage, _)| lineage);
+
+    Ok((status, global_time, global_steps, lineages))
 }

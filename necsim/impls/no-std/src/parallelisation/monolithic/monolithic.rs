@@ -11,8 +11,12 @@ use necsim_core_bond::NonNegativeF64;
 
 use necsim_partitioning_core::LocalPartition;
 
-use crate::cogs::{
-    emigration_exit::never::NeverEmigrationExit, immigration_entry::never::NeverImmigrationEntry,
+use crate::{
+    cogs::{
+        emigration_exit::never::NeverEmigrationExit,
+        immigration_entry::never::NeverImmigrationEntry,
+    },
+    parallelisation::Status,
 };
 
 #[allow(clippy::type_complexity)]
@@ -48,7 +52,7 @@ pub fn simulate<
     >,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut L,
-) -> (NonNegativeF64, u64) {
+) -> (Status, NonNegativeF64, u64) {
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(simulation.get_balanced_remaining_work().0);
 
@@ -61,5 +65,11 @@ pub fn simulate<
 
     local_partition.report_progress_sync(simulation.get_balanced_remaining_work().0);
 
-    local_partition.reduce_global_time_steps(time, steps)
+    let status = Status::paused(
+        local_partition
+            .reduce_vote_continue(simulation.active_lineage_sampler().number_active_lineages() > 0),
+    );
+    let (global_time, global_steps) = local_partition.reduce_global_time_steps(time, steps);
+
+    (status, global_time, global_steps)
 }

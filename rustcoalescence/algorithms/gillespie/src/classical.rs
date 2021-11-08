@@ -26,7 +26,7 @@ use necsim_impls_no_std::{
         },
         turnover_rate::uniform::UniformTurnoverRate,
     },
-    parallelisation,
+    parallelisation::{self, Status},
 };
 use necsim_impls_std::cogs::rng::pcg::Pcg;
 use necsim_partitioning_core::LocalPartition;
@@ -112,16 +112,15 @@ where
                 }
                 .build();
 
-                let (time, steps) = parallelisation::monolithic::monolithic::simulate(
+                let (status, time, steps) = parallelisation::monolithic::monolithic::simulate(
                     &mut simulation,
                     pause_before,
                     local_partition,
                 );
 
-                if simulation.get_balanced_remaining_work().0 == 0 {
-                    Ok(AlgorithmResult::Done { time, steps })
-                } else {
-                    Ok(AlgorithmResult::Paused {
+                match status {
+                    Status::Done => Ok(AlgorithmResult::Done { time, steps }),
+                    Status::Paused => Ok(AlgorithmResult::Paused {
                         time,
                         steps,
                         lineages: simulation
@@ -134,7 +133,7 @@ where
                             .collect(),
                         rng: simulation.rng_mut().clone(),
                         marker: PhantomData,
-                    })
+                    }),
                 }
             },
             non_monolithic_parallelism_mode => {
@@ -180,7 +179,7 @@ where
                 }
                 .build();
 
-                let (time, steps) = match non_monolithic_parallelism_mode {
+                let (_status, time, steps) = match non_monolithic_parallelism_mode {
                     ParallelismMode::Monolithic => unsafe { unreachable_unchecked() },
                     ParallelismMode::Optimistic(OptimisticParallelismMode { delta_sync }) => {
                         parallelisation::monolithic::optimistic::simulate(
@@ -273,16 +272,15 @@ where
                 }
                 .build();
 
-                let (time, steps) = parallelisation::monolithic::monolithic::simulate(
+                let (status, time, steps) = parallelisation::monolithic::monolithic::simulate(
                     &mut simulation,
                     pause_before,
                     local_partition,
                 );
 
-                if simulation.get_balanced_remaining_work().0 == 0 {
-                    Ok(AlgorithmResult::Done { time, steps })
-                } else {
-                    Ok(AlgorithmResult::Paused {
+                match status {
+                    Status::Done => Ok(AlgorithmResult::Done { time, steps }),
+                    Status::Paused => Ok(AlgorithmResult::Paused {
                         time,
                         steps,
                         lineages: simulation
@@ -295,7 +293,7 @@ where
                             .collect(),
                         rng: simulation.rng_mut().clone(),
                         marker: PhantomData,
-                    })
+                    }),
                 }
             },
             non_monolithic_parallelism_mode => {
@@ -337,7 +335,7 @@ where
                 }
                 .build();
 
-                let (time, steps) = match non_monolithic_parallelism_mode {
+                let (_status, time, steps) = match non_monolithic_parallelism_mode {
                     ParallelismMode::Monolithic => unsafe { unreachable_unchecked() },
                     ParallelismMode::Optimistic(OptimisticParallelismMode { delta_sync }) => {
                         parallelisation::monolithic::optimistic::simulate(

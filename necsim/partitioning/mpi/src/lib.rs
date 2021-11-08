@@ -41,7 +41,7 @@ pub enum MpiPartitioningError {
 pub enum MpiLocalPartitionError {
     #[error("MPI partitioning requires an event log.")]
     MissingEventLog,
-    #[error("Failed to create MPI event sub-log.")]
+    #[error("Failed to create the event sub-log.")]
     InvalidEventSubLog,
 }
 
@@ -144,6 +144,7 @@ impl Partitioning for MpiPartitioning {
 
         let event_log = event_log
             .r#move(&directory)
+            .and_then(EventLogRecorder::assert_empty)
             .context(MpiLocalPartitionError::InvalidEventSubLog)?;
 
         if self.world.rank() == MpiPartitioning::ROOT_RANK {

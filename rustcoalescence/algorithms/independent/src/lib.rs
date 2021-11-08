@@ -42,7 +42,7 @@ use necsim_impls_no_std::{
         },
         rng::wyhash::WyHash,
     },
-    parallelisation,
+    parallelisation::{self, Status},
 };
 use necsim_partitioning_core::LocalPartition;
 
@@ -143,28 +143,26 @@ impl<
                 }
                 .build();
 
-                let ((time, steps), lineages) = parallelisation::independent::monolithic::simulate(
-                    &mut simulation,
-                    lineages,
-                    args.dedup_cache,
-                    args.step_slice,
-                    event_slice,
-                    pause_before,
-                    local_partition,
-                );
+                let (status, time, steps, lineages) =
+                    parallelisation::independent::monolithic::simulate(
+                        &mut simulation,
+                        lineages,
+                        args.dedup_cache,
+                        args.step_slice,
+                        event_slice,
+                        pause_before,
+                        local_partition,
+                    );
 
-                let lineages: Vec<Lineage> = lineages.into_iter().collect();
-
-                if lineages.is_empty() {
-                    Ok(AlgorithmResult::Done { time, steps })
-                } else {
-                    Ok(AlgorithmResult::Paused {
+                match status {
+                    Status::Done => Ok(AlgorithmResult::Done { time, steps }),
+                    Status::Paused => Ok(AlgorithmResult::Paused {
                         time,
                         steps,
-                        lineages,
+                        lineages: lineages.into_iter().collect(),
                         rng: simulation.rng_mut().clone(),
                         marker: PhantomData,
-                    })
+                    }),
                 }
             },
             ParallelismMode::Individuals => {
@@ -204,7 +202,7 @@ impl<
                 }
                 .build();
 
-                let ((time, steps), _lineages) =
+                let (_status, time, steps, _lineages) =
                     parallelisation::independent::individuals::simulate(
                         &mut simulation,
                         lineages,
@@ -260,13 +258,14 @@ impl<
                 }
                 .build();
 
-                let ((time, steps), _lineages) = parallelisation::independent::landscape::simulate(
-                    &mut simulation,
-                    lineages,
-                    args.dedup_cache,
-                    args.step_slice,
-                    local_partition,
-                );
+                let (_status, time, steps, _lineages) =
+                    parallelisation::independent::landscape::simulate(
+                        &mut simulation,
+                        lineages,
+                        args.dedup_cache,
+                        args.step_slice,
+                        local_partition,
+                    );
 
                 // TODO: Adapt for parallel pausing
                 Ok(AlgorithmResult::Done { time, steps })
@@ -317,13 +316,14 @@ impl<
                 }
                 .build();
 
-                let ((time, steps), _lineages) = parallelisation::independent::landscape::simulate(
-                    &mut simulation,
-                    lineages,
-                    args.dedup_cache,
-                    args.step_slice,
-                    local_partition,
-                );
+                let (_status, time, steps, _lineages) =
+                    parallelisation::independent::landscape::simulate(
+                        &mut simulation,
+                        lineages,
+                        args.dedup_cache,
+                        args.step_slice,
+                        local_partition,
+                    );
 
                 // TODO: Adapt for parallel pausing
                 Ok(AlgorithmResult::Done { time, steps })
