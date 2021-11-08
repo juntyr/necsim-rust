@@ -2,7 +2,7 @@
 
 use std::{collections::HashSet, fmt};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize, Serializer};
 
 use necsim_core::{impl_report, landscape::Location, reporter::Reporter};
 
@@ -16,6 +16,15 @@ pub struct DemoReporter {
     initialised: bool,
 }
 
+impl Serialize for DemoReporter {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        DemoReporterArgs {
+            ignore: self.ignore.clone(),
+        }
+        .serialize(serializer)
+    }
+}
+
 impl fmt::Debug for DemoReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("DemoReporter")
@@ -24,9 +33,10 @@ impl fmt::Debug for DemoReporter {
     }
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 #[serde(default)]
+#[serde(rename = "DemoReporter")]
 struct DemoReporterArgs {
     ignore: HashSet<Location>,
 }
