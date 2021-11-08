@@ -2,8 +2,13 @@
     /* per-individual per-generation probability that an individual speciates
      *  i.e. is the creator of a new unique species */
     speciation: (0.0 < f64 <= 1.0),
-    /* percentage of how many individuals are simulated */
-    sample: (0.0 <= f64 <= 1.0),
+    /* selection of the sample of individuals that are simulatd */
+    /* optional, default = Sample(percentage: 1.0) */
+    sample: Sample(
+        /* percentage of individuals from the sample that are simulated */
+        /* optional, default = 1.0 */
+        percentage: (0.0 <= f64 <= 1.0),
+    ),
     /* selected of the initialisation of the random number generator */
     rng: (
         /* seeds from OS-provided randomness */
@@ -483,10 +488,10 @@
                  *  new configuration file */
               | List
                 /* the remaining individuals will be written to a new binary file */
-              | Serde(
+              | Bincode(
                     /* file path to where the new binary file listing the remaining
                     *  individuals will be written */
-                    path: (PathBuf),
+                    file: (PathBuf),
                 )
             ),
         )
