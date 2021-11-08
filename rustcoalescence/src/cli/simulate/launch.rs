@@ -57,10 +57,32 @@ where
         );
     }
 
-    if P::IsLive::VALUE {
-        info!("The simulation will report all events live.");
-    } else {
-        warn!("The simulation will only report progress events live.");
+    if <P::Reporter as Reporter>::ReportSpeciation::VALUE {
+        if P::IsLive::VALUE {
+            info!("The simulation will report speciation events live.");
+        } else {
+            info!("The simulation will record speciation events.");
+        }
+    }
+
+    if <P::Reporter as Reporter>::ReportDispersal::VALUE {
+        if P::IsLive::VALUE {
+            info!("The simulation will report dispersal events live.");
+        } else {
+            info!("The simulation will record dispersal events.");
+            warn!("Recording dispersal events can be very space-consuming.");
+        }
+    }
+
+    if <P::Reporter as Reporter>::ReportProgress::VALUE {
+        info!("The simulation will report progress events live.");
+    }
+
+    if !<P::Reporter as Reporter>::ReportSpeciation::VALUE
+        && !<P::Reporter as Reporter>::ReportDispersal::VALUE
+        && !<P::Reporter as Reporter>::ReportProgress::VALUE
+    {
+        warn!("The simulation will report no events.");
     }
 
     let result = A::initialise_and_simulate(

@@ -35,6 +35,7 @@ use crate::{
         lineage_store::independent::IndependentLineageStore,
     },
     decomposition::Decomposition,
+    parallelisation::Status,
 };
 
 use super::{reporter::IgnoreProgressReporterProxy, DedupCache};
@@ -73,7 +74,12 @@ pub fn simulate<
     dedup_cache: DedupCache,
     step_slice: NonZeroU64,
     local_partition: &mut P,
-) -> ((NonNegativeF64, u64), impl IntoIterator<Item = Lineage>) {
+) -> (
+    Status,
+    NonNegativeF64,
+    u64,
+    impl IntoIterator<Item = Lineage>,
+) {
     let mut lineages = VecDeque::from_iter(lineages);
     let mut proxy = IgnoreProgressReporterProxy::from(local_partition);
     let mut min_spec_samples = dedup_cache.construct(lineages.len());
@@ -192,10 +198,9 @@ pub fn simulate<
 
     proxy.local_partition().report_progress_sync(0_u64);
 
-    (
-        proxy
-            .local_partition()
-            .reduce_global_time_steps(max_time, total_steps),
-        lineages,
-    )
+    let (global_time, global_steps) = proxy
+        .local_partition()
+        .reduce_global_time_steps(max_time, total_steps);
+
+    (Status::Done, global_time, global_steps, lineages)
 }

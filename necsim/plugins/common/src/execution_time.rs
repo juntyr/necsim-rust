@@ -60,16 +60,22 @@ impl Reporter for ExecutionTimeReporter {
         }
     );
 
-    impl_finalise!((self) {
-        if let (Some(start_time), Some(end_time)) = (self.start_time, self.end_time) {
-            info!(
+    impl_finalise!((mut self) {
+        match (self.start_time, self.end_time) {
+            (Some(start_time), Some(end_time)) => info!(
                 "The simulation took:\n - initialisation: {:?}\n - execution: {:?}\n - \
                 cleanup: {:?}",
                 (start_time - self.init_time),
                 (end_time - start_time),
                 end_time.elapsed()
-            );
-        }
+            ),
+            (Some(start_time), None) => info!(
+                "The simulation took:\n - initialisation: {:?}\n - execution: {:?}",
+                (start_time - self.init_time),
+                start_time.elapsed(),
+            ),
+            _ => (),
+        };
     });
 
     fn initialise(&mut self) -> Result<(), String> {
