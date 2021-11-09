@@ -1,5 +1,6 @@
 use std::{collections::HashMap, convert::TryFrom, fmt, fs::OpenOptions, io};
 
+use fnv::FnvBuildHasher;
 use serde::{Deserialize, Serialize, Serializer};
 use tskit::{IndividualId, NodeId, TableCollection};
 
@@ -27,13 +28,17 @@ pub struct TskitTreeReporter {
     last_dispersal_event: Option<DispersalEvent>,
 
     // Original (present-time) locations of all lineages
-    origins: HashMap<GlobalLineageReference, IndexedLocation>,
+    origins: HashMap<GlobalLineageReference, IndexedLocation, FnvBuildHasher>,
     // Children lineages of a parent, used if parent is unknown at coalescence
-    children: HashMap<GlobalLineageReference, Vec<(GlobalLineageReference, NonNegativeF64)>>,
+    children: HashMap<
+        GlobalLineageReference,
+        Vec<(GlobalLineageReference, NonNegativeF64)>,
+        FnvBuildHasher,
+    >,
     // Child -> Parent lineage mapping
-    parents: HashMap<GlobalLineageReference, GlobalLineageReference>,
+    parents: HashMap<GlobalLineageReference, GlobalLineageReference, FnvBuildHasher>,
     // Lineage to tskit mapping, used if parent is known before coalescence
-    tskit_ids: HashMap<GlobalLineageReference, (IndividualId, NodeId)>,
+    tskit_ids: HashMap<GlobalLineageReference, (IndividualId, NodeId), FnvBuildHasher>,
 
     table: TableCollection,
 
@@ -83,10 +88,10 @@ impl TryFrom<TskitTreeReporterArgs> for TskitTreeReporter {
             last_speciation_event: None,
             last_dispersal_event: None,
 
-            origins: HashMap::new(),
-            children: HashMap::new(),
-            parents: HashMap::new(),
-            tskit_ids: HashMap::new(),
+            origins: HashMap::default(),
+            children: HashMap::default(),
+            parents: HashMap::default(),
+            tskit_ids: HashMap::default(),
 
             table,
 
