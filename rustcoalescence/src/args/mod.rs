@@ -10,6 +10,7 @@ use std::{
     path::PathBuf,
 };
 
+use fnv::FnvBuildHasher;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_state::DeserializeState;
 use structopt::StructOpt;
@@ -536,7 +537,8 @@ impl TryFrom<SampleOriginRaw> for SampleOrigin {
             SampleOriginRaw::Bincode(loader) => loader.get_lineages().iter(),
         };
 
-        let mut global_references = HashSet::with_capacity(lineages.len());
+        let mut global_references =
+            HashSet::with_capacity_and_hasher(lineages.len(), FnvBuildHasher::default());
 
         for lineage in lineages {
             if !global_references.insert(lineage.global_reference.clone()) {
