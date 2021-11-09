@@ -1,5 +1,6 @@
 use core::{marker::PhantomData, ops::Index};
 
+use fnv::FnvBuildHasher;
 use hashbrown::hash_map::HashMap;
 use slab::Slab;
 
@@ -17,7 +18,8 @@ mod store;
 #[derive(Debug)]
 pub struct ClassicalLineageStore<M: MathsCore, H: Habitat<M>> {
     lineages_store: Slab<Lineage>,
-    indexed_location_to_lineage_reference: HashMap<IndexedLocation, InMemoryLineageReference>,
+    indexed_location_to_lineage_reference:
+        HashMap<IndexedLocation, InMemoryLineageReference, FnvBuildHasher>,
     _marker: PhantomData<(M, H)>,
 }
 
@@ -43,7 +45,7 @@ impl<'h, M: MathsCore, H: 'h + Habitat<M>> ClassicalLineageStore<M, H> {
         let mut lineages_store = Slab::with_capacity(lineages_amount_hint);
 
         let mut indexed_location_to_lineage_reference =
-            HashMap::with_capacity(lineages_amount_hint);
+            HashMap::with_capacity_and_hasher(lineages_amount_hint, FnvBuildHasher::default());
 
         for lineage in origin_sampler {
             let indexed_location = lineage.indexed_location.clone();
