@@ -18,8 +18,8 @@
 [Gitpod Ready-to-Code]: https://img.shields.io/badge/Gitpod-ready-blue?logo=gitpod
 [gitpod]: https://gitpod.io/#https://github.com/MomoLangenstein/necsim-rust
 
-[DOI]: https://zenodo.org/badge/303474757.svg
-[zenodo]: https://zenodo.org/badge/latestdoi/303474757
+[DOI]: https://zenodo.org/badge/DOI/10.5281/zenodo.5220080.svg
+[zenodo]: https://doi.org/10.5281/zenodo.5220080
 
 ## Introduction
 
@@ -114,7 +114,6 @@ necsim-rust consists of the following crates:
         - monolithic/: `necsim-partitioning-monolithic` implements monolithic, i.e. non-parallel partitioning
         - mpi/: `necsim-partitioning-mpi` implements the MPI-based partitioning backend
 - rustcoalescence/: `rustcoalescence` provides the command-line interface.
-    - linker/: `rustcoalescence-linker` is a custom linker used during the compilation.
     - scenarios/: `rustcoalescence-scenarios` contains the glue code to put together the cogs for the built-in scenarios. It is specifically built only for reducing code duplication in rustcoalescence, not for giving a minimal example of how to construct a simulation.
     - algorithms/:
         - gillespie/: `rustcoalescence-algorithms-gillespie` contains the glue code to put together the cogs for the two **monolithic Gillespie** coalescence algorithms. It is specifically built only for reducing code duplication in rustcoalescence, not for giving a minimal example of how to construct a simulation.
