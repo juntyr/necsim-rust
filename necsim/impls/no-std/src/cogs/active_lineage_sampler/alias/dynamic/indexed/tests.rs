@@ -22,7 +22,7 @@ fn singular_event_group() {
     assert_eq!(&group.weights, &[1_u64]);
     assert_eq!(group.total_weight, 1_u128);
 
-    assert!(group.remove(0, &mut HashMap::new()).is_none());
+    assert!(group.remove(0, &mut HashMap::default()).is_none());
 }
 
 #[test]
@@ -30,7 +30,7 @@ fn singular_event_group() {
 fn add_remove_event_group() {
     let mut group = RejectionSamplingGroup::new(0_u8, 1_u64);
 
-    let mut lookup = HashMap::new();
+    let mut lookup = HashMap::default();
     lookup.insert(
         0_u8,
         EventLocation {
@@ -137,7 +137,7 @@ fn add_remove_event_group() {
     );
 
     assert_eq!(
-        group.sample_pop(&mut HashMap::new(), &mut DummyRng::new(vec![0.0, 0.0])),
+        group.sample_pop(&mut HashMap::default(), &mut DummyRng::new(vec![0.0, 0.0])),
         (None, 2_u8)
     );
 }
@@ -151,7 +151,7 @@ fn sample_single_group() {
         decompose_weight(PositiveF64::new(6.0 / 12.0).unwrap()).mantissa,
     );
 
-    let mut lookup = HashMap::new();
+    let mut lookup = HashMap::default();
 
     for i in 1..6 {
         assert_eq!(

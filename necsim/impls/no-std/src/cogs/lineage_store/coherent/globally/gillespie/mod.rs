@@ -2,6 +2,7 @@ use core::{marker::PhantomData, ops::Index};
 
 use alloc::vec::Vec;
 
+use fnv::FnvBuildHasher;
 use hashbrown::hash_map::HashMap;
 use slab::Slab;
 
@@ -21,7 +22,7 @@ pub struct GillespieLineageStore<M: MathsCore, H: Habitat<M>> {
     lineages_store: Slab<Lineage>,
     location_to_lineage_references: Array2D<Vec<InMemoryLineageReference>>,
     indexed_location_to_lineage_reference:
-        HashMap<IndexedLocation, (GlobalLineageReference, usize)>,
+        HashMap<IndexedLocation, (GlobalLineageReference, usize), FnvBuildHasher>,
     _marker: PhantomData<(M, H)>,
 }
 
@@ -55,7 +56,7 @@ impl<'h, M: MathsCore, H: 'h + Habitat<M>> GillespieLineageStore<M, H> {
         );
 
         let mut indexed_location_to_lineage_reference =
-            HashMap::with_capacity(lineages_amount_hint);
+            HashMap::with_capacity_and_hasher(lineages_amount_hint, FnvBuildHasher::default());
 
         let x_from = landscape_extent.x();
         let y_from = landscape_extent.y();

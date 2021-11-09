@@ -5,6 +5,7 @@ extern crate log;
 
 use std::{collections::HashSet, fmt, num::NonZeroU64};
 
+use fnv::FnvBuildHasher;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 
@@ -102,7 +103,8 @@ impl Reporter for MetacommunityMigrationReporter {
 
         let mut rng = StdRng::seed_from_u64(self.seed);
 
-        let mut unique_migration_targets = HashSet::new();
+        let mut unique_migration_targets =
+            HashSet::with_capacity_and_hasher(self.migrations, FnvBuildHasher::default());
 
         for _ in 0..self.migrations {
             unique_migration_targets.insert(rng.gen_range(0..metacommunity_size.get()));

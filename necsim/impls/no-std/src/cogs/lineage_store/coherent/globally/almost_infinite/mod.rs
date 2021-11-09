@@ -1,5 +1,6 @@
 use core::{marker::PhantomData, ops::Index};
 
+use fnv::FnvBuildHasher;
 use hashbrown::hash_map::HashMap;
 use slab::Slab;
 
@@ -20,7 +21,7 @@ mod store;
 #[derive(Debug)]
 pub struct AlmostInfiniteLineageStore<M: MathsCore> {
     lineages_store: Slab<Lineage>,
-    location_to_lineage_reference: HashMap<Location, InMemoryLineageReference>,
+    location_to_lineage_reference: HashMap<Location, InMemoryLineageReference, FnvBuildHasher>,
     _marker: PhantomData<M>,
 }
 
@@ -46,7 +47,8 @@ impl<M: MathsCore> AlmostInfiniteLineageStore<M> {
         let lineages_amount_hint = origin_sampler.full_upper_bound_size_hint() as usize;
 
         let mut lineages_store = Slab::with_capacity(lineages_amount_hint);
-        let mut location_to_lineage_references = HashMap::with_capacity(lineages_amount_hint);
+        let mut location_to_lineage_references =
+            HashMap::with_capacity_and_hasher(lineages_amount_hint, FnvBuildHasher::default());
 
         for lineage in origin_sampler {
             location_to_lineage_references.insert(

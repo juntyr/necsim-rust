@@ -19,6 +19,20 @@ use crate::{
 #[repr(transparent)]
 pub struct GlobalLineageReference(NonZeroOneU64);
 
+impl GlobalLineageReference {
+    #[doc(hidden)]
+    #[must_use]
+    pub unsafe fn into_inner(self) -> NonZeroOneU64 {
+        self.0
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub unsafe fn from_inner(inner: NonZeroOneU64) -> Self {
+        Self(inner)
+    }
+}
+
 impl fmt::Display for GlobalLineageReference {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0.get() - 2)

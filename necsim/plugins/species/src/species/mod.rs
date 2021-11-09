@@ -1,5 +1,6 @@
 use std::{collections::HashMap, convert::TryFrom, fmt, path::PathBuf};
 
+use fnv::FnvBuildHasher;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
@@ -26,9 +27,9 @@ pub struct SpeciesLocationsReporter {
     // Original (present-time) locations of all lineages
     origins: Vec<(GlobalLineageReference, IndexedLocation)>,
     // Child -> Parent lineage mapping
-    parents: HashMap<GlobalLineageReference, GlobalLineageReference>,
+    parents: HashMap<GlobalLineageReference, GlobalLineageReference, FnvBuildHasher>,
     // Species originator -> Species identities mapping
-    species: HashMap<GlobalLineageReference, SpeciesIdentity>,
+    species: HashMap<GlobalLineageReference, SpeciesIdentity, FnvBuildHasher>,
 
     output: PathBuf,
     table: String,
@@ -79,8 +80,8 @@ impl TryFrom<SpeciesLocationsReporterArgs> for SpeciesLocationsReporter {
             last_dispersal_event: None,
 
             origins: Vec::new(),
-            parents: HashMap::new(),
-            species: HashMap::new(),
+            parents: HashMap::default(),
+            species: HashMap::default(),
 
             output: args.output,
             table: args.table,

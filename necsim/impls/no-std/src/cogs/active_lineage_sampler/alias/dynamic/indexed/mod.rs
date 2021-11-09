@@ -5,6 +5,7 @@ use core::{
     hash::Hash,
     num::{NonZeroU128, NonZeroUsize},
 };
+use fnv::FnvBuildHasher;
 
 use hashbrown::HashMap;
 
@@ -26,7 +27,7 @@ struct RejectionSamplingGroup<E: Eq + Hash> {
 pub struct DynamicAliasMethodIndexedSampler<E: Eq + Hash + Clone> {
     exponents: Vec<i16>,
     groups: Vec<RejectionSamplingGroup<E>>,
-    lookup: HashMap<E, EventLocation>,
+    lookup: HashMap<E, EventLocation, FnvBuildHasher>,
     min_exponent: i16,
     total_weight: u128,
 }
@@ -47,7 +48,7 @@ impl<E: Eq + Hash> RejectionSamplingGroup<E> {
 
     unsafe fn sample_pop_inplace<M: MathsCore, G: RngCore<M>>(
         &mut self,
-        lookup: &mut HashMap<E, EventLocation>,
+        lookup: &mut HashMap<E, EventLocation, FnvBuildHasher>,
         rng: &mut G,
     ) -> (Option<&mut Self>, E) {
         if let [event] = &self.events[..] {
@@ -86,7 +87,7 @@ impl<E: Eq + Hash> RejectionSamplingGroup<E> {
     #[cfg(test)]
     fn sample_pop<M: MathsCore, G: RngCore<M>>(
         mut self,
-        lookup: &mut HashMap<E, EventLocation>,
+        lookup: &mut HashMap<E, EventLocation, FnvBuildHasher>,
         rng: &mut G,
     ) -> (Option<Self>, E) {
         match unsafe { self.sample_pop_inplace(lookup, rng) } {
@@ -98,7 +99,7 @@ impl<E: Eq + Hash> RejectionSamplingGroup<E> {
     unsafe fn remove_inplace(
         &mut self,
         index: usize,
-        lookup: &mut HashMap<E, EventLocation>,
+        lookup: &mut HashMap<E, EventLocation, FnvBuildHasher>,
     ) -> Option<&mut Self> {
         self.events.swap_remove(index);
         let weight = self.weights.swap_remove(index);
@@ -119,7 +120,11 @@ impl<E: Eq + Hash> RejectionSamplingGroup<E> {
     }
 
     #[cfg(test)]
-    fn remove(mut self, index: usize, lookup: &mut HashMap<E, EventLocation>) -> Option<Self> {
+    fn remove(
+        mut self,
+        index: usize,
+        lookup: &mut HashMap<E, EventLocation, FnvBuildHasher>,
+    ) -> Option<Self> {
         if unsafe { self.remove_inplace(index, lookup) }.is_some() {
             Some(self)
         } else {
@@ -158,7 +163,7 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodIndexedSampler<E> {
         Self {
             exponents: Vec::new(),
             groups: Vec::new(),
-            lookup: HashMap::new(),
+            lookup: HashMap::default(),
             min_exponent: 0_i16,
             total_weight: 0_u128,
         }
@@ -172,7 +177,7 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodIndexedSampler<E> {
         Self {
             exponents: Vec::with_capacity(capacity_log2_approx),
             groups: Vec::with_capacity(capacity_log2_approx),
-            lookup: HashMap::with_capacity(capacity),
+            lookup: HashMap::with_capacity_and_hasher(capacity, FnvBuildHasher::default()),
             min_exponent: 0_i16,
             total_weight: 0_u128,
         }
