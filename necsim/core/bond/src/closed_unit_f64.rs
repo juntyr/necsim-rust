@@ -9,7 +9,7 @@ use core::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::PositiveUnitF64;
+use crate::{ClosedOpenUnitF64, OpenClosedUnitF64};
 
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
@@ -98,8 +98,14 @@ impl ClosedUnitF64 {
     }
 }
 
-impl From<PositiveUnitF64> for ClosedUnitF64 {
-    fn from(value: PositiveUnitF64) -> Self {
+impl From<OpenClosedUnitF64> for ClosedUnitF64 {
+    fn from(value: OpenClosedUnitF64) -> Self {
+        Self(value.get())
+    }
+}
+
+impl From<ClosedOpenUnitF64> for ClosedUnitF64 {
+    fn from(value: ClosedOpenUnitF64) -> Self {
         Self(value.get())
     }
 }
@@ -155,5 +161,21 @@ impl Div<NonZeroU32> for ClosedUnitF64 {
 
     fn div(self, rhs: NonZeroU32) -> Self::Output {
         Self(self.0 / f64::from(rhs.get()))
+    }
+}
+
+impl Mul<ClosedOpenUnitF64> for ClosedUnitF64 {
+    type Output = ClosedOpenUnitF64;
+
+    fn mul(self, other: ClosedOpenUnitF64) -> ClosedOpenUnitF64 {
+        unsafe { ClosedOpenUnitF64::new_unchecked(self.0 * other.get()) }
+    }
+}
+
+impl Mul<OpenClosedUnitF64> for ClosedUnitF64 {
+    type Output = OpenClosedUnitF64;
+
+    fn mul(self, other: OpenClosedUnitF64) -> OpenClosedUnitF64 {
+        unsafe { OpenClosedUnitF64::new_unchecked(self.0 * other.get()) }
     }
 }

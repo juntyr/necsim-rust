@@ -17,7 +17,7 @@ impl fmt::Display for PartitionRankOutOfBounds {
 }
 
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
-#[derive(Copy, Clone, Debug, Serialize, Deserialize, TypeLayout)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 #[serde(try_from = "PartitionRaw")]
 pub struct Partition {
     rank: u32,

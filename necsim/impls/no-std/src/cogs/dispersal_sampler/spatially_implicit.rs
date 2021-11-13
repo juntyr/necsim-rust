@@ -2,7 +2,7 @@ use necsim_core::{
     cogs::{Backup, DispersalSampler, Habitat, MathsCore, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
-use necsim_core_bond::{ClosedUnitF64, PositiveUnitF64};
+use necsim_core_bond::{ClosedUnitF64, OpenClosedUnitF64 as PositiveUnitF64};
 
 use crate::cogs::{
     dispersal_sampler::non_spatial::NonSpatialDispersalSampler,

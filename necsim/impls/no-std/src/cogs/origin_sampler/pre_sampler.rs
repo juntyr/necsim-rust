@@ -5,7 +5,8 @@ use core::{
 };
 
 use necsim_core::cogs::MathsCore;
-use necsim_core_bond::{ClosedUnitF64, Partition};
+use necsim_core_bond::ClosedUnitF64;
+use necsim_partitioning_core::partition::Partition;
 
 const INV_PHI: f64 = 6.180_339_887_498_949e-1_f64;
 

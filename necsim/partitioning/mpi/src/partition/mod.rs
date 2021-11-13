@@ -3,9 +3,11 @@ use necsim_core::{
     lineage::MigratingLineage,
     reporter::{boolean::False, Reporter},
 };
-use necsim_core_bond::{NonNegativeF64, Partition, PositiveF64};
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
-use necsim_partitioning_core::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode};
+use necsim_partitioning_core::{
+    iterator::ImmigrantPopIterator, partition::Partition, LocalPartition, MigrationMode,
+};
 
 mod parallel;
 mod root;

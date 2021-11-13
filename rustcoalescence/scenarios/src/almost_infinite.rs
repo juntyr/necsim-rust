@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
-use necsim_core_bond::{NonNegativeF64, Partition, PositiveUnitF64};
+use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
+use necsim_partitioning_core::partition::Partition;
 
 use necsim_impls_no_std::{
     cogs::{

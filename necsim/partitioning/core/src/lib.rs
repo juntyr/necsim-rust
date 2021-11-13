@@ -12,12 +12,14 @@ use necsim_core::{
     lineage::MigratingLineage,
     reporter::{boolean::Boolean, Reporter},
 };
-use necsim_core_bond::{NonNegativeF64, Partition, PositiveF64};
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 pub mod context;
 pub mod iterator;
+pub mod partition;
 
 use context::ReporterContext;
+use partition::Partition;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]

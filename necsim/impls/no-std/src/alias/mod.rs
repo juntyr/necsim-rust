@@ -91,7 +91,7 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
     pub fn sample_event<M: MathsCore, G: RngCore<M>>(&self, rng: &mut G) -> E {
         use necsim_core::cogs::RngSampler;
 
-        let x = rng.sample_uniform();
+        let x = rng.sample_uniform_closed_open();
 
         #[allow(
             clippy::cast_precision_loss,

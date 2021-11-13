@@ -20,10 +20,9 @@ use serde_state::{DeserializeState, Deserializer};
 use thiserror::Error;
 
 use necsim_core::reporter::Reporter;
-use necsim_core_bond::Partition;
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
-use necsim_partitioning_core::{context::ReporterContext, Partitioning};
+use necsim_partitioning_core::{context::ReporterContext, partition::Partition, Partitioning};
 
 mod partition;
 

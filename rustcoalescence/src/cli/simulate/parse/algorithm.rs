@@ -1,4 +1,4 @@
-use necsim_core_bond::Partition;
+use necsim_partitioning_core::partition::Partition;
 
 use crate::args::{parse::try_parse_state, Algorithm, Partitioning};
 

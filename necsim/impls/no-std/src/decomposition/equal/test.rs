@@ -3,8 +3,8 @@ use core::{convert::TryFrom, num::NonZeroU32};
 use hashbrown::HashMap;
 
 use necsim_core::cogs::{Backup, Habitat};
-use necsim_core_bond::Partition;
 use necsim_core_maths::IntrinsicsMathsCore;
+use necsim_partitioning_core::partition::Partition;
 
 use crate::{
     cogs::habitat::{non_spatial::NonSpatialHabitat, spatially_implicit::SpatiallyImplicitHabitat},

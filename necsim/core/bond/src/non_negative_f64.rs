@@ -4,14 +4,14 @@ use core::{
     fmt,
     hash::{Hash, Hasher},
     iter::Sum,
-    ops::{Add, AddAssign, Div, Mul},
+    ops::{Add, AddAssign, Div, Mul, Neg},
 };
 
 use serde::{Deserialize, Serialize};
 
 use necsim_core_maths::MathsCore;
 
-use crate::{ClosedUnitF64, PositiveF64};
+use crate::{ClosedOpenUnitF64, ClosedUnitF64, NonPositiveF64, OpenClosedUnitF64, PositiveF64};
 
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
@@ -142,6 +142,18 @@ impl From<ClosedUnitF64> for NonNegativeF64 {
     }
 }
 
+impl From<OpenClosedUnitF64> for NonNegativeF64 {
+    fn from(value: OpenClosedUnitF64) -> Self {
+        Self(value.get())
+    }
+}
+
+impl From<ClosedOpenUnitF64> for NonNegativeF64 {
+    fn from(value: ClosedOpenUnitF64) -> Self {
+        Self(value.get())
+    }
+}
+
 impl PartialEq for NonNegativeF64 {
     fn eq(&self, other: &Self) -> bool {
         self.0.eq(&other.0)
@@ -222,6 +234,14 @@ impl Div for NonNegativeF64 {
     }
 }
 
+impl Div<PositiveF64> for NonNegativeF64 {
+    type Output = Self;
+
+    fn div(self, other: PositiveF64) -> Self {
+        Self(self.0 / other.get())
+    }
+}
+
 impl Mul<PositiveF64> for NonNegativeF64 {
     type Output = Self;
 
@@ -249,5 +269,13 @@ impl Mul<ClosedUnitF64> for NonNegativeF64 {
 impl Sum for NonNegativeF64 {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.fold(NonNegativeF64::zero(), |a, b| a + b)
+    }
+}
+
+impl Neg for NonNegativeF64 {
+    type Output = NonPositiveF64;
+
+    fn neg(self) -> Self::Output {
+        unsafe { NonPositiveF64::new_unchecked(self.0) }
     }
 }

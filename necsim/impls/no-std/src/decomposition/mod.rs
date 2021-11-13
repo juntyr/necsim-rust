@@ -2,7 +2,7 @@ use necsim_core::{
     cogs::{Backup, Habitat, MathsCore},
     landscape::Location,
 };
-use necsim_core_bond::Partition;
+use necsim_partitioning_core::partition::Partition;
 
 pub mod equal;
 pub mod modulo;

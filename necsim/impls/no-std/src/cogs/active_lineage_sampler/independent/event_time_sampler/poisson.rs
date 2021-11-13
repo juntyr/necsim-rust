@@ -54,7 +54,7 @@ impl<M: MathsCore, H: Habitat<M>, G: PrimeableRng<M>, T: TurnoverRate<M, H>>
                 let mut prod = no_event_probability_per_step;
                 let mut acc = no_event_probability_per_step;
 
-                let u = rng.sample_uniform();
+                let u = rng.sample_uniform_closed_open();
 
                 while u > acc && prod > 0.0_f64 {
                     poisson += 1;
@@ -78,8 +78,9 @@ impl<M: MathsCore, H: Habitat<M>, G: PrimeableRng<M>, T: TurnoverRate<M, H>>
 
             for event_index in 0..number_events_at_time_steps {
                 #[allow(clippy::cast_precision_loss)]
-                let event_time =
-                    (NonNegativeF64::from(time_step) + rng.sample_uniform()) * self.delta_t;
+                let event_time = (NonNegativeF64::from(time_step)
+                    + NonNegativeF64::from(rng.sample_uniform_closed_open()))
+                    * self.delta_t;
 
                 if event_time > time {
                     next_event = match next_event {

@@ -10,12 +10,13 @@ use necsim_core::{
         FilteredReporter, Reporter,
     },
 };
-use necsim_core_bond::{NonNegativeF64, Partition, PositiveF64};
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 
 use necsim_partitioning_core::{
-    context::ReporterContext, iterator::ImmigrantPopIterator, LocalPartition, MigrationMode,
+    context::ReporterContext, iterator::ImmigrantPopIterator, partition::Partition, LocalPartition,
+    MigrationMode,
 };
 
 #[allow(clippy::module_name_repetitions)]

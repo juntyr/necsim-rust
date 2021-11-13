@@ -1,5 +1,5 @@
 use necsim_core::reporter::Reporter;
-use necsim_core_bond::{NonNegativeF64, PositiveUnitF64};
+use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::LocalPartition;
 
 #[cfg(feature = "rustcoalescence-algorithms-cuda")]

@@ -3,7 +3,8 @@ use std::num::NonZeroU64;
 use serde::{Deserialize, Serialize};
 use serde_state::DeserializeState;
 
-use necsim_core_bond::{ClosedUnitF64, Partition, PositiveF64};
+use necsim_core_bond::{ClosedUnitF64, PositiveF64};
+use necsim_partitioning_core::partition::Partition;
 
 use necsim_impls_no_std::parallelisation::independent::{DedupCache, EventSlice, RelativeCapacity};
 

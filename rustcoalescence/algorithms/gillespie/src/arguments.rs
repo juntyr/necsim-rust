@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use serde_state::DeserializeState;
 
-use necsim_core_bond::{Partition, PositiveF64};
+use necsim_core_bond::PositiveF64;
+use necsim_partitioning_core::partition::Partition;
 
 #[derive(Serialize, Debug)]
 #[allow(clippy::module_name_repetitions)]
