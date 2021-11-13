@@ -14,8 +14,9 @@ use serde_state::DeserializeState;
 use structopt::StructOpt;
 
 use necsim_core::cogs::{MathsCore, RngCore};
-use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, Partition};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 use necsim_impls_std::{event_log::replay::EventLogReplay, lineage_file::saver::LineageFileSaver};
+use necsim_partitioning_core::partition::Partition;
 
 use rustcoalescence_scenarios::{
     almost_infinite::AlmostInfiniteArguments,

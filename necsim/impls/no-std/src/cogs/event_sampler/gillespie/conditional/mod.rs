@@ -129,7 +129,7 @@ impl<
                 ProbabilityAtLocation::new(dispersal_origin.location(), simulation, false)
             });
 
-        let event_sample = probability_at_location.total() * rng.sample_uniform();
+        let event_sample = probability_at_location.total() * rng.sample_uniform_closed_open();
 
         if event_sample < probability_at_location.speciation() {
             // Speciation Event

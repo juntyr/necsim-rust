@@ -113,7 +113,7 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
     ) -> E {
         use necsim_core::cogs::RngSampler;
 
-        let x = rng.sample_uniform();
+        let x = rng.sample_uniform_closed_open();
 
         #[allow(
             clippy::cast_precision_loss,

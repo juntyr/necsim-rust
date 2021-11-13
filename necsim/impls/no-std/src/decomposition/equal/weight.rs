@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 use necsim_core::cogs::{Habitat, MathsCore};
-use necsim_core_bond::Partition;
+use necsim_partitioning_core::partition::Partition;
 
 use super::EqualDecomposition;
 

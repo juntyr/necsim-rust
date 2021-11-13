@@ -1,11 +1,11 @@
 use alloc::boxed::Box;
 use core::marker::PhantomData;
-use necsim_core_bond::Partition;
 
 use necsim_core::{
     cogs::{Backup, Habitat, MathsCore},
     landscape::{LandscapeExtent, Location},
 };
+use necsim_partitioning_core::partition::Partition;
 
 use crate::decomposition::Decomposition;
 

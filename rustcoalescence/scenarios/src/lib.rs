@@ -11,7 +11,8 @@ use necsim_core::cogs::{
     DispersalSampler, Habitat, LineageReference, LineageStore, MathsCore, OriginSampler, RngCore,
     SpeciationProbability, TurnoverRate,
 };
-use necsim_core_bond::{Partition, PositiveUnitF64};
+use necsim_core_bond::OpenClosedUnitF64 as PositiveUnitF64;
+use necsim_partitioning_core::partition::Partition;
 
 use necsim_impls_no_std::{
     cogs::{

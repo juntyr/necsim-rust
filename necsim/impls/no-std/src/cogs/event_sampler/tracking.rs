@@ -1,6 +1,6 @@
 use core::hash::{Hash, Hasher};
 
-use necsim_core_bond::{ClosedUnitF64, PositiveF64};
+use necsim_core_bond::{ClosedOpenUnitF64, PositiveF64};
 
 use necsim_core::{
     cogs::{
@@ -30,7 +30,7 @@ pub trait MinSpeciationTrackingEventSampler<
 #[derive(Clone, Debug, TypeLayout)]
 #[repr(C)]
 pub struct SpeciationSample {
-    speciation_sample: ClosedUnitF64,
+    speciation_sample: ClosedOpenUnitF64,
     sample_time: PositiveF64,
     sample_location: IndexedLocation,
 }
@@ -45,7 +45,7 @@ const EXCESSIVE_OPTION_SPECIATION_SAMPLE_ERROR: [(); 1 - {
 impl SpeciationSample {
     pub fn update_min(
         min_spec_sample: &mut Option<Self>,
-        speciation_sample: ClosedUnitF64,
+        speciation_sample: ClosedOpenUnitF64,
         sample_time: PositiveF64,
         sample_location: &IndexedLocation,
     ) {

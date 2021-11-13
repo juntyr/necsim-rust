@@ -143,7 +143,7 @@ impl<
     ) -> Q {
         use necsim_core::cogs::RngSampler;
 
-        let speciation_sample = rng.sample_uniform();
+        let speciation_sample = rng.sample_uniform_closed_open();
 
         SpeciationSample::update_min(
             &mut self.min_spec_sample,

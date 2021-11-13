@@ -22,10 +22,12 @@ use necsim_core::{
         Reporter,
     },
 };
-use necsim_core_bond::{NonNegativeF64, Partition, PositiveF64};
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
-use necsim_partitioning_core::{iterator::ImmigrantPopIterator, LocalPartition, MigrationMode};
+use necsim_partitioning_core::{
+    iterator::ImmigrantPopIterator, partition::Partition, LocalPartition, MigrationMode,
+};
 
 use crate::{
     partition::utils::{reduce_lexicographic_min_time_rank, MpiMigratingLineage},

@@ -1,6 +1,6 @@
 use core::cmp::{Ord, Ordering};
 
-use necsim_core_bond::ClosedUnitF64;
+use necsim_core_bond::ClosedOpenUnitF64;
 
 use serde::{Deserialize, Serialize};
 
@@ -35,7 +35,7 @@ pub trait CoalescenceSampler<
 #[allow(clippy::unsafe_derive_deserialize)]
 #[derive(Debug, PartialEq, Serialize, Deserialize, TypeLayout)]
 #[repr(transparent)]
-pub struct CoalescenceRngSample(ClosedUnitF64);
+pub struct CoalescenceRngSample(ClosedOpenUnitF64);
 
 #[contract_trait]
 impl Backup for CoalescenceRngSample {
@@ -64,7 +64,7 @@ impl CoalescenceRngSample {
     pub fn new<M: MathsCore, G: RngCore<M>>(rng: &mut G) -> Self {
         use crate::cogs::RngSampler;
 
-        Self(rng.sample_uniform())
+        Self(rng.sample_uniform_closed_open())
     }
 
     #[must_use]

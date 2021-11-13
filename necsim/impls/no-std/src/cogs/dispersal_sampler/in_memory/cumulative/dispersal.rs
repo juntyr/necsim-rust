@@ -28,7 +28,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
         let cumulative_dispersals_at_location = &self.cumulative_dispersal
             [location_index * habitat_area..(location_index + 1) * habitat_area];
 
-        let cumulative_percentage_sample = rng.sample_uniform();
+        let cumulative_percentage_sample = rng.sample_uniform_closed_open().into();
 
         let dispersal_target_index = usize::min(
             match cumulative_dispersals_at_location.binary_search(&cumulative_percentage_sample) {

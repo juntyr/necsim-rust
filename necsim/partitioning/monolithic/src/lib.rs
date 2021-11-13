@@ -15,11 +15,11 @@ use necsim_core::{
     lineage::MigratingLineage,
     reporter::{boolean::True, Reporter},
 };
-use necsim_core_bond::{NonNegativeF64, Partition, PositiveF64};
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_partitioning_core::{
-    context::ReporterContext, iterator::ImmigrantPopIterator, LocalPartition, MigrationMode,
-    Partitioning,
+    context::ReporterContext, iterator::ImmigrantPopIterator, partition::Partition, LocalPartition,
+    MigrationMode, Partitioning,
 };
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
