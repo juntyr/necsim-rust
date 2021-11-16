@@ -5,15 +5,12 @@ use hashbrown::hash_map::HashMap;
 use slab::Slab;
 
 use necsim_core::{
-    cogs::{Backup, MathsCore, OriginSampler},
+    cogs::{Backup, MathsCore},
     landscape::Location,
     lineage::Lineage,
 };
 
-use crate::cogs::{
-    habitat::almost_infinite::AlmostInfiniteHabitat,
-    lineage_reference::in_memory::InMemoryLineageReference,
-};
+use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 
 mod store;
 
@@ -35,37 +32,6 @@ impl<M: MathsCore> Index<InMemoryLineageReference> for AlmostInfiniteLineageStor
     )]
     fn index(&self, reference: InMemoryLineageReference) -> &Self::Output {
         &self.lineages_store[usize::from(reference)]
-    }
-}
-
-impl<M: MathsCore> AlmostInfiniteLineageStore<M> {
-    #[must_use]
-    pub fn new<'h, O: OriginSampler<'h, M, Habitat = AlmostInfiniteHabitat<M>>>(
-        origin_sampler: O,
-    ) -> Self {
-        #[allow(clippy::cast_possible_truncation)]
-        let lineages_amount_hint = origin_sampler.full_upper_bound_size_hint() as usize;
-
-        let mut lineages_store = Slab::with_capacity(lineages_amount_hint);
-        let mut location_to_lineage_references =
-            HashMap::with_capacity_and_hasher(lineages_amount_hint, FnvBuildHasher::default());
-
-        for lineage in origin_sampler {
-            location_to_lineage_references.insert(
-                lineage.indexed_location.location().clone(),
-                InMemoryLineageReference::from(lineages_store.len()),
-            );
-
-            let _local_reference = lineages_store.insert(lineage);
-        }
-
-        lineages_store.shrink_to_fit();
-
-        Self {
-            lineages_store,
-            location_to_lineage_reference: location_to_lineage_references,
-            _marker: PhantomData::<M>,
-        }
     }
 }
 

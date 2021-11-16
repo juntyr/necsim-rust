@@ -1,15 +1,19 @@
+use core::marker::PhantomData;
+
+use fnv::FnvBuildHasher;
+use hashbrown::HashMap;
+use slab::Slab;
+
 use necsim_core::{
-    cogs::{
-        GloballyCoherentLineageStore, LineageStore, LocallyCoherentLineageStore, MathsCore,
-        OriginSampler,
-    },
+    cogs::{GloballyCoherentLineageStore, LineageStore, LocallyCoherentLineageStore, MathsCore},
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},
 };
 
-use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
-
-use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
+use crate::cogs::{
+    habitat::almost_infinite::AlmostInfiniteHabitat,
+    lineage_reference::in_memory::InMemoryLineageReference,
+};
 
 use super::AlmostInfiniteLineageStore;
 
@@ -20,10 +24,15 @@ impl<M: MathsCore> LineageStore<M, AlmostInfiniteHabitat<M>, InMemoryLineageRefe
     #[allow(clippy::type_complexity)]
     type LineageReferenceIterator<'a> = impl Iterator<Item = InMemoryLineageReference>;
 
-    fn from_origin_sampler<'h, O: OriginSampler<'h, M, Habitat = AlmostInfiniteHabitat<M>>>(
-        origin_sampler: O,
-    ) -> Self {
-        Self::new(origin_sampler)
+    fn with_capacity(_habitat: &AlmostInfiniteHabitat<M>, capacity: usize) -> Self {
+        Self {
+            lineages_store: Slab::with_capacity(capacity),
+            location_to_lineage_reference: HashMap::with_capacity_and_hasher(
+                capacity,
+                FnvBuildHasher::default(),
+            ),
+            _marker: PhantomData::<M>,
+        }
     }
 
     #[must_use]

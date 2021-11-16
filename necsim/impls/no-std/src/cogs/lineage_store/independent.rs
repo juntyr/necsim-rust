@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, LineageStore, MathsCore, OriginSampler},
+    cogs::{Backup, Habitat, LineageStore, MathsCore},
     lineage::{GlobalLineageReference, Lineage},
 };
 
@@ -39,10 +39,7 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, GlobalLineageReference>
         H: 'a,
     = impl Iterator<Item = GlobalLineageReference>;
 
-    fn from_origin_sampler<'h, O: OriginSampler<'h, M, Habitat = H>>(_origin_sampler: O) -> Self
-    where
-        H: 'h,
-    {
+    fn with_capacity(_habitat: &H, _capacity: usize) -> Self {
         Self::default()
     }
 

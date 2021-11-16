@@ -1,6 +1,6 @@
 use core::ops::Index;
 
-use super::{Habitat, LineageReference, MathsCore, OriginSampler};
+use super::{Habitat, LineageReference, MathsCore};
 use crate::{
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},
@@ -17,9 +17,7 @@ pub trait LineageStore<M: MathsCore, H: Habitat<M>, R: LineageReference<M, H>>:
         Self: 'a;
 
     #[must_use]
-    fn from_origin_sampler<'h, O: OriginSampler<'h, M, Habitat = H>>(origin_sampler: O) -> Self
-    where
-        H: 'h;
+    fn with_capacity(habitat: &H, capacity: usize) -> Self;
 
     #[must_use]
     fn iter_local_lineage_references(&self) -> Self::LineageReferenceIterator<'_>;
