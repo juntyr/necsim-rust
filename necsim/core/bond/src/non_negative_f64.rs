@@ -276,6 +276,6 @@ impl Neg for NonNegativeF64 {
     type Output = NonPositiveF64;
 
     fn neg(self) -> Self::Output {
-        unsafe { NonPositiveF64::new_unchecked(self.0) }
+        unsafe { NonPositiveF64::new_unchecked(-self.0) }
     }
 }
