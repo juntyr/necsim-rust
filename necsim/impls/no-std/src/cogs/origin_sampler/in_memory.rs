@@ -5,7 +5,7 @@ use core::{
 };
 
 use necsim_core::{
-    cogs::{Habitat, MathsCore, OriginSampler},
+    cogs::{Habitat, MathsCore},
     landscape::{IndexedLocation, LocationIterator},
     lineage::Lineage,
 };
@@ -13,6 +13,8 @@ use necsim_core::{
 use crate::cogs::{
     habitat::in_memory::InMemoryHabitat, origin_sampler::pre_sampler::OriginPreSampler,
 };
+
+use super::OriginSampler;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct InMemoryOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {

@@ -1,7 +1,7 @@
 use core::{fmt, iter::Iterator};
 
 use necsim_core::{
-    cogs::{MathsCore, OriginSampler},
+    cogs::MathsCore,
     landscape::{IndexedLocation, LandscapeExtent, LocationIterator},
     lineage::Lineage,
 };
@@ -9,6 +9,8 @@ use necsim_core::{
 use crate::cogs::{
     habitat::almost_infinite::AlmostInfiniteHabitat, origin_sampler::pre_sampler::OriginPreSampler,
 };
+
+use super::OriginSampler;
 
 const HABITAT_CENTRE: u32 = u32::MAX / 2;
 

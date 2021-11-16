@@ -1,13 +1,19 @@
+use alloc::vec::Vec;
+use core::marker::PhantomData;
+
+use fnv::FnvBuildHasher;
+use hashbrown::HashMap;
+use slab::Slab;
+
 use necsim_core::{
     cogs::{
-        GloballyCoherentLineageStore, Habitat, LineageStore, LocallyCoherentLineageStore,
-        MathsCore, OriginSampler,
+        GloballyCoherentLineageStore, Habitat, LineageStore, LocallyCoherentLineageStore, MathsCore,
     },
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},
 };
 
-use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
+use crate::{array2d::Array2D, cogs::lineage_reference::in_memory::InMemoryLineageReference};
 
 use super::GillespieLineageStore;
 
@@ -21,11 +27,20 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
         H: 'a,
     = impl Iterator<Item = InMemoryLineageReference>;
 
-    fn from_origin_sampler<'h, O: OriginSampler<'h, M, Habitat = H>>(origin_sampler: O) -> Self
-    where
-        H: 'h,
-    {
-        Self::new(origin_sampler)
+    fn with_capacity(habitat: &H, capacity: usize) -> Self {
+        Self {
+            lineages_store: Slab::with_capacity(capacity),
+            location_to_lineage_references: Array2D::filled_with(
+                Vec::new(),
+                habitat.get_extent().height() as usize,
+                habitat.get_extent().width() as usize,
+            ),
+            indexed_location_to_lineage_reference: HashMap::with_capacity_and_hasher(
+                capacity,
+                FnvBuildHasher::default(),
+            ),
+            _marker: PhantomData::<(M, H)>,
+        }
     }
 
     #[must_use]

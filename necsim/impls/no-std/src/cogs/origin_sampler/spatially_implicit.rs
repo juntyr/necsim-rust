@@ -1,14 +1,13 @@
 use core::{fmt, iter::Iterator};
 
-use necsim_core::{
-    cogs::{MathsCore, OriginSampler},
-    lineage::Lineage,
-};
+use necsim_core::{cogs::MathsCore, lineage::Lineage};
 
 use crate::cogs::{
     habitat::spatially_implicit::SpatiallyImplicitHabitat,
     origin_sampler::{non_spatial::NonSpatialOriginSampler, pre_sampler::OriginPreSampler},
 };
+
+use super::OriginSampler;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct SpatiallyImplicitOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {

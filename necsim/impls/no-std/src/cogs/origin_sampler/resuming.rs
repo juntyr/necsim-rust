@@ -1,11 +1,13 @@
 use core::{fmt, iter::ExactSizeIterator};
 
 use necsim_core::{
-    cogs::{Habitat, MathsCore, OriginSampler},
+    cogs::{Habitat, MathsCore},
     lineage::Lineage,
 };
 
 use crate::cogs::origin_sampler::pre_sampler::OriginPreSampler;
+
+use super::OriginSampler;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ResumingOriginSampler<

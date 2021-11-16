@@ -24,7 +24,7 @@ use necsim_impls_no_std::{
         lineage_reference::in_memory::InMemoryLineageReference,
         lineage_store::coherent::globally::gillespie::GillespieLineageStore,
         origin_sampler::{
-            decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
+            decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler, OriginSampler,
         },
     },
     parallelisation::{self, Status},
@@ -84,8 +84,19 @@ where
     ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, Self::Error> {
         match args.parallelism_mode {
             ParallelismMode::Monolithic => {
-                let lineage_store =
-                    Self::LineageStore::from_origin_sampler(scenario.sample_habitat(pre_sampler));
+                // TODO: Move init logic into active lineage sampler impls
+                let mut origin_sampler = scenario.sample_habitat(pre_sampler);
+                #[allow(clippy::cast_possible_truncation)]
+                let mut lineage_store = Self::LineageStore::with_capacity(
+                    origin_sampler.habitat(),
+                    origin_sampler.full_upper_bound_size_hint() as usize,
+                );
+                while let Some(lineage) = origin_sampler.next() {
+                    lineage_store
+                        .insert_lineage_globally_coherent(lineage, origin_sampler.habitat());
+                }
+                std::mem::drop(origin_sampler);
+
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
                     scenario.build::<InMemorySeparableAliasDispersalSampler<
                         Self::MathsCore,
@@ -168,15 +179,26 @@ where
                 }
             },
             non_monolithic_parallelism_mode => {
+                let rng = rng.split_to_stream(u64::from(local_partition.get_partition().rank()));
                 let decomposition =
                     O::decompose(scenario.habitat(), local_partition.get_partition());
 
-                let rng = rng.split_to_stream(u64::from(local_partition.get_partition().rank()));
-                let lineage_store =
-                    Self::LineageStore::from_origin_sampler(DecompositionOriginSampler::new(
-                        scenario.sample_habitat(pre_sampler),
-                        &decomposition,
-                    ));
+                // TODO: Move init logic into active lineage sampler impls
+                let mut origin_sampler = DecompositionOriginSampler::new(
+                    scenario.sample_habitat(pre_sampler),
+                    &decomposition,
+                );
+                #[allow(clippy::cast_possible_truncation)]
+                let mut lineage_store = Self::LineageStore::with_capacity(
+                    origin_sampler.habitat(),
+                    origin_sampler.full_upper_bound_size_hint() as usize,
+                );
+                while let Some(lineage) = origin_sampler.next() {
+                    lineage_store
+                        .insert_lineage_globally_coherent(lineage, origin_sampler.habitat());
+                }
+                std::mem::drop(origin_sampler);
+
                 let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
                     scenario.build::<InMemorySeparableAliasDispersalSampler<
                         Self::MathsCore,

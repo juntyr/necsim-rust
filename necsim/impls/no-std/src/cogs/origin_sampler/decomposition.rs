@@ -1,11 +1,10 @@
 use core::marker::PhantomData;
 
-use necsim_core::{
-    cogs::{MathsCore, OriginSampler},
-    lineage::Lineage,
-};
+use necsim_core::{cogs::MathsCore, lineage::Lineage};
 
 use crate::decomposition::Decomposition;
+
+use super::OriginSampler;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]

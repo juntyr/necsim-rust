@@ -5,7 +5,7 @@ use hashbrown::hash_map::HashMap;
 use slab::Slab;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, OriginSampler},
+    cogs::{Backup, Habitat, MathsCore},
     landscape::IndexedLocation,
     lineage::Lineage,
 };
@@ -33,34 +33,6 @@ impl<M: MathsCore, H: Habitat<M>> Index<InMemoryLineageReference> for ClassicalL
     )]
     fn index(&self, reference: InMemoryLineageReference) -> &Self::Output {
         &self.lineages_store[usize::from(reference)]
-    }
-}
-
-impl<'h, M: MathsCore, H: 'h + Habitat<M>> ClassicalLineageStore<M, H> {
-    #[must_use]
-    pub fn new<O: OriginSampler<'h, M, Habitat = H>>(origin_sampler: O) -> Self {
-        #[allow(clippy::cast_possible_truncation)]
-        let lineages_amount_hint = origin_sampler.full_upper_bound_size_hint() as usize;
-
-        let mut lineages_store = Slab::with_capacity(lineages_amount_hint);
-
-        let mut indexed_location_to_lineage_reference =
-            HashMap::with_capacity_and_hasher(lineages_amount_hint, FnvBuildHasher::default());
-
-        for lineage in origin_sampler {
-            let indexed_location = lineage.indexed_location.clone();
-
-            let local_reference = InMemoryLineageReference::from(lineages_store.insert(lineage));
-            indexed_location_to_lineage_reference.insert(indexed_location, local_reference);
-        }
-
-        lineages_store.shrink_to_fit();
-
-        Self {
-            lineages_store,
-            indexed_location_to_lineage_reference,
-            _marker: PhantomData::<(M, H)>,
-        }
     }
 }
 
