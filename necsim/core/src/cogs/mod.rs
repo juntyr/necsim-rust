@@ -6,9 +6,6 @@ pub use backup::Backup;
 pub mod habitat;
 pub use habitat::Habitat;
 
-pub mod origin_sampler;
-pub use origin_sampler::OriginSampler;
-
 pub mod speciation_probability;
 pub use speciation_probability::SpeciationProbability;
 

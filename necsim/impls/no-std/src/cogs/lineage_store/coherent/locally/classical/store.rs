@@ -1,5 +1,11 @@
+use core::marker::PhantomData;
+
+use fnv::FnvBuildHasher;
+use hashbrown::HashMap;
+use slab::Slab;
+
 use necsim_core::{
-    cogs::{Habitat, LineageStore, LocallyCoherentLineageStore, MathsCore, OriginSampler},
+    cogs::{Habitat, LineageStore, LocallyCoherentLineageStore, MathsCore},
     landscape::IndexedLocation,
     lineage::{GlobalLineageReference, Lineage},
 };
@@ -17,11 +23,15 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
         H: 'a,
     = impl Iterator<Item = InMemoryLineageReference>;
 
-    fn from_origin_sampler<'h, O: OriginSampler<'h, M, Habitat = H>>(origin_sampler: O) -> Self
-    where
-        H: 'h,
-    {
-        Self::new(origin_sampler)
+    fn with_capacity(_habitat: &H, capacity: usize) -> Self {
+        Self {
+            lineages_store: Slab::with_capacity(capacity),
+            indexed_location_to_lineage_reference: HashMap::with_capacity_and_hasher(
+                capacity,
+                FnvBuildHasher::default(),
+            ),
+            _marker: PhantomData::<(M, H)>,
+        }
     }
 
     #[must_use]
