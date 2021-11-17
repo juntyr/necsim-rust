@@ -1,6 +1,7 @@
 #![deny(clippy::pedantic)]
 #![feature(associated_type_bounds)]
 #![feature(never_type)]
+#![feature(type_alias_impl_trait)]
 #![feature(generic_associated_types)]
 
 #[macro_use]
@@ -37,7 +38,9 @@ pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioParameters {
     where
         M: 'h,
         Self: 'h;
+    type OriginSamplerAuxiliary;
     type Decomposition: Decomposition<M, Self::Habitat>;
+    type DecompositionAuxiliary;
     type LineageReference: LineageReference<M, Self::Habitat>;
     type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>>: LineageStore<
         M,
@@ -62,6 +65,7 @@ pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioParameters {
 
     /// Inside rustcoalescence, I know that only specialised
     /// `InMemoryDispersalSampler` implementations will be requested.
+    #[allow(clippy::type_complexity)]
     fn build<D: InMemoryDispersalSampler<M, Self::Habitat, G>>(
         self,
     ) -> (
@@ -69,14 +73,19 @@ pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioParameters {
         Self::DispersalSampler<D>,
         Self::TurnoverRate,
         Self::SpeciationProbability,
+        Self::OriginSamplerAuxiliary,
+        Self::DecompositionAuxiliary,
     );
 
     fn sample_habitat<I: Iterator<Item = u64>>(
-        &self,
+        habitat: &Self::Habitat,
         pre_sampler: OriginPreSampler<M, I>,
+        auxiliary: Self::OriginSamplerAuxiliary,
     ) -> Self::OriginSampler<'_, I>;
 
-    fn habitat(&self) -> &Self::Habitat;
-
-    fn decompose(habitat: &Self::Habitat, subdomain: Partition) -> Self::Decomposition;
+    fn decompose(
+        habitat: &Self::Habitat,
+        subdomain: Partition,
+        auxiliary: Self::DecompositionAuxiliary,
+    ) -> Self::Decomposition;
 }

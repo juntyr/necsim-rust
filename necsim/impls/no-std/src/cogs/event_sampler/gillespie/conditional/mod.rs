@@ -16,7 +16,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::cogs::{
     coalescence_sampler::conditional::ConditionalCoalescenceSampler,
-    event_sampler::gillespie::{GillespieEventSampler, GillespiePartialSimulation},
+    event_sampler::gillespie::GillespieEventSampler,
 };
 
 mod probability;
@@ -124,10 +124,15 @@ impl<
     ) -> Q {
         // The event is sampled after the active lineage has been removed from
         //  the lineage store, but it must be included in the calculation
-        let probability_at_location =
-            GillespiePartialSimulation::without_emigration_exit(simulation, |simulation| {
-                ProbabilityAtLocation::new(dispersal_origin.location(), simulation, false)
-            });
+        let probability_at_location = ProbabilityAtLocation::new(
+            dispersal_origin.location(),
+            &simulation.habitat,
+            &simulation.lineage_store,
+            &simulation.dispersal_sampler,
+            &simulation.coalescence_sampler,
+            &simulation.speciation_probability,
+            false,
+        );
 
         let event_sample = probability_at_location.total() * rng.sample_uniform_closed_open();
 
@@ -198,8 +203,9 @@ impl<
             }
         } else {
             // In-Coalescence Event
-            let (dispersal_target, coalescence) =
-                ConditionalCoalescenceSampler::sample_coalescence_at_location(
+            let (dispersal_target, coalescence) = simulation
+                .coalescence_sampler
+                .sample_coalescence_at_location(
                     dispersal_origin.location().clone(),
                     &simulation.habitat,
                     &simulation.lineage_store,
@@ -240,32 +246,32 @@ impl<
     fn get_event_rate_at_location(
         &self,
         location: &Location,
-        simulation: &GillespiePartialSimulation<
-            M,
-            H,
-            G,
-            R,
-            S,
-            D,
-            ConditionalCoalescenceSampler<M, H, R, S>,
-            T,
-            N,
-        >,
+        habitat: &H,
+        lineage_store: &S,
+        dispersal_sampler: &D,
+        coalescence_sampler: &ConditionalCoalescenceSampler<M, H, R, S>,
+        turnover_rate: &T,
+        speciation_probability: &N,
     ) -> NonNegativeF64 {
         // By PRE, all active lineages, including self, are in the lineage store
-        let probability_at_location = ProbabilityAtLocation::new(location, simulation, true);
+        let probability_at_location = ProbabilityAtLocation::new(
+            location,
+            habitat,
+            lineage_store,
+            dispersal_sampler,
+            coalescence_sampler,
+            speciation_probability,
+            true,
+        );
 
         let population = NonNegativeF64::from(
-            simulation
-                .lineage_store
-                .get_local_lineage_references_at_location_unordered(location, &simulation.habitat)
+            lineage_store
+                .get_local_lineage_references_at_location_unordered(location, habitat)
                 .len(),
         );
 
         NonNegativeF64::from(probability_at_location.total())
             * population
-            * simulation
-                .turnover_rate
-                .get_turnover_rate_at_location(location, &simulation.habitat)
+            * turnover_rate.get_turnover_rate_at_location(location, habitat)
     }
 }

@@ -49,6 +49,7 @@ impl<M: MathsCore, G: RngCore<M>> ScenarioParameters for SpatiallyImplicitScenar
 
 impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyImplicitScenario<M, G> {
     type Decomposition = ModuloDecomposition;
+    type DecompositionAuxiliary = ();
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
         SpatiallyImplicitDispersalSampler<M, G>;
     type Habitat = SpatiallyImplicitHabitat<M>;
@@ -58,6 +59,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyImplicitScenario<M
     where
         G: 'h,
     = SpatiallyImplicitOriginSampler<'h, M, I>;
+    type OriginSamplerAuxiliary = ();
     type SpeciationProbability = SpatiallyImplicitSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
 
@@ -85,6 +87,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyImplicitScenario<M
         })
     }
 
+    #[allow(clippy::type_complexity)]
     fn build<D: DispersalSampler<M, Self::Habitat, G>>(
         self,
     ) -> (
@@ -92,27 +95,32 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyImplicitScenario<M
         Self::DispersalSampler<D>,
         Self::TurnoverRate,
         Self::SpeciationProbability,
+        Self::OriginSamplerAuxiliary,
+        Self::DecompositionAuxiliary,
     ) {
         (
             self.habitat,
             self.dispersal_sampler,
             self.turnover_rate,
             self.speciation_probability,
+            (),
+            (),
         )
     }
 
     fn sample_habitat<I: Iterator<Item = u64>>(
-        &self,
+        habitat: &Self::Habitat,
         pre_sampler: OriginPreSampler<M, I>,
+        _auxiliary: Self::OriginSamplerAuxiliary,
     ) -> Self::OriginSampler<'_, I> {
-        SpatiallyImplicitOriginSampler::new(pre_sampler, &self.habitat)
+        SpatiallyImplicitOriginSampler::new(pre_sampler, habitat)
     }
 
-    fn decompose(_habitat: &Self::Habitat, subdomain: Partition) -> Self::Decomposition {
+    fn decompose(
+        _habitat: &Self::Habitat,
+        subdomain: Partition,
+        _auxiliary: Self::DecompositionAuxiliary,
+    ) -> Self::Decomposition {
         ModuloDecomposition::new(subdomain)
-    }
-
-    fn habitat(&self) -> &Self::Habitat {
-        &self.habitat
     }
 }
