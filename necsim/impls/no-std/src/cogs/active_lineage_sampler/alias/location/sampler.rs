@@ -7,12 +7,12 @@ use necsim_core::{
         RngCore, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
-    simulation::partial::active_lineager_sampler::PartialSimulation,
+    simulation::partial::active_lineage_sampler::PartialSimulation,
 };
 
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
-use crate::cogs::event_sampler::gillespie::{GillespieEventSampler, GillespiePartialSimulation};
+use crate::cogs::event_sampler::gillespie::GillespieEventSampler;
 
 use super::LocationAliasActiveLineageSampler;
 
@@ -121,18 +121,19 @@ impl<
 
             if number_lineages_left_at_location > 0 {
                 if let Ok(event_rate_at_location) = PositiveF64::new(
+                    // All active lineages which are left, which now excludes
+                    //  chosen_lineage_reference, are still in the lineage store
                     simulation
-                        .with_split_event_sampler(|event_sampler, simulation| {
-                            GillespiePartialSimulation::without_emigration_exit(
-                                simulation,
-                                |simulation| {
-                                    // All active lineages which are left, which now excludes
-                                    //  chosen_lineage_reference, are still in the lineage store
-                                    event_sampler
-                                        .get_event_rate_at_location(&chosen_location, simulation)
-                                },
-                            )
-                        })
+                        .event_sampler
+                        .get_event_rate_at_location(
+                            &chosen_location,
+                            &simulation.habitat,
+                            &simulation.lineage_store,
+                            &simulation.dispersal_sampler,
+                            &simulation.coalescence_sampler,
+                            &simulation.turnover_rate,
+                            &simulation.speciation_probability,
+                        )
                         .get(),
                 ) {
                     self.alias_sampler
@@ -170,14 +171,19 @@ impl<
             .insert_lineage_globally_coherent(lineage, &simulation.habitat);
 
         if let Ok(event_rate_at_location) = PositiveF64::new(
+            // All active lineage references, including lineage_reference,
+            //  are now (back) in the lineage store
             simulation
-                .with_split_event_sampler(|event_sampler, simulation| {
-                    GillespiePartialSimulation::without_emigration_exit(simulation, |simulation| {
-                        // All active lineage references, including lineage_reference,
-                        //  are now (back) in the lineage store
-                        event_sampler.get_event_rate_at_location(&location, simulation)
-                    })
-                })
+                .event_sampler
+                .get_event_rate_at_location(
+                    &location,
+                    &simulation.habitat,
+                    &simulation.lineage_store,
+                    &simulation.dispersal_sampler,
+                    &simulation.coalescence_sampler,
+                    &simulation.turnover_rate,
+                    &simulation.speciation_probability,
+                )
                 .get(),
         ) {
             self.alias_sampler

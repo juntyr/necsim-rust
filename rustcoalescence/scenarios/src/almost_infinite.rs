@@ -45,6 +45,7 @@ impl<M: MathsCore, G: RngCore<M>> ScenarioParameters for AlmostInfiniteScenario<
 
 impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteScenario<M, G> {
     type Decomposition = RadialDecomposition;
+    type DecompositionAuxiliary = ();
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
         AlmostInfiniteNormalDispersalSampler<M, G>;
     type Habitat = AlmostInfiniteHabitat<M>;
@@ -55,6 +56,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteScenario<M, G
     where
         G: 'h,
     = AlmostInfiniteOriginSampler<'h, M, I>;
+    type OriginSamplerAuxiliary = (u32,);
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
 
@@ -78,6 +80,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteScenario<M, G
         })
     }
 
+    #[allow(clippy::type_complexity)]
     fn build<D: DispersalSampler<M, Self::Habitat, G>>(
         self,
     ) -> (
@@ -85,27 +88,32 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteScenario<M, G
         Self::DispersalSampler<D>,
         Self::TurnoverRate,
         Self::SpeciationProbability,
+        Self::OriginSamplerAuxiliary,
+        Self::DecompositionAuxiliary,
     ) {
         (
             self.habitat,
             self.dispersal_sampler,
             self.turnover_rate,
             self.speciation_probability,
+            (self.radius,),
+            (),
         )
     }
 
     fn sample_habitat<I: Iterator<Item = u64>>(
-        &self,
+        habitat: &Self::Habitat,
         pre_sampler: OriginPreSampler<M, I>,
+        (radius,): Self::OriginSamplerAuxiliary,
     ) -> Self::OriginSampler<'_, I> {
-        AlmostInfiniteOriginSampler::new(pre_sampler, &self.habitat, self.radius)
+        AlmostInfiniteOriginSampler::new(pre_sampler, habitat, radius)
     }
 
-    fn decompose(_habitat: &Self::Habitat, subdomain: Partition) -> Self::Decomposition {
+    fn decompose(
+        _habitat: &Self::Habitat,
+        subdomain: Partition,
+        _auxiliary: Self::DecompositionAuxiliary,
+    ) -> Self::Decomposition {
         RadialDecomposition::new(subdomain)
-    }
-
-    fn habitat(&self) -> &Self::Habitat {
-        &self.habitat
     }
 }

@@ -54,6 +54,7 @@ impl<M: MathsCore, G: RngCore<M>> ScenarioParameters
 
 impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitTurnoverMapScenario<M, G> {
     type Decomposition = EqualDecomposition<M, Self::Habitat>;
+    type DecompositionAuxiliary = ();
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> = D;
     type Habitat = InMemoryHabitat<M>;
     type LineageReference = InMemoryLineageReference;
@@ -62,6 +63,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitTurnoverMa
     where
         G: 'h,
     = InMemoryOriginSampler<'h, M, I>;
+    type OriginSamplerAuxiliary = ();
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = InMemoryTurnoverRate;
 
@@ -101,6 +103,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitTurnoverMa
         })
     }
 
+    #[allow(clippy::type_complexity)]
     fn build<D: InMemoryDispersalSampler<M, Self::Habitat, G>>(
         self,
     ) -> (
@@ -108,6 +111,8 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitTurnoverMa
         Self::DispersalSampler<D>,
         Self::TurnoverRate,
         Self::SpeciationProbability,
+        Self::OriginSamplerAuxiliary,
+        Self::DecompositionAuxiliary,
     ) {
         let dispersal_sampler = D::unchecked_new(&self.dispersal_map, &self.habitat);
 
@@ -116,17 +121,24 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitTurnoverMa
             dispersal_sampler,
             self.turnover_rate,
             self.speciation_probability,
+            (),
+            (),
         )
     }
 
     fn sample_habitat<I: Iterator<Item = u64>>(
-        &self,
+        habitat: &Self::Habitat,
         pre_sampler: OriginPreSampler<M, I>,
+        _auxiliary: Self::OriginSamplerAuxiliary,
     ) -> Self::OriginSampler<'_, I> {
-        InMemoryOriginSampler::new(pre_sampler, &self.habitat)
+        InMemoryOriginSampler::new(pre_sampler, habitat)
     }
 
-    fn decompose(habitat: &Self::Habitat, subdomain: Partition) -> Self::Decomposition {
+    fn decompose(
+        habitat: &Self::Habitat,
+        subdomain: Partition,
+        _auxiliary: Self::DecompositionAuxiliary,
+    ) -> Self::Decomposition {
         match EqualDecomposition::weight(habitat, subdomain) {
             Ok(decomposition) => decomposition,
             Err(decomposition) => {
@@ -141,10 +153,6 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitTurnoverMa
                 decomposition
             },
         }
-    }
-
-    fn habitat(&self) -> &Self::Habitat {
-        &self.habitat
     }
 }
 

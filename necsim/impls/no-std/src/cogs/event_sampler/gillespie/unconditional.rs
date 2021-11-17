@@ -14,7 +14,7 @@ use necsim_core::{
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
-use super::{GillespieEventSampler, GillespiePartialSimulation};
+use super::GillespieEventSampler;
 
 #[allow(clippy::module_name_repetitions, clippy::type_complexity)]
 #[derive(Debug)]
@@ -197,18 +197,19 @@ impl<
     fn get_event_rate_at_location(
         &self,
         location: &Location,
-        simulation: &GillespiePartialSimulation<M, H, G, R, S, D, C, T, N>,
+        habitat: &H,
+        lineage_store: &S,
+        _dispersal_sampler: &D,
+        _coalescence_sampler: &C,
+        turnover_rate: &T,
+        _speciation_probability: &N,
     ) -> NonNegativeF64 {
         let population = NonNegativeF64::from(
-            simulation
-                .lineage_store
-                .get_local_lineage_references_at_location_unordered(location, &simulation.habitat)
+            lineage_store
+                .get_local_lineage_references_at_location_unordered(location, habitat)
                 .len(),
         );
 
-        population
-            * simulation
-                .turnover_rate
-                .get_turnover_rate_at_location(location, &simulation.habitat)
+        population * turnover_rate.get_turnover_rate_at_location(location, habitat)
     }
 }

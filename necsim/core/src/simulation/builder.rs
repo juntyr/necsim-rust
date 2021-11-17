@@ -171,7 +171,7 @@ impl<
         Q,
         F: FnOnce(
             &mut A,
-            &mut super::partial::active_lineager_sampler::PartialSimulation<
+            &mut super::partial::active_lineage_sampler::PartialSimulation<
                 M,
                 H,
                 G,
@@ -196,7 +196,7 @@ impl<
         //  subsequence of Self's type and layout
         let partial_simulation = unsafe {
             &mut *(self as *mut Self)
-                .cast::<super::partial::active_lineager_sampler::PartialSimulation<
+                .cast::<super::partial::active_lineage_sampler::PartialSimulation<
                     M,
                     H,
                     G,

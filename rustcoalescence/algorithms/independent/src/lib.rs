@@ -86,45 +86,55 @@ impl<
                 event_slice, ..
             })
             | ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { event_slice, .. }) => {
+                let (
+                    habitat,
+                    dispersal_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    origin_sampler_auxiliary,
+                    decomposition_auxiliary,
+                ) = scenario.build::<InMemoryAliasDispersalSampler<
+                    Self::MathsCore,
+                    O::Habitat,
+                    WyHash<Self::MathsCore>,
+                >>();
+                let lineage_store = IndependentLineageStore::default();
+                let coalescence_sampler = IndependentCoalescenceSampler::default();
+                let event_sampler = IndependentEventSampler::default();
+
                 let lineages: Vec<Lineage> = match args.parallelism_mode {
                     // Apply no lineage origin partitioning in the `Monolithic` mode
                     ParallelismMode::Monolithic(..) => {
-                        scenario.sample_habitat(pre_sampler).collect()
+                        O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary).collect()
                     },
                     // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
                     ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode {
                         partition,
                         ..
-                    }) => scenario
-                        .sample_habitat(pre_sampler.partition(partition))
-                        .collect(),
+                    }) => O::sample_habitat(
+                        &habitat,
+                        pre_sampler.partition(partition),
+                        origin_sampler_auxiliary,
+                    )
+                    .collect(),
                     // Apply lineage origin partitioning in the `IsolatedLandscape` mode
                     ParallelismMode::IsolatedLandscape(IsolatedParallelismMode {
                         partition,
                         ..
                     }) => DecompositionOriginSampler::new(
-                        scenario.sample_habitat(pre_sampler),
-                        &O::decompose(scenario.habitat(), partition),
+                        O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
+                        &O::decompose(&habitat, partition, decomposition_auxiliary),
                     )
                     .collect(),
                     _ => unsafe { std::hint::unreachable_unchecked() },
                 };
 
-                let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<
-                        Self::MathsCore,
-                        O::Habitat,
-                        WyHash<Self::MathsCore>,
-                    >>();
-                let lineage_store = IndependentLineageStore::default();
-                let coalescence_sampler = IndependentCoalescenceSampler::default();
-
-                let emigration_exit = NeverEmigrationExit::default();
-                let event_sampler = IndependentEventSampler::default();
-                let immigration_entry = NeverImmigrationEntry::default();
                 let active_lineage_sampler = IndependentActiveLineageSampler::empty(
                     PoissonEventTimeSampler::new(args.delta_t),
                 );
+
+                let emigration_exit = NeverEmigrationExit::default();
+                let immigration_entry = NeverImmigrationEntry::default();
 
                 let mut simulation = SimulationBuilder {
                     maths: PhantomData::<Self::MathsCore>,
@@ -166,24 +176,35 @@ impl<
                 }
             },
             ParallelismMode::Individuals => {
-                let lineages: Vec<Lineage> = scenario
-                    .sample_habitat(pre_sampler.partition(local_partition.get_partition()))
-                    .collect();
-
-                let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<
-                        Self::MathsCore,
-                        O::Habitat,
-                        WyHash<Self::MathsCore>,
-                    >>();
+                let (
+                    habitat,
+                    dispersal_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    origin_sampler_auxiliary,
+                    _decomposition_auxiliary,
+                ) = scenario.build::<InMemoryAliasDispersalSampler<
+                    Self::MathsCore,
+                    O::Habitat,
+                    WyHash<Self::MathsCore>,
+                >>();
                 let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
-                let emigration_exit = NeverEmigrationExit::default();
                 let event_sampler = IndependentEventSampler::default();
-                let immigration_entry = NeverImmigrationEntry::default();
+
+                let lineages: Vec<Lineage> = O::sample_habitat(
+                    &habitat,
+                    pre_sampler.partition(local_partition.get_partition()),
+                    origin_sampler_auxiliary,
+                )
+                .collect();
+
                 let active_lineage_sampler = IndependentActiveLineageSampler::empty(
                     PoissonEventTimeSampler::new(args.delta_t),
                 );
+
+                let emigration_exit = NeverEmigrationExit::default();
+                let immigration_entry = NeverImmigrationEntry::default();
 
                 let mut simulation = SimulationBuilder {
                     maths: PhantomData::<Self::MathsCore>,
@@ -215,31 +236,42 @@ impl<
                 Ok(AlgorithmResult::Done { time, steps })
             },
             ParallelismMode::Landscape => {
-                let decomposition =
-                    O::decompose(scenario.habitat(), local_partition.get_partition());
+                let (
+                    habitat,
+                    dispersal_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    origin_sampler_auxiliary,
+                    decomposition_auxiliary,
+                ) = scenario.build::<InMemoryAliasDispersalSampler<
+                    Self::MathsCore,
+                    O::Habitat,
+                    WyHash<Self::MathsCore>,
+                >>();
+                let lineage_store = IndependentLineageStore::default();
+                let coalescence_sampler = IndependentCoalescenceSampler::default();
+                let event_sampler = IndependentEventSampler::default();
+
+                let decomposition = O::decompose(
+                    &habitat,
+                    local_partition.get_partition(),
+                    decomposition_auxiliary,
+                );
                 let lineages: Vec<Lineage> = DecompositionOriginSampler::new(
-                    scenario.sample_habitat(pre_sampler),
+                    O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
                     &decomposition,
                 )
                 .collect();
 
-                let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<
-                        Self::MathsCore,
-                        O::Habitat,
-                        WyHash<Self::MathsCore>,
-                    >>();
-                let lineage_store = IndependentLineageStore::default();
-                let coalescence_sampler = IndependentCoalescenceSampler::default();
+                let active_lineage_sampler = IndependentActiveLineageSampler::empty(
+                    PoissonEventTimeSampler::new(args.delta_t),
+                );
+
                 let emigration_exit = IndependentEmigrationExit::new(
                     decomposition,
                     AlwaysEmigrationChoice::default(),
                 );
-                let event_sampler = IndependentEventSampler::default();
                 let immigration_entry = NeverImmigrationEntry::default();
-                let active_lineage_sampler = IndependentActiveLineageSampler::empty(
-                    PoissonEventTimeSampler::new(args.delta_t),
-                );
 
                 let mut simulation = SimulationBuilder {
                     maths: PhantomData::<Self::MathsCore>,
@@ -273,31 +305,42 @@ impl<
             ParallelismMode::Probabilistic(ProbabilisticParallelismMode {
                 communication_probability,
             }) => {
-                let decomposition =
-                    O::decompose(scenario.habitat(), local_partition.get_partition());
+                let (
+                    habitat,
+                    dispersal_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    origin_sampler_auxiliary,
+                    decomposition_auxiliary,
+                ) = scenario.build::<InMemoryAliasDispersalSampler<
+                    Self::MathsCore,
+                    O::Habitat,
+                    WyHash<Self::MathsCore>,
+                >>();
+                let lineage_store = IndependentLineageStore::default();
+                let coalescence_sampler = IndependentCoalescenceSampler::default();
+                let event_sampler = IndependentEventSampler::default();
+
+                let decomposition = O::decompose(
+                    &habitat,
+                    local_partition.get_partition(),
+                    decomposition_auxiliary,
+                );
                 let lineages: Vec<Lineage> = DecompositionOriginSampler::new(
-                    scenario.sample_habitat(pre_sampler),
+                    O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
                     &decomposition,
                 )
                 .collect();
 
-                let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<
-                        Self::MathsCore,
-                        O::Habitat,
-                        WyHash<Self::MathsCore>,
-                    >>();
-                let lineage_store = IndependentLineageStore::default();
-                let coalescence_sampler = IndependentCoalescenceSampler::default();
+                let active_lineage_sampler = IndependentActiveLineageSampler::empty(
+                    PoissonEventTimeSampler::new(args.delta_t),
+                );
+
                 let emigration_exit = IndependentEmigrationExit::new(
                     decomposition,
                     ProbabilisticEmigrationChoice::new(communication_probability),
                 );
-                let event_sampler = IndependentEventSampler::default();
                 let immigration_entry = NeverImmigrationEntry::default();
-                let active_lineage_sampler = IndependentActiveLineageSampler::empty(
-                    PoissonEventTimeSampler::new(args.delta_t),
-                );
 
                 let mut simulation = SimulationBuilder {
                     maths: PhantomData::<Self::MathsCore>,
