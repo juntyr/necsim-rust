@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -11,7 +12,7 @@ use necsim_core::{
     landscape::Location,
 };
 
-use crate::cogs::event_sampler::gillespie::{GillespieEventSampler, GillespiePartialSimulation};
+use crate::cogs::{event_sampler::gillespie::GillespieEventSampler, origin_sampler::OriginSampler};
 
 use super::dynamic::indexed::DynamicAliasMethodIndexedSampler;
 
@@ -55,46 +56,85 @@ impl<
     > LocationAliasActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
 {
     #[must_use]
-    pub fn new(
-        partial_simulation: &GillespiePartialSimulation<M, H, G, R, S, D, C, T, N>,
+    pub fn new_with_store<'h, O: OriginSampler<'h, M, Habitat = H>>(
+        mut origin_sampler: O,
+        dispersal_sampler: &D,
+        coalescence_sampler: &C,
+        turnover_rate: &T,
+        speciation_probability: &N,
         event_sampler: &E,
-    ) -> Self {
-        let mut alias_sampler = DynamicAliasMethodIndexedSampler::new();
-        let mut number_active_lineages: usize = 0;
+    ) -> (S, Self)
+    where
+        H: 'h,
+    {
+        #[allow(clippy::cast_possible_truncation)]
+        let capacity = origin_sampler.full_upper_bound_size_hint() as usize;
 
-        partial_simulation
-            .lineage_store
-            .iter_active_locations(&partial_simulation.habitat)
-            .for_each(|location| {
-                let number_active_lineages_at_location = partial_simulation
-                    .lineage_store
+        let mut lineage_store = S::with_capacity(origin_sampler.habitat(), capacity);
+
+        let mut alias_sampler = DynamicAliasMethodIndexedSampler::new();
+        let mut last_event_time = NonNegativeF64::zero();
+
+        let mut ordered_active_locations = Vec::new();
+
+        while let Some(lineage) = origin_sampler.next() {
+            let turnover_rate = turnover_rate.get_turnover_rate_at_location(
+                lineage.indexed_location.location(),
+                origin_sampler.habitat(),
+            );
+
+            if PositiveF64::new(turnover_rate.get()).is_ok() {
+                last_event_time = last_event_time.max(lineage.last_event_time);
+
+                match ordered_active_locations.last() {
+                    Some(location) if location == lineage.indexed_location.location() => (),
+                    _ => ordered_active_locations.push(lineage.indexed_location.location().clone()),
+                };
+
+                let _local_reference = lineage_store
+                    .insert_lineage_globally_coherent(lineage, origin_sampler.habitat());
+            }
+        }
+
+        for location in ordered_active_locations {
+            if let Ok(event_rate_at_location) = PositiveF64::new(
+                event_sampler
+                    .get_event_rate_at_location(
+                        &location,
+                        origin_sampler.habitat(),
+                        &lineage_store,
+                        dispersal_sampler,
+                        coalescence_sampler,
+                        turnover_rate,
+                        speciation_probability,
+                    )
+                    .get(),
+            ) {
+                alias_sampler.update_or_add(location, event_rate_at_location);
+            }
+        }
+
+        let number_active_lineages = lineage_store
+            .iter_active_locations(origin_sampler.habitat())
+            .map(|location| {
+                lineage_store
                     .get_local_lineage_references_at_location_unordered(
                         &location,
-                        &partial_simulation.habitat,
+                        origin_sampler.habitat(),
                     )
-                    .len();
+                    .len()
+            })
+            .sum();
 
-                if number_active_lineages_at_location > 0 {
-                    // All lineages were just initially inserted into the lineage store,
-                    //  so all active lineages are in the lineage store
-                    if let Ok(event_rate_at_location) = PositiveF64::new(
-                        event_sampler
-                            .get_event_rate_at_location(&location, partial_simulation)
-                            .get(),
-                    ) {
-                        alias_sampler.update_or_add(location, event_rate_at_location);
-
-                        number_active_lineages += number_active_lineages_at_location;
-                    }
-                }
-            });
-
-        Self {
-            alias_sampler,
-            number_active_lineages,
-            last_event_time: NonNegativeF64::zero(),
-            marker: PhantomData::<(M, H, G, R, S, X, D, C, T, N, E, I)>,
-        }
+        (
+            lineage_store,
+            Self {
+                alias_sampler,
+                number_active_lineages,
+                last_event_time,
+                marker: PhantomData::<(M, H, G, R, S, X, D, C, T, N, E, I)>,
+            },
+        )
     }
 }
 

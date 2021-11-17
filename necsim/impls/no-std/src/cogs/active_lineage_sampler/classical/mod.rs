@@ -8,6 +8,8 @@ use necsim_core::cogs::{
 };
 use necsim_core_bond::NonNegativeF64;
 
+use crate::cogs::origin_sampler::OriginSampler;
+
 mod sampler;
 
 #[allow(clippy::module_name_repetitions)]
@@ -42,20 +44,36 @@ impl<
     > ClassicalActiveLineageSampler<M, H, G, R, S, X, D, N, I>
 {
     #[must_use]
-    pub fn new(lineage_store: &S) -> Self {
+    pub fn new_with_store<'h, O: OriginSampler<'h, M, Habitat = H>>(
+        mut origin_sampler: O,
+    ) -> (S, Self)
+    where
+        H: 'h,
+    {
+        #[allow(clippy::cast_possible_truncation)]
+        let capacity = origin_sampler.full_upper_bound_size_hint() as usize;
+
+        let mut lineage_store = S::with_capacity(origin_sampler.habitat(), capacity);
+
+        let mut active_lineage_references = Vec::with_capacity(capacity);
         let mut last_event_time = NonNegativeF64::zero();
 
-        Self {
-            active_lineage_references: lineage_store
-                .iter_local_lineage_references()
-                .inspect(|local_reference| {
-                    last_event_time =
-                        last_event_time.max(lineage_store[local_reference.clone()].last_event_time);
-                })
-                .collect(),
-            last_event_time,
-            _marker: PhantomData::<(M, H, G, S, X, D, N, I)>,
+        while let Some(lineage) = origin_sampler.next() {
+            last_event_time = last_event_time.max(lineage.last_event_time);
+
+            active_lineage_references.push(
+                lineage_store.insert_lineage_locally_coherent(lineage, origin_sampler.habitat()),
+            );
         }
+
+        (
+            lineage_store,
+            Self {
+                active_lineage_references,
+                last_event_time,
+                _marker: PhantomData::<(M, H, G, S, X, D, N, I)>,
+            },
+        )
     }
 }
 

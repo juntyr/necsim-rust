@@ -8,6 +8,8 @@ use necsim_core::cogs::{
     SpeciationProbability, TurnoverRate,
 };
 
+use crate::cogs::origin_sampler::OriginSampler;
+
 use super::dynamic::stack::DynamicAliasMethodStackSampler;
 
 mod sampler;
@@ -50,29 +52,49 @@ impl<
     > IndividualAliasActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
 {
     #[must_use]
-    pub fn new(habitat: &H, turnover_rate: &T, lineage_store: &S) -> Self {
+    pub fn new_with_store<'h, O: OriginSampler<'h, M, Habitat = H>>(
+        mut origin_sampler: O,
+        turnover_rate: &T,
+    ) -> (S, Self)
+    where
+        H: 'h,
+    {
+        #[allow(clippy::cast_possible_truncation)]
+        let capacity = origin_sampler.full_upper_bound_size_hint() as usize;
+
+        let mut lineage_store = S::with_capacity(origin_sampler.habitat(), capacity);
+
         let mut alias_sampler = DynamicAliasMethodStackSampler::new();
         let mut number_active_lineages: usize = 0;
+        let mut last_event_time = NonNegativeF64::zero();
 
-        lineage_store
-            .iter_local_lineage_references()
-            .for_each(|reference| {
-                let location = lineage_store[reference.clone()].indexed_location.location();
-                let rate = turnover_rate.get_turnover_rate_at_location(location, habitat);
+        while let Some(lineage) = origin_sampler.next() {
+            let turnover_rate = turnover_rate.get_turnover_rate_at_location(
+                lineage.indexed_location.location(),
+                origin_sampler.habitat(),
+            );
 
-                if let Ok(event_rate) = PositiveF64::new(rate.get()) {
-                    alias_sampler.add_push(reference, event_rate);
+            if let Ok(event_rate) = PositiveF64::new(turnover_rate.get()) {
+                last_event_time = last_event_time.max(lineage.last_event_time);
 
-                    number_active_lineages += 1;
-                }
-            });
+                let local_reference = lineage_store
+                    .insert_lineage_locally_coherent(lineage, origin_sampler.habitat());
 
-        Self {
-            alias_sampler,
-            number_active_lineages,
-            last_event_time: NonNegativeF64::zero(),
-            marker: PhantomData::<(M, H, G, R, S, X, D, C, T, N, E, I)>,
+                alias_sampler.add_push(local_reference, event_rate);
+
+                number_active_lineages += 1;
+            }
         }
+
+        (
+            lineage_store,
+            Self {
+                alias_sampler,
+                number_active_lineages,
+                last_event_time,
+                marker: PhantomData::<(M, H, G, R, S, X, D, C, T, N, E, I)>,
+            },
+        )
     }
 }
 

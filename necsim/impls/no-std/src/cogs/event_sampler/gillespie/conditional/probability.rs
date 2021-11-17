@@ -1,16 +1,13 @@
 use necsim_core::{
     cogs::{
         GloballyCoherentLineageStore, Habitat, LineageReference, MathsCore, RngCore,
-        SeparableDispersalSampler, SpeciationProbability, TurnoverRate,
+        SeparableDispersalSampler, SpeciationProbability,
     },
     landscape::Location,
 };
 use necsim_core_bond::ClosedUnitF64;
 
-use crate::cogs::{
-    coalescence_sampler::conditional::ConditionalCoalescenceSampler,
-    event_sampler::gillespie::GillespiePartialSimulation,
-};
+use crate::cogs::coalescence_sampler::conditional::ConditionalCoalescenceSampler;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ProbabilityAtLocation {
@@ -28,34 +25,25 @@ impl ProbabilityAtLocation {
         R: LineageReference<M, H>,
         S: GloballyCoherentLineageStore<M, H, R>,
         D: SeparableDispersalSampler<M, H, G>,
-        T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
     >(
         location: &Location,
-        simulation: &GillespiePartialSimulation<
-            M,
-            H,
-            G,
-            R,
-            S,
-            D,
-            ConditionalCoalescenceSampler<M, H, R, S>,
-            T,
-            N,
-        >,
+        habitat: &H,
+        lineage_store: &S,
+        dispersal_sampler: &D,
+        coalescence_sampler: &ConditionalCoalescenceSampler<M, H, R, S>,
+        speciation_probability: &N,
         lineage_store_includes_self: bool,
     ) -> Self {
-        let speciation_probability = simulation
-            .speciation_probability
-            .get_speciation_probability_at_location(location, &simulation.habitat);
-        let self_dispersal_probability = simulation
-            .dispersal_sampler
-            .get_self_dispersal_probability_at_location(location, &simulation.habitat);
-        let coalescence_probability_at_location =
-            ConditionalCoalescenceSampler::get_coalescence_probability_at_location(
+        let speciation_probability =
+            speciation_probability.get_speciation_probability_at_location(location, habitat);
+        let self_dispersal_probability =
+            dispersal_sampler.get_self_dispersal_probability_at_location(location, habitat);
+        let coalescence_probability_at_location = coalescence_sampler
+            .get_coalescence_probability_at_location(
                 location,
-                &simulation.habitat,
-                &simulation.lineage_store,
+                habitat,
+                lineage_store,
                 lineage_store_includes_self,
             );
 

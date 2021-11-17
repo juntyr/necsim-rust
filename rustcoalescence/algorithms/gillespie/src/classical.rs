@@ -1,7 +1,7 @@
 use std::{hint::unreachable_unchecked, marker::PhantomData};
 
 use necsim_core::{
-    cogs::{ActiveLineageSampler, LineageStore, LocallyCoherentLineageStore, SplittableRng},
+    cogs::{ActiveLineageSampler, LocallyCoherentLineageStore, SplittableRng},
     reporter::Reporter,
     simulation::SimulationBuilder,
 };
@@ -22,7 +22,7 @@ use necsim_impls_no_std::{
         lineage_reference::in_memory::InMemoryLineageReference,
         lineage_store::coherent::locally::classical::ClassicalLineageStore,
         origin_sampler::{
-            decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler, OriginSampler,
+            decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
         },
         turnover_rate::uniform::UniformTurnoverRate,
     },
@@ -77,34 +77,27 @@ where
     ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, Self::Error> {
         match args.parallelism_mode {
             ParallelismMode::Monolithic => {
-                // TODO: Move init logic into active lineage sampler impls
-                let mut origin_sampler = scenario.sample_habitat(pre_sampler);
-                #[allow(clippy::cast_possible_truncation)]
-                let mut lineage_store = Self::LineageStore::with_capacity(
-                    origin_sampler.habitat(),
-                    origin_sampler.full_upper_bound_size_hint() as usize,
-                );
-                while let Some(lineage) = origin_sampler.next() {
-                    lineage_store
-                        .insert_lineage_locally_coherent(lineage, origin_sampler.habitat());
-                }
-                std::mem::drop(origin_sampler);
-
-                let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<
-                        Self::MathsCore,
-                        O::Habitat,
-                        Self::Rng,
-                    >>();
+                let (
+                    habitat,
+                    dispersal_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    origin_sampler_auxiliary,
+                    _decomposition_auxiliary,
+                ) = scenario
+                    .build::<InMemoryAliasDispersalSampler<Self::MathsCore, O::Habitat, Self::Rng>>(
+                    );
                 let coalescence_sampler = UnconditionalCoalescenceSampler::default();
-                let emigration_exit = NeverEmigrationExit::default();
                 let event_sampler = UnconditionalEventSampler::default();
+
+                let (lineage_store, active_lineage_sampler): (Self::LineageStore, _) =
+                    IndividualAliasActiveLineageSampler::new_with_store(
+                        O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
+                        &turnover_rate,
+                    );
+
+                let emigration_exit = NeverEmigrationExit::default();
                 let immigration_entry = NeverImmigrationEntry::default();
-                let active_lineage_sampler = IndividualAliasActiveLineageSampler::new(
-                    &habitat,
-                    &turnover_rate,
-                    &lineage_store,
-                );
 
                 let mut simulation = SimulationBuilder {
                     maths: PhantomData::<Self::MathsCore>,
@@ -149,40 +142,38 @@ where
             },
             non_monolithic_parallelism_mode => {
                 let rng = rng.split_to_stream(u64::from(local_partition.get_partition().rank()));
-                let decomposition =
-                    O::decompose(scenario.habitat(), local_partition.get_partition());
 
-                // TODO: Move init logic into active lineage sampler impls
-                let mut origin_sampler = DecompositionOriginSampler::new(
-                    scenario.sample_habitat(pre_sampler),
+                let (
+                    habitat,
+                    dispersal_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    origin_sampler_auxiliary,
+                    decomposition_auxiliary,
+                ) = scenario
+                    .build::<InMemoryAliasDispersalSampler<Self::MathsCore, O::Habitat, Self::Rng>>(
+                    );
+                let coalescence_sampler = UnconditionalCoalescenceSampler::default();
+                let event_sampler = UnconditionalEventSampler::default();
+
+                let decomposition = O::decompose(
+                    &habitat,
+                    local_partition.get_partition(),
+                    decomposition_auxiliary,
+                );
+                let origin_sampler = DecompositionOriginSampler::new(
+                    O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
                     &decomposition,
                 );
-                #[allow(clippy::cast_possible_truncation)]
-                let mut lineage_store = Self::LineageStore::with_capacity(
-                    origin_sampler.habitat(),
-                    origin_sampler.full_upper_bound_size_hint() as usize,
-                );
-                while let Some(lineage) = origin_sampler.next() {
-                    lineage_store
-                        .insert_lineage_locally_coherent(lineage, origin_sampler.habitat());
-                }
-                std::mem::drop(origin_sampler);
 
-                let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<
-                        Self::MathsCore,
-                        O::Habitat,
-                        Self::Rng,
-                    >>();
-                let coalescence_sampler = UnconditionalCoalescenceSampler::default();
+                let (lineage_store, active_lineage_sampler): (Self::LineageStore, _) =
+                    IndividualAliasActiveLineageSampler::new_with_store(
+                        origin_sampler,
+                        &turnover_rate,
+                    );
+
                 let emigration_exit = DomainEmigrationExit::new(decomposition);
-                let event_sampler = UnconditionalEventSampler::default();
                 let immigration_entry = BufferedImmigrationEntry::default();
-                let active_lineage_sampler = IndividualAliasActiveLineageSampler::new(
-                    &habitat,
-                    &turnover_rate,
-                    &lineage_store,
-                );
 
                 let mut simulation = SimulationBuilder {
                     maths: PhantomData::<Self::MathsCore>,
@@ -263,30 +254,30 @@ where
     ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, Self::Error> {
         match args.parallelism_mode {
             ParallelismMode::Monolithic => {
-                // TODO: Move init logic into active lineage sampler impls
-                let mut origin_sampler = scenario.sample_habitat(pre_sampler);
-                #[allow(clippy::cast_possible_truncation)]
-                let mut lineage_store = Self::LineageStore::with_capacity(
-                    origin_sampler.habitat(),
-                    origin_sampler.full_upper_bound_size_hint() as usize,
-                );
-                while let Some(lineage) = origin_sampler.next() {
-                    lineage_store
-                        .insert_lineage_locally_coherent(lineage, origin_sampler.habitat());
-                }
-                std::mem::drop(origin_sampler);
-
-                let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<
-                        Self::MathsCore,
-                        O::Habitat,
-                        Pcg<Self::MathsCore>,
-                    >>();
+                let (
+                    habitat,
+                    dispersal_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    origin_sampler_auxiliary,
+                    _decomposition_auxiliary,
+                ) = scenario.build::<InMemoryAliasDispersalSampler<
+                    Self::MathsCore,
+                    O::Habitat,
+                    Pcg<Self::MathsCore>,
+                >>();
                 let coalescence_sampler = UnconditionalCoalescenceSampler::default();
-                let emigration_exit = NeverEmigrationExit::default();
                 let event_sampler = UnconditionalEventSampler::default();
+
+                let (lineage_store, active_lineage_sampler): (Self::LineageStore, _) =
+                    ClassicalActiveLineageSampler::new_with_store(O::sample_habitat(
+                        &habitat,
+                        pre_sampler,
+                        origin_sampler_auxiliary,
+                    ));
+
+                let emigration_exit = NeverEmigrationExit::default();
                 let immigration_entry = NeverImmigrationEntry::default();
-                let active_lineage_sampler = ClassicalActiveLineageSampler::new(&lineage_store);
 
                 let mut simulation = SimulationBuilder {
                     maths: PhantomData::<Self::MathsCore>,
@@ -331,36 +322,37 @@ where
             },
             non_monolithic_parallelism_mode => {
                 let rng = rng.split_to_stream(u64::from(local_partition.get_partition().rank()));
-                let decomposition =
-                    O::decompose(scenario.habitat(), local_partition.get_partition());
 
-                // TODO: Move init logic into active lineage sampler impls
-                let mut origin_sampler = DecompositionOriginSampler::new(
-                    scenario.sample_habitat(pre_sampler),
+                let (
+                    habitat,
+                    dispersal_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    origin_sampler_auxiliary,
+                    decomposition_auxiliary,
+                ) = scenario.build::<InMemoryAliasDispersalSampler<
+                    Self::MathsCore,
+                    O::Habitat,
+                    Pcg<Self::MathsCore>,
+                >>();
+                let coalescence_sampler = UnconditionalCoalescenceSampler::default();
+                let event_sampler = UnconditionalEventSampler::default();
+
+                let decomposition = O::decompose(
+                    &habitat,
+                    local_partition.get_partition(),
+                    decomposition_auxiliary,
+                );
+                let origin_sampler = DecompositionOriginSampler::new(
+                    O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
                     &decomposition,
                 );
-                #[allow(clippy::cast_possible_truncation)]
-                let mut lineage_store = Self::LineageStore::with_capacity(
-                    origin_sampler.habitat(),
-                    origin_sampler.full_upper_bound_size_hint() as usize,
-                );
-                while let Some(lineage) = origin_sampler.next() {
-                    lineage_store
-                        .insert_lineage_locally_coherent(lineage, origin_sampler.habitat());
-                }
-                std::mem::drop(origin_sampler);
 
-                let (habitat, dispersal_sampler, turnover_rate, speciation_probability) =
-                    scenario.build::<InMemoryAliasDispersalSampler<
-                        Self::MathsCore,
-                        O::Habitat,
-                        Pcg<Self::MathsCore>,
-                    >>();
-                let coalescence_sampler = UnconditionalCoalescenceSampler::default();
+                let (lineage_store, active_lineage_sampler): (Self::LineageStore, _) =
+                    ClassicalActiveLineageSampler::new_with_store(origin_sampler);
+
                 let emigration_exit = DomainEmigrationExit::new(decomposition);
-                let event_sampler = UnconditionalEventSampler::default();
                 let immigration_entry = BufferedImmigrationEntry::default();
-                let active_lineage_sampler = ClassicalActiveLineageSampler::new(&lineage_store);
 
                 let mut simulation = SimulationBuilder {
                     maths: PhantomData::<Self::MathsCore>,

@@ -7,7 +7,7 @@ use super::{
 
 use crate::{
     landscape::IndexedLocation, lineage::Lineage,
-    simulation::partial::active_lineager_sampler::PartialSimulation,
+    simulation::partial::active_lineage_sampler::PartialSimulation,
 };
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]

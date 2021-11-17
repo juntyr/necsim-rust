@@ -6,7 +6,7 @@ use necsim_core::{
         LineageReference, LocallyCoherentLineageStore, MathsCore, RngCore, SpeciationProbability,
     },
     lineage::Lineage,
-    simulation::partial::active_lineager_sampler::PartialSimulation,
+    simulation::partial::active_lineage_sampler::PartialSimulation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 

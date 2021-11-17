@@ -79,7 +79,9 @@ impl<
     > ConditionalCoalescenceSampler<M, H, R, S>
 {
     #[must_use]
+    #[allow(clippy::unused_self)]
     pub fn sample_coalescence_at_location(
+        &self,
         location: Location,
         habitat: &H,
         lineage_store: &S,
@@ -104,7 +106,9 @@ impl<
 
     #[must_use]
     #[debug_requires(habitat.get_habitat_at_location(location) > 0, "location is habitable")]
+    #[allow(clippy::unused_self)]
     pub fn get_coalescence_probability_at_location(
+        &self,
         location: &Location,
         habitat: &H,
         lineage_store: &S,
