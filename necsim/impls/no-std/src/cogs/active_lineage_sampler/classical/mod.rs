@@ -1,6 +1,5 @@
-use core::marker::PhantomData;
-
 use alloc::vec::Vec;
+use core::marker::PhantomData;
 
 use necsim_core::cogs::{
     Backup, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry, LineageReference,
@@ -8,7 +7,9 @@ use necsim_core::cogs::{
 };
 use necsim_core_bond::NonNegativeF64;
 
-use crate::cogs::origin_sampler::OriginSampler;
+use crate::cogs::origin_sampler::{TrustedOriginSampler, UntrustedOriginSampler};
+
+use super::resuming::ExceptionalLineage;
 
 mod sampler;
 
@@ -44,9 +45,21 @@ impl<
     > ClassicalActiveLineageSampler<M, H, G, R, S, X, D, N, I>
 {
     #[must_use]
-    pub fn new_with_store<'h, O: OriginSampler<'h, M, Habitat = H>>(
-        mut origin_sampler: O,
+    pub fn init_with_store<'h, O: TrustedOriginSampler<'h, M, Habitat = H>>(
+        origin_sampler: O,
     ) -> (S, Self)
+    where
+        H: 'h,
+    {
+        let (lineage_store, active_lineage_sampler, _) = Self::resume_with_store(origin_sampler);
+
+        (lineage_store, active_lineage_sampler)
+    }
+
+    #[must_use]
+    pub fn resume_with_store<'h, O: UntrustedOriginSampler<'h, M, Habitat = H>>(
+        mut origin_sampler: O,
+    ) -> (S, Self, Vec<ExceptionalLineage>)
     where
         H: 'h,
     {
@@ -58,7 +71,37 @@ impl<
         let mut active_lineage_references = Vec::with_capacity(capacity);
         let mut last_event_time = NonNegativeF64::zero();
 
+        let mut exceptional_lineages = Vec::new();
+
         while let Some(lineage) = origin_sampler.next() {
+            if !origin_sampler
+                .habitat()
+                .contains(lineage.indexed_location.location())
+            {
+                exceptional_lineages.push(ExceptionalLineage::OutOfHabitat(lineage));
+                continue;
+            }
+
+            if lineage.indexed_location.index()
+                >= origin_sampler
+                    .habitat()
+                    .get_habitat_at_location(lineage.indexed_location.location())
+            {
+                exceptional_lineages.push(ExceptionalLineage::OutOfDeme(lineage));
+                continue;
+            }
+
+            if lineage_store
+                .get_global_lineage_reference_at_indexed_location(
+                    &lineage.indexed_location,
+                    origin_sampler.habitat(),
+                )
+                .is_some()
+            {
+                exceptional_lineages.push(ExceptionalLineage::Coalescence(lineage));
+                continue;
+            }
+
             last_event_time = last_event_time.max(lineage.last_event_time);
 
             active_lineage_references.push(
@@ -73,6 +116,7 @@ impl<
                 last_event_time,
                 _marker: PhantomData::<(M, H, G, S, X, D, N, I)>,
             },
+            exceptional_lineages,
         )
     }
 }

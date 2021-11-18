@@ -12,7 +12,11 @@ use necsim_core::{
     landscape::Location,
 };
 
-use crate::cogs::{event_sampler::gillespie::GillespieEventSampler, origin_sampler::OriginSampler};
+use crate::cogs::{
+    active_lineage_sampler::resuming::ExceptionalLineage,
+    event_sampler::gillespie::GillespieEventSampler,
+    origin_sampler::{TrustedOriginSampler, UntrustedOriginSampler},
+};
 
 use super::dynamic::indexed::DynamicAliasMethodIndexedSampler;
 
@@ -56,14 +60,38 @@ impl<
     > LocationAliasActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
 {
     #[must_use]
-    pub fn new_with_store<'h, O: OriginSampler<'h, M, Habitat = H>>(
-        mut origin_sampler: O,
+    pub fn init_with_store<'h, O: TrustedOriginSampler<'h, M, Habitat = H>>(
+        origin_sampler: O,
         dispersal_sampler: &D,
         coalescence_sampler: &C,
         turnover_rate: &T,
         speciation_probability: &N,
         event_sampler: &E,
     ) -> (S, Self)
+    where
+        H: 'h,
+    {
+        let (lineage_store, active_lineage_sampler, _) = Self::resume_with_store(
+            origin_sampler,
+            dispersal_sampler,
+            coalescence_sampler,
+            turnover_rate,
+            speciation_probability,
+            event_sampler,
+        );
+
+        (lineage_store, active_lineage_sampler)
+    }
+
+    #[must_use]
+    pub fn resume_with_store<'h, O: UntrustedOriginSampler<'h, M, Habitat = H>>(
+        mut origin_sampler: O,
+        dispersal_sampler: &D,
+        coalescence_sampler: &C,
+        turnover_rate: &T,
+        speciation_probability: &N,
+        event_sampler: &E,
+    ) -> (S, Self, Vec<ExceptionalLineage>)
     where
         H: 'h,
     {
@@ -77,7 +105,37 @@ impl<
 
         let mut ordered_active_locations = Vec::new();
 
+        let mut exceptional_lineages = Vec::new();
+
         while let Some(lineage) = origin_sampler.next() {
+            if !origin_sampler
+                .habitat()
+                .contains(lineage.indexed_location.location())
+            {
+                exceptional_lineages.push(ExceptionalLineage::OutOfHabitat(lineage));
+                continue;
+            }
+
+            if lineage.indexed_location.index()
+                >= origin_sampler
+                    .habitat()
+                    .get_habitat_at_location(lineage.indexed_location.location())
+            {
+                exceptional_lineages.push(ExceptionalLineage::OutOfDeme(lineage));
+                continue;
+            }
+
+            if lineage_store
+                .get_global_lineage_reference_at_indexed_location(
+                    &lineage.indexed_location,
+                    origin_sampler.habitat(),
+                )
+                .is_some()
+            {
+                exceptional_lineages.push(ExceptionalLineage::Coalescence(lineage));
+                continue;
+            }
+
             let turnover_rate = turnover_rate.get_turnover_rate_at_location(
                 lineage.indexed_location.location(),
                 origin_sampler.habitat(),
@@ -134,6 +192,7 @@ impl<
                 last_event_time,
                 marker: PhantomData::<(M, H, G, R, S, X, D, C, T, N, E, I)>,
             },
+            exceptional_lineages,
         )
     }
 }

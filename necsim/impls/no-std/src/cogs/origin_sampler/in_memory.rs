@@ -14,7 +14,7 @@ use crate::cogs::{
     habitat::in_memory::InMemoryHabitat, origin_sampler::pre_sampler::OriginPreSampler,
 };
 
-use super::OriginSampler;
+use super::{TrustedOriginSampler, UntrustedOriginSampler};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct InMemoryOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
@@ -51,7 +51,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> InMemoryOriginSampler<'h, M, I> 
 }
 
 #[contract_trait]
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> OriginSampler<'h, M>
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
     for InMemoryOriginSampler<'h, M, I>
 {
     type Habitat = InMemoryHabitat<M>;
@@ -71,6 +71,11 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> OriginSampler<'h, M>
                 * self.pre_sampler.get_sample_proportion().get()) as u64
         }
     }
+}
+
+unsafe impl<'h, M: MathsCore, I: Iterator<Item = u64>> TrustedOriginSampler<'h, M>
+    for InMemoryOriginSampler<'h, M, I>
+{
 }
 
 impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator for InMemoryOriginSampler<'h, M, I> {

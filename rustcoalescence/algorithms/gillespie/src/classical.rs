@@ -91,7 +91,7 @@ where
                 let event_sampler = UnconditionalEventSampler::default();
 
                 let (lineage_store, active_lineage_sampler): (Self::LineageStore, _) =
-                    IndividualAliasActiveLineageSampler::new_with_store(
+                    IndividualAliasActiveLineageSampler::init_with_store(
                         O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
                         &turnover_rate,
                     );
@@ -167,7 +167,7 @@ where
                 );
 
                 let (lineage_store, active_lineage_sampler): (Self::LineageStore, _) =
-                    IndividualAliasActiveLineageSampler::new_with_store(
+                    IndividualAliasActiveLineageSampler::init_with_store(
                         origin_sampler,
                         &turnover_rate,
                     );
@@ -270,7 +270,7 @@ where
                 let event_sampler = UnconditionalEventSampler::default();
 
                 let (lineage_store, active_lineage_sampler): (Self::LineageStore, _) =
-                    ClassicalActiveLineageSampler::new_with_store(O::sample_habitat(
+                    ClassicalActiveLineageSampler::init_with_store(O::sample_habitat(
                         &habitat,
                         pre_sampler,
                         origin_sampler_auxiliary,
@@ -349,7 +349,7 @@ where
                 );
 
                 let (lineage_store, active_lineage_sampler): (Self::LineageStore, _) =
-                    ClassicalActiveLineageSampler::new_with_store(origin_sampler);
+                    ClassicalActiveLineageSampler::init_with_store(origin_sampler);
 
                 let emigration_exit = DomainEmigrationExit::new(decomposition);
                 let immigration_entry = BufferedImmigrationEntry::default();
