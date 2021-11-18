@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 use necsim_core::{
@@ -9,7 +10,9 @@ use necsim_core::{
 };
 use necsim_core_bond::NonNegativeF64;
 
-use crate::cogs::lineage_store::independent::IndependentLineageStore;
+use crate::cogs::{
+    lineage_store::independent::IndependentLineageStore, origin_sampler::TrustedOriginSampler,
+};
 
 mod sampler;
 mod singular;
@@ -17,6 +20,8 @@ mod singular;
 pub mod event_time_sampler;
 
 use event_time_sampler::EventTimeSampler;
+
+use super::resuming::ExceptionalLineage;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
@@ -60,13 +65,70 @@ impl<
     > IndependentActiveLineageSampler<M, H, G, X, D, T, N, J>
 {
     #[must_use]
-    pub fn empty(event_time_sampler: J) -> Self {
-        Self {
-            active_lineage: None,
-            last_event_time: NonNegativeF64::zero(),
-            event_time_sampler,
-            marker: PhantomData::<(M, H, G, X, D, T, N)>,
+    pub fn init_with_store_and_lineages<'h, O: TrustedOriginSampler<'h, M, Habitat = H>>(
+        origin_sampler: O,
+        event_time_sampler: J,
+    ) -> (IndependentLineageStore<M, H>, Self, Vec<Lineage>)
+    where
+        H: 'h,
+    {
+        let (lineage_store, active_lineage_sampler, lineages, _) =
+            Self::resume_with_store_and_lineages(origin_sampler, event_time_sampler);
+
+        (lineage_store, active_lineage_sampler, lineages)
+    }
+
+    #[must_use]
+    pub fn resume_with_store_and_lineages<'h, O: TrustedOriginSampler<'h, M, Habitat = H>>(
+        mut origin_sampler: O,
+        event_time_sampler: J,
+    ) -> (
+        IndependentLineageStore<M, H>,
+        Self,
+        Vec<Lineage>,
+        Vec<ExceptionalLineage>,
+    )
+    where
+        H: 'h,
+    {
+        #[allow(clippy::cast_possible_truncation)]
+        let capacity = origin_sampler.full_upper_bound_size_hint() as usize;
+
+        let mut lineages = Vec::with_capacity(capacity);
+        let mut exceptional_lineages = Vec::new();
+
+        while let Some(lineage) = origin_sampler.next() {
+            if !origin_sampler
+                .habitat()
+                .contains(lineage.indexed_location.location())
+            {
+                exceptional_lineages.push(ExceptionalLineage::OutOfHabitat(lineage));
+                continue;
+            }
+
+            if lineage.indexed_location.index()
+                >= origin_sampler
+                    .habitat()
+                    .get_habitat_at_location(lineage.indexed_location.location())
+            {
+                exceptional_lineages.push(ExceptionalLineage::OutOfDeme(lineage));
+                continue;
+            }
+
+            lineages.push(lineage);
         }
+
+        (
+            IndependentLineageStore::default(),
+            Self {
+                active_lineage: None,
+                last_event_time: NonNegativeF64::zero(),
+                event_time_sampler,
+                marker: PhantomData::<(M, H, G, X, D, T, N)>,
+            },
+            lineages,
+            exceptional_lineages,
+        )
     }
 }
 

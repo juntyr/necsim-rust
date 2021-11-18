@@ -17,7 +17,7 @@ use necsim_partitioning_core::partition::Partition;
 use necsim_impls_no_std::{
     cogs::{
         dispersal_sampler::in_memory::InMemoryDispersalSampler,
-        origin_sampler::{pre_sampler::OriginPreSampler, OriginSampler},
+        origin_sampler::{pre_sampler::OriginPreSampler, TrustedOriginSampler},
     },
     decomposition::Decomposition,
 };
@@ -34,7 +34,7 @@ pub trait ScenarioParameters {
 
 pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioParameters {
     type Habitat: Habitat<M>;
-    type OriginSampler<'h, I: Iterator<Item = u64>>: OriginSampler<'h, M, Habitat = Self::Habitat>
+    type OriginSampler<'h, I: Iterator<Item = u64>>: TrustedOriginSampler<'h, M, Habitat = Self::Habitat>
     where
         M: 'h,
         Self: 'h;

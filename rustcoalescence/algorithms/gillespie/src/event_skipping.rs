@@ -98,7 +98,7 @@ where
                 let event_sampler = ConditionalGillespieEventSampler::default();
 
                 let (lineage_store, active_lineage_sampler): (Self::LineageStore, _) =
-                    LocationAliasActiveLineageSampler::new_with_store(
+                    LocationAliasActiveLineageSampler::init_with_store(
                         O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
                         &dispersal_sampler,
                         &coalescence_sampler,
@@ -180,7 +180,7 @@ where
                 );
 
                 let (lineage_store, active_lineage_sampler): (Self::LineageStore, _) =
-                    LocationAliasActiveLineageSampler::new_with_store(
+                    LocationAliasActiveLineageSampler::init_with_store(
                         origin_sampler,
                         &dispersal_sampler,
                         &coalescence_sampler,

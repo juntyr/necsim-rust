@@ -5,22 +5,19 @@ use necsim_core::{
     lineage::Lineage,
 };
 
-use crate::cogs::origin_sampler::pre_sampler::OriginPreSampler;
+use crate::cogs::origin_sampler::{pre_sampler::OriginPreSampler, TrustedOriginSampler};
 
-use super::OriginSampler;
+use super::UntrustedOriginSampler;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ResumingOriginSampler<
     'h,
-    'o,
     M: MathsCore,
     H: Habitat<M>,
     L: ExactSizeIterator<Item = Lineage>,
     I: Iterator<Item = u64>,
-    O: FnMut(Lineage),
 > {
     lineage_iterator: L,
-    oob_lineage_generator: &'o mut O,
     pre_sampler: OriginPreSampler<M, I>,
     last_index: u64,
     habitat: &'h H,
@@ -28,13 +25,11 @@ pub struct ResumingOriginSampler<
 
 impl<
         'h,
-        'o,
         M: MathsCore,
         H: Habitat<M>,
         L: ExactSizeIterator<Item = Lineage>,
         I: Iterator<Item = u64>,
-        O: FnMut(Lineage),
-    > fmt::Debug for ResumingOriginSampler<'h, 'o, M, H, L, I, O>
+    > fmt::Debug for ResumingOriginSampler<'h, M, H, L, I>
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(ResumingOriginSampler))
@@ -47,26 +42,16 @@ impl<
 
 impl<
         'h,
-        'o,
         M: MathsCore,
         H: Habitat<M>,
         L: ExactSizeIterator<Item = Lineage>,
         I: Iterator<Item = u64>,
-        O: FnMut(Lineage),
-    > ResumingOriginSampler<'h, 'o, M, H, L, I, O>
+    > ResumingOriginSampler<'h, M, H, L, I>
 {
     #[must_use]
-    pub fn new(
-        lineage_iterator: L,
-        pre_sampler: OriginPreSampler<M, I>,
-        habitat: &'h H,
-        oob_lineage_generator: &'o mut O,
-    ) -> Self {
-        // TODO: the output of this sampler could be further sampled, so the
-        //       oob generator might contain out-of-partition items
+    pub fn new(lineage_iterator: L, pre_sampler: OriginPreSampler<M, I>, habitat: &'h H) -> Self {
         Self {
             lineage_iterator,
-            oob_lineage_generator,
             pre_sampler,
             last_index: 0_u64,
             habitat,
@@ -77,13 +62,11 @@ impl<
 #[contract_trait]
 impl<
         'h,
-        'o,
         M: MathsCore,
         H: Habitat<M>,
         L: ExactSizeIterator<Item = Lineage>,
         I: Iterator<Item = u64>,
-        O: FnMut(Lineage),
-    > OriginSampler<'h, M> for ResumingOriginSampler<'h, 'o, M, H, L, I, O>
+    > UntrustedOriginSampler<'h, M> for ResumingOriginSampler<'h, M, H, L, I>
 {
     type Habitat = H;
 
@@ -107,41 +90,33 @@ impl<
 
 impl<
         'h,
-        'o,
         M: MathsCore,
         H: Habitat<M>,
         L: ExactSizeIterator<Item = Lineage>,
         I: Iterator<Item = u64>,
-        O: FnMut(Lineage),
-    > Iterator for ResumingOriginSampler<'h, 'o, M, H, L, I, O>
+    > !TrustedOriginSampler<'h, M> for ResumingOriginSampler<'h, M, H, L, I>
+{
+}
+
+impl<
+        'h,
+        M: MathsCore,
+        H: Habitat<M>,
+        L: ExactSizeIterator<Item = Lineage>,
+        I: Iterator<Item = u64>,
+    > Iterator for ResumingOriginSampler<'h, M, H, L, I>
 {
     type Item = Lineage;
 
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            let next_index = self.pre_sampler.next()?;
-            let index_difference = next_index - self.last_index;
-            self.last_index = next_index + 1;
+        let next_index = self.pre_sampler.next()?;
+        let index_difference = next_index - self.last_index;
+        self.last_index = next_index + 1;
 
-            for _ in 0..index_difference {
-                self.lineage_iterator.next()?;
-            }
-
-            let lineage = self.lineage_iterator.next()?;
-
-            #[allow(clippy::redundant_else)]
-            if self.habitat.contains(lineage.indexed_location.location())
-                && lineage.indexed_location.index()
-                    < self
-                        .habitat
-                        .get_habitat_at_location(lineage.indexed_location.location())
-            {
-                // if the lineage is inside the habitat, return it
-                return Some(lineage);
-            } else {
-                // otherwise push the lineage to the oob generator
-                (self.oob_lineage_generator)(lineage);
-            }
+        for _ in 0..index_difference {
+            self.lineage_iterator.next()?;
         }
+
+        self.lineage_iterator.next()
     }
 }

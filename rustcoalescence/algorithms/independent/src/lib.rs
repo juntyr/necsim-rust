@@ -11,9 +11,7 @@ use arguments::{
     ProbabilisticParallelismMode,
 };
 use necsim_core::{
-    lineage::{GlobalLineageReference, Lineage},
-    reporter::Reporter,
-    simulation::SimulationBuilder,
+    lineage::GlobalLineageReference, reporter::Reporter, simulation::SimulationBuilder,
 };
 use necsim_core_bond::NonNegativeF64;
 use necsim_core_maths::IntrinsicsMathsCore;
@@ -98,40 +96,43 @@ impl<
                     O::Habitat,
                     WyHash<Self::MathsCore>,
                 >>();
-                let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
                 let event_sampler = IndependentEventSampler::default();
 
-                let lineages: Vec<Lineage> = match args.parallelism_mode {
+                let (lineage_store, active_lineage_sampler, lineages) = match args.parallelism_mode
+                {
                     // Apply no lineage origin partitioning in the `Monolithic` mode
                     ParallelismMode::Monolithic(..) => {
-                        O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary).collect()
+                        IndependentActiveLineageSampler::init_with_store_and_lineages(
+                            O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
+                            PoissonEventTimeSampler::new(args.delta_t),
+                        )
                     },
                     // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
                     ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode {
                         partition,
                         ..
-                    }) => O::sample_habitat(
-                        &habitat,
-                        pre_sampler.partition(partition),
-                        origin_sampler_auxiliary,
-                    )
-                    .collect(),
+                    }) => IndependentActiveLineageSampler::init_with_store_and_lineages(
+                        O::sample_habitat(
+                            &habitat,
+                            pre_sampler.partition(partition),
+                            origin_sampler_auxiliary,
+                        ),
+                        PoissonEventTimeSampler::new(args.delta_t),
+                    ),
                     // Apply lineage origin partitioning in the `IsolatedLandscape` mode
                     ParallelismMode::IsolatedLandscape(IsolatedParallelismMode {
                         partition,
                         ..
-                    }) => DecompositionOriginSampler::new(
-                        O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
-                        &O::decompose(&habitat, partition, decomposition_auxiliary),
-                    )
-                    .collect(),
+                    }) => IndependentActiveLineageSampler::init_with_store_and_lineages(
+                        DecompositionOriginSampler::new(
+                            O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
+                            &O::decompose(&habitat, partition, decomposition_auxiliary),
+                        ),
+                        PoissonEventTimeSampler::new(args.delta_t),
+                    ),
                     _ => unsafe { std::hint::unreachable_unchecked() },
                 };
-
-                let active_lineage_sampler = IndependentActiveLineageSampler::empty(
-                    PoissonEventTimeSampler::new(args.delta_t),
-                );
 
                 let emigration_exit = NeverEmigrationExit::default();
                 let immigration_entry = NeverImmigrationEntry::default();
@@ -188,20 +189,18 @@ impl<
                     O::Habitat,
                     WyHash<Self::MathsCore>,
                 >>();
-                let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
                 let event_sampler = IndependentEventSampler::default();
 
-                let lineages: Vec<Lineage> = O::sample_habitat(
-                    &habitat,
-                    pre_sampler.partition(local_partition.get_partition()),
-                    origin_sampler_auxiliary,
-                )
-                .collect();
-
-                let active_lineage_sampler = IndependentActiveLineageSampler::empty(
-                    PoissonEventTimeSampler::new(args.delta_t),
-                );
+                let (lineage_store, active_lineage_sampler, lineages) =
+                    IndependentActiveLineageSampler::init_with_store_and_lineages(
+                        O::sample_habitat(
+                            &habitat,
+                            pre_sampler.partition(local_partition.get_partition()),
+                            origin_sampler_auxiliary,
+                        ),
+                        PoissonEventTimeSampler::new(args.delta_t),
+                    );
 
                 let emigration_exit = NeverEmigrationExit::default();
                 let immigration_entry = NeverImmigrationEntry::default();
@@ -248,7 +247,6 @@ impl<
                     O::Habitat,
                     WyHash<Self::MathsCore>,
                 >>();
-                let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
                 let event_sampler = IndependentEventSampler::default();
 
@@ -257,15 +255,15 @@ impl<
                     local_partition.get_partition(),
                     decomposition_auxiliary,
                 );
-                let lineages: Vec<Lineage> = DecompositionOriginSampler::new(
-                    O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
-                    &decomposition,
-                )
-                .collect();
 
-                let active_lineage_sampler = IndependentActiveLineageSampler::empty(
-                    PoissonEventTimeSampler::new(args.delta_t),
-                );
+                let (lineage_store, active_lineage_sampler, lineages) =
+                    IndependentActiveLineageSampler::init_with_store_and_lineages(
+                        DecompositionOriginSampler::new(
+                            O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
+                            &decomposition,
+                        ),
+                        PoissonEventTimeSampler::new(args.delta_t),
+                    );
 
                 let emigration_exit = IndependentEmigrationExit::new(
                     decomposition,
@@ -317,7 +315,6 @@ impl<
                     O::Habitat,
                     WyHash<Self::MathsCore>,
                 >>();
-                let lineage_store = IndependentLineageStore::default();
                 let coalescence_sampler = IndependentCoalescenceSampler::default();
                 let event_sampler = IndependentEventSampler::default();
 
@@ -326,15 +323,15 @@ impl<
                     local_partition.get_partition(),
                     decomposition_auxiliary,
                 );
-                let lineages: Vec<Lineage> = DecompositionOriginSampler::new(
-                    O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
-                    &decomposition,
-                )
-                .collect();
 
-                let active_lineage_sampler = IndependentActiveLineageSampler::empty(
-                    PoissonEventTimeSampler::new(args.delta_t),
-                );
+                let (lineage_store, active_lineage_sampler, lineages) =
+                    IndependentActiveLineageSampler::init_with_store_and_lineages(
+                        DecompositionOriginSampler::new(
+                            O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
+                            &decomposition,
+                        ),
+                        PoissonEventTimeSampler::new(args.delta_t),
+                    );
 
                 let emigration_exit = IndependentEmigrationExit::new(
                     decomposition,
