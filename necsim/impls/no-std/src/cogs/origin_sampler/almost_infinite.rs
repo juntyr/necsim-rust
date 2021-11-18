@@ -10,7 +10,7 @@ use crate::cogs::{
     habitat::almost_infinite::AlmostInfiniteHabitat, origin_sampler::pre_sampler::OriginPreSampler,
 };
 
-use super::OriginSampler;
+use super::{TrustedOriginSampler, UntrustedOriginSampler};
 
 const HABITAT_CENTRE: u32 = u32::MAX / 2;
 
@@ -74,7 +74,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteOriginSampler<'h, 
 }
 
 #[contract_trait]
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> OriginSampler<'h, M>
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
     for AlmostInfiniteOriginSampler<'h, M, I>
 {
     type Habitat = AlmostInfiniteHabitat<M>;
@@ -86,6 +86,11 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> OriginSampler<'h, M>
     fn full_upper_bound_size_hint(&self) -> u64 {
         self.upper_bound_size_hint
     }
+}
+
+unsafe impl<'h, M: MathsCore, I: Iterator<Item = u64>> TrustedOriginSampler<'h, M>
+    for AlmostInfiniteOriginSampler<'h, M, I>
+{
 }
 
 impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator for AlmostInfiniteOriginSampler<'h, M, I> {

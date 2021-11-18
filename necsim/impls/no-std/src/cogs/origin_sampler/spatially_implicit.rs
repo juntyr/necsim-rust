@@ -7,7 +7,7 @@ use crate::cogs::{
     origin_sampler::{non_spatial::NonSpatialOriginSampler, pre_sampler::OriginPreSampler},
 };
 
-use super::OriginSampler;
+use super::{TrustedOriginSampler, UntrustedOriginSampler};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct SpatiallyImplicitOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
@@ -40,7 +40,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> SpatiallyImplicitOriginSampler<'
 }
 
 #[contract_trait]
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> OriginSampler<'h, M>
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
     for SpatiallyImplicitOriginSampler<'h, M, I>
 {
     type Habitat = SpatiallyImplicitHabitat<M>;
@@ -52,6 +52,11 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> OriginSampler<'h, M>
     fn full_upper_bound_size_hint(&self) -> u64 {
         self.local_iterator.full_upper_bound_size_hint()
     }
+}
+
+unsafe impl<'h, M: MathsCore, I: Iterator<Item = u64>> TrustedOriginSampler<'h, M>
+    for SpatiallyImplicitOriginSampler<'h, M, I>
+{
 }
 
 impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator

@@ -4,14 +4,14 @@ use necsim_core::{cogs::MathsCore, lineage::Lineage};
 
 use crate::decomposition::Decomposition;
 
-use super::OriginSampler;
+use super::{TrustedOriginSampler, UntrustedOriginSampler};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct DecompositionOriginSampler<
     'd,
     M: MathsCore,
-    O: OriginSampler<'d, M>,
+    O: UntrustedOriginSampler<'d, M>,
     D: Decomposition<M, O::Habitat>,
 > {
     origin_sampler: O,
@@ -19,7 +19,7 @@ pub struct DecompositionOriginSampler<
     _marker: PhantomData<M>,
 }
 
-impl<'d, M: MathsCore, O: OriginSampler<'d, M>, D: Decomposition<M, O::Habitat>>
+impl<'d, M: MathsCore, O: UntrustedOriginSampler<'d, M>, D: Decomposition<M, O::Habitat>>
     DecompositionOriginSampler<'d, M, O, D>
 {
     #[must_use]
@@ -33,8 +33,8 @@ impl<'d, M: MathsCore, O: OriginSampler<'d, M>, D: Decomposition<M, O::Habitat>>
 }
 
 #[contract_trait]
-impl<'d, M: MathsCore, O: OriginSampler<'d, M>, D: Decomposition<M, O::Habitat>>
-    OriginSampler<'d, M> for DecompositionOriginSampler<'d, M, O, D>
+impl<'d, M: MathsCore, O: UntrustedOriginSampler<'d, M>, D: Decomposition<M, O::Habitat>>
+    UntrustedOriginSampler<'d, M> for DecompositionOriginSampler<'d, M, O, D>
 {
     type Habitat = O::Habitat;
 
@@ -55,7 +55,12 @@ impl<'d, M: MathsCore, O: OriginSampler<'d, M>, D: Decomposition<M, O::Habitat>>
     }
 }
 
-impl<'d, M: MathsCore, O: OriginSampler<'d, M>, D: Decomposition<M, O::Habitat>> Iterator
+unsafe impl<'d, M: MathsCore, O: TrustedOriginSampler<'d, M>, D: Decomposition<M, O::Habitat>>
+    TrustedOriginSampler<'d, M> for DecompositionOriginSampler<'d, M, O, D>
+{
+}
+
+impl<'d, M: MathsCore, O: UntrustedOriginSampler<'d, M>, D: Decomposition<M, O::Habitat>> Iterator
     for DecompositionOriginSampler<'d, M, O, D>
 {
     type Item = Lineage;
