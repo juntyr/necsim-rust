@@ -7,7 +7,7 @@ use necsim_core::lineage::Lineage;
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
 use crate::args::{
-    parse::{into_ron_str, ron_config},
+    parse::{into_ron_str, try_print},
     ser::BufferingSerializeResult,
     CommandArgs, Pause, Sample, SampleDestiny,
 };
@@ -94,9 +94,7 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
             .pause(&Option::<Pause>::None)
             .build()
             .map_err(anyhow::Error::new)
-            .and_then(|resume_args| {
-                ron::ser::to_string_pretty(&resume_args, ron_config()).map_err(anyhow::Error::new)
-            })
+            .and_then(|resume_args| try_print(&resume_args))
             .context("Failed to generate the config to resume the simulation.")?;
 
         pause
