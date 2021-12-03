@@ -6,7 +6,7 @@ use necsim_core::{event::TypedEvent, reporter::Reporter};
 use necsim_plugins_core::match_any_reporter_plugin_vec;
 
 use crate::args::{
-    parse::{into_ron_str, ron_config, try_parse},
+    parse::{into_ron_str, try_parse, try_print},
     CommandArgs, ReplayArgs,
 };
 
@@ -16,8 +16,8 @@ pub fn replay_with_logger(replay_args: CommandArgs) -> Result<()> {
 
     let replay_args: ReplayArgs = try_parse("replay", &into_ron_str(replay_args))?;
 
-    let config_str = ron::ser::to_string_pretty(&replay_args, ron_config())
-        .context("Failed to normalise the event replay config.")?;
+    let config_str =
+        try_print(&replay_args).context("Failed to normalise the event replay config.")?;
 
     println!("\n{:=^80}\n", " Replay Configuration ");
     println!("{}", config_str.trim_start_matches("Replay"));

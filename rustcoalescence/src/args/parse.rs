@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
-use ron::{extensions::Extensions, ser::PrettyConfig};
-use serde::Deserialize;
+use ron::{extensions::Extensions, ser::PrettyConfig, Options};
+use serde::{Deserialize, Serialize};
 use serde_state::DeserializeState;
 
 use super::CommandArgs;
@@ -16,9 +16,14 @@ pub fn into_ron_str(command_args: CommandArgs) -> String {
 
     let ron_args_trimmed = ron_args.trim();
 
-    let mut ron_args =
-        String::from("#![enable(unwrap_variant_newtypes, unwrap_newtypes, implicit_some)]");
-    ron_args.reserve(ron_args_trimmed.len());
+    let mut ron_args = String::with_capacity(
+        ron_args_trimmed.len()
+            + if ron_args_trimmed.starts_with('(') {
+                2
+            } else {
+                0
+            },
+    );
 
     if !ron_args_trimmed.starts_with('(') {
         ron_args.push('(');
@@ -31,26 +36,22 @@ pub fn into_ron_str(command_args: CommandArgs) -> String {
     ron_args
 }
 
-pub fn ron_config() -> PrettyConfig {
-    PrettyConfig::default()
-        .decimal_floats(true)
-        .struct_names(true)
-        .extensions(
-            Extensions::UNWRAP_VARIANT_NEWTYPES
-                | Extensions::UNWRAP_NEWTYPES
-                | Extensions::IMPLICIT_SOME,
-        )
-        .output_extensions(false)
+fn ron_options() -> Options {
+    Options::default()
+        .with_default_extension(Extensions::IMPLICIT_SOME)
+        .with_default_extension(Extensions::UNWRAP_NEWTYPES)
+        .with_default_extension(Extensions::UNWRAP_VARIANT_NEWTYPES)
 }
 
 #[allow(clippy::module_name_repetitions)]
 pub fn try_parse<'de, D: Deserialize<'de>>(subcommand: &str, ron_args: &'de str) -> Result<D> {
-    let mut de_ron = ron::Deserializer::from_str(ron_args).with_context(|| {
-        format!(
-            "Failed to create the {} subcommand argument parser.",
-            subcommand
-        )
-    })?;
+    let mut de_ron = ron::Deserializer::from_str_with_options(ron_args, ron_options())
+        .with_context(|| {
+            format!(
+                "Failed to create the {} subcommand argument parser.",
+                subcommand
+            )
+        })?;
 
     let mut track = serde_path_to_error::Track::new();
     let de = serde_path_to_error::Deserializer::new(&mut de_ron, &mut track);
@@ -78,12 +79,13 @@ pub fn try_parse_state<'de, D: DeserializeState<'de, Seed>, Seed: ?Sized>(
     ron_args: &'de str,
     seed: &'de mut Seed,
 ) -> Result<D> {
-    let mut de_ron = ron::Deserializer::from_str(ron_args).with_context(|| {
-        format!(
-            "Failed to create the {} subcommand argument parser.",
-            subcommand
-        )
-    })?;
+    let mut de_ron = ron::Deserializer::from_str_with_options(ron_args, ron_options())
+        .with_context(|| {
+            format!(
+                "Failed to create the {} subcommand argument parser.",
+                subcommand
+            )
+        })?;
 
     let mut track = serde_path_to_error::Track::new();
     let de = serde_path_to_error::Deserializer::new(&mut de_ron, &mut track);
@@ -104,4 +106,15 @@ pub fn try_parse_state<'de, D: DeserializeState<'de, Seed>, Seed: ?Sized>(
         },
     }
     .with_context(|| format!("Failed to parse the {} subcommand arguments.", subcommand))
+}
+
+pub fn try_print<S: Serialize>(value: &S) -> Result<String> {
+    ron_options()
+        .to_string_pretty(
+            value,
+            PrettyConfig::default()
+                .decimal_floats(true)
+                .struct_names(true),
+        )
+        .map_err(anyhow::Error::new)
 }

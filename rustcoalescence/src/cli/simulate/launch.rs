@@ -9,7 +9,7 @@ use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_scenarios::Scenario;
 
-use crate::args::{parse::ron_config, Sample};
+use crate::args::{parse::try_print, Sample};
 
 use super::BufferingSimulateArgsBuilder;
 
@@ -37,9 +37,7 @@ where
     let config_str = normalised_args
         .build()
         .map_err(anyhow::Error::new)
-        .and_then(|simulate_args| {
-            ron::ser::to_string_pretty(&simulate_args, ron_config()).map_err(anyhow::Error::new)
-        })
+        .and_then(|simulate_args| try_print(&simulate_args))
         .context("Failed to normalise the simulation config.")?;
 
     if log::log_enabled!(log::Level::Info) {
