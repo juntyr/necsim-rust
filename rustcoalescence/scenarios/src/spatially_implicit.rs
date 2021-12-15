@@ -54,7 +54,10 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyImplicitScenario<M
     type Habitat = SpatiallyImplicitHabitat<M>;
     type LineageReference = InMemoryLineageReference;
     type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>> = L;
-    type OriginSampler<'h, I: Iterator<Item = u64>> = SpatiallyImplicitOriginSampler<'h, M, I>;
+    type OriginSampler<'h, I: Iterator<Item = u64>>
+    where
+        G: 'h,
+    = SpatiallyImplicitOriginSampler<'h, M, I>;
     type SpeciationProbability = SpatiallyImplicitSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
 

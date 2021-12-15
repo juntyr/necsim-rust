@@ -27,7 +27,10 @@ pub enum MpiLocalPartition<R: Reporter> {
 
 #[contract_trait]
 impl<R: Reporter> LocalPartition<R> for MpiLocalPartition<R> {
-    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
+    type ImmigrantIterator<'a>
+    where
+        R: 'a,
+    = ImmigrantPopIterator<'a>;
     type IsLive = False;
     type Reporter = Self;
 

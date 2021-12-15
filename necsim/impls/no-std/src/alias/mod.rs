@@ -15,6 +15,7 @@ pub struct AliasMethodSampler<E: Copy + PartialEq> {
 }
 
 impl<E: Copy + PartialEq> AliasMethodSampler<E> {
+    #[allow(clippy::no_effect_underscore_binding)]
     #[debug_requires(!event_weights.is_empty(), "event_weights is non-empty")]
     #[debug_ensures(
         ret.Es.iter().eq(old(event_weights).iter().map(|(e, _p)| e)),

@@ -11,6 +11,7 @@ use crate::{
 };
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
+#[allow(clippy::no_effect_underscore_binding)]
 #[contract_trait]
 pub trait ActiveLineageSampler<
     M: MathsCore,
@@ -27,7 +28,12 @@ pub trait ActiveLineageSampler<
     I: ImmigrationEntry<M>,
 >: crate::cogs::Backup + core::fmt::Debug
 {
-    type LineageIterator<'a>: Iterator<Item = &'a Lineage>;
+    type LineageIterator<'a>: Iterator<Item = &'a Lineage>
+    where
+        M: 'a,
+        H: 'a,
+        S: 'a,
+        Self: 'a;
 
     #[must_use]
     fn number_active_lineages(&self) -> usize;

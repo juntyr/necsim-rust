@@ -11,7 +11,10 @@ use crate::{
 pub trait LineageStore<M: MathsCore, H: Habitat<M>, R: LineageReference<M, H>>:
     crate::cogs::Backup + Sized + core::fmt::Debug
 {
-    type LineageReferenceIterator<'a>: Iterator<Item = R>;
+    type LineageReferenceIterator<'a>: Iterator<Item = R>
+    where
+        M: 'a,
+        Self: 'a;
 
     #[must_use]
     fn from_origin_sampler<'h, O: OriginSampler<'h, M, Habitat = H>>(origin_sampler: O) -> Self
@@ -26,6 +29,7 @@ pub trait LineageStore<M: MathsCore, H: Habitat<M>, R: LineageReference<M, H>>:
 }
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
+#[allow(clippy::no_effect_underscore_binding)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
 pub trait LocallyCoherentLineageStore<M: MathsCore, H: Habitat<M>, R: LineageReference<M, H>>:
@@ -82,12 +86,16 @@ pub trait LocallyCoherentLineageStore<M: MathsCore, H: Habitat<M>, R: LineageRef
 }
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
+#[allow(clippy::no_effect_underscore_binding)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
 pub trait GloballyCoherentLineageStore<M: MathsCore, H: Habitat<M>, R: LineageReference<M, H>>:
     LocallyCoherentLineageStore<M, H, R>
 {
-    type LocationIterator<'a>: Iterator<Item = Location>;
+    type LocationIterator<'a>: Iterator<Item = Location>
+    where
+        M: 'a,
+        Self: 'a;
 
     #[must_use]
     fn iter_active_locations(&self, habitat: &H) -> Self::LocationIterator<'_>;

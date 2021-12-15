@@ -98,7 +98,10 @@ pub enum MonolithicLocalPartition<R: Reporter> {
 
 #[contract_trait]
 impl<R: Reporter> LocalPartition<R> for MonolithicLocalPartition<R> {
-    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
+    type ImmigrantIterator<'a>
+    where
+        R: 'a,
+    = ImmigrantPopIterator<'a>;
     // pessimistic
     type IsLive = True;
     type Reporter = Self;

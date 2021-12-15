@@ -24,6 +24,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
 {
     /// Creates a new `InMemoryCumulativeDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
+    #[allow(clippy::no_effect_underscore_binding)]
     #[debug_ensures(ret
         .explicit_only_valid_targets_dispersal_contract(old(habitat)),
         "valid_dispersal_targets only allows dispersal to habitat"
