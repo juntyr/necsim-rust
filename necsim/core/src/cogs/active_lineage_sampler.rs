@@ -59,11 +59,11 @@ pub trait ActiveLineageSampler<
         },
     }, "removes an active lineage if `Some(_)` returned")]
     #[debug_ensures(
-        old(self.number_active_lineages()) == 0 -> ret.is_none(),
-        "returns `None` of no lineages are left"
+        old(self.number_active_lineages()) != 0 || ret.is_none(),
+        "returns `None` if no lineages are left"
     )]
     #[debug_ensures(
-        ret.is_some() -> ret.as_ref().unwrap().1 > old(self.get_last_event_time()),
+        ret.is_none() || ret.as_ref().unwrap().1 > old(self.get_last_event_time()),
         "event occurs later than last event time"
     )]
     #[debug_ensures(if let Some((ref _lineage, event_time)) = ret {
