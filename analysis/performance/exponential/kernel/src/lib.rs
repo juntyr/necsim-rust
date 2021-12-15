@@ -5,6 +5,7 @@
 #![cfg_attr(target_os = "cuda", feature(panic_info_message))]
 #![cfg_attr(target_os = "cuda", feature(atomic_from_mut))]
 #![cfg_attr(target_os = "cuda", feature(asm))]
+#![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![cfg_attr(target_os = "cuda", feature(stdsimd))]
 #![allow(clippy::type_complexity)]
 
