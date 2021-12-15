@@ -101,11 +101,14 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteScenario<M, G
         )
     }
 
-    fn sample_habitat<I: Iterator<Item = u64>>(
-        habitat: &Self::Habitat,
+    fn sample_habitat<'h, I: Iterator<Item = u64>>(
+        habitat: &'h Self::Habitat,
         pre_sampler: OriginPreSampler<M, I>,
         (radius,): Self::OriginSamplerAuxiliary,
-    ) -> Self::OriginSampler<'_, I> {
+    ) -> Self::OriginSampler<'h, I>
+    where
+        G: 'h,
+    {
         AlmostInfiniteOriginSampler::new(pre_sampler, habitat, radius)
     }
 
