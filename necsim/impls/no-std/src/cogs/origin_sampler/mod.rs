@@ -26,6 +26,7 @@ pub trait UntrustedOriginSampler<'h, M: MathsCore>:
     fn full_upper_bound_size_hint(&self) -> u64;
 }
 
+/// # Safety
 /// `Lineage`s produced by the sampler's iterator must have
 /// * unique global references
 /// * unique indexed locations
