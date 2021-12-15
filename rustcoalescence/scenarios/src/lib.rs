@@ -34,9 +34,14 @@ pub trait ScenarioParameters {
 
 pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioParameters {
     type Habitat: Habitat<M>;
-    type OriginSampler<'h, I: Iterator<Item = u64>>: TrustedOriginSampler<'h, M, Habitat = Self::Habitat>
+    type OriginSampler<'h, I: Iterator<Item = u64>>: TrustedOriginSampler<
+        'h,
+        M,
+        Habitat = Self::Habitat,
+    >
     where
         M: 'h,
+        G: 'h,
         Self: 'h;
     type OriginSamplerAuxiliary;
     type Decomposition: Decomposition<M, Self::Habitat>;
@@ -77,11 +82,13 @@ pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioParameters {
         Self::DecompositionAuxiliary,
     );
 
-    fn sample_habitat<I: Iterator<Item = u64>>(
-        habitat: &Self::Habitat,
+    fn sample_habitat<'h, I: Iterator<Item = u64>>(
+        habitat: &'h Self::Habitat,
         pre_sampler: OriginPreSampler<M, I>,
         auxiliary: Self::OriginSamplerAuxiliary,
-    ) -> Self::OriginSampler<'_, I>;
+    ) -> Self::OriginSampler<'h, I>
+    where
+        G: 'h;
 
     fn decompose(
         habitat: &Self::Habitat,

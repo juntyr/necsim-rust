@@ -95,11 +95,14 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for NonSpatialScenario<M, G> {
         )
     }
 
-    fn sample_habitat<I: Iterator<Item = u64>>(
-        habitat: &Self::Habitat,
+    fn sample_habitat<'h, I: Iterator<Item = u64>>(
+        habitat: &'h Self::Habitat,
         pre_sampler: OriginPreSampler<M, I>,
         _auxiliary: Self::OriginSamplerAuxiliary,
-    ) -> Self::OriginSampler<'_, I> {
+    ) -> Self::OriginSampler<'h, I>
+    where
+        G: 'h,
+    {
         NonSpatialOriginSampler::new(pre_sampler, habitat)
     }
 
