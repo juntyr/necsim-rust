@@ -16,7 +16,10 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
     for GillespieLineageStore<M, H>
 {
     #[allow(clippy::type_complexity)]
-    type LineageReferenceIterator<'a> = impl Iterator<Item = InMemoryLineageReference>;
+    type LineageReferenceIterator<'a>
+    where
+        H: 'a,
+    = impl Iterator<Item = InMemoryLineageReference>;
 
     fn from_origin_sampler<'h, O: OriginSampler<'h, M, Habitat = H>>(origin_sampler: O) -> Self
     where
@@ -25,7 +28,6 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
         Self::new(origin_sampler)
     }
 
-    #[must_use]
     #[must_use]
     fn iter_local_lineage_references(&self) -> Self::LineageReferenceIterator<'_> {
         self.lineages_store
@@ -123,7 +125,10 @@ impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H, InMemoryLine
 impl<M: MathsCore, H: Habitat<M>> GloballyCoherentLineageStore<M, H, InMemoryLineageReference>
     for GillespieLineageStore<M, H>
 {
-    type LocationIterator<'a> = impl Iterator<Item = Location>;
+    type LocationIterator<'a>
+    where
+        H: 'a,
+    = impl Iterator<Item = Location>;
 
     #[must_use]
     fn iter_active_locations(&self, habitat: &H) -> Self::LocationIterator<'_> {

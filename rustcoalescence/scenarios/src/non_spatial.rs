@@ -47,7 +47,10 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for NonSpatialScenario<M, G> {
     type Habitat = NonSpatialHabitat<M>;
     type LineageReference = InMemoryLineageReference;
     type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>> = L;
-    type OriginSampler<'h, I: Iterator<Item = u64>> = NonSpatialOriginSampler<'h, M, I>;
+    type OriginSampler<'h, I: Iterator<Item = u64>>
+    where
+        G: 'h,
+    = NonSpatialOriginSampler<'h, M, I>;
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
 

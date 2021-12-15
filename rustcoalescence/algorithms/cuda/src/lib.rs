@@ -1,5 +1,4 @@
 #![deny(clippy::pedantic)]
-#![feature(option_result_unwrap_unchecked)]
 #![feature(drain_filter)]
 #![feature(associated_type_defaults)]
 #![feature(const_eval_limit)]

@@ -34,7 +34,10 @@ impl<M: MathsCore, H: Habitat<M>> Backup for IndependentLineageStore<M, H> {
 impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, GlobalLineageReference>
     for IndependentLineageStore<M, H>
 {
-    type LineageReferenceIterator<'a> = impl Iterator<Item = GlobalLineageReference>;
+    type LineageReferenceIterator<'a>
+    where
+        H: 'a,
+    = impl Iterator<Item = GlobalLineageReference>;
 
     fn from_origin_sampler<'h, O: OriginSampler<'h, M, Habitat = H>>(_origin_sampler: O) -> Self
     where
@@ -43,7 +46,6 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, GlobalLineageReference>
         Self::default()
     }
 
-    #[must_use]
     #[must_use]
     fn iter_local_lineage_references(&self) -> Self::LineageReferenceIterator<'_> {
         core::iter::empty()

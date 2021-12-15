@@ -1,10 +1,7 @@
 use std::collections::VecDeque;
 
 use necsim_core_bond::NonNegativeF64;
-use tskit::{
-    provenance::Provenance, IndividualId, NodeId, TableOutputOptions, TableSortOptions,
-    TreeSequenceFlags,
-};
+use tskit::{IndividualId, NodeId, TableOutputOptions, TableSortOptions, TreeSequenceFlags};
 
 use necsim_core::{landscape::IndexedLocation, lineage::GlobalLineageReference};
 

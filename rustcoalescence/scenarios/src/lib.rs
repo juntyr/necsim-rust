@@ -34,7 +34,10 @@ pub trait ScenarioParameters {
 
 pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioParameters {
     type Habitat: Habitat<M>;
-    type OriginSampler<'h, I: Iterator<Item = u64>>: OriginSampler<'h, M, Habitat = Self::Habitat>;
+    type OriginSampler<'h, I: Iterator<Item = u64>>: OriginSampler<'h, M, Habitat = Self::Habitat>
+    where
+        M: 'h,
+        Self: 'h;
     type Decomposition: Decomposition<M, Self::Habitat>;
     type LineageReference: LineageReference<M, Self::Habitat>;
     type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>>: LineageStore<

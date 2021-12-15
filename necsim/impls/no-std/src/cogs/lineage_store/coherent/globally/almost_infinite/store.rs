@@ -27,7 +27,6 @@ impl<M: MathsCore> LineageStore<M, AlmostInfiniteHabitat<M>, InMemoryLineageRefe
     }
 
     #[must_use]
-    #[must_use]
     fn iter_local_lineage_references(&self) -> Self::LineageReferenceIterator<'_> {
         self.lineages_store
             .iter()

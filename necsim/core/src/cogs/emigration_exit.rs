@@ -12,6 +12,7 @@ use crate::{
     clippy::inline_fn_without_body,
     clippy::too_many_arguments
 )]
+#[allow(clippy::no_effect_underscore_binding)]
 #[contract_trait]
 pub trait EmigrationExit<
     M: MathsCore,

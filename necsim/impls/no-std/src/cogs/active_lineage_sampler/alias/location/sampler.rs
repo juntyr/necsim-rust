@@ -33,7 +33,20 @@ impl<
     > ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
     for LocationAliasActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
 {
-    type LineageIterator<'a> = impl Iterator<Item = &'a Lineage>;
+    type LineageIterator<'a>
+    where
+        H: 'a,
+        G: 'a,
+        R: 'a,
+        S: 'a,
+        X: 'a,
+        D: 'a,
+        C: 'a,
+        T: 'a,
+        N: 'a,
+        E: 'a,
+        I: 'a,
+    = impl Iterator<Item = &'a Lineage>;
 
     #[must_use]
     fn number_active_lineages(&self) -> usize {

@@ -12,7 +12,10 @@ use super::ClassicalLineageStore;
 impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
     for ClassicalLineageStore<M, H>
 {
-    type LineageReferenceIterator<'a> = impl Iterator<Item = InMemoryLineageReference>;
+    type LineageReferenceIterator<'a>
+    where
+        H: 'a,
+    = impl Iterator<Item = InMemoryLineageReference>;
 
     fn from_origin_sampler<'h, O: OriginSampler<'h, M, Habitat = H>>(origin_sampler: O) -> Self
     where
@@ -21,7 +24,6 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
         Self::new(origin_sampler)
     }
 
-    #[must_use]
     #[must_use]
     fn iter_local_lineage_references(&self) -> Self::LineageReferenceIterator<'_> {
         self.lineages_store

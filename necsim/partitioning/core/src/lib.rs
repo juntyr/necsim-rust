@@ -56,7 +56,9 @@ pub enum MigrationMode {
 pub trait LocalPartition<R: Reporter>: Sized {
     type Reporter: Reporter;
     type IsLive: Boolean;
-    type ImmigrantIterator<'a>: Iterator<Item = MigratingLineage>;
+    type ImmigrantIterator<'a>: Iterator<Item = MigratingLineage>
+    where
+        Self: 'a;
 
     fn get_reporter(&mut self) -> &mut Self::Reporter;
 

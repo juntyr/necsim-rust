@@ -71,12 +71,12 @@ impl<R: Reporter> Drop for MpiRootPartition<R> {
 
         for request in self.emigration_requests.iter_mut() {
             if let Some(request) = request.take() {
-                CancelGuard::from(request);
+                std::mem::drop(CancelGuard::from(request));
             }
         }
 
         if let Some(barrier) = self.barrier.take() {
-            CancelGuard::from(barrier);
+            std::mem::drop(CancelGuard::from(barrier));
         }
     }
 }
@@ -131,7 +131,10 @@ impl<R: Reporter> MpiRootPartition<R> {
 
 #[contract_trait]
 impl<R: Reporter> LocalPartition<R> for MpiRootPartition<R> {
-    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a>;
+    type ImmigrantIterator<'a>
+    where
+        R: 'a,
+    = ImmigrantPopIterator<'a>;
     type IsLive = False;
     type Reporter = Self;
 
@@ -191,25 +194,26 @@ impl<R: Reporter> LocalPartition<R> for MpiRootPartition<R> {
 
                 let receive_start = immigration_buffer.len();
 
-                immigration_buffer.reserve(number_immigrants);
-
+                #[allow(clippy::uninit_vec)]
+                // Safety: The uninitialised `number_immigrants` items are initialised in the
+                //         following `matched_receive_into` call
                 unsafe {
+                    immigration_buffer.reserve(number_immigrants);
                     immigration_buffer.set_len(receive_start + number_immigrants);
+
+                    // Safety: `MpiMigratingLineage` is a transparent newtype wrapper around
+                    //         `MigratingLineage`
+                    let immigration_slice: &mut [MpiMigratingLineage] =
+                        std::slice::from_raw_parts_mut(
+                            immigration_buffer
+                                .as_mut_ptr()
+                                .cast::<MpiMigratingLineage>()
+                                .add(receive_start),
+                            number_immigrants,
+                        );
+
+                    msg.matched_receive_into(immigration_slice);
                 }
-
-                // Safety: `MpiMigratingLineage` is a transparent newtype wrapper around
-                //         `MigratingLineage`
-                let immigration_slice: &mut [MpiMigratingLineage] = unsafe {
-                    std::slice::from_raw_parts_mut(
-                        immigration_buffer
-                            .as_mut_ptr()
-                            .cast::<MpiMigratingLineage>()
-                            .add(receive_start),
-                        number_immigrants,
-                    )
-                };
-
-                msg.matched_receive_into(immigration_slice);
             }
         }
 

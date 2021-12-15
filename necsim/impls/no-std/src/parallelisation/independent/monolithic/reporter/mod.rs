@@ -11,6 +11,7 @@ mod live;
 mod recorded;
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
+#[allow(clippy::no_effect_underscore_binding)]
 #[contract_trait]
 pub trait WaterLevelReporterProxy<'p, R: Reporter, P: LocalPartition<R>>:
     Sized

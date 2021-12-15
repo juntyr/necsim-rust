@@ -23,6 +23,7 @@ struct AliasMethodSamplerAtomRaw<E: Copy + PartialEq> {
 }
 
 impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
+    #[allow(clippy::no_effect_underscore_binding)]
     #[debug_requires(!event_weights.is_empty(), "event_weights is non-empty")]
     #[debug_requires(
         event_weights.iter().all(|(_e, p)| *p >= 0.0_f64),
@@ -102,6 +103,7 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
         }
     }
 
+    #[allow(clippy::no_effect_underscore_binding)]
     #[debug_requires(!alias_samplers.is_empty(), "alias_samplers is non-empty")]
     #[debug_ensures(
         old(alias_samplers).iter().map(|s| s.E).any(|e| e == ret),
