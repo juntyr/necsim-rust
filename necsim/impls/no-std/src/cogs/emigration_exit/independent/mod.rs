@@ -147,7 +147,7 @@ impl<M: MathsCore, H: Habitat<M>, C: Decomposition<M, H>, E: EmigrationChoice<M,
     }
 
     pub fn len(&self) -> usize {
-        self.emigrant.is_some() as usize
+        usize::from(self.emigrant.is_some())
     }
 
     pub fn is_empty(&self) -> bool {

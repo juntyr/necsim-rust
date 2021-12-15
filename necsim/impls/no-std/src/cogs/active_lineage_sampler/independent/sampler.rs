@@ -56,7 +56,7 @@ impl<
 
     #[must_use]
     fn number_active_lineages(&self) -> usize {
-        self.active_lineage.is_some() as usize
+        usize::from(self.active_lineage.is_some())
     }
 
     #[must_use]
