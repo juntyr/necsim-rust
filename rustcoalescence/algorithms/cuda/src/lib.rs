@@ -1,6 +1,4 @@
 #![deny(clippy::pedantic)]
-#![feature(drain_filter)]
-#![feature(associated_type_defaults)]
 #![feature(const_eval_limit)]
 #![const_eval_limit = "1000000000000"]
 #![allow(incomplete_features)]

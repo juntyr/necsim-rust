@@ -1,7 +1,5 @@
 #![deny(clippy::pedantic)]
-#![allow(incomplete_features)]
 #![feature(generic_associated_types)]
-#![feature(stmt_expr_attributes)]
 
 #[macro_use]
 extern crate contracts;

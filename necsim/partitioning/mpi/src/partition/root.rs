@@ -433,7 +433,7 @@ impl<R: Reporter> Reporter for MpiRootPartition<R> {
                 let remaining_status: (u64, _) = msg.matched_receive();
 
                 #[allow(clippy::cast_sign_loss)]
-                self.all_remaining[remaining_status.1.source_rank() as usize] = remaining_status.0;
+                { self.all_remaining[remaining_status.1.source_rank() as usize] = remaining_status.0; }
             }
 
             self.reporter.report_progress(

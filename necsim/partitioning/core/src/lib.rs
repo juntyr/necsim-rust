@@ -1,6 +1,5 @@
 #![deny(clippy::pedantic)]
 #![no_std]
-#![allow(incomplete_features)]
 #![feature(generic_associated_types)]
 
 extern crate alloc;

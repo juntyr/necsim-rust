@@ -6,7 +6,6 @@
 #![feature(const_mut_refs)]
 #![feature(const_fn_trait_bound)]
 #![feature(const_refs_to_cell)]
-#![allow(incomplete_features)]
 #![feature(generic_associated_types)]
 
 #[doc(hidden)]
