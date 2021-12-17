@@ -1,7 +1,5 @@
 #![deny(clippy::pedantic)]
 #![feature(unwrap_infallible)]
-#![allow(incomplete_features)]
-#![feature(specialization)]
 
 #[macro_use]
 extern crate serde_derive_state;

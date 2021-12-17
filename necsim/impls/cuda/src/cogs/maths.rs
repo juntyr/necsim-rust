@@ -31,7 +31,7 @@ impl MathsCore for NvptxMathsCore {
             let x: f32 = x as f32;
             let f: f32;
 
-            asm!("lg2.approx.f32 {}, {};", out(reg32) f, in(reg32) x, options(pure, nomem, nostack));
+            core::arch::asm!("lg2.approx.f32 {}, {};", out(reg32) f, in(reg32) x, options(pure, nomem, nostack));
 
             // f / log_2(e)
             f64::from(f) * FRAC_1_LOG2_E
@@ -50,7 +50,7 @@ impl MathsCore for NvptxMathsCore {
             let x: f32 = (x * core::f64::consts::LOG2_E) as f32;
             let f: f32;
 
-            asm!("ex2.approx.f32 {}, {};", out(reg32) f, in(reg32) x, options(pure, nomem, nostack));
+            core::arch::asm!("ex2.approx.f32 {}, {};", out(reg32) f, in(reg32) x, options(pure, nomem, nostack));
 
             f64::from(f)
         }
@@ -73,7 +73,7 @@ impl MathsCore for NvptxMathsCore {
             let x: f32 = x as f32;
             let f: f32;
 
-            asm!("sin.approx.f32 {}, {};", out(reg32) f, in(reg32) x, options(pure, nomem, nostack));
+            core::arch::asm!("sin.approx.f32 {}, {};", out(reg32) f, in(reg32) x, options(pure, nomem, nostack));
 
             f64::from(f)
         }
@@ -91,7 +91,7 @@ impl MathsCore for NvptxMathsCore {
             let x: f32 = x as f32;
             let f: f32;
 
-            asm!("cos.approx.f32 {}, {};", out(reg32) f, in(reg32) x, options(pure, nomem, nostack));
+            core::arch::asm!("cos.approx.f32 {}, {};", out(reg32) f, in(reg32) x, options(pure, nomem, nostack));
 
             f64::from(f)
         }
@@ -108,12 +108,12 @@ impl MathsCore for NvptxMathsCore {
             const ROUND_TRUNC_OFFSET: f64 = 0.5_f64 - 0.25_f64 * f64::EPSILON;
 
             let offset: f64;
-            asm!("copysign {}, {}, {};", out(reg64) offset, in(reg64) x, const ROUND_TRUNC_OFFSET.to_bits(), options(pure, nomem, nostack));
+            core::arch::asm!("copysign {}, {}, {};", out(reg64) offset, in(reg64) x, const ROUND_TRUNC_OFFSET.to_bits(), options(pure, nomem, nostack));
 
             let overshot = x + offset;
 
             let round: f64;
-            asm!("cvt.rzi.f64.f64 {}, {};", out(reg64) round, in(reg64) overshot, options(pure, nomem, nostack));
+            core::arch::asm!("cvt.rzi.f64.f64 {}, {};", out(reg64) round, in(reg64) overshot, options(pure, nomem, nostack));
 
             round
         }
