@@ -3,7 +3,7 @@
 #[must_use]
 pub fn counter() -> u64 {
     let counter: u64;
-    unsafe { asm!("mov.u64  {}, %clock64;", out(reg64) counter, options(nostack)) };
+    unsafe { core::arch::asm!("mov.u64  {}, %clock64;", out(reg64) counter, options(nostack)) };
     counter
 }
 
@@ -12,6 +12,6 @@ pub fn counter() -> u64 {
 #[must_use]
 pub fn timer_ns() -> u64 {
     let timer: u64;
-    unsafe { asm!("mov.u64  {}, %globaltimer;", out(reg64) timer, options(nostack)) };
+    unsafe { core::arch::asm!("mov.u64  {}, %globaltimer;", out(reg64) timer, options(nostack)) };
     timer
 }
