@@ -88,7 +88,7 @@ with
 ```
 Here, `args..` is a configuration string in [RON](https://github.com/ron-rs/ron) format, which can also directly be read from a configuration file:
 ```shell
-> rustcoalescence <SUBCOMMAND> $(<config.ron)
+> rustcoalescence <SUBCOMMAND> "$(<config.ron)"
 ```
 Please refer to [docs/simulate.ron](docs/simulate.ron) and [docs/replay.ron](docs/replay.ron) for a detailed description of all configuration options. [./simulate.ron](simulate.ron) and [./replay.ron](replay.ron) also provide example configurations.
 
