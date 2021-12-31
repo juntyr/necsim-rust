@@ -60,14 +60,16 @@ pub fn try_parse<'de, D: Deserialize<'de>>(subcommand: &str, ron_args: &'de str)
         Ok(args) => Ok(args),
         Err(err) => {
             let path = track.path();
+            let err = de_ron.error(err);
 
             Err(anyhow::anyhow!(
-                "{}{}{}{}: {}",
+                "{}{}{}{} @ ({}):\n{}",
                 subcommand,
                 if path.iter().count() >= 1 { "." } else { "" },
                 path,
                 if path.iter().count() >= 1 { "" } else { "*" },
-                err,
+                err.position,
+                err.code,
             ))
         },
     }
