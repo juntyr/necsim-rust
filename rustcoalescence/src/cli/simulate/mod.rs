@@ -10,7 +10,7 @@ use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 use crate::args::{
     parse::{into_ron_str, try_print},
     ser::BufferingSerializeResult,
-    CommandArgs, Pause, Sample, SampleDestiny, SampleOrigin,
+    CommandArgs, Pause, Sample, SampleDestiny, SampleMode, SampleOrigin,
 };
 
 mod dispatch;
@@ -98,6 +98,7 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
                         )
                     },
                 },
+                mode: SampleMode::Resume,
             })
             .pause(&Option::<Pause>::None)
             .build()

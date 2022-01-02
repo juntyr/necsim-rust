@@ -51,7 +51,8 @@ impl<
     where
         H: 'h,
     {
-        let (lineage_store, active_lineage_sampler, _) = Self::resume_with_store(origin_sampler);
+        let (lineage_store, active_lineage_sampler, _) =
+            Self::resume_with_store(origin_sampler, NonNegativeF64::zero());
 
         (lineage_store, active_lineage_sampler)
     }
@@ -59,6 +60,7 @@ impl<
     #[must_use]
     pub fn resume_with_store<'h, O: UntrustedOriginSampler<'h, M, Habitat = H>>(
         mut origin_sampler: O,
+        resume_time: NonNegativeF64,
     ) -> (S, Self, Vec<ExceptionalLineage>)
     where
         H: 'h,
@@ -69,7 +71,7 @@ impl<
         let mut lineage_store = S::with_capacity(origin_sampler.habitat(), capacity);
 
         let mut active_lineage_references = Vec::with_capacity(capacity);
-        let mut last_event_time = NonNegativeF64::zero();
+        let mut last_event_time = resume_time;
 
         let mut exceptional_lineages = Vec::new();
 

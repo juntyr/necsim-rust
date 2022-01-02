@@ -47,6 +47,7 @@ pub struct IndependentActiveLineageSampler<
         Option<rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<Lineage>>
     ))]
     active_lineage: Option<Lineage>,
+    min_event_time: NonNegativeF64,
     last_event_time: NonNegativeF64,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     event_time_sampler: J,
@@ -73,7 +74,11 @@ impl<
         H: 'h,
     {
         let (lineage_store, active_lineage_sampler, lineages, _) =
-            Self::resume_with_store_and_lineages(origin_sampler, event_time_sampler);
+            Self::resume_with_store_and_lineages(
+                origin_sampler,
+                event_time_sampler,
+                NonNegativeF64::zero(),
+            );
 
         (lineage_store, active_lineage_sampler, lineages)
     }
@@ -82,6 +87,7 @@ impl<
     pub fn resume_with_store_and_lineages<'h, O: TrustedOriginSampler<'h, M, Habitat = H>>(
         mut origin_sampler: O,
         event_time_sampler: J,
+        resume_time: NonNegativeF64,
     ) -> (
         IndependentLineageStore<M, H>,
         Self,
@@ -122,6 +128,7 @@ impl<
             IndependentLineageStore::default(),
             Self {
                 active_lineage: None,
+                min_event_time: resume_time,
                 last_event_time: NonNegativeF64::zero(),
                 event_time_sampler,
                 marker: PhantomData::<(M, H, G, X, D, T, N)>,
@@ -147,6 +154,7 @@ impl<
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             active_lineage: self.active_lineage.clone(),
+            min_event_time: self.min_event_time,
             last_event_time: self.last_event_time,
             event_time_sampler: self.event_time_sampler.clone(),
             marker: PhantomData::<(M, H, G, X, D, T, N)>,
