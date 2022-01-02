@@ -69,7 +69,7 @@ impl<
     }
 
     fn get_last_event_time(&self) -> NonNegativeF64 {
-        self.last_event_time
+        self.last_event_time.max(self.min_event_time)
     }
 
     #[must_use]
@@ -94,19 +94,20 @@ impl<
         early_peek_stop: F,
     ) -> Option<(Lineage, PositiveF64)> {
         if let Some(active_lineage) = &self.active_lineage {
+            let before_next_event = active_lineage.last_event_time.max(self.min_event_time);
+
             // Check for extraneously simulated (inactive) lineages
             let event_time = self
                 .event_time_sampler
                 .next_event_time_at_indexed_location_weakly_after(
                     &active_lineage.indexed_location,
-                    active_lineage.last_event_time,
+                    before_next_event,
                     &simulation.habitat,
                     rng,
                     &simulation.turnover_rate,
                 );
 
-            let next_event_time =
-                PositiveF64::max_after(active_lineage.last_event_time, event_time);
+            let next_event_time = PositiveF64::max_after(before_next_event, event_time);
 
             if early_peek_stop(next_event_time) {
                 return None;
