@@ -305,7 +305,7 @@ pub enum Algorithm {
 
 impl Serialize for Algorithm {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        #[allow(unreachable_patterns)]
+        #[allow(unreachable_patterns, clippy::single_match_else)]
         match self {
             #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
             Self::Classical(args) => {
@@ -451,20 +451,87 @@ struct ReplayArgsRaw {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(default)]
-#[serde(deny_unknown_fields)]
+#[serde(try_from = "SampleRaw")]
 pub struct Sample {
     pub percentage: ClosedUnitF64,
     pub origin: SampleOrigin,
+    pub mode: SampleMode,
 }
 
 impl Default for Sample {
     fn default() -> Self {
+        let raw = SampleRaw::default();
+
+        Self {
+            percentage: raw.percentage,
+            origin: raw.origin,
+            mode: raw.mode,
+        }
+    }
+}
+
+impl TryFrom<SampleRaw> for Sample {
+    type Error = anyhow::Error;
+
+    fn try_from(raw: SampleRaw) -> Result<Self, Self::Error> {
+        match (&raw.origin, &raw.mode) {
+            (SampleOrigin::Habitat, SampleMode::Genesis)
+            | (
+                SampleOrigin::List(_) | SampleOrigin::Bincode(_),
+                SampleMode::Resume | SampleMode::Restart(_),
+            ) => (),
+            (SampleOrigin::Habitat, SampleMode::Resume | SampleMode::Restart(_)) => {
+                anyhow::bail!("`Habitat` origin is only compatible with `Genesis` mode")
+            },
+            (SampleOrigin::List(_) | SampleOrigin::Bincode(_), SampleMode::Genesis) => {
+                anyhow::bail!("`Genesis` mode is only compatible with `Habitat` origin")
+            },
+        }
+
+        Ok(Self {
+            percentage: raw.percentage,
+            origin: raw.origin,
+            mode: raw.mode,
+        })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+#[serde(deny_unknown_fields)]
+#[serde(rename = "Sample")]
+struct SampleRaw {
+    percentage: ClosedUnitF64,
+    origin: SampleOrigin,
+    mode: SampleMode,
+}
+
+impl Default for SampleRaw {
+    fn default() -> Self {
         Self {
             percentage: ClosedUnitF64::one(),
             origin: SampleOrigin::Habitat,
+            mode: SampleMode::Genesis,
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum SampleMode {
+    Genesis,
+    Resume,
+    Restart(SampleModeRestart),
+}
+
+impl Default for SampleMode {
+    fn default() -> Self {
+        Self::Genesis
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SampleModeRestart {
+    pub after: NonNegativeF64,
 }
 
 #[derive(Debug, Serialize)]
@@ -474,12 +541,12 @@ pub struct Pause {
     pub destiny: SampleDestiny,
 }
 
-impl<'de> DeserializeState<'de, Partition> for Pause {
+impl<'de> DeserializeState<'de, (Partition, &'de Sample)> for Pause {
     fn deserialize_state<D: Deserializer<'de>>(
-        partition: &mut Partition,
+        (partition, mut sample): &mut (Partition, &'de Sample),
         deserializer: D,
     ) -> Result<Self, D::Error> {
-        let raw = PauseRaw::deserialize(deserializer)?;
+        let raw = PauseRaw::deserialize_state(&mut sample, deserializer)?;
 
         if partition.size().get() > 1 {
             return Err(serde::de::Error::custom(
@@ -501,6 +568,16 @@ pub enum SampleOrigin {
     Habitat,
     List(Vec<Lineage>),
     Bincode(LineageFileLoader),
+}
+
+impl fmt::Display for SampleOrigin {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Habitat => fmt.write_str("Habitat"),
+            Self::List(_) => fmt.write_str("List"),
+            Self::Bincode(_) => fmt.write_str("Bincode"),
+        }
+    }
 }
 
 impl fmt::Debug for SampleOrigin {
@@ -557,20 +634,57 @@ impl TryFrom<SampleOriginRaw> for SampleOrigin {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, DeserializeState)]
 #[serde(deny_unknown_fields)]
 #[serde(rename = "Pause")]
+#[serde(deserialize_state = "&'de Sample")]
 pub struct PauseRaw {
     pub before: NonNegativeF64,
     pub config: ResumeConfig,
+    #[serde(deserialize_state)]
     pub destiny: SampleDestiny,
 }
 
-// TODO: Only allow `List` if the input sample was also `List`
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub enum SampleDestiny {
     List,
     Bincode(LineageFileSaver),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename = "SampleDestiny")]
+enum SampleDestinyRaw {
+    List,
+    Bincode(LineageFileSaver),
+}
+
+impl<'de> DeserializeState<'de, &'de Sample> for SampleDestiny {
+    fn deserialize_state<D: Deserializer<'de>>(
+        sample: &mut &'de Sample,
+        deserializer: D,
+    ) -> Result<Self, D::Error> {
+        let raw = SampleDestinyRaw::deserialize(deserializer)?;
+
+        if matches!(raw, SampleDestinyRaw::List)
+            && !matches!(
+                sample,
+                Sample {
+                    origin: SampleOrigin::List(_),
+                    ..
+                }
+            )
+        {
+            return Err(serde::de::Error::custom(format!(
+                "`List` pause destiny requires `List` origin sample, found `{}`",
+                sample.origin
+            )));
+        }
+
+        Ok(match raw {
+            SampleDestinyRaw::List => SampleDestiny::List,
+            SampleDestinyRaw::Bincode(saver) => SampleDestiny::Bincode(saver),
+        })
+    }
 }
 
 #[derive(Deserialize)]

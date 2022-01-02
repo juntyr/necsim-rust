@@ -99,12 +99,13 @@ pub fn try_parse_state<'de, D: DeserializeState<'de, Seed>, Seed: ?Sized>(
             let err = de_ron.span_error(err);
 
             Err(anyhow::anyhow!(
-                "{}{}{}{}: {}",
+                "{}{}{}{} @ ({}):\n{}",
                 subcommand,
                 if path.iter().count() >= 1 { "." } else { "" },
                 path,
                 if path.iter().count() >= 1 { "" } else { "*" },
-                err,
+                err.position,
+                err.code,
             ))
         },
     }

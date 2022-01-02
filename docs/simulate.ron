@@ -11,7 +11,8 @@
         /* selection of the base sample of individuals */
         /* optional, default = Habitat */
         origin: (
-            /* all individuals living inside the habitat are sampled */
+            /* all individuals living inside the habitat are sampled
+             * only compatible with mode = Genesis */
           | Habitat
             /* ordered set of individuals that are sampled */
           | List([
@@ -33,6 +34,32 @@
           | Bincode(
                 /* file path to a binary file listing the individuals */
                 file: (PathBuf)
+            )
+        ),
+        /* selection of the simulation initialisation mode */
+        /* optional, default = Genesis */
+        mode: (
+            /* the simulation starts from the beginning with all individuals
+             * only compatible with origin = Habitat */
+          | Genesis
+            /* WARNING: should only be used to resume a previously paused simulation
+             *          WITHOUT changing the simulation parameters (the log and
+             *           reporters can be changed without issues)
+             *          OTHERWISE new events may occur before the previous pause
+             *           timestamp
+             *
+             * resume the simulation from the given sample of individual origins
+             * ensures perfect continuity of the simulation, i.e. pausing + resuming
+             *  has no effect on the simulation result */
+          | Resume
+            /* restart the simulation from the given sample of individual origins
+             * should be used to resume after the simulation parameters have been changed
+             * breaks continuity of the simulation, i.e. pausing + restarting has an
+             *  effect on the simulation result, but allows reconfiguration */
+          | Restart(
+                /* the event timestamp from which to simulate (exclusive)
+                 * must match the timestamp previously used to pause the simulation */
+                after: (0.0 <= f64),
             )
         ),
     ),
@@ -538,7 +565,8 @@
                 /* the remaining individuals will be listed literally inside the
                  *  new configuration file */
               | List
-                /* the remaining individuals will be written to a new binary file */
+                /* the remaining individuals will be written to a new binary file
+                 * only compatible with sample.origin = List */
               | Bincode(
                     /* file path to where the new binary file listing the remaining
                     *  individuals will be written */

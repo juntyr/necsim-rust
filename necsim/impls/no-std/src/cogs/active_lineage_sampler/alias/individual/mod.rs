@@ -14,7 +14,7 @@ use crate::cogs::{
     origin_sampler::{TrustedOriginSampler, UntrustedOriginSampler},
 };
 
-use super::dynamic::stack::DynamicAliasMethodStackSampler;
+use super::sampler::stack::DynamicAliasMethodStackSampler;
 
 mod sampler;
 
@@ -64,7 +64,7 @@ impl<
         H: 'h,
     {
         let (lineage_store, active_lineage_sampler, _) =
-            Self::resume_with_store(origin_sampler, turnover_rate);
+            Self::resume_with_store(origin_sampler, turnover_rate, NonNegativeF64::zero());
 
         (lineage_store, active_lineage_sampler)
     }
@@ -73,6 +73,7 @@ impl<
     pub fn resume_with_store<'h, O: UntrustedOriginSampler<'h, M, Habitat = H>>(
         mut origin_sampler: O,
         turnover_rate: &T,
+        resume_time: NonNegativeF64,
     ) -> (S, Self, Vec<ExceptionalLineage>)
     where
         H: 'h,
@@ -84,7 +85,7 @@ impl<
 
         let mut alias_sampler = DynamicAliasMethodStackSampler::new();
         let mut number_active_lineages: usize = 0;
-        let mut last_event_time = NonNegativeF64::zero();
+        let mut last_event_time = resume_time;
 
         let mut exceptional_lineages = Vec::new();
 
