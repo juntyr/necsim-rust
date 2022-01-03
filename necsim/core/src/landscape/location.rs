@@ -107,6 +107,7 @@ impl<'de> Deserialize<'de> for LocationIndex {
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[serde(rename = "IndexedLocation")]
 #[repr(C)]
 struct IndexedLocationRaw {
     x: u32,

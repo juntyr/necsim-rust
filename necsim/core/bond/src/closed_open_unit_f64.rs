@@ -25,6 +25,12 @@ impl fmt::Display for ClosedOpenUnitF64Error {
 #[serde(try_from = "f64", into = "f64")]
 pub struct ClosedOpenUnitF64(f64);
 
+impl fmt::Display for ClosedOpenUnitF64 {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.0, fmt)
+    }
+}
+
 impl TryFrom<f64> for ClosedOpenUnitF64 {
     type Error = ClosedOpenUnitF64Error;
 

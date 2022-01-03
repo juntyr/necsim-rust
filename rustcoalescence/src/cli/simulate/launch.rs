@@ -9,7 +9,7 @@ use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_scenarios::Scenario;
 
-use crate::args::{parse::try_print, Sample};
+use crate::args::{parse::try_print, Sample, SampleMode, SampleModeRestart, SampleOrigin};
 
 use super::BufferingSimulateArgsBuilder;
 
@@ -45,6 +45,20 @@ where
         println!("{}", config_str.trim_start_matches("Simulate"));
         println!("\n{:=^80}\n", " Simulation Configuration ");
     }
+
+    let mut resume_pause = String::from("The simulation will ");
+    match sample.mode {
+        SampleMode::Genesis => resume_pause.push_str("start fresh"),
+        SampleMode::Resume => resume_pause.push_str("resume"),
+        SampleMode::Restart(SampleModeRestart { after }) => {
+            resume_pause.push_str(&format!("restart after {}", after));
+        },
+    }
+    match pause_before {
+        None => resume_pause.push('.'),
+        Some(before) => resume_pause.push_str(&format!(" and pause before {}.", before)),
+    }
+    info!("{}", resume_pause);
 
     if local_partition.get_partition().size().get() <= 1 {
         info!("The simulation will be run in monolithic mode.");
@@ -83,15 +97,14 @@ where
         warn!("The simulation will report no events.");
     }
 
-    let result = A::initialise_and_simulate(
+    let result = simulate::<A, O, R, P>(
         algorithm_args,
         rng,
         scenario,
-        OriginPreSampler::all().percentage(sample.percentage),
+        sample,
         pause_before,
         &mut local_partition,
-    )
-    .context("Failed to perform the simulation.")?;
+    )?;
 
     if log::log_enabled!(log::Level::Info) {
         println!("\n");
@@ -122,4 +135,50 @@ where
     }
 
     Ok(result)
+}
+
+fn simulate<
+    A: Algorithm<O, R, P>,
+    O: Scenario<A::MathsCore, A::Rng>,
+    R: Reporter,
+    P: LocalPartition<R>,
+>(
+    algorithm_args: A::Arguments,
+    rng: A::Rng,
+    scenario: O,
+    sample: Sample,
+    pause_before: Option<NonNegativeF64>,
+    local_partition: &mut P,
+) -> anyhow::Result<AlgorithmResult<A::MathsCore, A::Rng>> {
+    match (sample.origin, sample.mode) {
+        (SampleOrigin::Habitat, _) | (_, SampleMode::Genesis) => A::initialise_and_simulate(
+            algorithm_args,
+            rng,
+            scenario,
+            OriginPreSampler::all().percentage(sample.percentage),
+            pause_before,
+            local_partition,
+        )
+        .context("Failed to perform the fresh simulation."),
+        (SampleOrigin::List(lineages), _) => A::resume_and_simulate(
+            algorithm_args,
+            rng,
+            scenario,
+            OriginPreSampler::all().percentage(sample.percentage),
+            lineages.into_iter(),
+            pause_before,
+            local_partition,
+        )
+        .context("Failed to perform the resuming simulation."),
+        (SampleOrigin::Bincode(loader), _) => A::resume_and_simulate(
+            algorithm_args,
+            rng,
+            scenario,
+            OriginPreSampler::all().percentage(sample.percentage),
+            loader.into_lineages().into_iter(),
+            pause_before,
+            local_partition,
+        )
+        .context("Failed to perform the resuming simulation."),
+    }
 }
