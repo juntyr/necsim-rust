@@ -11,7 +11,8 @@ use necsim_core::{
 use necsim_core_bond::NonNegativeF64;
 
 use crate::cogs::{
-    lineage_store::independent::IndependentLineageStore, origin_sampler::TrustedOriginSampler,
+    lineage_store::independent::IndependentLineageStore,
+    origin_sampler::{TrustedOriginSampler, UntrustedOriginSampler},
 };
 
 mod sampler;
@@ -84,7 +85,7 @@ impl<
     }
 
     #[must_use]
-    pub fn resume_with_store_and_lineages<'h, O: TrustedOriginSampler<'h, M, Habitat = H>>(
+    pub fn resume_with_store_and_lineages<'h, O: UntrustedOriginSampler<'h, M, Habitat = H>>(
         mut origin_sampler: O,
         event_time_sampler: J,
         resume_time: NonNegativeF64,

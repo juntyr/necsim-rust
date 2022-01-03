@@ -27,6 +27,12 @@ impl fmt::Display for PositiveF64Error {
 #[serde(try_from = "f64", into = "f64")]
 pub struct PositiveF64(f64);
 
+impl fmt::Display for PositiveF64 {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.0, fmt)
+    }
+}
+
 impl TryFrom<f64> for PositiveF64 {
     type Error = PositiveF64Error;
 

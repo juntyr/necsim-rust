@@ -39,6 +39,9 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
     });
 
     let reporters = parse::reporters::parse_and_normalise(&ron_args, &mut normalised_args)?;
+    // TODO: resuming or pausing should require event log for now
+    // TODO: event log should check for non-overwriting
+    // TODO: maybe resume.ron could advance the event log directory
     let event_log =
         parse::event_log::parse_and_normalise(&ron_args, &mut normalised_args, &partitioning)?;
 

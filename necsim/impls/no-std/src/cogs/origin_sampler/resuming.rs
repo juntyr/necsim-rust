@@ -49,7 +49,7 @@ impl<
     > ResumingOriginSampler<'h, M, H, L, I>
 {
     #[must_use]
-    pub fn new(lineage_iterator: L, pre_sampler: OriginPreSampler<M, I>, habitat: &'h H) -> Self {
+    pub fn new(habitat: &'h H, pre_sampler: OriginPreSampler<M, I>, lineage_iterator: L) -> Self {
         Self {
             lineage_iterator,
             pre_sampler,

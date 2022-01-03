@@ -1,6 +1,9 @@
 use core::marker::PhantomData;
 
-use necsim_core::{cogs::MathsCore, lineage::Lineage};
+use necsim_core::{
+    cogs::{Habitat, MathsCore},
+    lineage::Lineage,
+};
 
 use crate::decomposition::Decomposition;
 
@@ -68,6 +71,20 @@ impl<'d, M: MathsCore, O: UntrustedOriginSampler<'d, M>, D: Decomposition<M, O::
     fn next(&mut self) -> Option<Self::Item> {
         #[allow(clippy::while_let_on_iterator)]
         while let Some(lineage) = self.origin_sampler.next() {
+            // Forward any out-of-habitat or out-of-deme lineages
+            if !self
+                .origin_sampler
+                .habitat()
+                .contains(lineage.indexed_location.location())
+                || lineage.indexed_location.index()
+                    >= self
+                        .origin_sampler
+                        .habitat()
+                        .get_habitat_at_location(lineage.indexed_location.location())
+            {
+                return Some(lineage);
+            }
+
             if self.decomposition.map_location_to_subdomain_rank(
                 lineage.indexed_location.location(),
                 self.origin_sampler.habitat(),
