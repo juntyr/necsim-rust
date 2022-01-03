@@ -17,6 +17,12 @@ impl fmt::Display for NonZeroOneU64Error {
 #[serde(try_from = "u64", into = "u64")]
 pub struct NonZeroOneU64(NonZeroU64);
 
+impl fmt::Display for NonZeroOneU64 {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.0, fmt)
+    }
+}
+
 impl NonZeroOneU64 {
     /// # Errors
     ///

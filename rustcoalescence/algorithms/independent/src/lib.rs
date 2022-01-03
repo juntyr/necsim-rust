@@ -11,7 +11,9 @@ use arguments::{
     ProbabilisticParallelismMode,
 };
 use necsim_core::{
-    lineage::GlobalLineageReference, reporter::Reporter, simulation::SimulationBuilder,
+    lineage::{GlobalLineageReference, Lineage},
+    reporter::Reporter,
+    simulation::SimulationBuilder,
 };
 use necsim_core_bond::NonNegativeF64;
 use necsim_core_maths::IntrinsicsMathsCore;
@@ -37,6 +39,7 @@ use necsim_impls_no_std::{
         lineage_store::independent::IndependentLineageStore,
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
+            resuming::ResumingOriginSampler,
         },
         rng::wyhash::WyHash,
     },
@@ -46,7 +49,7 @@ use necsim_partitioning_core::LocalPartition;
 
 mod arguments;
 
-use rustcoalescence_algorithms::{Algorithm, AlgorithmParamters, AlgorithmResult};
+use rustcoalescence_algorithms::{Algorithm, AlgorithmParamters, AlgorithmResult, ContinueError};
 use rustcoalescence_scenarios::Scenario;
 
 #[allow(clippy::module_name_repetitions, clippy::empty_enum)]
@@ -332,6 +335,331 @@ impl<
                         ),
                         PoissonEventTimeSampler::new(args.delta_t),
                     );
+
+                let emigration_exit = IndependentEmigrationExit::new(
+                    decomposition,
+                    ProbabilisticEmigrationChoice::new(communication_probability),
+                );
+                let immigration_entry = NeverImmigrationEntry::default();
+
+                let mut simulation = SimulationBuilder {
+                    maths: PhantomData::<Self::MathsCore>,
+                    habitat,
+                    lineage_reference: PhantomData::<GlobalLineageReference>,
+                    lineage_store,
+                    dispersal_sampler,
+                    coalescence_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    emigration_exit,
+                    event_sampler,
+                    active_lineage_sampler,
+                    rng,
+                    immigration_entry,
+                }
+                .build();
+
+                let (_status, time, steps, _lineages) =
+                    parallelisation::independent::landscape::simulate(
+                        &mut simulation,
+                        lineages,
+                        args.dedup_cache,
+                        args.step_slice,
+                        local_partition,
+                    );
+
+                // TODO: Adapt for parallel pausing
+                Ok(AlgorithmResult::Done { time, steps })
+            },
+        }
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn resume_and_simulate<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
+        args: Self::Arguments,
+        rng: Self::Rng,
+        scenario: O,
+        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        lineages: L,
+        pause_before: Option<NonNegativeF64>,
+        local_partition: &mut P,
+    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, ContinueError<Self::Error>> {
+        match args.parallelism_mode {
+            ParallelismMode::Monolithic(MonolithicParallelismMode { event_slice })
+            | ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode {
+                event_slice, ..
+            })
+            | ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { event_slice, .. }) => {
+                let (
+                    habitat,
+                    dispersal_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    _origin_sampler_auxiliary,
+                    decomposition_auxiliary,
+                ) = scenario.build::<InMemoryAliasDispersalSampler<
+                    Self::MathsCore,
+                    O::Habitat,
+                    WyHash<Self::MathsCore>,
+                >>();
+                let coalescence_sampler = IndependentCoalescenceSampler::default();
+                let event_sampler = IndependentEventSampler::default();
+
+                let (lineage_store, active_lineage_sampler, lineages, exceptional_lineages) =
+                    match args.parallelism_mode {
+                        // Apply no lineage origin partitioning in the `Monolithic` mode
+                        ParallelismMode::Monolithic(..) => {
+                            IndependentActiveLineageSampler::resume_with_store_and_lineages(
+                                ResumingOriginSampler::new(&habitat, pre_sampler, lineages),
+                                PoissonEventTimeSampler::new(args.delta_t),
+                                NonNegativeF64::zero(),
+                            )
+                        },
+                        // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
+                        ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode {
+                            partition,
+                            ..
+                        }) => IndependentActiveLineageSampler::resume_with_store_and_lineages(
+                            ResumingOriginSampler::new(
+                                &habitat,
+                                pre_sampler.partition(partition),
+                                lineages,
+                            ),
+                            PoissonEventTimeSampler::new(args.delta_t),
+                            NonNegativeF64::zero(),
+                        ),
+                        // Apply lineage origin partitioning in the `IsolatedLandscape` mode
+                        ParallelismMode::IsolatedLandscape(IsolatedParallelismMode {
+                            partition,
+                            ..
+                        }) => IndependentActiveLineageSampler::resume_with_store_and_lineages(
+                            DecompositionOriginSampler::new(
+                                ResumingOriginSampler::new(&habitat, pre_sampler, lineages),
+                                &O::decompose(&habitat, partition, decomposition_auxiliary),
+                            ),
+                            PoissonEventTimeSampler::new(args.delta_t),
+                            NonNegativeF64::zero(),
+                        ),
+                        _ => unsafe { std::hint::unreachable_unchecked() },
+                    };
+
+                if !exceptional_lineages.is_empty() {
+                    return Err(ContinueError::Sample(exceptional_lineages));
+                }
+
+                let emigration_exit = NeverEmigrationExit::default();
+                let immigration_entry = NeverImmigrationEntry::default();
+
+                let mut simulation = SimulationBuilder {
+                    maths: PhantomData::<Self::MathsCore>,
+                    habitat,
+                    lineage_reference: PhantomData::<GlobalLineageReference>,
+                    lineage_store,
+                    dispersal_sampler,
+                    coalescence_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    emigration_exit,
+                    event_sampler,
+                    active_lineage_sampler,
+                    rng,
+                    immigration_entry,
+                }
+                .build();
+
+                let (status, time, steps, lineages) =
+                    parallelisation::independent::monolithic::simulate(
+                        &mut simulation,
+                        lineages,
+                        args.dedup_cache,
+                        args.step_slice,
+                        event_slice,
+                        pause_before,
+                        local_partition,
+                    );
+
+                match status {
+                    Status::Done => Ok(AlgorithmResult::Done { time, steps }),
+                    Status::Paused => Ok(AlgorithmResult::Paused {
+                        time,
+                        steps,
+                        lineages: lineages.into_iter().collect(),
+                        rng: simulation.rng_mut().clone(),
+                        marker: PhantomData,
+                    }),
+                }
+            },
+            ParallelismMode::Individuals => {
+                let (
+                    habitat,
+                    dispersal_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    _origin_sampler_auxiliary,
+                    _decomposition_auxiliary,
+                ) = scenario.build::<InMemoryAliasDispersalSampler<
+                    Self::MathsCore,
+                    O::Habitat,
+                    WyHash<Self::MathsCore>,
+                >>();
+                let coalescence_sampler = IndependentCoalescenceSampler::default();
+                let event_sampler = IndependentEventSampler::default();
+
+                let (lineage_store, active_lineage_sampler, lineages, exceptional_lineages) =
+                    IndependentActiveLineageSampler::resume_with_store_and_lineages(
+                        ResumingOriginSampler::new(
+                            &habitat,
+                            pre_sampler.partition(local_partition.get_partition()),
+                            lineages,
+                        ),
+                        PoissonEventTimeSampler::new(args.delta_t),
+                        NonNegativeF64::zero(),
+                    );
+
+                if !exceptional_lineages.is_empty() {
+                    return Err(ContinueError::Sample(exceptional_lineages));
+                }
+
+                let emigration_exit = NeverEmigrationExit::default();
+                let immigration_entry = NeverImmigrationEntry::default();
+
+                let mut simulation = SimulationBuilder {
+                    maths: PhantomData::<Self::MathsCore>,
+                    habitat,
+                    lineage_reference: PhantomData::<GlobalLineageReference>,
+                    lineage_store,
+                    dispersal_sampler,
+                    coalescence_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    emigration_exit,
+                    event_sampler,
+                    active_lineage_sampler,
+                    rng,
+                    immigration_entry,
+                }
+                .build();
+
+                let (_status, time, steps, _lineages) =
+                    parallelisation::independent::individuals::simulate(
+                        &mut simulation,
+                        lineages,
+                        args.dedup_cache,
+                        args.step_slice,
+                        local_partition,
+                    );
+
+                // TODO: Adapt for parallel pausing
+                Ok(AlgorithmResult::Done { time, steps })
+            },
+            ParallelismMode::Landscape => {
+                let (
+                    habitat,
+                    dispersal_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    _origin_sampler_auxiliary,
+                    decomposition_auxiliary,
+                ) = scenario.build::<InMemoryAliasDispersalSampler<
+                    Self::MathsCore,
+                    O::Habitat,
+                    WyHash<Self::MathsCore>,
+                >>();
+                let coalescence_sampler = IndependentCoalescenceSampler::default();
+                let event_sampler = IndependentEventSampler::default();
+
+                let decomposition = O::decompose(
+                    &habitat,
+                    local_partition.get_partition(),
+                    decomposition_auxiliary,
+                );
+
+                let (lineage_store, active_lineage_sampler, lineages, exceptional_lineages) =
+                    IndependentActiveLineageSampler::resume_with_store_and_lineages(
+                        DecompositionOriginSampler::new(
+                            ResumingOriginSampler::new(&habitat, pre_sampler, lineages),
+                            &decomposition,
+                        ),
+                        PoissonEventTimeSampler::new(args.delta_t),
+                        NonNegativeF64::zero(),
+                    );
+
+                if !exceptional_lineages.is_empty() {
+                    return Err(ContinueError::Sample(exceptional_lineages));
+                }
+
+                let emigration_exit = IndependentEmigrationExit::new(
+                    decomposition,
+                    AlwaysEmigrationChoice::default(),
+                );
+                let immigration_entry = NeverImmigrationEntry::default();
+
+                let mut simulation = SimulationBuilder {
+                    maths: PhantomData::<Self::MathsCore>,
+                    habitat,
+                    lineage_reference: PhantomData::<GlobalLineageReference>,
+                    lineage_store,
+                    dispersal_sampler,
+                    coalescence_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    emigration_exit,
+                    event_sampler,
+                    active_lineage_sampler,
+                    rng,
+                    immigration_entry,
+                }
+                .build();
+
+                let (_status, time, steps, _lineages) =
+                    parallelisation::independent::landscape::simulate(
+                        &mut simulation,
+                        lineages,
+                        args.dedup_cache,
+                        args.step_slice,
+                        local_partition,
+                    );
+
+                // TODO: Adapt for parallel pausing
+                Ok(AlgorithmResult::Done { time, steps })
+            },
+            ParallelismMode::Probabilistic(ProbabilisticParallelismMode {
+                communication_probability,
+            }) => {
+                let (
+                    habitat,
+                    dispersal_sampler,
+                    turnover_rate,
+                    speciation_probability,
+                    _origin_sampler_auxiliary,
+                    decomposition_auxiliary,
+                ) = scenario.build::<InMemoryAliasDispersalSampler<
+                    Self::MathsCore,
+                    O::Habitat,
+                    WyHash<Self::MathsCore>,
+                >>();
+                let coalescence_sampler = IndependentCoalescenceSampler::default();
+                let event_sampler = IndependentEventSampler::default();
+
+                let decomposition = O::decompose(
+                    &habitat,
+                    local_partition.get_partition(),
+                    decomposition_auxiliary,
+                );
+
+                let (lineage_store, active_lineage_sampler, lineages, exceptional_lineages) =
+                    IndependentActiveLineageSampler::resume_with_store_and_lineages(
+                        DecompositionOriginSampler::new(
+                            ResumingOriginSampler::new(&habitat, pre_sampler, lineages),
+                            &decomposition,
+                        ),
+                        PoissonEventTimeSampler::new(args.delta_t),
+                        NonNegativeF64::zero(),
+                    );
+
+                if !exceptional_lineages.is_empty() {
+                    return Err(ContinueError::Sample(exceptional_lineages));
+                }
 
                 let emigration_exit = IndependentEmigrationExit::new(
                     decomposition,

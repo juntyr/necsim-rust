@@ -32,9 +32,11 @@ impl LineageFileLoader {
     /// Fails if the `path` cannot be read as a list of lineages
     pub fn try_new(path: &Path) -> anyhow::Result<Self> {
         let file = OpenOptions::new().read(true).write(false).open(path)?;
-        let mut buf_reader = BufReader::new(file);
 
-        let lineages = bincode::deserialize_from(&mut buf_reader)?;
+        let mut deserializer =
+            bincode::Deserializer::with_reader(BufReader::new(file), bincode::options());
+
+        let lineages = <Vec<Lineage>>::deserialize(&mut deserializer)?;
 
         Ok(Self {
             lineages,
