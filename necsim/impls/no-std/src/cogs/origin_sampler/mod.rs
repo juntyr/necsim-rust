@@ -11,6 +11,8 @@ pub mod pre_sampler;
 pub mod resuming;
 pub mod spatially_implicit;
 
+use pre_sampler::OriginPreSampler;
+
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 #[allow(clippy::module_name_repetitions)]
@@ -20,8 +22,13 @@ pub trait UntrustedOriginSampler<'h, M: MathsCore>:
     core::fmt::Debug + core::iter::Iterator<Item = Lineage>
 {
     type Habitat: 'h + Habitat<M>;
+    type PreSampler: Iterator<Item = u64>;
 
     fn habitat(&self) -> &'h Self::Habitat;
+
+    fn into_pre_sampler(self) -> OriginPreSampler<M, Self::PreSampler>
+    where
+        Self: Sized;
 
     fn full_upper_bound_size_hint(&self) -> u64;
 }
