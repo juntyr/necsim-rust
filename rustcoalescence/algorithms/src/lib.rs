@@ -45,8 +45,8 @@ pub trait Algorithm<O: Scenario<Self::MathsCore, Self::Rng>, R: Reporter, P: Loc
 
     /// # Errors
     ///
-    /// Returns a `Self::Error` if initialising the resuming simulation or
-    ///  running the algorithm failed
+    /// Returns a `ContinueError<Self::Error>` if initialising the resuming
+    ///  simulation or running the algorithm failed
     #[allow(clippy::type_complexity)]
     fn resume_and_simulate<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,

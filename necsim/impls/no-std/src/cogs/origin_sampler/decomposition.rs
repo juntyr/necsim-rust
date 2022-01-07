@@ -5,9 +5,12 @@ use necsim_core::{
     lineage::Lineage,
 };
 
-use crate::decomposition::Decomposition;
-
-use super::{TrustedOriginSampler, UntrustedOriginSampler};
+use crate::{
+    cogs::origin_sampler::{
+        pre_sampler::OriginPreSampler, TrustedOriginSampler, UntrustedOriginSampler,
+    },
+    decomposition::Decomposition,
+};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
@@ -40,9 +43,14 @@ impl<'d, M: MathsCore, O: UntrustedOriginSampler<'d, M>, D: Decomposition<M, O::
     UntrustedOriginSampler<'d, M> for DecompositionOriginSampler<'d, M, O, D>
 {
     type Habitat = O::Habitat;
+    type PreSampler = O::PreSampler;
 
     fn habitat(&self) -> &'d Self::Habitat {
         self.origin_sampler.habitat()
+    }
+
+    fn into_pre_sampler(self) -> OriginPreSampler<M, Self::PreSampler> {
+        self.origin_sampler.into_pre_sampler()
     }
 
     fn full_upper_bound_size_hint(&self) -> u64 {
