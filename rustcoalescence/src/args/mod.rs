@@ -474,6 +474,10 @@ impl TryFrom<SampleRaw> for Sample {
     type Error = anyhow::Error;
 
     fn try_from(raw: SampleRaw) -> Result<Self, Self::Error> {
+        if matches!(raw.mode, SampleMode::Restart(_)) {
+            anyhow::bail!("`Restart` mode is not yet supported");
+        }
+
         match (&raw.origin, &raw.mode) {
             (SampleOrigin::Habitat, SampleMode::Genesis)
             | (
