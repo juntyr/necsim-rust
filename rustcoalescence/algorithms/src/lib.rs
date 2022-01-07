@@ -1,4 +1,5 @@
 #![deny(clippy::pedantic)]
+#![feature(generic_associated_types)]
 
 use std::{error::Error as StdError, fmt, marker::PhantomData};
 
@@ -140,3 +141,9 @@ impl<E: StdError + Send + Sync + 'static> fmt::Display for ContinueError<E> {
 }
 
 impl<E: StdError + Send + Sync + 'static> std::error::Error for ContinueError<E> {}
+
+impl<E: StdError + Send + Sync + 'static> From<E> for ContinueError<E> {
+    fn from(err: E) -> Self {
+        Self::Simulate(err)
+    }
+}
