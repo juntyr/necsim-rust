@@ -69,9 +69,14 @@ impl<
     > UntrustedOriginSampler<'h, M> for ResumingOriginSampler<'h, M, H, L, I>
 {
     type Habitat = H;
+    type PreSampler = I;
 
     fn habitat(&self) -> &'h Self::Habitat {
         self.habitat
+    }
+
+    fn into_pre_sampler(self) -> OriginPreSampler<M, Self::PreSampler> {
+        self.pre_sampler
     }
 
     fn full_upper_bound_size_hint(&self) -> u64 {
