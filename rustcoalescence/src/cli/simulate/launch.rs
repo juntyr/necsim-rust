@@ -50,7 +50,7 @@ where
     match sample.mode {
         SampleMode::Genesis => resume_pause.push_str("start fresh"),
         SampleMode::Resume => resume_pause.push_str("resume"),
-        SampleMode::Restart(SampleModeRestart { after }) => {
+        SampleMode::Restart(SampleModeRestart { after, .. }) => {
             resume_pause.push_str(&format!("restart after {}", after));
         },
     }
