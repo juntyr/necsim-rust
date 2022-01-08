@@ -8,5 +8,5 @@ extern crate serde_derive_state;
 
 mod arguments;
 
-pub mod classical;
 pub mod event_skipping;
+pub mod gillespie;
