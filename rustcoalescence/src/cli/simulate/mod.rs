@@ -24,9 +24,7 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
     log::set_max_level(LevelFilter::Info);
 
     let ron_args = into_ron_str(simulate_args);
-
     parse::fields::parse_and_normalise(&ron_args)?;
-
     let mut normalised_args = BufferingSimulateArgs::builder();
 
     let partitioning = parse::partitioning::parse_and_normalise(&ron_args, &mut normalised_args)?;
@@ -38,23 +36,26 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
         log::LevelFilter::Off
     });
 
-    let reporters = parse::reporters::parse_and_normalise(&ron_args, &mut normalised_args)?;
-    // TODO: resuming or pausing should require event log for now
-    // TODO: event log should check for non-overwriting
-    // TODO: maybe resume.ron could advance the event log directory
-    let event_log =
-        parse::event_log::parse_and_normalise(&ron_args, &mut normalised_args, &partitioning)?;
-
     let sample = parse::sample::parse_and_normalise(&ron_args, &mut normalised_args)?;
     let pause =
         parse::pause::parse_and_normalise(&ron_args, &mut normalised_args, &partitioning, &sample)?;
 
     let speciation_probability_per_generation =
         parse::speciation::parse_and_normalise(&ron_args, &mut normalised_args)?;
-    let scenario = parse::scenario::parse_and_normalise(&ron_args, &mut normalised_args)?;
 
+    let scenario = parse::scenario::parse_and_normalise(&ron_args, &mut normalised_args)?;
     let algorithm =
         parse::algorithm::parse_and_normalise(&ron_args, &mut normalised_args, &partitioning)?;
+
+    let event_log = parse::event_log::parse_and_normalise(
+        &ron_args,
+        &mut normalised_args,
+        &partitioning,
+        &sample,
+        &pause,
+    )?;
+
+    let reporters = parse::reporters::parse_and_normalise(&ron_args, &mut normalised_args)?;
 
     let result = dispatch(
         partitioning,
