@@ -6,7 +6,7 @@ use necsim_partitioning_core::LocalPartition;
 use rustcoalescence_algorithms_cuda::CudaAlgorithm;
 #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
 use rustcoalescence_algorithms_gillespie::{
-    classical::ClassicalAlgorithm, event_skipping::EventSkippingAlgorithm,
+    event_skipping::EventSkippingAlgorithm, gillespie::GillespieAlgorithm,
 };
 #[cfg(feature = "rustcoalescence-algorithms-independent")]
 use rustcoalescence_algorithms_independent::IndependentAlgorithm;
@@ -113,8 +113,8 @@ pub(super) fn dispatch<R: Reporter, P: LocalPartition<R>>(
         (algorithm, scenario => scenario)
     {
         #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
-        AlgorithmArgs::Classical(algorithm_args) => {
-            rng::dispatch::<ClassicalAlgorithm, _, R, P>(
+        AlgorithmArgs::Gillespie(algorithm_args) => {
+            rng::dispatch::<GillespieAlgorithm, _, R, P>(
                 local_partition, sample, algorithm_args, scenario,
                 pause_before, ron_args, normalised_args,
             )
