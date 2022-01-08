@@ -124,7 +124,10 @@ impl EventLogRecorder {
     pub fn assert_empty(self) -> Result<Self> {
         if fs::read_dir(&self.directory)?.next().is_some() {
             return Err(anyhow::anyhow!(
-                "{:?} is not an empty directory.",
+                "{:?} is not an empty directory.\n\nIf you are starting a new simulation, clean \
+                 out the existing log.\nIf you are pausing or resuming a simulation, try \
+                 appending a\n simulation-slice-specific postfix to your log path, and keep all\n \
+                 these log-slices in the same parent directory for easy analysis.",
                 &self.directory
             ));
         }
