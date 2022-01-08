@@ -2,9 +2,8 @@ use std::{hint::unreachable_unchecked, marker::PhantomData};
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit,
-        GloballyCoherentLineageStore, ImmigrationEntry, LineageReference, MathsCore, RngCore,
-        SeparableDispersalSampler, SplittableRng,
+        ActiveLineageSampler, DispersalSampler, EmigrationExit, ImmigrationEntry, LineageReference,
+        LocallyCoherentLineageStore, MathsCore, RngCore, SplittableRng,
     },
     lineage::Lineage,
     reporter::Reporter,
@@ -15,68 +14,51 @@ use necsim_core_maths::IntrinsicsMathsCore;
 
 use necsim_impls_no_std::{
     cogs::{
-        active_lineage_sampler::alias::location::LocationAliasActiveLineageSampler,
-        coalescence_sampler::conditional::ConditionalCoalescenceSampler,
-        dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
+        active_lineage_sampler::classical::ClassicalActiveLineageSampler,
+        coalescence_sampler::unconditional::UnconditionalCoalescenceSampler,
+        dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
         emigration_exit::{domain::DomainEmigrationExit, never::NeverEmigrationExit},
-        event_sampler::gillespie::{
-            conditional::ConditionalGillespieEventSampler, GillespieEventSampler,
-        },
+        event_sampler::unconditional::UnconditionalEventSampler,
         immigration_entry::{buffered::BufferedImmigrationEntry, never::NeverImmigrationEntry},
         lineage_reference::in_memory::InMemoryLineageReference,
-        lineage_store::coherent::globally::gillespie::GillespieLineageStore,
+        lineage_store::coherent::locally::classical::ClassicalLineageStore,
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
             resuming::ResumingOriginSampler, TrustedOriginSampler,
         },
+        turnover_rate::uniform::UniformTurnoverRate,
     },
     parallelisation::{self, Status},
 };
 use necsim_impls_std::cogs::rng::pcg::Pcg;
 use necsim_partitioning_core::LocalPartition;
 
-use rustcoalescence_algorithms::{Algorithm, AlgorithmParamters, AlgorithmResult, ContinueError};
+use rustcoalescence_algorithms::{Algorithm, AlgorithmResult, ContinueError};
 use rustcoalescence_scenarios::Scenario;
 
 use crate::arguments::{
     AveragingParallelismMode, MonolithicArguments, OptimisticParallelismMode, ParallelismMode,
 };
 
-#[allow(clippy::module_name_repetitions, clippy::empty_enum)]
-pub struct EventSkippingAlgorithm {}
+use super::GillespieAlgorithm;
 
-impl AlgorithmParamters for EventSkippingAlgorithm {
-    type Arguments = MonolithicArguments;
-    type Error = !;
-}
-
+// Optimised 'Classical' implementation for the `UniformTurnoverSampler`
 #[allow(clippy::type_complexity)]
 impl<
         O: Scenario<
             IntrinsicsMathsCore,
             Pcg<IntrinsicsMathsCore>,
             LineageReference = InMemoryLineageReference,
+            TurnoverRate = UniformTurnoverRate,
         >,
         R: Reporter,
         P: LocalPartition<R>,
-    > Algorithm<O, R, P> for EventSkippingAlgorithm
+    > Algorithm<O, R, P> for GillespieAlgorithm
 where
-    O::LineageStore<GillespieLineageStore<IntrinsicsMathsCore, O::Habitat>>:
-        GloballyCoherentLineageStore<IntrinsicsMathsCore, O::Habitat, InMemoryLineageReference>,
-    O::DispersalSampler<
-        InMemorySeparableAliasDispersalSampler<
-            IntrinsicsMathsCore,
-            O::Habitat,
-            Pcg<IntrinsicsMathsCore>,
-        >,
-    >: SeparableDispersalSampler<IntrinsicsMathsCore, O::Habitat, Pcg<IntrinsicsMathsCore>>,
+    O::LineageStore<ClassicalLineageStore<IntrinsicsMathsCore, O::Habitat>>:
+        LocallyCoherentLineageStore<IntrinsicsMathsCore, O::Habitat, InMemoryLineageReference>,
 {
-    type LineageReference = InMemoryLineageReference;
-    type LineageStore = O::LineageStore<GillespieLineageStore<Self::MathsCore, O::Habitat>>;
-    type MathsCore = IntrinsicsMathsCore;
-    type Rng = Pcg<Self::MathsCore>;
-
-    #[allow(clippy::shadow_unrelated, clippy::too_many_lines)]
+    #[allow(clippy::too_many_lines)]
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         rng: Self::Rng,
@@ -88,41 +70,23 @@ where
         struct GenesisInitialiser;
 
         impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
-            EventSkippingLineageStoreSampleInitialiser<M, G, O, !> for GenesisInitialiser
+            ClassicalLineageStoreSampleInitialiser<M, G, O, !> for GenesisInitialiser
         {
             fn init<
                 'h,
                 T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
                 R: LineageReference<M, O::Habitat>,
-                S: GloballyCoherentLineageStore<M, O::Habitat, R>,
+                S: LocallyCoherentLineageStore<M, O::Habitat, R>,
                 X: EmigrationExit<M, O::Habitat, G, R, S>,
                 D: DispersalSampler<M, O::Habitat, G>,
-                C: CoalescenceSampler<M, O::Habitat, R, S>,
-                E: GillespieEventSampler<
-                    M,
-                    O::Habitat,
-                    G,
-                    R,
-                    S,
-                    X,
-                    D,
-                    C,
-                    O::TurnoverRate,
-                    O::SpeciationProbability,
-                >,
                 I: ImmigrationEntry<M>,
             >(
                 self,
                 origin_sampler: T,
-                dispersal_sampler: &D,
-                coalescence_sampler: &C,
-                turnover_rate: &O::TurnoverRate,
-                speciation_probability: &O::SpeciationProbability,
-                event_sampler: &E,
             ) -> Result<
                 (
                     S,
-                    LocationAliasActiveLineageSampler<
+                    ClassicalActiveLineageSampler<
                         M,
                         O::Habitat,
                         G,
@@ -130,10 +94,7 @@ where
                         S,
                         X,
                         D,
-                        C,
-                        O::TurnoverRate,
                         O::SpeciationProbability,
-                        E,
                         I,
                     >,
                 ),
@@ -142,13 +103,8 @@ where
             where
                 O::Habitat: 'h,
             {
-                Ok(LocationAliasActiveLineageSampler::init_with_store(
+                Ok(ClassicalActiveLineageSampler::init_with_store(
                     origin_sampler,
-                    dispersal_sampler,
-                    coalescence_sampler,
-                    turnover_rate,
-                    speciation_probability,
-                    event_sampler,
                 ))
             }
         }
@@ -186,42 +142,24 @@ where
                 M: MathsCore,
                 G: RngCore<M>,
                 O: Scenario<M, G>,
-            > EventSkippingLineageStoreSampleInitialiser<M, G, O, ContinueError<!>>
+            > ClassicalLineageStoreSampleInitialiser<M, G, O, ContinueError<!>>
             for ResumeInitialiser<L>
         {
             fn init<
                 'h,
                 T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
                 R: LineageReference<M, O::Habitat>,
-                S: GloballyCoherentLineageStore<M, O::Habitat, R>,
+                S: LocallyCoherentLineageStore<M, O::Habitat, R>,
                 X: EmigrationExit<M, O::Habitat, G, R, S>,
                 D: DispersalSampler<M, O::Habitat, G>,
-                C: CoalescenceSampler<M, O::Habitat, R, S>,
-                E: GillespieEventSampler<
-                    M,
-                    O::Habitat,
-                    G,
-                    R,
-                    S,
-                    X,
-                    D,
-                    C,
-                    O::TurnoverRate,
-                    O::SpeciationProbability,
-                >,
                 I: ImmigrationEntry<M>,
             >(
                 self,
                 origin_sampler: T,
-                dispersal_sampler: &D,
-                coalescence_sampler: &C,
-                turnover_rate: &O::TurnoverRate,
-                speciation_probability: &O::SpeciationProbability,
-                event_sampler: &E,
             ) -> Result<
                 (
                     S,
-                    LocationAliasActiveLineageSampler<
+                    ClassicalActiveLineageSampler<
                         M,
                         O::Habitat,
                         G,
@@ -229,10 +167,7 @@ where
                         S,
                         X,
                         D,
-                        C,
-                        O::TurnoverRate,
                         O::SpeciationProbability,
-                        E,
                         I,
                     >,
                 ),
@@ -245,13 +180,8 @@ where
                 let pre_sampler = origin_sampler.into_pre_sampler();
 
                 let (lineage_store, active_lineage_sampler, exceptional_lineages) =
-                    LocationAliasActiveLineageSampler::resume_with_store(
+                    ClassicalActiveLineageSampler::resume_with_store(
                         ResumingOriginSampler::new(habitat, pre_sampler, self.lineages),
-                        dispersal_sampler,
-                        coalescence_sampler,
-                        turnover_rate,
-                        speciation_probability,
-                        event_sampler,
                         NonNegativeF64::zero(),
                     );
 
@@ -275,15 +205,15 @@ where
     }
 }
 
-#[allow(clippy::shadow_unrelated, clippy::too_many_lines)]
+#[allow(clippy::too_many_lines)]
 fn initialise_and_simulate<
     M: MathsCore,
     G: SplittableRng<M>,
-    O: Scenario<M, G, LineageReference = InMemoryLineageReference>,
+    O: Scenario<M, G, LineageReference = InMemoryLineageReference, TurnoverRate = UniformTurnoverRate>,
     R: Reporter,
     P: LocalPartition<R>,
     I: Iterator<Item = u64>,
-    L: EventSkippingLineageStoreSampleInitialiser<M, G, O, Error>,
+    L: ClassicalLineageStoreSampleInitialiser<M, G, O, Error>,
     Error,
 >(
     args: MonolithicArguments,
@@ -295,10 +225,8 @@ fn initialise_and_simulate<
     lineage_store_sampler_initialiser: L,
 ) -> Result<AlgorithmResult<M, G>, Error>
 where
-    O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
-        GloballyCoherentLineageStore<M, O::Habitat, InMemoryLineageReference>,
-    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
-        SeparableDispersalSampler<M, O::Habitat, G>,
+    O::LineageStore<ClassicalLineageStore<M, O::Habitat>>:
+        LocallyCoherentLineageStore<M, O::Habitat, InMemoryLineageReference>,
 {
     match args.parallelism_mode {
         ParallelismMode::Monolithic => {
@@ -309,21 +237,18 @@ where
                 speciation_probability,
                 origin_sampler_auxiliary,
                 _decomposition_auxiliary,
-            ) = scenario.build::<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>();
-            let coalescence_sampler = ConditionalCoalescenceSampler::default();
-            let event_sampler = ConditionalGillespieEventSampler::default();
+            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, G>>();
+            let coalescence_sampler = UnconditionalCoalescenceSampler::default();
+            let event_sampler = UnconditionalEventSampler::default();
 
             let (lineage_store, active_lineage_sampler): (
-                O::LineageStore<GillespieLineageStore<M, O::Habitat>>,
+                O::LineageStore<ClassicalLineageStore<M, O::Habitat>>,
                 _,
-            ) = lineage_store_sampler_initialiser.init(
-                O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
-                &dispersal_sampler,
-                &coalescence_sampler,
-                &turnover_rate,
-                &speciation_probability,
-                &event_sampler,
-            )?;
+            ) = lineage_store_sampler_initialiser.init(O::sample_habitat(
+                &habitat,
+                pre_sampler,
+                origin_sampler_auxiliary,
+            ))?;
 
             let emigration_exit = NeverEmigrationExit::default();
             let immigration_entry = NeverImmigrationEntry::default();
@@ -379,9 +304,9 @@ where
                 speciation_probability,
                 origin_sampler_auxiliary,
                 decomposition_auxiliary,
-            ) = scenario.build::<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>();
-            let coalescence_sampler = ConditionalCoalescenceSampler::default();
-            let event_sampler = ConditionalGillespieEventSampler::default();
+            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, G>>();
+            let coalescence_sampler = UnconditionalCoalescenceSampler::default();
+            let event_sampler = UnconditionalEventSampler::default();
 
             let decomposition = O::decompose(
                 &habitat,
@@ -394,16 +319,9 @@ where
             );
 
             let (lineage_store, active_lineage_sampler): (
-                O::LineageStore<GillespieLineageStore<M, O::Habitat>>,
+                O::LineageStore<ClassicalLineageStore<M, O::Habitat>>,
                 _,
-            ) = lineage_store_sampler_initialiser.init(
-                origin_sampler,
-                &dispersal_sampler,
-                &coalescence_sampler,
-                &turnover_rate,
-                &speciation_probability,
-                &event_sampler,
-            )?;
+            ) = lineage_store_sampler_initialiser.init(origin_sampler)?;
 
             let emigration_exit = DomainEmigrationExit::new(decomposition);
             let immigration_entry = BufferedImmigrationEntry::default();
@@ -460,46 +378,23 @@ where
 }
 
 #[allow(clippy::type_complexity)]
-trait EventSkippingLineageStoreSampleInitialiser<
-    M: MathsCore,
-    G: RngCore<M>,
-    O: Scenario<M, G>,
-    Error,
->
+trait ClassicalLineageStoreSampleInitialiser<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>, Error>
 {
     fn init<
         'h,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
         R: LineageReference<M, O::Habitat>,
-        S: GloballyCoherentLineageStore<M, O::Habitat, R>,
+        S: LocallyCoherentLineageStore<M, O::Habitat, R>,
         X: EmigrationExit<M, O::Habitat, G, R, S>,
         D: DispersalSampler<M, O::Habitat, G>,
-        C: CoalescenceSampler<M, O::Habitat, R, S>,
-        E: GillespieEventSampler<
-            M,
-            O::Habitat,
-            G,
-            R,
-            S,
-            X,
-            D,
-            C,
-            O::TurnoverRate,
-            O::SpeciationProbability,
-        >,
         I: ImmigrationEntry<M>,
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: &D,
-        coalescence_sampler: &C,
-        turnover_rate: &O::TurnoverRate,
-        speciation_probability: &O::SpeciationProbability,
-        event_sampler: &E,
     ) -> Result<
         (
             S,
-            LocationAliasActiveLineageSampler<
+            ClassicalActiveLineageSampler<
                 M,
                 O::Habitat,
                 G,
@@ -507,10 +402,7 @@ trait EventSkippingLineageStoreSampleInitialiser<
                 S,
                 X,
                 D,
-                C,
-                O::TurnoverRate,
                 O::SpeciationProbability,
-                E,
                 I,
             >,
         ),

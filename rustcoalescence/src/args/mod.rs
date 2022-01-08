@@ -283,10 +283,10 @@ impl Default for Partitioning {
 #[serde(deserialize_state = "Partition")]
 pub enum Algorithm {
     #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
-    #[serde(alias = "Gillespie")]
-    Classical(
+    #[serde(alias = "Classical")]
+    Gillespie(
         #[serde(deserialize_state)]
-        <rustcoalescence_algorithms_gillespie::classical::ClassicalAlgorithm as rustcoalescence_algorithms::AlgorithmParamters>::Arguments,
+        <rustcoalescence_algorithms_gillespie::gillespie::GillespieAlgorithm as rustcoalescence_algorithms::AlgorithmParamters>::Arguments,
     ),
     #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
     #[serde(alias = "SkippingGillespie")]
@@ -308,8 +308,8 @@ impl Serialize for Algorithm {
         #[allow(unreachable_patterns, clippy::single_match_else)]
         match self {
             #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
-            Self::Classical(args) => {
-                serializer.serialize_newtype_variant(stringify!(Algorithm), 0, "Classical", args)
+            Self::Gillespie(args) => {
+                serializer.serialize_newtype_variant(stringify!(Algorithm), 0, "Gillespie", args)
             },
             #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
             Self::EventSkipping(args) => serializer.serialize_newtype_variant(
