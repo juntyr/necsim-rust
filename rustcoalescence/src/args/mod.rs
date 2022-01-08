@@ -474,10 +474,6 @@ impl TryFrom<SampleRaw> for Sample {
     type Error = anyhow::Error;
 
     fn try_from(raw: SampleRaw) -> Result<Self, Self::Error> {
-        if matches!(raw.mode, SampleMode::Restart(_)) {
-            anyhow::bail!("`Restart` mode is not yet supported");
-        }
-
         match (&raw.origin, &raw.mode) {
             (SampleOrigin::Habitat, SampleMode::Genesis)
             | (
@@ -536,6 +532,45 @@ impl Default for SampleMode {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SampleModeRestart {
     pub after: NonNegativeF64,
+    #[serde(default)]
+    pub strategy: SampleModeRestartStrategy,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename = "InvalidIndividualStrategy")]
+#[serde(default)]
+pub struct SampleModeRestartStrategy {
+    #[serde(alias = "deme", alias = "ood")]
+    pub out_of_deme: OutOfDemeStrategy,
+    #[serde(alias = "habitat", alias = "ooh")]
+    pub out_of_habitat: OutOfHabitatStrategy,
+    #[serde(alias = "dup", alias = "coa")]
+    pub coalescence: CoalescenceStrategy,
+}
+
+impl Default for SampleModeRestartStrategy {
+    fn default() -> Self {
+        Self {
+            out_of_deme: OutOfDemeStrategy::Abort,
+            out_of_habitat: OutOfHabitatStrategy::Abort,
+            coalescence: CoalescenceStrategy::Abort,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum OutOfDemeStrategy {
+    Abort,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum OutOfHabitatStrategy {
+    Abort,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum CoalescenceStrategy {
+    Abort,
 }
 
 #[derive(Debug, Serialize)]
