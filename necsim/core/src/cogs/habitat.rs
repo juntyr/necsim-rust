@@ -15,17 +15,10 @@ pub trait Habitat<M: MathsCore>: crate::cogs::Backup + core::fmt::Debug + Sized 
 
     #[must_use]
     #[debug_ensures(ret == {
-        let extent = self.get_extent();
-
-        let mut total_habitat: u64 = 0;
-
-        for y in extent.y()..(extent.y() + extent.height()) {
-            for x in extent.x()..(extent.x() + extent.width()) {
-                total_habitat += u64::from(self.get_habitat_at_location(&Location::new(x, y)));
-            }
-        }
-
-        total_habitat
+        self.get_extent()
+            .iter()
+            .map(|location| u64::from(self.get_habitat_at_location(&location)))
+            .sum()
     }, "total habitat is the sum of all habitat in the extent of the habitat")]
     fn get_total_habitat(&self) -> u64;
 

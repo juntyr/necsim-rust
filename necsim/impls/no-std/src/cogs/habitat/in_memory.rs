@@ -8,6 +8,7 @@ use necsim_core::{
     cogs::{Backup, Habitat, MathsCore},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
+use necsim_core_bond::OffByOneU32;
 
 use crate::array2d::Array2D;
 
@@ -50,7 +51,10 @@ impl<M: MathsCore> Habitat<M> for InMemoryHabitat<M> {
     #[must_use]
     fn get_habitat_at_location(&self, location: &Location) -> u32 {
         self.habitat
-            .get((location.y() as usize) * (self.extent.width() as usize) + (location.x() as usize))
+            .get(
+                (location.y() as usize) * usize::from(self.extent.width())
+                    + (location.x() as usize),
+            )
             .copied()
             .unwrap_or(0)
     }
@@ -59,7 +63,7 @@ impl<M: MathsCore> Habitat<M> for InMemoryHabitat<M> {
     fn map_indexed_location_to_u64_injective(&self, indexed_location: &IndexedLocation) -> u64 {
         self.u64_injection
             .get(
-                (indexed_location.location().y() as usize) * (self.extent.width() as usize)
+                (indexed_location.location().y() as usize) * usize::from(self.extent.width())
                     + (indexed_location.location().x() as usize),
             )
             .copied()
@@ -70,16 +74,19 @@ impl<M: MathsCore> Habitat<M> for InMemoryHabitat<M> {
 
 impl<M: MathsCore> InMemoryHabitat<M> {
     #[must_use]
-    #[debug_ensures(
-        old(habitat.num_columns()) == ret.get_extent().width() as usize &&
-        old(habitat.num_rows()) == ret.get_extent().height() as usize,
-        "habitat extent has the dimension of the habitat array"
-    )]
-    pub fn new(habitat: Array2D<u32>) -> Self {
-        #[allow(clippy::cast_possible_truncation)]
-        let width: u32 = habitat.num_columns() as u32;
-        #[allow(clippy::cast_possible_truncation)]
-        let height: u32 = habitat.num_rows() as u32;
+    #[debug_ensures(if let Some(ret) = &ret {
+        old(habitat.num_columns()) == usize::from(ret.get_extent().width()) &&
+        old(habitat.num_rows()) == usize::from(ret.get_extent().height())
+    } else { true }, "habitat extent has the dimension of the habitat array")]
+    pub fn try_new(habitat: Array2D<u32>) -> Option<Self> {
+        let width = match OffByOneU32::new(habitat.num_columns() as u64) {
+            Ok(width) => width,
+            Err(_) => return None,
+        };
+        let height = match OffByOneU32::new(habitat.num_rows() as u64) {
+            Ok(height) => height,
+            Err(_) => return None,
+        };
 
         let habitat = habitat.into_row_major().into_boxed_slice();
 
@@ -98,11 +105,11 @@ impl<M: MathsCore> InMemoryHabitat<M> {
         #[allow(clippy::cast_possible_truncation)]
         let extent = LandscapeExtent::new(0, 0, width, height);
 
-        Self {
+        Some(Self {
             habitat: Final::new(habitat),
             u64_injection: Final::new(u64_injection),
             extent,
             marker: PhantomData::<M>,
-        }
+        })
     }
 }

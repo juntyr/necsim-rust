@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, Habitat, MathsCore, RngCore, SeparableDispersalSampler},
+    cogs::{Backup, DispersalSampler, MathsCore, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
@@ -57,10 +57,12 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, AlmostInfiniteHabitat<M>, 
     fn sample_dispersal_from_location(
         &self,
         location: &Location,
-        habitat: &AlmostInfiniteHabitat<M>,
+        _habitat: &AlmostInfiniteHabitat<M>,
         rng: &mut G,
     ) -> Location {
         use necsim_core::cogs::RngSampler;
+
+        const WRAP: i64 = 1 << 32;
 
         let (dx, dy): (f64, f64) = rng.sample_2d_normal(0.0_f64, self.sigma);
 
@@ -68,20 +70,15 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, AlmostInfiniteHabitat<M>, 
         // i.e. |dispersal| >= 0.5 changes the cell
         // (dx and dy must be rounded to nearest int away from 0.0)
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let (dx, dy): (i64, i64) = (
-            (M::round(dx) as i64) % i64::from(habitat.get_extent().width()),
-            (M::round(dy) as i64) % i64::from(habitat.get_extent().height()),
-        );
+        let (dx, dy): (i64, i64) = (M::round(dx) as i64, M::round(dy) as i64);
 
-        let new_x = (i64::from(location.x()) + dx) % i64::from(habitat.get_extent().width());
-        let new_y = (i64::from(location.y()) + dy) % i64::from(habitat.get_extent().height());
+        let new_x = (i64::from(location.x()) + dx) % WRAP;
+        let new_y = (i64::from(location.y()) + dy) % WRAP;
 
         #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         Location::new(
-            ((new_x + i64::from(habitat.get_extent().width()))
-                % i64::from(habitat.get_extent().width())) as u32,
-            ((new_y + i64::from(habitat.get_extent().height()))
-                % i64::from(habitat.get_extent().height())) as u32,
+            ((new_x + WRAP) % WRAP) as u32,
+            ((new_y + WRAP) % WRAP) as u32,
         )
     }
 }

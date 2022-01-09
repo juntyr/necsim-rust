@@ -20,8 +20,8 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
         habitat: &H,
         rng: &mut G,
     ) -> Location {
-        let location_row = (location.y() - habitat.get_extent().y()) as usize;
-        let location_column = (location.x() - habitat.get_extent().x()) as usize;
+        let location_row = location.y().wrapping_sub(habitat.get_extent().y()) as usize;
+        let location_column = location.x().wrapping_sub(habitat.get_extent().x()) as usize;
 
         // Only safe as trait precondition that `location` is inside `habitat`
         let alias_range = unsafe {
@@ -42,10 +42,12 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
-            (dispersal_target_index % (habitat.get_extent().width() as usize)) as u32
-                + habitat.get_extent().x(),
-            (dispersal_target_index / (habitat.get_extent().width() as usize)) as u32
-                + habitat.get_extent().y(),
+            habitat.get_extent().x().wrapping_add(
+                (dispersal_target_index % usize::from(habitat.get_extent().width())) as u32,
+            ),
+            habitat.get_extent().y().wrapping_add(
+                (dispersal_target_index / usize::from(habitat.get_extent().width())) as u32,
+            ),
         )
     }
 }

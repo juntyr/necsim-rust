@@ -1,7 +1,7 @@
 use core::{
     convert::AsMut,
     default::Default,
-    num::{NonZeroU128, NonZeroU32, NonZeroUsize},
+    num::{NonZeroU128, NonZeroU32, NonZeroU64, NonZeroUsize},
     ptr::copy_nonoverlapping,
 };
 
@@ -122,6 +122,23 @@ pub trait RngSampler<M: MathsCore>: RngCore<M> {
         )]
         let index =
             M::floor(self.sample_uniform_closed_open().get() * f64::from(length.get())) as u32;
+        // Safety in case of f64 rounding errors
+        index.min(length.get() - 1)
+    }
+
+    #[must_use]
+    #[inline]
+    #[debug_ensures(ret < length.get(), "samples U(0, length - 1)")]
+    fn sample_index_u64(&mut self, length: NonZeroU64) -> u64 {
+        // attributes on expressions are experimental
+        // see https://github.com/rust-lang/rust/issues/15701
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
+        let index =
+            M::floor(self.sample_uniform_closed_open().get() * (length.get() as f64)) as u64;
         // Safety in case of f64 rounding errors
         index.min(length.get() - 1)
     }

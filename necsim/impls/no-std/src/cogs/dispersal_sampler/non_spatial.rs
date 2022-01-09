@@ -1,4 +1,4 @@
-use core::{marker::PhantomData, num::NonZeroUsize};
+use core::{marker::PhantomData, num::NonZeroU64};
 
 use necsim_core::{
     cogs::{Backup, DispersalSampler, Habitat, MathsCore, RngCore, SeparableDispersalSampler},
@@ -48,19 +48,22 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, NonSpatialHabitat<M>, G>
         use necsim_core::cogs::RngSampler;
 
         let habitat_index_max =
-            (habitat.get_extent().width() as usize) * (habitat.get_extent().height() as usize);
+            habitat.get_extent().width().get() * habitat.get_extent().height().get();
 
-        // Safety: `habitat_index_max` is zero iff the habitat is 0x0, in which
-        //         case the location cannot be in the landscape
+        // Safety: habitat width and height are both > 0
         let dispersal_target_index =
-            rng.sample_index(unsafe { NonZeroUsize::new_unchecked(habitat_index_max) });
+            rng.sample_index_u64(unsafe { NonZeroU64::new_unchecked(habitat_index_max) });
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
-            (dispersal_target_index % (habitat.get_extent().width() as usize)) as u32
-                + habitat.get_extent().x(),
-            (dispersal_target_index / (habitat.get_extent().width() as usize)) as u32
-                + habitat.get_extent().y(),
+            habitat
+                .get_extent()
+                .x()
+                .wrapping_add((dispersal_target_index % habitat.get_extent().width().get()) as u32),
+            habitat
+                .get_extent()
+                .y()
+                .wrapping_add((dispersal_target_index / habitat.get_extent().width().get()) as u32),
         )
     }
 }
@@ -82,15 +85,14 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, NonSpatialHabitat
         use necsim_core::cogs::RngSampler;
 
         let habitat_index_max =
-            (habitat.get_extent().width() as usize) * (habitat.get_extent().height() as usize);
-        let current_location_index = (location.y() as usize)
-            * (habitat.get_extent().width() as usize)
-            + (location.x() as usize);
+            habitat.get_extent().width().get() * habitat.get_extent().height().get();
+        let current_location_index =
+            u64::from(location.y()) * habitat.get_extent().width().get() + u64::from(location.x());
 
-        // Safety: by PRE, `habitat_index_max` > 1
         let dispersal_target_index = {
+            // Safety: by PRE, `habitat_index_max` > 1
             let dispersal_target_index =
-                rng.sample_index(unsafe { NonZeroUsize::new_unchecked(habitat_index_max - 1) });
+                rng.sample_index_u64(unsafe { NonZeroU64::new_unchecked(habitat_index_max - 1) });
 
             if dispersal_target_index >= current_location_index {
                 dispersal_target_index + 1
@@ -101,10 +103,14 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, NonSpatialHabitat
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
-            (dispersal_target_index % (habitat.get_extent().width() as usize)) as u32
-                + habitat.get_extent().x(),
-            (dispersal_target_index / (habitat.get_extent().width() as usize)) as u32
-                + habitat.get_extent().y(),
+            habitat
+                .get_extent()
+                .x()
+                .wrapping_add((dispersal_target_index % habitat.get_extent().width().get()) as u32),
+            habitat
+                .get_extent()
+                .y()
+                .wrapping_add((dispersal_target_index / habitat.get_extent().width().get()) as u32),
         )
     }
 

@@ -27,6 +27,15 @@ use crate::{Scenario, ScenarioParameters};
 
 use super::super::maps::{self, MapLoadingMode};
 
+#[allow(clippy::module_name_repetitions, clippy::enum_variant_names)]
+#[derive(thiserror::Error, displaydoc::Display, Debug)]
+pub enum SpatiallyExplicitUniformTurnoverScenarioError {
+    /// invalid habitat map: zero width or height
+    EmptyHabitatMap,
+    /// invalid dispersal map: {0}
+    DispersalMap(InMemoryDispersalSamplerError),
+}
+
 #[allow(clippy::module_name_repetitions)]
 pub struct SpatiallyExplicitUniformTurnoverScenario<M: MathsCore, G: RngCore<M>> {
     habitat: InMemoryHabitat<M>,
@@ -40,7 +49,7 @@ impl<M: MathsCore, G: RngCore<M>> ScenarioParameters
     for SpatiallyExplicitUniformTurnoverScenario<M, G>
 {
     type Arguments = SpatiallyExplicitUniformTurnoverArguments;
-    type Error = InMemoryDispersalSamplerError;
+    type Error = SpatiallyExplicitUniformTurnoverScenarioError;
 }
 
 impl<M: MathsCore, G: RngCore<M>> Scenario<M, G>
@@ -64,22 +73,28 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G>
         args: Self::Arguments,
         speciation_probability_per_generation: PositiveUnitF64,
     ) -> Result<Self, Self::Error> {
-        let habitat = InMemoryHabitat::new(args.habitat_map);
+        let habitat = InMemoryHabitat::try_new(args.habitat_map)
+            .ok_or(SpatiallyExplicitUniformTurnoverScenarioError::EmptyHabitatMap)?;
         let turnover_rate = UniformTurnoverRate::new(args.turnover_rate);
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation.into());
 
         let habitat_extent = habitat.get_extent();
-        let habitat_area = (habitat_extent.width() as usize) * (habitat_extent.height() as usize);
+        let habitat_area =
+            usize::from(habitat_extent.width()) * usize::from(habitat_extent.height());
 
         if args.dispersal_map.num_rows() != habitat_area
             || args.dispersal_map.num_columns() != habitat_area
         {
-            return Err(InMemoryDispersalSamplerError::InconsistentDispersalMapSize);
+            return Err(SpatiallyExplicitUniformTurnoverScenarioError::DispersalMap(
+                InMemoryDispersalSamplerError::InconsistentDispersalMapSize,
+            ));
         }
 
         if !explicit_in_memory_dispersal_check_contract(&args.dispersal_map, &habitat) {
-            return Err(InMemoryDispersalSamplerError::InconsistentDispersalProbabilities);
+            return Err(SpatiallyExplicitUniformTurnoverScenarioError::DispersalMap(
+                InMemoryDispersalSamplerError::InconsistentDispersalProbabilities,
+            ));
         }
 
         Ok(Self {
