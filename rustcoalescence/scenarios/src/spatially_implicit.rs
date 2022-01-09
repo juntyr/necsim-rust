@@ -3,7 +3,7 @@ use std::num::NonZeroU32;
 use serde::{Deserialize, Serialize};
 
 use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
-use necsim_core_bond::OpenClosedUnitF64 as PositiveUnitF64;
+use necsim_core_bond::{OffByOneU32, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::partition::Partition;
 
 use necsim_impls_no_std::{
@@ -33,9 +33,9 @@ pub struct SpatiallyImplicitScenario<M: MathsCore, G: RngCore<M>> {
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
 pub struct SpatiallyImplicitArguments {
-    pub local_area: (u32, u32),
+    pub local_area: (OffByOneU32, OffByOneU32),
     pub local_deme: NonZeroU32,
-    pub meta_area: (u32, u32),
+    pub meta_area: (OffByOneU32, OffByOneU32),
     pub meta_deme: NonZeroU32,
 
     #[serde(alias = "migration")]

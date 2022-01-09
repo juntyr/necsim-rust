@@ -72,8 +72,12 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                 for (col_index, dispersal_probability) in row.enumerate() {
                     #[allow(clippy::cast_possible_truncation)]
                     let location = Location::new(
-                        (col_index % (habitat_extent.width() as usize)) as u32 + habitat_extent.x(),
-                        (col_index / (habitat_extent.width() as usize)) as u32 + habitat_extent.y(),
+                        habitat_extent
+                            .x()
+                            .wrapping_add((col_index % usize::from(habitat_extent.width())) as u32),
+                        habitat_extent
+                            .y()
+                            .wrapping_add((col_index / usize::from(habitat_extent.width())) as u32),
                     );
 
                     // Multiply all dispersal probabilities by the habitat of their target
@@ -96,8 +100,8 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                     AliasSamplerRange::from(range_from..alias_dispersal_buffer.len())
                 }
             }),
-            habitat_extent.height() as usize,
-            habitat_extent.width() as usize,
+            usize::from(habitat_extent.height()),
+            usize::from(habitat_extent.width()),
         )
         .unwrap(); // infallible by PRE;
 

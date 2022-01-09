@@ -18,12 +18,12 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
     ) -> Location {
         use necsim_core::cogs::RngSampler;
 
-        let location_index = ((location.y() - habitat.get_extent().y()) as usize)
-            * (habitat.get_extent().width() as usize)
-            + ((location.x() - habitat.get_extent().x()) as usize);
+        let location_index = (location.y().wrapping_sub(habitat.get_extent().y()) as usize)
+            * usize::from(habitat.get_extent().width())
+            + (location.x().wrapping_sub(habitat.get_extent().x()) as usize);
 
         let habitat_area =
-            (habitat.get_extent().width() as usize) * (habitat.get_extent().height() as usize);
+            usize::from(habitat.get_extent().width()) * usize::from(habitat.get_extent().height());
 
         let cumulative_dispersals_at_location = &self.cumulative_dispersal
             [location_index * habitat_area..(location_index + 1) * habitat_area];
@@ -50,10 +50,12 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
-            (valid_dispersal_target_index % (habitat.get_extent().width() as usize)) as u32
-                + habitat.get_extent().x(),
-            (valid_dispersal_target_index / (habitat.get_extent().width() as usize)) as u32
-                + habitat.get_extent().y(),
+            habitat.get_extent().x().wrapping_add(
+                (valid_dispersal_target_index % usize::from(habitat.get_extent().width())) as u32,
+            ),
+            habitat.get_extent().y().wrapping_add(
+                (valid_dispersal_target_index / usize::from(habitat.get_extent().width())) as u32,
+            ),
         )
     }
 }

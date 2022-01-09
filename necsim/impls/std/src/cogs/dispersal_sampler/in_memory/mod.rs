@@ -19,9 +19,9 @@ pub trait InMemoryDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>>:
     #[debug_ensures(
         matches!(ret, Err(InMemoryDispersalSamplerError::InconsistentDispersalMapSize)) != (
             dispersal.num_columns() == old(
-                (habitat.get_extent().width() * habitat.get_extent().height()) as usize
+                usize::from(habitat.get_extent().width()) * usize::from(habitat.get_extent().height())
             ) && dispersal.num_rows() == old(
-                (habitat.get_extent().width() * habitat.get_extent().height()) as usize
+                usize::from(habitat.get_extent().width()) * usize::from(habitat.get_extent().height())
             )
         ),
         "returns Err(InconsistentDispersalMapSize) iff the dispersal dimensions are inconsistent"
@@ -63,7 +63,8 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>, T: InMemoryDispersalSamplerNoEr
     ) -> Result<Self, InMemoryDispersalSamplerError> {
         let habitat_extent = habitat.get_extent();
 
-        let habitat_area = (habitat_extent.width() as usize) * (habitat_extent.height() as usize);
+        let habitat_area =
+            usize::from(habitat_extent.width()) * usize::from(habitat_extent.height());
 
         if dispersal.num_rows() != habitat_area || dispersal.num_columns() != habitat_area {
             return Err(InMemoryDispersalSamplerError::InconsistentDispersalMapSize);

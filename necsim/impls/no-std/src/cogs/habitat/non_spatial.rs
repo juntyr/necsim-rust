@@ -4,6 +4,7 @@ use necsim_core::{
     cogs::{Backup, Habitat, MathsCore},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
+use necsim_core_bond::OffByOneU32;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
@@ -20,7 +21,7 @@ impl<M: MathsCore> NonSpatialHabitat<M> {
         ret.get_total_habitat() == old(u64::from(area.0) * u64::from(area.1) * u64::from(deme.get())),
         "creates a habitat with community size area.0 * area.1 * deme"
     )]
-    pub fn new(area: (u32, u32), deme: NonZeroU32) -> Self {
+    pub fn new(area: (OffByOneU32, OffByOneU32), deme: NonZeroU32) -> Self {
         Self {
             extent: LandscapeExtent::new(0, 0, area.0, area.1),
             deme,
@@ -29,13 +30,13 @@ impl<M: MathsCore> NonSpatialHabitat<M> {
     }
 
     pub(super) fn new_with_offset(
-        width: u32,
-        height: u32,
-        area: (u32, u32),
+        x: u32,
+        y: u32,
+        area: (OffByOneU32, OffByOneU32),
         deme: NonZeroU32,
     ) -> Self {
         Self {
-            extent: LandscapeExtent::new(width, height, area.0, area.1),
+            extent: LandscapeExtent::new(x, y, area.0, area.1),
             deme,
             marker: PhantomData::<M>,
         }
@@ -79,10 +80,18 @@ impl<M: MathsCore> Habitat<M> for NonSpatialHabitat<M> {
 
     #[must_use]
     fn map_indexed_location_to_u64_injective(&self, indexed_location: &IndexedLocation) -> u64 {
-        (u64::from(indexed_location.location().y() - self.extent.y())
-            * u64::from(self.extent.width())
-            + u64::from(indexed_location.location().x() - self.extent.x()))
-            * u64::from(self.deme.get())
+        u64::from(
+            indexed_location
+                .location()
+                .y()
+                .wrapping_sub(self.extent.y()),
+        ) * u64::from(self.extent.width())
+            + u64::from(
+                indexed_location
+                    .location()
+                    .x()
+                    .wrapping_sub(self.extent.x()),
+            ) * u64::from(self.deme.get())
             + u64::from(indexed_location.index())
     }
 }

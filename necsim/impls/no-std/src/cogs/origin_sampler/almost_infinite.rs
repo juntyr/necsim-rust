@@ -5,6 +5,7 @@ use necsim_core::{
     landscape::{IndexedLocation, LandscapeExtent, LocationIterator},
     lineage::Lineage,
 };
+use necsim_core_bond::OffByOneU32;
 
 use crate::cogs::{
     habitat::almost_infinite::AlmostInfiniteHabitat, origin_sampler::pre_sampler::OriginPreSampler,
@@ -40,18 +41,22 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
 }
 
 impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteOriginSampler<'h, M, I> {
-    #[debug_requires(radius < (u32::MAX / 2), "sample circle fits into almost infinite habitat")]
     #[must_use]
     pub fn new(
         pre_sampler: OriginPreSampler<M, I>,
         habitat: &'h AlmostInfiniteHabitat<M>,
-        radius: u32,
+        radius: u16,
     ) -> Self {
+        // Safety: safe since lower and upper bound are both safe
+        //  a) radius = 0 --> 0*2 + 1 = 1 --> ok
+        //  b) radius = u16::MAX --> u16::MAX*2 + 1 = u32::MAX --> ok
+        let diameter = unsafe { OffByOneU32::new_unchecked(u64::from(radius) * 2 + 1) };
+
         let sample_extent = LandscapeExtent::new(
-            HABITAT_CENTRE - radius,
-            HABITAT_CENTRE - radius,
-            radius * 2 + 1,
-            radius * 2 + 1,
+            HABITAT_CENTRE - u32::from(radius),
+            HABITAT_CENTRE - u32::from(radius),
+            diameter,
+            diameter,
         );
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]

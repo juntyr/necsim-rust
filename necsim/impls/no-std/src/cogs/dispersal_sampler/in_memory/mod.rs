@@ -20,9 +20,9 @@ pub trait InMemoryDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>>:
 {
     #[debug_requires((
         dispersal.num_columns() == (
-            (habitat.get_extent().width() * habitat.get_extent().height()) as usize
+            usize::from(habitat.get_extent().width()) * usize::from(habitat.get_extent().height())
         ) && dispersal.num_rows() == (
-            (habitat.get_extent().width() * habitat.get_extent().height()) as usize
+            usize::from(habitat.get_extent().width()) * usize::from(habitat.get_extent().height())
         )
     ), "dispersal dimensions are consistent")]
     #[debug_requires(

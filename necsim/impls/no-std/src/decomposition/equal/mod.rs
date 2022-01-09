@@ -5,6 +5,7 @@ use necsim_core::{
     cogs::{Backup, Habitat, MathsCore},
     landscape::{LandscapeExtent, Location},
 };
+use necsim_core_bond::OffByOneU32;
 use necsim_partitioning_core::partition::Partition;
 
 use crate::decomposition::Decomposition;
@@ -66,9 +67,9 @@ impl<M: MathsCore, H: Habitat<M>> Decomposition<M, H> for EqualDecomposition<M, 
 }
 
 impl<M: MathsCore, H: Habitat<M>> EqualDecomposition<M, H> {
-    fn next_log2(coord: u32) -> u8 {
+    fn next_log2(coord: OffByOneU32) -> u8 {
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        if coord > 1 {
+        if coord.get() > 1 {
             M::ceil(M::ln(f64::from(coord)) / core::f64::consts::LN_2) as u8
         } else {
             0

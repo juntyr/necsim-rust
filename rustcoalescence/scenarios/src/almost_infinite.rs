@@ -23,7 +23,7 @@ use crate::{Scenario, ScenarioParameters};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct AlmostInfiniteScenario<M: MathsCore, G: RngCore<M>> {
-    radius: u32,
+    radius: u16,
 
     habitat: AlmostInfiniteHabitat<M>,
     dispersal_sampler: AlmostInfiniteNormalDispersalSampler<M, G>,
@@ -34,7 +34,7 @@ pub struct AlmostInfiniteScenario<M: MathsCore, G: RngCore<M>> {
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
 pub struct AlmostInfiniteArguments {
-    pub radius: u32,
+    pub radius: u16,
     pub sigma: NonNegativeF64,
 }
 
@@ -56,7 +56,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteScenario<M, G
     where
         G: 'h,
     = AlmostInfiniteOriginSampler<'h, M, I>;
-    type OriginSamplerAuxiliary = (u32,);
+    type OriginSamplerAuxiliary = (u16,);
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
 
