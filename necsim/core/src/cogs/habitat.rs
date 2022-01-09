@@ -1,10 +1,20 @@
+use necsim_core_bond::OffByOneU64;
+
 use crate::landscape::{IndexedLocation, LandscapeExtent, Location};
 
-use super::MathsCore;
+use super::{MathsCore, RngCore};
 
-#[allow(clippy::inline_always, clippy::inline_fn_without_body)]
+#[allow(
+    clippy::inline_always,
+    clippy::inline_fn_without_body,
+    clippy::no_effect_underscore_binding
+)]
 #[contract_trait]
 pub trait Habitat<M: MathsCore>: crate::cogs::Backup + core::fmt::Debug + Sized {
+    type LocationIterator<'a>: Iterator<Item = Location> + 'a
+    where
+        Self: 'a;
+
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent;
 
@@ -14,13 +24,12 @@ pub trait Habitat<M: MathsCore>: crate::cogs::Backup + core::fmt::Debug + Sized 
     }
 
     #[must_use]
-    #[debug_ensures(ret == {
-        self.get_extent()
-            .iter()
-            .map(|location| u64::from(self.get_habitat_at_location(&location)))
+    #[debug_ensures(ret.get() == {
+        self.iter_habitable_locations()
+            .map(|location| u128::from(self.get_habitat_at_location(&location)))
             .sum()
     }, "total habitat is the sum of all habitat in the extent of the habitat")]
-    fn get_total_habitat(&self) -> u64;
+    fn get_total_habitat(&self) -> OffByOneU64;
 
     #[must_use]
     #[debug_requires(self.get_extent().contains(location), "location is inside habitat extent")]
@@ -36,4 +45,14 @@ pub trait Habitat<M: MathsCore>: crate::cogs::Backup + core::fmt::Debug + Sized 
         "index is within the location's habitat capacity"
     )]
     fn map_indexed_location_to_u64_injective(&self, indexed_location: &IndexedLocation) -> u64;
+
+    #[debug_ensures(
+        old(self).get_extent().contains(ret.location()) &&
+        ret.index() < old(self).get_habitat_at_location(ret.location()),
+        "sampled indexed location is habitable"
+    )]
+    fn sample_habitable_indexed_location<G: RngCore<M>>(&self, rng: &mut G) -> IndexedLocation;
+
+    #[must_use]
+    fn iter_habitable_locations(&self) -> Self::LocationIterator<'_>;
 }
