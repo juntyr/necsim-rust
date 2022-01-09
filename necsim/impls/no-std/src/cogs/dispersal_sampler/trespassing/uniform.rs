@@ -1,0 +1,52 @@
+use core::marker::PhantomData;
+
+use necsim_core::{
+    cogs::{Backup, Habitat, MathsCore, RngCore},
+    landscape::Location,
+};
+
+use super::AntiTrespassingDispersalSampler;
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug)]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+pub struct UniformAntiTrespassingDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>> {
+    marker: PhantomData<(M, H, G)>,
+}
+
+impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Default
+    for UniformAntiTrespassingDispersalSampler<M, H, G>
+{
+    #[must_use]
+    fn default() -> Self {
+        Self {
+            marker: PhantomData::<(M, H, G)>,
+        }
+    }
+}
+
+#[contract_trait]
+impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Backup
+    for UniformAntiTrespassingDispersalSampler<M, H, G>
+{
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            marker: PhantomData::<(M, H, G)>,
+        }
+    }
+}
+
+#[contract_trait]
+impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> AntiTrespassingDispersalSampler<M, H, G>
+    for UniformAntiTrespassingDispersalSampler<M, H, G>
+{
+    #[must_use]
+    fn sample_anti_trespassing_dispersal_from_location(
+        &self,
+        _location: &Location,
+        habitat: &H,
+        rng: &mut G,
+    ) -> Location {
+        habitat.sample_habitable_indexed_location(rng).into()
+    }
+}

@@ -20,7 +20,7 @@ impl<M: MathsCore, H: Habitat<M>> EqualDecomposition<M, H> {
         let morton_x = Self::next_log2(extent.width());
         let morton_y = Self::next_log2(extent.height());
 
-        for location in extent.iter() {
+        for location in habitat.iter_habitable_locations() {
             let h = habitat.get_habitat_at_location(&location);
 
             if h > 0 {

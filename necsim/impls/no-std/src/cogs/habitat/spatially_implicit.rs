@@ -1,10 +1,10 @@
 use core::num::NonZeroU32;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore},
+    cogs::{Backup, Habitat, MathsCore, RngCore},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
-use necsim_core_bond::OffByOneU32;
+use necsim_core_bond::{OffByOneU32, OffByOneU64};
 
 use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 
@@ -23,8 +23,12 @@ impl<M: MathsCore> SpatiallyImplicitHabitat<M> {
     #[must_use]
     #[debug_ensures(
         ret.get_total_habitat() == old(
-            u64::from(local_area.0) * u64::from(local_area.1) * u64::from(local_deme.get())
-            + u64::from(meta_area.0) * u64::from(meta_area.1) * u64::from(meta_deme.get())
+            OffByOneU64::from(local_area.0)
+                * OffByOneU64::from(local_area.1)
+                * OffByOneU64::from(local_deme)
+            + OffByOneU64::from(meta_area.0)
+                * OffByOneU64::from(meta_area.1)
+                * OffByOneU64::from(meta_deme)
         ),
         "creates a habitat with a combined local and meta community size "
     )]
@@ -73,13 +77,15 @@ impl<M: MathsCore> Backup for SpatiallyImplicitHabitat<M> {
 
 #[contract_trait]
 impl<M: MathsCore> Habitat<M> for SpatiallyImplicitHabitat<M> {
+    type LocationIterator<'a> = impl Iterator<Item = Location>;
+
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
         &self.extent
     }
 
     #[must_use]
-    fn get_total_habitat(&self) -> u64 {
+    fn get_total_habitat(&self) -> OffByOneU64 {
         self.local.get_total_habitat() + self.meta().get_total_habitat()
     }
 
@@ -108,5 +114,17 @@ impl<M: MathsCore> Habitat<M> for SpatiallyImplicitHabitat<M> {
             self.meta
                 .map_indexed_location_to_u64_injective(indexed_location)
         }
+    }
+
+    #[must_use]
+    fn sample_habitable_indexed_location<G: RngCore<M>>(&self, rng: &mut G) -> IndexedLocation {
+        self.local.sample_habitable_indexed_location(rng)
+    }
+
+    #[must_use]
+    fn iter_habitable_locations(&self) -> Self::LocationIterator<'_> {
+        self.local
+            .iter_habitable_locations()
+            .chain(self.meta.iter_habitable_locations())
     }
 }
