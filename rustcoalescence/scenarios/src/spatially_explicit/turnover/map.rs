@@ -27,9 +27,11 @@ use crate::{Scenario, ScenarioParameters};
 
 use super::super::maps::{self, MapLoadingMode};
 
-#[allow(clippy::module_name_repetitions)]
+#[allow(clippy::module_name_repetitions, clippy::enum_variant_names)]
 #[derive(thiserror::Error, displaydoc::Display, Debug)]
 pub enum SpatiallyExplicitTurnoverMapScenarioError {
+    /// invalid habitat map: zero width or height
+    EmptyHabitatMap,
     /// invalid dispersal map: {0}
     DispersalMap(InMemoryDispersalSamplerError),
     /// invalid turnover map: {0}
@@ -71,14 +73,16 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitTurnoverMa
         args: Self::Arguments,
         speciation_probability_per_generation: PositiveUnitF64,
     ) -> Result<Self, Self::Error> {
-        let habitat = InMemoryHabitat::new(args.habitat_map);
+        let habitat = InMemoryHabitat::try_new(args.habitat_map)
+            .ok_or(SpatiallyExplicitTurnoverMapScenarioError::EmptyHabitatMap)?;
         let turnover_rate = InMemoryTurnoverRate::new(args.turnover_map, &habitat)
             .map_err(SpatiallyExplicitTurnoverMapScenarioError::TurnoverMap)?;
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation.into());
 
         let habitat_extent = habitat.get_extent();
-        let habitat_area = (habitat_extent.width() as usize) * (habitat_extent.height() as usize);
+        let habitat_area =
+            usize::from(habitat_extent.width()) * usize::from(habitat_extent.height());
 
         if args.dispersal_map.num_rows() != habitat_area
             || args.dispersal_map.num_columns() != habitat_area

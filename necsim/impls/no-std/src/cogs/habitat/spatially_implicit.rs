@@ -4,6 +4,7 @@ use necsim_core::{
     cogs::{Backup, Habitat, MathsCore},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
+use necsim_core_bond::OffByOneU32;
 
 use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 
@@ -28,26 +29,21 @@ impl<M: MathsCore> SpatiallyImplicitHabitat<M> {
         "creates a habitat with a combined local and meta community size "
     )]
     pub fn new(
-        local_area: (u32, u32),
+        local_area: (OffByOneU32, OffByOneU32),
         local_deme: NonZeroU32,
-        meta_area: (u32, u32),
+        meta_area: (OffByOneU32, OffByOneU32),
         meta_deme: NonZeroU32,
     ) -> Self {
         let local = NonSpatialHabitat::new(local_area, local_deme);
         let meta = NonSpatialHabitat::new_with_offset(
-            local.get_extent().width(),
-            local.get_extent().height(),
+            meta_area.0.inv(),
+            meta_area.1.inv(),
             meta_area,
             meta_deme,
         );
 
         Self {
-            extent: LandscapeExtent::new(
-                0,
-                0,
-                local.get_extent().width() + meta.get_extent().width(),
-                local.get_extent().height() + meta.get_extent().height(),
-            ),
+            extent: LandscapeExtent::new(0, 0, OffByOneU32::max(), OffByOneU32::max()),
             local,
             meta,
         }

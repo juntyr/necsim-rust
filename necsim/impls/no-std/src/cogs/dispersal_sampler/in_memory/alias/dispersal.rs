@@ -27,10 +27,12 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
-            (dispersal_target_index % (habitat.get_extent().width() as usize)) as u32
-                + habitat.get_extent().x(),
-            (dispersal_target_index / (habitat.get_extent().width() as usize)) as u32
-                + habitat.get_extent().y(),
+            habitat.get_extent().x().wrapping_add(
+                (dispersal_target_index % usize::from(habitat.get_extent().width())) as u32,
+            ),
+            habitat.get_extent().y().wrapping_add(
+                (dispersal_target_index / usize::from(habitat.get_extent().width())) as u32,
+            ),
         )
     }
 }

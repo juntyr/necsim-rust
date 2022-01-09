@@ -17,8 +17,8 @@ pub fn explicit_in_memory_dispersal_check_contract<M: MathsCore, H: Habitat<M>>(
     for row_index in 0..dispersal.num_rows() {
         #[allow(clippy::cast_possible_truncation)]
         let dispersal_origin = Location::new(
-            (row_index % habitat_width as usize) as u32,
-            (row_index / habitat_width as usize) as u32,
+            (row_index % usize::from(habitat_width)) as u32,
+            (row_index / usize::from(habitat_width)) as u32,
         );
 
         if habitat.get_habitat_at_location(&dispersal_origin) > 0 {
@@ -27,8 +27,8 @@ pub fn explicit_in_memory_dispersal_check_contract<M: MathsCore, H: Habitat<M>>(
             for col_index in 0..dispersal.num_columns() {
                 #[allow(clippy::cast_possible_truncation)]
                 let dispersal_target = Location::new(
-                    (col_index % habitat_width as usize) as u32,
-                    (col_index / habitat_width as usize) as u32,
+                    (col_index % usize::from(habitat_width)) as u32,
+                    (col_index / usize::from(habitat_width)) as u32,
                 );
 
                 if dispersal[(row_index, col_index)] > 0.0_f64 {
