@@ -65,6 +65,11 @@ impl Partition {
     pub const fn size(self) -> NonZeroU32 {
         self.size
     }
+
+    #[must_use]
+    pub const fn is_root(self) -> bool {
+        self.rank == 0_u32
+    }
 }
 
 impl TryFrom<PartitionRaw> for Partition {

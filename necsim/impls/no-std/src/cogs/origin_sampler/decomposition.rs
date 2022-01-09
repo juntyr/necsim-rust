@@ -80,6 +80,7 @@ impl<'d, M: MathsCore, O: UntrustedOriginSampler<'d, M>, D: Decomposition<M, O::
         #[allow(clippy::while_let_on_iterator)]
         while let Some(lineage) = self.origin_sampler.next() {
             // Forward any out-of-habitat or out-of-deme lineages
+            //  (but only on the root subdomain -> no duplication)
             if !self
                 .origin_sampler
                 .habitat()
@@ -90,7 +91,11 @@ impl<'d, M: MathsCore, O: UntrustedOriginSampler<'d, M>, D: Decomposition<M, O::
                         .habitat()
                         .get_habitat_at_location(lineage.indexed_location.location())
             {
-                return Some(lineage);
+                if self.decomposition.get_subdomain().is_root() {
+                    return Some(lineage);
+                }
+
+                continue;
             }
 
             if self.decomposition.map_location_to_subdomain_rank(

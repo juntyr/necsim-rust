@@ -8,11 +8,11 @@ use slab::Slab;
 
 use necsim_core::{
     cogs::{Backup, Habitat, MathsCore},
-    landscape::IndexedLocation,
+    landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},
 };
 
-use crate::{array2d::Array2D, cogs::lineage_reference::in_memory::InMemoryLineageReference};
+use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 
 mod store;
 
@@ -20,7 +20,8 @@ mod store;
 #[derive(Debug)]
 pub struct GillespieLineageStore<M: MathsCore, H: Habitat<M>> {
     lineages_store: Slab<Lineage>,
-    location_to_lineage_references: Array2D<Vec<InMemoryLineageReference>>,
+    location_to_lineage_references:
+        HashMap<Location, Vec<InMemoryLineageReference>, FnvBuildHasher>,
     indexed_location_to_lineage_reference:
         HashMap<IndexedLocation, (GlobalLineageReference, usize), FnvBuildHasher>,
     _marker: PhantomData<(M, H)>,

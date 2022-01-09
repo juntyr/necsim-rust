@@ -13,7 +13,7 @@ use necsim_core::{
     lineage::{GlobalLineageReference, Lineage},
 };
 
-use crate::{array2d::Array2D, cogs::lineage_reference::in_memory::InMemoryLineageReference};
+use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 
 use super::GillespieLineageStore;
 
@@ -27,14 +27,10 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
         H: 'a,
     = impl Iterator<Item = InMemoryLineageReference>;
 
-    fn with_capacity(habitat: &H, capacity: usize) -> Self {
+    fn with_capacity(_habitat: &H, capacity: usize) -> Self {
         Self {
             lineages_store: Slab::with_capacity(capacity),
-            location_to_lineage_references: Array2D::filled_with(
-                Vec::new(),
-                habitat.get_extent().height() as usize,
-                habitat.get_extent().width() as usize,
-            ),
+            location_to_lineage_references: HashMap::with_hasher(FnvBuildHasher::default()),
             indexed_location_to_lineage_reference: HashMap::with_capacity_and_hasher(
                 capacity,
                 FnvBuildHasher::default(),
@@ -77,12 +73,12 @@ impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H, InMemoryLine
     fn insert_lineage_locally_coherent(
         &mut self,
         lineage: Lineage,
-        habitat: &H,
+        _habitat: &H,
     ) -> InMemoryLineageReference {
-        let lineages_at_location = &mut self.location_to_lineage_references[(
-            (lineage.indexed_location.location().y() - habitat.get_extent().y()) as usize,
-            (lineage.indexed_location.location().x() - habitat.get_extent().x()) as usize,
-        )];
+        let lineages_at_location = self
+            .location_to_lineage_references
+            .entry(lineage.indexed_location.location().clone())
+            .or_insert(Vec::new());
 
         self.indexed_location_to_lineage_reference.insert(
             lineage.indexed_location.clone(),
@@ -101,7 +97,7 @@ impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H, InMemoryLine
     fn extract_lineage_locally_coherent(
         &mut self,
         reference: InMemoryLineageReference,
-        habitat: &H,
+        _habitat: &H,
     ) -> Lineage {
         let lineage = self.lineages_store.remove(usize::from(reference));
 
@@ -111,10 +107,11 @@ impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H, InMemoryLine
             .remove(&lineage.indexed_location)
             .unwrap();
 
-        let lineages_at_location = &mut self.location_to_lineage_references[(
-            (lineage.indexed_location.location().y() - habitat.get_extent().y()) as usize,
-            (lineage.indexed_location.location().x() - habitat.get_extent().x()) as usize,
-        )];
+        // We know from the integrity of this store that this value exists
+        let lineages_at_location = self
+            .location_to_lineage_references
+            .get_mut(lineage.indexed_location.location())
+            .unwrap();
 
         lineages_at_location.swap_remove(local_index);
 
@@ -146,19 +143,26 @@ impl<M: MathsCore, H: Habitat<M>> GloballyCoherentLineageStore<M, H, InMemoryLin
     = impl Iterator<Item = Location>;
 
     #[must_use]
-    fn iter_active_locations(&self, habitat: &H) -> Self::LocationIterator<'_> {
-        habitat.get_extent().iter()
+    fn iter_active_locations(&self, _habitat: &H) -> Self::LocationIterator<'_> {
+        self.location_to_lineage_references
+            .iter()
+            .filter_map(|(location, references)| {
+                if references.is_empty() {
+                    None
+                } else {
+                    Some(location.clone())
+                }
+            })
     }
 
     #[must_use]
     fn get_local_lineage_references_at_location_unordered(
         &self,
         location: &Location,
-        habitat: &H,
+        _habitat: &H,
     ) -> &[InMemoryLineageReference] {
-        &self.location_to_lineage_references[(
-            (location.y() - habitat.get_extent().y()) as usize,
-            (location.x() - habitat.get_extent().x()) as usize,
-        )]
+        self.location_to_lineage_references
+            .get(location)
+            .map_or(&[], |references| references)
     }
 }
