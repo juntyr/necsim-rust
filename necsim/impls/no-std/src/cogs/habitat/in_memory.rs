@@ -5,10 +5,10 @@ use alloc::{boxed::Box, vec::Vec};
 use r#final::Final;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore},
+    cogs::{Backup, Habitat, MathsCore, RngCore},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
-use necsim_core_bond::OffByOneU32;
+use necsim_core_bond::{OffByOneU32, OffByOneU64};
 
 use crate::array2d::Array2D;
 
@@ -38,14 +38,19 @@ impl<M: MathsCore> Backup for InMemoryHabitat<M> {
 
 #[contract_trait]
 impl<M: MathsCore> Habitat<M> for InMemoryHabitat<M> {
+    type LocationIterator<'a> = impl Iterator<Item = Location>;
+
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
         &self.extent
     }
 
     #[must_use]
-    fn get_total_habitat(&self) -> u64 {
-        self.habitat.iter().map(|x| u64::from(*x)).sum()
+    fn get_total_habitat(&self) -> OffByOneU64 {
+        // Safety: constructor ensures that there is at least one habitable location
+        unsafe {
+            OffByOneU64::new_unchecked(u128::from(*self.u64_injection.last().unwrap_unchecked()))
+        }
     }
 
     #[must_use]
@@ -70,6 +75,53 @@ impl<M: MathsCore> Habitat<M> for InMemoryHabitat<M> {
             .unwrap_or(0)
             + u64::from(indexed_location.index())
     }
+
+    #[must_use]
+    fn sample_habitable_indexed_location<G: RngCore<M>>(&self, rng: &mut G) -> IndexedLocation {
+        use necsim_core::cogs::RngSampler;
+
+        let indexed_location_index = rng.sample_index_u64(self.get_total_habitat().into());
+
+        let location_index = match self.u64_injection.binary_search(&indexed_location_index) {
+            Ok(index) => index,
+            Err(index) => index - 1,
+        };
+
+        #[allow(clippy::cast_possible_truncation)]
+        IndexedLocation::new(
+            Location::new(
+                self.extent
+                    .x()
+                    .wrapping_add((location_index % usize::from(self.extent.width())) as u32),
+                self.extent
+                    .y()
+                    .wrapping_add((location_index / usize::from(self.extent.width())) as u32),
+            ),
+            (indexed_location_index - self.u64_injection[location_index]) as u32,
+        )
+    }
+
+    #[must_use]
+    fn iter_habitable_locations(&self) -> Self::LocationIterator<'_> {
+        self.habitat
+            .iter()
+            .enumerate()
+            .filter_map(move |(location_index, habitat)| {
+                if *habitat > 0 {
+                    #[allow(clippy::cast_possible_truncation)]
+                    Some(Location::new(
+                        self.extent.x().wrapping_add(
+                            (location_index % usize::from(self.extent.width())) as u32,
+                        ),
+                        self.extent.y().wrapping_add(
+                            (location_index / usize::from(self.extent.width())) as u32,
+                        ),
+                    ))
+                } else {
+                    None
+                }
+            })
+    }
 }
 
 impl<M: MathsCore> InMemoryHabitat<M> {
@@ -92,15 +144,20 @@ impl<M: MathsCore> InMemoryHabitat<M> {
 
         let mut index_acc = 0_u64;
 
-        let u64_injection = habitat
+        let mut u64_injection = habitat
             .iter()
             .map(|h| {
                 let injection = index_acc;
                 index_acc += u64::from(*h);
                 injection
             })
-            .collect::<Vec<u64>>()
-            .into_boxed_slice();
+            .collect::<Vec<u64>>();
+        u64_injection.push(index_acc);
+        let u64_injection = u64_injection.into_boxed_slice();
+
+        if index_acc == 0 {
+            return None;
+        }
 
         #[allow(clippy::cast_possible_truncation)]
         let extent = LandscapeExtent::new(0, 0, width, height);

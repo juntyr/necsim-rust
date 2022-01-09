@@ -30,7 +30,7 @@ use super::super::maps::{self, MapLoadingMode};
 #[allow(clippy::module_name_repetitions, clippy::enum_variant_names)]
 #[derive(thiserror::Error, displaydoc::Display, Debug)]
 pub enum SpatiallyExplicitTurnoverMapScenarioError {
-    /// invalid habitat map: zero width or height
+    /// invalid habitat map: no habitable locations
     EmptyHabitatMap,
     /// invalid dispersal map: {0}
     DispersalMap(InMemoryDispersalSamplerError),

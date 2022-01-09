@@ -6,6 +6,8 @@ use necsim_core::{
 };
 use necsim_core_bond::ClosedUnitF64;
 
+pub mod uniform;
+
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[allow(clippy::no_effect_underscore_binding)]
 #[allow(clippy::module_name_repetitions)]

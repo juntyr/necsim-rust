@@ -72,7 +72,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
             clippy::cast_precision_loss
         )]
         {
-            ((self.habitat.get_total_habitat() as f64)
+            (f64::from(self.habitat.get_total_habitat())
                 * self.pre_sampler.get_sample_proportion().get()) as u64
         }
     }

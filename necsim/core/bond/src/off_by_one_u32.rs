@@ -1,4 +1,4 @@
-use core::{convert::TryFrom, fmt};
+use core::{convert::TryFrom, fmt, num::NonZeroU64};
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -87,6 +87,13 @@ impl TryFrom<u64> for OffByOneU32 {
 impl const From<OffByOneU32> for u64 {
     fn from(val: OffByOneU32) -> Self {
         u64::from(val.0) + 1_u64
+    }
+}
+
+impl const From<OffByOneU32> for NonZeroU64 {
+    fn from(val: OffByOneU32) -> Self {
+        // Safety: always at least 1
+        unsafe { NonZeroU64::new_unchecked(u64::from(val)) }
     }
 }
 
