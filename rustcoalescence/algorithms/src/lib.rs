@@ -3,6 +3,8 @@
 
 use std::{error::Error as StdError, fmt, marker::PhantomData};
 
+use serde::{Deserialize, Serialize};
+
 use necsim_core::{
     cogs::{LineageReference, LineageStore, MathsCore, RngCore},
     lineage::Lineage,
@@ -48,16 +50,44 @@ pub trait Algorithm<O: Scenario<Self::MathsCore, Self::Rng>, R: Reporter, P: Loc
     ///
     /// Returns a `ContinueError<Self::Error>` if initialising the resuming
     ///  simulation or running the algorithm failed
-    #[allow(clippy::type_complexity)]
+    #[allow(clippy::type_complexity, clippy::too_many_arguments)]
     fn resume_and_simulate<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         lineages: L,
+        resume_after: Option<NonNegativeF64>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
     ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, ContinueError<Self::Error>>;
+
+    /// # Errors
+    ///
+    /// Returns a `ContinueError<Self::Error>` if fixing up the restarting
+    ///  simulation (incl. running the algorithm) failed
+    #[allow(clippy::type_complexity, clippy::too_many_arguments)]
+    fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
+        args: Self::Arguments,
+        rng: Self::Rng,
+        scenario: O,
+        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        lineages: L,
+        restart_at: NonNegativeF64,
+        _fixup_strategy: RestartFixUpStrategy,
+        local_partition: &mut P,
+    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, ContinueError<Self::Error>> {
+        Self::resume_and_simulate(
+            args,
+            rng,
+            scenario,
+            pre_sampler,
+            lineages,
+            Some(restart_at),
+            Some(necsim_core_bond::PositiveF64::max_after(restart_at, restart_at).into()),
+            local_partition,
+        )
+    }
 }
 
 pub enum AlgorithmResult<M: MathsCore, G: RngCore<M>> {
@@ -146,4 +176,45 @@ impl<E: StdError + Send + Sync + 'static> From<E> for ContinueError<E> {
     fn from(err: E) -> Self {
         Self::Simulate(err)
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename = "InvalidIndividualStrategy")]
+#[serde(default)]
+pub struct RestartFixUpStrategy {
+    #[serde(alias = "deme", alias = "ood")]
+    pub out_of_deme: OutOfDemeStrategy,
+    #[serde(alias = "habitat", alias = "ooh")]
+    pub out_of_habitat: OutOfHabitatStrategy,
+    #[serde(alias = "dup", alias = "coa")]
+    pub coalescence: CoalescenceStrategy,
+}
+
+impl Default for RestartFixUpStrategy {
+    fn default() -> Self {
+        Self {
+            out_of_deme: OutOfDemeStrategy::Abort,
+            out_of_habitat: OutOfHabitatStrategy::Abort,
+            coalescence: CoalescenceStrategy::Abort,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum OutOfDemeStrategy {
+    Abort,
+    Dispersal,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum OutOfHabitatStrategy {
+    Abort,
+    #[serde(alias = "Uniform")]
+    UniformDispersal,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum CoalescenceStrategy {
+    Abort,
+    Coalescence,
 }
