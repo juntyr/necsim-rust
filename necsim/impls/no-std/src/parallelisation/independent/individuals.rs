@@ -8,8 +8,7 @@ use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, Habitat, MathsCore, PrimeableRng,
-        SpeciationProbability, TurnoverRate,
+        DispersalSampler, Habitat, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
     },
     lineage::{GlobalLineageReference, Lineage},
     reporter::Reporter,
@@ -20,10 +19,7 @@ use necsim_partitioning_core::LocalPartition;
 
 use crate::{
     cogs::{
-        active_lineage_sampler::{
-            independent::{event_time_sampler::EventTimeSampler, IndependentActiveLineageSampler},
-            singular::SingularActiveLineageSampler,
-        },
+        active_lineage_sampler::singular::SingularActiveLineageSampler,
         coalescence_sampler::independent::IndependentCoalescenceSampler,
         emigration_exit::never::NeverEmigrationExit,
         event_sampler::{
@@ -45,7 +41,20 @@ pub fn simulate<
     D: DispersalSampler<M, H, G>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
-    J: EventTimeSampler<M, H, G, T>,
+    A: SingularActiveLineageSampler<
+        M,
+        H,
+        G,
+        GlobalLineageReference,
+        IndependentLineageStore<M, H>,
+        NeverEmigrationExit,
+        D,
+        IndependentCoalescenceSampler<M, H>,
+        T,
+        N,
+        IndependentEventSampler<M, H, G, NeverEmigrationExit, D, T, N>,
+        NeverImmigrationEntry,
+    >,
     R: Reporter,
     P: LocalPartition<R>,
     L: IntoIterator<Item = Lineage>,
@@ -63,7 +72,7 @@ pub fn simulate<
         N,
         IndependentEventSampler<M, H, G, NeverEmigrationExit, D, T, N>,
         NeverImmigrationEntry,
-        IndependentActiveLineageSampler<M, H, G, NeverEmigrationExit, D, T, N, J>,
+        A,
     >,
     lineages: L,
     dedup_cache: DedupCache,
