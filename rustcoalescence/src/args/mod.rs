@@ -19,7 +19,7 @@ use necsim_core::{
     cogs::{MathsCore, RngCore},
     lineage::Lineage,
 };
-use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveF64};
 use necsim_impls_std::{
     event_log::replay::EventLogReplay,
     lineage_file::{loader::LineageFileLoader, saver::LineageFileSaver},
@@ -452,8 +452,7 @@ struct ReplayArgsRaw {
     reporters: Vec<ReporterPluginLibrary>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(try_from = "SampleRaw")]
+#[derive(Debug, Serialize)]
 pub struct Sample {
     pub percentage: ClosedUnitF64,
     pub origin: SampleOrigin,
@@ -472,22 +471,82 @@ impl Default for Sample {
     }
 }
 
-impl TryFrom<SampleRaw> for Sample {
-    type Error = anyhow::Error;
+impl<'de> DeserializeState<'de, &'de Option<Pause>> for Sample {
+    fn deserialize_state<D: Deserializer<'de>>(
+        pause: &mut &'de Option<Pause>,
+        deserializer: D,
+    ) -> Result<Self, D::Error> {
+        let raw = SampleRaw::deserialize_state(pause, deserializer)?;
 
-    fn try_from(raw: SampleRaw) -> Result<Self, Self::Error> {
         match (&raw.origin, &raw.mode) {
             (SampleOrigin::Habitat, SampleMode::Genesis)
             | (
                 SampleOrigin::List(_) | SampleOrigin::Bincode(_),
-                SampleMode::Resume | SampleMode::Restart(_),
+                SampleMode::Resume | SampleMode::FixUp(_) | SampleMode::Restart(_),
             ) => (),
-            (SampleOrigin::Habitat, SampleMode::Resume | SampleMode::Restart(_)) => {
-                anyhow::bail!("`Habitat` origin is only compatible with `Genesis` mode")
+            (
+                SampleOrigin::Habitat,
+                SampleMode::Resume | SampleMode::FixUp(_) | SampleMode::Restart(_),
+            ) => {
+                return Err(serde::de::Error::custom(
+                    "`Habitat` origin is only compatible with `Genesis` mode",
+                ));
             },
             (SampleOrigin::List(_) | SampleOrigin::Bincode(_), SampleMode::Genesis) => {
-                anyhow::bail!("`Genesis` mode is only compatible with `Habitat` origin")
+                return Err(serde::de::Error::custom(
+                    "`Genesis` mode is only compatible with `Habitat` origin",
+                ));
             },
+        }
+
+        let pre_resume_bound = match &raw.mode {
+            SampleMode::Genesis | SampleMode::Resume => None,
+            SampleMode::FixUp(_) => {
+                if let Some(pause) = pause {
+                    match pause.mode {
+                        PauseMode::Resume => {
+                            return Err(serde::de::Error::custom(
+                                "`FixUp` sample mode is incompatible with `Resume` pause mode,\n \
+                                 use `Restart` instead",
+                            ))
+                        },
+                        PauseMode::FixUp | PauseMode::Restart => (),
+                    }
+
+                    match PositiveF64::new(pause.before.get()) {
+                        Ok(fix_at) => Some(fix_at),
+                        Err(_) => {
+                            return Err(serde::de::Error::custom(
+                                "`FixUp` mode cannot be used at simulation genesis time 0.0",
+                            ))
+                        },
+                    }
+                } else {
+                    return Err(serde::de::Error::custom(
+                        "`FixUp` mode requires an immediate pause to save the fixed individuals",
+                    ));
+                }
+            },
+            SampleMode::Restart(SampleModeRestart { after }) => {
+                Some(PositiveF64::max_after(*after, *after))
+            },
+        };
+
+        let lineages = match &raw.origin {
+            SampleOrigin::Habitat => None,
+            SampleOrigin::List(lineages) => Some(lineages.iter()),
+            SampleOrigin::Bincode(loader) => Some(loader.get_lineages().iter()),
+        };
+
+        if let (Some(lineages), Some(pre_resume_bound)) = (lineages, pre_resume_bound) {
+            for lineage in lineages {
+                if lineage.last_event_time >= pre_resume_bound {
+                    return Err(serde::de::Error::custom(format!(
+                        "Lineage #{} at time {} is not before the resume point",
+                        lineage.global_reference, lineage.last_event_time
+                    )));
+                }
+            }
         }
 
         Ok(Self {
@@ -498,12 +557,14 @@ impl TryFrom<SampleRaw> for Sample {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, DeserializeState)]
+#[serde(deserialize_state = "&'de Option<Pause>")]
 #[serde(default)]
 #[serde(deny_unknown_fields)]
 #[serde(rename = "Sample")]
 struct SampleRaw {
     percentage: ClosedUnitF64,
+    #[serde(deserialize_state)]
     origin: SampleOrigin,
     mode: SampleMode,
 }
@@ -522,6 +583,7 @@ impl Default for SampleRaw {
 pub enum SampleMode {
     Genesis,
     Resume,
+    FixUp(RestartFixUpStrategy),
     Restart(SampleModeRestart),
 }
 
@@ -534,8 +596,6 @@ impl Default for SampleMode {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SampleModeRestart {
     pub after: NonNegativeF64,
-    #[serde(default)]
-    pub strategy: RestartFixUpStrategy,
 }
 
 #[derive(Debug, Serialize)]
@@ -543,14 +603,36 @@ pub struct Pause {
     pub before: NonNegativeF64,
     pub config: ResumeConfig,
     pub destiny: SampleDestiny,
+    #[serde(default)]
+    pub mode: PauseMode,
 }
 
-impl<'de> DeserializeState<'de, (Partition, &'de Sample)> for Pause {
+#[derive(Debug, Serialize)]
+#[serde(rename = "Pause")]
+pub struct FuturePause {
+    pub before: NonNegativeF64,
+    pub mode: PauseMode,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum PauseMode {
+    Resume,
+    FixUp,
+    Restart,
+}
+
+impl Default for PauseMode {
+    fn default() -> Self {
+        Self::Resume
+    }
+}
+
+impl<'de> DeserializeState<'de, Partition> for Pause {
     fn deserialize_state<D: Deserializer<'de>>(
-        (partition, mut sample): &mut (Partition, &'de Sample),
+        partition: &mut Partition,
         deserializer: D,
     ) -> Result<Self, D::Error> {
-        let raw = PauseRaw::deserialize_state(&mut sample, deserializer)?;
+        let raw = PauseRaw::deserialize(deserializer)?;
 
         if partition.size().get() > 1 {
             return Err(serde::de::Error::custom(
@@ -562,12 +644,12 @@ impl<'de> DeserializeState<'de, (Partition, &'de Sample)> for Pause {
             before: raw.before,
             config: raw.config,
             destiny: raw.destiny,
+            mode: raw.mode,
         })
     }
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(try_from = "SampleOriginRaw")]
+#[derive(Serialize)]
 pub enum SampleOrigin {
     Habitat,
     List(Vec<Lineage>),
@@ -575,6 +657,16 @@ pub enum SampleOrigin {
 }
 
 impl fmt::Display for SampleOrigin {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Habitat => fmt.write_str("Habitat"),
+            Self::List(_) => fmt.write_str("List"),
+            Self::Bincode(_) => fmt.write_str("Bincode"),
+        }
+    }
+}
+
+impl fmt::Display for SampleOriginRaw {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Habitat => fmt.write_str("Habitat"),
@@ -608,10 +700,24 @@ impl fmt::Debug for SampleOrigin {
     }
 }
 
-impl TryFrom<SampleOriginRaw> for SampleOrigin {
-    type Error = anyhow::Error;
+impl<'de> DeserializeState<'de, &'de Option<Pause>> for SampleOrigin {
+    fn deserialize_state<D: Deserializer<'de>>(
+        pause: &mut &'de Option<Pause>,
+        deserializer: D,
+    ) -> Result<Self, D::Error> {
+        let raw = SampleOriginRaw::deserialize(deserializer)?;
 
-    fn try_from(raw: SampleOriginRaw) -> Result<Self, Self::Error> {
+        if let Some(pause) = pause {
+            if matches!(pause.destiny, SampleDestiny::List)
+                && !matches!(raw, SampleOriginRaw::List(_))
+            {
+                return Err(serde::de::Error::custom(format!(
+                    "`List` pause destiny requires `List` origin sample, found `{}`",
+                    raw
+                )));
+            }
+        }
+
         let lineages = match &raw {
             SampleOriginRaw::Habitat => return Ok(Self::Habitat),
             SampleOriginRaw::List(lineages) => lineages.iter(),
@@ -623,10 +729,10 @@ impl TryFrom<SampleOriginRaw> for SampleOrigin {
 
         for lineage in lineages {
             if !global_references.insert(lineage.global_reference.clone()) {
-                anyhow::bail!(
-                    "duplicate lineage with reference {}",
+                return Err(serde::de::Error::custom(format!(
+                    "duplicate lineage reference #{}",
                     lineage.global_reference
-                );
+                )));
             }
         }
 
@@ -638,57 +744,20 @@ impl TryFrom<SampleOriginRaw> for SampleOrigin {
     }
 }
 
-#[derive(Debug, DeserializeState)]
+#[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[serde(rename = "Pause")]
-#[serde(deserialize_state = "&'de Sample")]
 pub struct PauseRaw {
     pub before: NonNegativeF64,
     pub config: ResumeConfig,
-    #[serde(deserialize_state)]
     pub destiny: SampleDestiny,
-}
-
-#[derive(Debug, Serialize)]
-pub enum SampleDestiny {
-    List,
-    Bincode(LineageFileSaver),
+    pub mode: PauseMode,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename = "SampleDestiny")]
-enum SampleDestinyRaw {
+pub enum SampleDestiny {
     List,
     Bincode(LineageFileSaver),
-}
-
-impl<'de> DeserializeState<'de, &'de Sample> for SampleDestiny {
-    fn deserialize_state<D: Deserializer<'de>>(
-        sample: &mut &'de Sample,
-        deserializer: D,
-    ) -> Result<Self, D::Error> {
-        let raw = SampleDestinyRaw::deserialize(deserializer)?;
-
-        if matches!(raw, SampleDestinyRaw::List)
-            && !matches!(
-                sample,
-                Sample {
-                    origin: SampleOrigin::List(_),
-                    ..
-                }
-            )
-        {
-            return Err(serde::de::Error::custom(format!(
-                "`List` pause destiny requires `List` origin sample, found `{}`",
-                sample.origin
-            )));
-        }
-
-        Ok(match raw {
-            SampleDestinyRaw::List => SampleDestiny::List,
-            SampleDestinyRaw::Bincode(saver) => SampleDestiny::Bincode(saver),
-        })
-    }
 }
 
 #[derive(Deserialize)]
