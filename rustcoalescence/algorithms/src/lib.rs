@@ -10,7 +10,7 @@ use necsim_core::{
     lineage::Lineage,
     reporter::Reporter,
 };
-use necsim_core_bond::NonNegativeF64;
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::resuming::ExceptionalLineage,
@@ -73,7 +73,7 @@ pub trait Algorithm<O: Scenario<Self::MathsCore, Self::Rng>, R: Reporter, P: Loc
         scenario: O,
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         lineages: L,
-        restart_at: NonNegativeF64,
+        restart_at: PositiveF64,
         _fixup_strategy: RestartFixUpStrategy,
         local_partition: &mut P,
     ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, ContinueError<Self::Error>> {
@@ -83,8 +83,8 @@ pub trait Algorithm<O: Scenario<Self::MathsCore, Self::Rng>, R: Reporter, P: Loc
             scenario,
             pre_sampler,
             lineages,
-            Some(restart_at),
-            Some(necsim_core_bond::PositiveF64::max_after(restart_at, restart_at).into()),
+            Some(restart_at.into()),
+            Some(PositiveF64::max_after(restart_at.into(), restart_at.into()).into()),
             local_partition,
         )
     }

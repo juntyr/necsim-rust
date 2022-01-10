@@ -1,5 +1,6 @@
 #![deny(clippy::pedantic)]
 #![feature(never_type)]
+#![feature(generic_associated_types)]
 
 #[macro_use]
 extern crate serde_derive_state;
@@ -22,7 +23,10 @@ use necsim_impls_no_std::{
                 event_time_sampler::{poisson::PoissonEventTimeSampler, EventTimeSampler},
                 IndependentActiveLineageSampler,
             },
-            resuming::{ExceptionalLineage, SplitExceptionalLineages},
+            resuming::{
+                ExceptionalLineage, RestartFixUpActiveLineageSampler, SplitExceptionalLineages,
+            },
+            singular::SingularActiveLineageSampler,
         },
         coalescence_sampler::independent::IndependentCoalescenceSampler,
         dispersal_sampler::{
@@ -99,6 +103,25 @@ impl<
         impl<M: MathsCore, G: PrimeableRng<M>, O: Scenario<M, G>>
             IndependentLineageStoreSampleInitialiser<M, G, O, !> for GenesisInitialiser
         {
+            type ActiveLineageSampler<
+                X: EmigrationExit<
+                    M,
+                    O::Habitat,
+                    G,
+                    GlobalLineageReference,
+                    IndependentLineageStore<M, O::Habitat>,
+                >,
+                J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate>,
+            > = IndependentActiveLineageSampler<
+                M,
+                O::Habitat,
+                G,
+                X,
+                Self::DispersalSampler,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+                J,
+            >;
             type DispersalSampler =
                 O::DispersalSampler<InMemoryAliasDispersalSampler<M, O::Habitat, G>>;
 
@@ -124,16 +147,7 @@ impl<
                 (
                     IndependentLineageStore<M, O::Habitat>,
                     Self::DispersalSampler,
-                    IndependentActiveLineageSampler<
-                        M,
-                        O::Habitat,
-                        G,
-                        X,
-                        Self::DispersalSampler,
-                        O::TurnoverRate,
-                        O::SpeciationProbability,
-                        J,
-                    >,
+                    Self::ActiveLineageSampler<X, J>,
                     Vec<Lineage>,
                     Vec<Lineage>,
                 ),
@@ -196,6 +210,25 @@ impl<
             > IndependentLineageStoreSampleInitialiser<M, G, O, ContinueError<!>>
             for ResumeInitialiser<L>
         {
+            type ActiveLineageSampler<
+                X: EmigrationExit<
+                    M,
+                    O::Habitat,
+                    G,
+                    GlobalLineageReference,
+                    IndependentLineageStore<M, O::Habitat>,
+                >,
+                J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate>,
+            > = IndependentActiveLineageSampler<
+                M,
+                O::Habitat,
+                G,
+                X,
+                Self::DispersalSampler,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+                J,
+            >;
             type DispersalSampler =
                 O::DispersalSampler<InMemoryAliasDispersalSampler<M, O::Habitat, G>>;
 
@@ -221,16 +254,7 @@ impl<
                 (
                     IndependentLineageStore<M, O::Habitat>,
                     Self::DispersalSampler,
-                    IndependentActiveLineageSampler<
-                        M,
-                        O::Habitat,
-                        G,
-                        X,
-                        Self::DispersalSampler,
-                        O::TurnoverRate,
-                        O::SpeciationProbability,
-                        J,
-                    >,
+                    Self::ActiveLineageSampler<X, J>,
                     Vec<Lineage>,
                     Vec<Lineage>,
                 ),
@@ -288,13 +312,13 @@ impl<
         scenario: O,
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         lineages: L,
-        restart_at: NonNegativeF64,
+        restart_at: PositiveF64,
         fixup_strategy: RestartFixUpStrategy,
         local_partition: &mut P,
     ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, ContinueError<Self::Error>> {
         struct RestartInitialiser<L: ExactSizeIterator<Item = Lineage>> {
             lineages: L,
-            restart_at: NonNegativeF64,
+            restart_at: PositiveF64,
             fixup_strategy: RestartFixUpStrategy,
         }
 
@@ -306,6 +330,47 @@ impl<
             > IndependentLineageStoreSampleInitialiser<M, G, O, ContinueError<!>>
             for RestartInitialiser<L>
         {
+            type ActiveLineageSampler<
+                X: EmigrationExit<
+                    M,
+                    O::Habitat,
+                    G,
+                    GlobalLineageReference,
+                    IndependentLineageStore<M, O::Habitat>,
+                >,
+                J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate>,
+            > = RestartFixUpActiveLineageSampler<
+                M,
+                O::Habitat,
+                G,
+                GlobalLineageReference,
+                IndependentLineageStore<M, O::Habitat>,
+                X,
+                Self::DispersalSampler,
+                IndependentCoalescenceSampler<M, O::Habitat>,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+                IndependentEventSampler<
+                    M,
+                    O::Habitat,
+                    G,
+                    X,
+                    Self::DispersalSampler,
+                    O::TurnoverRate,
+                    O::SpeciationProbability,
+                >,
+                NeverImmigrationEntry,
+                IndependentActiveLineageSampler<
+                    M,
+                    O::Habitat,
+                    G,
+                    X,
+                    Self::DispersalSampler,
+                    O::TurnoverRate,
+                    O::SpeciationProbability,
+                    J,
+                >,
+            >;
             type DispersalSampler = TrespassingDispersalSampler<
                 M,
                 O::Habitat,
@@ -336,16 +401,7 @@ impl<
                 (
                     IndependentLineageStore<M, O::Habitat>,
                     Self::DispersalSampler,
-                    IndependentActiveLineageSampler<
-                        M,
-                        O::Habitat,
-                        G,
-                        X,
-                        Self::DispersalSampler,
-                        O::TurnoverRate,
-                        O::SpeciationProbability,
-                        J,
-                    >,
+                    Self::ActiveLineageSampler<X, J>,
                     Vec<Lineage>,
                     Vec<Lineage>,
                 ),
@@ -365,7 +421,7 @@ impl<
                 ) = IndependentActiveLineageSampler::resume_with_store_and_lineages(
                     ResumingOriginSampler::new(habitat, pre_sampler, self.lineages),
                     event_time_sampler,
-                    self.restart_at,
+                    self.restart_at.into(),
                 );
 
                 let SplitExceptionalLineages {
@@ -423,6 +479,11 @@ impl<
                     dispersal_sampler,
                     UniformAntiTrespassingDispersalSampler::default(),
                 );
+                let active_lineage_sampler = RestartFixUpActiveLineageSampler::new(
+                    active_lineage_sampler,
+                    Vec::new(),
+                    self.restart_at,
+                );
 
                 // Simulate the fixable lineages, pass through the good ones
                 Ok((
@@ -437,13 +498,13 @@ impl<
 
         // TODO: what about fixable lineages that are already after the restart time?
         // TODO: This should presumably be checked earlier on / maybe could be an error
-        // type
+        //       type
         initialise_and_simulate(
             &args,
             rng,
             scenario,
             pre_sampler,
-            Some(PositiveF64::max_after(restart_at, restart_at).into()),
+            Some(PositiveF64::max_after(restart_at.into(), restart_at.into()).into()),
             local_partition,
             RestartInitialiser {
                 lineages,
@@ -769,6 +830,19 @@ trait IndependentLineageStoreSampleInitialiser<
 >
 {
     type DispersalSampler: DispersalSampler<M, O::Habitat, G>;
+    type ActiveLineageSampler<X: EmigrationExit<
+        M,
+        O::Habitat,
+        G,
+        GlobalLineageReference,
+        IndependentLineageStore<M, O::Habitat>,
+    >, J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate>>: SingularActiveLineageSampler<
+        M, O::Habitat, G, GlobalLineageReference, IndependentLineageStore<M, O::Habitat>,
+        X, Self::DispersalSampler, IndependentCoalescenceSampler<M, O::Habitat>, O::TurnoverRate,
+        O::SpeciationProbability, IndependentEventSampler<
+            M, O::Habitat, G, X, Self::DispersalSampler, O::TurnoverRate, O::SpeciationProbability
+        >, NeverImmigrationEntry,
+    >;
 
     fn init<
         'h,
@@ -790,16 +864,7 @@ trait IndependentLineageStoreSampleInitialiser<
         (
             IndependentLineageStore<M, O::Habitat>,
             Self::DispersalSampler,
-            IndependentActiveLineageSampler<
-                M,
-                O::Habitat,
-                G,
-                X,
-                Self::DispersalSampler,
-                O::TurnoverRate,
-                O::SpeciationProbability,
-                J,
-            >,
+            Self::ActiveLineageSampler<X, J>,
             Vec<Lineage>,
             Vec<Lineage>,
         ),
