@@ -79,7 +79,7 @@ pub fn try_parse<'de, D: Deserialize<'de>>(subcommand: &str, ron_args: &'de str)
 pub fn try_parse_state<'de, D: DeserializeState<'de, Seed>, Seed: ?Sized>(
     subcommand: &str,
     ron_args: &'de str,
-    seed: &'de mut Seed,
+    seed: &mut Seed,
 ) -> Result<D> {
     let mut de_ron = ron::Deserializer::from_str_with_options(ron_args, ron_options())
         .with_context(|| {

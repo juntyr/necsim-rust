@@ -7,10 +7,13 @@ use serde::Serialize;
 use necsim_core::lineage::Lineage;
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
+use rustcoalescence_algorithms::RestartFixUpStrategy;
+
 use crate::args::{
     parse::{into_ron_str, try_print},
     ser::BufferingSerializeResult,
-    CommandArgs, Pause, Sample, SampleDestiny, SampleMode, SampleOrigin,
+    CommandArgs, FuturePause, PauseMode, Sample, SampleDestiny, SampleMode, SampleModeRestart,
+    SampleOrigin,
 };
 
 mod dispatch;
@@ -36,9 +39,8 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
         log::LevelFilter::Off
     });
 
-    let sample = parse::sample::parse_and_normalise(&ron_args, &mut normalised_args)?;
-    let pause =
-        parse::pause::parse_and_normalise(&ron_args, &mut normalised_args, &partitioning, &sample)?;
+    let pause = parse::pause::parse_and_normalise(&ron_args, &mut normalised_args, &partitioning)?;
+    let sample = parse::sample::parse_and_normalise(&ron_args, &mut normalised_args, &pause)?;
 
     let speciation_probability_per_generation =
         parse::speciation::parse_and_normalise(&ron_args, &mut normalised_args)?;
@@ -102,9 +104,21 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
                         )
                     },
                 },
-                mode: SampleMode::Resume,
+                mode: match pause.mode {
+                    PauseMode::Resume => SampleMode::Resume,
+                    PauseMode::FixUp => SampleMode::FixUp(RestartFixUpStrategy::default()),
+                    PauseMode::Restart => SampleMode::Restart(SampleModeRestart {
+                        after: pause.before,
+                    }),
+                },
             })
-            .pause(&Option::<Pause>::None)
+            .pause(&match pause.mode {
+                PauseMode::Resume | PauseMode::Restart => None,
+                PauseMode::FixUp => Some(FuturePause {
+                    before: pause.before,
+                    mode: PauseMode::Restart,
+                }),
+            })
             .build()
             .map_err(anyhow::Error::new)
             .and_then(|resume_args| try_print(&resume_args))
