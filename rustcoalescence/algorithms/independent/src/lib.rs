@@ -496,9 +496,6 @@ impl<
             }
         }
 
-        // TODO: what about fixable lineages that are already after the restart time?
-        // TODO: This should presumably be checked earlier on / maybe could be an error
-        //       type
         initialise_and_simulate(
             &args,
             rng,

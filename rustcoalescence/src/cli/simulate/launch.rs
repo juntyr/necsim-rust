@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use rustcoalescence_algorithms::{Algorithm, AlgorithmResult};
 
 use necsim_core::reporter::{boolean::Boolean, Reporter};
-use necsim_core_bond::NonNegativeF64;
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_impls_no_std::cogs::origin_sampler::pre_sampler::OriginPreSampler;
 use necsim_partitioning_core::LocalPartition;
 
@@ -50,6 +50,7 @@ where
     match sample.mode {
         SampleMode::Genesis => resume_pause.push_str("start fresh"),
         SampleMode::Resume => resume_pause.push_str("resume"),
+        SampleMode::FixUp(_) => resume_pause.push_str("fix-up for a restart"),
         SampleMode::Restart(SampleModeRestart { after, .. }) => {
             resume_pause.push_str(&format!("restart after {}", after));
         },
@@ -150,8 +151,24 @@ fn simulate<
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
 ) -> anyhow::Result<AlgorithmResult<A::MathsCore, A::Rng>> {
-    match (sample.origin, sample.mode) {
-        (SampleOrigin::Habitat, _) | (_, SampleMode::Genesis) => A::initialise_and_simulate(
+    let lineages = match sample.origin {
+        SampleOrigin::Habitat => {
+            return A::initialise_and_simulate(
+                algorithm_args,
+                rng,
+                scenario,
+                OriginPreSampler::all().percentage(sample.percentage),
+                pause_before,
+                local_partition,
+            )
+            .context("Failed to perform the fresh simulation.")
+        },
+        SampleOrigin::List(lineages) => lineages,
+        SampleOrigin::Bincode(loader) => loader.into_lineages(),
+    };
+
+    match sample.mode {
+        SampleMode::Genesis => A::initialise_and_simulate(
             algorithm_args,
             rng,
             scenario,
@@ -160,7 +177,7 @@ fn simulate<
             local_partition,
         )
         .context("Failed to perform the fresh simulation."),
-        (SampleOrigin::List(lineages), _) => A::resume_and_simulate(
+        SampleMode::Resume => A::resume_and_simulate(
             algorithm_args,
             rng,
             scenario,
@@ -171,16 +188,27 @@ fn simulate<
             local_partition,
         )
         .context("Failed to perform the resuming simulation."),
-        (SampleOrigin::Bincode(loader), _) => A::resume_and_simulate(
+        SampleMode::FixUp(strategy) => A::fixup_for_restart(
             algorithm_args,
             rng,
             scenario,
             OriginPreSampler::all().percentage(sample.percentage),
-            loader.into_lineages().into_iter(),
-            None,
+            lineages.into_iter(),
+            PositiveF64::new(pause_before.unwrap().get()).unwrap(),
+            strategy,
+            local_partition,
+        )
+        .context("Failed to fix-up the restarting simulation."),
+        SampleMode::Restart(SampleModeRestart { after }) => A::resume_and_simulate(
+            algorithm_args,
+            rng,
+            scenario,
+            OriginPreSampler::all().percentage(sample.percentage),
+            lineages.into_iter(),
+            Some(after),
             pause_before,
             local_partition,
         )
-        .context("Failed to perform the resuming simulation."),
+        .context("Failed to perform the restarting simulation."),
     }
 }

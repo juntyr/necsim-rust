@@ -179,7 +179,6 @@ impl<E: StdError + Send + Sync + 'static> From<E> for ContinueError<E> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename = "InvalidIndividualStrategy")]
 #[serde(default)]
 pub struct RestartFixUpStrategy {
     #[serde(alias = "deme", alias = "ood")]
