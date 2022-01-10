@@ -45,6 +45,24 @@ pub struct TrespassingDispersalSampler<
     marker: PhantomData<(M, H, G)>,
 }
 
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: RngCore<M>,
+        D: DispersalSampler<M, H, G>,
+        T: AntiTrespassingDispersalSampler<M, H, G>,
+    > TrespassingDispersalSampler<M, H, G, D, T>
+{
+    #[must_use]
+    pub fn new(dispersal_sampler: D, anti_trespassing: T) -> Self {
+        Self {
+            legal_dispersal_sampler: dispersal_sampler,
+            trespassing_dispersal_sampler: anti_trespassing,
+            marker: PhantomData::<(M, H, G)>,
+        }
+    }
+}
+
 #[contract_trait]
 impl<
         M: MathsCore,

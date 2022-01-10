@@ -35,6 +35,8 @@ use rustcoalescence_scenarios::{
     spatially_implicit::SpatiallyImplicitArguments,
 };
 
+use rustcoalescence_algorithms::RestartFixUpStrategy;
+
 #[cfg(any(
     feature = "rustcoalescence-algorithms-gillespie",
     feature = "rustcoalescence-algorithms-independent",
@@ -533,44 +535,7 @@ impl Default for SampleMode {
 pub struct SampleModeRestart {
     pub after: NonNegativeF64,
     #[serde(default)]
-    pub strategy: SampleModeRestartStrategy,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename = "InvalidIndividualStrategy")]
-#[serde(default)]
-pub struct SampleModeRestartStrategy {
-    #[serde(alias = "deme", alias = "ood")]
-    pub out_of_deme: OutOfDemeStrategy,
-    #[serde(alias = "habitat", alias = "ooh")]
-    pub out_of_habitat: OutOfHabitatStrategy,
-    #[serde(alias = "dup", alias = "coa")]
-    pub coalescence: CoalescenceStrategy,
-}
-
-impl Default for SampleModeRestartStrategy {
-    fn default() -> Self {
-        Self {
-            out_of_deme: OutOfDemeStrategy::Abort,
-            out_of_habitat: OutOfHabitatStrategy::Abort,
-            coalescence: CoalescenceStrategy::Abort,
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum OutOfDemeStrategy {
-    Abort,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum OutOfHabitatStrategy {
-    Abort,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum CoalescenceStrategy {
-    Abort,
+    pub strategy: RestartFixUpStrategy,
 }
 
 #[derive(Debug, Serialize)]

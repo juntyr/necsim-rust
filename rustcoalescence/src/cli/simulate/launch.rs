@@ -166,6 +166,7 @@ fn simulate<
             scenario,
             OriginPreSampler::all().percentage(sample.percentage),
             lineages.into_iter(),
+            None,
             pause_before,
             local_partition,
         )
@@ -176,6 +177,7 @@ fn simulate<
             scenario,
             OriginPreSampler::all().percentage(sample.percentage),
             loader.into_lineages().into_iter(),
+            None,
             pause_before,
             local_partition,
         )
