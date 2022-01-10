@@ -281,11 +281,13 @@ where
         scenario: O,
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         lineages: L,
+        resume_after: Option<NonNegativeF64>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
     ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, ContinueError<Self::Error>> {
         struct ResumeInitialiser<L: ExactSizeIterator<Item = Lineage>> {
             lineages: L,
+            resume_after: Option<NonNegativeF64>,
         }
 
         impl<
@@ -338,7 +340,7 @@ where
                     IndependentActiveLineageSampler::resume_with_store_and_lineages(
                         ResumingOriginSampler::new(habitat, pre_sampler, self.lineages),
                         event_time_sampler,
-                        NonNegativeF64::zero(),
+                        self.resume_after.unwrap_or(NonNegativeF64::zero()),
                     );
 
                 if !exceptional_lineages.is_empty() {
@@ -356,7 +358,10 @@ where
             pre_sampler,
             pause_before,
             local_partition,
-            ResumeInitialiser { lineages },
+            ResumeInitialiser {
+                lineages,
+                resume_after,
+            },
         )
     }
 }
