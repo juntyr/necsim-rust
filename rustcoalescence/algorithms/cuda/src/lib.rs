@@ -53,8 +53,8 @@ use necsim_impls_no_std::{
 use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_algorithms::{
-    Algorithm, AlgorithmParamters, AlgorithmResult, CoalescenceStrategy, ContinueError,
-    OutOfDemeStrategy, OutOfHabitatStrategy, RestartFixUpStrategy,
+    Algorithm, AlgorithmParamters, AlgorithmResult, ContinueError, OutOfDemeStrategy,
+    OutOfHabitatStrategy, RestartFixUpStrategy,
 };
 use rustcoalescence_scenarios::Scenario;
 
@@ -568,12 +568,17 @@ where
                 let habitat = origin_sampler.habitat();
                 let pre_sampler = origin_sampler.into_pre_sampler();
 
-                let (lineage_store, active_lineage_sampler, lineages, exceptional_lineages) =
+                let (lineage_store, active_lineage_sampler, mut lineages, mut exceptional_lineages) =
                     IndependentActiveLineageSampler::resume_with_store_and_lineages(
                         ResumingOriginSampler::new(habitat, pre_sampler, self.lineages),
                         event_time_sampler,
                         self.resume_after.unwrap_or(NonNegativeF64::zero()),
                     );
+
+                // The Independent algorithm can deal with late coalescence
+                lineages.extend(ExceptionalLineage::drain_coalescing_lineages(
+                    &mut exceptional_lineages,
+                ));
 
                 if !exceptional_lineages.is_empty() {
                     return Err(ContinueError::Sample(exceptional_lineages));
@@ -718,20 +723,8 @@ where
                 let mut exceptional_lineages = Vec::new();
                 let mut fixable_lineages = Vec::new();
 
-                // Note: `coalescence` should be empty anyways as the
-                //  `IndependentActiveLineageSampler` cannot detect
-                //  coalescence by itself
-                match self.fixup_strategy.coalescence {
-                    CoalescenceStrategy::Abort => {
-                        exceptional_lineages
-                            .extend(coalescence.into_iter().map(ExceptionalLineage::Coalescence));
-                    },
-                    CoalescenceStrategy::Coalescence => {
-                        // The Independent algorithm can deal with late
-                        //  coalescence already
-                        good_lineages.extend(coalescence.into_iter());
-                    },
-                }
+                // The Independent algorithm can deal with late coalescence
+                good_lineages.extend(coalescence.into_iter().map(|(lineage, _)| lineage));
 
                 match self.fixup_strategy.out_of_deme {
                     OutOfDemeStrategy::Abort => {

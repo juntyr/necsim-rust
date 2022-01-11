@@ -159,6 +159,31 @@ impl Lineage {
     }
 }
 
+impl Ord for Lineage {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Order `Lineage`s in lexicographical order:
+        //  (1) indexed_location
+        //  (2) last_event_time
+        //  (3) global_reference
+        (
+            &self.indexed_location,
+            &self.last_event_time,
+            &self.global_reference,
+        )
+            .cmp(&(
+                &other.indexed_location,
+                &other.last_event_time,
+                &other.global_reference,
+            ))
+    }
+}
+
+impl PartialOrd for Lineage {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[repr(C)]

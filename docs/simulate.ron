@@ -48,46 +48,95 @@
              *          OTHERWISE new events may occur before the previous pause
              *           timestamp
              *
-             * resume the simulation from the given sample of individual origins
+             * resume the simulation from the given sample of individuals
              * ensures perfect continuity of the simulation, i.e. pausing + resuming
              *  has no effect on the simulation result */
           | Resume
-            /* restart the simulation from the given sample of individual origins
+            /* fix-up the given sample of individuals for a simulation restart
              * should be used to resume after the simulation parameters have been changed
-             * breaks continuity of the simulation, i.e. pausing + restarting has an
-             *  effect on the simulation result, but allows reconfiguration */
+             * breaks continuity of the simulation, i.e. pausing + fix-up + restarting
+             *  affects the simulation result, but allows reconfiguration
+             * requires an immediate pause at the same time as the original pause */
+          | FixUp(
+                /* selection of how to handle individuals at a valid location that is
+                  *  already occupied by too many other individuals, i.e. the deme is full
+                  * optional, default = Abort */
+                out_of_deme: (
+                    /* Abort the simulation during configuration before it runs */
+                  | Abort
+                ),
+                /* selection of how to handle individuals at an inhabitable location
+                  * optional, default = Abort */
+                out_of_habitat: (
+                    /* Abort the simulation during configuration before it runs */
+                  | Abort
+                ),
+                /* selection of how to handle individuals at a valid location-index pair
+                  *  that is already occupied by another individual, i.e. where these
+                  *  individuals should have (already) coalesced during the simulation
+                  * optional, default = Abort */
+                coalescence: (
+                    /* Abort the simulation during configuration before it runs */
+                  | Abort
+                ),
+            )
+            /* restart the simulation from the given sample of individuals
+             * should be used to resume after the simulation parameters have been changed
+             *  and the individuals have been fixed-up
+             * breaks continuity of the simulation, i.e. pausing + restarting affects the
+             *  simulation result, but allows reconfiguration */
           | Restart(
                 /* the event timestamp from which to simulate (exclusive)
                  * must match the timestamp previously used to pause the simulation */
                 after: (0.0 <= f64),
-                /* configuration of the strategies to deal with individuals that have
-                 *  become invalid across the simulation restart boundary
-                 * optional, default = Abort for all */
-                strategy: InvalidIndividualStrategy(
-                    /* selection of how to handle individuals at a valid location that is
-                     *  already occupied by too many other individuals, i.e. the deme is full
-                     * optional, default = Abort */
-                    out_of_deme: (
-                        /* Abort the simulation during configuration before it runs */
-                      | Abort
-                    ),
-                    /* selection of how to handle individuals at an inhabitable location
-                     * optional, default = Abort */
-                    out_of_habitat: (
-                        /* Abort the simulation during configuration before it runs */
-                      | Abort
-                    ),
-                    /* selection of how to handle individuals at a valid location-index pair
-                     *  that is already occupied by another individual, i.e. where these
-                     *  individuals should have (already) coalesced during the simulation
-                     * optional, default = Abort */
-                    coalescence: (
-                        /* Abort the simulation during configuration before it runs */
-                      | Abort
-                    ),
-                ),
             )
         ),
+    ),
+    /* selection of whether the simulation should pause before completing */
+    /* optional, default = None */
+    pause: (
+        /* the simulation will run until completion */
+      | None
+        /* the simulation will pause right before the time `before`
+         * all events before `before` will be reported, but none at or after */
+      | Pause(
+            /* the event timestamp until which to simulate (exclusive)
+             * pausing before 0.0 simply samples the individuals but does not
+             *  simulate them, e.g. to write all initial individuals to a file
+             * pausing before a fix-up and restart must be after 0.0 */
+            before: (0.0 <= f64),
+            /* path where a new configuration file will be created
+             * from which the simulation can be resumed seamlessly */
+            config: (PathBuf),
+            /* selection of the output of the remaining individuals */
+            destiny: (
+                /* the remaining individuals will be listed literally inside the
+                 *  new configuration file */
+              | List
+                /* the remaining individuals will be written to a new binary file
+                 * only compatible with sample.origin = List */
+              | Bincode(
+                    /* file path to where the new binary file listing the remaining
+                    *  individuals will be written */
+                    file: (PathBuf),
+                )
+            ),
+            /* selection of the pause mode, which affects how the simulation is
+             *  resumed afterwards */
+            /* optional, default = Resume */
+            mode: (
+                /* the simulation can be resumed with continuity after the pause
+                 * no changes in configuration should be made */
+              | Resume
+                /* the simulation will first be fixed-up after the pause
+                 * inconsistencies through a change in configuration are fixed */
+              | FixUp
+                /* the simulation can be restarted without continuity after the
+                 *  pause
+                 * used to continue the simulation directly after a FixUp */
+              | Restart
+            ),
+        )
     ),
     /* selection of the initialisation of the random number generator */
     rng: (
@@ -573,33 +622,4 @@
             ]
         )
     ],
-
-    /* selection of whether the simulation should pause before completing */
-    /* optional, default = None */
-    pause: (
-        /* the simulation will run until completion */
-      | None
-        /* the simulation will pause right before the time `before`
-         * all events before `before` will be reported, but none at or after */
-      | Pause(
-            /* the event timestamp until which to simulate (exclusive) */
-            before: (0.0 <= f64),
-            /* path where a new configuration file will be created
-             * from which the simulation can be resumed seamlessly */
-            config: (PathBuf),
-            /* selection of the output of the remaining individuals */
-            destiny: (
-                /* the remaining individuals will be listed literally inside the
-                 *  new configuration file */
-              | List
-                /* the remaining individuals will be written to a new binary file
-                 * only compatible with sample.origin = List */
-              | Bincode(
-                    /* file path to where the new binary file listing the remaining
-                    *  individuals will be written */
-                    file: (PathBuf),
-                )
-            ),
-        )
-    ),
 )

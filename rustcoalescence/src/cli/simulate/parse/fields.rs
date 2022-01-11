@@ -22,6 +22,9 @@ struct SimulateArgsFields {
     #[serde(default)]
     sample: IgnoredAny,
 
+    #[serde(default)]
+    pause: Option<IgnoredAny>,
+
     #[serde(alias = "randomness")]
     #[serde(default)]
     rng: IgnoredAny,
@@ -38,7 +41,4 @@ struct SimulateArgsFields {
     log: Option<IgnoredAny>,
 
     reporters: Vec<IgnoredAny>,
-
-    #[serde(default)]
-    pause: Option<IgnoredAny>,
 }
