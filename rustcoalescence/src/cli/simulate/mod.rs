@@ -152,13 +152,13 @@ enum SimulationResult {
 struct BufferingSimulateArgs {
     speciation: BufferingSerializeResult,
     sample: BufferingSerializeResult,
+    pause: BufferingSerializeResult,
     rng: BufferingSerializeResult,
     scenario: BufferingSerializeResult,
     algorithm: BufferingSerializeResult,
     partitioning: BufferingSerializeResult,
     log: BufferingSerializeResult,
     reporters: BufferingSerializeResult,
-    pause: BufferingSerializeResult,
 }
 
 impl BufferingSimulateArgs {

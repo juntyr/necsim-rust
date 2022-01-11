@@ -1,5 +1,6 @@
 #![deny(clippy::pedantic)]
 #![feature(never_type)]
+#![feature(generic_associated_types)]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 
