@@ -76,18 +76,7 @@ pub trait Algorithm<O: Scenario<Self::MathsCore, Self::Rng>, R: Reporter, P: Loc
         restart_at: PositiveF64,
         _fixup_strategy: RestartFixUpStrategy,
         local_partition: &mut P,
-    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, ContinueError<Self::Error>> {
-        Self::resume_and_simulate(
-            args,
-            rng,
-            scenario,
-            pre_sampler,
-            lineages,
-            Some(restart_at.into()),
-            Some(PositiveF64::max_after(restart_at.into(), restart_at.into()).into()),
-            local_partition,
-        )
-    }
+    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, ContinueError<Self::Error>>;
 }
 
 pub enum AlgorithmResult<M: MathsCore, G: RngCore<M>> {
