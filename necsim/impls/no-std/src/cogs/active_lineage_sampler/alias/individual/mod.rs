@@ -107,14 +107,14 @@ impl<
                 continue;
             }
 
-            if lineage_store
-                .get_global_lineage_reference_at_indexed_location(
-                    &lineage.indexed_location,
-                    origin_sampler.habitat(),
-                )
-                .is_some()
-            {
-                exceptional_lineages.push(ExceptionalLineage::Coalescence(lineage));
+            if let Some(parent) = lineage_store.get_global_lineage_reference_at_indexed_location(
+                &lineage.indexed_location,
+                origin_sampler.habitat(),
+            ) {
+                exceptional_lineages.push(ExceptionalLineage::Coalescence {
+                    child: lineage,
+                    parent: parent.clone(),
+                });
                 continue;
             }
 

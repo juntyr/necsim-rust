@@ -120,18 +120,19 @@ impl<E: StdError + Send + Sync + 'static> fmt::Display for ContinueError<E> {
                     exceptional_lineages.len()
                 )?;
 
-                if let Some(lineage) = exceptional_lineages.iter().find_map(|e| match e {
-                    ExceptionalLineage::Coalescence(lineage) => Some(lineage),
+                if let Some((child, parent)) = exceptional_lineages.iter().find_map(|e| match e {
+                    ExceptionalLineage::Coalescence { child, parent } => Some((child, parent)),
                     _ => None,
                 }) {
                     writeln!(
                         fmt,
-                        "- Lineage #{} at ({}, {}, {}) is at the same indexed location as another \
-                         lineage",
-                        lineage.global_reference,
-                        lineage.indexed_location.location().x(),
-                        lineage.indexed_location.location().y(),
-                        lineage.indexed_location.index(),
+                        "- Lineage #{} at ({}, {}, {}) is at the same indexed location as Lineage \
+                         #{}",
+                        child.global_reference,
+                        child.indexed_location.location().x(),
+                        child.indexed_location.location().y(),
+                        child.indexed_location.index(),
+                        parent,
                     )?;
                 }
 
