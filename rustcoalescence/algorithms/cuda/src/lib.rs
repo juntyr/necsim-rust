@@ -1,6 +1,7 @@
 #![deny(clippy::pedantic)]
 #![feature(const_eval_limit)]
 #![const_eval_limit = "1000000000000"]
+#![feature(generic_associated_types)]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 
@@ -10,22 +11,33 @@ extern crate serde_derive_state;
 use std::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{EmigrationExit, MathsCore, PrimeableRng},
+    cogs::{DispersalSampler, EmigrationExit, MathsCore, PrimeableRng},
     lineage::{GlobalLineageReference, Lineage},
     reporter::Reporter,
     simulation::SimulationBuilder,
 };
-use necsim_core_bond::NonNegativeF64;
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_cuda::cogs::{maths::NvptxMathsCore, rng::CudaRng};
 use necsim_impls_no_std::{
     cogs::{
-        active_lineage_sampler::independent::{
-            event_time_sampler::{exp::ExpEventTimeSampler, EventTimeSampler},
-            IndependentActiveLineageSampler,
+        active_lineage_sampler::{
+            independent::{
+                event_time_sampler::{
+                    exp::ExpEventTimeSampler, r#const::ConstEventTimeSampler, EventTimeSampler,
+                },
+                IndependentActiveLineageSampler,
+            },
+            resuming::{ExceptionalLineage, SplitExceptionalLineages},
+            singular::SingularActiveLineageSampler,
         },
         coalescence_sampler::independent::IndependentCoalescenceSampler,
-        dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
+        dispersal_sampler::{
+            in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
+            trespassing::{
+                uniform::UniformAntiTrespassingDispersalSampler, TrespassingDispersalSampler,
+            },
+        },
         emigration_exit::never::NeverEmigrationExit,
         event_sampler::independent::IndependentEventSampler,
         immigration_entry::never::NeverImmigrationEntry,
@@ -40,7 +52,10 @@ use necsim_impls_no_std::{
 };
 use necsim_partitioning_core::LocalPartition;
 
-use rustcoalescence_algorithms::{Algorithm, AlgorithmParamters, AlgorithmResult, ContinueError};
+use rustcoalescence_algorithms::{
+    Algorithm, AlgorithmParamters, AlgorithmResult, CoalescenceStrategy, ContinueError,
+    OutOfDemeStrategy, OutOfHabitatStrategy, RestartFixUpStrategy,
+};
 use rustcoalescence_scenarios::Scenario;
 
 use rust_cuda::{
@@ -197,6 +212,169 @@ where
         R::ReportSpeciation,
         R::ReportDispersal,
     >,
+    SimulationKernel<
+        NvptxMathsCore,
+        O::Habitat,
+        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+        GlobalLineageReference,
+        IndependentLineageStore<NvptxMathsCore, O::Habitat>,
+        NeverEmigrationExit,
+        TrespassingDispersalSampler<
+            NvptxMathsCore,
+            O::Habitat,
+            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            O::DispersalSampler<
+                InMemoryPackedAliasDispersalSampler<
+                    NvptxMathsCore,
+                    O::Habitat,
+                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                >,
+            >,
+            UniformAntiTrespassingDispersalSampler<
+                NvptxMathsCore,
+                O::Habitat,
+                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            >,
+        >,
+        IndependentCoalescenceSampler<NvptxMathsCore, O::Habitat>,
+        O::TurnoverRate,
+        O::SpeciationProbability,
+        IndependentEventSampler<
+            NvptxMathsCore,
+            O::Habitat,
+            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            NeverEmigrationExit,
+            TrespassingDispersalSampler<
+                NvptxMathsCore,
+                O::Habitat,
+                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                O::DispersalSampler<
+                    InMemoryPackedAliasDispersalSampler<
+                        NvptxMathsCore,
+                        O::Habitat,
+                        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                    >,
+                >,
+                UniformAntiTrespassingDispersalSampler<
+                    NvptxMathsCore,
+                    O::Habitat,
+                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                >,
+            >,
+            O::TurnoverRate,
+            O::SpeciationProbability,
+        >,
+        NeverImmigrationEntry,
+        IndependentActiveLineageSampler<
+            NvptxMathsCore,
+            O::Habitat,
+            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            NeverEmigrationExit,
+            TrespassingDispersalSampler<
+                NvptxMathsCore,
+                O::Habitat,
+                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                O::DispersalSampler<
+                    InMemoryPackedAliasDispersalSampler<
+                        NvptxMathsCore,
+                        O::Habitat,
+                        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                    >,
+                >,
+                UniformAntiTrespassingDispersalSampler<
+                    NvptxMathsCore,
+                    O::Habitat,
+                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                >,
+            >,
+            O::TurnoverRate,
+            O::SpeciationProbability,
+            ConstEventTimeSampler,
+        >,
+        R::ReportSpeciation,
+        R::ReportDispersal,
+    >: rustcoalescence_algorithms_cuda_kernel::Kernel<
+        NvptxMathsCore,
+        O::Habitat,
+        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+        GlobalLineageReference,
+        IndependentLineageStore<NvptxMathsCore, O::Habitat>,
+        NeverEmigrationExit,
+        TrespassingDispersalSampler<
+            NvptxMathsCore,
+            O::Habitat,
+            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            O::DispersalSampler<
+                InMemoryPackedAliasDispersalSampler<
+                    NvptxMathsCore,
+                    O::Habitat,
+                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                >,
+            >,
+            UniformAntiTrespassingDispersalSampler<
+                NvptxMathsCore,
+                O::Habitat,
+                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            >,
+        >,
+        IndependentCoalescenceSampler<NvptxMathsCore, O::Habitat>,
+        O::TurnoverRate,
+        O::SpeciationProbability,
+        IndependentEventSampler<
+            NvptxMathsCore,
+            O::Habitat,
+            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            NeverEmigrationExit,
+            TrespassingDispersalSampler<
+                NvptxMathsCore,
+                O::Habitat,
+                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                O::DispersalSampler<
+                    InMemoryPackedAliasDispersalSampler<
+                        NvptxMathsCore,
+                        O::Habitat,
+                        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                    >,
+                >,
+                UniformAntiTrespassingDispersalSampler<
+                    NvptxMathsCore,
+                    O::Habitat,
+                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                >,
+            >,
+            O::TurnoverRate,
+            O::SpeciationProbability,
+        >,
+        NeverImmigrationEntry,
+        IndependentActiveLineageSampler<
+            NvptxMathsCore,
+            O::Habitat,
+            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            NeverEmigrationExit,
+            TrespassingDispersalSampler<
+                NvptxMathsCore,
+                O::Habitat,
+                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                O::DispersalSampler<
+                    InMemoryPackedAliasDispersalSampler<
+                        NvptxMathsCore,
+                        O::Habitat,
+                        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                    >,
+                >,
+                UniformAntiTrespassingDispersalSampler<
+                    NvptxMathsCore,
+                    O::Habitat,
+                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                >,
+            >,
+            O::TurnoverRate,
+            O::SpeciationProbability,
+            ConstEventTimeSampler,
+        >,
+        R::ReportSpeciation,
+        R::ReportDispersal,
+    >,
 {
     type LineageReference = GlobalLineageReference;
     type LineageStore = IndependentLineageStore<Self::MathsCore, O::Habitat>;
@@ -213,37 +391,60 @@ where
     ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, Self::Error> {
         struct GenesisInitialiser;
 
-        impl<M: MathsCore, G: PrimeableRng<M>, O: Scenario<M, G>>
+        impl<M: MathsCore, G: PrimeableRng<M> + RustToCuda, O: Scenario<M, G>>
             CudaLineageStoreSampleInitialiser<M, G, O, CudaError> for GenesisInitialiser
+        where
+            O::Habitat: RustToCuda,
+            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda,
+            O::TurnoverRate: RustToCuda,
+            O::SpeciationProbability: RustToCuda,
         {
+            type ActiveLineageSampler<
+                X: EmigrationExit<
+                        M,
+                        O::Habitat,
+                        G,
+                        GlobalLineageReference,
+                        IndependentLineageStore<M, O::Habitat>,
+                    > + RustToCuda,
+                J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
+            > = IndependentActiveLineageSampler<
+                M,
+                O::Habitat,
+                G,
+                X,
+                Self::DispersalSampler,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+                J,
+            >;
+            type DispersalSampler =
+                O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>;
+
             fn init<
                 'h,
                 T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
-                J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate>,
+                J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
                 X: EmigrationExit<
-                    M,
-                    O::Habitat,
-                    G,
-                    GlobalLineageReference,
-                    IndependentLineageStore<M, O::Habitat>,
-                >,
+                        M,
+                        O::Habitat,
+                        G,
+                        GlobalLineageReference,
+                        IndependentLineageStore<M, O::Habitat>,
+                    > + RustToCuda,
             >(
                 self,
                 origin_sampler: T,
+                dispersal_sampler: O::DispersalSampler<
+                    InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>,
+                >,
                 event_time_sampler: J,
             ) -> Result<
                 (
                     IndependentLineageStore<M, O::Habitat>,
-                    IndependentActiveLineageSampler<
-                        M,
-                        O::Habitat,
-                        G,
-                        X,
-                        O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
-                        O::TurnoverRate,
-                        O::SpeciationProbability,
-                        J,
-                    >,
+                    Self::DispersalSampler,
+                    Self::ActiveLineageSampler<X, J>,
+                    Vec<Lineage>,
                     Vec<Lineage>,
                 ),
                 CudaError,
@@ -251,12 +452,19 @@ where
             where
                 O::Habitat: 'h,
             {
-                Ok(
+                let (lineage_store, active_lineage_sampler, lineages) =
                     IndependentActiveLineageSampler::init_with_store_and_lineages(
                         origin_sampler,
                         event_time_sampler,
-                    ),
-                )
+                    );
+
+                Ok((
+                    lineage_store,
+                    dispersal_sampler,
+                    active_lineage_sampler,
+                    lineages,
+                    Vec::new(),
+                ))
             }
         }
 
@@ -275,6 +483,7 @@ where
     ///
     /// Returns a `ContinueError::Sample` if initialising the resuming
     ///  simulation failed
+    #[allow(clippy::too_many_lines)]
     fn resume_and_simulate<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: Self::Rng,
@@ -293,39 +502,62 @@ where
         impl<
                 L: ExactSizeIterator<Item = Lineage>,
                 M: MathsCore,
-                G: PrimeableRng<M>,
+                G: PrimeableRng<M> + RustToCuda,
                 O: Scenario<M, G>,
             > CudaLineageStoreSampleInitialiser<M, G, O, ContinueError<CudaError>>
             for ResumeInitialiser<L>
+        where
+            O::Habitat: RustToCuda,
+            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda,
+            O::TurnoverRate: RustToCuda,
+            O::SpeciationProbability: RustToCuda,
         {
+            type ActiveLineageSampler<
+                X: EmigrationExit<
+                        M,
+                        O::Habitat,
+                        G,
+                        GlobalLineageReference,
+                        IndependentLineageStore<M, O::Habitat>,
+                    > + RustToCuda,
+                J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
+            > = IndependentActiveLineageSampler<
+                M,
+                O::Habitat,
+                G,
+                X,
+                Self::DispersalSampler,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+                J,
+            >;
+            type DispersalSampler =
+                O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>;
+
             fn init<
                 'h,
                 T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
-                J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate>,
+                J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
                 X: EmigrationExit<
-                    M,
-                    O::Habitat,
-                    G,
-                    GlobalLineageReference,
-                    IndependentLineageStore<M, O::Habitat>,
-                >,
+                        M,
+                        O::Habitat,
+                        G,
+                        GlobalLineageReference,
+                        IndependentLineageStore<M, O::Habitat>,
+                    > + RustToCuda,
             >(
                 self,
                 origin_sampler: T,
+                dispersal_sampler: O::DispersalSampler<
+                    InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>,
+                >,
                 event_time_sampler: J,
             ) -> Result<
                 (
                     IndependentLineageStore<M, O::Habitat>,
-                    IndependentActiveLineageSampler<
-                        M,
-                        O::Habitat,
-                        G,
-                        X,
-                        O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
-                        O::TurnoverRate,
-                        O::SpeciationProbability,
-                        J,
-                    >,
+                    Self::DispersalSampler,
+                    Self::ActiveLineageSampler<X, J>,
+                    Vec<Lineage>,
                     Vec<Lineage>,
                 ),
                 ContinueError<CudaError>,
@@ -347,7 +579,13 @@ where
                     return Err(ContinueError::Sample(exceptional_lineages));
                 }
 
-                Ok((lineage_store, active_lineage_sampler, lineages))
+                Ok((
+                    lineage_store,
+                    dispersal_sampler,
+                    active_lineage_sampler,
+                    lineages,
+                    Vec::new(),
+                ))
             }
         }
 
@@ -361,6 +599,194 @@ where
             ResumeInitialiser {
                 lineages,
                 resume_after,
+            },
+        )
+    }
+
+    /// # Errors
+    ///
+    /// Returns a `ContinueError<Self::Error>` if fixing up the restarting
+    ///  simulation (incl. running the algorithm) failed
+    #[allow(clippy::too_many_lines)]
+    fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
+        args: Self::Arguments,
+        rng: Self::Rng,
+        scenario: O,
+        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        lineages: L,
+        restart_at: PositiveF64,
+        fixup_strategy: RestartFixUpStrategy,
+        local_partition: &mut P,
+    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, ContinueError<Self::Error>> {
+        struct FixUpInitialiser<L: ExactSizeIterator<Item = Lineage>> {
+            lineages: L,
+            restart_at: PositiveF64,
+            fixup_strategy: RestartFixUpStrategy,
+        }
+
+        impl<
+                L: ExactSizeIterator<Item = Lineage>,
+                M: MathsCore,
+                G: PrimeableRng<M> + RustToCuda,
+                O: Scenario<M, G>,
+            > CudaLineageStoreSampleInitialiser<M, G, O, ContinueError<CudaError>>
+            for FixUpInitialiser<L>
+        where
+            O::Habitat: RustToCuda,
+            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda,
+            O::TurnoverRate: RustToCuda,
+            O::SpeciationProbability: RustToCuda,
+        {
+            type ActiveLineageSampler<
+                X: EmigrationExit<
+                        M,
+                        O::Habitat,
+                        G,
+                        GlobalLineageReference,
+                        IndependentLineageStore<M, O::Habitat>,
+                    > + RustToCuda,
+                J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
+            > = IndependentActiveLineageSampler<
+                M,
+                O::Habitat,
+                G,
+                X,
+                Self::DispersalSampler,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+                ConstEventTimeSampler,
+            >;
+            type DispersalSampler = TrespassingDispersalSampler<
+                M,
+                O::Habitat,
+                G,
+                O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+                UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
+            >;
+
+            fn init<
+                'h,
+                T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
+                J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
+                X: EmigrationExit<
+                        M,
+                        O::Habitat,
+                        G,
+                        GlobalLineageReference,
+                        IndependentLineageStore<M, O::Habitat>,
+                    > + RustToCuda,
+            >(
+                self,
+                origin_sampler: T,
+                dispersal_sampler: O::DispersalSampler<
+                    InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>,
+                >,
+                _event_time_sampler: J,
+            ) -> Result<
+                (
+                    IndependentLineageStore<M, O::Habitat>,
+                    Self::DispersalSampler,
+                    Self::ActiveLineageSampler<X, J>,
+                    Vec<Lineage>,
+                    Vec<Lineage>,
+                ),
+                ContinueError<CudaError>,
+            >
+            where
+                O::Habitat: 'h,
+            {
+                let habitat = origin_sampler.habitat();
+                let pre_sampler = origin_sampler.into_pre_sampler();
+
+                let (
+                    lineage_store,
+                    active_lineage_sampler,
+                    mut good_lineages,
+                    exceptional_lineages,
+                ) = IndependentActiveLineageSampler::resume_with_store_and_lineages(
+                    ResumingOriginSampler::new(habitat, pre_sampler, self.lineages),
+                    ConstEventTimeSampler::new(self.restart_at),
+                    NonNegativeF64::zero(),
+                );
+
+                let SplitExceptionalLineages {
+                    coalescence,
+                    out_of_deme,
+                    out_of_habitat,
+                } = ExceptionalLineage::split_vec(exceptional_lineages);
+
+                let mut exceptional_lineages = Vec::new();
+                let mut fixable_lineages = Vec::new();
+
+                // Note: `coalescence` should be empty anyways as the
+                //  `IndependentActiveLineageSampler` cannot detect
+                //  coalescence by itself
+                match self.fixup_strategy.coalescence {
+                    CoalescenceStrategy::Abort => {
+                        exceptional_lineages
+                            .extend(coalescence.into_iter().map(ExceptionalLineage::Coalescence));
+                    },
+                    CoalescenceStrategy::Coalescence => {
+                        // The Independent algorithm can deal with late
+                        //  coalescence already
+                        good_lineages.extend(coalescence.into_iter());
+                    },
+                }
+
+                match self.fixup_strategy.out_of_deme {
+                    OutOfDemeStrategy::Abort => {
+                        exceptional_lineages
+                            .extend(out_of_deme.into_iter().map(ExceptionalLineage::OutOfDeme));
+                    },
+                    OutOfDemeStrategy::Dispersal => {
+                        fixable_lineages.extend(out_of_deme.into_iter());
+                    },
+                }
+
+                match self.fixup_strategy.out_of_habitat {
+                    OutOfHabitatStrategy::Abort => {
+                        exceptional_lineages.extend(
+                            out_of_habitat
+                                .into_iter()
+                                .map(ExceptionalLineage::OutOfHabitat),
+                        );
+                    },
+                    OutOfHabitatStrategy::UniformDispersal => {
+                        fixable_lineages.extend(out_of_habitat.into_iter());
+                    },
+                }
+
+                if !exceptional_lineages.is_empty() {
+                    return Err(ContinueError::Sample(exceptional_lineages));
+                }
+
+                let dispersal_sampler = TrespassingDispersalSampler::new(
+                    dispersal_sampler,
+                    UniformAntiTrespassingDispersalSampler::default(),
+                );
+
+                // Simulate the fixable lineages, pass through the good ones
+                Ok((
+                    lineage_store,
+                    dispersal_sampler,
+                    active_lineage_sampler,
+                    fixable_lineages,
+                    good_lineages,
+                ))
+            }
+        }
+
+        initialise_and_simulate(
+            &args,
+            rng,
+            scenario,
+            pre_sampler,
+            Some(PositiveF64::max_after(restart_at.into(), restart_at.into()).into()),
+            local_partition,
+            FixUpInitialiser {
+                lineages,
+                restart_at,
+                fixup_strategy,
             },
         )
     }
@@ -406,13 +832,7 @@ where
         GlobalLineageReference,
         IndependentLineageStore<NvptxMathsCore, O::Habitat>,
         NeverEmigrationExit,
-        O::DispersalSampler<
-            InMemoryPackedAliasDispersalSampler<
-                NvptxMathsCore,
-                O::Habitat,
-                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-            >,
-        >,
+        L::DispersalSampler,
         IndependentCoalescenceSampler<NvptxMathsCore, O::Habitat>,
         O::TurnoverRate,
         O::SpeciationProbability,
@@ -421,33 +841,12 @@ where
             O::Habitat,
             CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
             NeverEmigrationExit,
-            O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<
-                    NvptxMathsCore,
-                    O::Habitat,
-                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                >,
-            >,
+            L::DispersalSampler,
             O::TurnoverRate,
             O::SpeciationProbability,
         >,
         NeverImmigrationEntry,
-        IndependentActiveLineageSampler<
-            NvptxMathsCore,
-            O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-            NeverEmigrationExit,
-            O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<
-                    NvptxMathsCore,
-                    O::Habitat,
-                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                >,
-            >,
-            O::TurnoverRate,
-            O::SpeciationProbability,
-            ExpEventTimeSampler,
-        >,
+        L::ActiveLineageSampler<NeverEmigrationExit, ExpEventTimeSampler>,
         R::ReportSpeciation,
         R::ReportDispersal,
     >: rustcoalescence_algorithms_cuda_kernel::Kernel<
@@ -457,13 +856,7 @@ where
         GlobalLineageReference,
         IndependentLineageStore<NvptxMathsCore, O::Habitat>,
         NeverEmigrationExit,
-        O::DispersalSampler<
-            InMemoryPackedAliasDispersalSampler<
-                NvptxMathsCore,
-                O::Habitat,
-                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-            >,
-        >,
+        L::DispersalSampler,
         IndependentCoalescenceSampler<NvptxMathsCore, O::Habitat>,
         O::TurnoverRate,
         O::SpeciationProbability,
@@ -472,33 +865,12 @@ where
             O::Habitat,
             CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
             NeverEmigrationExit,
-            O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<
-                    NvptxMathsCore,
-                    O::Habitat,
-                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                >,
-            >,
+            L::DispersalSampler,
             O::TurnoverRate,
             O::SpeciationProbability,
         >,
         NeverImmigrationEntry,
-        IndependentActiveLineageSampler<
-            NvptxMathsCore,
-            O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-            NeverEmigrationExit,
-            O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<
-                    NvptxMathsCore,
-                    O::Habitat,
-                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                >,
-            >,
-            O::TurnoverRate,
-            O::SpeciationProbability,
-            ExpEventTimeSampler,
-        >,
+        L::ActiveLineageSampler<NeverEmigrationExit, ExpEventTimeSampler>,
         R::ReportSpeciation,
         R::ReportDispersal,
     >,
@@ -518,34 +890,38 @@ where
     let coalescence_sampler = IndependentCoalescenceSampler::default();
     let event_sampler = IndependentEventSampler::default();
 
-    let (lineage_store, active_lineage_sampler, lineages) = match args.parallelism_mode {
-        // Apply no lineage origin partitioning in the `Monolithic` mode
-        ParallelismMode::Monolithic(..) => lineage_store_sampler_initialiser.init(
-            O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
-            ExpEventTimeSampler::new(args.delta_t),
-        )?,
-        // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
-        ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { partition, .. }) => {
-            lineage_store_sampler_initialiser.init(
-                O::sample_habitat(
-                    &habitat,
-                    pre_sampler.partition(partition),
-                    origin_sampler_auxiliary,
-                ),
+    let (lineage_store, dispersal_sampler, active_lineage_sampler, lineages, passthrough) =
+        match args.parallelism_mode {
+            // Apply no lineage origin partitioning in the `Monolithic` mode
+            ParallelismMode::Monolithic(..) => lineage_store_sampler_initialiser.init(
+                O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
+                dispersal_sampler,
                 ExpEventTimeSampler::new(args.delta_t),
-            )?
-        },
-        // Apply lineage origin partitioning in the `IsolatedLandscape` mode
-        ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { partition, .. }) => {
-            lineage_store_sampler_initialiser.init(
-                DecompositionOriginSampler::new(
-                    O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
-                    &O::decompose(&habitat, partition, decomposition_auxiliary),
-                ),
-                ExpEventTimeSampler::new(args.delta_t),
-            )?
-        },
-    };
+            )?,
+            // Apply lineage origin partitioning in the `IsolatedIndividuals` mode
+            ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { partition, .. }) => {
+                lineage_store_sampler_initialiser.init(
+                    O::sample_habitat(
+                        &habitat,
+                        pre_sampler.partition(partition),
+                        origin_sampler_auxiliary,
+                    ),
+                    dispersal_sampler,
+                    ExpEventTimeSampler::new(args.delta_t),
+                )?
+            },
+            // Apply lineage origin partitioning in the `IsolatedLandscape` mode
+            ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { partition, .. }) => {
+                lineage_store_sampler_initialiser.init(
+                    DecompositionOriginSampler::new(
+                        O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
+                        &O::decompose(&habitat, partition, decomposition_auxiliary),
+                    ),
+                    dispersal_sampler,
+                    ExpEventTimeSampler::new(args.delta_t),
+                )?
+            },
+        };
 
     let emigration_exit = NeverEmigrationExit::default();
     let immigration_entry = NeverImmigrationEntry::default();
@@ -579,7 +955,7 @@ where
         },
     };
 
-    let (status, time, steps, lineages) = with_initialised_cuda(args.device, || {
+    let (mut status, time, steps, lineages) = with_initialised_cuda(args.device, || {
         let kernel = SimulationKernel::try_new(
             Stream::new(StreamFlags::NON_BLOCKING, None)?,
             grid_size.clone(),
@@ -598,12 +974,19 @@ where
     })
     .map_err(CudaError::from)?;
 
+    if !passthrough.is_empty() {
+        status = Status::Paused;
+    }
+
     match status {
         Status::Done => Ok(AlgorithmResult::Done { time, steps }),
         Status::Paused => Ok(AlgorithmResult::Paused {
             time,
             steps,
-            lineages: lineages.into_iter().collect(),
+            lineages: lineages
+                .into_iter()
+                .chain(passthrough.into_iter())
+                .collect(),
             rng: simulation.rng_mut().clone(),
             marker: PhantomData,
         }),
@@ -613,39 +996,57 @@ where
 #[allow(clippy::type_complexity)]
 trait CudaLineageStoreSampleInitialiser<
     M: MathsCore,
-    G: PrimeableRng<M>,
+    G: PrimeableRng<M> + RustToCuda,
     O: Scenario<M, G>,
     Error: From<CudaError>,
->
+> where
+    O::Habitat: RustToCuda,
+    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda,
+    O::TurnoverRate: RustToCuda,
+    O::SpeciationProbability: RustToCuda,
 {
-    fn init<
-        'h,
-        T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
-        J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate>,
+    type DispersalSampler: DispersalSampler<M, O::Habitat, G> + RustToCuda;
+    type ActiveLineageSampler<
         X: EmigrationExit<
             M,
             O::Habitat,
             G,
             GlobalLineageReference,
             IndependentLineageStore<M, O::Habitat>,
-        >,
+        > + RustToCuda,
+        J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
+    >: SingularActiveLineageSampler<
+        M, O::Habitat, G, GlobalLineageReference, IndependentLineageStore<M, O::Habitat>,
+        X, Self::DispersalSampler, IndependentCoalescenceSampler<M, O::Habitat>, O::TurnoverRate,
+        O::SpeciationProbability, IndependentEventSampler<
+            M, O::Habitat, G, X, Self::DispersalSampler, O::TurnoverRate, O::SpeciationProbability
+        >, NeverImmigrationEntry,
+    > + RustToCuda;
+
+    fn init<
+        'h,
+        T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
+        J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
+        X: EmigrationExit<
+                M,
+                O::Habitat,
+                G,
+                GlobalLineageReference,
+                IndependentLineageStore<M, O::Habitat>,
+            > + RustToCuda,
     >(
         self,
         origin_sampler: T,
+        dispersal_sampler: O::DispersalSampler<
+            InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>,
+        >,
         event_time_sampler: J,
     ) -> Result<
         (
             IndependentLineageStore<M, O::Habitat>,
-            IndependentActiveLineageSampler<
-                M,
-                O::Habitat,
-                G,
-                X,
-                O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
-                O::TurnoverRate,
-                O::SpeciationProbability,
-                J,
-            >,
+            Self::DispersalSampler,
+            Self::ActiveLineageSampler<X, J>,
+            Vec<Lineage>,
             Vec<Lineage>,
         ),
         Error,
