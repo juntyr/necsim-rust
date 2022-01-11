@@ -9,8 +9,6 @@ use necsim_core::{
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
-use crate::cogs::active_lineage_sampler::singular::SingularActiveLineageSampler;
-
 use super::RestartFixUpActiveLineageSampler;
 
 impl<
@@ -173,49 +171,5 @@ impl<
         rng: &mut G,
     ) {
         self.inner.push_active_lineage(lineage, simulation, rng);
-    }
-}
-
-impl<
-        M: MathsCore,
-        H: Habitat<M>,
-        G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: LineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
-        D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
-        T: TurnoverRate<M, H>,
-        N: SpeciationProbability<M, H>,
-        E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
-        I: ImmigrationEntry<M>,
-        A: SingularActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>,
-    > SingularActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
-    for RestartFixUpActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I, A>
-{
-    #[must_use]
-    #[debug_requires(
-        self.number_active_lineages() <= 1,
-        "stores either a fixed or fixable lineage, but not more"
-    )]
-    #[debug_ensures(
-        self.number_active_lineages() <= 1,
-        "stores either a fixed or fixable lineage, but not more"
-    )]
-    fn replace_active_lineage(&mut self, active_lineage: Option<Lineage>) -> Option<Lineage> {
-        if let Some(active_lineage) = active_lineage {
-            if active_lineage.last_event_time < self.restart_time {
-                let old_lineage = self.fixable_lineages.pop();
-                self.fixable_lineages.push(active_lineage);
-
-                old_lineage
-            } else {
-                self.inner.replace_active_lineage(Some(active_lineage))
-            }
-        } else if self.fixable_lineages.is_empty() {
-            self.inner.replace_active_lineage(active_lineage)
-        } else {
-            self.fixable_lineages.pop()
-        }
     }
 }

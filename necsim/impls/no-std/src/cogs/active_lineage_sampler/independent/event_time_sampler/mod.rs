@@ -4,6 +4,7 @@ use necsim_core::{
 };
 use necsim_core_bond::NonNegativeF64;
 
+pub mod r#const;
 pub mod exp;
 pub mod fixed;
 pub mod geometric;
