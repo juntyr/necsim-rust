@@ -2,26 +2,34 @@ use std::{hint::unreachable_unchecked, marker::PhantomData};
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit,
-        GloballyCoherentLineageStore, ImmigrationEntry, LineageReference, MathsCore, RngCore,
-        SeparableDispersalSampler, SplittableRng,
+        ActiveLineageSampler, EmigrationExit, GloballyCoherentLineageStore, ImmigrationEntry,
+        LineageReference, MathsCore, RngCore, SeparableDispersalSampler, SplittableRng,
     },
-    lineage::Lineage,
+    event::DispersalEvent,
+    lineage::{Lineage, LineageInteraction},
     reporter::Reporter,
     simulation::SimulationBuilder,
 };
-use necsim_core_bond::NonNegativeF64;
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_core_maths::IntrinsicsMathsCore;
 
 use necsim_impls_no_std::{
     cogs::{
-        active_lineage_sampler::alias::location::LocationAliasActiveLineageSampler,
-        coalescence_sampler::conditional::ConditionalCoalescenceSampler,
-        dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
-        emigration_exit::{domain::DomainEmigrationExit, never::NeverEmigrationExit},
-        event_sampler::gillespie::{
-            conditional::ConditionalGillespieEventSampler, GillespieEventSampler,
+        active_lineage_sampler::{
+            alias::location::LocationAliasActiveLineageSampler,
+            resuming::{
+                ExceptionalLineage, RestartFixUpActiveLineageSampler, SplitExceptionalLineages,
+            },
         },
+        coalescence_sampler::conditional::ConditionalCoalescenceSampler,
+        dispersal_sampler::{
+            in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
+            trespassing::{
+                uniform::UniformAntiTrespassingDispersalSampler, TrespassingDispersalSampler,
+            },
+        },
+        emigration_exit::{domain::DomainEmigrationExit, never::NeverEmigrationExit},
+        event_sampler::gillespie::conditional::ConditionalGillespieEventSampler,
         immigration_entry::{buffered::BufferedImmigrationEntry, never::NeverImmigrationEntry},
         lineage_reference::in_memory::InMemoryLineageReference,
         lineage_store::coherent::globally::gillespie::GillespieLineageStore,
@@ -35,7 +43,10 @@ use necsim_impls_no_std::{
 use necsim_impls_std::cogs::rng::pcg::Pcg;
 use necsim_partitioning_core::LocalPartition;
 
-use rustcoalescence_algorithms::{Algorithm, AlgorithmParamters, AlgorithmResult, ContinueError};
+use rustcoalescence_algorithms::{
+    Algorithm, AlgorithmParamters, AlgorithmResult, CoalescenceStrategy, ContinueError,
+    OutOfDemeStrategy, OutOfHabitatStrategy, RestartFixUpStrategy,
+};
 use rustcoalescence_scenarios::Scenario;
 
 use crate::arguments::{
@@ -89,66 +100,100 @@ where
 
         impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
             EventSkippingLineageStoreSampleInitialiser<M, G, O, !> for GenesisInitialiser
+        where
+            O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
+                SeparableDispersalSampler<M, O::Habitat, G>,
         {
-            fn init<
-                'h,
-                T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
+            type ActiveLineageSampler<
                 R: LineageReference<M, O::Habitat>,
                 S: GloballyCoherentLineageStore<M, O::Habitat, R>,
                 X: EmigrationExit<M, O::Habitat, G, R, S>,
-                D: DispersalSampler<M, O::Habitat, G>,
-                C: CoalescenceSampler<M, O::Habitat, R, S>,
-                E: GillespieEventSampler<
+                I: ImmigrationEntry<M>,
+            > = LocationAliasActiveLineageSampler<
+                M,
+                O::Habitat,
+                G,
+                R,
+                S,
+                X,
+                Self::DispersalSampler,
+                ConditionalCoalescenceSampler<M, O::Habitat, R, S>,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+                ConditionalGillespieEventSampler<
                     M,
                     O::Habitat,
                     G,
                     R,
                     S,
                     X,
-                    D,
-                    C,
+                    Self::DispersalSampler,
                     O::TurnoverRate,
                     O::SpeciationProbability,
                 >,
+                I,
+            >;
+            type DispersalSampler =
+                O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>;
+
+            fn init<
+                'h,
+                T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
+                R: LineageReference<M, O::Habitat>,
+                S: GloballyCoherentLineageStore<M, O::Habitat, R>,
+                X: EmigrationExit<M, O::Habitat, G, R, S>,
                 I: ImmigrationEntry<M>,
+                Q: Reporter,
+                P: LocalPartition<Q>,
             >(
                 self,
                 origin_sampler: T,
-                dispersal_sampler: &D,
-                coalescence_sampler: &C,
+                dispersal_sampler: O::DispersalSampler<
+                    InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>,
+                >,
+                coalescence_sampler: &ConditionalCoalescenceSampler<M, O::Habitat, R, S>,
                 turnover_rate: &O::TurnoverRate,
                 speciation_probability: &O::SpeciationProbability,
-                event_sampler: &E,
+                _local_partition: &mut P,
             ) -> Result<
                 (
                     S,
-                    LocationAliasActiveLineageSampler<
+                    Self::DispersalSampler,
+                    ConditionalGillespieEventSampler<
                         M,
                         O::Habitat,
                         G,
                         R,
                         S,
                         X,
-                        D,
-                        C,
+                        Self::DispersalSampler,
                         O::TurnoverRate,
                         O::SpeciationProbability,
-                        E,
-                        I,
                     >,
+                    Self::ActiveLineageSampler<R, S, X, I>,
                 ),
                 !,
             >
             where
                 O::Habitat: 'h,
             {
-                Ok(LocationAliasActiveLineageSampler::init_with_store(
-                    origin_sampler,
+                let event_sampler = ConditionalGillespieEventSampler::default();
+
+                let (lineage_store, active_lineage_sampler) =
+                    LocationAliasActiveLineageSampler::init_with_store(
+                        origin_sampler,
+                        &dispersal_sampler,
+                        coalescence_sampler,
+                        turnover_rate,
+                        speciation_probability,
+                        &event_sampler,
+                    );
+
+                Ok((
+                    lineage_store,
                     dispersal_sampler,
-                    coalescence_sampler,
-                    turnover_rate,
-                    speciation_probability,
                     event_sampler,
+                    active_lineage_sampler,
                 ))
             }
         }
@@ -168,6 +213,7 @@ where
     ///
     /// Returns a `ContinueError::Sample` if initialising the resuming
     ///  simulation failed
+    #[allow(clippy::too_many_lines)]
     fn resume_and_simulate<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: Self::Rng,
@@ -190,53 +236,77 @@ where
                 O: Scenario<M, G>,
             > EventSkippingLineageStoreSampleInitialiser<M, G, O, ContinueError<!>>
             for ResumeInitialiser<L>
+        where
+            O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
+                SeparableDispersalSampler<M, O::Habitat, G>,
         {
-            fn init<
-                'h,
-                T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
+            type ActiveLineageSampler<
                 R: LineageReference<M, O::Habitat>,
                 S: GloballyCoherentLineageStore<M, O::Habitat, R>,
                 X: EmigrationExit<M, O::Habitat, G, R, S>,
-                D: DispersalSampler<M, O::Habitat, G>,
-                C: CoalescenceSampler<M, O::Habitat, R, S>,
-                E: GillespieEventSampler<
+                I: ImmigrationEntry<M>,
+            > = LocationAliasActiveLineageSampler<
+                M,
+                O::Habitat,
+                G,
+                R,
+                S,
+                X,
+                Self::DispersalSampler,
+                ConditionalCoalescenceSampler<M, O::Habitat, R, S>,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+                ConditionalGillespieEventSampler<
                     M,
                     O::Habitat,
                     G,
                     R,
                     S,
                     X,
-                    D,
-                    C,
+                    Self::DispersalSampler,
                     O::TurnoverRate,
                     O::SpeciationProbability,
                 >,
+                I,
+            >;
+            type DispersalSampler =
+                O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>;
+
+            fn init<
+                'h,
+                T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
+                R: LineageReference<M, O::Habitat>,
+                S: GloballyCoherentLineageStore<M, O::Habitat, R>,
+                X: EmigrationExit<M, O::Habitat, G, R, S>,
                 I: ImmigrationEntry<M>,
+                Q: Reporter,
+                P: LocalPartition<Q>,
             >(
                 self,
                 origin_sampler: T,
-                dispersal_sampler: &D,
-                coalescence_sampler: &C,
+                dispersal_sampler: O::DispersalSampler<
+                    InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>,
+                >,
+                coalescence_sampler: &ConditionalCoalescenceSampler<M, O::Habitat, R, S>,
                 turnover_rate: &O::TurnoverRate,
                 speciation_probability: &O::SpeciationProbability,
-                event_sampler: &E,
+                _local_partition: &mut P,
             ) -> Result<
                 (
                     S,
-                    LocationAliasActiveLineageSampler<
+                    Self::DispersalSampler,
+                    ConditionalGillespieEventSampler<
                         M,
                         O::Habitat,
                         G,
                         R,
                         S,
                         X,
-                        D,
-                        C,
+                        Self::DispersalSampler,
                         O::TurnoverRate,
                         O::SpeciationProbability,
-                        E,
-                        I,
                     >,
+                    Self::ActiveLineageSampler<R, S, X, I>,
                 ),
                 ContinueError<!>,
             >
@@ -246,14 +316,16 @@ where
                 let habitat = origin_sampler.habitat();
                 let pre_sampler = origin_sampler.into_pre_sampler();
 
+                let event_sampler = ConditionalGillespieEventSampler::default();
+
                 let (lineage_store, active_lineage_sampler, exceptional_lineages) =
                     LocationAliasActiveLineageSampler::resume_with_store(
                         ResumingOriginSampler::new(habitat, pre_sampler, self.lineages),
-                        dispersal_sampler,
+                        &dispersal_sampler,
                         coalescence_sampler,
                         turnover_rate,
                         speciation_probability,
-                        event_sampler,
+                        &event_sampler,
                         self.resume_after.unwrap_or(NonNegativeF64::zero()),
                     );
 
@@ -261,7 +333,12 @@ where
                     return Err(ContinueError::Sample(exceptional_lineages));
                 }
 
-                Ok((lineage_store, active_lineage_sampler))
+                Ok((
+                    lineage_store,
+                    dispersal_sampler,
+                    event_sampler,
+                    active_lineage_sampler,
+                ))
             }
         }
 
@@ -275,6 +352,253 @@ where
             ResumeInitialiser {
                 lineages,
                 resume_after,
+            },
+        )
+    }
+
+    /// # Errors
+    ///
+    /// Returns a `ContinueError<Self::Error>` if fixing up the restarting
+    ///  simulation (incl. running the algorithm) failed
+    #[allow(clippy::too_many_lines)]
+    fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
+        args: Self::Arguments,
+        rng: Self::Rng,
+        scenario: O,
+        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        lineages: L,
+        restart_at: PositiveF64,
+        fixup_strategy: RestartFixUpStrategy,
+        local_partition: &mut P,
+    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, ContinueError<Self::Error>> {
+        struct FixUpInitialiser<L: ExactSizeIterator<Item = Lineage>> {
+            lineages: L,
+            restart_at: PositiveF64,
+            fixup_strategy: RestartFixUpStrategy,
+        }
+
+        impl<
+                L: ExactSizeIterator<Item = Lineage>,
+                M: MathsCore,
+                G: RngCore<M>,
+                O: Scenario<M, G>,
+            > EventSkippingLineageStoreSampleInitialiser<M, G, O, ContinueError<!>>
+            for FixUpInitialiser<L>
+        where
+            O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
+                SeparableDispersalSampler<M, O::Habitat, G>,
+        {
+            type ActiveLineageSampler<
+                R: LineageReference<M, O::Habitat>,
+                S: GloballyCoherentLineageStore<M, O::Habitat, R>,
+                X: EmigrationExit<M, O::Habitat, G, R, S>,
+                I: ImmigrationEntry<M>,
+            > = RestartFixUpActiveLineageSampler<
+                M,
+                O::Habitat,
+                G,
+                R,
+                S,
+                X,
+                Self::DispersalSampler,
+                ConditionalCoalescenceSampler<M, O::Habitat, R, S>,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+                ConditionalGillespieEventSampler<
+                    M,
+                    O::Habitat,
+                    G,
+                    R,
+                    S,
+                    X,
+                    Self::DispersalSampler,
+                    O::TurnoverRate,
+                    O::SpeciationProbability,
+                >,
+                I,
+                LocationAliasActiveLineageSampler<
+                    M,
+                    O::Habitat,
+                    G,
+                    R,
+                    S,
+                    X,
+                    Self::DispersalSampler,
+                    ConditionalCoalescenceSampler<M, O::Habitat, R, S>,
+                    O::TurnoverRate,
+                    O::SpeciationProbability,
+                    ConditionalGillespieEventSampler<
+                        M,
+                        O::Habitat,
+                        G,
+                        R,
+                        S,
+                        X,
+                        Self::DispersalSampler,
+                        O::TurnoverRate,
+                        O::SpeciationProbability,
+                    >,
+                    I,
+                >,
+            >;
+            type DispersalSampler = TrespassingDispersalSampler<
+                M,
+                O::Habitat,
+                G,
+                O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>,
+                UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
+            >;
+
+            fn init<
+                'h,
+                T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
+                R: LineageReference<M, O::Habitat>,
+                S: GloballyCoherentLineageStore<M, O::Habitat, R>,
+                X: EmigrationExit<M, O::Habitat, G, R, S>,
+                I: ImmigrationEntry<M>,
+                Q: Reporter,
+                P: LocalPartition<Q>,
+            >(
+                self,
+                origin_sampler: T,
+                dispersal_sampler: O::DispersalSampler<
+                    InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>,
+                >,
+                coalescence_sampler: &ConditionalCoalescenceSampler<M, O::Habitat, R, S>,
+                turnover_rate: &O::TurnoverRate,
+                speciation_probability: &O::SpeciationProbability,
+                local_partition: &mut P,
+            ) -> Result<
+                (
+                    S,
+                    Self::DispersalSampler,
+                    ConditionalGillespieEventSampler<
+                        M,
+                        O::Habitat,
+                        G,
+                        R,
+                        S,
+                        X,
+                        Self::DispersalSampler,
+                        O::TurnoverRate,
+                        O::SpeciationProbability,
+                    >,
+                    Self::ActiveLineageSampler<R, S, X, I>,
+                ),
+                ContinueError<!>,
+            >
+            where
+                O::Habitat: 'h,
+            {
+                let habitat = origin_sampler.habitat();
+                let pre_sampler = origin_sampler.into_pre_sampler();
+
+                let event_sampler = ConditionalGillespieEventSampler::default();
+                let dispersal_sampler = TrespassingDispersalSampler::new(
+                    dispersal_sampler,
+                    UniformAntiTrespassingDispersalSampler::default(),
+                );
+
+                let (lineage_store, active_lineage_sampler, exceptional_lineages) =
+                    LocationAliasActiveLineageSampler::resume_with_store(
+                        ResumingOriginSampler::new(habitat, pre_sampler, self.lineages),
+                        &dispersal_sampler,
+                        coalescence_sampler,
+                        turnover_rate,
+                        speciation_probability,
+                        &event_sampler,
+                        self.restart_at.into(),
+                    );
+
+                let SplitExceptionalLineages {
+                    mut coalescence,
+                    out_of_deme,
+                    out_of_habitat,
+                } = ExceptionalLineage::split_vec(exceptional_lineages);
+
+                let mut exceptional_lineages = Vec::new();
+                let mut fixable_lineages = Vec::new();
+
+                match self.fixup_strategy.coalescence {
+                    CoalescenceStrategy::Abort => {
+                        exceptional_lineages.extend(coalescence.into_iter().map(
+                            |(child, parent)| ExceptionalLineage::Coalescence { child, parent },
+                        ));
+                    },
+                    CoalescenceStrategy::Coalescence => {
+                        coalescence.sort();
+
+                        for (coalescing_lineage, parent) in coalescence {
+                            local_partition.get_reporter().report_dispersal(
+                                (&DispersalEvent {
+                                    global_lineage_reference: coalescing_lineage.global_reference,
+                                    prior_time: coalescing_lineage.last_event_time,
+                                    event_time: self.restart_at,
+                                    origin: coalescing_lineage.indexed_location.clone(),
+                                    target: coalescing_lineage.indexed_location,
+                                    interaction: LineageInteraction::Coalescence(parent),
+                                })
+                                    .into(),
+                            );
+                        }
+                    },
+                }
+
+                match self.fixup_strategy.out_of_deme {
+                    OutOfDemeStrategy::Abort => {
+                        exceptional_lineages
+                            .extend(out_of_deme.into_iter().map(ExceptionalLineage::OutOfDeme));
+                    },
+                    OutOfDemeStrategy::Dispersal => {
+                        fixable_lineages.extend(out_of_deme.into_iter());
+                    },
+                }
+
+                match self.fixup_strategy.out_of_habitat {
+                    OutOfHabitatStrategy::Abort => {
+                        exceptional_lineages.extend(
+                            out_of_habitat
+                                .into_iter()
+                                .map(ExceptionalLineage::OutOfHabitat),
+                        );
+                    },
+                    OutOfHabitatStrategy::UniformDispersal => {
+                        fixable_lineages.extend(out_of_habitat.into_iter());
+                    },
+                }
+
+                if !exceptional_lineages.is_empty() {
+                    return Err(ContinueError::Sample(exceptional_lineages));
+                }
+
+                fixable_lineages.sort();
+
+                let active_lineage_sampler = RestartFixUpActiveLineageSampler::new(
+                    active_lineage_sampler,
+                    fixable_lineages,
+                    self.restart_at,
+                );
+
+                Ok((
+                    lineage_store,
+                    dispersal_sampler,
+                    event_sampler,
+                    active_lineage_sampler,
+                ))
+            }
+        }
+
+        initialise_and_simulate(
+            args,
+            rng,
+            scenario,
+            pre_sampler,
+            Some(PositiveF64::max_after(restart_at.into(), restart_at.into()).into()),
+            local_partition,
+            FixUpInitialiser {
+                lineages,
+                restart_at,
+                fixup_strategy,
             },
         )
     }
@@ -316,18 +640,19 @@ where
                 _decomposition_auxiliary,
             ) = scenario.build::<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>();
             let coalescence_sampler = ConditionalCoalescenceSampler::default();
-            let event_sampler = ConditionalGillespieEventSampler::default();
 
-            let (lineage_store, active_lineage_sampler): (
+            let (lineage_store, dispersal_sampler, event_sampler, active_lineage_sampler): (
                 O::LineageStore<GillespieLineageStore<M, O::Habitat>>,
+                _,
+                _,
                 _,
             ) = lineage_store_sampler_initialiser.init(
                 O::sample_habitat(&habitat, pre_sampler, origin_sampler_auxiliary),
-                &dispersal_sampler,
+                dispersal_sampler,
                 &coalescence_sampler,
                 &turnover_rate,
                 &speciation_probability,
-                &event_sampler,
+                local_partition,
             )?;
 
             let emigration_exit = NeverEmigrationExit::default();
@@ -386,7 +711,6 @@ where
                 decomposition_auxiliary,
             ) = scenario.build::<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>();
             let coalescence_sampler = ConditionalCoalescenceSampler::default();
-            let event_sampler = ConditionalGillespieEventSampler::default();
 
             let decomposition = O::decompose(
                 &habitat,
@@ -398,16 +722,18 @@ where
                 &decomposition,
             );
 
-            let (lineage_store, active_lineage_sampler): (
+            let (lineage_store, dispersal_sampler, event_sampler, active_lineage_sampler): (
                 O::LineageStore<GillespieLineageStore<M, O::Habitat>>,
+                _,
+                _,
                 _,
             ) = lineage_store_sampler_initialiser.init(
                 origin_sampler,
-                &dispersal_sampler,
+                dispersal_sampler,
                 &coalescence_sampler,
                 &turnover_rate,
                 &speciation_probability,
-                &event_sampler,
+                local_partition,
             )?;
 
             let emigration_exit = DomainEmigrationExit::new(decomposition);
@@ -470,54 +796,76 @@ trait EventSkippingLineageStoreSampleInitialiser<
     G: RngCore<M>,
     O: Scenario<M, G>,
     Error,
->
+> where
+    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
+        SeparableDispersalSampler<M, O::Habitat, G>,
 {
-    fn init<
-        'h,
-        T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
+    type DispersalSampler: SeparableDispersalSampler<M, O::Habitat, G>;
+    type ActiveLineageSampler<
         R: LineageReference<M, O::Habitat>,
         S: GloballyCoherentLineageStore<M, O::Habitat, R>,
         X: EmigrationExit<M, O::Habitat, G, R, S>,
-        D: DispersalSampler<M, O::Habitat, G>,
-        C: CoalescenceSampler<M, O::Habitat, R, S>,
-        E: GillespieEventSampler<
+        I: ImmigrationEntry<M>,
+    >: ActiveLineageSampler<
+        M,
+        O::Habitat,
+        G,
+        R,
+        S,
+        X,
+        Self::DispersalSampler,
+        ConditionalCoalescenceSampler<M, O::Habitat, R, S>,
+        O::TurnoverRate,
+        O::SpeciationProbability,
+        ConditionalGillespieEventSampler<
             M,
             O::Habitat,
             G,
             R,
             S,
             X,
-            D,
-            C,
+            Self::DispersalSampler,
             O::TurnoverRate,
             O::SpeciationProbability,
         >,
+        I,
+    >;
+
+    fn init<
+        'h,
+        T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
+        R: LineageReference<M, O::Habitat>,
+        S: GloballyCoherentLineageStore<M, O::Habitat, R>,
+        X: EmigrationExit<M, O::Habitat, G, R, S>,
         I: ImmigrationEntry<M>,
+        Q: Reporter,
+        P: LocalPartition<Q>,
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: &D,
-        coalescence_sampler: &C,
+        dispersal_sampler: O::DispersalSampler<
+            InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>,
+        >,
+        coalescence_sampler: &ConditionalCoalescenceSampler<M, O::Habitat, R, S>,
         turnover_rate: &O::TurnoverRate,
         speciation_probability: &O::SpeciationProbability,
-        event_sampler: &E,
+        local_partition: &mut P,
     ) -> Result<
         (
             S,
-            LocationAliasActiveLineageSampler<
+            Self::DispersalSampler,
+            ConditionalGillespieEventSampler<
                 M,
                 O::Habitat,
                 G,
                 R,
                 S,
                 X,
-                D,
-                C,
+                Self::DispersalSampler,
                 O::TurnoverRate,
                 O::SpeciationProbability,
-                E,
-                I,
             >,
+            Self::ActiveLineageSampler<R, S, X, I>,
         ),
         Error,
     >
