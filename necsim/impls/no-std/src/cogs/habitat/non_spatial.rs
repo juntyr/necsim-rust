@@ -87,7 +87,7 @@ impl<M: MathsCore> Habitat<M> for NonSpatialHabitat<M> {
 
     #[must_use]
     fn map_indexed_location_to_u64_injective(&self, indexed_location: &IndexedLocation) -> u64 {
-        u64::from(
+        (u64::from(
             indexed_location
                 .location()
                 .y()
@@ -98,7 +98,8 @@ impl<M: MathsCore> Habitat<M> for NonSpatialHabitat<M> {
                     .location()
                     .x()
                     .wrapping_sub(self.extent.x()),
-            ) * u64::from(self.deme.get())
+            ))
+            * u64::from(self.deme.get())
             + u64::from(indexed_location.index())
     }
 
