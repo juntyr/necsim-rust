@@ -640,6 +640,12 @@ impl<'de> DeserializeState<'de, Partition> for Pause {
             ));
         }
 
+        if matches!(raw.mode, PauseMode::FixUp) && raw.before == NonNegativeF64::zero() {
+            return Err(serde::de::Error::custom(
+                "pause mode `FixUp` requires a positive non-zero pause time",
+            ));
+        }
+
         Ok(Pause {
             before: raw.before,
             config: raw.config,
