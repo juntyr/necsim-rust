@@ -3,7 +3,7 @@
      *  i.e. is the creator of a new unique species */
     speciation: (0.0 < f64 <= 1.0),
     /* selection of the sample of individuals that are simulatd */
-    /* optional, default = Sample(percentage: 1.0, origin: Habitat) */
+    /* optional, default = Sample(percentage: 1.0, origin: Habitat, mode: Genesis) */
     sample: Sample(
         /* percentage of individuals from the sample that are simulated */
         /* optional, default = 1.0 */
@@ -64,12 +64,18 @@
                 out_of_deme: (
                     /* Abort the simulation during configuration before it runs */
                   | Abort
+                    /* Simulate one event to speciate, or to get the individual back into
+                     *  a valid habitable location and deme */
+                  | Dispersal
                 ),
                 /* selection of how to handle individuals at an inhabitable location
                   * optional, default = Abort */
                 out_of_habitat: (
                     /* Abort the simulation during configuration before it runs */
                   | Abort
+                    /* Simulate one event to speciate, or to get the individual back into
+                     *  ANY uniformly selected habitable location and deme */
+                  | UniformDispersal
                 ),
                 /* selection of how to handle individuals at a valid location-index pair
                   *  that is already occupied by another individual, i.e. where these
@@ -78,6 +84,8 @@
                 coalescence: (
                     /* Abort the simulation during configuration before it runs */
                   | Abort
+                    /* Output an immediate coalescence event to resolve the duplication */
+                  | Coalescence
                 ),
             )
             /* restart the simulation from the given sample of individuals
