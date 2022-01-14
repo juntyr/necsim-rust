@@ -66,7 +66,8 @@ pub struct Dispersal {
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug, Clone, TypeLayout)]
+#[allow(clippy::unsafe_derive_deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TypeLayout)]
 #[repr(C)]
 pub struct SpeciationEvent {
     pub global_lineage_reference: GlobalLineageReference,
@@ -83,7 +84,8 @@ const EXCESSIVE_OPTION_SPECIATION_EVENT_ERROR: [(); 1 - {
 } as usize] = [];
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug, Clone, TypeLayout)]
+#[allow(clippy::unsafe_derive_deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TypeLayout)]
 #[repr(C)]
 pub struct DispersalEvent {
     pub global_lineage_reference: GlobalLineageReference,
