@@ -54,14 +54,14 @@ impl Reporter for SpeciesLocationsReporter {
         let output = self.output.clone();
 
         if let Err(err) = self.output_to_database() {
-            error!("Failed to write the lineage locations to table {:?} at {:?}: {:?}", table, output, err);
+            error!("Failed to write the lineage locations to table {:?} at {:?}:\n{}", table, output, err);
         }
     });
 
     fn initialise(&mut self) -> Result<(), String> {
         self.initialise_sqlite_connection().map_err(|err| {
             format!(
-                "Failed to initialise the SQLite species location list: {:?}",
+                "Failed to initialise the SQLite species location list:\n{}",
                 err
             )
         })
