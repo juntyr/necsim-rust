@@ -139,8 +139,7 @@ impl<
         }
 
         // Safety: We just checked that there is at least one fixable lineage
-        let mut fixable_lineage = unsafe { self.fixable_lineages.pop().unwrap_unchecked() };
-        fixable_lineage.last_event_time = self.restart_time.into();
+        let fixable_lineage = unsafe { self.fixable_lineages.pop().unwrap_unchecked() };
 
         Some((fixable_lineage, self.restart_time))
     }
