@@ -115,7 +115,7 @@ impl<
             self.last_event_time = next_event_time.into();
 
             // Note: Option::take would be better but uses local memory
-            let mut chosen_lineage = active_lineage.clone();
+            let chosen_lineage = active_lineage.clone();
             self.active_lineage = None;
 
             Some((chosen_lineage, next_event_time))
