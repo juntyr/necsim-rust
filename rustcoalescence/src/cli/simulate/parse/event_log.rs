@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use serde::{Deserialize, Deserializer};
 use serde_state::DeserializeState;
 
@@ -26,6 +28,15 @@ pub(in super::super) fn parse_and_normalise(
         try_parse_state("simulate", ron_args, &mut event_log_check)?;
 
     normalised_args.log(&event_log);
+
+    let event_log = match event_log {
+        Some(event_log)
+            if event_log.directory() == Path::new("I-solemnly-swear-that-I-am-up-to-no-good") =>
+        {
+            None
+        },
+        event_log => event_log,
+    };
 
     Ok(event_log)
 }
