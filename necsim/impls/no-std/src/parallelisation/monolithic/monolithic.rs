@@ -1,3 +1,5 @@
+use core::ops::ControlFlow;
+
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EventSampler, Habitat,
@@ -58,7 +60,13 @@ pub fn simulate<
 
     let (time, steps) = simulation.simulate_incremental_early_stop(
         |_, _, next_event_time| {
-            pause_before.map_or(false, |pause_before| next_event_time >= pause_before)
+            pause_before.map_or(ControlFlow::CONTINUE, |pause_before| {
+                if next_event_time >= pause_before {
+                    ControlFlow::BREAK
+                } else {
+                    ControlFlow::CONTINUE
+                }
+            })
         },
         local_partition.get_reporter(),
     );

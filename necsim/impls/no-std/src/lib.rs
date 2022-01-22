@@ -9,6 +9,7 @@
 #![feature(const_mut_refs)]
 #![feature(const_fn_trait_bound)]
 #![feature(const_refs_to_cell)]
+#![feature(control_flow_enum)]
 #![feature(negative_impls)]
 #![feature(generic_associated_types)]
 #![allow(incomplete_features)]

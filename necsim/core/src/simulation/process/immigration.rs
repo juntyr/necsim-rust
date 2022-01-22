@@ -34,11 +34,11 @@ impl<
 
         migrating_lineage: MigratingLineage,
     ) {
-        // Immigration decrements the migration balance (extra external work)
-        self.migration_balance -= Wrapping(1_u64);
+        self.with_mut_split_active_lineage_sampler_and_rng_and_migration_balance(
+            |active_lineage_sampler, simulation, rng, migration_balance| {
+                // Immigration decrements the migration balance (extra external work)
+                *migration_balance -= Wrapping(1_u64);
 
-        self.with_mut_split_active_lineage_sampler_and_rng(
-            |active_lineage_sampler, simulation, rng| {
                 // Sample the missing coalescence using the random sample generated
                 // in the remote sublandscape from where the lineage emigrated
                 let (dispersal_target, interaction) = simulation
