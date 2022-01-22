@@ -1,4 +1,5 @@
 use alloc::vec::Vec;
+use core::ops::ControlFlow;
 
 use necsim_core::{
     cogs::{
@@ -94,7 +95,13 @@ pub fn simulate<
             let next_safe_time = global_safe_time + independent_time_slice;
 
             let (_, new_steps) = simulation.simulate_incremental_early_stop(
-                |_, _, next_event_time| next_event_time >= next_safe_time,
+                |_, _, next_event_time| {
+                    if next_event_time >= next_safe_time {
+                        ControlFlow::BREAK
+                    } else {
+                        ControlFlow::CONTINUE
+                    }
+                },
                 &mut proxy,
             );
             total_steps += new_steps;

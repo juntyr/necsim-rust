@@ -8,9 +8,13 @@
 #![cfg_attr(target_os = "cuda", feature(atomic_from_mut))]
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![cfg_attr(target_os = "cuda", feature(stdsimd))]
+#![cfg_attr(target_os = "cuda", feature(control_flow_enum))]
 #![allow(clippy::type_complexity)]
 
 extern crate alloc;
+
+#[cfg(target_os = "cuda")]
+use core::ops::ControlFlow;
 
 use necsim_core::{
     cogs::{
@@ -102,7 +106,11 @@ pub fn simulate<
             |_, steps, next_event_time| {
                 final_next_event_time = Some(next_event_time);
 
-                steps >= max_steps || next_event_time >= max_next_event_time
+                if steps >= max_steps || next_event_time >= max_next_event_time {
+                    ControlFlow::BREAK
+                } else {
+                    ControlFlow::CONTINUE
+                }
             },
             event_buffer_reporter,
         );

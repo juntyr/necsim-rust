@@ -2,6 +2,7 @@ use alloc::{collections::VecDeque, vec::Vec};
 use core::{
     iter::FromIterator,
     num::{NonZeroU64, Wrapping},
+    ops::ControlFlow,
 };
 
 use necsim_core_bond::NonNegativeF64;
@@ -131,8 +132,16 @@ pub fn simulate<
             }
         }
 
-        let (new_time, new_steps) = simulation
-            .simulate_incremental_early_stop(|_, steps, _| steps >= step_slice.get(), &mut proxy);
+        let (new_time, new_steps) = simulation.simulate_incremental_early_stop(
+            |_, steps, _| {
+                if steps >= step_slice.get() {
+                    ControlFlow::BREAK
+                } else {
+                    ControlFlow::CONTINUE
+                }
+            },
+            &mut proxy,
+        );
 
         total_steps += new_steps;
         max_time = max_time.max(new_time);

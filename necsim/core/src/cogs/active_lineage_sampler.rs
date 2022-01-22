@@ -1,3 +1,5 @@
+use core::ops::ControlFlow;
+
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use super::{
@@ -5,10 +7,7 @@ use super::{
     LineageReference, LineageStore, MathsCore, RngCore, SpeciationProbability, TurnoverRate,
 };
 
-use crate::{
-    landscape::IndexedLocation, lineage::Lineage,
-    simulation::partial::active_lineage_sampler::PartialSimulation,
-};
+use crate::{lineage::Lineage, simulation::partial::active_lineage_sampler::PartialSimulation};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[allow(clippy::no_effect_underscore_binding)]
@@ -69,7 +68,7 @@ pub trait ActiveLineageSampler<
     #[debug_ensures(if let Some((ref _lineage, event_time)) = ret {
         self.get_last_event_time() == event_time
     } else { true }, "updates the time of the last event")]
-    fn pop_active_lineage_and_event_time<P: FnOnce(PositiveF64) -> bool>(
+    fn pop_active_lineage_and_event_time<P: FnOnce(PositiveF64) -> ControlFlow<(), ()>>(
         &mut self,
         simulation: &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
@@ -90,43 +89,4 @@ pub trait ActiveLineageSampler<
         simulation: &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
     );
-
-    #[inline]
-    fn with_next_active_lineage_and_event_time<
-        P: FnOnce(PositiveF64) -> bool,
-        F: FnOnce(
-            &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>,
-            &mut G,
-            Lineage,
-            PositiveF64,
-        ) -> Option<IndexedLocation>,
-    >(
-        &mut self,
-        simulation: &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>,
-        rng: &mut G,
-        early_peek_stop: P,
-        inner: F,
-    ) -> bool {
-        if let Some((chosen_lineage, event_time)) =
-            self.pop_active_lineage_and_event_time(simulation, rng, early_peek_stop)
-        {
-            let global_reference = chosen_lineage.global_reference.clone();
-
-            if let Some(dispersal_target) = inner(simulation, rng, chosen_lineage, event_time) {
-                self.push_active_lineage(
-                    Lineage {
-                        global_reference,
-                        indexed_location: dispersal_target,
-                        last_event_time: event_time.into(),
-                    },
-                    simulation,
-                    rng,
-                );
-            }
-
-            true
-        } else {
-            false
-        }
-    }
 }
