@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore},
+    cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 use necsim_core_bond::{OffByOneU32, OffByOneU64};
@@ -59,7 +59,15 @@ impl<M: MathsCore> Habitat<M> for AlmostInfiniteHabitat<M> {
     }
 
     #[must_use]
-    fn sample_habitable_indexed_location<G: RngCore<M>>(&self, rng: &mut G) -> IndexedLocation {
+    fn iter_habitable_locations(&self) -> Self::LocationIterator<'_> {
+        self.get_extent().iter()
+    }
+}
+
+#[contract_trait]
+impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for AlmostInfiniteHabitat<M> {
+    #[must_use]
+    fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
         let index = rng.sample_u64();
 
         IndexedLocation::new(
@@ -69,10 +77,5 @@ impl<M: MathsCore> Habitat<M> for AlmostInfiniteHabitat<M> {
             ),
             0,
         )
-    }
-
-    #[must_use]
-    fn iter_habitable_locations(&self) -> Self::LocationIterator<'_> {
-        self.get_extent().iter()
     }
 }
