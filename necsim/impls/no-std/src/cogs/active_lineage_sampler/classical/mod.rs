@@ -7,9 +7,10 @@ use necsim_core::cogs::{
 };
 use necsim_core_bond::NonNegativeF64;
 
-use crate::cogs::origin_sampler::{TrustedOriginSampler, UntrustedOriginSampler};
-
-use super::resuming::ExceptionalLineage;
+use crate::cogs::{
+    active_lineage_sampler::resuming::lineage::ExceptionalLineage,
+    origin_sampler::{TrustedOriginSampler, UntrustedOriginSampler},
+};
 
 mod sampler;
 

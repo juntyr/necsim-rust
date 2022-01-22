@@ -13,7 +13,7 @@ use necsim_core::{
 };
 
 use crate::cogs::{
-    active_lineage_sampler::resuming::ExceptionalLineage,
+    active_lineage_sampler::resuming::lineage::ExceptionalLineage,
     event_sampler::gillespie::GillespieEventSampler,
     origin_sampler::{TrustedOriginSampler, UntrustedOriginSampler},
 };

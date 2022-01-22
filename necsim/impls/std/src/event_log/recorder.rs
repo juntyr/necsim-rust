@@ -63,7 +63,10 @@ impl Serialize for EventLogRecorder {
 
 impl Drop for EventLogRecorder {
     fn drop(&mut self) {
-        if !self.buffer.is_empty() {
+        if self.buffer.is_empty() {
+            // Try to remove the directory if it is empty
+            std::mem::drop(fs::remove_dir(&self.directory));
+        } else {
             std::mem::drop(self.sort_and_write_segment());
         }
     }
@@ -101,6 +104,14 @@ impl EventLogRecorder {
     ///
     /// Fails to construct iff `path` is not a writable directory.
     pub fn r#move(mut self, path: &Path) -> Result<Self> {
+        if !self.buffer.is_empty() {
+            self.sort_and_write_segment()?;
+        } else if !path.starts_with(&self.directory) {
+            // Try to remove the directory if it is empty and the
+            //  new path is not a child of the current directory
+            std::mem::drop(fs::remove_dir(&self.directory));
+        }
+
         fs::create_dir_all(path)?;
 
         let metadata = fs::metadata(path)?;
