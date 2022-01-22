@@ -11,7 +11,6 @@ use necsim_core::{
     simulation::SimulationBuilder,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
-use necsim_core_maths::IntrinsicsMathsCore;
 
 use necsim_impls_no_std::{
     cogs::{
@@ -33,6 +32,7 @@ use necsim_impls_no_std::{
         immigration_entry::{buffered::BufferedImmigrationEntry, never::NeverImmigrationEntry},
         lineage_reference::in_memory::InMemoryLineageReference,
         lineage_store::coherent::globally::gillespie::GillespieLineageStore,
+        maths::intrinsics::IntrinsicsMathsCore,
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
             resuming::ResumingOriginSampler, TrustedOriginSampler,
