@@ -17,7 +17,8 @@ use necsim_impls_no_std::{
         active_lineage_sampler::{
             alias::location::LocationAliasActiveLineageSampler,
             resuming::{
-                ExceptionalLineage, RestartFixUpActiveLineageSampler, SplitExceptionalLineages,
+                lineage::{ExceptionalLineage, SplitExceptionalLineages},
+                RestartFixUpActiveLineageSampler,
             },
         },
         coalescence_sampler::conditional::ConditionalCoalescenceSampler,

@@ -28,7 +28,7 @@ use necsim_impls_no_std::{
                 },
                 IndependentActiveLineageSampler,
             },
-            resuming::{ExceptionalLineage, SplitExceptionalLineages},
+            resuming::lineage::{ExceptionalLineage, SplitExceptionalLineages},
             singular::SingularActiveLineageSampler,
         },
         coalescence_sampler::independent::IndependentCoalescenceSampler,

@@ -13,7 +13,7 @@ use necsim_core::{
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::cogs::{
-    active_lineage_sampler::resuming::ExceptionalLineage,
+    active_lineage_sampler::resuming::lineage::ExceptionalLineage,
     origin_sampler::pre_sampler::OriginPreSampler,
 };
 use necsim_partitioning_core::LocalPartition;

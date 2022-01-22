@@ -10,7 +10,7 @@ use necsim_core::cogs::{
 };
 
 use crate::cogs::{
-    active_lineage_sampler::resuming::ExceptionalLineage,
+    active_lineage_sampler::resuming::lineage::ExceptionalLineage,
     origin_sampler::{TrustedOriginSampler, UntrustedOriginSampler},
 };
 
