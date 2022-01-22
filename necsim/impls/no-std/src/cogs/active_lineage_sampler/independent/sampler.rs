@@ -1,3 +1,5 @@
+use core::ops::ControlFlow;
+
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, DispersalSampler, EmigrationExit, Habitat, MathsCore, PrimeableRng,
@@ -75,7 +77,7 @@ impl<
     #[must_use]
     #[allow(clippy::type_complexity)]
     #[inline]
-    fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> bool>(
+    fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> ControlFlow<(), ()>>(
         &mut self,
         simulation: &mut PartialSimulation<
             M,
@@ -109,7 +111,7 @@ impl<
 
             let next_event_time = PositiveF64::max_after(before_next_event, event_time);
 
-            if early_peek_stop(next_event_time) {
+            if early_peek_stop(next_event_time).is_break() {
                 return None;
             }
 

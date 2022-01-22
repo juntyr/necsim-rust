@@ -167,7 +167,7 @@ impl<
     > Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A>
 {
     #[inline]
-    pub fn with_mut_split_active_lineage_sampler_and_rng<
+    pub fn with_mut_split_active_lineage_sampler_and_rng_and_migration_balance<
         Q,
         F: FnOnce(
             &mut A,
@@ -185,13 +185,14 @@ impl<
                 E,
             >,
             &mut G,
+            &mut Wrapping<u64>,
         ) -> Q,
     >(
         &mut self,
         func: F,
     ) -> Q {
-        // Cast &self to a &PartialSimulation without the active lineage sampler
-        //  and rng
+        // Cast &self to a &PartialSimulation without the active lineage sampler,
+        //  rng, and migration balance
         // This is only safe as PartialSimulation's type and layout is a prefix
         //  subsequence of Self's type and layout
         let partial_simulation = unsafe {
@@ -215,6 +216,7 @@ impl<
             &mut self.active_lineage_sampler,
             partial_simulation,
             &mut self.rng,
+            &mut self.migration_balance,
         )
     }
 

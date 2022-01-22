@@ -1,5 +1,8 @@
 use alloc::collections::VecDeque;
-use core::num::{NonZeroU64, Wrapping};
+use core::{
+    num::{NonZeroU64, Wrapping},
+    ops::ControlFlow,
+};
 
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
@@ -222,7 +225,11 @@ pub fn simulate<
                 |_, steps, next_event_time| {
                     previous_next_event_time = Some(next_event_time);
 
-                    steps >= step_slice.get() || next_event_time >= level_time
+                    if steps >= step_slice.get() || next_event_time >= level_time {
+                        ControlFlow::BREAK
+                    } else {
+                        ControlFlow::CONTINUE
+                    }
                 },
                 &mut proxy,
             );

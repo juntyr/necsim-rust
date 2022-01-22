@@ -1,4 +1,4 @@
-use core::num::Wrapping;
+use core::{num::Wrapping, ops::ControlFlow};
 
 use necsim_core_bond::PositiveF64;
 
@@ -9,6 +9,7 @@ use crate::{
         MathsCore, RngCore, SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
+    lineage::Lineage,
     reporter::Reporter,
     simulation::Simulation,
 };
@@ -31,25 +32,23 @@ impl<
 {
     pub(in super::super) fn simulate_and_report_local_step_or_early_stop_or_finish<
         P: Reporter,
-        F: FnOnce(PositiveF64) -> bool,
+        F: FnOnce(PositiveF64) -> ControlFlow<(), ()>,
     >(
         &mut self,
         reporter: &mut P,
         early_peek: F,
-    ) -> bool {
-        let mut emigration = false;
+    ) -> ControlFlow<(), ()> {
+        self.with_mut_split_active_lineage_sampler_and_rng_and_migration_balance(
+            |active_lineage_sampler, simulation, rng, migration_balance| {
+                // Fetch the next `chosen_lineage` to be simulated at `event_time`
+                if let Some((chosen_lineage, event_time)) = active_lineage_sampler
+                    .pop_active_lineage_and_event_time(simulation, rng, early_peek)
+                {
+                    let global_reference = chosen_lineage.global_reference.clone();
 
-        let should_continue = self.with_mut_split_active_lineage_sampler_and_rng(
-            |active_lineage_sampler, simulation, rng| {
-                // Fetch the next `chosen_lineage` to be simulated with its
-                // `dispersal_origin` and `event_time`
-                active_lineage_sampler.with_next_active_lineage_and_event_time(
-                    simulation,
-                    rng,
-                    early_peek,
-                    |simulation, rng, chosen_lineage, event_time| {
-                        // Sample the next `event` for the `chosen_lineage`
-                        //  or emigrate the `chosen_lineage`
+                    // Sample the next `event` for the `chosen_lineage`
+                    //  or emigrate the `chosen_lineage`
+                    let dispersal =
                         simulation.with_mut_split_event_sampler(|event_sampler, simulation| {
                             event_sampler.sample_event_for_lineage_at_event_time_or_emigrate(
                                 chosen_lineage,
@@ -74,24 +73,34 @@ impl<
                                         }
                                     },
                                     emigration: |_| {
-                                        emigration = true;
+                                        // Emigration increments the migration balance
+                                        //  (less local work)
+                                        *migration_balance += Wrapping(1_u64);
 
                                         None
                                     },
                                 },
                                 reporter,
                             )
-                        })
-                    },
-                )
+                        });
+
+                    if let Some(dispersal_target) = dispersal {
+                        active_lineage_sampler.push_active_lineage(
+                            Lineage {
+                                global_reference,
+                                indexed_location: dispersal_target,
+                                last_event_time: event_time.into(),
+                            },
+                            simulation,
+                            rng,
+                        );
+                    }
+
+                    ControlFlow::CONTINUE
+                } else {
+                    ControlFlow::BREAK
+                }
             },
-        );
-
-        if emigration {
-            // Emigration increments the migration balance (less local work)
-            self.migration_balance += Wrapping(1_u64);
-        }
-
-        should_continue
+        )
     }
 }

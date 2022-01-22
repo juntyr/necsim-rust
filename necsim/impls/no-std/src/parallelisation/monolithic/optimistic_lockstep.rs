@@ -1,3 +1,5 @@
+use core::ops::ControlFlow;
+
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler, EventSampler, Habitat,
@@ -79,7 +81,13 @@ pub fn simulate<
         //  (we already know at least one partition has some next event time)
         let next_local_emigration_time = {
             let (_, new_steps) = simulation.simulate_incremental_early_stop(
-                |simulation, _, _| !simulation.emigration_exit().is_empty(),
+                |simulation, _, _| {
+                    if simulation.emigration_exit().is_empty() {
+                        ControlFlow::CONTINUE
+                    } else {
+                        ControlFlow::BREAK
+                    }
+                },
                 &mut NullReporter,
             );
 
@@ -100,7 +108,13 @@ pub fn simulate<
             //  that event
             Ok(next_global_time) => {
                 let (_, new_steps) = simulation.simulate_incremental_early_stop(
-                    |_, _, next_event_time| next_event_time > next_global_time,
+                    |_, _, next_event_time| {
+                        if next_event_time > next_global_time {
+                            ControlFlow::BREAK
+                        } else {
+                            ControlFlow::CONTINUE
+                        }
+                    },
                     local_partition.get_reporter(),
                 );
 
@@ -118,7 +132,13 @@ pub fn simulate<
             // All other partitions get to simulate until just before this next migration event
             Err(next_global_time) => {
                 let (_, new_steps) = simulation.simulate_incremental_early_stop(
-                    |_, _, next_event_time| next_event_time >= next_global_time,
+                    |_, _, next_event_time| {
+                        if next_event_time >= next_global_time {
+                            ControlFlow::BREAK
+                        } else {
+                            ControlFlow::CONTINUE
+                        }
+                    },
                     local_partition.get_reporter(),
                 );
 

@@ -1,3 +1,5 @@
+use core::ops::ControlFlow;
+
 mod backup;
 mod builder;
 mod process;
@@ -49,7 +51,7 @@ impl<
 
     #[inline]
     pub fn simulate_incremental_early_stop<
-        F: FnMut(&Self, u64, PositiveF64) -> bool,
+        F: FnMut(&Self, u64, PositiveF64) -> ControlFlow<(), ()>,
         P: Reporter,
     >(
         &mut self,
@@ -69,27 +71,32 @@ impl<
             let self_ptr = self as *const Self;
 
             let old_rng = unsafe { self.rng.backup_unchecked() };
-            let mut do_early_stop = false;
+            let mut early_stop_flow = ControlFlow::CONTINUE;
 
             let early_peek_stop = |next_event_time| {
                 // Safety: We are only passing in an immutable reference
-                do_early_stop = early_stop(unsafe { &*self_ptr }, steps, next_event_time);
+                early_stop_flow = early_stop(unsafe { &*self_ptr }, steps, next_event_time);
 
-                if do_early_stop {
-                    return true;
+                if early_stop_flow.is_break() {
+                    return ControlFlow::BREAK;
                 }
 
                 if let Some(next_immigration_time) = next_immigration_time {
-                    return next_immigration_time <= next_event_time;
+                    return if next_immigration_time <= next_event_time {
+                        ControlFlow::BREAK
+                    } else {
+                        ControlFlow::CONTINUE
+                    };
                 }
 
-                false
+                ControlFlow::CONTINUE
             };
 
-            if !self
+            if self
                 .simulate_and_report_local_step_or_early_stop_or_finish(reporter, early_peek_stop)
+                .is_break()
             {
-                if do_early_stop {
+                if early_stop_flow.is_break() {
                     // Early stop, reset the RNG to before the event time peek to eliminate side
                     // effects
                     break self.rng = old_rng;
@@ -116,6 +123,6 @@ impl<
 
     #[inline]
     pub fn simulate<P: Reporter>(mut self, reporter: &mut P) -> (NonNegativeF64, u64) {
-        self.simulate_incremental_early_stop(|_, _, _| false, reporter)
+        self.simulate_incremental_early_stop(|_, _, _| ControlFlow::CONTINUE, reporter)
     }
 }

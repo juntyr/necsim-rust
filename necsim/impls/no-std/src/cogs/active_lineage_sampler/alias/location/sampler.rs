@@ -1,4 +1,4 @@
-use core::num::NonZeroUsize;
+use core::{num::NonZeroUsize, ops::ControlFlow};
 
 use necsim_core::{
     cogs::{
@@ -75,7 +75,7 @@ impl<
     }
 
     #[must_use]
-    fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> bool>(
+    fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> ControlFlow<(), ()>>(
         &mut self,
         simulation: &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
@@ -90,7 +90,7 @@ impl<
 
             let next_event_time = PositiveF64::max_after(self.last_event_time, event_time);
 
-            if early_peek_stop(next_event_time) {
+            if early_peek_stop(next_event_time).is_break() {
                 return None;
             }
 

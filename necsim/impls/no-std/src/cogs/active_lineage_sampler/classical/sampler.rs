@@ -1,4 +1,7 @@
-use core::num::{NonZeroU64, NonZeroUsize};
+use core::{
+    num::{NonZeroU64, NonZeroUsize},
+    ops::ControlFlow,
+};
 
 use necsim_core::{
     cogs::{
@@ -90,7 +93,7 @@ impl<
 
     #[must_use]
     #[allow(clippy::type_complexity)]
-    fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> bool>(
+    fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> ControlFlow<(), ()>>(
         &mut self,
         simulation: &mut PartialSimulation<
             M,
@@ -130,7 +133,7 @@ impl<
 
             let next_event_time = PositiveF64::max_after(self.last_event_time, event_time);
 
-            if early_peek_stop(next_event_time) {
+            if early_peek_stop(next_event_time).is_break() {
                 return None;
             }
 

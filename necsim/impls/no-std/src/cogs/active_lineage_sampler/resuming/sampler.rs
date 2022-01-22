@@ -1,3 +1,5 @@
+use core::ops::ControlFlow;
+
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
@@ -110,7 +112,7 @@ impl<
     #[debug_ensures(if let Some((ref _lineage, event_time)) = ret {
         self.get_last_event_time() == event_time
     } else { true }, "updates the time of the last event")]
-    fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> bool>(
+    fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> ControlFlow<(), ()>>(
         &mut self,
         simulation: &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
@@ -122,7 +124,9 @@ impl<
     }
 
     #[must_use]
-    fn __contracts_impl_pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> bool>(
+    fn __contracts_impl_pop_active_lineage_and_event_time<
+        F: FnOnce(PositiveF64) -> ControlFlow<(), ()>,
+    >(
         &mut self,
         simulation: &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>,
         rng: &mut G,
@@ -134,7 +138,7 @@ impl<
                 .pop_active_lineage_and_event_time(simulation, rng, early_peek_stop);
         }
 
-        if early_peek_stop(self.restart_time) {
+        if early_peek_stop(self.restart_time).is_break() {
             return None;
         }
 
