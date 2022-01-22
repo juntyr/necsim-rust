@@ -2,9 +2,8 @@ use alloc::{vec, vec::Vec};
 
 use necsim_core::cogs::{Backup, RngCore, SeedableRng};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
-use necsim_core_maths::IntrinsicsMathsCore;
 
-use crate::cogs::rng::wyhash::WyHash;
+use crate::cogs::{maths::intrinsics::IntrinsicsMathsCore, rng::wyhash::WyHash};
 
 use super::{super::decompose_weight, DynamicAliasMethodStackSampler, RejectionSamplingGroup};
 
