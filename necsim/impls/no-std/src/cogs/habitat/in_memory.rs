@@ -5,7 +5,7 @@ use alloc::{boxed::Box, vec::Vec};
 use r#final::Final;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore},
+    cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 use necsim_core_bond::{OffByOneU32, OffByOneU64};
@@ -77,7 +77,32 @@ impl<M: MathsCore> Habitat<M> for InMemoryHabitat<M> {
     }
 
     #[must_use]
-    fn sample_habitable_indexed_location<G: RngCore<M>>(&self, rng: &mut G) -> IndexedLocation {
+    fn iter_habitable_locations(&self) -> Self::LocationIterator<'_> {
+        self.habitat
+            .iter()
+            .enumerate()
+            .filter_map(move |(location_index, habitat)| {
+                if *habitat > 0 {
+                    #[allow(clippy::cast_possible_truncation)]
+                    Some(Location::new(
+                        self.extent.x().wrapping_add(
+                            (location_index % usize::from(self.extent.width())) as u32,
+                        ),
+                        self.extent.y().wrapping_add(
+                            (location_index / usize::from(self.extent.width())) as u32,
+                        ),
+                    ))
+                } else {
+                    None
+                }
+            })
+    }
+}
+
+#[contract_trait]
+impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for InMemoryHabitat<M> {
+    #[must_use]
+    fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
         use necsim_core::cogs::RngSampler;
 
         let indexed_location_index = rng.sample_index_u64(self.get_total_habitat().into());
@@ -99,28 +124,6 @@ impl<M: MathsCore> Habitat<M> for InMemoryHabitat<M> {
             ),
             (indexed_location_index - self.u64_injection[location_index]) as u32,
         )
-    }
-
-    #[must_use]
-    fn iter_habitable_locations(&self) -> Self::LocationIterator<'_> {
-        self.habitat
-            .iter()
-            .enumerate()
-            .filter_map(move |(location_index, habitat)| {
-                if *habitat > 0 {
-                    #[allow(clippy::cast_possible_truncation)]
-                    Some(Location::new(
-                        self.extent.x().wrapping_add(
-                            (location_index % usize::from(self.extent.width())) as u32,
-                        ),
-                        self.extent.y().wrapping_add(
-                            (location_index / usize::from(self.extent.width())) as u32,
-                        ),
-                    ))
-                } else {
-                    None
-                }
-            })
     }
 }
 
