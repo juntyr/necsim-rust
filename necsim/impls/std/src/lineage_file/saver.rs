@@ -22,7 +22,7 @@ pub struct LineageFileSaver {
 impl Drop for LineageFileSaver {
     fn drop(&mut self) {
         if self.temp {
-            std::mem::drop(fs::remove_file(self.path.clone()));
+            std::mem::drop(fs::remove_file(&self.path));
         }
     }
 }

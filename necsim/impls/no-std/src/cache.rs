@@ -1,18 +1,18 @@
 use alloc::{boxed::Box, vec::Vec};
 use core::hash::{BuildHasher, Hash, Hasher};
 
-use hashbrown::hash_map::DefaultHashBuilder;
+use fnv::FnvBuildHasher;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct DirectMappedCache<T: Hash + PartialEq, S: BuildHasher = DefaultHashBuilder> {
+pub struct DirectMappedCache<T: Hash + PartialEq, S: BuildHasher = FnvBuildHasher> {
     cache: Box<[Option<T>]>,
     build_hasher: S,
 }
 
-impl<T: Hash + PartialEq> DirectMappedCache<T, DefaultHashBuilder> {
+impl<T: Hash + PartialEq> DirectMappedCache<T, FnvBuildHasher> {
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity_and_hasher(capacity, DefaultHashBuilder::default())
+        Self::with_capacity_and_hasher(capacity, FnvBuildHasher::default())
     }
 }
 

@@ -11,6 +11,7 @@ use necsim_core::{
 use necsim_core_bond::NonNegativeF64;
 
 use crate::cogs::{
+    active_lineage_sampler::resuming::lineage::ExceptionalLineage,
     lineage_store::independent::IndependentLineageStore,
     origin_sampler::{TrustedOriginSampler, UntrustedOriginSampler},
 };
@@ -21,8 +22,6 @@ mod singular;
 pub mod event_time_sampler;
 
 use event_time_sampler::EventTimeSampler;
-
-use super::resuming::ExceptionalLineage;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
