@@ -4,7 +4,7 @@ pub mod backup;
 pub use backup::Backup;
 
 pub mod habitat;
-pub use habitat::Habitat;
+pub use habitat::{Habitat, UniformlySampleableHabitat};
 
 pub mod speciation_probability;
 pub use speciation_probability::SpeciationProbability;

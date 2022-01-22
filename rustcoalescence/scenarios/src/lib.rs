@@ -7,8 +7,8 @@
 extern crate log;
 
 use necsim_core::cogs::{
-    DispersalSampler, Habitat, LineageReference, LineageStore, MathsCore, RngCore,
-    SpeciationProbability, TurnoverRate,
+    DispersalSampler, LineageReference, LineageStore, MathsCore, RngCore, SpeciationProbability,
+    TurnoverRate, UniformlySampleableHabitat,
 };
 use necsim_core_bond::OpenClosedUnitF64 as PositiveUnitF64;
 use necsim_partitioning_core::partition::Partition;
@@ -32,7 +32,7 @@ pub trait ScenarioParameters {
 }
 
 pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioParameters {
-    type Habitat: Habitat<M>;
+    type Habitat: UniformlySampleableHabitat<M, G>;
     type OriginSampler<'h, I: Iterator<Item = u64>>: TrustedOriginSampler<
         'h,
         M,

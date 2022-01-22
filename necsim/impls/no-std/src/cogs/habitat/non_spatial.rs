@@ -4,7 +4,7 @@ use core::{
 };
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore},
+    cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 use necsim_core_bond::{OffByOneU32, OffByOneU64};
@@ -104,7 +104,15 @@ impl<M: MathsCore> Habitat<M> for NonSpatialHabitat<M> {
     }
 
     #[must_use]
-    fn sample_habitable_indexed_location<G: RngCore<M>>(&self, rng: &mut G) -> IndexedLocation {
+    fn iter_habitable_locations(&self) -> Self::LocationIterator<'_> {
+        self.get_extent().iter()
+    }
+}
+
+#[contract_trait]
+impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for NonSpatialHabitat<M> {
+    #[must_use]
+    fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
         use necsim_core::cogs::RngSampler;
 
         let habitat_index_max =
@@ -129,10 +137,5 @@ impl<M: MathsCore> Habitat<M> for NonSpatialHabitat<M> {
             ),
             index,
         )
-    }
-
-    #[must_use]
-    fn iter_habitable_locations(&self) -> Self::LocationIterator<'_> {
-        self.get_extent().iter()
     }
 }
