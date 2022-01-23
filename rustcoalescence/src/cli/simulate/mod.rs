@@ -10,10 +10,8 @@ use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 use rustcoalescence_algorithms::RestartFixUpStrategy;
 
 use crate::args::{
-    parse::{into_ron_str, try_print},
-    ser::BufferingSerializeResult,
-    CommandArgs, FuturePause, PauseMode, Sample, SampleDestiny, SampleMode, SampleModeRestart,
-    SampleOrigin,
+    parse::try_print, ser::BufferingSerializeResult, CommandArgs, FuturePause, PauseMode, Sample,
+    SampleDestiny, SampleMode, SampleModeRestart, SampleOrigin,
 };
 
 mod dispatch;
@@ -26,7 +24,7 @@ use dispatch::dispatch;
 pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
     log::set_max_level(LevelFilter::Info);
 
-    let ron_args = into_ron_str(simulate_args);
+    let ron_args = simulate_args.into_config_string();
     parse::fields::parse_and_normalise(&ron_args)?;
     let mut normalised_args = BufferingSimulateArgs::builder();
 

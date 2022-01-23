@@ -203,7 +203,7 @@ mod tests {
             LocationIterator {
                 x: 0,
                 y: 0,
-                extent: extent.clone(),
+                extent,
                 first_y: false,
             }
         );
@@ -286,7 +286,7 @@ mod tests {
             LocationIterator {
                 x: 1386,
                 y: 6812,
-                extent: extent.clone(),
+                extent,
                 first_y: false,
             }
         );
