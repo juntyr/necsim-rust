@@ -74,7 +74,7 @@ pub trait Algorithm<O: Scenario<Self::MathsCore, Self::Rng>, R: Reporter, P: Loc
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         lineages: L,
         restart_at: PositiveF64,
-        _fixup_strategy: RestartFixUpStrategy,
+        fixup_strategy: RestartFixUpStrategy,
         local_partition: &mut P,
     ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, ContinueError<Self::Error>>;
 }

@@ -6,7 +6,7 @@ use necsim_core::{event::TypedEvent, reporter::Reporter};
 use necsim_plugins_core::match_any_reporter_plugin_vec;
 
 use crate::args::{
-    parse::{into_ron_str, try_parse, try_print},
+    parse::{try_parse, try_print},
     CommandArgs, ReplayArgs,
 };
 
@@ -14,7 +14,7 @@ use crate::args::{
 pub fn replay_with_logger(replay_args: CommandArgs) -> Result<()> {
     log::set_max_level(LevelFilter::Info);
 
-    let replay_args: ReplayArgs = try_parse("replay", &into_ron_str(replay_args))?;
+    let replay_args: ReplayArgs = try_parse("replay", &replay_args.into_config_string())?;
 
     let config_str =
         try_print(&replay_args).context("Failed to normalise the event replay config.")?;

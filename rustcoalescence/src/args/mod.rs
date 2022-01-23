@@ -62,7 +62,15 @@ pub enum RustcoalescenceArgs {
 #[structopt(setting(structopt::clap::AppSettings::AllowLeadingHyphen))]
 pub struct CommandArgs {
     #[structopt(hidden(true))]
-    pub args: Vec<String>,
+    args: Vec<String>,
+}
+
+impl CommandArgs {
+    pub fn into_config_string(self) -> String {
+        let config = self.args.join(" ");
+        std::mem::drop(self);
+        config
+    }
 }
 
 #[allow(dead_code)]

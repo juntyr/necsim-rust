@@ -1,5 +1,3 @@
-use std::fmt;
-
 use serde::{
     ser::{
         Error, SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTuple,
@@ -9,33 +7,6 @@ use serde::{
 };
 
 pub struct BufferingSerializer;
-
-#[derive(Clone)]
-pub struct StaticString(Box<str>);
-
-impl fmt::Debug for StaticString {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        (&*self.0).fmt(fmt)
-    }
-}
-
-impl fmt::Display for StaticString {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        (&*self.0).fmt(fmt)
-    }
-}
-
-impl StaticString {
-    pub fn get(&self) -> &'static str {
-        unsafe { &*(&*self.0 as *const str) }
-    }
-}
-
-impl From<&'static str> for StaticString {
-    fn from(string: &'static str) -> Self {
-        Self(String::from(string).into_boxed_str())
-    }
-}
 
 #[derive(Clone, Debug)]
 pub enum BufferingSerialize {
@@ -53,27 +24,27 @@ pub enum BufferingSerialize {
     F32(f32),
     F64(f64),
     Char(char),
-    Str(String),
+    Str(Box<str>),
     Bytes(Box<[u8]>),
     None,
     Some(Box<BufferingSerialize>),
     Unit,
     UnitStruct {
-        name: StaticString,
+        name: &'static str,
     },
     UnitVariant {
-        name: StaticString,
+        name: &'static str,
         variant_index: u32,
-        variant: StaticString,
+        variant: &'static str,
     },
     NewtypeStruct {
-        name: StaticString,
+        name: &'static str,
         value: Box<BufferingSerialize>,
     },
     NewtypeVariant {
-        name: StaticString,
+        name: &'static str,
         variant_index: u32,
-        variant: StaticString,
+        variant: &'static str,
         value: Box<BufferingSerialize>,
     },
     Seq {
@@ -85,14 +56,14 @@ pub enum BufferingSerialize {
         fields: Box<[BufferingSerialize]>,
     },
     TupleStruct {
-        name: StaticString,
+        name: &'static str,
         len: usize,
         fields: Box<[BufferingSerialize]>,
     },
     TupleVariant {
-        name: StaticString,
+        name: &'static str,
         variant_index: u32,
-        variant: StaticString,
+        variant: &'static str,
         len: usize,
         fields: Box<[BufferingSerialize]>,
     },
@@ -101,21 +72,21 @@ pub enum BufferingSerialize {
         entries: Box<[(Option<BufferingSerialize>, Option<BufferingSerialize>)]>,
     },
     Struct {
-        name: StaticString,
+        name: &'static str,
         len: usize,
-        fields: Box<[(StaticString, Option<BufferingSerialize>)]>,
+        fields: Box<[(&'static str, Option<BufferingSerialize>)]>,
     },
     StructVariant {
-        name: StaticString,
+        name: &'static str,
         variant_index: u32,
-        variant: StaticString,
+        variant: &'static str,
         len: usize,
-        fields: Box<[(StaticString, Option<BufferingSerialize>)]>,
+        fields: Box<[(&'static str, Option<BufferingSerialize>)]>,
     },
 }
 
 #[derive(Clone, Debug)]
-pub struct BufferingError(String);
+pub struct BufferingError(Box<str>);
 
 impl std::fmt::Display for BufferingError {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -127,25 +98,7 @@ impl std::error::Error for BufferingError {}
 
 impl Error for BufferingError {
     fn custom<T: std::fmt::Display>(msg: T) -> Self {
-        BufferingError(msg.to_string())
-    }
-}
-
-#[derive(Clone)]
-pub struct BufferingSerializeResult(Result<BufferingSerialize, BufferingError>);
-
-impl<S: Serialize> From<&S> for BufferingSerializeResult {
-    fn from(value: &S) -> Self {
-        Self(value.serialize(BufferingSerializer))
-    }
-}
-
-impl Serialize for BufferingSerializeResult {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        match &self.0 {
-            Ok(buffered) => buffered.serialize(serializer),
-            Err(err) => Err(serde::ser::Error::custom(&err.0)),
-        }
+        BufferingError(msg.to_string().into_boxed_str())
     }
 }
 
@@ -194,7 +147,7 @@ impl SerializeTuple for BufferedTupleSerializer {
 }
 
 pub struct BufferedTupleStructSerializer {
-    name: StaticString,
+    name: &'static str,
     len: usize,
     fields: Vec<BufferingSerialize>,
 }
@@ -218,9 +171,9 @@ impl SerializeTupleStruct for BufferedTupleStructSerializer {
 }
 
 pub struct BufferedTupleVariantSerializer {
-    name: StaticString,
+    name: &'static str,
     variant_index: u32,
-    variant: StaticString,
+    variant: &'static str,
     len: usize,
     fields: Vec<BufferingSerialize>,
 }
@@ -287,9 +240,9 @@ impl SerializeMap for BufferedMapSerializer {
 }
 
 pub struct BufferedStructSerializer {
-    name: StaticString,
+    name: &'static str,
     len: usize,
-    fields: Vec<(StaticString, Option<BufferingSerialize>)>,
+    fields: Vec<(&'static str, Option<BufferingSerialize>)>,
 }
 
 impl SerializeStruct for BufferedStructSerializer {
@@ -302,12 +255,12 @@ impl SerializeStruct for BufferedStructSerializer {
         value: &T,
     ) -> Result<(), Self::Error> {
         self.fields
-            .push((key.into(), Some(value.serialize(BufferingSerializer)?)));
+            .push((key, Some(value.serialize(BufferingSerializer)?)));
         Ok(())
     }
 
     fn skip_field(&mut self, key: &'static str) -> Result<(), Self::Error> {
-        self.fields.push((key.into(), None));
+        self.fields.push((key, None));
         Ok(())
     }
 
@@ -321,11 +274,11 @@ impl SerializeStruct for BufferedStructSerializer {
 }
 
 pub struct BufferedStructVariantSerializer {
-    name: StaticString,
+    name: &'static str,
     variant_index: u32,
-    variant: StaticString,
+    variant: &'static str,
     len: usize,
-    fields: Vec<(StaticString, Option<BufferingSerialize>)>,
+    fields: Vec<(&'static str, Option<BufferingSerialize>)>,
 }
 
 impl SerializeStructVariant for BufferedStructVariantSerializer {
@@ -338,12 +291,12 @@ impl SerializeStructVariant for BufferedStructVariantSerializer {
         value: &T,
     ) -> Result<(), Self::Error> {
         self.fields
-            .push((key.into(), Some(value.serialize(BufferingSerializer)?)));
+            .push((key, Some(value.serialize(BufferingSerializer)?)));
         Ok(())
     }
 
     fn skip_field(&mut self, key: &'static str) -> Result<(), Self::Error> {
-        self.fields.push((key.into(), None));
+        self.fields.push((key, None));
         Ok(())
     }
 
@@ -426,7 +379,7 @@ impl Serializer for BufferingSerializer {
     }
 
     fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error> {
-        Ok(BufferingSerialize::Str(v.to_owned()))
+        Ok(BufferingSerialize::Str(v.to_owned().into_boxed_str()))
     }
 
     fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
@@ -446,7 +399,7 @@ impl Serializer for BufferingSerializer {
     }
 
     fn serialize_unit_struct(self, name: &'static str) -> Result<Self::Ok, Self::Error> {
-        Ok(BufferingSerialize::UnitStruct { name: name.into() })
+        Ok(BufferingSerialize::UnitStruct { name })
     }
 
     fn serialize_unit_variant(
@@ -456,9 +409,9 @@ impl Serializer for BufferingSerializer {
         variant: &'static str,
     ) -> Result<Self::Ok, Self::Error> {
         Ok(BufferingSerialize::UnitVariant {
-            name: name.into(),
+            name,
             variant_index,
-            variant: variant.into(),
+            variant,
         })
     }
 
@@ -468,7 +421,7 @@ impl Serializer for BufferingSerializer {
         value: &T,
     ) -> Result<Self::Ok, Self::Error> {
         Ok(BufferingSerialize::NewtypeStruct {
-            name: name.into(),
+            name,
             value: Box::new(value.serialize(self)?),
         })
     }
@@ -481,9 +434,9 @@ impl Serializer for BufferingSerializer {
         value: &T,
     ) -> Result<Self::Ok, Self::Error> {
         Ok(BufferingSerialize::NewtypeVariant {
-            name: name.into(),
+            name,
             variant_index,
-            variant: variant.into(),
+            variant,
             value: Box::new(value.serialize(self)?),
         })
     }
@@ -508,7 +461,7 @@ impl Serializer for BufferingSerializer {
         len: usize,
     ) -> Result<Self::SerializeTupleStruct, Self::Error> {
         Ok(BufferedTupleStructSerializer {
-            name: name.into(),
+            name,
             len,
             fields: Vec::with_capacity(len),
         })
@@ -522,9 +475,9 @@ impl Serializer for BufferingSerializer {
         len: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
         Ok(BufferedTupleVariantSerializer {
-            name: name.into(),
+            name,
             variant_index,
-            variant: variant.into(),
+            variant,
             len,
             fields: Vec::with_capacity(len),
         })
@@ -543,7 +496,7 @@ impl Serializer for BufferingSerializer {
         len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
         Ok(BufferedStructSerializer {
-            name: name.into(),
+            name,
             len,
             fields: Vec::with_capacity(len),
         })
@@ -557,9 +510,9 @@ impl Serializer for BufferingSerializer {
         len: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error> {
         Ok(BufferedStructVariantSerializer {
-            name: name.into(),
+            name,
             variant_index,
-            variant: variant.into(),
+            variant,
             len,
             fields: Vec::with_capacity(len),
         })
@@ -589,26 +542,19 @@ impl Serialize for BufferingSerialize {
             Self::None => serializer.serialize_none(),
             Self::Some(value) => serializer.serialize_some(value),
             Self::Unit => serializer.serialize_unit(),
-            Self::UnitStruct { name } => serializer.serialize_unit_struct(name.get()),
+            Self::UnitStruct { name } => serializer.serialize_unit_struct(name),
             Self::UnitVariant {
                 name,
                 variant_index,
                 variant,
-            } => serializer.serialize_unit_variant(name.get(), *variant_index, variant.get()),
-            Self::NewtypeStruct { name, value } => {
-                serializer.serialize_newtype_struct(name.get(), value)
-            },
+            } => serializer.serialize_unit_variant(name, *variant_index, variant),
+            Self::NewtypeStruct { name, value } => serializer.serialize_newtype_struct(name, value),
             Self::NewtypeVariant {
                 name,
                 variant_index,
                 variant,
                 value,
-            } => serializer.serialize_newtype_variant(
-                name.get(),
-                *variant_index,
-                variant.get(),
-                value,
-            ),
+            } => serializer.serialize_newtype_variant(name, *variant_index, variant, value),
             Self::Seq { len, elements } => {
                 let mut seq = serializer.serialize_seq(*len)?;
 
@@ -628,7 +574,7 @@ impl Serialize for BufferingSerialize {
                 tuple.end()
             },
             Self::TupleStruct { name, len, fields } => {
-                let mut tuple_struct = serializer.serialize_tuple_struct(name.get(), *len)?;
+                let mut tuple_struct = serializer.serialize_tuple_struct(name, *len)?;
 
                 for field in fields.iter() {
                     tuple_struct.serialize_field(field)?;
@@ -643,12 +589,8 @@ impl Serialize for BufferingSerialize {
                 len,
                 fields,
             } => {
-                let mut tuple_variant = serializer.serialize_tuple_variant(
-                    name.get(),
-                    *variant_index,
-                    variant.get(),
-                    *len,
-                )?;
+                let mut tuple_variant =
+                    serializer.serialize_tuple_variant(name, *variant_index, variant, *len)?;
 
                 for field in fields.iter() {
                     tuple_variant.serialize_field(field)?;
@@ -671,13 +613,13 @@ impl Serialize for BufferingSerialize {
                 map.end()
             },
             Self::Struct { name, len, fields } => {
-                let mut r#struct = serializer.serialize_struct(name.get(), *len)?;
+                let mut r#struct = serializer.serialize_struct(name, *len)?;
 
                 for (key, value) in fields.iter() {
                     if let Some(value) = value {
-                        r#struct.serialize_field(key.get(), value)?;
+                        r#struct.serialize_field(key, value)?;
                     } else {
-                        r#struct.skip_field(key.get())?;
+                        r#struct.skip_field(key)?;
                     }
                 }
 
@@ -690,18 +632,14 @@ impl Serialize for BufferingSerialize {
                 len,
                 fields,
             } => {
-                let mut struct_variant = serializer.serialize_struct_variant(
-                    name.get(),
-                    *variant_index,
-                    variant.get(),
-                    *len,
-                )?;
+                let mut struct_variant =
+                    serializer.serialize_struct_variant(name, *variant_index, variant, *len)?;
 
                 for (key, value) in fields.iter() {
                     if let Some(value) = value {
-                        struct_variant.serialize_field(key.get(), value)?;
+                        struct_variant.serialize_field(key, value)?;
                     } else {
-                        struct_variant.skip_field(key.get())?;
+                        struct_variant.skip_field(key)?;
                     }
                 }
 
