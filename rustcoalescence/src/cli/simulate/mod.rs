@@ -1,24 +1,30 @@
-use anyhow::Context;
 use derive_builder::Builder;
 use log::LevelFilter;
-use necsim_impls_std::lineage_file::loader::LineageFileLoader;
 use serde::Serialize;
 
 use necsim_core::lineage::Lineage;
-use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
+use necsim_core_bond::NonNegativeF64;
 
-use rustcoalescence_algorithms::RestartFixUpStrategy;
-
-use crate::args::{
-    parse::try_print, ser::BufferingSerializeResult, CommandArgs, FuturePause, PauseMode, Sample,
-    SampleDestiny, SampleMode, SampleModeRestart, SampleOrigin,
-};
+use crate::args::{ser::BufferingSerializeResult, CommandArgs};
 
 mod dispatch;
-mod launch;
 mod parse;
+mod pause;
 
 use dispatch::dispatch;
+
+#[allow(dead_code)]
+enum SimulationResult {
+    Done {
+        time: NonNegativeF64,
+        steps: u64,
+    },
+    Paused {
+        time: NonNegativeF64,
+        steps: u64,
+        lineages: Vec<Lineage>,
+    },
+}
 
 #[allow(clippy::module_name_repetitions)]
 pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
@@ -84,64 +90,10 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
     }
 
     if let (Some(pause), SimulationResult::Paused { lineages, .. }) = (pause, result) {
-        let resume_str = normalised_args
-            .sample(&Sample {
-                percentage: ClosedUnitF64::one(),
-                origin: match pause.destiny {
-                    SampleDestiny::List => SampleOrigin::List(lineages),
-                    SampleDestiny::Bincode(lineage_file) => {
-                        let path = lineage_file.path().to_owned();
-
-                        lineage_file
-                            .write(lineages.iter())
-                            .context("Failed to write the remaining lineages.")?;
-
-                        SampleOrigin::Bincode(
-                            LineageFileLoader::try_new(&path)
-                                .context("Failed to write the remaining lineages.")?,
-                        )
-                    },
-                },
-                mode: match pause.mode {
-                    PauseMode::Resume => SampleMode::Resume,
-                    PauseMode::FixUp => SampleMode::FixUp(RestartFixUpStrategy::default()),
-                    PauseMode::Restart => SampleMode::Restart(SampleModeRestart {
-                        after: pause.before,
-                    }),
-                },
-            })
-            .pause(&match pause.mode {
-                PauseMode::Resume | PauseMode::Restart => None,
-                PauseMode::FixUp => Some(FuturePause {
-                    before: pause.before,
-                    mode: PauseMode::Restart,
-                }),
-            })
-            .build()
-            .map_err(anyhow::Error::new)
-            .and_then(|resume_args| try_print(&resume_args))
-            .context("Failed to generate the config to resume the simulation.")?;
-
-        pause
-            .config
-            .write(resume_str.trim_start_matches("Simulate"))
-            .context("Failed to write the config to resume the simulation.")?;
+        pause::write_resume_config(normalised_args, pause, lineages)?;
     }
 
     Ok(())
-}
-
-#[allow(dead_code)]
-enum SimulationResult {
-    Done {
-        time: NonNegativeF64,
-        steps: u64,
-    },
-    Paused {
-        time: NonNegativeF64,
-        steps: u64,
-        lineages: Vec<Lineage>,
-    },
 }
 
 #[derive(Serialize, Builder)]

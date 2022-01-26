@@ -16,7 +16,10 @@ use crate::{
     cli::simulate::parse,
 };
 
-use super::super::{launch::launch, BufferingSimulateArgsBuilder, SimulationResult};
+use super::{
+    super::super::{BufferingSimulateArgsBuilder, SimulationResult},
+    info,
+};
 
 pub(super) fn dispatch<
     A: Algorithm<O, R, P>,
@@ -52,7 +55,7 @@ where
         RngArgs::State(state) => state.into(),
     };
 
-    let result = launch::<A, O, R, P>(
+    let result = info::dispatch::<A, O, R, P>(
         algorithm_args,
         rng,
         scenario,

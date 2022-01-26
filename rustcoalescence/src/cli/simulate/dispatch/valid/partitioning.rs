@@ -15,7 +15,7 @@ use crate::{
     reporter::DynamicReporterContext,
 };
 
-use super::{super::BufferingSimulateArgsBuilder, algorithm_scenario};
+use super::{super::super::BufferingSimulateArgsBuilder, algorithm_scenario};
 
 #[allow(clippy::too_many_arguments)]
 pub(in super::super) fn dispatch(
