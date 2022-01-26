@@ -26,7 +26,7 @@ use crate::{
     cli::simulate::SimulationResult,
 };
 
-use super::{super::BufferingSimulateArgsBuilder, rng};
+use super::{super::super::BufferingSimulateArgsBuilder, rng};
 
 macro_rules! match_scenario_algorithm {
     (

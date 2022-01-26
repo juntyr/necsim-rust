@@ -3,19 +3,7 @@
     feature = "rustcoalescence-algorithms-independent",
     feature = "rustcoalescence-algorithms-cuda"
 ))]
-mod algorithm_scenario;
-#[cfg(any(
-    feature = "rustcoalescence-algorithms-gillespie",
-    feature = "rustcoalescence-algorithms-independent",
-    feature = "rustcoalescence-algorithms-cuda"
-))]
-mod partitioning;
-#[cfg(any(
-    feature = "rustcoalescence-algorithms-gillespie",
-    feature = "rustcoalescence-algorithms-independent",
-    feature = "rustcoalescence-algorithms-cuda"
-))]
-mod rng;
+mod valid;
 
 #[cfg(not(any(
     feature = "rustcoalescence-algorithms-gillespie",
@@ -29,7 +17,7 @@ mod fallback;
     feature = "rustcoalescence-algorithms-independent",
     feature = "rustcoalescence-algorithms-cuda"
 ))]
-pub(super) use partitioning::dispatch;
+pub(super) use valid::dispatch;
 
 #[cfg(not(any(
     feature = "rustcoalescence-algorithms-gillespie",
