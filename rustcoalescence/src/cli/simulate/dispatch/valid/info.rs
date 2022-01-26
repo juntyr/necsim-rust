@@ -3,19 +3,18 @@ use anyhow::{Context, Result};
 use rustcoalescence_algorithms::{Algorithm, AlgorithmResult};
 
 use necsim_core::reporter::{boolean::Boolean, Reporter};
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
-use necsim_impls_no_std::cogs::origin_sampler::pre_sampler::OriginPreSampler;
+use necsim_core_bond::NonNegativeF64;
 use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_scenarios::Scenario;
 
-use crate::args::{parse::try_print, Sample, SampleMode, SampleModeRestart, SampleOrigin};
+use crate::args::{parse::try_print, Sample, SampleMode, SampleModeRestart};
 
-use super::BufferingSimulateArgsBuilder;
+use super::{super::super::BufferingSimulateArgsBuilder, launch};
 
 #[allow(dead_code)]
 #[allow(clippy::needless_pass_by_value)]
-pub(super) fn launch<
+pub(super) fn dispatch<
     A: Algorithm<O, R, P>,
     O: Scenario<A::MathsCore, A::Rng>,
     R: Reporter,
@@ -98,7 +97,7 @@ where
         warn!("The simulation will report no events.");
     }
 
-    let result = simulate::<A, O, R, P>(
+    let result = launch::simulate::<A, O, R, P>(
         algorithm_args,
         rng,
         scenario,
@@ -136,79 +135,4 @@ where
     }
 
     Ok(result)
-}
-
-fn simulate<
-    A: Algorithm<O, R, P>,
-    O: Scenario<A::MathsCore, A::Rng>,
-    R: Reporter,
-    P: LocalPartition<R>,
->(
-    algorithm_args: A::Arguments,
-    rng: A::Rng,
-    scenario: O,
-    sample: Sample,
-    pause_before: Option<NonNegativeF64>,
-    local_partition: &mut P,
-) -> anyhow::Result<AlgorithmResult<A::MathsCore, A::Rng>> {
-    let lineages = match sample.origin {
-        SampleOrigin::Habitat => {
-            return A::initialise_and_simulate(
-                algorithm_args,
-                rng,
-                scenario,
-                OriginPreSampler::all().percentage(sample.percentage),
-                pause_before,
-                local_partition,
-            )
-            .context("Failed to perform the fresh simulation.")
-        },
-        SampleOrigin::List(lineages) => lineages,
-        SampleOrigin::Bincode(loader) => loader.into_lineages(),
-    };
-
-    match sample.mode {
-        SampleMode::Genesis => A::initialise_and_simulate(
-            algorithm_args,
-            rng,
-            scenario,
-            OriginPreSampler::all().percentage(sample.percentage),
-            pause_before,
-            local_partition,
-        )
-        .context("Failed to perform the fresh simulation."),
-        SampleMode::Resume => A::resume_and_simulate(
-            algorithm_args,
-            rng,
-            scenario,
-            OriginPreSampler::all().percentage(sample.percentage),
-            lineages.into_iter(),
-            None,
-            pause_before,
-            local_partition,
-        )
-        .context("Failed to perform the resuming simulation."),
-        SampleMode::FixUp(strategy) => A::fixup_for_restart(
-            algorithm_args,
-            rng,
-            scenario,
-            OriginPreSampler::all().percentage(sample.percentage),
-            lineages.into_iter(),
-            PositiveF64::new(pause_before.unwrap().get()).unwrap(),
-            strategy,
-            local_partition,
-        )
-        .context("Failed to fix-up the restarting simulation."),
-        SampleMode::Restart(SampleModeRestart { after }) => A::resume_and_simulate(
-            algorithm_args,
-            rng,
-            scenario,
-            OriginPreSampler::all().percentage(sample.percentage),
-            lineages.into_iter(),
-            Some(after),
-            pause_before,
-            local_partition,
-        )
-        .context("Failed to perform the restarting simulation."),
-    }
 }
