@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 
-use rustcoalescence_algorithms::{Algorithm, AlgorithmResult};
+use rustcoalescence_algorithms::{result::SimulationOutcome, Algorithm};
 
 use necsim_core::reporter::{boolean::Boolean, Reporter};
 use necsim_core_bond::NonNegativeF64;
@@ -28,10 +28,10 @@ pub(super) fn dispatch<
     mut local_partition: P,
 
     normalised_args: &BufferingSimulateArgsBuilder,
-) -> anyhow::Result<AlgorithmResult<A::MathsCore, A::Rng>>
+) -> anyhow::Result<SimulationOutcome<A::MathsCore, A::Rng>>
 where
-    Result<AlgorithmResult<A::MathsCore, A::Rng>, A::Error>:
-        anyhow::Context<AlgorithmResult<A::MathsCore, A::Rng>, A::Error>,
+    Result<SimulationOutcome<A::MathsCore, A::Rng>, A::Error>:
+        anyhow::Context<SimulationOutcome<A::MathsCore, A::Rng>, A::Error>,
 {
     let config_str = normalised_args
         .build()
@@ -110,7 +110,7 @@ where
         println!("\n");
         println!(
             "{:=^80}",
-            if matches!(result, AlgorithmResult::Done { .. }) {
+            if matches!(result, SimulationOutcome::Done { .. }) {
                 " Reporter Summary "
             } else {
                 " Partial Reporter Summary "
@@ -125,7 +125,7 @@ where
         println!();
         println!(
             "{:=^80}",
-            if matches!(result, AlgorithmResult::Done { .. }) {
+            if matches!(result, SimulationOutcome::Done { .. }) {
                 " Reporter Summary "
             } else {
                 " Partial Reporter Summary "

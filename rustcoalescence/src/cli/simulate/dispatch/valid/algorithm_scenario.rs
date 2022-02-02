@@ -23,7 +23,7 @@ use rustcoalescence_scenarios::{
 
 use crate::{
     args::{Algorithm as AlgorithmArgs, Sample as SampleArgs, Scenario as ScenarioArgs},
-    cli::simulate::SimulationResult,
+    cli::simulate::SimulationOutcome,
 };
 
 use super::{super::super::BufferingSimulateArgsBuilder, rng};
@@ -108,7 +108,7 @@ pub(super) fn dispatch<R: Reporter, P: LocalPartition<R>>(
 
     ron_args: &str,
     normalised_args: &mut BufferingSimulateArgsBuilder,
-) -> anyhow::Result<SimulationResult> {
+) -> anyhow::Result<SimulationOutcome> {
     match_scenario_algorithm!(
         (algorithm, scenario => scenario)
     {

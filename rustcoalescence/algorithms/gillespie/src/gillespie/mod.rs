@@ -46,8 +46,11 @@ use necsim_impls_std::cogs::rng::pcg::Pcg;
 use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_algorithms::{
-    Algorithm, AlgorithmParamters, AlgorithmResult, CoalescenceStrategy, ContinueError,
-    OutOfDemeStrategy, OutOfHabitatStrategy, RestartFixUpStrategy,
+    result::{ResumeError, SimulationOutcome},
+    strategy::{
+        CoalescenceStrategy, OutOfDemeStrategy, OutOfHabitatStrategy, RestartFixUpStrategy,
+    },
+    Algorithm, AlgorithmParamters,
 };
 use rustcoalescence_scenarios::Scenario;
 
@@ -93,7 +96,7 @@ where
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, Self::Error> {
+    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, Self::Error> {
         struct GenesisInitialiser;
 
         impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
@@ -213,7 +216,7 @@ where
         resume_after: Option<NonNegativeF64>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, ContinueError<Self::Error>> {
+    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, ResumeError<Self::Error>> {
         struct ResumeInitialiser<L: ExactSizeIterator<Item = Lineage>> {
             lineages: L,
             resume_after: Option<NonNegativeF64>,
@@ -224,7 +227,7 @@ where
                 M: MathsCore,
                 G: RngCore<M>,
                 O: Scenario<M, G>,
-            > GillespieLineageStoreSampleInitialiser<M, G, O, ContinueError<!>>
+            > GillespieLineageStoreSampleInitialiser<M, G, O, ResumeError<!>>
             for ResumeInitialiser<L>
         {
             type ActiveLineageSampler<
@@ -298,7 +301,7 @@ where
                     Self::DispersalSampler,
                     Self::ActiveLineageSampler<R, S, X, C, E, I>,
                 ),
-                ContinueError<!>,
+                ResumeError<!>,
             >
             where
                 O::Habitat: 'h,
@@ -314,7 +317,7 @@ where
                     );
 
                 if !exceptional_lineages.is_empty() {
-                    return Err(ContinueError::Sample(exceptional_lineages));
+                    return Err(ResumeError::Sample(exceptional_lineages));
                 }
 
                 Ok((lineage_store, dispersal_sampler, active_lineage_sampler))
@@ -349,7 +352,7 @@ where
         restart_at: PositiveF64,
         fixup_strategy: RestartFixUpStrategy,
         local_partition: &mut P,
-    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, ContinueError<Self::Error>> {
+    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, ResumeError<Self::Error>> {
         struct FixUpInitialiser<L: ExactSizeIterator<Item = Lineage>> {
             lineages: L,
             restart_at: PositiveF64,
@@ -361,7 +364,7 @@ where
                 M: MathsCore,
                 G: RngCore<M>,
                 O: Scenario<M, G>,
-            > GillespieLineageStoreSampleInitialiser<M, G, O, ContinueError<!>>
+            > GillespieLineageStoreSampleInitialiser<M, G, O, ResumeError<!>>
             for FixUpInitialiser<L>
         {
             type ActiveLineageSampler<
@@ -454,7 +457,7 @@ where
                     Self::DispersalSampler,
                     Self::ActiveLineageSampler<R, S, X, C, E, I>,
                 ),
-                ContinueError<!>,
+                ResumeError<!>,
             >
             where
                 O::Habitat: 'h,
@@ -527,7 +530,7 @@ where
                 }
 
                 if !exceptional_lineages.is_empty() {
-                    return Err(ContinueError::Sample(exceptional_lineages));
+                    return Err(ResumeError::Sample(exceptional_lineages));
                 }
 
                 fixable_lineages.sort();
@@ -580,7 +583,7 @@ fn initialise_and_simulate<
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
     lineage_store_sampler_initialiser: L,
-) -> Result<AlgorithmResult<M, G>, Error>
+) -> Result<SimulationOutcome<M, G>, Error>
 where
     O::LineageStore<ClassicalLineageStore<M, O::Habitat>>:
         LocallyCoherentLineageStore<M, O::Habitat, InMemoryLineageReference>,
@@ -636,8 +639,8 @@ where
             );
 
             match status {
-                Status::Done => Ok(AlgorithmResult::Done { time, steps }),
-                Status::Paused => Ok(AlgorithmResult::Paused {
+                Status::Done => Ok(SimulationOutcome::Done { time, steps }),
+                Status::Paused => Ok(SimulationOutcome::Paused {
                     time,
                     steps,
                     lineages: simulation
@@ -737,7 +740,7 @@ where
             };
 
             // TODO: Adapt for parallel pausing
-            Ok(AlgorithmResult::Done { time, steps })
+            Ok(SimulationOutcome::Done { time, steps })
         },
     }
 }

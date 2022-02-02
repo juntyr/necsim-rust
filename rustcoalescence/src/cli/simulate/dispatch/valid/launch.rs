@@ -1,6 +1,6 @@
 use anyhow::Context;
 
-use rustcoalescence_algorithms::{Algorithm, AlgorithmResult};
+use rustcoalescence_algorithms::{result::SimulationOutcome, Algorithm};
 
 use necsim_core::reporter::Reporter;
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -23,7 +23,7 @@ pub(super) fn simulate<
     sample: Sample,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
-) -> anyhow::Result<AlgorithmResult<A::MathsCore, A::Rng>> {
+) -> anyhow::Result<SimulationOutcome<A::MathsCore, A::Rng>> {
     let lineages = match sample.origin {
         SampleOrigin::Habitat => {
             return A::initialise_and_simulate(
