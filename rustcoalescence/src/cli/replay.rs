@@ -6,8 +6,8 @@ use necsim_core::{event::TypedEvent, reporter::Reporter};
 use necsim_plugins_core::match_any_reporter_plugin_vec;
 
 use crate::args::{
-    parse::{try_parse, try_print},
-    CommandArgs, ReplayArgs,
+    cli::{replay::ReplayArgs, CommandArgs},
+    utils::parse::{try_parse, try_print},
 };
 
 #[allow(clippy::module_name_repetitions)]

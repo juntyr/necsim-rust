@@ -3,7 +3,9 @@ use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_plugins_core::import::AnyReporterPluginVec;
 
 use crate::{
-    args::{Algorithm, Partitioning, Sample, Scenario},
+    args::config::{
+        algorithm::Algorithm, partitioning::Partitioning, sample::Sample, scenario::Scenario,
+    },
     cli::simulate::SimulationOutcome,
 };
 

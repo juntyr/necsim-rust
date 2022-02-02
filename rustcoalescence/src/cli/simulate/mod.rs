@@ -5,7 +5,7 @@ use serde::Serialize;
 use necsim_core::lineage::Lineage;
 use necsim_core_bond::NonNegativeF64;
 
-use crate::args::{ser::BufferingSerializeResult, CommandArgs};
+use crate::args::{cli::CommandArgs, utils::ser::BufferingSerializeResult};
 
 mod dispatch;
 mod parse;

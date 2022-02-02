@@ -10,7 +10,9 @@ use necsim_partitioning_monolithic::MonolithicLocalPartition;
 use necsim_partitioning_mpi::MpiLocalPartition;
 
 use crate::{
-    args::{Algorithm, Partitioning, Sample, Scenario},
+    args::config::{
+        algorithm::Algorithm, partitioning::Partitioning, sample::Sample, scenario::Scenario,
+    },
     cli::simulate::SimulationOutcome,
     reporter::DynamicReporterContext,
 };

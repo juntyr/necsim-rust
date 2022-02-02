@@ -8,7 +8,10 @@ use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_scenarios::Scenario;
 
-use crate::args::{parse::try_print, Sample, SampleMode, SampleModeRestart};
+use crate::args::{
+    config::sample::{Sample, SampleMode, SampleModeRestart},
+    utils::parse::try_print,
+};
 
 use super::{super::super::BufferingSimulateArgsBuilder, launch};
 

@@ -22,7 +22,10 @@ use rustcoalescence_scenarios::{
 };
 
 use crate::{
-    args::{Algorithm as AlgorithmArgs, Sample as SampleArgs, Scenario as ScenarioArgs},
+    args::config::{
+        algorithm::Algorithm as AlgorithmArgs, sample::Sample as SampleArgs,
+        scenario::Scenario as ScenarioArgs,
+    },
     cli::simulate::SimulationOutcome,
 };
 

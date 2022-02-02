@@ -15,7 +15,7 @@ mod cli;
 mod minimal_logger;
 mod reporter;
 
-use args::RustcoalescenceArgs;
+use args::cli::RustcoalescenceArgs;
 use minimal_logger::MinimalLogger;
 
 static MINIMAL_LOGGER: MinimalLogger = MinimalLogger;

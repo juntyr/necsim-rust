@@ -8,8 +8,11 @@ use necsim_impls_std::lineage_file::loader::LineageFileLoader;
 use rustcoalescence_algorithms::strategy::RestartFixUpStrategy;
 
 use crate::args::{
-    parse::try_print, FuturePause, Pause, PauseMode, Sample, SampleDestiny, SampleMode,
-    SampleModeRestart, SampleOrigin,
+    config::{
+        pause::{FuturePause, Pause, PauseMode, SampleDestiny},
+        sample::{Sample, SampleMode, SampleModeRestart, SampleOrigin},
+    },
+    utils::parse::try_print,
 };
 
 use super::BufferingSimulateArgsBuilder;
