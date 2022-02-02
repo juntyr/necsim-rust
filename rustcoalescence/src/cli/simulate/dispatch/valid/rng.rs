@@ -1,6 +1,6 @@
 use tiny_keccak::{Hasher, Keccak};
 
-use rustcoalescence_algorithms::{Algorithm, AlgorithmResult};
+use rustcoalescence_algorithms::{result::SimulationOutcome as AlgorithmOutcome, Algorithm};
 
 use necsim_core::{
     cogs::{RngCore, SeedableRng},
@@ -17,7 +17,7 @@ use crate::{
 };
 
 use super::{
-    super::super::{BufferingSimulateArgsBuilder, SimulationResult},
+    super::super::{BufferingSimulateArgsBuilder, SimulationOutcome},
     info,
 };
 
@@ -36,10 +36,10 @@ pub(super) fn dispatch<
 
     ron_args: &str,
     normalised_args: &mut BufferingSimulateArgsBuilder,
-) -> anyhow::Result<SimulationResult>
+) -> anyhow::Result<SimulationOutcome>
 where
-    Result<AlgorithmResult<A::MathsCore, A::Rng>, A::Error>:
-        anyhow::Context<AlgorithmResult<A::MathsCore, A::Rng>, A::Error>,
+    Result<AlgorithmOutcome<A::MathsCore, A::Rng>, A::Error>:
+        anyhow::Context<AlgorithmOutcome<A::MathsCore, A::Rng>, A::Error>,
 {
     let rng: A::Rng = match parse::rng::parse_and_normalise(ron_args, normalised_args)? {
         RngArgs::Seed(seed) => SeedableRng::seed_from_u64(seed),
@@ -66,8 +66,8 @@ where
     )?;
 
     match result {
-        AlgorithmResult::Done { time, steps } => Ok(SimulationResult::Done { time, steps }),
-        AlgorithmResult::Paused {
+        AlgorithmOutcome::Done { time, steps } => Ok(SimulationOutcome::Done { time, steps }),
+        AlgorithmOutcome::Paused {
             time,
             steps,
             lineages,
@@ -76,7 +76,7 @@ where
         } => {
             normalised_args.rng(&RngArgs::State(Base32RngState::from(paused_rng)));
 
-            Ok(SimulationResult::Paused {
+            Ok(SimulationOutcome::Paused {
                 time,
                 steps,
                 lineages,
