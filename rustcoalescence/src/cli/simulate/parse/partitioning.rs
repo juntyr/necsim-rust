@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::args::{parse::try_parse, Partitioning};
+use crate::args::{config::partitioning::Partitioning, utils::parse::try_parse};
 
 use super::super::BufferingSimulateArgsBuilder;
 

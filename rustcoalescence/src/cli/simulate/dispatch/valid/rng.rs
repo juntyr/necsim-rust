@@ -12,7 +12,10 @@ use necsim_partitioning_core::LocalPartition;
 use rustcoalescence_scenarios::Scenario;
 
 use crate::{
-    args::{Base32RngState, Rng as RngArgs, Sample},
+    args::config::{
+        rng::{Base32RngState, Rng as RngArgs},
+        sample::Sample,
+    },
     cli::simulate::parse,
 };
 

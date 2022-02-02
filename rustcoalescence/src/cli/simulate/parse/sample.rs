@@ -1,4 +1,7 @@
-use crate::args::{parse::try_parse_state, Pause, Sample};
+use crate::args::{
+    config::{pause::Pause, sample::Sample},
+    utils::parse::try_parse_state,
+};
 
 use super::super::BufferingSimulateArgsBuilder;
 
