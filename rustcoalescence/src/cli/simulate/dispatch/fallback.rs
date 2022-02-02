@@ -3,8 +3,10 @@ use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_plugins_core::import::AnyReporterPluginVec;
 
 use crate::{
-    args::{Algorithm, Partitioning, Sample, Scenario},
-    cli::simulate::SimulationResult,
+    args::config::{
+        algorithm::Algorithm, partitioning::Partitioning, sample::Sample, scenario::Scenario,
+    },
+    cli::simulate::SimulationOutcome,
 };
 
 use super::super::BufferingSimulateArgsBuilder;
@@ -23,7 +25,7 @@ pub(in super::super) fn dispatch(
 
     _ron_args: &str,
     _normalised_args: &mut BufferingSimulateArgsBuilder,
-) -> anyhow::Result<SimulationResult> {
+) -> anyhow::Result<SimulationOutcome> {
     extern "C" {
         fn simulate_dispatch_without_algorithm() -> !;
     }

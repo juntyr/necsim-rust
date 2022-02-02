@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use necsim_plugins_core::import::AnyReporterPluginVec;
 
-use crate::args::parse::try_parse;
+use crate::args::utils::parse::try_parse;
 
 use super::super::BufferingSimulateArgsBuilder;
 

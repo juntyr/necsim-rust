@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use necsim_core_bond::OpenClosedUnitF64 as PositiveUnitF64;
 
-use crate::args::parse::try_parse;
+use crate::args::utils::parse::try_parse;
 
 use super::super::BufferingSimulateArgsBuilder;
 

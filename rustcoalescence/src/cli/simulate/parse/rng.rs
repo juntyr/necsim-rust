@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use necsim_core::cogs::{MathsCore, RngCore};
 
-use crate::args::{parse::try_parse, Rng};
+use crate::args::{config::rng::Rng, utils::parse::try_parse};
 
 use super::super::BufferingSimulateArgsBuilder;
 

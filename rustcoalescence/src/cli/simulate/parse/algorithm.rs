@@ -1,6 +1,9 @@
 use necsim_partitioning_core::partition::Partition;
 
-use crate::args::{parse::try_parse_state, Algorithm, Partitioning};
+use crate::args::{
+    config::{algorithm::Algorithm, partitioning::Partitioning},
+    utils::parse::try_parse_state,
+};
 
 use super::super::BufferingSimulateArgsBuilder;
 

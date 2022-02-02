@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::args::{parse::try_parse, Scenario};
+use crate::args::{config::scenario::Scenario, utils::parse::try_parse};
 
 use super::super::BufferingSimulateArgsBuilder;
 

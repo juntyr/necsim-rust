@@ -9,7 +9,7 @@ use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_scenarios::Scenario;
 
-use crate::args::{Sample, SampleMode, SampleModeRestart, SampleOrigin};
+use crate::args::config::sample::{Sample, SampleMode, SampleModeRestart, SampleOrigin};
 
 pub(super) fn simulate<
     A: Algorithm<O, R, P>,

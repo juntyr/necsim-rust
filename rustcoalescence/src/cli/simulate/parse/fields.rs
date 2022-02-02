@@ -1,6 +1,6 @@
 use serde::{de::IgnoredAny, Deserialize};
 
-use crate::args::parse::try_parse;
+use crate::args::utils::parse::try_parse;
 
 pub fn parse_and_normalise(ron_args: &str) -> anyhow::Result<()> {
     // Check for the overall config stucture

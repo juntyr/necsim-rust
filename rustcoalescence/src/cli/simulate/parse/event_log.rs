@@ -5,7 +5,14 @@ use serde_state::DeserializeState;
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 
-use crate::args::{parse::try_parse_state, Partitioning, Pause, Sample, SampleMode};
+use crate::args::{
+    config::{
+        partitioning::Partitioning,
+        pause::Pause,
+        sample::{Sample, SampleMode},
+    },
+    utils::parse::try_parse_state,
+};
 
 use super::super::BufferingSimulateArgsBuilder;
 
