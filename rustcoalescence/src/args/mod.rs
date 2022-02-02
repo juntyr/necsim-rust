@@ -35,7 +35,7 @@ use rustcoalescence_scenarios::{
     spatially_implicit::SpatiallyImplicitArguments,
 };
 
-use rustcoalescence_algorithms::RestartFixUpStrategy;
+use rustcoalescence_algorithms::strategy::RestartFixUpStrategy;
 
 #[cfg(any(
     feature = "rustcoalescence-algorithms-gillespie",

@@ -11,7 +11,7 @@ use necsim_partitioning_mpi::MpiLocalPartition;
 
 use crate::{
     args::{Algorithm, Partitioning, Sample, Scenario},
-    cli::simulate::SimulationResult,
+    cli::simulate::SimulationOutcome,
     reporter::DynamicReporterContext,
 };
 
@@ -31,7 +31,7 @@ pub(super) fn dispatch(
 
     ron_args: &str,
     normalised_args: &mut BufferingSimulateArgsBuilder,
-) -> anyhow::Result<SimulationResult> {
+) -> anyhow::Result<SimulationOutcome> {
     match_any_reporter_plugin_vec!(reporters => |reporter| {
         // Initialise the local partition and the simulation
         match partitioning {

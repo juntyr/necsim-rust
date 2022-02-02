@@ -14,7 +14,7 @@ mod pause;
 use dispatch::dispatch;
 
 #[allow(dead_code)]
-enum SimulationResult {
+enum SimulationOutcome {
     Done {
         time: NonNegativeF64,
         steps: u64,
@@ -77,19 +77,19 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
     )?;
 
     match &result {
-        SimulationResult::Done { time, steps } => info!(
+        SimulationOutcome::Done { time, steps } => info!(
             "The simulation finished at time {} after {} steps.\n",
             time.get(),
             steps
         ),
-        SimulationResult::Paused { time, steps, .. } => info!(
+        SimulationOutcome::Paused { time, steps, .. } => info!(
             "The simulation paused at time {} after {} steps.\n",
             time.get(),
             steps
         ),
     }
 
-    if let (Some(pause), SimulationResult::Paused { lineages, .. }) = (pause, result) {
+    if let (Some(pause), SimulationOutcome::Paused { lineages, .. }) = (pause, result) {
         pause::write_resume_config(normalised_args, pause, lineages)?;
     }
 

@@ -59,8 +59,9 @@ use necsim_impls_no_std::{
 use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_algorithms::{
-    Algorithm, AlgorithmParamters, AlgorithmResult, ContinueError, OutOfDemeStrategy,
-    OutOfHabitatStrategy, RestartFixUpStrategy,
+    result::{ResumeError, SimulationOutcome},
+    strategy::{OutOfDemeStrategy, OutOfHabitatStrategy, RestartFixUpStrategy},
+    Algorithm, AlgorithmParamters,
 };
 use rustcoalescence_scenarios::Scenario;
 
@@ -98,7 +99,7 @@ impl<
         pre_sampler: OriginPreSampler<Self::MathsCore, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, Self::Error> {
+    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, Self::Error> {
         struct GenesisInitialiser;
 
         impl<M: MathsCore, G: PrimeableRng<M>, O: Scenario<M, G>>
@@ -197,7 +198,7 @@ impl<
         resume_after: Option<NonNegativeF64>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, ContinueError<Self::Error>> {
+    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, ResumeError<Self::Error>> {
         struct ResumeInitialiser<L: ExactSizeIterator<Item = Lineage>> {
             lineages: L,
             resume_after: Option<NonNegativeF64>,
@@ -208,7 +209,7 @@ impl<
                 M: MathsCore,
                 G: PrimeableRng<M>,
                 O: Scenario<M, G>,
-            > IndependentLineageStoreSampleInitialiser<M, G, O, ContinueError<!>>
+            > IndependentLineageStoreSampleInitialiser<M, G, O, ResumeError<!>>
             for ResumeInitialiser<L>
         {
             type ActiveLineageSampler<
@@ -259,7 +260,7 @@ impl<
                     Vec<Lineage>,
                     Vec<Lineage>,
                 ),
-                ContinueError<!>,
+                ResumeError<!>,
             >
             where
                 O::Habitat: 'h,
@@ -280,7 +281,7 @@ impl<
                 ));
 
                 if !exceptional_lineages.is_empty() {
-                    return Err(ContinueError::Sample(exceptional_lineages));
+                    return Err(ResumeError::Sample(exceptional_lineages));
                 }
 
                 Ok((
@@ -321,7 +322,7 @@ impl<
         restart_at: PositiveF64,
         fixup_strategy: RestartFixUpStrategy,
         local_partition: &mut P,
-    ) -> Result<AlgorithmResult<Self::MathsCore, Self::Rng>, ContinueError<Self::Error>> {
+    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, ResumeError<Self::Error>> {
         struct FixUpInitialiser<L: ExactSizeIterator<Item = Lineage>> {
             lineages: L,
             restart_at: PositiveF64,
@@ -333,7 +334,7 @@ impl<
                 M: MathsCore,
                 G: PrimeableRng<M>,
                 O: Scenario<M, G>,
-            > IndependentLineageStoreSampleInitialiser<M, G, O, ContinueError<!>>
+            > IndependentLineageStoreSampleInitialiser<M, G, O, ResumeError<!>>
             for FixUpInitialiser<L>
         {
             type ActiveLineageSampler<
@@ -389,7 +390,7 @@ impl<
                     Vec<Lineage>,
                     Vec<Lineage>,
                 ),
-                ContinueError<!>,
+                ResumeError<!>,
             >
             where
                 O::Habitat: 'h,
@@ -444,7 +445,7 @@ impl<
                 }
 
                 if !exceptional_lineages.is_empty() {
-                    return Err(ContinueError::Sample(exceptional_lineages));
+                    return Err(ResumeError::Sample(exceptional_lineages));
                 }
 
                 let dispersal_sampler = TrespassingDispersalSampler::new(
@@ -497,7 +498,7 @@ fn initialise_and_simulate<
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
     lineage_store_sampler_initialiser: L,
-) -> Result<AlgorithmResult<M, G>, Error> {
+) -> Result<SimulationOutcome<M, G>, Error> {
     match args.parallelism_mode {
         ParallelismMode::Monolithic(MonolithicParallelismMode { event_slice })
         | ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { event_slice, .. })
@@ -585,8 +586,8 @@ fn initialise_and_simulate<
             }
 
             match status {
-                Status::Done => Ok(AlgorithmResult::Done { time, steps }),
-                Status::Paused => Ok(AlgorithmResult::Paused {
+                Status::Done => Ok(SimulationOutcome::Done { time, steps }),
+                Status::Paused => Ok(SimulationOutcome::Paused {
                     time,
                     steps,
                     lineages: lineages
@@ -652,7 +653,7 @@ fn initialise_and_simulate<
 
             // TODO: Adapt for parallel pausing
             // TODO: Adapt for lineage passthrough
-            Ok(AlgorithmResult::Done { time, steps })
+            Ok(SimulationOutcome::Done { time, steps })
         },
         ParallelismMode::Landscape => {
             let (
@@ -714,7 +715,7 @@ fn initialise_and_simulate<
 
             // TODO: Adapt for parallel pausing
             // TODO: Adapt for lineage passthrough
-            Ok(AlgorithmResult::Done { time, steps })
+            Ok(SimulationOutcome::Done { time, steps })
         },
         ParallelismMode::Probabilistic(ProbabilisticParallelismMode {
             communication_probability,
@@ -780,7 +781,7 @@ fn initialise_and_simulate<
 
             // TODO: Adapt for parallel pausing
             // TODO: Adapt for lineage passthrough
-            Ok(AlgorithmResult::Done { time, steps })
+            Ok(SimulationOutcome::Done { time, steps })
         },
     }
 }

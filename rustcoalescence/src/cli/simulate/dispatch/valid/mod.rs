@@ -4,7 +4,7 @@ use necsim_plugins_core::import::AnyReporterPluginVec;
 
 use crate::{
     args::{Algorithm, Partitioning, Sample, Scenario},
-    cli::simulate::SimulationResult,
+    cli::simulate::SimulationOutcome,
 };
 
 use super::super::BufferingSimulateArgsBuilder;
@@ -29,7 +29,7 @@ pub(in super::super) fn dispatch(
 
     ron_args: &str,
     normalised_args: &mut BufferingSimulateArgsBuilder,
-) -> anyhow::Result<SimulationResult> {
+) -> anyhow::Result<SimulationOutcome> {
     partitioning::dispatch(
         partitioning,
         event_log,

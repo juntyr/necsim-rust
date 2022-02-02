@@ -5,7 +5,7 @@ use necsim_core_bond::ClosedUnitF64;
 
 use necsim_impls_std::lineage_file::loader::LineageFileLoader;
 
-use rustcoalescence_algorithms::RestartFixUpStrategy;
+use rustcoalescence_algorithms::strategy::RestartFixUpStrategy;
 
 use crate::args::{
     parse::try_print, FuturePause, Pause, PauseMode, Sample, SampleDestiny, SampleMode,
