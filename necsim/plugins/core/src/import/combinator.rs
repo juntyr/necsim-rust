@@ -3,6 +3,7 @@ use std::{
     iter::{FromIterator, IntoIterator},
     marker::PhantomData,
     path::Path,
+    rc::Rc,
 };
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -61,6 +62,20 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
             plugins: plugins.into_boxed_slice(),
             marker: self.marker,
         }
+    }
+
+    pub fn with_lifetime<Q, F: FnOnce(Self) -> Q>(self, inner: F) -> Q {
+        let libraries = self
+            .plugins
+            .iter()
+            .map(|plugin| Rc::clone(&plugin.library))
+            .collect::<Vec<_>>();
+
+        let result = inner(self);
+
+        std::mem::drop(libraries);
+
+        result
     }
 }
 
@@ -218,6 +233,37 @@ macro_rules! match_any_reporter_plugin_vec {
             ReportSpeciationReportDispersalReportProgress(mut $inner) => $code,
         }
     }};
+}
+
+impl AnyReporterPluginVec {
+    pub fn with_lifetime<Q, F: FnOnce(Self) -> Q>(self, inner: F) -> Q {
+        match self {
+            Self::IgnoreSpeciationIgnoreDispersalIgnoreProgress(vec) => vec.with_lifetime(|vec| {
+                inner(Self::IgnoreSpeciationIgnoreDispersalIgnoreProgress(vec))
+            }),
+            Self::IgnoreSpeciationIgnoreDispersalReportProgress(vec) => vec.with_lifetime(|vec| {
+                inner(Self::IgnoreSpeciationIgnoreDispersalReportProgress(vec))
+            }),
+            Self::IgnoreSpeciationReportDispersalIgnoreProgress(vec) => vec.with_lifetime(|vec| {
+                inner(Self::IgnoreSpeciationReportDispersalIgnoreProgress(vec))
+            }),
+            Self::IgnoreSpeciationReportDispersalReportProgress(vec) => vec.with_lifetime(|vec| {
+                inner(Self::IgnoreSpeciationReportDispersalReportProgress(vec))
+            }),
+            Self::ReportSpeciationIgnoreDispersalIgnoreProgress(vec) => vec.with_lifetime(|vec| {
+                inner(Self::ReportSpeciationIgnoreDispersalIgnoreProgress(vec))
+            }),
+            Self::ReportSpeciationIgnoreDispersalReportProgress(vec) => vec.with_lifetime(|vec| {
+                inner(Self::ReportSpeciationIgnoreDispersalReportProgress(vec))
+            }),
+            Self::ReportSpeciationReportDispersalIgnoreProgress(vec) => vec.with_lifetime(|vec| {
+                inner(Self::ReportSpeciationReportDispersalIgnoreProgress(vec))
+            }),
+            Self::ReportSpeciationReportDispersalReportProgress(vec) => vec.with_lifetime(|vec| {
+                inner(Self::ReportSpeciationReportDispersalReportProgress(vec))
+            }),
+        }
+    }
 }
 
 impl<'de> Deserialize<'de> for AnyReporterPluginVec {
