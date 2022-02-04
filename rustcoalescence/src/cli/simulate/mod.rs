@@ -63,37 +63,40 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
 
     let reporters = parse::reporters::parse_and_normalise(&ron_args, &mut normalised_args)?;
 
-    let result = dispatch(
-        partitioning,
-        event_log,
-        reporters,
-        speciation_probability_per_generation,
-        sample,
-        scenario,
-        algorithm,
-        pause.as_ref().map(|pause| pause.before),
-        &ron_args,
-        &mut normalised_args,
-    )?;
+    // Ensure the dynamic reporter plugin libraries are not deallocated prematurely
+    reporters.with_lifetime(|reporters| {
+        let result = dispatch(
+            partitioning,
+            event_log,
+            reporters,
+            speciation_probability_per_generation,
+            sample,
+            scenario,
+            algorithm,
+            pause.as_ref().map(|pause| pause.before),
+            &ron_args,
+            &mut normalised_args,
+        )?;
 
-    match &result {
-        SimulationOutcome::Done { time, steps } => info!(
-            "The simulation finished at time {} after {} steps.\n",
-            time.get(),
-            steps
-        ),
-        SimulationOutcome::Paused { time, steps, .. } => info!(
-            "The simulation paused at time {} after {} steps.\n",
-            time.get(),
-            steps
-        ),
-    }
+        match &result {
+            SimulationOutcome::Done { time, steps } => info!(
+                "The simulation finished at time {} after {} steps.\n",
+                time.get(),
+                steps
+            ),
+            SimulationOutcome::Paused { time, steps, .. } => info!(
+                "The simulation paused at time {} after {} steps.\n",
+                time.get(),
+                steps
+            ),
+        }
 
-    if let (Some(pause), SimulationOutcome::Paused { lineages, .. }) = (pause, result) {
-        pause::write_resume_config(normalised_args, pause, lineages)?;
-    }
+        if let (Some(pause), SimulationOutcome::Paused { lineages, .. }) = (pause, result) {
+            pause::write_resume_config(normalised_args, pause, lineages)?;
+        }
 
-    Ok(())
+        Ok(())
+    })
 }
 
 #[derive(Serialize, Builder)]
