@@ -32,7 +32,9 @@ use necsim_impls_no_std::cogs::{
 
 use rust_cuda::common::RustToCuda;
 
-#[rust_cuda::common::kernel(pub use link_kernel! as impl Kernel<KernelArgs> for SimulationKernel)]
+#[rust_cuda::common::kernel(
+    pub use link_kernel! as impl SimulatableKernel<SimulationKernelArgs> for SimulationKernel
+)]
 #[allow(clippy::too_many_arguments)]
 pub fn simulate<
     M: MathsCore,

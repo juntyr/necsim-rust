@@ -24,14 +24,14 @@ use rust_cuda::{
     utils::device_copy::SafeDeviceCopyWrapper,
 };
 
-use rustcoalescence_algorithms_cuda_kernel::Kernel;
+use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
 
-use super::SimulationKernel;
+use crate::SimulationKernel;
 
 // If `Kernel` is implemented for `ReportSpeciation` x `ReportDispersal`, i.e.
-// for {`False`, `True`} x {`False`, `True`} then it is implemented for all
-// `Boolean`s. However, Rust does not recognise that `Boolean` is closed over
-// {`False`, `True`}. These default impls provide the necessary coersion.
+//  for {`False`, `True`} x {`False`, `True`} then it is implemented for all
+//  `Boolean`s. However, Rust does not recognise that `Boolean` is closed over
+//  {`False`, `True`}. These default impls provide the necessary coersion.
 
 extern "C" {
     fn unreachable_cuda_simulation_linking_reporter() -> !;
@@ -54,17 +54,17 @@ unsafe impl<
         A: SingularActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
         ReportSpeciation: Boolean,
         ReportDispersal: Boolean,
-    > Kernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
+    > SimulatableKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
     for SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
 where
     SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, False, False>:
-        Kernel<M, H, G, R, S, X, D, C, T, N, E, I, A, False, False>,
+        SimulatableKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, False, False>,
     SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, False, True>:
-        Kernel<M, H, G, R, S, X, D, C, T, N, E, I, A, False, True>,
+        SimulatableKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, False, True>,
     SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, True, False>:
-        Kernel<M, H, G, R, S, X, D, C, T, N, E, I, A, True, False>,
+        SimulatableKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, True, False>,
     SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, True, True>:
-        Kernel<M, H, G, R, S, X, D, C, T, N, E, I, A, True, True>,
+        SimulatableKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, True, True>,
 {
     default fn get_ptx_str() -> &'static str {
         unsafe { unreachable_cuda_simulation_linking_reporter() }
@@ -72,7 +72,23 @@ where
 
     default fn new_kernel() -> CudaResult<
         TypedKernel<
-            dyn Kernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>,
+            dyn SimulatableKernel<
+                M,
+                H,
+                G,
+                R,
+                S,
+                X,
+                D,
+                C,
+                T,
+                N,
+                E,
+                I,
+                A,
+                ReportSpeciation,
+                ReportDispersal,
+            >,
         >,
     > {
         unsafe { unreachable_cuda_simulation_linking_reporter() }

@@ -1,9 +1,5 @@
 #![deny(clippy::pedantic)]
-#![feature(const_eval_limit)]
-#![const_eval_limit = "1000000000000"]
 #![feature(generic_associated_types)]
-#![allow(incomplete_features)]
-#![feature(specialization)]
 
 #[macro_use]
 extern crate serde_derive_state;
@@ -43,13 +39,15 @@ use rustcoalescence_algorithms::{
 };
 use rustcoalescence_scenarios::Scenario;
 
+use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernel;
+use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
+
 use rust_cuda::common::RustToCuda;
 
 mod arguments;
 mod cuda;
 mod info;
 mod initialiser;
-mod kernel;
 mod launch;
 mod parallelisation;
 
@@ -58,7 +56,6 @@ use crate::{
     initialiser::{
         fixup::FixUpInitialiser, genesis::GenesisInitialiser, resume::ResumeInitialiser,
     },
-    kernel::SimulationKernel,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -141,7 +138,7 @@ where
         >,
         R::ReportSpeciation,
         R::ReportDispersal,
-    >: rustcoalescence_algorithms_cuda_kernel::Kernel<
+    >: SimulatableKernel<
         NvptxMathsCore,
         O::Habitat,
         CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
@@ -274,7 +271,7 @@ where
         >,
         R::ReportSpeciation,
         R::ReportDispersal,
-    >: rustcoalescence_algorithms_cuda_kernel::Kernel<
+    >: SimulatableKernel<
         NvptxMathsCore,
         O::Habitat,
         CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
