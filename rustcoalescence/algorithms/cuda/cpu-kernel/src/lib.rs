@@ -1,3 +1,9 @@
+#![deny(clippy::pedantic)]
+#![feature(const_eval_limit)]
+#![const_eval_limit = "1000000000000"]
+#![allow(incomplete_features)]
+#![feature(specialization)]
+
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
@@ -22,7 +28,7 @@ use rust_cuda::{
     },
 };
 
-use rustcoalescence_algorithms_cuda_kernel::Kernel;
+use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
 
 mod link;
 mod patch;
@@ -46,12 +52,28 @@ pub struct SimulationKernel<
     ReportDispersal: Boolean,
 > {
     kernel: TypedKernel<
-        dyn Kernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>,
+        dyn SimulatableKernel<
+            M,
+            H,
+            G,
+            R,
+            S,
+            X,
+            D,
+            C,
+            T,
+            N,
+            E,
+            I,
+            A,
+            ReportSpeciation,
+            ReportDispersal,
+        >,
     >,
     stream: CudaDropWrapper<Stream>,
     grid: GridSize,
     block: BlockSize,
-    watcher: (),
+    watcher: Box<dyn FnMut(&Function) -> CudaResult<()>>,
 }
 
 impl<
@@ -72,9 +94,33 @@ impl<
         ReportDispersal: Boolean,
     > SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
 {
-    pub fn try_new(stream: Stream, grid: GridSize, block: BlockSize) -> CudaResult<Self>
+    /// # Errors
+    ///
+    /// Returns a `CudaError` if loading the CUDA kernel failed.
+    pub fn try_new(
+        stream: Stream,
+        grid: GridSize,
+        block: BlockSize,
+        on_compile: Box<dyn FnMut(&Function) -> CudaResult<()>>,
+    ) -> CudaResult<Self>
     where
-        Self: Kernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>,
+        Self: SimulatableKernel<
+            M,
+            H,
+            G,
+            R,
+            S,
+            X,
+            D,
+            C,
+            T,
+            N,
+            E,
+            I,
+            A,
+            ReportSpeciation,
+            ReportDispersal,
+        >,
     {
         let stream = CudaDropWrapper::from(stream);
         let kernel = Self::new_kernel()?;
@@ -84,7 +130,7 @@ impl<
             stream,
             grid,
             block,
-            watcher: (),
+            watcher: on_compile,
         })
     }
 }
@@ -108,9 +154,24 @@ impl<
     > Launcher
     for SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
 {
-    type CompilationWatcher = ();
-    type KernelTraitObject =
-        dyn Kernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>;
+    type CompilationWatcher = Box<dyn FnMut(&Function) -> CudaResult<()>>;
+    type KernelTraitObject = dyn SimulatableKernel<
+        M,
+        H,
+        G,
+        R,
+        S,
+        X,
+        D,
+        C,
+        T,
+        N,
+        E,
+        I,
+        A,
+        ReportSpeciation,
+        ReportDispersal,
+    >;
 
     fn get_launch_package(&mut self) -> LaunchPackage<Self> {
         LaunchPackage {
@@ -127,9 +188,7 @@ impl<
         }
     }
 
-    fn on_compile(kernel: &Function, _watcher: &mut Self::CompilationWatcher) -> CudaResult<()> {
-        crate::info::print_kernel_function_attributes(kernel);
-
-        Ok(())
+    fn on_compile(kernel: &Function, watcher: &mut Self::CompilationWatcher) -> CudaResult<()> {
+        (watcher)(kernel)
     }
 }

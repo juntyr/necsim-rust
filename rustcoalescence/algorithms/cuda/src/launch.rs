@@ -27,6 +27,9 @@ use necsim_partitioning_core::LocalPartition;
 use rustcoalescence_algorithms::result::SimulationOutcome;
 use rustcoalescence_scenarios::Scenario;
 
+use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernel;
+use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
+
 use rust_cuda::{
     common::RustToCuda,
     rustacuda::{
@@ -41,7 +44,6 @@ use crate::{
     },
     cuda::with_initialised_cuda,
     initialiser::CudaLineageStoreSampleInitialiser,
-    kernel::SimulationKernel,
     parallelisation, CudaError,
 };
 
@@ -102,7 +104,7 @@ where
         L::ActiveLineageSampler<NeverEmigrationExit, ExpEventTimeSampler>,
         R::ReportSpeciation,
         R::ReportDispersal,
-    >: rustcoalescence_algorithms_cuda_kernel::Kernel<
+    >: SimulatableKernel<
         NvptxMathsCore,
         O::Habitat,
         CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
@@ -213,6 +215,10 @@ where
             Stream::new(StreamFlags::NON_BLOCKING, None)?,
             grid_size.clone(),
             block_size.clone(),
+            Box::new(|kernel| {
+                crate::info::print_kernel_function_attributes(kernel);
+                Ok(())
+            }),
         )?;
 
         parallelisation::monolithic::simulate(
