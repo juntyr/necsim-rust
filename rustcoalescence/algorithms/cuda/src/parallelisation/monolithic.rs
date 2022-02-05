@@ -42,9 +42,8 @@ use necsim_partitioning_core::LocalPartition;
 
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
-use rustcoalescence_algorithms_cuda_kernel::Kernel;
-
-use crate::kernel::SimulationKernel;
+use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernel;
+use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
 
 #[allow(clippy::type_complexity, clippy::too_many_lines)]
 pub fn simulate<
@@ -107,7 +106,7 @@ pub fn simulate<
         A,
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
-    >: rustcoalescence_algorithms_cuda_kernel::Kernel<
+    >: SimulatableKernel<
         M,
         H,
         G,
