@@ -156,16 +156,18 @@
       | Seed(u64)
         /* seeds based on the given base32-string, which goes through a
          *  sponge function to fit the RNG's seed size */
-        /* infallible */
+        /* fails if the base32-string is actually an RNG state
+         *  (safeguards confusing State and Sponge, unlikely by accident) */
       | Sponge(Base32)
         /* tries to set the RNG's state from the given base32-string */
         /* fails if the the base32-string is not a valid RNG state
-         *  (use only for resuming a paused + unchanged simulation) */
+         *  (use only for resuming a paused + unchanged simulation)
+         *  (must come from the same RNG that the simulation was paused with) */
       | State(Base32)
         /* combination of the State and Sponge initialisation methods
          *  (a) try the State initialisation
          *  (b) on failure, use the Sponge initialisation */
-        /* infallible */
+        /* fails if the base32-string could not have come from a paused RNG */
       | StateElseSponge(Base32)
     ),
 
