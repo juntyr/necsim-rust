@@ -118,7 +118,7 @@ impl core::hash::Hash for LineageInteraction {
 }
 
 #[allow(clippy::unsafe_derive_deserialize)]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TypeLayout)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, TypeLayout)]
 #[serde(deny_unknown_fields)]
 #[repr(C)]
 pub struct Lineage {
