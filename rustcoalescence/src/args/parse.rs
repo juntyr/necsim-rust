@@ -60,7 +60,7 @@ pub fn try_parse<'de, D: Deserialize<'de>>(subcommand: &str, ron_args: &'de str)
         Ok(args) => Ok(args),
         Err(err) => {
             let path = track.path();
-            let err = de_ron.error(err);
+            let err = de_ron.span_error(err);
 
             Err(anyhow::anyhow!(
                 "{}{}{}{} @ ({}):\n{}",
@@ -96,6 +96,7 @@ pub fn try_parse_state<'de, D: DeserializeState<'de, Seed>, Seed: ?Sized>(
         Ok(args) => Ok(args),
         Err(err) => {
             let path = track.path();
+            let err = de_ron.span_error(err);
 
             Err(anyhow::anyhow!(
                 "{}{}{}{}: {}",
