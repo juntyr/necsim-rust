@@ -112,11 +112,6 @@ pub fn try_parse_state<'de, D: DeserializeState<'de, Seed>, Seed: ?Sized>(
 
 pub fn try_print<S: Serialize>(value: &S) -> Result<String> {
     ron_options()
-        .to_string_pretty(
-            value,
-            PrettyConfig::default()
-                .decimal_floats(true)
-                .struct_names(true),
-        )
+        .to_string_pretty(value, PrettyConfig::default().struct_names(true))
         .map_err(anyhow::Error::new)
 }
