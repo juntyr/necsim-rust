@@ -4,7 +4,7 @@
 [workflow]: https://github.com/MomoLangenstein/necsim-rust/actions/workflows/ci.yml?query=branch%3Amain
 
 [Rust Doc]: https://img.shields.io/badge/docs-main-blue
-[docs]: https://momolangenstein.github.io/necsim-rust/
+[docs]: https://momolangenstein.github.io/necsim-rust-docs/
 
 [License Status]: https://app.fossa.com/api/projects/git%2Bgithub.com%2FMomoLangenstein%2Fnecsim-rust.svg?type=shield
 [fossa]: https://app.fossa.com/projects/git%2Bgithub.com%2FMomoLangenstein%2Fnecsim-rust?ref=badge_shield
