@@ -98,7 +98,7 @@ impl<R: Reporter> LocalPartition<R> for LiveMonolithicLocalPartition<R> {
 }
 
 impl<R: Reporter> LiveMonolithicLocalPartition<R> {
-    pub fn from_reporter(reporter: FilteredReporter<R, True, True, True>) -> Self {
+    pub(crate) fn from_reporter(reporter: FilteredReporter<R, True, True, True>) -> Self {
         Self {
             reporter,
             loopback: Vec::new(),
@@ -108,7 +108,9 @@ impl<R: Reporter> LiveMonolithicLocalPartition<R> {
     /// # Errors
     ///
     /// Returns any error which occured while building the context's reporter
-    pub fn try_from_context<P: ReporterContext<Reporter = R>>(context: P) -> anyhow::Result<Self> {
+    pub(crate) fn try_from_context<P: ReporterContext<Reporter = R>>(
+        context: P,
+    ) -> anyhow::Result<Self> {
         Ok(Self::from_reporter(context.try_build()?))
     }
 }

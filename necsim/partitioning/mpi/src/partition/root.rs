@@ -86,7 +86,7 @@ impl<R: Reporter> MpiRootPartition<R> {
     const MPI_PROGRESS_WAIT_TIME: Duration = Duration::from_millis(100_u64);
 
     #[must_use]
-    pub fn new(
+    pub(crate) fn new(
         universe: Universe,
         world: SystemCommunicator,
         reporter: FilteredReporter<R, False, False, True>,

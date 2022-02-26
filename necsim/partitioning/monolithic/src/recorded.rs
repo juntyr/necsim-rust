@@ -111,7 +111,7 @@ impl<R: Reporter> RecordedMonolithicLocalPartition<R> {
     /// # Errors
     ///
     /// Returns any error which occured while building the context's reporter
-    pub fn try_from_context_and_recorder<P: ReporterContext<Reporter = R>>(
+    pub(crate) fn try_from_context_and_recorder<P: ReporterContext<Reporter = R>>(
         context: P,
         mut recorder: EventLogRecorder,
     ) -> anyhow::Result<Self> {
