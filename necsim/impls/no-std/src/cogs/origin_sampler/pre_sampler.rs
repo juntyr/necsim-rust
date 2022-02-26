@@ -1,5 +1,6 @@
 use core::{
     fmt,
+    iter::Empty,
     marker::PhantomData,
     ops::{Deref, DerefMut, RangeFrom},
 };
@@ -51,6 +52,17 @@ impl<M: MathsCore> OriginPreSampler<M, RangeFrom<u64>> {
         Self {
             inner: 0..,
             proportion: ClosedUnitF64::one(),
+            _marker: PhantomData::<M>,
+        }
+    }
+}
+
+impl<M: MathsCore> OriginPreSampler<M, Empty<u64>> {
+    #[must_use]
+    pub fn none() -> Self {
+        Self {
+            inner: Empty::default(),
+            proportion: ClosedUnitF64::zero(),
             _marker: PhantomData::<M>,
         }
     }
