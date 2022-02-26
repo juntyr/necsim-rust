@@ -13,11 +13,7 @@ use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 use necsim_core_maths::IntrinsicsMathsCore;
 use necsim_impls_std::cogs::rng::pcg::Pcg;
 
-use necsim_core::{
-    cogs::{LineageStore, SeedableRng},
-    reporter::Reporter,
-    simulation::SimulationBuilder,
-};
+use necsim_core::{cogs::SeedableRng, reporter::Reporter, simulation::SimulationBuilder};
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::classical::ClassicalActiveLineageSampler,
     coalescence_sampler::unconditional::UnconditionalCoalescenceSampler,
@@ -58,7 +54,7 @@ struct Options {
     #[structopt(long)]
     seed: u64,
     #[structopt(long)]
-    radius: u32,
+    radius: u16,
     #[structopt(long, parse(try_from_str = try_from_str))]
     sigma: NonNegativeF64,
     #[structopt(long, parse(try_from_str = try_from_str))]
@@ -111,17 +107,18 @@ fn simulate<R: Reporter>(options: &Options, mut reporter: R) {
     let turnover_rate = UniformTurnoverRate::default();
     let speciation_probability = UniformSpeciationProbability::new(options.speciation);
     let rng = Pcg::<IntrinsicsMathsCore>::seed_from_u64(options.seed);
-    let lineage_store =
-        AlmostInfiniteLineageStore::from_origin_sampler(AlmostInfiniteOriginSampler::new(
+
+    let (lineage_store, active_lineage_sampler): (AlmostInfiniteLineageStore<_>, _) =
+        ClassicalActiveLineageSampler::init_with_store(AlmostInfiniteOriginSampler::new(
             OriginPreSampler::all().percentage(options.sample),
             &habitat,
             options.radius,
         ));
+
     let coalescence_sampler = UnconditionalCoalescenceSampler::default();
     let emigration_exit = NeverEmigrationExit::default();
     let event_sampler = UnconditionalEventSampler::default();
     let immigration_entry = NeverImmigrationEntry::default();
-    let active_lineage_sampler = ClassicalActiveLineageSampler::new(&lineage_store);
 
     let simulation = SimulationBuilder {
         maths: PhantomData::<IntrinsicsMathsCore>,

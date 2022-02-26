@@ -7,7 +7,7 @@ use necsim_core::{
     cogs::SeedableRng,
     landscape::{IndexedLocation, Location},
 };
-use necsim_core_bond::PositiveF64;
+use necsim_core_bond::{OffByOneU32, PositiveF64};
 
 use necsim_impls_cuda::cogs::maths::NvptxMathsCore;
 use necsim_impls_no_std::cogs::{
@@ -34,7 +34,9 @@ pub fn inter_event_times<
     total_cycles_sum: &AtomicU64,
     total_time_sum: &AtomicU64,
 ) {
-    let habitat = NonSpatialHabitat::new((1, 1), unsafe { NonZeroU32::new_unchecked(1) });
+    let habitat = NonSpatialHabitat::new((OffByOneU32::one(), OffByOneU32::one()), unsafe {
+        NonZeroU32::new_unchecked(1)
+    });
     let rng = WyHash::seed_from_u64(seed + (rust_cuda::device::utils::index() as u64));
     let turnover_rate = UniformTurnoverRate::new(lambda);
     let indexed_location = IndexedLocation::new(Location::new(0, 0), 0);

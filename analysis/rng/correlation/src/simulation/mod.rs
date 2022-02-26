@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, marker::PhantomData};
+use std::{collections::VecDeque, marker::PhantomData, ops::ControlFlow};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -24,6 +24,7 @@ use necsim_impls_no_std::cogs::{
     habitat::almost_infinite::AlmostInfiniteHabitat,
     immigration_entry::never::NeverImmigrationEntry,
     lineage_store::independent::IndependentLineageStore,
+    origin_sampler::{almost_infinite::AlmostInfiniteOriginSampler, pre_sampler::OriginPreSampler},
     speciation_probability::uniform::UniformSpeciationProbability,
     turnover_rate::uniform::UniformTurnoverRate,
 };
@@ -76,11 +77,19 @@ impl<M: MathsCore, G: RngCore<M, Seed: Clone> + PrimeableRng<M>, const SIGMA: f6
     type Seed = G::Seed;
 
     fn from_seed(seed: Self::Seed) -> Self {
+        let habitat = AlmostInfiniteHabitat::default();
+
+        let (lineage_store, active_lineage_sampler, _) =
+            IndependentActiveLineageSampler::init_with_store_and_lineages(
+                AlmostInfiniteOriginSampler::new(OriginPreSampler::none(), &habitat, 0),
+                PoissonEventTimeSampler::new(PositiveF64::new(1.0_f64).unwrap()),
+            );
+
         let mut simulation = SimulationBuilder {
             maths: PhantomData::<M>,
-            habitat: AlmostInfiniteHabitat::default(),
+            habitat,
             lineage_reference: PhantomData::<GlobalLineageReference>,
-            lineage_store: IndependentLineageStore::default(),
+            lineage_store,
             dispersal_sampler: AlmostInfiniteNormalDispersalSampler::new(
                 NonNegativeF64::new(SIGMA).unwrap(),
             ),
@@ -89,9 +98,7 @@ impl<M: MathsCore, G: RngCore<M, Seed: Clone> + PrimeableRng<M>, const SIGMA: f6
             speciation_probability: UniformSpeciationProbability::new(ClosedUnitF64::zero()),
             emigration_exit: NeverEmigrationExit::default(),
             event_sampler: IndependentEventSampler::default(),
-            active_lineage_sampler: IndependentActiveLineageSampler::empty(
-                PoissonEventTimeSampler::new(PositiveF64::new(1.0_f64).unwrap()),
-            ),
+            active_lineage_sampler,
             rng: InterceptingReporter::<M, G>::from_seed(seed.clone()),
             immigration_entry: NeverImmigrationEntry::default(),
         }
@@ -143,8 +150,16 @@ impl<M: MathsCore, G: RngCore<M, Seed: Clone> + PrimeableRng<M>, const SIGMA: f6
                 break sample;
             }
 
-            self.simulation
-                .simulate_incremental_early_stop(|_, steps, _| steps >= 256, &mut NullReporter);
+            self.simulation.simulate_incremental_early_stop(
+                |_, steps, _| {
+                    if steps >= 256 {
+                        ControlFlow::BREAK
+                    } else {
+                        ControlFlow::CONTINUE
+                    }
+                },
+                &mut NullReporter,
+            );
         };
 
         let (mut next_rng, next_lineage) = self.other_rngs_lineages.pop_front().unwrap();

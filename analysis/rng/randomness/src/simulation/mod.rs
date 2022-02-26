@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, num::NonZeroU32};
+use std::{marker::PhantomData, num::NonZeroU32, ops::ControlFlow};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -9,7 +9,7 @@ use necsim_core::{
     reporter::NullReporter,
     simulation::{Simulation, SimulationBuilder},
 };
-use necsim_core_bond::{ClosedUnitF64, PositiveF64};
+use necsim_core_bond::{ClosedUnitF64, OffByOneU32, PositiveF64};
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::{
         independent::{
@@ -24,6 +24,7 @@ use necsim_impls_no_std::cogs::{
     habitat::non_spatial::NonSpatialHabitat,
     immigration_entry::never::NeverImmigrationEntry,
     lineage_store::independent::IndependentLineageStore,
+    origin_sampler::{non_spatial::NonSpatialOriginSampler, pre_sampler::OriginPreSampler},
     speciation_probability::uniform::UniformSpeciationProbability,
     turnover_rate::uniform::UniformTurnoverRate,
 };
@@ -74,20 +75,28 @@ impl<M: MathsCore, G: RngCore<M> + PrimeableRng<M>, const SIZE: u32> RngCore<M>
     type Seed = G::Seed;
 
     fn from_seed(seed: Self::Seed) -> Self {
+        let size = OffByOneU32::new(u64::from(SIZE)).unwrap();
+
+        let habitat = NonSpatialHabitat::new((size, size), NonZeroU32::new(SIZE).unwrap());
+
+        let (lineage_store, active_lineage_sampler, _) =
+            IndependentActiveLineageSampler::init_with_store_and_lineages(
+                NonSpatialOriginSampler::new(OriginPreSampler::none(), &habitat),
+                PoissonEventTimeSampler::new(PositiveF64::new(1.0_f64).unwrap()),
+            );
+
         let mut simulation = SimulationBuilder {
             maths: PhantomData::<M>,
-            habitat: NonSpatialHabitat::new((SIZE, SIZE), NonZeroU32::new(SIZE).unwrap()),
+            habitat,
             lineage_reference: PhantomData::<GlobalLineageReference>,
-            lineage_store: IndependentLineageStore::default(),
+            lineage_store,
             dispersal_sampler: NonSpatialDispersalSampler::default(),
             coalescence_sampler: IndependentCoalescenceSampler::default(),
             turnover_rate: UniformTurnoverRate::default(),
             speciation_probability: UniformSpeciationProbability::new(ClosedUnitF64::zero()),
             emigration_exit: NeverEmigrationExit::default(),
             event_sampler: IndependentEventSampler::default(),
-            active_lineage_sampler: IndependentActiveLineageSampler::empty(
-                PoissonEventTimeSampler::new(PositiveF64::new(1.0_f64).unwrap()),
-            ),
+            active_lineage_sampler,
             rng: InterceptingReporter::<M, G>::from_seed(seed),
             immigration_entry: NeverImmigrationEntry::default(),
         }
@@ -111,8 +120,16 @@ impl<M: MathsCore, G: RngCore<M> + PrimeableRng<M>, const SIZE: u32> RngCore<M>
                 return sample;
             }
 
-            self.simulation
-                .simulate_incremental_early_stop(|_, steps, _| steps >= 256, &mut NullReporter);
+            self.simulation.simulate_incremental_early_stop(
+                |_, steps, _| {
+                    if steps >= 256 {
+                        ControlFlow::BREAK
+                    } else {
+                        ControlFlow::CONTINUE
+                    }
+                },
+                &mut NullReporter,
+            );
         }
     }
 }

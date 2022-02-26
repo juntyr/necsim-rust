@@ -1,4 +1,5 @@
 #![deny(clippy::pedantic)]
+#![feature(control_flow_enum)]
 
 #[macro_use]
 extern crate contracts;

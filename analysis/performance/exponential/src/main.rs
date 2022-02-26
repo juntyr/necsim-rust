@@ -17,7 +17,7 @@ use necsim_core::{
     cogs::{Habitat, MathsCore, PrimeableRng, SeedableRng, TurnoverRate},
     landscape::{IndexedLocation, Location},
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::{NonNegativeF64, OffByOneU32, PositiveF64};
 use necsim_core_maths::IntrinsicsMathsCore;
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::independent::event_time_sampler::{
@@ -89,7 +89,10 @@ fn main() {
 }
 
 fn main_cpu(options: &Options) {
-    let habitat = NonSpatialHabitat::new((1, 1), NonZeroU32::new(1).unwrap());
+    let habitat = NonSpatialHabitat::new(
+        (OffByOneU32::one(), OffByOneU32::one()),
+        NonZeroU32::new(1).unwrap(),
+    );
     let rng = WyHash::<IntrinsicsMathsCore>::seed_from_u64(options.seed);
     let turnover_rate = UniformTurnoverRate::new(options.lambda);
     let indexed_location = IndexedLocation::new(Location::new(0, 0), 0);

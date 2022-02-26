@@ -1,5 +1,6 @@
 #![deny(clippy::pedantic)]
 #![feature(associated_type_bounds)]
+#![feature(control_flow_enum)]
 #![allow(incomplete_features)]
 #![feature(adt_const_params)]
 
