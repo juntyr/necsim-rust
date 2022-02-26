@@ -9,15 +9,8 @@ use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
 use crate::{export::ReporterPluginDeclaration, import::ReporterPlugin};
 
 pub struct ReporterPluginLibrary {
-    library: Rc<PluginLibrary>,
+    _library: Rc<PluginLibrary>,
     reporters: Vec<ReporterPlugin>,
-}
-
-impl ReporterPluginLibrary {
-    #[must_use]
-    pub fn library(&self) -> &Library {
-        &self.library.library
-    }
 }
 
 impl IntoIterator for ReporterPluginLibrary {
@@ -44,7 +37,7 @@ impl<'de> Deserialize<'de> for ReporterPluginLibrary {
 #[serde(try_from = "PathBuf")]
 pub(crate) struct PluginLibrary {
     pub(crate) path: PathBuf,
-    pub(crate) library: Library,
+    pub(crate) _library: Library,
     pub(crate) declaration: ReporterPluginDeclaration,
 }
 
@@ -96,7 +89,7 @@ impl TryFrom<PathBuf> for PluginLibrary {
 
         Ok(Self {
             path,
-            library,
+            _library: library,
             declaration,
         })
     }
@@ -206,7 +199,10 @@ impl<'de> Visitor<'de> for ReporterPluginLibraryVisitor {
             .next_element_seed(RcPluginLibrary(library.clone()))?
             .ok_or_else(|| de::Error::invalid_length(1, &self))?;
 
-        Ok(ReporterPluginLibrary { library, reporters })
+        Ok(ReporterPluginLibrary {
+            _library: library,
+            reporters,
+        })
     }
 
     fn visit_map<V>(self, mut map: V) -> Result<ReporterPluginLibrary, V::Error>
@@ -227,6 +223,9 @@ impl<'de> Visitor<'de> for ReporterPluginLibraryVisitor {
                 return Err(de::Error::missing_field("reporters"));
             };
 
-        Ok(ReporterPluginLibrary { library, reporters })
+        Ok(ReporterPluginLibrary {
+            _library: library,
+            reporters,
+        })
     }
 }
