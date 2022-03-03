@@ -5,6 +5,7 @@
 extern crate serde_derive_state;
 
 use necsim_core::{
+    cogs::MathsCore,
     lineage::{GlobalLineageReference, Lineage},
     reporter::Reporter,
 };
@@ -35,7 +36,7 @@ use necsim_partitioning_core::LocalPartition;
 use rustcoalescence_algorithms::{
     result::{ResumeError, SimulationOutcome},
     strategy::RestartFixUpStrategy,
-    Algorithm, AlgorithmParamters,
+    Algorithm, AlgorithmDefaults, AlgorithmParamters,
 };
 use rustcoalescence_scenarios::Scenario;
 
@@ -70,67 +71,51 @@ impl AlgorithmParamters for CudaAlgorithm {
     type Error = CudaError;
 }
 
+impl AlgorithmDefaults for CudaAlgorithm {
+    type MathsCore = NvptxMathsCore;
+}
+
 #[allow(clippy::type_complexity)]
-impl<
-        O: Scenario<NvptxMathsCore, CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>>,
-        R: Reporter,
-        P: LocalPartition<R>,
-    > Algorithm<O, R, P> for CudaAlgorithm
+impl<M: MathsCore, O: Scenario<M, CudaRng<M, WyHash<M>>>, R: Reporter, P: LocalPartition<R>>
+    Algorithm<M, O, R, P> for CudaAlgorithm
 where
     O::Habitat: RustToCuda,
-    O::DispersalSampler<
-        InMemoryPackedAliasDispersalSampler<
-            NvptxMathsCore,
-            O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-        >,
-    >: RustToCuda,
+    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>>:
+        RustToCuda,
     O::TurnoverRate: RustToCuda,
     O::SpeciationProbability: RustToCuda,
     SimulationKernel<
-        NvptxMathsCore,
+        M,
         O::Habitat,
-        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+        CudaRng<M, WyHash<M>>,
         GlobalLineageReference,
-        IndependentLineageStore<NvptxMathsCore, O::Habitat>,
+        IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         O::DispersalSampler<
-            InMemoryPackedAliasDispersalSampler<
-                NvptxMathsCore,
-                O::Habitat,
-                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-            >,
+            InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
         >,
-        IndependentCoalescenceSampler<NvptxMathsCore, O::Habitat>,
+        IndependentCoalescenceSampler<M, O::Habitat>,
         O::TurnoverRate,
         O::SpeciationProbability,
         IndependentEventSampler<
-            NvptxMathsCore,
+            M,
             O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            CudaRng<M, WyHash<M>>,
             NeverEmigrationExit,
             O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<
-                    NvptxMathsCore,
-                    O::Habitat,
-                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                >,
+                InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
             >,
             O::TurnoverRate,
             O::SpeciationProbability,
         >,
         NeverImmigrationEntry,
         IndependentActiveLineageSampler<
-            NvptxMathsCore,
+            M,
             O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            CudaRng<M, WyHash<M>>,
             NeverEmigrationExit,
             O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<
-                    NvptxMathsCore,
-                    O::Habitat,
-                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                >,
+                InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
             >,
             O::TurnoverRate,
             O::SpeciationProbability,
@@ -139,49 +124,37 @@ where
         R::ReportSpeciation,
         R::ReportDispersal,
     >: SimulatableKernel<
-        NvptxMathsCore,
+        M,
         O::Habitat,
-        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+        CudaRng<M, WyHash<M>>,
         GlobalLineageReference,
-        IndependentLineageStore<NvptxMathsCore, O::Habitat>,
+        IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         O::DispersalSampler<
-            InMemoryPackedAliasDispersalSampler<
-                NvptxMathsCore,
-                O::Habitat,
-                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-            >,
+            InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
         >,
-        IndependentCoalescenceSampler<NvptxMathsCore, O::Habitat>,
+        IndependentCoalescenceSampler<M, O::Habitat>,
         O::TurnoverRate,
         O::SpeciationProbability,
         IndependentEventSampler<
-            NvptxMathsCore,
+            M,
             O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            CudaRng<M, WyHash<M>>,
             NeverEmigrationExit,
             O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<
-                    NvptxMathsCore,
-                    O::Habitat,
-                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                >,
+                InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
             >,
             O::TurnoverRate,
             O::SpeciationProbability,
         >,
         NeverImmigrationEntry,
         IndependentActiveLineageSampler<
-            NvptxMathsCore,
+            M,
             O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            CudaRng<M, WyHash<M>>,
             NeverEmigrationExit,
             O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<
-                    NvptxMathsCore,
-                    O::Habitat,
-                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                >,
+                InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
             >,
             O::TurnoverRate,
             O::SpeciationProbability,
@@ -191,79 +164,55 @@ where
         R::ReportDispersal,
     >,
     SimulationKernel<
-        NvptxMathsCore,
+        M,
         O::Habitat,
-        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+        CudaRng<M, WyHash<M>>,
         GlobalLineageReference,
-        IndependentLineageStore<NvptxMathsCore, O::Habitat>,
+        IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         TrespassingDispersalSampler<
-            NvptxMathsCore,
+            M,
             O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            CudaRng<M, WyHash<M>>,
             O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<
-                    NvptxMathsCore,
-                    O::Habitat,
-                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                >,
+                InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
             >,
-            UniformAntiTrespassingDispersalSampler<
-                NvptxMathsCore,
-                O::Habitat,
-                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-            >,
+            UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
         >,
-        IndependentCoalescenceSampler<NvptxMathsCore, O::Habitat>,
+        IndependentCoalescenceSampler<M, O::Habitat>,
         O::TurnoverRate,
         O::SpeciationProbability,
         IndependentEventSampler<
-            NvptxMathsCore,
+            M,
             O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            CudaRng<M, WyHash<M>>,
             NeverEmigrationExit,
             TrespassingDispersalSampler<
-                NvptxMathsCore,
+                M,
                 O::Habitat,
-                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                CudaRng<M, WyHash<M>>,
                 O::DispersalSampler<
-                    InMemoryPackedAliasDispersalSampler<
-                        NvptxMathsCore,
-                        O::Habitat,
-                        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                    >,
+                    InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
                 >,
-                UniformAntiTrespassingDispersalSampler<
-                    NvptxMathsCore,
-                    O::Habitat,
-                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                >,
+                UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
             >,
             O::TurnoverRate,
             O::SpeciationProbability,
         >,
         NeverImmigrationEntry,
         IndependentActiveLineageSampler<
-            NvptxMathsCore,
+            M,
             O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            CudaRng<M, WyHash<M>>,
             NeverEmigrationExit,
             TrespassingDispersalSampler<
-                NvptxMathsCore,
+                M,
                 O::Habitat,
-                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                CudaRng<M, WyHash<M>>,
                 O::DispersalSampler<
-                    InMemoryPackedAliasDispersalSampler<
-                        NvptxMathsCore,
-                        O::Habitat,
-                        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                    >,
+                    InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
                 >,
-                UniformAntiTrespassingDispersalSampler<
-                    NvptxMathsCore,
-                    O::Habitat,
-                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                >,
+                UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
             >,
             O::TurnoverRate,
             O::SpeciationProbability,
@@ -272,79 +221,55 @@ where
         R::ReportSpeciation,
         R::ReportDispersal,
     >: SimulatableKernel<
-        NvptxMathsCore,
+        M,
         O::Habitat,
-        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+        CudaRng<M, WyHash<M>>,
         GlobalLineageReference,
-        IndependentLineageStore<NvptxMathsCore, O::Habitat>,
+        IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         TrespassingDispersalSampler<
-            NvptxMathsCore,
+            M,
             O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            CudaRng<M, WyHash<M>>,
             O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<
-                    NvptxMathsCore,
-                    O::Habitat,
-                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                >,
+                InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
             >,
-            UniformAntiTrespassingDispersalSampler<
-                NvptxMathsCore,
-                O::Habitat,
-                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-            >,
+            UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
         >,
-        IndependentCoalescenceSampler<NvptxMathsCore, O::Habitat>,
+        IndependentCoalescenceSampler<M, O::Habitat>,
         O::TurnoverRate,
         O::SpeciationProbability,
         IndependentEventSampler<
-            NvptxMathsCore,
+            M,
             O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            CudaRng<M, WyHash<M>>,
             NeverEmigrationExit,
             TrespassingDispersalSampler<
-                NvptxMathsCore,
+                M,
                 O::Habitat,
-                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                CudaRng<M, WyHash<M>>,
                 O::DispersalSampler<
-                    InMemoryPackedAliasDispersalSampler<
-                        NvptxMathsCore,
-                        O::Habitat,
-                        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                    >,
+                    InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
                 >,
-                UniformAntiTrespassingDispersalSampler<
-                    NvptxMathsCore,
-                    O::Habitat,
-                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                >,
+                UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
             >,
             O::TurnoverRate,
             O::SpeciationProbability,
         >,
         NeverImmigrationEntry,
         IndependentActiveLineageSampler<
-            NvptxMathsCore,
+            M,
             O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            CudaRng<M, WyHash<M>>,
             NeverEmigrationExit,
             TrespassingDispersalSampler<
-                NvptxMathsCore,
+                M,
                 O::Habitat,
-                CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+                CudaRng<M, WyHash<M>>,
                 O::DispersalSampler<
-                    InMemoryPackedAliasDispersalSampler<
-                        NvptxMathsCore,
-                        O::Habitat,
-                        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                    >,
+                    InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
                 >,
-                UniformAntiTrespassingDispersalSampler<
-                    NvptxMathsCore,
-                    O::Habitat,
-                    CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-                >,
+                UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
             >,
             O::TurnoverRate,
             O::SpeciationProbability,
@@ -355,18 +280,17 @@ where
     >,
 {
     type LineageReference = GlobalLineageReference;
-    type LineageStore = IndependentLineageStore<Self::MathsCore, O::Habitat>;
-    type MathsCore = NvptxMathsCore;
-    type Rng = CudaRng<Self::MathsCore, WyHash<Self::MathsCore>>;
+    type LineageStore = IndependentLineageStore<M, O::Habitat>;
+    type Rng = CudaRng<M, WyHash<M>>;
 
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pre_sampler: OriginPreSampler<M, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, Self::Error> {
+    ) -> Result<SimulationOutcome<M, Self::Rng>, Self::Error> {
         launch::initialise_and_simulate(
             &args,
             rng,
@@ -387,12 +311,12 @@ where
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         resume_after: Option<NonNegativeF64>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, ResumeError<Self::Error>> {
+    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
         launch::initialise_and_simulate(
             &args,
             rng,
@@ -416,12 +340,12 @@ where
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         restart_at: PositiveF64,
         fixup_strategy: RestartFixUpStrategy,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, ResumeError<Self::Error>> {
+    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
         launch::initialise_and_simulate(
             &args,
             rng,

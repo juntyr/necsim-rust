@@ -1,11 +1,12 @@
 use std::marker::PhantomData;
 
 use necsim_core::{
-    lineage::GlobalLineageReference, reporter::Reporter, simulation::SimulationBuilder,
+    cogs::MathsCore, lineage::GlobalLineageReference, reporter::Reporter,
+    simulation::SimulationBuilder,
 };
 use necsim_core_bond::NonNegativeF64;
 
-use necsim_impls_cuda::cogs::{maths::NvptxMathsCore, rng::CudaRng};
+use necsim_impls_cuda::cogs::rng::CudaRng;
 use necsim_impls_no_std::{
     cogs::{
         active_lineage_sampler::independent::event_time_sampler::exp::ExpEventTimeSampler,
@@ -49,52 +50,43 @@ use crate::{
 
 #[allow(clippy::too_many_lines)]
 pub fn initialise_and_simulate<
-    O: Scenario<NvptxMathsCore, CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>>,
+    M: MathsCore,
+    O: Scenario<M, CudaRng<M, WyHash<M>>>,
     R: Reporter,
     P: LocalPartition<R>,
     I: Iterator<Item = u64>,
-    L: CudaLineageStoreSampleInitialiser<
-        NvptxMathsCore,
-        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-        O,
-        Error,
-    >,
+    L: CudaLineageStoreSampleInitialiser<M, CudaRng<M, WyHash<M>>, O, Error>,
     Error: From<CudaError>,
 >(
     args: &CudaArguments,
-    rng: CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+    rng: CudaRng<M, WyHash<M>>,
     scenario: O,
-    pre_sampler: OriginPreSampler<NvptxMathsCore, I>,
+    pre_sampler: OriginPreSampler<M, I>,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
     lineage_store_sampler_initialiser: L,
-) -> Result<SimulationOutcome<NvptxMathsCore, CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>>, Error>
+) -> Result<SimulationOutcome<M, CudaRng<M, WyHash<M>>>, Error>
 where
     O::Habitat: RustToCuda,
-    O::DispersalSampler<
-        InMemoryPackedAliasDispersalSampler<
-            NvptxMathsCore,
-            O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-        >,
-    >: RustToCuda,
+    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>>:
+        RustToCuda,
     O::TurnoverRate: RustToCuda,
     O::SpeciationProbability: RustToCuda,
     SimulationKernel<
-        NvptxMathsCore,
+        M,
         O::Habitat,
-        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+        CudaRng<M, WyHash<M>>,
         GlobalLineageReference,
-        IndependentLineageStore<NvptxMathsCore, O::Habitat>,
+        IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         L::DispersalSampler,
-        IndependentCoalescenceSampler<NvptxMathsCore, O::Habitat>,
+        IndependentCoalescenceSampler<M, O::Habitat>,
         O::TurnoverRate,
         O::SpeciationProbability,
         IndependentEventSampler<
-            NvptxMathsCore,
+            M,
             O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            CudaRng<M, WyHash<M>>,
             NeverEmigrationExit,
             L::DispersalSampler,
             O::TurnoverRate,
@@ -105,20 +97,20 @@ where
         R::ReportSpeciation,
         R::ReportDispersal,
     >: SimulatableKernel<
-        NvptxMathsCore,
+        M,
         O::Habitat,
-        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+        CudaRng<M, WyHash<M>>,
         GlobalLineageReference,
-        IndependentLineageStore<NvptxMathsCore, O::Habitat>,
+        IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         L::DispersalSampler,
-        IndependentCoalescenceSampler<NvptxMathsCore, O::Habitat>,
+        IndependentCoalescenceSampler<M, O::Habitat>,
         O::TurnoverRate,
         O::SpeciationProbability,
         IndependentEventSampler<
-            NvptxMathsCore,
+            M,
             O::Habitat,
-            CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
+            CudaRng<M, WyHash<M>>,
             NeverEmigrationExit,
             L::DispersalSampler,
             O::TurnoverRate,
@@ -137,11 +129,8 @@ where
         speciation_probability,
         origin_sampler_auxiliary,
         decomposition_auxiliary,
-    ) = scenario.build::<InMemoryPackedAliasDispersalSampler<
-        NvptxMathsCore,
-        O::Habitat,
-        CudaRng<NvptxMathsCore, WyHash<NvptxMathsCore>>,
-    >>();
+    ) = scenario
+        .build::<InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>>();
     let coalescence_sampler = IndependentCoalescenceSampler::default();
     let event_sampler = IndependentEventSampler::default();
 
@@ -182,7 +171,7 @@ where
     let immigration_entry = NeverImmigrationEntry::default();
 
     let mut simulation = SimulationBuilder {
-        maths: PhantomData::<NvptxMathsCore>,
+        maths: PhantomData::<M>,
         habitat,
         lineage_reference: PhantomData::<GlobalLineageReference>,
         lineage_store,

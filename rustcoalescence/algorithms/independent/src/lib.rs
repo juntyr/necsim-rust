@@ -6,6 +6,7 @@
 extern crate serde_derive_state;
 
 use necsim_core::{
+    cogs::MathsCore,
     lineage::{GlobalLineageReference, Lineage},
     reporter::Reporter,
 };
@@ -20,7 +21,7 @@ use necsim_partitioning_core::LocalPartition;
 use rustcoalescence_algorithms::{
     result::{ResumeError, SimulationOutcome},
     strategy::RestartFixUpStrategy,
-    Algorithm, AlgorithmParamters,
+    Algorithm, AlgorithmDefaults, AlgorithmParamters,
 };
 use rustcoalescence_scenarios::Scenario;
 
@@ -41,26 +42,26 @@ impl AlgorithmParamters for IndependentAlgorithm {
     type Error = !;
 }
 
+impl AlgorithmDefaults for IndependentAlgorithm {
+    type MathsCore = IntrinsicsMathsCore;
+}
+
 #[allow(clippy::type_complexity)]
-impl<
-        O: Scenario<IntrinsicsMathsCore, WyHash<IntrinsicsMathsCore>>,
-        R: Reporter,
-        P: LocalPartition<R>,
-    > Algorithm<O, R, P> for IndependentAlgorithm
+impl<O: Scenario<M, WyHash<M>>, R: Reporter, P: LocalPartition<R>, M: MathsCore>
+    Algorithm<M, O, R, P> for IndependentAlgorithm
 {
     type LineageReference = GlobalLineageReference;
-    type LineageStore = IndependentLineageStore<IntrinsicsMathsCore, O::Habitat>;
-    type MathsCore = IntrinsicsMathsCore;
-    type Rng = WyHash<IntrinsicsMathsCore>;
+    type LineageStore = IndependentLineageStore<M, O::Habitat>;
+    type Rng = WyHash<M>;
 
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pre_sampler: OriginPreSampler<M, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, Self::Error> {
+    ) -> Result<SimulationOutcome<M, Self::Rng>, Self::Error> {
         launch::initialise_and_simulate(
             &args,
             rng,
@@ -80,12 +81,12 @@ impl<
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         resume_after: Option<NonNegativeF64>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, ResumeError<Self::Error>> {
+    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
         launch::initialise_and_simulate(
             &args,
             rng,
@@ -109,12 +110,12 @@ impl<
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         restart_at: PositiveF64,
         fixup_strategy: RestartFixUpStrategy,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, ResumeError<Self::Error>> {
+    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
         launch::initialise_and_simulate(
             &args,
             rng,

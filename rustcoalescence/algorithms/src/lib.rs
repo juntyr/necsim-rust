@@ -26,13 +26,16 @@ pub trait AlgorithmParamters {
     type Error: StdError + Send + Sync + 'static;
 }
 
-pub trait Algorithm<O: Scenario<Self::MathsCore, Self::Rng>, R: Reporter, P: LocalPartition<R>>:
-    Sized + AlgorithmParamters
-{
+pub trait AlgorithmDefaults {
     type MathsCore: MathsCore;
-    type Rng: RngCore<Self::MathsCore>;
-    type LineageReference: LineageReference<Self::MathsCore, O::Habitat>;
-    type LineageStore: LineageStore<Self::MathsCore, O::Habitat, Self::LineageReference>;
+}
+
+pub trait Algorithm<M: MathsCore, O: Scenario<M, Self::Rng>, R: Reporter, P: LocalPartition<R>>:
+    Sized + AlgorithmParamters + AlgorithmDefaults
+{
+    type Rng: RngCore<M>;
+    type LineageReference: LineageReference<M, O::Habitat>;
+    type LineageStore: LineageStore<M, O::Habitat, Self::LineageReference>;
 
     /// # Errors
     ///
@@ -42,10 +45,10 @@ pub trait Algorithm<O: Scenario<Self::MathsCore, Self::Rng>, R: Reporter, P: Loc
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pre_sampler: OriginPreSampler<M, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, Self::Error>;
+    ) -> Result<SimulationOutcome<M, Self::Rng>, Self::Error>;
 
     /// # Errors
     ///
@@ -56,12 +59,12 @@ pub trait Algorithm<O: Scenario<Self::MathsCore, Self::Rng>, R: Reporter, P: Loc
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         resume_after: Option<NonNegativeF64>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, ResumeError<Self::Error>>;
+    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>>;
 
     /// # Errors
     ///
@@ -72,10 +75,10 @@ pub trait Algorithm<O: Scenario<Self::MathsCore, Self::Rng>, R: Reporter, P: Loc
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         restart_at: PositiveF64,
         fixup_strategy: RestartFixUpStrategy,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, ResumeError<Self::Error>>;
+    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>>;
 }

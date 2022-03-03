@@ -1,11 +1,14 @@
-use necsim_core::{cogs::LocallyCoherentLineageStore, lineage::Lineage, reporter::Reporter};
+use necsim_core::{
+    cogs::{LocallyCoherentLineageStore, MathsCore},
+    lineage::Lineage,
+    reporter::Reporter,
+};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::cogs::{
     lineage_reference::in_memory::InMemoryLineageReference,
     lineage_store::coherent::locally::classical::ClassicalLineageStore,
-    maths::intrinsics::IntrinsicsMathsCore, origin_sampler::pre_sampler::OriginPreSampler,
-    turnover_rate::uniform::UniformTurnoverRate,
+    origin_sampler::pre_sampler::OriginPreSampler, turnover_rate::uniform::UniformTurnoverRate,
 };
 use necsim_impls_std::cogs::rng::pcg::Pcg;
 use necsim_partitioning_core::LocalPartition;
@@ -30,27 +33,28 @@ use initialiser::{
 #[allow(clippy::type_complexity)]
 impl<
         O: Scenario<
-            IntrinsicsMathsCore,
-            Pcg<IntrinsicsMathsCore>,
+            M,
+            Pcg<M>,
             LineageReference = InMemoryLineageReference,
             TurnoverRate = UniformTurnoverRate,
         >,
         R: Reporter,
         P: LocalPartition<R>,
-    > Algorithm<O, R, P> for GillespieAlgorithm
+        M: MathsCore,
+    > Algorithm<M, O, R, P> for GillespieAlgorithm
 where
-    O::LineageStore<ClassicalLineageStore<IntrinsicsMathsCore, O::Habitat>>:
-        LocallyCoherentLineageStore<IntrinsicsMathsCore, O::Habitat, InMemoryLineageReference>,
+    O::LineageStore<ClassicalLineageStore<M, O::Habitat>>:
+        LocallyCoherentLineageStore<M, O::Habitat, InMemoryLineageReference>,
 {
     #[allow(clippy::too_many_lines)]
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pre_sampler: OriginPreSampler<M, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, Self::Error> {
+    ) -> Result<SimulationOutcome<M, Self::Rng>, Self::Error> {
         launch::initialise_and_simulate(
             args,
             rng,
@@ -70,12 +74,12 @@ where
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         resume_after: Option<NonNegativeF64>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, ResumeError<Self::Error>> {
+    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
         launch::initialise_and_simulate(
             args,
             rng,
@@ -99,12 +103,12 @@ where
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         restart_at: PositiveF64,
         fixup_strategy: RestartFixUpStrategy,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, ResumeError<Self::Error>> {
+    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
         launch::initialise_and_simulate(
             args,
             rng,

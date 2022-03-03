@@ -2,6 +2,8 @@ use necsim_core::reporter::Reporter;
 use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::LocalPartition;
 
+use rustcoalescence_algorithms::AlgorithmDefaults;
+
 #[cfg(feature = "rustcoalescence-algorithms-cuda")]
 use rustcoalescence_algorithms_cuda::CudaAlgorithm;
 #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
@@ -117,28 +119,40 @@ pub(super) fn dispatch<R: Reporter, P: LocalPartition<R>>(
     {
         #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
         AlgorithmArgs::Gillespie(algorithm_args) => {
-            rng::dispatch::<GillespieAlgorithm, _, R, P>(
+            rng::dispatch::<
+                <GillespieAlgorithm as AlgorithmDefaults>::MathsCore,
+                GillespieAlgorithm, _, R, P,
+            >(
                 local_partition, sample, algorithm_args, scenario,
                 pause_before, ron_args, normalised_args,
             )
         },
         #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
         AlgorithmArgs::EventSkipping(algorithm_args) => {
-            rng::dispatch::<EventSkippingAlgorithm, _, R, P>(
+            rng::dispatch::<
+                <EventSkippingAlgorithm as AlgorithmDefaults>::MathsCore,
+                EventSkippingAlgorithm, _, R, P,
+            >(
                 local_partition, sample, algorithm_args, scenario,
                 pause_before, ron_args, normalised_args,
             )
         },
         #[cfg(feature = "rustcoalescence-algorithms-independent")]
         AlgorithmArgs::Independent(algorithm_args) => {
-            rng::dispatch::<IndependentAlgorithm, _, R, P>(
+            rng::dispatch::<
+                <IndependentAlgorithm as AlgorithmDefaults>::MathsCore,
+                IndependentAlgorithm, _, R, P,
+            >(
                 local_partition, sample, algorithm_args, scenario,
                 pause_before, ron_args, normalised_args,
             )
         },
         #[cfg(feature = "rustcoalescence-algorithms-cuda")]
         AlgorithmArgs::Cuda(algorithm_args) => {
-            rng::dispatch::<CudaAlgorithm, _, R, P>(
+            rng::dispatch::<
+                <CudaAlgorithm as AlgorithmDefaults>::MathsCore,
+                CudaAlgorithm, _, R, P,
+            >(
                 local_partition, sample, algorithm_args, scenario,
                 pause_before, ron_args, normalised_args,
             )
