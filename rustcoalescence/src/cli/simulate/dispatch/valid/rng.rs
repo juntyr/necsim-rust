@@ -3,7 +3,7 @@ use tiny_keccak::{Hasher, Keccak};
 use rustcoalescence_algorithms::{result::SimulationOutcome as AlgorithmOutcome, Algorithm};
 
 use necsim_core::{
-    cogs::{RngCore, SeedableRng},
+    cogs::{MathsCore, RngCore, SeedableRng},
     reporter::Reporter,
 };
 use necsim_core_bond::NonNegativeF64;
@@ -25,8 +25,9 @@ use super::{
 };
 
 pub(super) fn dispatch<
-    A: Algorithm<O, R, P>,
-    O: Scenario<A::MathsCore, A::Rng>,
+    M: MathsCore,
+    A: Algorithm<M, O, R, P>,
+    O: Scenario<M, A::Rng>,
     R: Reporter,
     P: LocalPartition<R>,
 >(
@@ -41,13 +42,13 @@ pub(super) fn dispatch<
     normalised_args: &mut BufferingSimulateArgsBuilder,
 ) -> anyhow::Result<SimulationOutcome>
 where
-    Result<AlgorithmOutcome<A::MathsCore, A::Rng>, A::Error>:
-        anyhow::Context<AlgorithmOutcome<A::MathsCore, A::Rng>, A::Error>,
+    Result<AlgorithmOutcome<M, A::Rng>, A::Error>:
+        anyhow::Context<AlgorithmOutcome<M, A::Rng>, A::Error>,
 {
     let rng: A::Rng = match parse::rng::parse_and_normalise(ron_args, normalised_args)? {
         RngArgs::Seed(seed) => SeedableRng::seed_from_u64(seed),
         RngArgs::Sponge(bytes) => {
-            let mut seed = <A::Rng as RngCore<A::MathsCore>>::Seed::default();
+            let mut seed = <A::Rng as RngCore<M>>::Seed::default();
 
             let mut sponge = Keccak::v256();
             sponge.update(&bytes);
@@ -58,7 +59,7 @@ where
         RngArgs::State(state) => state.into(),
     };
 
-    let result = info::dispatch::<A, O, R, P>(
+    let result = info::dispatch::<M, A, O, R, P>(
         algorithm_args,
         rng,
         scenario,

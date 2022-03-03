@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{GloballyCoherentLineageStore, SeparableDispersalSampler},
+    cogs::{GloballyCoherentLineageStore, MathsCore, SeparableDispersalSampler},
     lineage::Lineage,
     reporter::Reporter,
 };
@@ -17,7 +17,7 @@ use necsim_partitioning_core::LocalPartition;
 use rustcoalescence_algorithms::{
     result::{ResumeError, SimulationOutcome},
     strategy::RestartFixUpStrategy,
-    Algorithm, AlgorithmParamters,
+    Algorithm, AlgorithmDefaults, AlgorithmParamters,
 };
 use rustcoalescence_scenarios::Scenario;
 
@@ -38,41 +38,36 @@ impl AlgorithmParamters for EventSkippingAlgorithm {
     type Error = !;
 }
 
+impl AlgorithmDefaults for EventSkippingAlgorithm {
+    type MathsCore = IntrinsicsMathsCore;
+}
+
 #[allow(clippy::type_complexity)]
 impl<
-        O: Scenario<
-            IntrinsicsMathsCore,
-            Pcg<IntrinsicsMathsCore>,
-            LineageReference = InMemoryLineageReference,
-        >,
+        O: Scenario<M, Pcg<M>, LineageReference = InMemoryLineageReference>,
         R: Reporter,
         P: LocalPartition<R>,
-    > Algorithm<O, R, P> for EventSkippingAlgorithm
+        M: MathsCore,
+    > Algorithm<M, O, R, P> for EventSkippingAlgorithm
 where
-    O::LineageStore<GillespieLineageStore<IntrinsicsMathsCore, O::Habitat>>:
-        GloballyCoherentLineageStore<IntrinsicsMathsCore, O::Habitat, InMemoryLineageReference>,
-    O::DispersalSampler<
-        InMemorySeparableAliasDispersalSampler<
-            IntrinsicsMathsCore,
-            O::Habitat,
-            Pcg<IntrinsicsMathsCore>,
-        >,
-    >: SeparableDispersalSampler<IntrinsicsMathsCore, O::Habitat, Pcg<IntrinsicsMathsCore>>,
+    O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
+        GloballyCoherentLineageStore<M, O::Habitat, InMemoryLineageReference>,
+    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, Pcg<M>>>:
+        SeparableDispersalSampler<M, O::Habitat, Pcg<M>>,
 {
     type LineageReference = InMemoryLineageReference;
-    type LineageStore = O::LineageStore<GillespieLineageStore<Self::MathsCore, O::Habitat>>;
-    type MathsCore = IntrinsicsMathsCore;
-    type Rng = Pcg<Self::MathsCore>;
+    type LineageStore = O::LineageStore<GillespieLineageStore<M, O::Habitat>>;
+    type Rng = Pcg<M>;
 
     #[allow(clippy::shadow_unrelated, clippy::too_many_lines)]
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pre_sampler: OriginPreSampler<M, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, Self::Error> {
+    ) -> Result<SimulationOutcome<M, Self::Rng>, Self::Error> {
         launch::initialise_and_simulate(
             args,
             rng,
@@ -93,12 +88,12 @@ where
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         resume_after: Option<NonNegativeF64>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, ResumeError<Self::Error>> {
+    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
         launch::initialise_and_simulate(
             args,
             rng,
@@ -122,12 +117,12 @@ where
         args: Self::Arguments,
         rng: Self::Rng,
         scenario: O,
-        pre_sampler: OriginPreSampler<Self::MathsCore, I>,
+        pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         restart_at: PositiveF64,
         fixup_strategy: RestartFixUpStrategy,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<Self::MathsCore, Self::Rng>, ResumeError<Self::Error>> {
+    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
         launch::initialise_and_simulate(
             args,
             rng,

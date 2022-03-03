@@ -1,4 +1,6 @@
-use rustcoalescence_algorithms::AlgorithmParamters;
+use necsim_impls_no_std::cogs::maths::intrinsics::IntrinsicsMathsCore;
+
+use rustcoalescence_algorithms::{AlgorithmDefaults, AlgorithmParamters};
 
 use crate::arguments::MonolithicArguments;
 
@@ -11,4 +13,8 @@ pub enum GillespieAlgorithm {}
 impl AlgorithmParamters for GillespieAlgorithm {
     type Arguments = MonolithicArguments;
     type Error = !;
+}
+
+impl AlgorithmDefaults for GillespieAlgorithm {
+    type MathsCore = IntrinsicsMathsCore;
 }

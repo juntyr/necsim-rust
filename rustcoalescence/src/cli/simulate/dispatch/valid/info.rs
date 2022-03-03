@@ -2,7 +2,10 @@ use anyhow::{Context, Result};
 
 use rustcoalescence_algorithms::{result::SimulationOutcome, Algorithm};
 
-use necsim_core::reporter::{boolean::Boolean, Reporter};
+use necsim_core::{
+    cogs::MathsCore,
+    reporter::{boolean::Boolean, Reporter},
+};
 use necsim_core_bond::NonNegativeF64;
 use necsim_partitioning_core::LocalPartition;
 
@@ -18,8 +21,9 @@ use super::{super::super::BufferingSimulateArgsBuilder, launch};
 #[allow(dead_code)]
 #[allow(clippy::needless_pass_by_value)]
 pub(super) fn dispatch<
-    A: Algorithm<O, R, P>,
-    O: Scenario<A::MathsCore, A::Rng>,
+    M: MathsCore,
+    A: Algorithm<M, O, R, P>,
+    O: Scenario<M, A::Rng>,
     R: Reporter,
     P: LocalPartition<R>,
 >(
@@ -31,10 +35,10 @@ pub(super) fn dispatch<
     mut local_partition: P,
 
     normalised_args: &BufferingSimulateArgsBuilder,
-) -> anyhow::Result<SimulationOutcome<A::MathsCore, A::Rng>>
+) -> anyhow::Result<SimulationOutcome<M, A::Rng>>
 where
-    Result<SimulationOutcome<A::MathsCore, A::Rng>, A::Error>:
-        anyhow::Context<SimulationOutcome<A::MathsCore, A::Rng>, A::Error>,
+    Result<SimulationOutcome<M, A::Rng>, A::Error>:
+        anyhow::Context<SimulationOutcome<M, A::Rng>, A::Error>,
 {
     let config_str = normalised_args
         .build()
@@ -100,7 +104,7 @@ where
         warn!("The simulation will report no events.");
     }
 
-    let result = launch::simulate::<A, O, R, P>(
+    let result = launch::simulate::<M, A, O, R, P>(
         algorithm_args,
         rng,
         scenario,
