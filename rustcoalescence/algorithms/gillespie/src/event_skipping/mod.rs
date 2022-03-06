@@ -44,11 +44,12 @@ impl AlgorithmDefaults for EventSkippingAlgorithm {
 
 #[allow(clippy::type_complexity)]
 impl<
+        'p,
         O: Scenario<M, Pcg<M>, LineageReference = InMemoryLineageReference>,
         R: Reporter,
-        P: LocalPartition<R>,
+        P: LocalPartition<'p, R>,
         M: MathsCore,
-    > Algorithm<M, O, R, P> for EventSkippingAlgorithm
+    > Algorithm<'p, M, O, R, P> for EventSkippingAlgorithm
 where
     O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
         GloballyCoherentLineageStore<M, O::Habitat, InMemoryLineageReference>,

@@ -32,6 +32,7 @@ use initialiser::{
 // Optimised 'Classical' implementation for the `UniformTurnoverSampler`
 #[allow(clippy::type_complexity)]
 impl<
+        'p,
         O: Scenario<
             M,
             Pcg<M>,
@@ -39,9 +40,9 @@ impl<
             TurnoverRate = UniformTurnoverRate,
         >,
         R: Reporter,
-        P: LocalPartition<R>,
+        P: LocalPartition<'p, R>,
         M: MathsCore,
-    > Algorithm<M, O, R, P> for GillespieAlgorithm
+    > Algorithm<'p, M, O, R, P> for GillespieAlgorithm
 where
     O::LineageStore<ClassicalLineageStore<M, O::Habitat>>:
         LocallyCoherentLineageStore<M, O::Habitat, InMemoryLineageReference>,

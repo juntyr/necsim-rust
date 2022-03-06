@@ -32,11 +32,12 @@ use initialiser::{
 // Default 'Gillespie' implementation for any turnover sampler
 #[allow(clippy::type_complexity)]
 impl<
+        'p,
         O: Scenario<M, Pcg<M>, LineageReference = InMemoryLineageReference>,
         R: Reporter,
-        P: LocalPartition<R>,
+        P: LocalPartition<'p, R>,
         M: MathsCore,
-    > Algorithm<M, O, R, P> for GillespieAlgorithm
+    > Algorithm<'p, M, O, R, P> for GillespieAlgorithm
 where
     O::LineageStore<ClassicalLineageStore<M, O::Habitat>>:
         LocallyCoherentLineageStore<M, O::Habitat, InMemoryLineageReference>,

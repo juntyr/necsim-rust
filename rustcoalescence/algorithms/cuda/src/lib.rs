@@ -76,8 +76,13 @@ impl AlgorithmDefaults for CudaAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<M: MathsCore, O: Scenario<M, CudaRng<M, WyHash<M>>>, R: Reporter, P: LocalPartition<R>>
-    Algorithm<M, O, R, P> for CudaAlgorithm
+impl<
+        'p,
+        M: MathsCore,
+        O: Scenario<M, CudaRng<M, WyHash<M>>>,
+        R: Reporter,
+        P: LocalPartition<'p, R>,
+    > Algorithm<'p, M, O, R, P> for CudaAlgorithm
 where
     O::Habitat: RustToCuda,
     O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>>:

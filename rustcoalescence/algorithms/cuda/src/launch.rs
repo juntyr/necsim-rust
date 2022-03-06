@@ -50,10 +50,11 @@ use crate::{
 
 #[allow(clippy::too_many_lines)]
 pub fn initialise_and_simulate<
+    'p,
     M: MathsCore,
     O: Scenario<M, CudaRng<M, WyHash<M>>>,
     R: Reporter,
-    P: LocalPartition<R>,
+    P: LocalPartition<'p, R>,
     I: Iterator<Item = u64>,
     L: CudaLineageStoreSampleInitialiser<M, CudaRng<M, WyHash<M>>, O, Error>,
     Error: From<CudaError>,
