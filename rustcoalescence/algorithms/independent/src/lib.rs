@@ -47,8 +47,8 @@ impl AlgorithmDefaults for IndependentAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<O: Scenario<M, WyHash<M>>, R: Reporter, P: LocalPartition<R>, M: MathsCore>
-    Algorithm<M, O, R, P> for IndependentAlgorithm
+impl<'p, O: Scenario<M, WyHash<M>>, R: Reporter, P: LocalPartition<'p, R>, M: MathsCore>
+    Algorithm<'p, M, O, R, P> for IndependentAlgorithm
 {
     type LineageReference = GlobalLineageReference;
     type LineageStore = IndependentLineageStore<M, O::Habitat>;

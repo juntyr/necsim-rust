@@ -21,11 +21,12 @@ use super::{super::super::BufferingSimulateArgsBuilder, launch};
 #[allow(dead_code)]
 #[allow(clippy::needless_pass_by_value)]
 pub(super) fn dispatch<
+    'p,
     M: MathsCore,
-    A: Algorithm<M, O, R, P>,
+    A: Algorithm<'p, M, O, R, P>,
     O: Scenario<M, A::Rng>,
     R: Reporter,
-    P: LocalPartition<R>,
+    P: LocalPartition<'p, R>,
 >(
     algorithm_args: A::Arguments,
     rng: A::Rng,

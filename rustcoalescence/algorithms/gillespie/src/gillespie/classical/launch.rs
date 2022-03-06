@@ -36,11 +36,12 @@ use super::initialiser::ClassicalLineageStoreSampleInitialiser;
 
 #[allow(clippy::too_many_lines)]
 pub fn initialise_and_simulate<
+    'p,
     M: MathsCore,
     G: SplittableRng<M>,
     O: Scenario<M, G, LineageReference = InMemoryLineageReference, TurnoverRate = UniformTurnoverRate>,
     R: Reporter,
-    P: LocalPartition<R>,
+    P: LocalPartition<'p, R>,
     I: Iterator<Item = u64>,
     L: ClassicalLineageStoreSampleInitialiser<M, G, O, Error>,
     Error,

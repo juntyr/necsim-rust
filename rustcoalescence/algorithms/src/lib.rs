@@ -30,8 +30,13 @@ pub trait AlgorithmDefaults {
     type MathsCore: MathsCore;
 }
 
-pub trait Algorithm<M: MathsCore, O: Scenario<M, Self::Rng>, R: Reporter, P: LocalPartition<R>>:
-    Sized + AlgorithmParamters + AlgorithmDefaults
+pub trait Algorithm<
+    'p,
+    M: MathsCore,
+    O: Scenario<M, Self::Rng>,
+    R: Reporter,
+    P: LocalPartition<'p, R>,
+>: Sized + AlgorithmParamters + AlgorithmDefaults
 {
     type Rng: RngCore<M>;
     type LineageReference: LineageReference<M, O::Habitat>;

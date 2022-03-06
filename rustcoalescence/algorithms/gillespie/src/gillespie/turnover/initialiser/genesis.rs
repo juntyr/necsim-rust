@@ -60,6 +60,7 @@ impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
 
     fn init<
         'h,
+        'p,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
         R: LineageReference<M, O::Habitat>,
         S: LocallyCoherentLineageStore<M, O::Habitat, R>,
@@ -79,7 +80,7 @@ impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
         >,
         I: ImmigrationEntry<M>,
         Q: Reporter,
-        P: LocalPartition<Q>,
+        P: LocalPartition<'p, Q>,
     >(
         self,
         origin_sampler: T,

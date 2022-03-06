@@ -1,5 +1,3 @@
-use anyhow::Context;
-
 use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_partitioning_core::Partitioning as _;
@@ -37,31 +35,31 @@ pub(super) fn dispatch(
     match_any_reporter_plugin_vec!(reporters => |reporter| {
         // Initialise the local partition and the simulation
         match partitioning {
-            Partitioning::Monolithic(partitioning) => match partitioning.into_local_partition(
-                DynamicReporterContext::new(reporter), event_log
-            ).with_context(|| "Failed to initialise the local monolithic partition.")? {
-                MonolithicLocalPartition::Live(partition) => algorithm_scenario::dispatch(
-                    *partition, speciation_probability_per_generation, sample, scenario,
-                    algorithm, pause_before, ron_args, normalised_args,
-                ),
-                MonolithicLocalPartition::Recorded(partition) => algorithm_scenario::dispatch(
-                    *partition, speciation_probability_per_generation, sample, scenario,
-                    algorithm, pause_before, ron_args, normalised_args,
-                ),
-            },
+            Partitioning::Monolithic(partitioning) => partitioning.with_local_partition(
+                DynamicReporterContext::new(reporter), event_log, |partition| match partition {
+                    MonolithicLocalPartition::Live(partition) => algorithm_scenario::dispatch(
+                        *partition, speciation_probability_per_generation, sample, scenario,
+                        algorithm, pause_before, ron_args, normalised_args,
+                    ),
+                    MonolithicLocalPartition::Recorded(partition) => algorithm_scenario::dispatch(
+                        *partition, speciation_probability_per_generation, sample, scenario,
+                        algorithm, pause_before, ron_args, normalised_args,
+                    ),
+                },
+            ),
             #[cfg(feature = "necsim-partitioning-mpi")]
-            Partitioning::Mpi(partitioning) => match partitioning.into_local_partition(
-                DynamicReporterContext::new(reporter), event_log
-            ).with_context(|| "Failed to initialise the local MPI partition.")? {
-                MpiLocalPartition::Root(partition) => algorithm_scenario::dispatch(
-                    *partition, speciation_probability_per_generation, sample, scenario,
-                    algorithm, pause_before, ron_args, normalised_args,
-                ),
-                MpiLocalPartition::Parallel(partition) => algorithm_scenario::dispatch(
-                    *partition, speciation_probability_per_generation, sample, scenario,
-                    algorithm, pause_before, ron_args, normalised_args,
-                ),
-            },
-        }
+            Partitioning::Mpi(partitioning) => partitioning.with_local_partition(
+                DynamicReporterContext::new(reporter), event_log, |partition| match partition {
+                    MpiLocalPartition::Root(partition) => algorithm_scenario::dispatch(
+                        *partition, speciation_probability_per_generation, sample, scenario,
+                        algorithm, pause_before, ron_args, normalised_args,
+                    ),
+                    MpiLocalPartition::Parallel(partition) => algorithm_scenario::dispatch(
+                        *partition, speciation_probability_per_generation, sample, scenario,
+                        algorithm, pause_before, ron_args, normalised_args,
+                    ),
+                },
+            ),
+        }.flatten()
     })
 }
