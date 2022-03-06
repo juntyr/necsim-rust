@@ -48,6 +48,7 @@ use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
 #[allow(clippy::type_complexity, clippy::too_many_lines)]
 pub fn simulate<
     'l,
+    'p,
     M: MathsCore,
     H: Habitat<M> + RustToCuda,
     G: PrimeableRng<M> + RustToCuda,
@@ -63,7 +64,7 @@ pub fn simulate<
     A: SingularActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
         + RustToCuda,
     P: Reporter,
-    L: LocalPartition<P>,
+    L: LocalPartition<'p, P>,
     LI: IntoIterator<Item = Lineage>,
 >(
     simulation: &mut Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A>,
@@ -104,8 +105,8 @@ pub fn simulate<
         E,
         I,
         A,
-        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
-        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
+        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, 'p, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
+        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, 'p, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
     >: SimulatableKernel<
         M,
         H,
@@ -120,8 +121,8 @@ pub fn simulate<
         E,
         I,
         A,
-        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
-        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
+        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, 'p, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
+        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, 'p, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
     >,
 {
     let mut slow_lineages = lineages

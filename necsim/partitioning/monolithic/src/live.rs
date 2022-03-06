@@ -35,9 +35,10 @@ impl<R: Reporter> fmt::Debug for LiveMonolithicLocalPartition<R> {
 }
 
 #[contract_trait]
-impl<R: Reporter> LocalPartition<R> for LiveMonolithicLocalPartition<R> {
+impl<'p, R: Reporter> LocalPartition<'p, R> for LiveMonolithicLocalPartition<R> {
     type ImmigrantIterator<'a>
     where
+        'p: 'a,
         R: 'a,
     = ImmigrantPopIterator<'a>;
     type IsLive = True;
@@ -55,12 +56,15 @@ impl<R: Reporter> LocalPartition<R> for LiveMonolithicLocalPartition<R> {
         Partition::monolithic()
     }
 
-    fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(
-        &mut self,
+    fn migrate_individuals<'a, E: Iterator<Item = (u32, MigratingLineage)>>(
+        &'a mut self,
         emigrants: &mut E,
         _emigration_mode: MigrationMode,
         _immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'_> {
+    ) -> Self::ImmigrantIterator<'a>
+    where
+        'p: 'a,
+    {
         for (_, emigrant) in emigrants {
             self.loopback.push(emigrant);
         }

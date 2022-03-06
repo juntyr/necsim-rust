@@ -20,15 +20,16 @@ pub use root::MpiRootPartition;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub enum MpiLocalPartition<R: Reporter> {
-    Root(Box<MpiRootPartition<R>>),
-    Parallel(Box<MpiParallelPartition<R>>),
+pub enum MpiLocalPartition<'p, R: Reporter> {
+    Root(Box<MpiRootPartition<'p, R>>),
+    Parallel(Box<MpiParallelPartition<'p, R>>),
 }
 
 #[contract_trait]
-impl<R: Reporter> LocalPartition<R> for MpiLocalPartition<R> {
+impl<'p, R: Reporter> LocalPartition<'p, R> for MpiLocalPartition<'p, R> {
     type ImmigrantIterator<'a>
     where
+        'p: 'a,
         R: 'a,
     = ImmigrantPopIterator<'a>;
     type IsLive = False;
@@ -52,12 +53,15 @@ impl<R: Reporter> LocalPartition<R> for MpiLocalPartition<R> {
         }
     }
 
-    fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(
-        &mut self,
+    fn migrate_individuals<'a, E: Iterator<Item = (u32, MigratingLineage)>>(
+        &'a mut self,
         emigrants: &mut E,
         emigration_mode: MigrationMode,
         immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'_> {
+    ) -> Self::ImmigrantIterator<'a>
+    where
+        'p: 'a,
+    {
         match self {
             Self::Root(partition) => {
                 partition.migrate_individuals(emigrants, emigration_mode, immigration_mode)
@@ -117,7 +121,7 @@ impl<R: Reporter> LocalPartition<R> for MpiLocalPartition<R> {
     }
 }
 
-impl<R: Reporter> Reporter for MpiLocalPartition<R> {
+impl<'p, R: Reporter> Reporter for MpiLocalPartition<'p, R> {
     impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
         match self {
             Self::Root(partition) => partition.get_reporter().report_speciation(

@@ -52,7 +52,7 @@ impl<'de> Deserialize<'de> for MonolithicPartitioning {
 #[contract_trait]
 impl Partitioning for MonolithicPartitioning {
     type Auxiliary = Option<EventLogRecorder>;
-    type LocalPartition<R: Reporter> = MonolithicLocalPartition<R>;
+    type LocalPartition<'p, R: Reporter> = MonolithicLocalPartition<R>;
 
     fn is_monolithic(&self) -> bool {
         true
@@ -66,25 +66,36 @@ impl Partitioning for MonolithicPartitioning {
         Partition::monolithic()
     }
 
-    fn into_local_partition<R: Reporter, P: ReporterContext<Reporter = R>>(
+    /// # Errors
+    ///
+    /// Returns an error if the provided event log is not empty.
+    fn with_local_partition<
+        R: Reporter,
+        P: ReporterContext<Reporter = R>,
+        F: for<'p> FnOnce(Self::LocalPartition<'p, R>) -> Q,
+        Q,
+    >(
         self,
         reporter_context: P,
         event_log: Self::Auxiliary,
-    ) -> anyhow::Result<Self::LocalPartition<R>> {
-        if let Some(event_log) = event_log {
-            Ok(MonolithicLocalPartition::Recorded(Box::new(
+        inner: F,
+    ) -> anyhow::Result<Q> {
+        let local_partition = if let Some(event_log) = event_log {
+            MonolithicLocalPartition::Recorded(Box::new(
                 recorded::RecordedMonolithicLocalPartition::try_from_context_and_recorder(
                     reporter_context,
                     event_log
                         .assert_empty()
                         .context("Failed to create the event log.")?,
                 )?,
-            )))
+            ))
         } else {
-            Ok(MonolithicLocalPartition::Live(Box::new(
+            MonolithicLocalPartition::Live(Box::new(
                 live::LiveMonolithicLocalPartition::try_from_context(reporter_context)?,
-            )))
-        }
+            ))
+        };
+
+        Ok(inner(local_partition))
     }
 }
 
@@ -96,9 +107,10 @@ pub enum MonolithicLocalPartition<R: Reporter> {
 }
 
 #[contract_trait]
-impl<R: Reporter> LocalPartition<R> for MonolithicLocalPartition<R> {
+impl<'p, R: Reporter> LocalPartition<'p, R> for MonolithicLocalPartition<R> {
     type ImmigrantIterator<'a>
     where
+        'p: 'a,
         R: 'a,
     = ImmigrantPopIterator<'a>;
     // pessimistic
@@ -123,12 +135,15 @@ impl<R: Reporter> LocalPartition<R> for MonolithicLocalPartition<R> {
         }
     }
 
-    fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(
-        &mut self,
+    fn migrate_individuals<'a, E: Iterator<Item = (u32, MigratingLineage)>>(
+        &'a mut self,
         emigrants: &mut E,
         emigration_mode: MigrationMode,
         immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'_> {
+    ) -> Self::ImmigrantIterator<'a>
+    where
+        'p: 'a,
+    {
         match self {
             Self::Live(partition) => {
                 partition.migrate_individuals(emigrants, emigration_mode, immigration_mode)

@@ -41,6 +41,7 @@ use reporter::{
 
 #[allow(clippy::type_complexity, clippy::too_many_lines)]
 pub fn simulate<
+    'p,
     M: MathsCore,
     H: Habitat<M>,
     G: PrimeableRng<M>,
@@ -62,7 +63,7 @@ pub fn simulate<
         NeverImmigrationEntry,
     >,
     R: Reporter,
-    P: LocalPartition<R>,
+    P: LocalPartition<'p, R>,
     L: IntoIterator<Item = Lineage>,
 >(
     simulation: &mut Simulation<

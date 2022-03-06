@@ -102,7 +102,7 @@ macro_rules! match_scenario_algorithm {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(super) fn dispatch<R: Reporter, P: LocalPartition<R>>(
+pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
     local_partition: P,
 
     speciation_probability_per_generation: PositiveUnitF64,

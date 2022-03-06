@@ -9,6 +9,7 @@ use std::{fmt, mem::ManuallyDrop, num::NonZeroU32};
 use anyhow::Context;
 use mpi::{
     environment::Universe,
+    request::LocalScope,
     topology::{Communicator, Rank, SystemCommunicator},
     Tag,
 };
@@ -17,7 +18,7 @@ use serde_derive_state::DeserializeState;
 use serde_state::{DeserializeState, Deserializer};
 use thiserror::Error;
 
-use necsim_core::reporter::Reporter;
+use necsim_core::{lineage::MigratingLineage, reporter::Reporter};
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_partitioning_core::{context::ReporterContext, partition::Partition, Partitioning};
@@ -102,7 +103,7 @@ impl MpiPartitioning {
 #[contract_trait]
 impl Partitioning for MpiPartitioning {
     type Auxiliary = Option<EventLogRecorder>;
-    type LocalPartition<R: Reporter> = MpiLocalPartition<R>;
+    type LocalPartition<'p, R: Reporter> = MpiLocalPartition<'p, R>;
 
     fn is_monolithic(&self) -> bool {
         self.world.size() <= 1
@@ -126,11 +127,17 @@ impl Partitioning for MpiPartitioning {
     /// Returns `MissingEventLog` if the local partition is non-monolithic and
     ///  the `event_log` is `None`.
     /// Returns `InvalidEventSubLog` if creating a sub-`event_log` failed.
-    fn into_local_partition<R: Reporter, P: ReporterContext<Reporter = R>>(
+    fn with_local_partition<
+        R: Reporter,
+        P: ReporterContext<Reporter = R>,
+        F: for<'p> FnOnce(Self::LocalPartition<'p, R>) -> Q,
+        Q,
+    >(
         self,
         reporter_context: P,
         event_log: Self::Auxiliary,
-    ) -> anyhow::Result<Self::LocalPartition<R>> {
+        inner: F,
+    ) -> anyhow::Result<Q> {
         let event_log = match event_log {
             Some(event_log) => event_log,
             None => anyhow::bail!(MpiLocalPartitionError::MissingEventLog),
@@ -144,23 +151,51 @@ impl Partitioning for MpiPartitioning {
             .and_then(EventLogRecorder::assert_empty)
             .context(MpiLocalPartitionError::InvalidEventSubLog)?;
 
-        if self.world.rank() == MpiPartitioning::ROOT_RANK {
-            Ok(MpiLocalPartition::Root(Box::new(MpiRootPartition::new(
-                ManuallyDrop::into_inner(self.universe),
-                self.world,
-                reporter_context.try_build()?,
-                event_log,
-            ))))
-        } else {
-            Ok(MpiLocalPartition::Parallel(Box::new(
-                MpiParallelPartition::new(
+        let mut mpi_local_continue = false;
+        let mut mpi_global_continue = false;
+
+        let mut mpi_local_remaining = 0_u64;
+
+        #[allow(clippy::cast_sign_loss)]
+        let world_size = self.world.size() as usize;
+
+        let mut mpi_migration_buffers: Vec<Vec<MigratingLineage>> = Vec::with_capacity(world_size);
+        mpi_migration_buffers.resize_with(world_size, Vec::new);
+        let mut mpi_migration_buffers = mpi_migration_buffers.into_boxed_slice();
+
+        mpi::request::scope(|scope| {
+            let local_partition = if self.world.rank() == MpiPartitioning::ROOT_RANK {
+                MpiLocalPartition::Root(Box::new(MpiRootPartition::new(
                     ManuallyDrop::into_inner(self.universe),
                     self.world,
+                    reduce_scope(scope),
+                    &mut mpi_local_continue,
+                    &mut mpi_global_continue,
+                    &mut mpi_migration_buffers,
+                    reporter_context.try_build()?,
                     event_log,
-                ),
-            )))
-        }
+                )))
+            } else {
+                MpiLocalPartition::Parallel(Box::new(MpiParallelPartition::new(
+                    ManuallyDrop::into_inner(self.universe),
+                    self.world,
+                    reduce_scope(scope),
+                    &mut mpi_local_continue,
+                    &mut mpi_global_continue,
+                    &mut mpi_local_remaining,
+                    &mut mpi_migration_buffers,
+                    event_log,
+                )))
+            };
+
+            Ok(inner(local_partition))
+        })
     }
+}
+
+fn reduce_scope<'s, 'p: 's>(scope: &'s LocalScope<'p>) -> &'s LocalScope<'s> {
+    // Safety: 'p outlives 's, so reducing the scope from 'p to 's is safe
+    unsafe { std::mem::transmute(scope) }
 }
 
 #[derive(DeserializeState)]

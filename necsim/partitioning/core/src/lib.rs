@@ -23,7 +23,7 @@ use partition::Partition;
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait Partitioning: Sized {
-    type LocalPartition<R: Reporter>: LocalPartition<R>;
+    type LocalPartition<'p, R: Reporter>: LocalPartition<'p, R>;
     type Auxiliary;
 
     fn is_monolithic(&self) -> bool;
@@ -36,11 +36,17 @@ pub trait Partitioning: Sized {
 
     fn get_partition(&self) -> Partition;
 
-    fn into_local_partition<R: Reporter, P: ReporterContext<Reporter = R>>(
+    fn with_local_partition<
+        R: Reporter,
+        P: ReporterContext<Reporter = R>,
+        F: for<'p> FnOnce(Self::LocalPartition<'p, R>) -> Q,
+        Q,
+    >(
         self,
         reporter_context: P,
         auxiliary: Self::Auxiliary,
-    ) -> anyhow::Result<Self::LocalPartition<R>>;
+        inner: F,
+    ) -> anyhow::Result<Q>;
 }
 
 #[derive(Copy, Clone)]
@@ -52,12 +58,13 @@ pub enum MigrationMode {
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait LocalPartition<R: Reporter>: Sized {
+pub trait LocalPartition<'p, R: Reporter>: Sized {
     type Reporter: Reporter;
     type IsLive: Boolean;
     type ImmigrantIterator<'a>: Iterator<Item = MigratingLineage>
     where
-        Self: 'a;
+        Self: 'a,
+        'p: 'a;
 
     fn get_reporter(&mut self) -> &mut Self::Reporter;
 
@@ -65,12 +72,14 @@ pub trait LocalPartition<R: Reporter>: Sized {
 
     fn get_partition(&self) -> Partition;
 
-    fn migrate_individuals<E: Iterator<Item = (u32, MigratingLineage)>>(
-        &mut self,
+    fn migrate_individuals<'a, E: Iterator<Item = (u32, MigratingLineage)>>(
+        &'a mut self,
         emigrants: &mut E,
         emigration_mode: MigrationMode,
         immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'_>;
+    ) -> Self::ImmigrantIterator<'a>
+    where
+        'p: 'a;
 
     fn reduce_vote_continue(&self, local_continue: bool) -> bool;
 
