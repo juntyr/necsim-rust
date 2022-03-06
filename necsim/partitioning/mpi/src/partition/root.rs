@@ -103,13 +103,6 @@ impl<'p, R: Reporter> MpiRootPartition<'p, R> {
         #[allow(clippy::cast_sign_loss)]
         let world_size = world.size() as usize;
 
-        /*let mut mpi_migration_buffers = Vec::with_capacity(world_size);
-        mpi_migration_buffers.resize_with(world_size, Vec::new);
-
-        unsafe {
-            MPI_MIGRATION_BUFFERS = mpi_migration_buffers;
-        }*/
-
         let mut migration_buffers = Vec::with_capacity(world_size);
         migration_buffers.resize_with(world_size, Vec::new);
 
@@ -216,16 +209,9 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
                     immigration_buffer.reserve(number_immigrants);
                     immigration_buffer.set_len(receive_start + number_immigrants);
 
-                    // Safety: `MpiMigratingLineage` is a transparent newtype wrapper around
-                    //         `MigratingLineage`
-                    let immigration_slice: &mut [MpiMigratingLineage] =
-                        std::slice::from_raw_parts_mut(
-                            immigration_buffer
-                                .as_mut_ptr()
-                                .cast::<MpiMigratingLineage>()
-                                .add(receive_start),
-                            number_immigrants,
-                        );
+                    let immigration_slice = MpiMigratingLineage::from_mut_slice(
+                        &mut immigration_buffer[receive_start..],
+                    );
 
                     msg.matched_receive_into(immigration_slice);
                 }
@@ -264,18 +250,14 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
                     // MPI cannot terminate in this round since this partition gave up work
                     self.communicated_since_last_barrier = true;
 
-                    let local_emigration_buffer = &mut self.mpi_migration_buffers[rank_index];
+                    // Safety: emigration requests barrier protects from mutability conflicts
+                    let local_emigration_buffer =
+                        unsafe { &mut *(&mut self.mpi_migration_buffers[rank_index] as *mut _) };
 
                     std::mem::swap(emigration_buffer, local_emigration_buffer);
 
-                    // Safety: `MpiMigratingLineage` is a transparent newtype wrapper around
-                    //         `MigratingLineage`
-                    let local_emigration_slice: &[MpiMigratingLineage] = unsafe {
-                        std::slice::from_raw_parts(
-                            local_emigration_buffer.as_ptr().cast(),
-                            local_emigration_buffer.len(),
-                        )
-                    };
+                    let local_emigration_slice =
+                        MpiMigratingLineage::from_slice(local_emigration_buffer);
 
                     #[allow(clippy::cast_possible_wrap)]
                     let receiver_process = self.world.process_at_rank(rank as i32);
