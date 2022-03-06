@@ -87,31 +87,22 @@ fn reduce_lexicographic_min_time_rank_inner(local: &TimeRank, accumulator: &mut 
 #[repr(transparent)]
 pub struct MpiMigratingLineage(MigratingLineage);
 
-impl From<MigratingLineage> for MpiMigratingLineage {
-    fn from(
-        MigratingLineage {
-            global_reference,
-            prior_time,
-            event_time,
-            coalescence_rng_sample,
-            dispersal_target,
-            dispersal_origin,
-        }: MigratingLineage,
-    ) -> Self {
-        Self(MigratingLineage {
-            global_reference,
-            prior_time,
-            event_time,
-            coalescence_rng_sample,
-            dispersal_target,
-            dispersal_origin,
-        })
+impl MpiMigratingLineage {
+    pub fn from_slice(slice: &[MigratingLineage]) -> &[MpiMigratingLineage] {
+        // Safety: cast to transparent newtype wrapper
+        unsafe {
+            std::slice::from_raw_parts(slice.as_ptr().cast::<MpiMigratingLineage>(), slice.len())
+        }
     }
-}
 
-impl From<MpiMigratingLineage> for MigratingLineage {
-    fn from(lineage: MpiMigratingLineage) -> Self {
-        lineage.0
+    pub fn from_mut_slice(slice: &mut [MigratingLineage]) -> &mut [MpiMigratingLineage] {
+        // Safety: cast to transparent newtype wrapper
+        unsafe {
+            std::slice::from_raw_parts_mut(
+                slice.as_mut_ptr().cast::<MpiMigratingLineage>(),
+                slice.len(),
+            )
+        }
     }
 }
 
