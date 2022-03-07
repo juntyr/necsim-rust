@@ -46,7 +46,11 @@ where
     Result<AlgorithmOutcome<M, A::Rng>, A::Error>:
         anyhow::Context<AlgorithmOutcome<M, A::Rng>, A::Error>,
 {
-    let rng: A::Rng = match parse::rng::parse_and_normalise(ron_args, normalised_args)? {
+    let rng: A::Rng = match parse::rng::parse_and_normalise(
+        ron_args,
+        normalised_args,
+        &mut local_partition.get_partition(),
+    )? {
         RngArgs::Seed(seed) => SeedableRng::seed_from_u64(seed),
         RngArgs::Sponge(bytes) => {
             let mut seed = <A::Rng as RngCore<M>>::Seed::default();
