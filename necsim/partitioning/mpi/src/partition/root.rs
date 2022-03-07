@@ -219,22 +219,30 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
                 }
             {
                 // Check if the prior send request has finished
-                self.mpi_migration_buffers[rank_index].test_if_request(|_| ());
+                //  and clear the buffer if it has finished
+                if let Some(emigration_buffer) =
+                    self.mpi_migration_buffers[rank_index].get_data_mut()
+                {
+                    emigration_buffer.clear();
+                }
 
                 let emigration_buffer = &mut self.migration_buffers[rank_index];
 
                 if !emigration_buffer.is_empty() {
-                    self.last_migration_times[rank_index] = now;
-
-                    // MPI cannot terminate in this round since this partition gave up work
-                    self.communicated_since_last_barrier = true;
-
                     #[allow(clippy::cast_possible_wrap)]
                     let receiver_process = self.world.process_at_rank(rank as i32);
+
+                    let mut last_migration_time = self.last_migration_times[rank_index];
+                    let mut communicated_since_last_barrier = self.communicated_since_last_barrier;
 
                     // Send a new non-empty request iff the prior one has finished
                     self.mpi_migration_buffers[rank_index].request_if_data(
                         |mpi_emigration_buffer, scope| {
+                            last_migration_time = now;
+
+                            // MPI cannot terminate in this round since this partition gave up work
+                            communicated_since_last_barrier = true;
+
                             // Any prior send request has already finished
                             mpi_emigration_buffer.clear();
 
@@ -247,6 +255,9 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
                             )
                         },
                     );
+
+                    self.last_migration_times[rank_index] = last_migration_time;
+                    self.communicated_since_last_barrier = communicated_since_last_barrier;
                 }
             }
         }
@@ -290,7 +301,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
         // This partition can only terminate if all emigrations have been
         //  sent and acknowledged (request finished + empty buffers)
         for buffer in self.mpi_migration_buffers.iter() {
-            if !buffer.check(|buffer| buffer.map_or(false, Vec::is_empty)) {
+            if !buffer.get_data().map_or(false, Vec::is_empty) {
                 return true;
             }
         }
@@ -301,7 +312,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
 
         // Create a new termination attempt if the last one failed
         // Wait if at least one partition votes to wait
-        let should_wait = self.mpi_local_global_continue.request_if_data_then_test(
+        let should_wait = self.mpi_local_global_continue.request_if_data_then_access(
             |(local_continue, global_continue), scope| {
                 *local_continue = communicated_since_last_barrier;
                 communicated_since_last_barrier = false;

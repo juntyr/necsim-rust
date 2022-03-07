@@ -1,8 +1,10 @@
 use std::{fmt, marker::PhantomData};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_state::DeserializeState;
 
 use necsim_core::cogs::{MathsCore, RngCore};
+use necsim_partitioning_core::partition::Partition;
 
 mod base32;
 
@@ -22,12 +24,21 @@ pub struct Base32RngState<M: MathsCore, G: RngCore<M>> {
     marker: PhantomData<M>,
 }
 
-impl<'de, M: MathsCore, G: RngCore<M>> Deserialize<'de> for Rng<M, G> {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+impl<'de, M: MathsCore, G: RngCore<M>> DeserializeState<'de, Partition> for Rng<M, G> {
+    fn deserialize_state<D: Deserializer<'de>>(
+        partition: &mut Partition,
+        deserializer: D,
+    ) -> Result<Self, D::Error> {
         let raw = RngRaw::<M, G>::deserialize(deserializer)?;
 
         let rng = match raw {
             RngRaw::Entropy => {
+                if partition.size().get() > 1 {
+                    return Err(serde::de::Error::custom(
+                        "`Entropy` rng initialisation cannot be used with partitioned simulations",
+                    ));
+                }
+
                 let mut entropy = G::Seed::default();
 
                 loop {
