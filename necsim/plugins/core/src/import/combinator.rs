@@ -154,49 +154,49 @@ impl FromIterator<ReporterPlugin> for AnyReporterPluginVec {
             (false, false, false) => {
                 Self::IgnoreSpeciationIgnoreDispersalIgnoreProgress(ReporterPluginVec {
                     plugins,
-                    marker: PhantomData,
+                    marker: PhantomData::<(False, False, False)>,
                 })
             },
             (false, false, true) => {
                 Self::IgnoreSpeciationIgnoreDispersalReportProgress(ReporterPluginVec {
                     plugins,
-                    marker: PhantomData,
+                    marker: PhantomData::<(False, False, True)>,
                 })
             },
             (false, true, false) => {
                 Self::IgnoreSpeciationReportDispersalIgnoreProgress(ReporterPluginVec {
                     plugins,
-                    marker: PhantomData,
+                    marker: PhantomData::<(False, True, False)>,
                 })
             },
             (false, true, true) => {
                 Self::IgnoreSpeciationReportDispersalReportProgress(ReporterPluginVec {
                     plugins,
-                    marker: PhantomData,
+                    marker: PhantomData::<(False, True, True)>,
                 })
             },
             (true, false, false) => {
                 Self::ReportSpeciationIgnoreDispersalIgnoreProgress(ReporterPluginVec {
                     plugins,
-                    marker: PhantomData,
+                    marker: PhantomData::<(True, False, False)>,
                 })
             },
             (true, false, true) => {
                 Self::ReportSpeciationIgnoreDispersalReportProgress(ReporterPluginVec {
                     plugins,
-                    marker: PhantomData,
+                    marker: PhantomData::<(True, False, True)>,
                 })
             },
             (true, true, false) => {
                 Self::ReportSpeciationReportDispersalIgnoreProgress(ReporterPluginVec {
                     plugins,
-                    marker: PhantomData,
+                    marker: PhantomData::<(True, True, False)>,
                 })
             },
             (true, true, true) => {
                 Self::ReportSpeciationReportDispersalReportProgress(ReporterPluginVec {
                     plugins,
-                    marker: PhantomData,
+                    marker: PhantomData::<(True, True, True)>,
                 })
             },
         }

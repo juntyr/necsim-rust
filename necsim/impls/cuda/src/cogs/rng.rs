@@ -18,7 +18,7 @@ impl<M: MathsCore, R: RngCore<M> + StackOnly + TypeLayout> Clone for CudaRng<M, 
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
-            marker: PhantomData,
+            marker: PhantomData::<M>,
         }
     }
 }
@@ -29,7 +29,7 @@ impl<M: MathsCore, R: RngCore<M> + StackOnly + TypeLayout> From<R> for CudaRng<M
     fn from(rng: R) -> Self {
         Self {
             inner: rng,
-            marker: PhantomData,
+            marker: PhantomData::<M>,
         }
     }
 }
@@ -49,7 +49,7 @@ impl<M: MathsCore, R: RngCore<M> + StackOnly + TypeLayout> RngCore<M> for CudaRn
     fn from_seed(seed: Self::Seed) -> Self {
         Self {
             inner: R::from_seed(seed),
-            marker: PhantomData,
+            marker: PhantomData::<M>,
         }
     }
 
@@ -79,7 +79,7 @@ impl<'de, M: MathsCore, R: RngCore<M> + StackOnly + TypeLayout> Deserialize<'de>
 
         Ok(Self {
             inner,
-            marker: PhantomData,
+            marker: PhantomData::<M>,
         })
     }
 }

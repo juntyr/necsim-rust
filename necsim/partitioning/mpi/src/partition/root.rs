@@ -114,7 +114,7 @@ impl<'p, R: Reporter> MpiRootPartition<'p, R> {
             finalised: false,
             migration_interval,
             progress_interval,
-            _marker: PhantomData,
+            _marker: PhantomData::<&'p ()>,
         }
     }
 }
