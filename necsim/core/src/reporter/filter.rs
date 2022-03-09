@@ -38,7 +38,7 @@ impl<R: Reporter, KeepSpeciation: Boolean, KeepDispersal: Boolean, KeepProgress:
     fn from(reporter: R) -> Self {
         Self {
             reporter,
-            marker: PhantomData,
+            marker: PhantomData::<(KeepSpeciation, KeepDispersal, KeepProgress)>,
         }
     }
 }

@@ -96,7 +96,7 @@ impl<'p, R: Reporter> MpiParallelPartition<'p, R> {
             recorder,
             migration_interval,
             progress_interval,
-            _marker: PhantomData,
+            _marker: PhantomData::<(&'p (), R)>,
         }
     }
 }

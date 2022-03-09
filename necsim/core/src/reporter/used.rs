@@ -22,7 +22,7 @@ impl<T, B: Boolean> From<T> for MaybeUsed<T, B> {
     fn from(inner: T) -> Self {
         Self {
             inner,
-            _used: PhantomData,
+            _used: PhantomData::<B>,
         }
     }
 }

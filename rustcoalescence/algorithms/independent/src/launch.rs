@@ -159,7 +159,7 @@ pub fn initialise_and_simulate<
                         .chain(passthrough.into_iter())
                         .collect(),
                     rng: simulation.rng_mut().clone(),
-                    marker: PhantomData,
+                    marker: PhantomData::<M>,
                 }),
             }
         },
