@@ -38,7 +38,7 @@ use crate::{
 pub struct MpiRootPartition<'p, R: Reporter> {
     _universe: Universe,
     world: SystemCommunicator,
-    mpi_local_global_continue: DataOrRequest<'p, (bool, bool)>,
+    mpi_local_global_wait: DataOrRequest<'p, (bool, bool)>,
     mpi_migration_buffers: Box<[DataOrRequest<'p, Vec<MigratingLineage>>]>,
     migration_buffers: Box<[Vec<MigratingLineage>]>,
     all_remaining: Box<[u64]>,
@@ -76,7 +76,7 @@ impl<'p, R: Reporter> MpiRootPartition<'p, R> {
     #[must_use]
     pub(crate) fn new(
         universe: Universe,
-        mpi_local_global_continue: DataOrRequest<'p, (bool, bool)>,
+        mpi_local_global_wait: DataOrRequest<'p, (bool, bool)>,
         mpi_migration_buffers: Box<[DataOrRequest<'p, Vec<MigratingLineage>>]>,
         reporter: FilteredReporter<R, False, False, True>,
         mut recorder: EventLogRecorder,
@@ -98,7 +98,7 @@ impl<'p, R: Reporter> MpiRootPartition<'p, R> {
         Self {
             _universe: universe,
             world,
-            mpi_local_global_continue,
+            mpi_local_global_wait,
             mpi_migration_buffers,
             migration_buffers: migration_buffers.into_boxed_slice(),
             all_remaining: vec![0; world_size].into_boxed_slice(),
@@ -308,41 +308,37 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
 
         let world = &self.world;
         let mut communicated_since_last_barrier = self.communicated_since_last_barrier;
-        let mut should_check_progress = false;
 
         // Create a new termination attempt if the last one failed
-        // Wait if at least one partition votes to wait
-        let should_wait = self.mpi_local_global_continue.request_if_data_then_access(
-            |(local_continue, global_continue), scope| {
-                *local_continue = communicated_since_last_barrier;
+        self.mpi_local_global_wait
+            .request_if_data(|(local_wait, global_wait), scope| {
+                *local_wait = communicated_since_last_barrier;
                 communicated_since_last_barrier = false;
-                *global_continue = false;
+                *global_wait = false;
 
                 world.immediate_all_reduce_into(
                     scope,
-                    local_continue,
-                    global_continue,
+                    local_wait,
+                    global_wait,
                     SystemOperation::logical_or(),
                 )
-            },
-            |local_global_continue| match local_global_continue {
-                Some((_local_continue, global_continue)) => {
-                    should_check_progress = true;
-
-                    *global_continue
-                },
-                None => true,
-            },
-        );
+            });
 
         self.communicated_since_last_barrier = communicated_since_last_barrier;
 
-        // Check for pending progress updates from other partitions
-        if should_check_progress {
-            let remaining = self.all_remaining[self.get_partition().rank() as usize];
+        // Wait if voting is ongoing or at least one partition voted to wait
+        let should_wait = match self.mpi_local_global_wait.get_data_mut() {
+            Some((_local_wait, global_wait)) => {
+                let should_wait = *global_wait;
 
-            self.report_progress(&remaining.into());
-        }
+                // Check for pending progress updates from other partitions
+                let remaining = self.all_remaining[self.get_partition().rank() as usize];
+                self.report_progress(&remaining.into());
+
+                should_wait
+            },
+            None => true,
+        };
 
         should_wait
     }

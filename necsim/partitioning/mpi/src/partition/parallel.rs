@@ -37,7 +37,7 @@ use crate::{
 pub struct MpiParallelPartition<'p, R: Reporter> {
     _universe: Universe,
     world: SystemCommunicator,
-    mpi_local_global_continue: DataOrRequest<'p, (bool, bool)>,
+    mpi_local_global_wait: DataOrRequest<'p, (bool, bool)>,
     mpi_local_remaining: DataOrRequest<'p, u64>,
     mpi_migration_buffers: Box<[DataOrRequest<'p, Vec<MigratingLineage>>]>,
     migration_buffers: Box<[Vec<MigratingLineage>]>,
@@ -60,7 +60,7 @@ impl<'p, R: Reporter> MpiParallelPartition<'p, R> {
     #[must_use]
     pub(crate) fn new(
         universe: Universe,
-        mpi_local_global_continue: DataOrRequest<'p, (bool, bool)>,
+        mpi_local_global_wait: DataOrRequest<'p, (bool, bool)>,
         mpi_local_remaining: DataOrRequest<'p, u64>,
         mpi_migration_buffers: Box<[DataOrRequest<'p, Vec<MigratingLineage>>]>,
         mut recorder: EventLogRecorder,
@@ -82,7 +82,7 @@ impl<'p, R: Reporter> MpiParallelPartition<'p, R> {
         Self {
             _universe: universe,
             world,
-            mpi_local_global_continue,
+            mpi_local_global_wait,
             mpi_local_remaining,
             mpi_migration_buffers,
             migration_buffers: migration_buffers.into_boxed_slice(),
@@ -292,27 +292,27 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
         let mut communicated_since_last_barrier = self.communicated_since_last_barrier;
 
         // Create a new termination attempt if the last one failed
-        // Wait if at least one partition votes to wait
-        let should_wait = self.mpi_local_global_continue.request_if_data_then_access(
-            |(local_continue, global_continue), scope| {
-                *local_continue = communicated_since_last_barrier;
+        self.mpi_local_global_wait
+            .request_if_data(|(local_wait, global_wait), scope| {
+                *local_wait = communicated_since_last_barrier;
                 communicated_since_last_barrier = false;
-                *global_continue = false;
+                *global_wait = false;
 
                 world.immediate_all_reduce_into(
                     scope,
-                    local_continue,
-                    global_continue,
+                    local_wait,
+                    global_wait,
                     SystemOperation::logical_or(),
                 )
-            },
-            |local_global_continue| match local_global_continue {
-                Some((_local_continue, global_continue)) => *global_continue,
-                None => true,
-            },
-        );
+            });
 
         self.communicated_since_last_barrier = communicated_since_last_barrier;
+
+        // Wait if voting is ongoing or at least one partition voted to wait
+        let should_wait = match self.mpi_local_global_wait.get_data_mut() {
+            Some((_local_wait, global_wait)) => *global_wait,
+            None => true,
+        };
 
         should_wait
     }
@@ -366,7 +366,7 @@ impl<'p, R: Reporter> Reporter for MpiParallelPartition<'p, R> {
         }
 
         // Only send progress if there is no ongoing continue barrier request
-        if self.mpi_local_global_continue.get_data().is_some() {
+        if self.mpi_local_global_wait.get_data().is_some() {
             let now = Instant::now();
 
             if now.duration_since(self.last_report_time) >= self.progress_interval {
