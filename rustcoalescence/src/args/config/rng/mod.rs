@@ -33,12 +33,6 @@ impl<'de, M: MathsCore, G: RngCore<M>> DeserializeState<'de, Partition> for Rng<
 
         let rng = match raw {
             RngRaw::Entropy => {
-                if partition.size().get() > 1 {
-                    return Err(serde::de::Error::custom(
-                        "`Entropy` rng initialisation cannot be used with partitioned simulations",
-                    ));
-                }
-
                 let mut entropy = G::Seed::default();
 
                 loop {
@@ -50,7 +44,17 @@ impl<'de, M: MathsCore, G: RngCore<M>> DeserializeState<'de, Partition> for Rng<
                     }
                 }
 
-                Self::Sponge(Base32String::new(entropy.as_mut()))
+                let sponge = Base32String::new(entropy.as_mut());
+
+                if partition.size().get() > 1 {
+                    return Err(serde::de::Error::custom(format!(
+                        "`Entropy` rng initialisation cannot be used with partitioned \
+                         simulations.\n\nTry using `Sponge({})` instead.",
+                        sponge
+                    )));
+                }
+
+                Self::Sponge(sponge)
             },
             RngRaw::Seed(seed) => Self::Seed(seed),
             RngRaw::Sponge(sponge) => Self::Sponge(sponge),
