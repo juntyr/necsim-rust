@@ -7,16 +7,16 @@ use necsim_partitioning_core::{partition::Partition, LocalPartition};
 
 #[derive(Serialize, Debug)]
 #[allow(clippy::module_name_repetitions)]
-pub struct MonolithicArguments {
+pub struct GillespieArguments {
     pub parallelism_mode: ParallelismMode,
 }
 
-impl<'de> DeserializeState<'de, Partition> for MonolithicArguments {
+impl<'de> DeserializeState<'de, Partition> for GillespieArguments {
     fn deserialize_state<D>(partition: &mut Partition, deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::de::Deserializer<'de>,
     {
-        let raw = MonolithicArgumentsRaw::deserialize_state(partition, deserializer)?;
+        let raw = GillespieArgumentsRaw::deserialize_state(partition, deserializer)?;
 
         let parallelism_mode = match raw.parallelism_mode {
             Some(parallelism_mode) => parallelism_mode,
@@ -29,14 +29,15 @@ impl<'de> DeserializeState<'de, Partition> for MonolithicArguments {
             },
         };
 
-        Ok(MonolithicArguments { parallelism_mode })
+        Ok(GillespieArguments { parallelism_mode })
     }
 }
 
 #[derive(Default, Debug, DeserializeState)]
 #[serde(default, deny_unknown_fields)]
+#[serde(rename = "GillespieArguments")]
 #[serde(deserialize_state = "Partition")]
-struct MonolithicArgumentsRaw {
+struct GillespieArgumentsRaw {
     #[serde(deserialize_state)]
     parallelism_mode: Option<ParallelismMode>,
 }
@@ -93,8 +94,8 @@ impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
 }
 
 #[must_use]
-pub fn get_effective_monolithic_partition<'p, R: Reporter, P: LocalPartition<'p, R>>(
-    args: &MonolithicArguments,
+pub fn get_gillespie_logical_partition<'p, R: Reporter, P: LocalPartition<'p, R>>(
+    args: &GillespieArguments,
     local_partition: &P,
 ) -> Partition {
     match &args.parallelism_mode {

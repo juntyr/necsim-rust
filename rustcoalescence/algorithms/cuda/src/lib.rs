@@ -288,7 +288,7 @@ where
     type LineageStore = IndependentLineageStore<M, O::Habitat>;
     type Rng = CudaRng<M, WyHash<M>>;
 
-    fn get_effective_partition(args: &Self::Arguments, _local_partition: &P) -> Partition {
+    fn get_logical_partition(args: &Self::Arguments, _local_partition: &P) -> Partition {
         match &args.parallelism_mode {
             ParallelismMode::Monolithic(_) => Partition::monolithic(),
             ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { partition, .. })
