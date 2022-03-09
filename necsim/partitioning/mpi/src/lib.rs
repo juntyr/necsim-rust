@@ -199,7 +199,7 @@ impl Partitioning for MpiPartitioning {
             .and_then(EventLogRecorder::assert_empty)
             .context(MpiLocalPartitionError::InvalidEventSubLog)?;
 
-        let mut mpi_local_global_continue = (false, false);
+        let mut mpi_local_global_wait = (false, false);
         let mut mpi_local_remaining = 0_u64;
 
         #[allow(clippy::cast_sign_loss)]
@@ -211,8 +211,7 @@ impl Partitioning for MpiPartitioning {
         mpi::request::scope(|scope| {
             let scope = reduce_scope(scope);
 
-            let mpi_local_global_continue =
-                DataOrRequest::new(&mut mpi_local_global_continue, scope);
+            let mpi_local_global_wait = DataOrRequest::new(&mut mpi_local_global_wait, scope);
             let mpi_local_remaining = DataOrRequest::new(&mut mpi_local_remaining, scope);
             let mpi_migration_buffers = mpi_migration_buffers
                 .iter_mut()
@@ -223,7 +222,7 @@ impl Partitioning for MpiPartitioning {
             let local_partition = if self.world.rank() == MpiPartitioning::ROOT_RANK {
                 MpiLocalPartition::Root(Box::new(MpiRootPartition::new(
                     ManuallyDrop::into_inner(self.universe),
-                    mpi_local_global_continue,
+                    mpi_local_global_wait,
                     mpi_migration_buffers,
                     reporter_context.try_build()?,
                     event_log,
@@ -233,7 +232,7 @@ impl Partitioning for MpiPartitioning {
             } else {
                 MpiLocalPartition::Parallel(Box::new(MpiParallelPartition::new(
                     ManuallyDrop::into_inner(self.universe),
-                    mpi_local_global_continue,
+                    mpi_local_global_wait,
                     mpi_local_remaining,
                     mpi_migration_buffers,
                     event_log,

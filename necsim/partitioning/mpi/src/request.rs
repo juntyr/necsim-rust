@@ -37,39 +37,17 @@ impl<'a, T: ?Sized> DataOrRequest<'a, T> {
         }
     }
 
-    #[allow(clippy::let_unit_value)]
     pub fn request_if_data<
         R: for<'r> FnOnce(&'r mut T, &'r LocalScope<'r>) -> Request<'r, &'r LocalScope<'r>>,
     >(
         &mut self,
         do_request: R,
     ) {
-        let _: () = self.request_if_data_then_access(do_request, |_| ());
-    }
-
-    #[must_use]
-    pub fn request_if_data_then_access<
-        R: for<'r> FnOnce(&'r mut T, &'r LocalScope<'r>) -> Request<'r, &'r LocalScope<'r>>,
-        S: for<'t> FnOnce(Option<&'t mut T>) -> Q,
-        Q,
-    >(
-        &mut self,
-        do_request: R,
-        do_access: S,
-    ) -> Q {
-        let request = self.request.take().unwrap_or_else(|| {
+        if self.request.is_none() {
             let request = do_request(self.value, reduce_scope(self.scope));
 
             // Safety: upgrade of request scope back to the scope 'a
-            unsafe { std::mem::transmute(request) }
-        });
-
-        match request.test() {
-            Ok(_) => do_access(Some(self.value)),
-            Err(request) => {
-                self.request = Some(request);
-                do_access(None)
-            },
+            self.request = Some(unsafe { std::mem::transmute(request) });
         }
     }
 }
