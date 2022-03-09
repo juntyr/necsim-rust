@@ -12,7 +12,7 @@ use necsim_impls_no_std::cogs::{
     maths::intrinsics::IntrinsicsMathsCore, origin_sampler::pre_sampler::OriginPreSampler,
 };
 use necsim_impls_std::cogs::rng::pcg::Pcg;
-use necsim_partitioning_core::LocalPartition;
+use necsim_partitioning_core::{partition::Partition, LocalPartition};
 
 use rustcoalescence_algorithms::{
     result::{ResumeError, SimulationOutcome},
@@ -21,7 +21,7 @@ use rustcoalescence_algorithms::{
 };
 use rustcoalescence_scenarios::Scenario;
 
-use crate::arguments::MonolithicArguments;
+use crate::arguments::{get_effective_monolithic_partition, MonolithicArguments};
 
 mod initialiser;
 mod launch;
@@ -59,6 +59,10 @@ where
     type LineageReference = InMemoryLineageReference;
     type LineageStore = O::LineageStore<GillespieLineageStore<M, O::Habitat>>;
     type Rng = Pcg<M>;
+
+    fn get_effective_partition(args: &Self::Arguments, local_partition: &P) -> Partition {
+        get_effective_monolithic_partition(args, local_partition)
+    }
 
     #[allow(clippy::shadow_unrelated, clippy::too_many_lines)]
     fn initialise_and_simulate<I: Iterator<Item = u64>>(

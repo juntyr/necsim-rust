@@ -11,7 +11,7 @@ use necsim_core::{
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::cogs::origin_sampler::pre_sampler::OriginPreSampler;
-use necsim_partitioning_core::LocalPartition;
+use necsim_partitioning_core::{partition::Partition, LocalPartition};
 
 use rustcoalescence_scenarios::Scenario;
 
@@ -41,6 +41,8 @@ pub trait Algorithm<
     type Rng: RngCore<M>;
     type LineageReference: LineageReference<M, O::Habitat>;
     type LineageStore: LineageStore<M, O::Habitat, Self::LineageReference>;
+
+    fn get_effective_partition(args: &Self::Arguments, local_partition: &P) -> Partition;
 
     /// # Errors
     ///
