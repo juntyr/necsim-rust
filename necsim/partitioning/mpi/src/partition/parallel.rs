@@ -203,7 +203,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
                 // Check if the prior send request has finished
                 //  and clear the buffer if it has finished
                 if let Some(emigration_buffer) =
-                    self.mpi_migration_buffers[rank_index].get_data_mut()
+                    self.mpi_migration_buffers[rank_index].test_for_data_mut()
                 {
                     emigration_buffer.clear();
                 }
@@ -309,7 +309,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
         self.communicated_since_last_barrier = communicated_since_last_barrier;
 
         // Wait if voting is ongoing or at least one partition voted to wait
-        let should_wait = match self.mpi_local_global_wait.get_data_mut() {
+        let should_wait = match self.mpi_local_global_wait.test_for_data_mut() {
             Some((_local_wait, global_wait)) => *global_wait,
             None => true,
         };
@@ -361,7 +361,7 @@ impl<'p, R: Reporter> Reporter for MpiParallelPartition<'p, R> {
     });
 
     impl_report!(progress(&mut self, remaining: MaybeUsed<R::ReportProgress>) {
-        if self.mpi_local_remaining.get_data().map_or(false, |local_remaining| *local_remaining == *remaining) {
+        if self.mpi_local_remaining.test_for_data_mut().map_or(false, |local_remaining| *local_remaining == *remaining) {
             return;
         }
 

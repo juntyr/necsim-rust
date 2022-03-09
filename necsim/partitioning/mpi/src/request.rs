@@ -26,7 +26,7 @@ impl<'a, T: ?Sized> DataOrRequest<'a, T> {
     }
 
     #[must_use]
-    pub fn get_data_mut(&mut self) -> Option<&mut T> {
+    pub fn test_for_data_mut(&mut self) -> Option<&mut T> {
         match self.request.take().map(Request::test) {
             None | Some(Ok(_)) => Some(self.value),
             Some(Err(request)) => {
