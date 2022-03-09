@@ -20,7 +20,7 @@ use rustcoalescence_algorithms::{
 };
 use rustcoalescence_scenarios::Scenario;
 
-use crate::arguments::get_effective_monolithic_partition;
+use crate::arguments::get_gillespie_logical_partition;
 
 use super::GillespieAlgorithm;
 
@@ -48,8 +48,8 @@ where
     type LineageStore = O::LineageStore<ClassicalLineageStore<M, O::Habitat>>;
     type Rng = Pcg<M>;
 
-    default fn get_effective_partition(args: &Self::Arguments, local_partition: &P) -> Partition {
-        get_effective_monolithic_partition(args, local_partition)
+    default fn get_logical_partition(args: &Self::Arguments, local_partition: &P) -> Partition {
+        get_gillespie_logical_partition(args, local_partition)
     }
 
     #[allow(clippy::shadow_unrelated, clippy::too_many_lines)]

@@ -68,12 +68,23 @@ where
     }
     info!("{}", resume_pause);
 
-    if local_partition.get_partition().size().get() <= 1 {
-        info!("The simulation will be run in monolithic mode.");
+    let logical_partition = A::get_logical_partition(&algorithm_args, &local_partition);
+    if logical_partition.size().get() <= 1 {
+        info!("The scenario will be simulated as one monolithic partition.");
     } else {
         info!(
-            "The simulation will be distributed across {} partitions.",
-            local_partition.get_partition().size().get()
+            "The scenario will be simulated across {} logical partitions.",
+            logical_partition.size()
+        );
+    }
+
+    let physical_partition = local_partition.get_partition();
+    if physical_partition.size().get() <= 1 {
+        info!("The simulation will be run on one processing unit.");
+    } else {
+        info!(
+            "The simulation will be distributed across {} processing units.",
+            physical_partition.size()
         );
     }
 
