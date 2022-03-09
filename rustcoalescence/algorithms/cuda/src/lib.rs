@@ -31,7 +31,7 @@ use necsim_impls_no_std::cogs::{
     origin_sampler::pre_sampler::OriginPreSampler,
     rng::wyhash::WyHash,
 };
-use necsim_partitioning_core::LocalPartition;
+use necsim_partitioning_core::{partition::Partition, LocalPartition};
 
 use rustcoalescence_algorithms::{
     result::{ResumeError, SimulationOutcome},
@@ -53,7 +53,7 @@ mod launch;
 mod parallelisation;
 
 use crate::{
-    arguments::CudaArguments,
+    arguments::{CudaArguments, IsolatedParallelismMode, ParallelismMode},
     initialiser::{
         fixup::FixUpInitialiser, genesis::GenesisInitialiser, resume::ResumeInitialiser,
     },
@@ -287,6 +287,16 @@ where
     type LineageReference = GlobalLineageReference;
     type LineageStore = IndependentLineageStore<M, O::Habitat>;
     type Rng = CudaRng<M, WyHash<M>>;
+
+    fn get_effective_partition(args: &Self::Arguments, _local_partition: &P) -> Partition {
+        match &args.parallelism_mode {
+            ParallelismMode::Monolithic(_) => Partition::monolithic(),
+            ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { partition, .. })
+            | ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { partition, .. }) => {
+                *partition
+            },
+        }
+    }
 
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,

@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_state::DeserializeState;
 
+use necsim_core::reporter::Reporter;
 use necsim_core_bond::PositiveF64;
-use necsim_partitioning_core::partition::Partition;
+use necsim_partitioning_core::{partition::Partition, LocalPartition};
 
 #[derive(Serialize, Debug)]
 #[allow(clippy::module_name_repetitions)]
@@ -88,5 +89,19 @@ impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
             },
             partition_mode => Ok(partition_mode),
         }
+    }
+}
+
+#[must_use]
+pub fn get_effective_monolithic_partition<'p, R: Reporter, P: LocalPartition<'p, R>>(
+    args: &MonolithicArguments,
+    local_partition: &P,
+) -> Partition {
+    match &args.parallelism_mode {
+        ParallelismMode::Monolithic => Partition::monolithic(),
+        ParallelismMode::Optimistic(_)
+        | ParallelismMode::Lockstep
+        | ParallelismMode::OptimisticLockstep
+        | ParallelismMode::Averaging(_) => local_partition.get_partition(),
     }
 }
