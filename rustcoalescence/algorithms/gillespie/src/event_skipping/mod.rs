@@ -21,7 +21,7 @@ use rustcoalescence_algorithms::{
 };
 use rustcoalescence_scenarios::Scenario;
 
-use crate::arguments::{get_effective_monolithic_partition, MonolithicArguments};
+use crate::arguments::{get_gillespie_logical_partition, GillespieArguments};
 
 mod initialiser;
 mod launch;
@@ -34,7 +34,7 @@ use initialiser::{
 pub struct EventSkippingAlgorithm {}
 
 impl AlgorithmParamters for EventSkippingAlgorithm {
-    type Arguments = MonolithicArguments;
+    type Arguments = GillespieArguments;
     type Error = !;
 }
 
@@ -60,8 +60,8 @@ where
     type LineageStore = O::LineageStore<GillespieLineageStore<M, O::Habitat>>;
     type Rng = Pcg<M>;
 
-    fn get_effective_partition(args: &Self::Arguments, local_partition: &P) -> Partition {
-        get_effective_monolithic_partition(args, local_partition)
+    fn get_logical_partition(args: &Self::Arguments, local_partition: &P) -> Partition {
+        get_gillespie_logical_partition(args, local_partition)
     }
 
     #[allow(clippy::shadow_unrelated, clippy::too_many_lines)]

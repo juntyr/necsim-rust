@@ -54,7 +54,7 @@ impl<'p, O: Scenario<M, WyHash<M>>, R: Reporter, P: LocalPartition<'p, R>, M: Ma
     type LineageStore = IndependentLineageStore<M, O::Habitat>;
     type Rng = WyHash<M>;
 
-    fn get_effective_partition(args: &Self::Arguments, local_partition: &P) -> Partition {
+    fn get_logical_partition(args: &Self::Arguments, local_partition: &P) -> Partition {
         match &args.parallelism_mode {
             ParallelismMode::Monolithic(_) => Partition::monolithic(),
             ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { partition, .. })

@@ -31,7 +31,7 @@ use rustcoalescence_scenarios::Scenario;
 
 use super::initialiser::EventSkippingLineageStoreSampleInitialiser;
 use crate::arguments::{
-    AveragingParallelismMode, MonolithicArguments, OptimisticParallelismMode, ParallelismMode,
+    AveragingParallelismMode, GillespieArguments, OptimisticParallelismMode, ParallelismMode,
 };
 
 #[allow(clippy::shadow_unrelated, clippy::too_many_lines)]
@@ -46,7 +46,7 @@ pub fn initialise_and_simulate<
     L: EventSkippingLineageStoreSampleInitialiser<M, G, O, Error>,
     Error,
 >(
-    args: MonolithicArguments,
+    args: GillespieArguments,
     rng: G,
     scenario: O,
     pre_sampler: OriginPreSampler<M, I>,

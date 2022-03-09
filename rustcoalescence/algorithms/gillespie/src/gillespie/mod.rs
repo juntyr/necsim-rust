@@ -2,7 +2,7 @@ use necsim_impls_no_std::cogs::maths::intrinsics::IntrinsicsMathsCore;
 
 use rustcoalescence_algorithms::{AlgorithmDefaults, AlgorithmParamters};
 
-use crate::arguments::MonolithicArguments;
+use crate::arguments::GillespieArguments;
 
 mod classical;
 mod turnover;
@@ -11,7 +11,7 @@ mod turnover;
 pub enum GillespieAlgorithm {}
 
 impl AlgorithmParamters for GillespieAlgorithm {
-    type Arguments = MonolithicArguments;
+    type Arguments = GillespieArguments;
     type Error = !;
 }
 

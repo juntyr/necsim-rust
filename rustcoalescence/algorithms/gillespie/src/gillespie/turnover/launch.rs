@@ -28,7 +28,7 @@ use rustcoalescence_algorithms::result::SimulationOutcome;
 use rustcoalescence_scenarios::Scenario;
 
 use crate::arguments::{
-    AveragingParallelismMode, MonolithicArguments, OptimisticParallelismMode, ParallelismMode,
+    AveragingParallelismMode, GillespieArguments, OptimisticParallelismMode, ParallelismMode,
 };
 
 use super::initialiser::GillespieLineageStoreSampleInitialiser;
@@ -45,7 +45,7 @@ pub fn initialise_and_simulate<
     L: GillespieLineageStoreSampleInitialiser<M, G, O, Error>,
     Error,
 >(
-    args: MonolithicArguments,
+    args: GillespieArguments,
     rng: G,
     scenario: O,
     pre_sampler: OriginPreSampler<M, I>,
