@@ -237,7 +237,7 @@ where
                 .chain(passthrough.into_iter())
                 .collect(),
             rng: simulation.rng_mut().clone(),
-            marker: PhantomData,
+            marker: PhantomData::<M>,
         }),
     }
 }
