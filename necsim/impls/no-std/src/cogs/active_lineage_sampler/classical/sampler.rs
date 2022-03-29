@@ -59,7 +59,7 @@ impl<
         I,
     > for ClassicalActiveLineageSampler<M, H, G, R, S, X, D, N, I>
 {
-    type LineageIterator<'a>
+    type LineageIterator<'a>:
     where
         H: 'a,
         G: 'a,

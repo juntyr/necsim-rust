@@ -46,7 +46,7 @@ impl<R: Reporter> fmt::Debug for RecordedMonolithicLocalPartition<R> {
 
 #[contract_trait]
 impl<'p, R: Reporter> LocalPartition<'p, R> for RecordedMonolithicLocalPartition<R> {
-    type ImmigrantIterator<'a>
+    type ImmigrantIterator<'a>:
     where
         'p: 'a,
         R: 'a,

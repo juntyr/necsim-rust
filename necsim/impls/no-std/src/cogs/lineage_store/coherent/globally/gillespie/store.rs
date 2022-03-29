@@ -22,7 +22,7 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
     for GillespieLineageStore<M, H>
 {
     #[allow(clippy::type_complexity)]
-    type LineageReferenceIterator<'a>
+    type LineageReferenceIterator<'a>:
     where
         H: 'a,
     = impl Iterator<Item = InMemoryLineageReference>;
@@ -137,7 +137,7 @@ impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H, InMemoryLine
 impl<M: MathsCore, H: Habitat<M>> GloballyCoherentLineageStore<M, H, InMemoryLineageReference>
     for GillespieLineageStore<M, H>
 {
-    type LocationIterator<'a>
+    type LocationIterator<'a>:
     where
         H: 'a,
     = impl Iterator<Item = Location>;

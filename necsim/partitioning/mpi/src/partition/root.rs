@@ -121,7 +121,7 @@ impl<'p, R: Reporter> MpiRootPartition<'p, R> {
 
 #[contract_trait]
 impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
-    type ImmigrantIterator<'a>
+    type ImmigrantIterator<'a>:
     where
         'p: 'a,
         R: 'a,
