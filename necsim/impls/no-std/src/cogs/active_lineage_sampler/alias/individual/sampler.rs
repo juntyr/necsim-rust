@@ -31,7 +31,7 @@ impl<
     > ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
     for IndividualAliasActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
 {
-    type LineageIterator<'a>
+    type LineageIterator<'a>:
     where
         H: 'a,
         G: 'a,

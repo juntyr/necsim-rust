@@ -103,7 +103,7 @@ impl<'p, R: Reporter> MpiParallelPartition<'p, R> {
 
 #[contract_trait]
 impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
-    type ImmigrantIterator<'a>
+    type ImmigrantIterator<'a>:
     where
         'p: 'a,
         R: 'a,

@@ -18,7 +18,7 @@ use super::ClassicalLineageStore;
 impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
     for ClassicalLineageStore<M, H>
 {
-    type LineageReferenceIterator<'a>
+    type LineageReferenceIterator<'a>:
     where
         H: 'a,
     = impl Iterator<Item = InMemoryLineageReference>;
