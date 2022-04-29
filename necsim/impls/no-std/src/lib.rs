@@ -7,7 +7,6 @@
 #![feature(const_type_name)]
 #![feature(const_ptr_offset_from)]
 #![feature(const_mut_refs)]
-#![feature(const_fn_trait_bound)]
 #![feature(const_refs_to_cell)]
 #![feature(control_flow_enum)]
 #![feature(negative_impls)]

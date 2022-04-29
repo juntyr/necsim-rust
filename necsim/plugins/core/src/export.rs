@@ -75,6 +75,7 @@ impl<R: SerializeableReporter> From<R> for UnsafeReporterPlugin {
 }
 
 #[macro_export]
+#[allow(clippy::module_name_repetitions)]
 macro_rules! export_plugin {
     ($($name:ident => $plugin:ty),+$(,)?) => {
         #[doc(hidden)]

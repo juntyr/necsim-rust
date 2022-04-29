@@ -1,6 +1,5 @@
 #![deny(clippy::pedantic)]
 #![no_std]
-#![feature(total_cmp)]
 #![feature(const_fn_floating_point_arithmetic)]
 #![feature(const_float_bits_conv)]
 #![feature(const_float_classify)]

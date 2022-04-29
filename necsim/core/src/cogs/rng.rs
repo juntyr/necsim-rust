@@ -54,7 +54,7 @@ pub trait SeedableRng<M: MathsCore>: RngCore<M> {
             let x = xorshifted.rotate_right(rot).to_le();
 
             unsafe {
-                let p = (&x as *const u32).cast::<u8>();
+                let p = core::ptr::addr_of!(x).cast::<u8>();
                 copy_nonoverlapping(p, chunk.as_mut_ptr(), chunk.len());
             }
         }
@@ -224,7 +224,9 @@ impl<M: MathsCore, R: PrimeableRng<M>, H: Habitat<M>> HabitatPrimeableRng<M, H> 
 
 #[allow(clippy::module_name_repetitions)]
 pub trait SplittableRng<M: MathsCore>: RngCore<M> {
+    #[must_use]
     fn split(self) -> (Self, Self);
 
+    #[must_use]
     fn split_to_stream(self, stream: u64) -> Self;
 }

@@ -1,4 +1,5 @@
 #[macro_export]
+#[allow(clippy::module_name_repetitions)]
 macro_rules! impl_report {
     // Special case: Ignored = MaybeUsed<False>
     ($(#[$metas:meta])* $target:ident(&mut $this:ident, $value:ident: Ignored) {}) =>
@@ -66,6 +67,7 @@ macro_rules! impl_report {
 }
 
 #[macro_export]
+#[allow(clippy::module_name_repetitions)]
 macro_rules! impl_finalise {
     ($(#[$metas:meta])* ($self:ident) $code:block) => {
         $(#[$metas])*
