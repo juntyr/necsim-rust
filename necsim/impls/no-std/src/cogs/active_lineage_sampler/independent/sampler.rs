@@ -45,7 +45,7 @@ impl<
         NeverImmigrationEntry,
     > for IndependentActiveLineageSampler<M, H, G, X, D, T, N, J>
 {
-    type LineageIterator<'a>:
+    type LineageIterator<'a>
     where
         H: 'a,
         G: 'a,

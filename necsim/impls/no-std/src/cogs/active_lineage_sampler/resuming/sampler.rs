@@ -30,21 +30,7 @@ impl<
     > ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
     for RestartFixUpActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I, A>
 {
-    type LineageIterator<'a>
-    where
-        H: 'a,
-        G: 'a,
-        R: 'a,
-        S: 'a,
-        X: 'a,
-        D: 'a,
-        C: 'a,
-        T: 'a,
-        N: 'a,
-        E: 'a,
-        I: 'a,
-        A: 'a,
-    = impl Iterator<Item = &'a Lineage>;
+    type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, R: 'a, S: 'a, X: 'a, D: 'a, C: 'a, T: 'a, N: 'a, E: 'a, I: 'a, A: 'a;
 
     #[must_use]
     fn number_active_lineages(&self) -> usize {

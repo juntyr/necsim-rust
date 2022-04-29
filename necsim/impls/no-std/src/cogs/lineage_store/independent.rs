@@ -34,7 +34,7 @@ impl<M: MathsCore, H: Habitat<M>> Backup for IndependentLineageStore<M, H> {
 impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, GlobalLineageReference>
     for IndependentLineageStore<M, H>
 {
-    type LineageReferenceIterator<'a>:
+    type LineageReferenceIterator<'a>
     where
         H: 'a,
     = impl Iterator<Item = GlobalLineageReference>;

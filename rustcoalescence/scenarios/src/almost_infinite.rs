@@ -52,10 +52,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteScenario<M, G
     type LineageReference = InMemoryLineageReference;
     type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>> =
         AlmostInfiniteLineageStore<M>;
-    type OriginSampler<'h, I: Iterator<Item = u64>>
-    where
-        G: 'h,
-    = AlmostInfiniteOriginSampler<'h, M, I>;
+    type OriginSampler<'h, I: Iterator<Item = u64>> = AlmostInfiniteOriginSampler<'h, M, I> where G: 'h;
     type OriginSamplerAuxiliary = (u16,);
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
