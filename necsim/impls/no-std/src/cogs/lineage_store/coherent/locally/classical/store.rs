@@ -18,10 +18,7 @@ use super::ClassicalLineageStore;
 impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
     for ClassicalLineageStore<M, H>
 {
-    type LineageReferenceIterator<'a>:
-    where
-        H: 'a,
-    = impl Iterator<Item = InMemoryLineageReference>;
+    type LineageReferenceIterator<'a> = impl Iterator<Item = InMemoryLineageReference> where H: 'a;
 
     fn with_capacity(_habitat: &H, capacity: usize) -> Self {
         Self {

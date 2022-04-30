@@ -36,11 +36,7 @@ impl<R: Reporter> fmt::Debug for LiveMonolithicLocalPartition<R> {
 
 #[contract_trait]
 impl<'p, R: Reporter> LocalPartition<'p, R> for LiveMonolithicLocalPartition<R> {
-    type ImmigrantIterator<'a>:
-    where
-        'p: 'a,
-        R: 'a,
-    = ImmigrantPopIterator<'a>;
+    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
     type IsLive = True;
     type Reporter = FilteredReporter<R, True, True, True>;
 

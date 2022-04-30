@@ -59,17 +59,7 @@ impl<
         I,
     > for ClassicalActiveLineageSampler<M, H, G, R, S, X, D, N, I>
 {
-    type LineageIterator<'a>:
-    where
-        H: 'a,
-        G: 'a,
-        R: 'a,
-        S: 'a,
-        X: 'a,
-        D: 'a,
-        N: 'a,
-        I: 'a,
-    = impl Iterator<Item = &'a Lineage>;
+    type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, R: 'a, S: 'a, X: 'a, D: 'a, N: 'a, I: 'a;
 
     #[must_use]
     fn number_active_lineages(&self) -> usize {
