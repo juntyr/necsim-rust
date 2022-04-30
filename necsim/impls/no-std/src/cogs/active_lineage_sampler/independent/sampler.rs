@@ -45,16 +45,7 @@ impl<
         NeverImmigrationEntry,
     > for IndependentActiveLineageSampler<M, H, G, X, D, T, N, J>
 {
-    type LineageIterator<'a>:
-    where
-        H: 'a,
-        G: 'a,
-        X: 'a,
-        D: 'a,
-        T: 'a,
-        N: 'a,
-        J: 'a,
-    = impl Iterator<Item = &'a Lineage>;
+    type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, X: 'a, D: 'a, T: 'a, N: 'a, J: 'a;
 
     #[must_use]
     fn number_active_lineages(&self) -> usize {

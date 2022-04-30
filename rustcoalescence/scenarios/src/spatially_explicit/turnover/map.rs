@@ -61,10 +61,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitTurnoverMa
     type Habitat = InMemoryHabitat<M>;
     type LineageReference = InMemoryLineageReference;
     type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>> = L;
-    type OriginSampler<'h, I: Iterator<Item = u64>>
-    where
-        G: 'h,
-    = InMemoryOriginSampler<'h, M, I>;
+    type OriginSampler<'h, I: Iterator<Item = u64>> = InMemoryOriginSampler<'h, M, I> where G: 'h;
     type OriginSamplerAuxiliary = ();
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = InMemoryTurnoverRate;
