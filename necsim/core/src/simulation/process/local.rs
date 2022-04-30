@@ -30,6 +30,7 @@ impl<
         A: ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>,
     > Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A>
 {
+    #[inline]
     pub(in super::super) fn simulate_and_report_local_step_or_early_stop_or_finish<
         P: Reporter,
         F: FnOnce(PositiveF64) -> ControlFlow<(), ()>,
