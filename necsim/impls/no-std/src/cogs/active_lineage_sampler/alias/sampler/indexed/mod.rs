@@ -1,9 +1,10 @@
 use alloc::{vec, vec::Vec};
 use core::{
     cmp::Ordering,
+    convert::TryFrom,
     fmt,
     hash::Hash,
-    num::{NonZeroU128, NonZeroUsize},
+    num::{NonZeroU128, NonZeroU64, NonZeroUsize},
 };
 
 use fnv::FnvBuildHasher;
@@ -190,6 +191,8 @@ impl<E: Eq + Hash + Backup> DynamicAliasMethodIndexedSampler<E> {
         if let Some(total_weight) = NonZeroU128::new(self.total_weight) {
             let cdf_sample = if let [_group] = &self.groups[..] {
                 0_u128
+            } else if let Ok(total_weight) = NonZeroU64::try_from(total_weight) {
+                u128::from(rng.sample_index_u64(total_weight))
             } else {
                 rng.sample_index_u128(total_weight)
             };
