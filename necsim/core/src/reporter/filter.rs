@@ -26,7 +26,7 @@ impl<R: Reporter, KeepSpeciation: Boolean, KeepDispersal: Boolean, KeepProgress:
     for FilteredReporter<R, KeepSpeciation, KeepDispersal, KeepProgress>
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("FilteredReporter")
+        fmt.debug_struct(stringify!(FilteredReporter))
             .field("reporter", &self.reporter)
             .finish()
     }

@@ -1,2 +1,2 @@
-pub mod almost_infinite;
 pub mod gillespie;
+pub mod singleton_demes;

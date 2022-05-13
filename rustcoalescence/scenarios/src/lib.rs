@@ -24,6 +24,7 @@ pub mod almost_infinite;
 pub mod non_spatial;
 pub mod spatially_explicit;
 pub mod spatially_implicit;
+pub mod wrapping_noise;
 
 pub trait ScenarioParameters {
     type Arguments;
