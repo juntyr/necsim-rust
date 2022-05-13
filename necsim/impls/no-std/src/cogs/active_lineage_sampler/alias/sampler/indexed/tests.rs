@@ -1100,11 +1100,4 @@ impl RngCore<IntrinsicsMathsCore> for DummyRng {
         self.0.pop().unwrap()
     }
 }
-
-#[contract_trait]
-impl Backup for DummyRng {
-    unsafe fn backup_unchecked(&self) -> Self {
-        Self(self.0.clone())
-    }
-}
 // GRCOV_EXCL_STOP
