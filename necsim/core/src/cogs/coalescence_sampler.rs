@@ -5,12 +5,13 @@ use necsim_core_bond::ClosedOpenUnitF64;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    cogs::{Backup, MathsCore, RngCore},
+    cogs::{
+        rng::UniformClosedOpenUnit, Backup, DistributionSampler, Habitat, LineageStore, MathsCore,
+        Rng,
+    },
     landscape::{IndexedLocation, Location},
     lineage::LineageInteraction,
 };
-
-use super::{Habitat, LineageStore};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
@@ -57,10 +58,11 @@ impl Eq for CoalescenceRngSample {}
 impl CoalescenceRngSample {
     #[must_use]
     #[inline]
-    pub fn new<M: MathsCore, G: RngCore<M>>(rng: &mut G) -> Self {
-        use crate::cogs::RngSampler;
-
-        Self(rng.sample_uniform_closed_open())
+    pub fn new<M: MathsCore, G: Rng<M>>(rng: &mut G) -> Self
+    where
+        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
+    {
+        Self(rng.sample::<UniformClosedOpenUnit>())
     }
 
     #[must_use]

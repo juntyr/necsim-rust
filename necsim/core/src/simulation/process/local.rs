@@ -5,7 +5,7 @@ use necsim_core_bond::PositiveF64;
 use crate::{
     cogs::{
         event_sampler::EventHandler, ActiveLineageSampler, CoalescenceSampler, DispersalSampler,
-        EmigrationExit, EventSampler, Habitat, ImmigrationEntry, LineageStore, MathsCore, RngCore,
+        EmigrationExit, EventSampler, Habitat, ImmigrationEntry, LineageStore, MathsCore, Rng,
         SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
@@ -17,7 +17,7 @@ use crate::{
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: LineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,

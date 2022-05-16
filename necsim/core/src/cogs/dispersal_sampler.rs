@@ -1,7 +1,7 @@
 use necsim_core_bond::ClosedUnitF64;
 
 use crate::{
-    cogs::{MathsCore, RngCore},
+    cogs::{MathsCore, Rng},
     landscape::Location,
 };
 
@@ -11,7 +11,7 @@ use super::Habitat;
 #[allow(clippy::no_effect_underscore_binding)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
-pub trait DispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>>:
+pub trait DispersalSampler<M: MathsCore, H: Habitat<M>, G: Rng<M>>:
     crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
@@ -29,7 +29,7 @@ pub trait DispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>>:
 #[allow(clippy::no_effect_underscore_binding)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
-pub trait SeparableDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>>:
+pub trait SeparableDispersalSampler<M: MathsCore, H: Habitat<M>, G: Rng<M>>:
     DispersalSampler<M, H, G>
 {
     #[must_use]

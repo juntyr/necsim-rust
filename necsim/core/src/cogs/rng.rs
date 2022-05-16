@@ -1,11 +1,12 @@
 use core::{
     convert::AsMut,
     default::Default,
+    marker::PhantomData,
     num::{NonZeroU128, NonZeroU32, NonZeroU64, NonZeroUsize},
     ptr::copy_nonoverlapping,
 };
 
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 
 use necsim_core_bond::{
     ClosedOpenUnitF64, ClosedUnitF64, NonNegativeF64, OpenClosedUnitF64, PositiveF64,
@@ -17,7 +18,7 @@ use crate::{
 };
 
 #[allow(clippy::module_name_repetitions)]
-pub trait RngCore<M: MathsCore>:
+pub trait RngCore:
     crate::cogs::Backup + Sized + Clone + core::fmt::Debug + Serialize + DeserializeOwned
 {
     type Seed: AsMut<[u8]> + Default + Sized;
@@ -30,7 +31,7 @@ pub trait RngCore<M: MathsCore>:
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub trait SeedableRng<M: MathsCore>: RngCore<M> {
+pub trait SeedableRng: RngCore {
     #[must_use]
     fn seed_from_u64(mut state: u64) -> Self {
         // Implementation from:
@@ -64,9 +65,278 @@ pub trait SeedableRng<M: MathsCore>: RngCore<M> {
     }
 }
 
-impl<M: MathsCore, R: RngCore<M>> SeedableRng<M> for R {}
+impl<R: RngCore> SeedableRng for R {}
 
-#[allow(clippy::inline_always, clippy::inline_fn_without_body)]
+#[allow(clippy::module_name_repetitions)]
+pub trait PrimeableRng: RngCore {
+    fn prime_with(&mut self, location_index: u64, time_index: u64);
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub trait HabitatPrimeableRng<M: MathsCore, H: Habitat<M>>: PrimeableRng {
+    #[inline]
+    fn prime_with_habitat(
+        &mut self,
+        habitat: &H,
+        indexed_location: &IndexedLocation,
+        time_index: u64,
+    ) {
+        self.prime_with(
+            habitat.map_indexed_location_to_u64_injective(indexed_location),
+            time_index,
+        );
+    }
+}
+
+impl<M: MathsCore, H: Habitat<M>, R: PrimeableRng> HabitatPrimeableRng<M, H> for R {}
+
+#[allow(clippy::module_name_repetitions)]
+pub trait SplittableRng: RngCore {
+    #[must_use]
+    fn split(self) -> (Self, Self);
+
+    #[must_use]
+    fn split_to_stream(self, stream: u64) -> Self;
+}
+
+pub trait Distribution {
+    type Parameters;
+    type Sample;
+}
+
+pub trait Rng<M: MathsCore>: RngCore {
+    type Generator: RngCore;
+    type Sampler;
+
+    #[must_use]
+    fn generator(&mut self) -> &mut Self::Generator;
+
+    #[must_use]
+    fn sample_with<D: Distribution>(&mut self, params: D::Parameters) -> D::Sample
+    where
+        Self::Sampler: DistributionSampler<M, Self::Generator, Self::Sampler, D>;
+
+    #[must_use]
+    fn sample<D: Distribution<Parameters = ()>>(&mut self) -> D::Sample
+    where
+        Self::Sampler: DistributionSampler<M, Self::Generator, Self::Sampler, D>,
+    {
+        self.sample_with(())
+    }
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub trait DistributionSampler<M: MathsCore, R: RngCore, S, D: Distribution> {
+    type ConcreteSampler: DistributionSampler<M, R, S, D>;
+
+    #[must_use]
+    fn concrete(&self) -> &Self::ConcreteSampler;
+
+    #[must_use]
+    fn sample_with(&self, rng: &mut R, samplers: &S, params: D::Parameters) -> D::Sample;
+
+    #[must_use]
+    fn sample(&self, rng: &mut R, samplers: &S) -> D::Sample
+    where
+        D: Distribution<Parameters = ()>,
+    {
+        self.sample_with(rng, samplers, ())
+    }
+}
+
+pub enum UniformClosedOpenUnit {}
+
+impl Distribution for UniformClosedOpenUnit {
+    type Parameters = ();
+    type Sample = ClosedOpenUnitF64;
+}
+
+pub enum UniformOpenClosedUnit {}
+
+impl Distribution for UniformOpenClosedUnit {
+    type Parameters = ();
+    type Sample = OpenClosedUnitF64;
+}
+
+pub enum IndexUsize {}
+
+pub struct Length<T>(pub T);
+
+impl Distribution for IndexUsize {
+    type Parameters = Length<NonZeroUsize>;
+    type Sample = usize;
+}
+
+pub enum IndexU32 {}
+
+impl Distribution for IndexU32 {
+    type Parameters = Length<NonZeroU32>;
+    type Sample = u32;
+}
+
+pub enum IndexU64 {}
+
+impl Distribution for IndexU64 {
+    type Parameters = Length<NonZeroU64>;
+    type Sample = u64;
+}
+
+pub enum IndexU128 {}
+
+impl Distribution for IndexU128 {
+    type Parameters = Length<NonZeroU128>;
+    type Sample = u128;
+}
+
+pub enum Exponential {}
+
+pub struct Lambda(pub PositiveF64);
+
+impl Distribution for Exponential {
+    type Parameters = Lambda;
+    type Sample = NonNegativeF64;
+}
+
+pub enum Event {}
+
+impl Distribution for Event {
+    type Parameters = ClosedUnitF64;
+    type Sample = bool;
+}
+
+pub enum StandardNormal2D {}
+
+impl Distribution for StandardNormal2D {
+    type Parameters = ();
+    type Sample = (f64, f64);
+}
+
+pub enum Normal2D {}
+
+pub struct Normal {
+    pub mu: f64,
+    pub sigma: NonNegativeF64,
+}
+
+impl Distribution for Normal2D {
+    type Parameters = Normal;
+    type Sample = (f64, f64);
+}
+
+#[derive(Clone, Debug)]
+#[allow(clippy::module_name_repetitions)]
+pub struct SimpleRng<M: MathsCore, R: RngCore> {
+    inner: R,
+    _marker: PhantomData<M>,
+}
+
+impl<M: MathsCore, R: RngCore> Serialize for SimpleRng<M, R> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.inner.serialize(serializer)
+    }
+}
+
+impl<'de, M: MathsCore, R: RngCore> Deserialize<'de> for SimpleRng<M, R> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let inner = R::deserialize(deserializer)?;
+
+        Ok(Self {
+            inner,
+            _marker: PhantomData::<M>,
+        })
+    }
+}
+
+#[contract_trait]
+impl<M: MathsCore, R: RngCore> crate::cogs::Backup for SimpleRng<M, R> {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            inner: self.inner.backup_unchecked(),
+            _marker: PhantomData::<M>,
+        }
+    }
+}
+
+impl<M: MathsCore, R: RngCore> RngCore for SimpleRng<M, R> {
+    type Seed = R::Seed;
+
+    #[must_use]
+    fn from_seed(seed: Self::Seed) -> Self {
+        Self {
+            inner: R::from_seed(seed),
+            _marker: PhantomData::<M>,
+        }
+    }
+
+    #[must_use]
+    fn sample_u64(&mut self) -> u64 {
+        self.inner.sample_u64()
+    }
+}
+
+impl<M: MathsCore, R: RngCore> Rng<M> for SimpleRng<M, R> {
+    type Generator = R;
+    type Sampler = SimplerDistributionSamplers<M, R>;
+
+    fn generator(&mut self) -> &mut Self::Generator {
+        &mut self.inner
+    }
+
+    fn sample_with<D: Distribution>(&mut self, params: D::Parameters) -> D::Sample
+    where
+        Self::Sampler: DistributionSampler<M, Self::Generator, Self::Sampler, D>,
+    {
+        let samplers = SimplerDistributionSamplers {
+            _marker: PhantomData::<(M, R)>,
+        };
+
+        samplers.sample_with(&mut self.inner, &samplers, params)
+    }
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub struct SimplerDistributionSamplers<M: MathsCore, R: RngCore> {
+    _marker: PhantomData<(M, R)>,
+}
+
+impl<M: MathsCore, R: RngCore, S> DistributionSampler<M, R, S, UniformClosedOpenUnit>
+    for SimplerDistributionSamplers<M, R>
+{
+    type ConcreteSampler = Self;
+
+    fn concrete(&self) -> &Self::ConcreteSampler {
+        self
+    }
+
+    fn sample_with(&self, rng: &mut R, _samplers: &S, _params: ()) -> ClosedOpenUnitF64 {
+        // http://prng.di.unimi.it -> Generating uniform doubles in the unit interval
+        #[allow(clippy::cast_precision_loss)]
+        let u01 = ((rng.sample_u64() >> 11) as f64) * f64::from_bits(0x3CA0_0000_0000_0000_u64); // 0x1.0p-53
+
+        unsafe { ClosedOpenUnitF64::new_unchecked(u01) }
+    }
+}
+
+impl<M: MathsCore, R: RngCore, S> DistributionSampler<M, R, S, UniformOpenClosedUnit>
+    for SimplerDistributionSamplers<M, R>
+{
+    type ConcreteSampler = Self;
+
+    fn concrete(&self) -> &Self::ConcreteSampler {
+        self
+    }
+
+    fn sample_with(&self, rng: &mut R, _samplers: &S, _params: ()) -> OpenClosedUnitF64 {
+        // http://prng.di.unimi.it -> Generating uniform doubles in the unit interval
+        #[allow(clippy::cast_precision_loss)]
+        let u01 =
+            (((rng.sample_u64() >> 11) + 1) as f64) * f64::from_bits(0x3CA0_0000_0000_0000_u64); // 0x1.0p-53
+
+        unsafe { OpenClosedUnitF64::new_unchecked(u01) }
+    }
+}
+
+/*#[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
 pub trait RngSampler<M: MathsCore>: RngCore<M> {
@@ -242,36 +512,4 @@ pub trait RngSampler<M: MathsCore>: RngCore<M> {
     }
 }
 
-impl<M: MathsCore, R: RngCore<M>> RngSampler<M> for R {}
-
-#[allow(clippy::module_name_repetitions)]
-pub trait PrimeableRng<M: MathsCore>: RngCore<M> {
-    fn prime_with(&mut self, location_index: u64, time_index: u64);
-}
-
-#[allow(clippy::module_name_repetitions)]
-pub trait HabitatPrimeableRng<M: MathsCore, H: Habitat<M>>: PrimeableRng<M> {
-    #[inline]
-    fn prime_with_habitat(
-        &mut self,
-        habitat: &H,
-        indexed_location: &IndexedLocation,
-        time_index: u64,
-    ) {
-        self.prime_with(
-            habitat.map_indexed_location_to_u64_injective(indexed_location),
-            time_index,
-        );
-    }
-}
-
-impl<M: MathsCore, R: PrimeableRng<M>, H: Habitat<M>> HabitatPrimeableRng<M, H> for R {}
-
-#[allow(clippy::module_name_repetitions)]
-pub trait SplittableRng<M: MathsCore>: RngCore<M> {
-    #[must_use]
-    fn split(self) -> (Self, Self);
-
-    #[must_use]
-    fn split_to_stream(self, stream: u64) -> Self;
-}
+impl<M: MathsCore, R: RngCore<M>> RngSampler<M> for R {}*/
