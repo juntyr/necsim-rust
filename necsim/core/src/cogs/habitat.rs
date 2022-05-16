@@ -2,7 +2,7 @@ use necsim_core_bond::OffByOneU64;
 
 use crate::landscape::{IndexedLocation, LandscapeExtent, Location};
 
-use super::{MathsCore, RngCore};
+use super::{MathsCore, Rng};
 
 #[allow(
     clippy::inline_always,
@@ -67,7 +67,7 @@ pub trait Habitat<M: MathsCore>: crate::cogs::Backup + core::fmt::Debug + Sized 
     clippy::no_effect_underscore_binding
 )]
 #[contract_trait]
-pub trait UniformlySampleableHabitat<M: MathsCore, G: RngCore<M>>: Habitat<M> {
+pub trait UniformlySampleableHabitat<M: MathsCore, G: Rng<M>>: Habitat<M> {
     #[debug_ensures(
         old(self).get_extent().contains(ret.location()) &&
         ret.index() < old(self).get_habitat_at_location(ret.location()),
