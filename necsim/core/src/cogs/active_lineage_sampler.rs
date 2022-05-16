@@ -4,7 +4,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use super::{
     CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, ImmigrationEntry,
-    LineageStore, MathsCore, RngCore, SpeciationProbability, TurnoverRate,
+    LineageStore, MathsCore, Rng, SpeciationProbability, TurnoverRate,
 };
 
 use crate::{lineage::Lineage, simulation::partial::active_lineage_sampler::PartialSimulation};
@@ -15,7 +15,7 @@ use crate::{lineage::Lineage, simulation::partial::active_lineage_sampler::Parti
 pub trait ActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: RngCore<M>,
+    G: Rng<M>,
     S: LineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,

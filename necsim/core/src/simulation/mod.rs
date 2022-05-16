@@ -11,7 +11,7 @@ use core::num::Wrapping;
 use crate::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        Habitat, ImmigrationEntry, LineageStore, MathsCore, RngCore, SpeciationProbability,
+        Habitat, ImmigrationEntry, LineageStore, MathsCore, Rng, SpeciationProbability,
         TurnoverRate,
     },
     lineage::TieBreaker,
@@ -25,7 +25,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: LineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,

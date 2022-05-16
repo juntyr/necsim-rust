@@ -1,8 +1,8 @@
 use necsim_core_bond::PositiveF64;
 
 use super::{
-    CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, LineageStore, MathsCore,
-    RngCore, SpeciationProbability, TurnoverRate,
+    CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, LineageStore, MathsCore, Rng,
+    SpeciationProbability, TurnoverRate,
 };
 use crate::{
     event::{DispersalEvent, SpeciationEvent},
@@ -21,7 +21,7 @@ pub struct EventHandler<S, D, E> {
 pub trait EventSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: RngCore<M>,
+    G: Rng<M>,
     S: LineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
