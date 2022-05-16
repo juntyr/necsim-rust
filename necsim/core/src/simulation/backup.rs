@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use crate::cogs::{
     backup::BackedUp, ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler,
-    EmigrationExit, EventSampler, Habitat, ImmigrationEntry, LineageStore, MathsCore, RngCore,
+    EmigrationExit, EventSampler, Habitat, ImmigrationEntry, LineageStore, MathsCore, Rng,
     SpeciationProbability, TurnoverRate,
 };
 
@@ -12,7 +12,7 @@ use super::Simulation;
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: LineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -46,7 +46,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: LineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
