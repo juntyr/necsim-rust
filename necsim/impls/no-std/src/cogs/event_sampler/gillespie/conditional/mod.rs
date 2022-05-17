@@ -4,7 +4,7 @@ use necsim_core::{
     cogs::{
         coalescence_sampler::CoalescenceRngSample, event_sampler::EventHandler, Backup,
         CoalescenceSampler, EmigrationExit, EventSampler, GloballyCoherentLineageStore, Habitat,
-        MathsCore, RngCore, RngSampler, SeparableDispersalSampler, SpeciationProbability,
+        MathsCore, Rng, SeparableDispersalSampler, SpeciationProbability,
         TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
@@ -28,7 +28,7 @@ use probability::ProbabilityAtLocation;
 pub struct ConditionalGillespieEventSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: RngCore<M>,
+    G: Rng<M>,
     S: GloballyCoherentLineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: SeparableDispersalSampler<M, H, G>,
@@ -42,7 +42,7 @@ pub struct ConditionalGillespieEventSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: SeparableDispersalSampler<M, H, G>,
@@ -61,7 +61,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: SeparableDispersalSampler<M, H, G>,
@@ -80,7 +80,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: SeparableDispersalSampler<M, H, G>,
@@ -232,7 +232,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: SeparableDispersalSampler<M, H, G>,

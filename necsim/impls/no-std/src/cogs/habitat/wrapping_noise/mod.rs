@@ -1,14 +1,16 @@
 use alloc::boxed::Box;
 use core::{fmt, num::NonZeroUsize};
-use necsim_core_bond::{ClosedUnitF64, OffByOneU64, OpenClosedUnitF64 as PositiveUnitF64};
+
 use r#final::Final;
+
+use necsim_core_bond::{ClosedUnitF64, OffByOneU64, OpenClosedUnitF64 as PositiveUnitF64};
 
 mod opensimplex_noise;
 
 use opensimplex_noise::OpenSimplexNoise;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
+    cogs::{Backup, Habitat, MathsCore, Rng, UniformlySampleableHabitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -189,7 +191,7 @@ impl<M: MathsCore> Habitat<M> for WrappingNoiseHabitat<M> {
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for WrappingNoiseHabitat<M> {
+impl<M: MathsCore, G: Rng<M>> UniformlySampleableHabitat<M, G> for WrappingNoiseHabitat<M> {
     #[must_use]
     fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
         // Rejection sample until a habitable location is found
