@@ -9,7 +9,8 @@ use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::{
     cogs::{
-        DispersalSampler, Habitat, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
+        DispersalSampler, Habitat, MathsCore, PrimeableRng, Rng, SpeciationProbability,
+        TurnoverRate,
     },
     lineage::Lineage,
     reporter::Reporter,
@@ -39,7 +40,7 @@ pub fn simulate<
     'p,
     M: MathsCore,
     H: Habitat<M>,
-    G: PrimeableRng<M>,
+    G: Rng<M, Generator: PrimeableRng>,
     D: DispersalSampler<M, H, G>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,

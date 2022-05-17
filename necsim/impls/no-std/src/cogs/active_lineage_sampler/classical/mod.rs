@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 
 use necsim_core::cogs::{
     Backup, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-    LocallyCoherentLineageStore, MathsCore, RngCore, SpeciationProbability,
+    LocallyCoherentLineageStore, MathsCore, Rng, SpeciationProbability,
 };
 use necsim_core_bond::NonNegativeF64;
 
@@ -19,7 +19,7 @@ mod sampler;
 pub struct ClassicalActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: RngCore<M>,
+    G: Rng<M>,
     S: LocallyCoherentLineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
@@ -35,7 +35,7 @@ pub struct ClassicalActiveLineageSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -126,7 +126,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,

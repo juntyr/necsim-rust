@@ -1,5 +1,5 @@
 use necsim_core::cogs::{
-    DispersalSampler, EmigrationExit, Habitat, MathsCore, PrimeableRng, SpeciationProbability,
+    DispersalSampler, EmigrationExit, Habitat, MathsCore, PrimeableRng, Rng, SpeciationProbability,
     TurnoverRate,
 };
 
@@ -19,7 +19,7 @@ use super::{EventTimeSampler, IndependentActiveLineageSampler};
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: PrimeableRng<M>,
+        G: Rng<M, Generator: PrimeableRng>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,

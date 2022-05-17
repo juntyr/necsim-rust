@@ -1,12 +1,12 @@
 use necsim_core::{
-    cogs::{DispersalSampler, Habitat, MathsCore, RngCore},
+    cogs::{DispersalSampler, Habitat, MathsCore, Rng},
     landscape::Location,
 };
 
 use super::InMemoryCumulativeDispersalSampler;
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> DispersalSampler<M, H, G>
     for InMemoryCumulativeDispersalSampler
 {
     #[must_use]
@@ -16,8 +16,6 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
         habitat: &H,
         rng: &mut G,
     ) -> Location {
-        use necsim_core::cogs::RngSampler;
-
         let location_index = (location.y().wrapping_sub(habitat.get_extent().y()) as usize)
             * usize::from(habitat.get_extent().width())
             + (location.x().wrapping_sub(habitat.get_extent().x()) as usize);

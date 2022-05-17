@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng, RngSampler, TurnoverRate},
+    cogs::{Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng, Rng, TurnoverRate},
     landscape::IndexedLocation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -24,7 +24,7 @@ impl PoissonEventTimeSampler {
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: PrimeableRng<M>, T: TurnoverRate<M, H>>
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M, Generator: PrimeableRng>, T: TurnoverRate<M, H>>
     EventTimeSampler<M, H, G, T> for PoissonEventTimeSampler
 {
     #[inline]

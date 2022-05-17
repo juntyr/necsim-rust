@@ -4,7 +4,7 @@ use core::ops::ControlFlow;
 use necsim_core::{
     cogs::{
         backup::BackedUp, ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler,
-        EventSampler, Habitat, LocallyCoherentLineageStore, MathsCore, RngCore,
+        EventSampler, Habitat, LocallyCoherentLineageStore, MathsCore, Rng,
         SpeciationProbability, TurnoverRate,
     },
     lineage::MigratingLineage,
@@ -31,7 +31,7 @@ pub fn simulate<
     'p,
     M: MathsCore,
     H: Habitat<M>,
-    G: RngCore<M>,
+    G: Rng<M>,
     S: LocallyCoherentLineageStore<M, H>,
     D: DispersalSampler<M, H, G>,
     C: CoalescenceSampler<M, H, S>,

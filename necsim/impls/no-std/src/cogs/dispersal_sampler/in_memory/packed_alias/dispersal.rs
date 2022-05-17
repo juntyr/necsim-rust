@@ -1,7 +1,7 @@
 use core::ops::Range;
 
 use necsim_core::{
-    cogs::{DispersalSampler, Habitat, MathsCore, RngCore},
+    cogs::{DispersalSampler, Habitat, MathsCore, Rng},
     landscape::Location,
 };
 
@@ -10,7 +10,7 @@ use crate::alias::packed::AliasMethodSamplerAtom;
 use super::InMemoryPackedAliasDispersalSampler;
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> DispersalSampler<M, H, G>
     for InMemoryPackedAliasDispersalSampler<M, H, G>
 {
     #[must_use]

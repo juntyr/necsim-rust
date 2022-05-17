@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, Habitat, MathsCore, RngCore, SeparableDispersalSampler},
+    cogs::{Backup, DispersalSampler, Habitat, MathsCore, Rng, SeparableDispersalSampler},
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, OpenClosedUnitF64 as PositiveUnitF64};
@@ -13,7 +13,7 @@ use crate::cogs::{
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
-pub struct SpatiallyImplicitDispersalSampler<M: MathsCore, G: RngCore<M>> {
+pub struct SpatiallyImplicitDispersalSampler<M: MathsCore, G: Rng<M>> {
     #[cfg_attr(feature = "cuda", cuda(embed))]
     local: NonSpatialDispersalSampler<M, G>,
     #[cfg_attr(feature = "cuda", cuda(embed))]
@@ -21,7 +21,7 @@ pub struct SpatiallyImplicitDispersalSampler<M: MathsCore, G: RngCore<M>> {
     local_migration_probability_per_generation: PositiveUnitF64,
 }
 
-impl<M: MathsCore, G: RngCore<M>> SpatiallyImplicitDispersalSampler<M, G> {
+impl<M: MathsCore, G: Rng<M>> SpatiallyImplicitDispersalSampler<M, G> {
     #[must_use]
     pub fn new(local_migration_probability_per_generation: PositiveUnitF64) -> Self {
         Self {
@@ -33,7 +33,7 @@ impl<M: MathsCore, G: RngCore<M>> SpatiallyImplicitDispersalSampler<M, G> {
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> Backup for SpatiallyImplicitDispersalSampler<M, G> {
+impl<M: MathsCore, G: Rng<M>> Backup for SpatiallyImplicitDispersalSampler<M, G> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             local: self.local.backup_unchecked(),
@@ -45,7 +45,7 @@ impl<M: MathsCore, G: RngCore<M>> Backup for SpatiallyImplicitDispersalSampler<M
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, SpatiallyImplicitHabitat<M>, G>
+impl<M: MathsCore, G: Rng<M>> DispersalSampler<M, SpatiallyImplicitHabitat<M>, G>
     for SpatiallyImplicitDispersalSampler<M, G>
 {
     #[must_use]
@@ -62,8 +62,6 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, SpatiallyImplicitHabitat<M
         habitat: &SpatiallyImplicitHabitat<M>,
         rng: &mut G,
     ) -> Location {
-        use necsim_core::cogs::RngSampler;
-
         // By PRE, location must be habitable, i.e. either in the local or the meta
         //  habitat
         if habitat.local().get_extent().contains(location) {
@@ -89,7 +87,7 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, SpatiallyImplicitHabitat<M
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, SpatiallyImplicitHabitat<M>, G>
+impl<M: MathsCore, G: Rng<M>> SeparableDispersalSampler<M, SpatiallyImplicitHabitat<M>, G>
     for SpatiallyImplicitDispersalSampler<M, G>
 {
     #[must_use]
@@ -106,8 +104,6 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, SpatiallyImplicit
         habitat: &SpatiallyImplicitHabitat<M>,
         rng: &mut G,
     ) -> Location {
-        use necsim_core::cogs::RngSampler;
-
         // By PRE, location must be habitable, i.e. either in the local or the meta
         //  habitat
         if habitat.local().get_extent().contains(location) {
