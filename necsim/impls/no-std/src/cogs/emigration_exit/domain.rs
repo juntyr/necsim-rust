@@ -6,7 +6,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_core::{
     cogs::{
         coalescence_sampler::CoalescenceRngSample, Backup, EmigrationExit, Habitat,
-        LocallyCoherentLineageStore, MathsCore, RngCore,
+        LocallyCoherentLineageStore, MathsCore, Rng,
     },
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, MigratingLineage, TieBreaker},
@@ -45,7 +45,7 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         C: Decomposition<M, H>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: LocallyCoherentLineageStore<M, H>,
     > EmigrationExit<M, H, G, S> for DomainEmigrationExit<M, H, C>
 {

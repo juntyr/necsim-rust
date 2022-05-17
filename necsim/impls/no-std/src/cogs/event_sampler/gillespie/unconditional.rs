@@ -4,8 +4,8 @@ use necsim_core::{
     cogs::{
         coalescence_sampler::CoalescenceRngSample, event_sampler::EventHandler, Backup,
         CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        GloballyCoherentLineageStore, Habitat, MathsCore, RngCore, SpeciationProbability,
-        TurnoverRate,
+        GloballyCoherentLineageStore, Habitat, MathsCore, Rng,
+        SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
     landscape::Location,
@@ -21,7 +21,7 @@ use super::GillespieEventSampler;
 pub struct UnconditionalGillespieEventSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: RngCore<M>,
+    G: Rng<M>,
     S: GloballyCoherentLineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
@@ -36,7 +36,7 @@ pub struct UnconditionalGillespieEventSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -56,7 +56,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -76,7 +76,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -110,8 +110,6 @@ impl<
         }: EventHandler<FS, FD, FE>,
         auxiliary: Aux,
     ) -> Q {
-        use necsim_core::cogs::RngSampler;
-
         if rng.sample_event(
             simulation
                 .speciation_probability
@@ -185,7 +183,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,

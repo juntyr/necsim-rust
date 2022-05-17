@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
-        GloballyCoherentLineageStore, Habitat, MathsCore, RngCore, SeparableDispersalSampler,
-        SpeciationProbability,
+        GloballyCoherentLineageStore, Habitat, MathsCore, Rng,
+        SeparableDispersalSampler, SpeciationProbability,
     },
     landscape::Location,
 };
@@ -20,7 +20,7 @@ impl ProbabilityAtLocation {
     pub fn new<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: GloballyCoherentLineageStore<M, H>,
         D: SeparableDispersalSampler<M, H, G>,
         N: SpeciationProbability<M, H>,

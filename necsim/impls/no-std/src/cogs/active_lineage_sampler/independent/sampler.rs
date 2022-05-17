@@ -3,7 +3,7 @@ use core::ops::ControlFlow;
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, DispersalSampler, EmigrationExit, Habitat, MathsCore, PrimeableRng,
-        SpeciationProbability, TurnoverRate,
+        Rng, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -23,7 +23,7 @@ use super::{EventTimeSampler, IndependentActiveLineageSampler};
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: PrimeableRng<M>,
+        G: Rng<M, Generator: PrimeableRng>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,

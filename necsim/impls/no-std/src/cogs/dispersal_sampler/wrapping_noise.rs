@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        Backup, DispersalSampler, Habitat, MathsCore, RngCore, RngSampler,
+        Backup, DispersalSampler, Habitat, MathsCore, Rng,
         SeparableDispersalSampler,
     },
     landscape::Location,
@@ -16,12 +16,12 @@ use crate::cogs::{
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
-pub struct WrappingNoiseApproximateNormalDispersalSampler<M: MathsCore, G: RngCore<M>> {
+pub struct WrappingNoiseApproximateNormalDispersalSampler<M: MathsCore, G: Rng<M>> {
     #[cfg_attr(feature = "cuda", cuda(embed))]
     inner: AlmostInfiniteNormalDispersalSampler<M, G>,
 }
 
-impl<M: MathsCore, G: RngCore<M>> WrappingNoiseApproximateNormalDispersalSampler<M, G> {
+impl<M: MathsCore, G: Rng<M>> WrappingNoiseApproximateNormalDispersalSampler<M, G> {
     #[must_use]
     pub fn new(sigma: NonNegativeF64) -> Self {
         Self {
@@ -31,7 +31,7 @@ impl<M: MathsCore, G: RngCore<M>> WrappingNoiseApproximateNormalDispersalSampler
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> Backup for WrappingNoiseApproximateNormalDispersalSampler<M, G> {
+impl<M: MathsCore, G: Rng<M>> Backup for WrappingNoiseApproximateNormalDispersalSampler<M, G> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             inner: self.inner.backup_unchecked(),
@@ -40,7 +40,7 @@ impl<M: MathsCore, G: RngCore<M>> Backup for WrappingNoiseApproximateNormalDispe
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, WrappingNoiseHabitat<M>, G>
+impl<M: MathsCore, G: Rng<M>> DispersalSampler<M, WrappingNoiseHabitat<M>, G>
     for WrappingNoiseApproximateNormalDispersalSampler<M, G>
 {
     #[must_use]
@@ -65,7 +65,7 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, WrappingNoiseHabitat<M>, G
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, WrappingNoiseHabitat<M>, G>
+impl<M: MathsCore, G: Rng<M>> SeparableDispersalSampler<M, WrappingNoiseHabitat<M>, G>
     for WrappingNoiseApproximateNormalDispersalSampler<M, G>
 {
     #[must_use]

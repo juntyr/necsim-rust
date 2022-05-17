@@ -2,8 +2,7 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample, Backup, EmigrationExit, Habitat, MathsCore,
-        RngCore,
+        coalescence_sampler::CoalescenceRngSample, Backup, EmigrationExit, Habitat, MathsCore, Rng,
     },
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, MigratingLineage, TieBreaker},
@@ -52,13 +51,8 @@ impl<M: MathsCore, H: Habitat<M>, C: Decomposition<M, H>, E: EmigrationChoice<M,
 }
 
 #[contract_trait]
-impl<
-        M: MathsCore,
-        H: Habitat<M>,
-        C: Decomposition<M, H>,
-        E: EmigrationChoice<M, H>,
-        G: RngCore<M>,
-    > EmigrationExit<M, H, G, IndependentLineageStore<M, H>>
+impl<M: MathsCore, H: Habitat<M>, C: Decomposition<M, H>, E: EmigrationChoice<M, H>, G: Rng<M>>
+    EmigrationExit<M, H, G, IndependentLineageStore<M, H>>
     for IndependentEmigrationExit<M, H, C, E>
 {
     #[must_use]

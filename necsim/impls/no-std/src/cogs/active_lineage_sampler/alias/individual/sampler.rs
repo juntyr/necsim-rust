@@ -2,9 +2,10 @@ use core::ops::ControlFlow;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        Habitat, ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, RngCore,
-        SpeciationProbability, TurnoverRate,
+        rng::{Exponential, Lambda},
+        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, DistributionSampler,
+        EmigrationExit, EventSampler, Habitat, ImmigrationEntry,
+        LocallyCoherentLineageStore, MathsCore, Rng, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -18,7 +19,7 @@ use super::IndividualAliasActiveLineageSampler;
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -29,6 +30,8 @@ impl<
         I: ImmigrationEntry<M>,
     > ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
     for IndividualAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
 {
     type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, S: 'a, X: 'a, D: 'a, C: 'a, T: 'a, N: 'a, E: 'a, I: 'a;
 
@@ -60,12 +63,10 @@ impl<
         rng: &mut G,
         early_peek_stop: F,
     ) -> Option<(Lineage, PositiveF64)> {
-        use necsim_core::cogs::RngSampler;
-
         let total_rate = self.alias_sampler.total_weight();
 
         if let Ok(lambda) = PositiveF64::new(total_rate.get()) {
-            let event_time = self.last_event_time + rng.sample_exponential(lambda);
+            let event_time = self.last_event_time + rng.sample_with::<Exponential>(Lambda(lambda));
 
             let next_event_time = PositiveF64::max_after(self.last_event_time, event_time);
 

@@ -4,9 +4,9 @@ use core::{fmt, marker::PhantomData};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::cogs::{
-    Backup, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat,
-    ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, RngCore, SpeciationProbability,
-    TurnoverRate,
+    rng::Exponential, Backup, CoalescenceSampler, DispersalSampler, DistributionSampler,
+    EmigrationExit, EventSampler, Habitat, ImmigrationEntry,
+    LocallyCoherentLineageStore, MathsCore, Rng, SpeciationProbability, TurnoverRate,
 };
 
 use crate::cogs::{
@@ -22,7 +22,7 @@ mod sampler;
 pub struct IndividualAliasActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: RngCore<M>,
+    G: Rng<M>,
     S: LocallyCoherentLineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
@@ -31,7 +31,9 @@ pub struct IndividualAliasActiveLineageSampler<
     N: SpeciationProbability<M, H>,
     E: EventSampler<M, H, G, S, X, D, C, T, N>,
     I: ImmigrationEntry<M>,
-> {
+> where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
+{
     alias_sampler: DynamicAliasMethodStackSampler<S::LocalLineageReference>,
     number_active_lineages: usize,
     last_event_time: NonNegativeF64,
@@ -42,7 +44,7 @@ pub struct IndividualAliasActiveLineageSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -52,6 +54,8 @@ impl<
         E: EventSampler<M, H, G, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
     > IndividualAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
 {
     #[must_use]
     pub fn init_with_store<'h, O: TrustedOriginSampler<'h, M, Habitat = H>>(
@@ -149,7 +153,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -159,6 +163,8 @@ impl<
         E: EventSampler<M, H, G, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
     > fmt::Debug for IndividualAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("IndividualAliasActiveLineageSampler")
@@ -172,7 +178,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -182,6 +188,8 @@ impl<
         E: EventSampler<M, H, G, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
     > Backup for IndividualAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
