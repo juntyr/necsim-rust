@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        Backup, DispersalSampler, EmigrationExit, Habitat, MathsCore, PrimeableRng,
+        Backup, DispersalSampler, EmigrationExit, Habitat, MathsCore, PrimeableRng, Rng,
         SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
@@ -30,7 +30,7 @@ use event_time_sampler::EventTimeSampler;
 pub struct IndependentActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: PrimeableRng<M>,
+    G: Rng<M, Generator: PrimeableRng>,
     X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
     D: DispersalSampler<M, H, G>,
     T: TurnoverRate<M, H>,
@@ -52,7 +52,7 @@ pub struct IndependentActiveLineageSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: PrimeableRng<M>,
+        G: Rng<M, Generator: PrimeableRng>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,
@@ -138,7 +138,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: PrimeableRng<M>,
+        G: Rng<M, Generator: PrimeableRng>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,

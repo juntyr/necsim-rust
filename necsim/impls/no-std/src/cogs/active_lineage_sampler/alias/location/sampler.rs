@@ -2,9 +2,10 @@ use core::{num::NonZeroUsize, ops::ControlFlow};
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler, EmigrationExit,
-        GloballyCoherentLineageStore, Habitat, ImmigrationEntry, MathsCore, RngCore,
-        SpeciationProbability, TurnoverRate,
+        rng::{Exponential, IndexUsize, Lambda, Length},
+        ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler, DistributionSampler,
+        EmigrationExit, GloballyCoherentLineageStore, Habitat, ImmigrationEntry,
+        MathsCore, Rng, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -20,7 +21,7 @@ use super::LocationAliasActiveLineageSampler;
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -31,6 +32,9 @@ impl<
         I: ImmigrationEntry<M>,
     > ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
     for LocationAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
 {
     type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, S: 'a, X: 'a, D: 'a, C: 'a, T: 'a, N: 'a, E: 'a, I: 'a;
 
@@ -67,12 +71,10 @@ impl<
         rng: &mut G,
         early_peek_stop: F,
     ) -> Option<(Lineage, PositiveF64)> {
-        use necsim_core::cogs::RngSampler;
-
         let total_rate = self.alias_sampler.total_weight();
 
         if let Ok(lambda) = PositiveF64::new(total_rate.get()) {
-            let event_time = self.last_event_time + rng.sample_exponential(lambda);
+            let event_time = self.last_event_time + rng.sample_with::<Exponential>(Lambda(lambda));
 
             let next_event_time = PositiveF64::max_after(self.last_event_time, event_time);
 
@@ -95,10 +97,11 @@ impl<
 
             // Safety: `lineages_at_location` must be >0 since
             //         `chosen_active_location` can only be selected in that case
-            let chosen_lineage_index_at_location = rng
-                .sample_index(unsafe { NonZeroUsize::new_unchecked(lineages_at_location.len()) });
+            let chosen_lineage_index_at_location = rng.sample_with::<IndexUsize>(Length(unsafe {
+                NonZeroUsize::new_unchecked(lineages_at_location.len())
+            }));
             // Safety: reference clone is only used to then remove the lineage, which is
-            // owned
+            //  owned
             let chosen_lineage_reference = unsafe {
                 lineages_at_location[chosen_lineage_index_at_location].backup_unchecked()
             };

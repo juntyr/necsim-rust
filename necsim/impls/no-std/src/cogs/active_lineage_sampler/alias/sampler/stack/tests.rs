@@ -585,7 +585,7 @@ impl DummyRng {
     }
 }
 
-impl RngCore<IntrinsicsMathsCore> for DummyRng {
+impl RngCore for DummyRng {
     type Seed = [u8; 0];
 
     #[must_use]

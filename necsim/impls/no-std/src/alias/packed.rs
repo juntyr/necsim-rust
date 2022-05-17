@@ -1,8 +1,11 @@
-use core::cmp::Ordering;
+use core::{cmp::Ordering, num::NonZeroUsize};
 
 use alloc::vec::Vec;
 
-use necsim_core::cogs::{MathsCore, RngCore};
+use necsim_core::cogs::{
+    rng::{Event, IndexUsize, Length},
+    DistributionSampler, MathsCore, Rng,
+};
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
 #[allow(clippy::module_name_repetitions)]
@@ -108,27 +111,23 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
         old(alias_samplers).iter().map(|s| s.e).any(|e| e == ret),
         "returns one of the weighted events"
     )]
-    pub fn sample_event<M: MathsCore, G: RngCore<M>>(
+    pub fn sample_event<M: MathsCore, G: Rng<M>>(
         alias_samplers: &[AliasMethodSamplerAtom<E>],
         rng: &mut G,
-    ) -> E {
-        use necsim_core::cogs::RngSampler;
+    ) -> E
+    where
+        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
+        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+    {
+        // Safety: alias_samplers is non-empty by the precondition
+        let length = unsafe { NonZeroUsize::new_unchecked(alias_samplers.len()) };
 
-        let x = rng.sample_uniform_closed_open();
-
-        #[allow(
-            clippy::cast_precision_loss,
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss
-        )]
-        let i = M::floor(x.get() * (alias_samplers.len() as f64)) as usize; // index into events
-
-        #[allow(clippy::cast_precision_loss)]
-        let y = x.get() * (alias_samplers.len() as f64) - (i as f64); // U(0,1) to compare against U[i]
+        let i = rng.sample_with::<IndexUsize>(Length(length)); // index into events
 
         let sample = &alias_samplers[i];
 
-        if y < sample.u.get() {
+        // Select E over K according to its bucket percentage U
+        if rng.sample_with::<Event>(sample.u) {
             sample.e
         } else {
             sample.k

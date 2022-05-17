@@ -1,7 +1,7 @@
 use core::{marker::PhantomData, num::NonZeroU64};
 
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, Habitat, MathsCore, RngCore, SeparableDispersalSampler},
+    cogs::{Backup, DispersalSampler, Habitat, MathsCore, Rng, SeparableDispersalSampler},
     landscape::Location,
 };
 use necsim_core_bond::ClosedUnitF64;
@@ -12,11 +12,11 @@ use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "G"))]
-pub struct NonSpatialDispersalSampler<M: MathsCore, G: RngCore<M>> {
+pub struct NonSpatialDispersalSampler<M: MathsCore, G: Rng<M>> {
     marker: PhantomData<(M, G)>,
 }
 
-impl<M: MathsCore, G: RngCore<M>> Default for NonSpatialDispersalSampler<M, G> {
+impl<M: MathsCore, G: Rng<M>> Default for NonSpatialDispersalSampler<M, G> {
     #[must_use]
     fn default() -> Self {
         Self {
@@ -26,7 +26,7 @@ impl<M: MathsCore, G: RngCore<M>> Default for NonSpatialDispersalSampler<M, G> {
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> Backup for NonSpatialDispersalSampler<M, G> {
+impl<M: MathsCore, G: Rng<M>> Backup for NonSpatialDispersalSampler<M, G> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             marker: PhantomData::<(M, G)>,
@@ -35,7 +35,7 @@ impl<M: MathsCore, G: RngCore<M>> Backup for NonSpatialDispersalSampler<M, G> {
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, NonSpatialHabitat<M>, G>
+impl<M: MathsCore, G: Rng<M>> DispersalSampler<M, NonSpatialHabitat<M>, G>
     for NonSpatialDispersalSampler<M, G>
 {
     #[must_use]
@@ -46,8 +46,6 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, NonSpatialHabitat<M>, G>
         habitat: &NonSpatialHabitat<M>,
         rng: &mut G,
     ) -> Location {
-        use necsim_core::cogs::RngSampler;
-
         let habitat_index_max =
             habitat.get_extent().width().get() * habitat.get_extent().height().get();
 
@@ -70,7 +68,7 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, NonSpatialHabitat<M>, G>
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, NonSpatialHabitat<M>, G>
+impl<M: MathsCore, G: Rng<M>> SeparableDispersalSampler<M, NonSpatialHabitat<M>, G>
     for NonSpatialDispersalSampler<M, G>
 {
     #[must_use]
@@ -83,8 +81,6 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, NonSpatialHabitat
         habitat: &NonSpatialHabitat<M>,
         rng: &mut G,
     ) -> Location {
-        use necsim_core::cogs::RngSampler;
-
         let habitat_index_max =
             habitat.get_extent().width().get() * habitat.get_extent().height().get();
         let current_location_index =

@@ -1,6 +1,11 @@
+use core::num::NonZeroUsize;
+
 use alloc::vec::Vec;
 
-use necsim_core::cogs::{MathsCore, RngCore};
+use necsim_core::cogs::{
+    rng::{Event, IndexUsize, Length},
+    DistributionSampler, MathsCore, Rng,
+};
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
 pub mod packed;
@@ -89,22 +94,18 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
     }
 
     #[debug_ensures(self.Es.contains(&ret), "returns one of the weighted events")]
-    pub fn sample_event<M: MathsCore, G: RngCore<M>>(&self, rng: &mut G) -> E {
-        use necsim_core::cogs::RngSampler;
+    pub fn sample_event<M: MathsCore, G: Rng<M>>(&self, rng: &mut G) -> E
+    where
+        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
+        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+    {
+        // Safety: Es is non-empty by the precondition on construction
+        let length = unsafe { NonZeroUsize::new_unchecked(self.Es.len()) };
 
-        let x = rng.sample_uniform_closed_open();
+        let i = rng.sample_with::<IndexUsize>(Length(length)); // index into events
 
-        #[allow(
-            clippy::cast_precision_loss,
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss
-        )]
-        let i = M::floor(x.get() * (self.Es.len() as f64)) as usize; // index into events
-
-        #[allow(clippy::cast_precision_loss)]
-        let y = x.get() * (self.Es.len() as f64) - (i as f64); // U(0,1) to compare against U[i]
-
-        if y < self.Us[i].get() {
+        // Select Es[i] over Ks[i] according to its bucket percentage Us[i]
+        if rng.sample_with::<Event>(self.Us[i]) {
             self.Es[i]
         } else {
             self.Ks[i]

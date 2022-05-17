@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, EmigrationExit, Habitat, LineageStore, MathsCore, RngCore},
+    cogs::{Backup, EmigrationExit, Habitat, LineageStore, MathsCore, Rng},
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
     simulation::partial::emigration_exit::PartialSimulation,
@@ -19,8 +19,12 @@ impl Backup for NeverEmigrationExit {
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>, S: LineageStore<M, H>> EmigrationExit<M, H, G, S>
-    for NeverEmigrationExit
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: Rng<M>,
+        S: LineageStore<M, H>,
+    > EmigrationExit<M, H, G, S> for NeverEmigrationExit
 {
     #[must_use]
     #[inline]

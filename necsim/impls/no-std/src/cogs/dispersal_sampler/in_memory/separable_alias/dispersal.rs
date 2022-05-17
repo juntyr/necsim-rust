@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{DispersalSampler, Habitat, MathsCore, RngCore, SeparableDispersalSampler},
+    cogs::{DispersalSampler, Habitat, MathsCore, Rng, SeparableDispersalSampler},
     landscape::Location,
 };
 use necsim_core_bond::ClosedUnitF64;
@@ -7,7 +7,7 @@ use necsim_core_bond::ClosedUnitF64;
 use super::InMemorySeparableAliasDispersalSampler;
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> DispersalSampler<M, H, G>
     for InMemorySeparableAliasDispersalSampler<M, H, G>
 {
     #[must_use]
@@ -17,8 +17,6 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
         habitat: &H,
         rng: &mut G,
     ) -> Location {
-        use necsim_core::cogs::RngSampler;
-
         let self_dispersal_at_location =
             self.get_self_dispersal_probability_at_location(location, habitat);
 
@@ -35,7 +33,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> SeparableDispersalSampler<M, H, G>
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> SeparableDispersalSampler<M, H, G>
     for InMemorySeparableAliasDispersalSampler<M, H, G>
 {
     #[must_use]

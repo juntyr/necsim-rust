@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use alloc::vec::Vec;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore},
+    cogs::{Backup, Habitat, MathsCore, Rng},
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
@@ -17,14 +17,14 @@ mod dispersal;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct InMemorySeparableAliasDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>> {
+pub struct InMemorySeparableAliasDispersalSampler<M: MathsCore, H: Habitat<M>, G: Rng<M>> {
     alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
     self_dispersal: Array2D<ClosedUnitF64>,
     _marker: PhantomData<(M, H, G)>,
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, G>
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> InMemoryDispersalSampler<M, H, G>
     for InMemorySeparableAliasDispersalSampler<M, H, G>
 {
     /// Creates a new `InMemorySeparableAliasDispersalSampler` from the
@@ -112,7 +112,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Backup
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> Backup
     for InMemorySeparableAliasDispersalSampler<M, H, G>
 {
     unsafe fn backup_unchecked(&self) -> Self {

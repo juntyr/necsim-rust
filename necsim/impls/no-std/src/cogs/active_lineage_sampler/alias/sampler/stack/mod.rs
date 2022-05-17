@@ -7,7 +7,7 @@ use core::{
     num::{NonZeroU128, NonZeroU64, NonZeroUsize},
 };
 
-use necsim_core::cogs::{Backup, MathsCore, RngCore, RngSampler};
+use necsim_core::cogs::{Backup, MathsCore, Rng, RngCore};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 #[cfg(test)]
@@ -42,7 +42,7 @@ impl<E: Eq + Hash + Backup> RejectionSamplingGroup<E> {
         self.events.iter()
     }
 
-    unsafe fn sample_pop_inplace<M: MathsCore, G: RngCore<M>>(
+    unsafe fn sample_pop_inplace<M: MathsCore, G: Rng<M>>(
         &mut self,
         rng: &mut G,
     ) -> (Option<&mut Self>, E) {
@@ -70,7 +70,7 @@ impl<E: Eq + Hash + Backup> RejectionSamplingGroup<E> {
     }
 
     #[cfg(test)]
-    fn sample_pop<M: MathsCore, G: RngCore<M>>(mut self, rng: &mut G) -> (Option<Self>, E) {
+    fn sample_pop<M: MathsCore, G: Rng<M>>(mut self, rng: &mut G) -> (Option<Self>, E) {
         match unsafe { self.sample_pop_inplace(rng) } {
             (Some(_), event) => (Some(self), event),
             (None, event) => (None, event),
@@ -121,7 +121,7 @@ impl<E: Eq + Hash + Backup> DynamicAliasMethodStackSampler<E> {
         self.groups.iter().flat_map(RejectionSamplingGroup::iter)
     }
 
-    pub fn sample_pop<M: MathsCore, G: RngCore<M>>(&mut self, rng: &mut G) -> Option<E> {
+    pub fn sample_pop<M: MathsCore, G: Rng<M>>(&mut self, rng: &mut G) -> Option<E> {
         if let Some(total_weight) = NonZeroU128::new(self.total_weight) {
             let cdf_sample = if let [_group] = &self.groups[..] {
                 0_u128

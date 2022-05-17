@@ -336,6 +336,106 @@ impl<M: MathsCore, R: RngCore, S> DistributionSampler<M, R, S, UniformOpenClosed
     }
 }
 
+impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpenUnit>>
+    DistributionSampler<M, R, S, IndexUsize> for SimplerDistributionSamplers<M, R>
+{
+    type ConcreteSampler = Self;
+
+    fn concrete(&self) -> &Self::ConcreteSampler {
+        self
+    }
+
+    fn sample_with(&self, rng: &mut R, samplers: &S, params: Length<NonZeroUsize>) -> usize {
+        let length = params.0;
+
+        let u01: ClosedOpenUnitF64 = samplers.sample(rng, samplers);
+
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
+        let index = M::floor(u01.get() * (length.get() as f64)) as usize;
+
+        // Safety in case of f64 rounding errors
+        index.min(length.get() - 1)
+    }
+}
+
+impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpenUnit>>
+    DistributionSampler<M, R, S, IndexU32> for SimplerDistributionSamplers<M, R>
+{
+    type ConcreteSampler = Self;
+
+    fn concrete(&self) -> &Self::ConcreteSampler {
+        self
+    }
+
+    fn sample_with(&self, rng: &mut R, samplers: &S, params: Length<NonZeroU32>) -> u32 {
+        let length = params.0;
+
+        let u01: ClosedOpenUnitF64 = samplers.sample(rng, samplers);
+
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let index = M::floor(u01.get() * f64::from(length.get())) as u32;
+
+        // Safety in case of f64 rounding errors
+        index.min(length.get() - 1)
+    }
+}
+
+impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpenUnit>>
+    DistributionSampler<M, R, S, IndexU64> for SimplerDistributionSamplers<M, R>
+{
+    type ConcreteSampler = Self;
+
+    fn concrete(&self) -> &Self::ConcreteSampler {
+        self
+    }
+
+    fn sample_with(&self, rng: &mut R, samplers: &S, params: Length<NonZeroU64>) -> u64 {
+        let length = params.0;
+
+        let u01: ClosedOpenUnitF64 = samplers.sample(rng, samplers);
+
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
+        let index = M::floor(u01.get() * (length.get() as f64)) as u64;
+
+        // Safety in case of f64 rounding errors
+        index.min(length.get() - 1)
+    }
+}
+
+impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpenUnit>>
+    DistributionSampler<M, R, S, IndexU128> for SimplerDistributionSamplers<M, R>
+{
+    type ConcreteSampler = Self;
+
+    fn concrete(&self) -> &Self::ConcreteSampler {
+        self
+    }
+
+    fn sample_with(&self, rng: &mut R, samplers: &S, params: Length<NonZeroU128>) -> u128 {
+        let length = params.0;
+
+        let u01: ClosedOpenUnitF64 = samplers.sample(rng, samplers);
+
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
+        let index = M::floor(u01.get() * (length.get() as f64)) as u128;
+
+        // Safety in case of f64 rounding errors
+        index.min(length.get() - 1)
+    }
+}
+
 /*#[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]

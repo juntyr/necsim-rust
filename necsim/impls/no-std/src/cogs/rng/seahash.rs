@@ -1,30 +1,25 @@
-use core::marker::PhantomData;
-
-use necsim_core::cogs::{Backup, MathsCore, PrimeableRng, RngCore};
+use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
 
 use serde::{Deserialize, Serialize};
 
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
 #[derive(Clone, Debug, Serialize, Deserialize, TypeLayout)]
 #[serde(deny_unknown_fields)]
-#[layout(free = "M")]
-pub struct SeaHash<M: MathsCore> {
+pub struct SeaHash {
     seed: u64,
     location: u64,
     time: u64,
     offset: u64,
-    #[serde(skip)]
-    marker: PhantomData<M>,
 }
 
 #[contract_trait]
-impl<M: MathsCore> Backup for SeaHash<M> {
+impl Backup for SeaHash {
     unsafe fn backup_unchecked(&self) -> Self {
         self.clone()
     }
 }
 
-impl<M: MathsCore> RngCore<M> for SeaHash<M> {
+impl RngCore for SeaHash {
     type Seed = [u8; 8];
 
     #[must_use]
@@ -37,7 +32,6 @@ impl<M: MathsCore> RngCore<M> for SeaHash<M> {
             location: 0_u64,
             time: 0_u64,
             offset: 0_u64,
-            marker: PhantomData::<M>,
         }
     }
 
@@ -53,7 +47,7 @@ impl<M: MathsCore> RngCore<M> for SeaHash<M> {
     }
 }
 
-impl<M: MathsCore> PrimeableRng<M> for SeaHash<M> {
+impl PrimeableRng for SeaHash {
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
         self.location = location_index;
         self.time = time_index;

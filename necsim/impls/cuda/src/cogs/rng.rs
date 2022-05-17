@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{MathsCore, PrimeableRng, RngCore};
+use necsim_core::cogs::{Distribution, DistributionSampler, MathsCore, Rng, RngCore};
 
 use const_type_layout::TypeGraphLayout;
 use rust_cuda::safety::StackOnly;
@@ -12,13 +12,13 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 #[cuda(free = "M", free = "R")]
 pub struct CudaRng<M: MathsCore, R>
 where
-    R: RngCore<M> + StackOnly + ~const TypeGraphLayout,
+    R: Rng<M> + StackOnly + ~const TypeGraphLayout,
 {
     inner: R,
     marker: PhantomData<M>,
 }
 
-impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> Clone for CudaRng<M, R> {
+impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> Clone for CudaRng<M, R> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
@@ -27,7 +27,7 @@ impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> Clone for
     }
 }
 
-impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> From<R> for CudaRng<M, R> {
+impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> From<R> for CudaRng<M, R> {
     #[must_use]
     #[inline]
     fn from(rng: R) -> Self {
@@ -38,10 +38,10 @@ impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> From<R> f
     }
 }
 
-impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> RngCore<M>
+impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> RngCore
     for CudaRng<M, R>
 {
-    type Seed = <R as RngCore<M>>::Seed;
+    type Seed = <R as RngCore>::Seed;
 
     #[must_use]
     #[inline]
@@ -59,24 +59,29 @@ impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> RngCore<M
     }
 }
 
-impl<M: MathsCore, R: PrimeableRng<M> + StackOnly + ~const TypeGraphLayout> PrimeableRng<M>
-    for CudaRng<M, R>
-{
-    #[inline]
-    fn prime_with(&mut self, location_index: u64, time_index: u64) {
-        self.inner.prime_with(location_index, time_index);
+impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> Rng<M> for CudaRng<M, R> {
+    type Generator = R::Generator;
+    type Sampler = R::Sampler;
+
+    fn generator(&mut self) -> &mut Self::Generator {
+        self.inner.generator()
+    }
+
+    fn sample_with<D: Distribution>(&mut self, params: D::Parameters) -> D::Sample
+    where
+        Self::Sampler: DistributionSampler<M, Self::Generator, Self::Sampler, D>,
+    {
+        self.inner.sample_with(params)
     }
 }
 
-impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> Serialize for CudaRng<M, R> {
+impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> Serialize for CudaRng<M, R> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.inner.serialize(serializer)
     }
 }
 
-impl<'de, M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> Deserialize<'de>
-    for CudaRng<M, R>
-{
+impl<'de, M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> Deserialize<'de> for CudaRng<M, R> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let inner = R::deserialize(deserializer)?;
 

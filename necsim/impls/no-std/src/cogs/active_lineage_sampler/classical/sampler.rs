@@ -6,7 +6,7 @@ use core::{
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LocallyCoherentLineageStore, MathsCore, RngCore, SpeciationProbability,
+        LocallyCoherentLineageStore, MathsCore, Rng, SpeciationProbability,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -25,7 +25,7 @@ use super::ClassicalActiveLineageSampler;
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -106,8 +106,6 @@ impl<
         rng: &mut G,
         early_peek_stop: F,
     ) -> Option<(Lineage, PositiveF64)> {
-        use necsim_core::cogs::RngSampler;
-
         if let Some(number_active_lineages) = NonZeroU64::new(self.number_active_lineages() as u64)
         {
             let lambda = simulation.turnover_rate.get_uniform_turnover_rate()
