@@ -1,5 +1,8 @@
 use necsim_core::{
-    cogs::{EmigrationExit, MathsCore, PrimeableRng},
+    cogs::{
+        rng::{Event, IndexUsize, UniformClosedOpenUnit},
+        DistributionSampler, EmigrationExit, MathsCore, PrimeableRng, Rng,
+    },
     lineage::Lineage,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -43,7 +46,7 @@ pub struct FixUpInitialiser<L: ExactSizeIterator<Item = Lineage>> {
 impl<
         L: ExactSizeIterator<Item = Lineage>,
         M: MathsCore,
-        G: PrimeableRng<M> + RustToCuda,
+        G: Rng<M, Generator: PrimeableRng> + RustToCuda,
         O: Scenario<M, G>,
     > CudaLineageStoreSampleInitialiser<M, G, O, ResumeError<CudaError>> for FixUpInitialiser<L>
 where
@@ -51,6 +54,9 @@ where
     O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda,
     O::TurnoverRate: RustToCuda,
     O::SpeciationProbability: RustToCuda,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     type ActiveLineageSampler<
         X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>> + RustToCuda,

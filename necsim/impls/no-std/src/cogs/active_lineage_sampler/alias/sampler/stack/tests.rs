@@ -615,6 +615,10 @@ impl Rng<IntrinsicsMathsCore> for DummyRng {
         self
     }
 
+    fn map_generator<F: FnOnce(Self::Generator) -> Self::Generator>(self, map: F) -> Self {
+        map(self)
+    }
+
     fn sample_with<D: Distribution>(&mut self, params: D::Parameters) -> D::Sample
     where
         Self::Sampler: DistributionSampler<IntrinsicsMathsCore, Self::Generator, Self::Sampler, D>,

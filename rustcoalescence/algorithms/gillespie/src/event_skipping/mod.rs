@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{GloballyCoherentLineageStore, MathsCore, SeparableDispersalSampler},
+    cogs::{rng::SimpleRng, GloballyCoherentLineageStore, MathsCore, SeparableDispersalSampler},
     lineage::Lineage,
     reporter::Reporter,
 };
@@ -41,16 +41,21 @@ impl AlgorithmDefaults for EventSkippingAlgorithm {
     type MathsCore = IntrinsicsMathsCore;
 }
 
-impl<'p, O: Scenario<M, Pcg<M>>, R: Reporter, P: LocalPartition<'p, R>, M: MathsCore>
-    Algorithm<'p, M, O, R, P> for EventSkippingAlgorithm
+impl<
+        'p,
+        O: Scenario<M, SimpleRng<M, Pcg>>,
+        R: Reporter,
+        P: LocalPartition<'p, R>,
+        M: MathsCore,
+    > Algorithm<'p, M, O, R, P> for EventSkippingAlgorithm
 where
     O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
         GloballyCoherentLineageStore<M, O::Habitat>,
-    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, Pcg<M>>>:
-        SeparableDispersalSampler<M, O::Habitat, Pcg<M>>,
+    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, SimpleRng<M, Pcg>>>:
+        SeparableDispersalSampler<M, O::Habitat, SimpleRng<M, Pcg>>,
 {
     type LineageStore = O::LineageStore<GillespieLineageStore<M, O::Habitat>>;
-    type Rng = Pcg<M>;
+    type Rng = SimpleRng<M, Pcg>;
 
     fn get_logical_partition(args: &Self::Arguments, local_partition: &P) -> Partition {
         get_gillespie_logical_partition(args, local_partition)

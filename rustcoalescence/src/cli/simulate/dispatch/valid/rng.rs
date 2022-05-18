@@ -13,7 +13,7 @@ use rustcoalescence_scenarios::Scenario;
 
 use crate::{
     args::config::{
-        rng::{Base32RngState, Rng as RngArgs},
+        rng::{Base32RngState, RngConfig},
         sample::Sample,
     },
     cli::simulate::parse,
@@ -51,9 +51,9 @@ where
         normalised_args,
         &mut A::get_logical_partition(&algorithm_args, &local_partition),
     )? {
-        RngArgs::Seed(seed) => SeedableRng::seed_from_u64(seed),
-        RngArgs::Sponge(bytes) => {
-            let mut seed = <A::Rng as RngCore<M>>::Seed::default();
+        RngConfig::Seed(seed) => SeedableRng::seed_from_u64(seed),
+        RngConfig::Sponge(bytes) => {
+            let mut seed = <A::Rng as RngCore>::Seed::default();
 
             let mut sponge = Keccak::v256();
             sponge.update(&bytes);
@@ -61,7 +61,7 @@ where
 
             RngCore::from_seed(seed)
         },
-        RngArgs::State(state) => state.into(),
+        RngConfig::State(state) => state.into(),
     };
 
     let result = info::dispatch::<M, A, O, R, P>(
@@ -83,7 +83,7 @@ where
             rng: paused_rng,
             ..
         } => {
-            normalised_args.rng(&RngArgs::State(Base32RngState::from(paused_rng)));
+            normalised_args.rng(&RngConfig::State(Base32RngState::from(paused_rng)));
 
             Ok(SimulationOutcome::Paused {
                 time,

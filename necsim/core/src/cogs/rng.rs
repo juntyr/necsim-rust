@@ -112,6 +112,9 @@ pub trait Rng<M: MathsCore>: RngCore {
     fn generator(&mut self) -> &mut Self::Generator;
 
     #[must_use]
+    fn map_generator<F: FnOnce(Self::Generator) -> Self::Generator>(self, map: F) -> Self;
+
+    #[must_use]
     fn sample_with<D: Distribution>(&mut self, params: D::Parameters) -> D::Sample
     where
         Self::Sampler: DistributionSampler<M, Self::Generator, Self::Sampler, D>;
@@ -223,11 +226,12 @@ impl Distribution for Normal2D {
     type Sample = (f64, f64);
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, TypeLayout)]
+#[layout(free = "M")]
 #[allow(clippy::module_name_repetitions)]
 pub struct SimpleRng<M: MathsCore, R: RngCore> {
     inner: R,
-    _marker: PhantomData<M>,
+    marker: PhantomData<M>,
 }
 
 impl<M: MathsCore, R: RngCore> Serialize for SimpleRng<M, R> {
@@ -242,7 +246,7 @@ impl<'de, M: MathsCore, R: RngCore> Deserialize<'de> for SimpleRng<M, R> {
 
         Ok(Self {
             inner,
-            _marker: PhantomData::<M>,
+            marker: PhantomData::<M>,
         })
     }
 }
@@ -252,7 +256,7 @@ impl<M: MathsCore, R: RngCore> crate::cogs::Backup for SimpleRng<M, R> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             inner: self.inner.backup_unchecked(),
-            _marker: PhantomData::<M>,
+            marker: PhantomData::<M>,
         }
     }
 }
@@ -264,7 +268,7 @@ impl<M: MathsCore, R: RngCore> RngCore for SimpleRng<M, R> {
     fn from_seed(seed: Self::Seed) -> Self {
         Self {
             inner: R::from_seed(seed),
-            _marker: PhantomData::<M>,
+            marker: PhantomData::<M>,
         }
     }
 
@@ -280,6 +284,15 @@ impl<M: MathsCore, R: RngCore> Rng<M> for SimpleRng<M, R> {
 
     fn generator(&mut self) -> &mut Self::Generator {
         &mut self.inner
+    }
+
+    fn map_generator<F: FnOnce(Self::Generator) -> Self::Generator>(self, map: F) -> Self {
+        let SimpleRng { inner, marker } = self;
+
+        SimpleRng {
+            inner: map(inner),
+            marker,
+        }
     }
 
     fn sample_with<D: Distribution>(&mut self, params: D::Parameters) -> D::Sample
@@ -433,6 +446,92 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpen
 
         // Safety in case of f64 rounding errors
         index.min(length.get() - 1)
+    }
+}
+
+impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformOpenClosedUnit>>
+    DistributionSampler<M, R, S, Exponential> for SimplerDistributionSamplers<M, R>
+{
+    type ConcreteSampler = Self;
+
+    fn concrete(&self) -> &Self::ConcreteSampler {
+        self
+    }
+
+    fn sample_with(&self, rng: &mut R, samplers: &S, params: Lambda) -> NonNegativeF64 {
+        let lambda = params.0;
+
+        let u01: OpenClosedUnitF64 = samplers.sample(rng, samplers);
+
+        // Inverse transform sample: X = -ln(U(0,1]) / lambda
+        -u01.ln::<M>() / lambda
+    }
+}
+
+impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpenUnit>>
+    DistributionSampler<M, R, S, Event> for SimplerDistributionSamplers<M, R>
+{
+    type ConcreteSampler = Self;
+
+    fn concrete(&self) -> &Self::ConcreteSampler {
+        self
+    }
+
+    fn sample_with(&self, rng: &mut R, samplers: &S, params: ClosedUnitF64) -> bool {
+        let probability = params;
+
+        let u01: ClosedOpenUnitF64 = samplers.sample(rng, samplers);
+
+        // if probability == 1, then U[0, 1) always < 1.0
+        // if probability == 0, then U[0, 1) never < 0.0
+        u01 < probability
+    }
+}
+
+#[allow(clippy::trait_duplication_in_bounds)]
+impl<
+        M: MathsCore,
+        R: RngCore,
+        S: DistributionSampler<M, R, S, UniformClosedOpenUnit>
+            + DistributionSampler<M, R, S, UniformOpenClosedUnit>,
+    > DistributionSampler<M, R, S, StandardNormal2D> for SimplerDistributionSamplers<M, R>
+{
+    type ConcreteSampler = Self;
+
+    fn concrete(&self) -> &Self::ConcreteSampler {
+        self
+    }
+
+    fn sample_with(&self, rng: &mut R, samplers: &S, _params: ()) -> (f64, f64) {
+        // Basic Box-Muller transform
+        let u0 =
+            DistributionSampler::<M, R, S, UniformOpenClosedUnit>::sample(samplers, rng, samplers);
+        let u1 =
+            DistributionSampler::<M, R, S, UniformClosedOpenUnit>::sample(samplers, rng, samplers);
+
+        let r = M::sqrt(-2.0_f64 * M::ln(u0.get()));
+        let theta = -core::f64::consts::TAU * u1.get();
+
+        (r * M::sin(theta), r * M::cos(theta))
+    }
+}
+
+impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, StandardNormal2D>>
+    DistributionSampler<M, R, S, Normal2D> for SimplerDistributionSamplers<M, R>
+{
+    type ConcreteSampler = Self;
+
+    fn concrete(&self) -> &Self::ConcreteSampler {
+        self
+    }
+
+    fn sample_with(&self, rng: &mut R, samplers: &S, params: Normal) -> (f64, f64) {
+        let (z0, z1) = samplers.sample(rng, samplers);
+
+        (
+            z0 * params.sigma.get() + params.mu,
+            z1 * params.sigma.get() + params.mu,
+        )
     }
 }
 

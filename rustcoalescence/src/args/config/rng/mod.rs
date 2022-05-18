@@ -3,7 +3,7 @@ use std::{fmt, marker::PhantomData};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_state::DeserializeState;
 
-use necsim_core::cogs::{MathsCore, RngCore};
+use necsim_core::cogs::{MathsCore, Rng};
 use necsim_partitioning_core::partition::Partition;
 
 mod base32;
@@ -12,19 +12,21 @@ use self::base32::Base32String;
 
 #[derive(Debug, Serialize)]
 #[serde(bound = "")]
-pub enum Rng<M: MathsCore, G: RngCore<M>> {
+#[serde(rename = "Rng")]
+#[allow(clippy::module_name_repetitions)]
+pub enum RngConfig<M: MathsCore, G: Rng<M>> {
     Seed(u64),
     Sponge(Base32String),
     State(Base32RngState<M, G>),
 }
 
 #[allow(dead_code)]
-pub struct Base32RngState<M: MathsCore, G: RngCore<M>> {
+pub struct Base32RngState<M: MathsCore, G: Rng<M>> {
     rng: G,
     marker: PhantomData<M>,
 }
 
-impl<'de, M: MathsCore, G: RngCore<M>> DeserializeState<'de, Partition> for Rng<M, G> {
+impl<'de, M: MathsCore, G: Rng<M>> DeserializeState<'de, Partition> for RngConfig<M, G> {
     fn deserialize_state<D: Deserializer<'de>>(
         partition: &mut Partition,
         deserializer: D,
@@ -73,7 +75,7 @@ impl<'de, M: MathsCore, G: RngCore<M>> DeserializeState<'de, Partition> for Rng<
     }
 }
 
-impl<M: MathsCore, G: RngCore<M>> From<G> for Base32RngState<M, G> {
+impl<M: MathsCore, G: Rng<M>> From<G> for Base32RngState<M, G> {
     fn from(rng: G) -> Self {
         Self {
             rng,
@@ -82,7 +84,7 @@ impl<M: MathsCore, G: RngCore<M>> From<G> for Base32RngState<M, G> {
     }
 }
 
-impl<M: MathsCore, G: RngCore<M>> Base32RngState<M, G> {
+impl<M: MathsCore, G: Rng<M>> Base32RngState<M, G> {
     #[must_use]
     #[allow(dead_code)]
     pub fn into(self) -> G {
@@ -90,7 +92,7 @@ impl<M: MathsCore, G: RngCore<M>> Base32RngState<M, G> {
     }
 }
 
-impl<M: MathsCore, G: RngCore<M>> fmt::Debug for Base32RngState<M, G> {
+impl<M: MathsCore, G: Rng<M>> fmt::Debug for Base32RngState<M, G> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match ProtectedState::serialize(&self.rng) {
             Ok(state) => Base32String::new(&state).fmt(fmt),
@@ -99,7 +101,7 @@ impl<M: MathsCore, G: RngCore<M>> fmt::Debug for Base32RngState<M, G> {
     }
 }
 
-impl<M: MathsCore, G: RngCore<M>> Serialize for Base32RngState<M, G> {
+impl<M: MathsCore, G: Rng<M>> Serialize for Base32RngState<M, G> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let state = ProtectedState::serialize(&self.rng).map_err(serde::ser::Error::custom)?;
 
@@ -107,7 +109,7 @@ impl<M: MathsCore, G: RngCore<M>> Serialize for Base32RngState<M, G> {
     }
 }
 
-impl<'de, M: MathsCore, G: RngCore<M>> Deserialize<'de> for Base32RngState<M, G> {
+impl<'de, M: MathsCore, G: Rng<M>> Deserialize<'de> for Base32RngState<M, G> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let state = Base32String::deserialize(deserializer)?;
 
@@ -129,7 +131,7 @@ impl<'de, M: MathsCore, G: RngCore<M>> Deserialize<'de> for Base32RngState<M, G>
 #[derive(Debug, Deserialize)]
 #[serde(bound = "")]
 #[serde(rename = "Rng")]
-enum RngRaw<M: MathsCore, G: RngCore<M>> {
+enum RngRaw<M: MathsCore, G: Rng<M>> {
     Entropy,
     Seed(u64),
     #[serde(deserialize_with = "deserialize_rng_sponge")]
