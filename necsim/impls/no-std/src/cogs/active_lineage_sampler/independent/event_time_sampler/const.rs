@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Habitat, MathsCore, PrimeableRng, Rng, TurnoverRate},
+    cogs::{Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng, Rng, TurnoverRate},
     landscape::IndexedLocation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};

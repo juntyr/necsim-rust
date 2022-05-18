@@ -5,7 +5,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::{
     cogs::{
-        rng::{Exponential, IndexUsize},
+        rng::{Exponential, IndexU128, IndexU64, IndexUsize},
         Backup, CoalescenceSampler, DispersalSampler, DistributionSampler, EmigrationExit,
         GloballyCoherentLineageStore, Habitat, ImmigrationEntry, MathsCore, Rng,
         SpeciationProbability, TurnoverRate,
@@ -39,6 +39,8 @@ pub struct LocationAliasActiveLineageSampler<
 > where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
 {
     alias_sampler: DynamicAliasMethodIndexedSampler<Location>,
     number_active_lineages: usize,
@@ -63,6 +65,8 @@ impl<
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
 {
     #[must_use]
     pub fn init_with_store<'h, O: TrustedOriginSampler<'h, M, Habitat = H>>(
@@ -220,6 +224,8 @@ impl<
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct("LocationAliasActiveLineageSampler")
@@ -246,6 +252,8 @@ impl<
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {

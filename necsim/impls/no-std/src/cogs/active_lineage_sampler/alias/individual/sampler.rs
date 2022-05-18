@@ -2,7 +2,7 @@ use core::ops::ControlFlow;
 
 use necsim_core::{
     cogs::{
-        rng::{Exponential, Lambda},
+        rng::{Exponential, IndexU128, IndexU64, IndexUsize, Lambda},
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, DistributionSampler,
         EmigrationExit, EventSampler, Habitat, ImmigrationEntry,
         LocallyCoherentLineageStore, MathsCore, Rng, SpeciationProbability, TurnoverRate,
@@ -32,6 +32,9 @@ impl<
     for IndividualAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
 {
     type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, S: 'a, X: 'a, D: 'a, C: 'a, T: 'a, N: 'a, E: 'a, I: 'a;
 

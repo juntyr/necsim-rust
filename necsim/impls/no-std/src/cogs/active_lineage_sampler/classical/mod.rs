@@ -2,7 +2,8 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 use necsim_core::cogs::{
-    Backup, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+    rng::{Exponential, IndexUsize},
+    Backup, DispersalSampler, DistributionSampler, EmigrationExit, Habitat, ImmigrationEntry,
     LocallyCoherentLineageStore, MathsCore, Rng, SpeciationProbability,
 };
 use necsim_core_bond::NonNegativeF64;
@@ -25,7 +26,10 @@ pub struct ClassicalActiveLineageSampler<
     D: DispersalSampler<M, H, G>,
     N: SpeciationProbability<M, H>,
     I: ImmigrationEntry<M>,
-> {
+> where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
+{
     active_lineage_references: Vec<S::LocalLineageReference>,
     last_event_time: NonNegativeF64,
     #[allow(clippy::type_complexity)]
@@ -42,6 +46,9 @@ impl<
         N: SpeciationProbability<M, H>,
         I: ImmigrationEntry<M>,
     > ClassicalActiveLineageSampler<M, H, G, S, X, D, N, I>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
 {
     #[must_use]
     pub fn init_with_store<'h, O: TrustedOriginSampler<'h, M, Habitat = H>>(
@@ -133,6 +140,9 @@ impl<
         N: SpeciationProbability<M, H>,
         I: ImmigrationEntry<M>,
     > Backup for ClassicalActiveLineageSampler<M, H, G, S, X, D, N, I>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
