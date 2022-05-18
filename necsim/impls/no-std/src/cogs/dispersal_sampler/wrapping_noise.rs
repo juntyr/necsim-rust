@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
         Backup, DispersalSampler, Habitat, MathsCore, Rng,
-        SeparableDispersalSampler,
+        SeparableDispersalSampler, DistributionSampler, rng::{Normal2D, Event},
     },
     landscape::Location,
 };
@@ -16,12 +16,20 @@ use crate::cogs::{
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
-pub struct WrappingNoiseApproximateNormalDispersalSampler<M: MathsCore, G: Rng<M>> {
+pub struct WrappingNoiseApproximateNormalDispersalSampler<M: MathsCore, G: Rng<M>>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+{
     #[cfg_attr(feature = "cuda", cuda(embed))]
     inner: AlmostInfiniteNormalDispersalSampler<M, G>,
 }
 
-impl<M: MathsCore, G: Rng<M>> WrappingNoiseApproximateNormalDispersalSampler<M, G> {
+impl<M: MathsCore, G: Rng<M>> WrappingNoiseApproximateNormalDispersalSampler<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+{
     #[must_use]
     pub fn new(sigma: NonNegativeF64) -> Self {
         Self {
@@ -31,7 +39,11 @@ impl<M: MathsCore, G: Rng<M>> WrappingNoiseApproximateNormalDispersalSampler<M, 
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: Rng<M>> Backup for WrappingNoiseApproximateNormalDispersalSampler<M, G> {
+impl<M: MathsCore, G: Rng<M>> Backup for WrappingNoiseApproximateNormalDispersalSampler<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+{
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             inner: self.inner.backup_unchecked(),
@@ -42,6 +54,9 @@ impl<M: MathsCore, G: Rng<M>> Backup for WrappingNoiseApproximateNormalDispersal
 #[contract_trait]
 impl<M: MathsCore, G: Rng<M>> DispersalSampler<M, WrappingNoiseHabitat<M>, G>
     for WrappingNoiseApproximateNormalDispersalSampler<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
 {
     #[must_use]
     #[inline]
@@ -56,7 +71,7 @@ impl<M: MathsCore, G: Rng<M>> DispersalSampler<M, WrappingNoiseHabitat<M>, G>
         //  targets are rejected.
         // If seperable dispersal is not required, this can be implemented as a
         //  direct rejection sampling loop instead.
-        if rng.sample_event(self.get_self_dispersal_probability_at_location(location, habitat)) {
+        if rng.sample_with::<Event>(self.get_self_dispersal_probability_at_location(location, habitat)) {
             location.clone()
         } else {
             self.sample_non_self_dispersal_from_location(location, habitat, rng)
@@ -67,6 +82,9 @@ impl<M: MathsCore, G: Rng<M>> DispersalSampler<M, WrappingNoiseHabitat<M>, G>
 #[contract_trait]
 impl<M: MathsCore, G: Rng<M>> SeparableDispersalSampler<M, WrappingNoiseHabitat<M>, G>
     for WrappingNoiseApproximateNormalDispersalSampler<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
 {
     #[must_use]
     fn sample_non_self_dispersal_from_location(

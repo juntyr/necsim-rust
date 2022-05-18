@@ -5,8 +5,10 @@ use core::{
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LocallyCoherentLineageStore, MathsCore, Rng, SpeciationProbability,
+        rng::{Exponential, IndexUsize, Lambda, Length},
+        ActiveLineageSampler, DispersalSampler, DistributionSampler, EmigrationExit, Habitat,
+        ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng,
+        SpeciationProbability,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -55,6 +57,9 @@ impl<
         >,
         I,
     > for ClassicalActiveLineageSampler<M, H, G, S, X, D, N, I>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
 {
     type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, S: 'a, X: 'a, D: 'a, N: 'a, I: 'a;
 
@@ -111,7 +116,7 @@ impl<
             let lambda = simulation.turnover_rate.get_uniform_turnover_rate()
                 * PositiveF64::from(number_active_lineages);
 
-            let event_time = self.last_event_time + rng.sample_exponential(lambda);
+            let event_time = self.last_event_time + rng.sample_with::<Exponential>(Lambda(lambda));
 
             let next_event_time = PositiveF64::max_after(self.last_event_time, event_time);
 
@@ -123,9 +128,9 @@ impl<
 
             // Safety: The outer if statement has already shown that the number
             //         of remaining lineages is non-zero
-            let chosen_lineage_index = rng.sample_index(unsafe {
+            let chosen_lineage_index = rng.sample_with::<IndexUsize>(Length(unsafe {
                 NonZeroUsize::new_unchecked(self.active_lineage_references.len())
-            });
+            }));
             let chosen_lineage_reference = self
                 .active_lineage_references
                 .swap_remove(chosen_lineage_index);
