@@ -10,7 +10,7 @@ mod opensimplex_noise;
 use opensimplex_noise::OpenSimplexNoise;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, Rng, UniformlySampleableHabitat},
+    cogs::{Backup, Habitat, MathsCore, Rng, UniformlySampleableHabitat, RngCore},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -62,7 +62,7 @@ impl<M: MathsCore> WrappingNoiseHabitat<M> {
 
         // Utilise a PRNG to avoid sampling degeneracies for finding the
         //  threshold which would poison the entire sampler
-        let mut rng: WyHash<M> = WyHash::from_seed(seed.to_le_bytes());
+        let mut rng = WyHash::from_seed(seed.to_le_bytes());
 
         for _ in 0..(1_usize << 16) {
             let location = rng.sample_u64();
