@@ -19,8 +19,8 @@ use crate::cogs::{
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct SpatiallyImplicitDispersalSampler<M: MathsCore, G: Rng<M>>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
 {
     #[cfg_attr(feature = "cuda", cuda(embed))]
     local: NonSpatialDispersalSampler<M, G>,
@@ -31,8 +31,8 @@ where
 
 impl<M: MathsCore, G: Rng<M>> SpatiallyImplicitDispersalSampler<M, G>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
 {
     #[must_use]
     pub fn new(local_migration_probability_per_generation: PositiveUnitF64) -> Self {
@@ -47,8 +47,8 @@ where
 #[contract_trait]
 impl<M: MathsCore, G: Rng<M>> Backup for SpatiallyImplicitDispersalSampler<M, G>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
@@ -64,8 +64,8 @@ where
 impl<M: MathsCore, G: Rng<M>> DispersalSampler<M, SpatiallyImplicitHabitat<M>, G>
     for SpatiallyImplicitDispersalSampler<M, G>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
 {
     #[must_use]
     #[debug_ensures(habitat.meta().get_extent().contains(&ret) || (
@@ -109,8 +109,8 @@ where
 impl<M: MathsCore, G: Rng<M>> SeparableDispersalSampler<M, SpatiallyImplicitHabitat<M>, G>
     for SpatiallyImplicitDispersalSampler<M, G>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
 {
     #[must_use]
     #[debug_ensures(habitat.meta().get_extent().contains(&ret) || (
