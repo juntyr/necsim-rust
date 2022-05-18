@@ -3,8 +3,8 @@ use core::ops::ControlFlow;
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        Habitat, ImmigrationEntry, LineageStore, MathsCore, Rng,
-        SpeciationProbability, TurnoverRate,
+        Habitat, ImmigrationEntry, LineageStore, MathsCore, Rng, SpeciationProbability,
+        TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,

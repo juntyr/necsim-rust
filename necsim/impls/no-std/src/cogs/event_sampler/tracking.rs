@@ -4,8 +4,8 @@ use necsim_core_bond::{ClosedOpenUnitF64, PositiveF64};
 
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat,
-        LineageStore, MathsCore, Rng, SpeciationProbability, TurnoverRate,
+        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, LineageStore,
+        MathsCore, Rng, SpeciationProbability, TurnoverRate,
     },
     landscape::IndexedLocation,
 };

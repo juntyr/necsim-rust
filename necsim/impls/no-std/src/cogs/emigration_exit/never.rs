@@ -19,12 +19,8 @@ impl Backup for NeverEmigrationExit {
 }
 
 #[contract_trait]
-impl<
-        M: MathsCore,
-        H: Habitat<M>,
-        G: Rng<M>,
-        S: LineageStore<M, H>,
-    > EmigrationExit<M, H, G, S> for NeverEmigrationExit
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M>, S: LineageStore<M, H>> EmigrationExit<M, H, G, S>
+    for NeverEmigrationExit
 {
     #[must_use]
     #[inline]

@@ -1,29 +1,27 @@
-use std::{fmt, marker::PhantomData};
+use std::fmt;
 
 use pcg_rand::{seeds::PcgSeeder, PCGStateInfo, Pcg64};
 use rand_core::{RngCore as _, SeedableRng};
 use serde::{Deserialize, Serialize};
 
-use necsim_core::cogs::{MathsCore, RngCore, SplittableRng};
+use necsim_core::cogs::{RngCore, SplittableRng};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Serialize, Deserialize)]
 #[serde(from = "PcgState", into = "PcgState")]
-pub struct Pcg<M: MathsCore> {
+pub struct Pcg {
     inner: Pcg64,
-    marker: PhantomData<M>,
 }
 
-impl<M: MathsCore> Clone for Pcg<M> {
+impl Clone for Pcg {
     fn clone(&self) -> Self {
         Self {
             inner: Pcg64::restore_state_with_no_verification(self.inner.get_state()),
-            marker: PhantomData::<M>,
         }
     }
 }
 
-impl<M: MathsCore> fmt::Debug for Pcg<M> {
+impl fmt::Debug for Pcg {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let state = self.inner.get_state();
 
@@ -34,7 +32,7 @@ impl<M: MathsCore> fmt::Debug for Pcg<M> {
     }
 }
 
-impl<M: MathsCore> RngCore<M> for Pcg<M> {
+impl RngCore for Pcg {
     type Seed = [u8; 16];
 
     #[must_use]
@@ -45,7 +43,6 @@ impl<M: MathsCore> RngCore<M> for Pcg<M> {
                 u128::from_le_bytes(seed),
                 0_u128,
             )),
-            marker: PhantomData::<M>,
         }
     }
 
@@ -56,7 +53,7 @@ impl<M: MathsCore> RngCore<M> for Pcg<M> {
     }
 }
 
-impl<M: MathsCore> SplittableRng<M> for Pcg<M> {
+impl SplittableRng for Pcg {
     #[allow(clippy::identity_op)]
     fn split(self) -> (Self, Self) {
         let mut left_state = self.inner.get_state();
@@ -67,11 +64,9 @@ impl<M: MathsCore> SplittableRng<M> for Pcg<M> {
 
         let left = Self {
             inner: Pcg64::restore_state_with_no_verification(left_state),
-            marker: PhantomData::<M>,
         };
         let right = Self {
             inner: Pcg64::restore_state_with_no_verification(right_state),
-            marker: PhantomData::<M>,
         };
 
         (left, right)
@@ -83,7 +78,6 @@ impl<M: MathsCore> SplittableRng<M> for Pcg<M> {
 
         Self {
             inner: Pcg64::restore_state_with_no_verification(state),
-            marker: PhantomData::<M>,
         }
     }
 }
@@ -96,8 +90,8 @@ struct PcgState {
     increment: u128,
 }
 
-impl<M: MathsCore> From<Pcg<M>> for PcgState {
-    fn from(rng: Pcg<M>) -> Self {
+impl From<Pcg> for PcgState {
+    fn from(rng: Pcg) -> Self {
         let state_info = rng.inner.get_state();
 
         Self {
@@ -107,7 +101,7 @@ impl<M: MathsCore> From<Pcg<M>> for PcgState {
     }
 }
 
-impl<M: MathsCore> From<PcgState> for Pcg<M> {
+impl From<PcgState> for Pcg {
     fn from(state: PcgState) -> Self {
         use pcg_rand::{
             multiplier::{DefaultMultiplier, Multiplier},
@@ -125,7 +119,6 @@ impl<M: MathsCore> From<PcgState> for Pcg<M> {
 
         Self {
             inner: Pcg64::restore_state_with_no_verification(state_info),
-            marker: PhantomData::<M>,
         }
     }
 }

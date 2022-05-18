@@ -9,8 +9,8 @@ use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::{
     cogs::{
-        DispersalSampler, Habitat, MathsCore, PrimeableRng, Rng, SpeciationProbability,
-        TurnoverRate,
+        rng::UniformClosedOpenUnit, DispersalSampler, DistributionSampler, Habitat, MathsCore,
+        PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
     },
     event::DispersalEvent,
     landscape::IndexedLocation,
@@ -54,12 +54,12 @@ pub fn simulate<
         H,
         G,
         IndependentLineageStore<M, H>,
-        IndependentEmigrationExit<M, H, C, E>,
+        IndependentEmigrationExit<M, H, G, C, E>,
         D,
         IndependentCoalescenceSampler<M, H>,
         T,
         N,
-        IndependentEventSampler<M, H, G, IndependentEmigrationExit<M, H, C, E>, D, T, N>,
+        IndependentEventSampler<M, H, G, IndependentEmigrationExit<M, H, G, C, E>, D, T, N>,
         NeverImmigrationEntry,
     >,
     R: Reporter,
@@ -71,12 +71,12 @@ pub fn simulate<
         H,
         G,
         IndependentLineageStore<M, H>,
-        IndependentEmigrationExit<M, H, C, E>,
+        IndependentEmigrationExit<M, H, G, C, E>,
         D,
         IndependentCoalescenceSampler<M, H>,
         T,
         N,
-        IndependentEventSampler<M, H, G, IndependentEmigrationExit<M, H, C, E>, D, T, N>,
+        IndependentEventSampler<M, H, G, IndependentEmigrationExit<M, H, G, C, E>, D, T, N>,
         NeverImmigrationEntry,
         A,
     >,
@@ -89,7 +89,10 @@ pub fn simulate<
     NonNegativeF64,
     u64,
     impl IntoIterator<Item = Lineage>,
-) {
+)
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
+{
     let mut lineages = VecDeque::from_iter(lineages);
     let mut proxy = IgnoreProgressReporterProxy::from(local_partition);
     let mut min_spec_samples = dedup_cache.construct(lineages.len());

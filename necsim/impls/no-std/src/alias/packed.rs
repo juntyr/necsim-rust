@@ -116,8 +116,8 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
         rng: &mut G,
     ) -> E
     where
-        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
-        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+            + DistributionSampler<M, G::Generator, G::Sampler, Event>,
     {
         // Safety: alias_samplers is non-empty by the precondition
         let length = unsafe { NonZeroUsize::new_unchecked(alias_samplers.len()) };

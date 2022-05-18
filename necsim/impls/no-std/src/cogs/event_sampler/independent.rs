@@ -2,9 +2,10 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample, event_sampler::EventHandler, Backup,
-        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, MathsCore,
-        Rng, SpeciationProbability, TurnoverRate,
+        coalescence_sampler::CoalescenceRngSample, event_sampler::EventHandler,
+        rng::UniformClosedOpenUnit, Backup, CoalescenceSampler, DispersalSampler,
+        DistributionSampler, EmigrationExit, EventSampler, Habitat, MathsCore, Rng,
+        SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
     lineage::Lineage,
@@ -42,7 +43,9 @@ pub struct IndependentEventSampler<
     D: DispersalSampler<M, H, G>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
-> {
+> where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
+{
     #[cfg_attr(
         feature = "cuda",
         cuda(
@@ -62,6 +65,8 @@ impl<
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
     > Default for IndependentEventSampler<M, H, G, X, D, T, N>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     fn default() -> Self {
         Self {
@@ -81,6 +86,8 @@ impl<
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
     > Backup for IndependentEventSampler<M, H, G, X, D, T, N>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
@@ -111,6 +118,8 @@ impl<
         T,
         N,
     > for IndependentEventSampler<M, H, G, X, D, T, N>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     #[must_use]
     #[inline]
@@ -147,7 +156,7 @@ impl<
         }: EventHandler<FS, FD, FE>,
         auxiliary: Aux,
     ) -> Q {
-        let speciation_sample = rng.sample_uniform_closed_open();
+        let speciation_sample = rng.sample::<UniformClosedOpenUnit>();
 
         SpeciationSample::update_min(
             &mut self.min_spec_sample,
@@ -245,6 +254,8 @@ impl<
         T,
         N,
     > for IndependentEventSampler<M, H, G, X, D, T, N>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     fn replace_min_speciation(
         &mut self,

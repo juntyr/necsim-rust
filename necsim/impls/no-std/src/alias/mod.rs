@@ -96,8 +96,8 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
     #[debug_ensures(self.Es.contains(&ret), "returns one of the weighted events")]
     pub fn sample_event<M: MathsCore, G: Rng<M>>(&self, rng: &mut G) -> E
     where
-        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
-        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+            + DistributionSampler<M, G::Generator, G::Sampler, Event>,
     {
         // Safety: Es is non-empty by the precondition on construction
         let length = unsafe { NonZeroUsize::new_unchecked(self.Es.len()) };

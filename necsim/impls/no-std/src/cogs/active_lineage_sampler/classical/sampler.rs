@@ -5,10 +5,9 @@ use core::{
 
 use necsim_core::{
     cogs::{
-        rng::{Exponential, IndexUsize, Lambda, Length},
+        rng::{Event, Exponential, IndexUsize, Lambda, Length, UniformClosedOpenUnit},
         ActiveLineageSampler, DispersalSampler, DistributionSampler, EmigrationExit, Habitat,
-        ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng,
-        SpeciationProbability,
+        ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng, SpeciationProbability,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -58,8 +57,10 @@ impl<
         I,
     > for ClassicalActiveLineageSampler<M, H, G, S, X, D, N, I>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
+        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, S: 'a, X: 'a, D: 'a, N: 'a, I: 'a;
 

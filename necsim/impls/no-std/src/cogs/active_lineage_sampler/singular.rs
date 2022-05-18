@@ -1,8 +1,8 @@
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        Habitat, ImmigrationEntry, LineageStore, MathsCore, Rng,
-        SpeciationProbability, TurnoverRate,
+        Habitat, ImmigrationEntry, LineageStore, MathsCore, Rng, SpeciationProbability,
+        TurnoverRate,
     },
     lineage::Lineage,
 };

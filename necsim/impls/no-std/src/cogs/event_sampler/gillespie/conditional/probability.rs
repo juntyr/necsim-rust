@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
-        GloballyCoherentLineageStore, Habitat, MathsCore, Rng,
-        SeparableDispersalSampler, SpeciationProbability,
+        GloballyCoherentLineageStore, Habitat, MathsCore, Rng, SeparableDispersalSampler,
+        SpeciationProbability,
     },
     landscape::Location,
 };

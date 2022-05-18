@@ -2,10 +2,12 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample, event_sampler::EventHandler, Backup,
-        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        GloballyCoherentLineageStore, Habitat, MathsCore, Rng,
-        SpeciationProbability, TurnoverRate,
+        coalescence_sampler::CoalescenceRngSample,
+        event_sampler::EventHandler,
+        rng::{Event, UniformClosedOpenUnit},
+        Backup, CoalescenceSampler, DispersalSampler, DistributionSampler, EmigrationExit,
+        EventSampler, GloballyCoherentLineageStore, Habitat, MathsCore, Rng, SpeciationProbability,
+        TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
     landscape::Location,
@@ -28,7 +30,10 @@ pub struct UnconditionalGillespieEventSampler<
     C: CoalescenceSampler<M, H, S>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
-> {
+> where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
+{
     #[allow(clippy::type_complexity)]
     marker: PhantomData<(M, H, G, S, X, D, C, T, N)>,
 }
@@ -44,6 +49,9 @@ impl<
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
     > Default for UnconditionalGillespieEventSampler<M, H, G, S, X, D, C, T, N>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     fn default() -> Self {
         Self {
@@ -64,6 +72,9 @@ impl<
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
     > Backup for UnconditionalGillespieEventSampler<M, H, G, S, X, D, C, T, N>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
@@ -85,6 +96,9 @@ impl<
         N: SpeciationProbability<M, H>,
     > EventSampler<M, H, G, S, X, D, C, T, N>
     for UnconditionalGillespieEventSampler<M, H, G, S, X, D, C, T, N>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     #[must_use]
     fn sample_event_for_lineage_at_event_time_or_emigrate<
@@ -110,7 +124,7 @@ impl<
         }: EventHandler<FS, FD, FE>,
         auxiliary: Aux,
     ) -> Q {
-        if rng.sample_event(
+        if rng.sample_with::<Event>(
             simulation
                 .speciation_probability
                 .get_speciation_probability_at_location(
@@ -192,6 +206,9 @@ impl<
         N: SpeciationProbability<M, H>,
     > GillespieEventSampler<M, H, G, S, X, D, C, T, N>
     for UnconditionalGillespieEventSampler<M, H, G, S, X, D, C, T, N>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     #[must_use]
     fn get_event_rate_at_location(

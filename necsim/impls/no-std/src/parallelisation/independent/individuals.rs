@@ -9,8 +9,8 @@ use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::{
     cogs::{
-        DispersalSampler, Habitat, MathsCore, PrimeableRng, Rng, SpeciationProbability,
-        TurnoverRate,
+        rng::UniformClosedOpenUnit, DispersalSampler, DistributionSampler, Habitat, MathsCore,
+        PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     reporter::Reporter,
@@ -84,7 +84,10 @@ pub fn simulate<
     NonNegativeF64,
     u64,
     impl IntoIterator<Item = Lineage>,
-) {
+)
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
+{
     let mut lineages = VecDeque::from_iter(lineages);
     let mut proxy = IgnoreProgressReporterProxy::from(local_partition);
     let mut min_spec_samples = dedup_cache.construct(lineages.len());
