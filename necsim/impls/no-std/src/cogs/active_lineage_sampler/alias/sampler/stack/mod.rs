@@ -7,7 +7,10 @@ use core::{
     num::{NonZeroU128, NonZeroU64, NonZeroUsize},
 };
 
-use necsim_core::cogs::{Backup, MathsCore, Rng, RngCore};
+use necsim_core::cogs::{
+    rng::{IndexU128, IndexU64, IndexUsize, Length},
+    Backup, DistributionSampler, MathsCore, Rng,
+};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 #[cfg(test)]
@@ -45,7 +48,10 @@ impl<E: Eq + Hash + Backup> RejectionSamplingGroup<E> {
     unsafe fn sample_pop_inplace<M: MathsCore, G: Rng<M>>(
         &mut self,
         rng: &mut G,
-    ) -> (Option<&mut Self>, E) {
+    ) -> (Option<&mut Self>, E)
+    where
+        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
+    {
         if let [_event] = &self.events[..] {
             // Safety: If there is only one event, the pop must succeed
             return (None, self.events.pop().unwrap_unchecked());
@@ -53,7 +59,8 @@ impl<E: Eq + Hash + Backup> RejectionSamplingGroup<E> {
 
         loop {
             // Safety: By construction, the group never contains zero elements
-            let index = rng.sample_index(NonZeroUsize::new_unchecked(self.weights.len()));
+            let index = rng
+                .sample_with::<IndexUsize>(Length(NonZeroUsize::new_unchecked(self.weights.len())));
             let height = rng.sample_u64() >> 11;
 
             // 53rd bit of weight is always 1, so sampling chance >= 50%
@@ -70,7 +77,10 @@ impl<E: Eq + Hash + Backup> RejectionSamplingGroup<E> {
     }
 
     #[cfg(test)]
-    fn sample_pop<M: MathsCore, G: Rng<M>>(mut self, rng: &mut G) -> (Option<Self>, E) {
+    fn sample_pop<M: MathsCore, G: Rng<M>>(mut self, rng: &mut G) -> (Option<Self>, E)
+    where
+        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
+    {
         match unsafe { self.sample_pop_inplace(rng) } {
             (Some(_), event) => (Some(self), event),
             (None, event) => (None, event),
@@ -121,14 +131,19 @@ impl<E: Eq + Hash + Backup> DynamicAliasMethodStackSampler<E> {
         self.groups.iter().flat_map(RejectionSamplingGroup::iter)
     }
 
-    pub fn sample_pop<M: MathsCore, G: Rng<M>>(&mut self, rng: &mut G) -> Option<E> {
+    pub fn sample_pop<M: MathsCore, G: Rng<M>>(&mut self, rng: &mut G) -> Option<E>
+    where
+        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
+        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
+    {
         if let Some(total_weight) = NonZeroU128::new(self.total_weight) {
             let cdf_sample = if let [_group] = &self.groups[..] {
                 0_u128
             } else if let Ok(total_weight) = NonZeroU64::try_from(total_weight) {
-                u128::from(rng.sample_index_u64(total_weight))
+                u128::from(rng.sample_with::<IndexU64>(Length(total_weight)))
             } else {
-                rng.sample_index_u128(total_weight)
+                rng.sample_with::<IndexU128>(Length(total_weight))
             };
 
             let mut cdf_acc = 0_u128;

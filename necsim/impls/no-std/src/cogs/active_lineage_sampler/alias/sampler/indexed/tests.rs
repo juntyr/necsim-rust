@@ -1143,11 +1143,11 @@ impl DistributionSampler<IntrinsicsMathsCore, DummyRng, DummyDistributionSampler
     ) -> usize {
         let length = params.0;
 
-        /*#[allow(
+        #[allow(
             clippy::cast_precision_loss,
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
-        )]*/
+        )]
         let index = IntrinsicsMathsCore::floor(rng.sample_f64() * (length.get() as f64)) as usize;
 
         // Safety in case of f64 rounding errors
@@ -1172,11 +1172,11 @@ impl DistributionSampler<IntrinsicsMathsCore, DummyRng, DummyDistributionSampler
     ) -> u64 {
         let length = params.0;
 
-        /*#[allow(
+        #[allow(
             clippy::cast_precision_loss,
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
-        )]*/
+        )]
         let index = IntrinsicsMathsCore::floor(rng.sample_f64() * (length.get() as f64)) as u64;
 
         // Safety in case of f64 rounding errors
@@ -1201,11 +1201,11 @@ impl DistributionSampler<IntrinsicsMathsCore, DummyRng, DummyDistributionSampler
     ) -> u128 {
         let length = params.0;
 
-        /*#[allow(
+        #[allow(
             clippy::cast_precision_loss,
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
-        )]*/
+        )]
         let index = IntrinsicsMathsCore::floor(rng.sample_f64() * (length.get() as f64)) as u128;
 
         // Safety in case of f64 rounding errors

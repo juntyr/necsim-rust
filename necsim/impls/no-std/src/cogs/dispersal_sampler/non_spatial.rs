@@ -1,7 +1,11 @@
 use core::{marker::PhantomData, num::NonZeroU64};
 
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, Habitat, MathsCore, Rng, SeparableDispersalSampler},
+    cogs::{
+        rng::{IndexU64, Length},
+        Backup, DispersalSampler, DistributionSampler, Habitat, MathsCore, Rng,
+        SeparableDispersalSampler,
+    },
     landscape::Location,
 };
 use necsim_core_bond::ClosedUnitF64;
@@ -12,11 +16,17 @@ use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "G"))]
-pub struct NonSpatialDispersalSampler<M: MathsCore, G: Rng<M>> {
+pub struct NonSpatialDispersalSampler<M: MathsCore, G: Rng<M>>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+{
     marker: PhantomData<(M, G)>,
 }
 
-impl<M: MathsCore, G: Rng<M>> Default for NonSpatialDispersalSampler<M, G> {
+impl<M: MathsCore, G: Rng<M>> Default for NonSpatialDispersalSampler<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+{
     #[must_use]
     fn default() -> Self {
         Self {
@@ -26,7 +36,10 @@ impl<M: MathsCore, G: Rng<M>> Default for NonSpatialDispersalSampler<M, G> {
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: Rng<M>> Backup for NonSpatialDispersalSampler<M, G> {
+impl<M: MathsCore, G: Rng<M>> Backup for NonSpatialDispersalSampler<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+{
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             marker: PhantomData::<(M, G)>,
@@ -37,6 +50,8 @@ impl<M: MathsCore, G: Rng<M>> Backup for NonSpatialDispersalSampler<M, G> {
 #[contract_trait]
 impl<M: MathsCore, G: Rng<M>> DispersalSampler<M, NonSpatialHabitat<M>, G>
     for NonSpatialDispersalSampler<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
 {
     #[must_use]
     #[inline]
@@ -50,8 +65,9 @@ impl<M: MathsCore, G: Rng<M>> DispersalSampler<M, NonSpatialHabitat<M>, G>
             habitat.get_extent().width().get() * habitat.get_extent().height().get();
 
         // Safety: habitat width and height are both > 0
-        let dispersal_target_index =
-            rng.sample_index_u64(unsafe { NonZeroU64::new_unchecked(habitat_index_max) });
+        let dispersal_target_index = rng.sample_with::<IndexU64>(Length(unsafe {
+            NonZeroU64::new_unchecked(habitat_index_max)
+        }));
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
@@ -70,6 +86,8 @@ impl<M: MathsCore, G: Rng<M>> DispersalSampler<M, NonSpatialHabitat<M>, G>
 #[contract_trait]
 impl<M: MathsCore, G: Rng<M>> SeparableDispersalSampler<M, NonSpatialHabitat<M>, G>
     for NonSpatialDispersalSampler<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
 {
     #[must_use]
     #[debug_requires((
@@ -88,8 +106,9 @@ impl<M: MathsCore, G: Rng<M>> SeparableDispersalSampler<M, NonSpatialHabitat<M>,
 
         let dispersal_target_index = {
             // Safety: by PRE, `habitat_index_max` > 1
-            let dispersal_target_index =
-                rng.sample_index_u64(unsafe { NonZeroU64::new_unchecked(habitat_index_max - 1) });
+            let dispersal_target_index = rng.sample_with::<IndexU64>(Length(unsafe {
+                NonZeroU64::new_unchecked(habitat_index_max - 1)
+            }));
 
             if dispersal_target_index >= current_location_index {
                 dispersal_target_index + 1

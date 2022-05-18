@@ -1,7 +1,8 @@
 use necsim_core::{
     cogs::{
         rng::{Exponential, Lambda},
-        Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng, Rng, TurnoverRate,
+        DistributionSampler, Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng, Rng,
+        TurnoverRate,
     },
     landscape::IndexedLocation,
 };
@@ -29,6 +30,8 @@ impl ExpEventTimeSampler {
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: Rng<M, Generator: PrimeableRng>, T: TurnoverRate<M, H>>
     EventTimeSampler<M, H, G, T> for ExpEventTimeSampler
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
 {
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(

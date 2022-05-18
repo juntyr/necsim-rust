@@ -1,5 +1,9 @@
 use necsim_core::{
-    cogs::{Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng, Rng, TurnoverRate},
+    cogs::{
+        rng::{Normal, Normal2D, UniformClosedOpenUnit},
+        DistributionSampler, Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng, Rng,
+        TurnoverRate,
+    },
     landscape::IndexedLocation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -26,6 +30,9 @@ impl PoissonEventTimeSampler {
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: Rng<M, Generator: PrimeableRng>, T: TurnoverRate<M, H>>
     EventTimeSampler<M, H, G, T> for PoissonEventTimeSampler
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
 {
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
@@ -46,7 +53,8 @@ impl<M: MathsCore, H: Habitat<M>, G: Rng<M, Generator: PrimeableRng>, T: Turnove
         let mut time_step = M::floor(time.get() / self.delta_t.get()) as u64;
 
         let (event_time, event_index) = loop {
-            rng.prime_with_habitat(habitat, indexed_location, time_step);
+            rng.generator()
+                .prime_with_habitat(habitat, indexed_location, time_step);
 
             let number_events_at_time_steps = if no_event_probability_per_step > 0.0_f64 {
                 // https://en.wikipedia.org/wiki/Poisson_distribution#cite_ref-Devroye1986_54-0
@@ -54,7 +62,7 @@ impl<M: MathsCore, H: Habitat<M>, G: Rng<M, Generator: PrimeableRng>, T: Turnove
                 let mut prod = no_event_probability_per_step;
                 let mut acc = no_event_probability_per_step;
 
-                let u = rng.sample_uniform_closed_open();
+                let u = rng.sample::<UniformClosedOpenUnit>();
 
                 while u > acc && prod > 0.0_f64 {
                     poisson += 1;
@@ -67,7 +75,10 @@ impl<M: MathsCore, H: Habitat<M>, G: Rng<M, Generator: PrimeableRng>, T: Turnove
                 // Fallback in case no_event_probability_per_step underflows
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let normal_as_poisson = rng
-                    .sample_2d_normal(lambda_per_step.get(), lambda_per_step.sqrt::<M>())
+                    .sample_with::<Normal2D>(Normal {
+                        mu: lambda_per_step.get(),
+                        sigma: lambda_per_step.sqrt::<M>(),
+                    })
                     .0
                     .max(0.0_f64) as u32;
 
@@ -79,7 +90,7 @@ impl<M: MathsCore, H: Habitat<M>, G: Rng<M, Generator: PrimeableRng>, T: Turnove
             for event_index in 0..number_events_at_time_steps {
                 #[allow(clippy::cast_precision_loss)]
                 let event_time = (NonNegativeF64::from(time_step)
-                    + NonNegativeF64::from(rng.sample_uniform_closed_open()))
+                    + NonNegativeF64::from(rng.sample::<UniformClosedOpenUnit>()))
                     * self.delta_t;
 
                 if event_time > time {
@@ -99,7 +110,7 @@ impl<M: MathsCore, H: Habitat<M>, G: Rng<M, Generator: PrimeableRng>, T: Turnove
             }
         };
 
-        rng.prime_with_habitat(
+        rng.generator().prime_with_habitat(
             habitat,
             indexed_location,
             time_step + INV_PHI.wrapping_mul(u64::from(event_index + 1)),

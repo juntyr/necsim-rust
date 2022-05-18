@@ -1,5 +1,8 @@
 use necsim_core::{
-    cogs::{Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng, Rng, TurnoverRate},
+    cogs::{
+        rng::Event, DistributionSampler, Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng,
+        Rng, TurnoverRate,
+    },
     landscape::IndexedLocation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -23,6 +26,8 @@ impl GeometricEventTimeSampler {
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: Rng<M, Generator: PrimeableRng>, T: TurnoverRate<M, H>>
     EventTimeSampler<M, H, G, T> for GeometricEventTimeSampler
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
 {
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
@@ -47,7 +52,7 @@ impl<M: MathsCore, H: Habitat<M>, G: Rng<M, Generator: PrimeableRng>, T: Turnove
             rng.generator()
                 .prime_with_habitat(habitat, indexed_location, time_step);
 
-            if rng.sample_event(event_probability_per_step) {
+            if rng.sample_with::<Event>(event_probability_per_step) {
                 break;
             }
 

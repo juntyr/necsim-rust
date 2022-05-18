@@ -1,7 +1,13 @@
+use core::num::{NonZeroU128, NonZeroU64, NonZeroUsize};
+
 use alloc::{vec, vec::Vec};
 
-use necsim_core::cogs::{Backup, RngCore, SeedableRng};
+use necsim_core::cogs::{
+    rng::{IndexU128, IndexU64, IndexUsize, Length, SimpleRng},
+    Backup, Distribution, DistributionSampler, Rng, RngCore, SeedableRng,
+};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_maths::MathsCore;
 
 use crate::cogs::{maths::intrinsics::IntrinsicsMathsCore, rng::wyhash::WyHash};
 
@@ -96,7 +102,7 @@ fn sample_single_group() {
 
     let mut tally = [0_u64; 6];
 
-    let mut rng = WyHash::<IntrinsicsMathsCore>::seed_from_u64(24897);
+    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::seed_from_u64(24897);
 
     for _ in 0..N {
         let (maybe_group, sample) = group.sample_pop(&mut rng);
@@ -396,7 +402,7 @@ fn add_remove_event_full() {
 fn sample_single_group_full() {
     const N: usize = 10_000_000;
 
-    let mut rng = WyHash::<IntrinsicsMathsCore>::seed_from_u64(471_093);
+    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::seed_from_u64(471_093);
 
     let mut sampler = DynamicAliasMethodStackSampler::with_capacity(6);
 
@@ -445,7 +451,7 @@ fn sample_single_group_full() {
 fn sample_three_groups_full() {
     const N: usize = 10_000_000;
 
-    let mut rng = WyHash::<IntrinsicsMathsCore>::seed_from_u64(739_139);
+    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::seed_from_u64(739_139);
 
     let mut sampler = DynamicAliasMethodStackSampler::with_capacity(6);
 
@@ -491,7 +497,7 @@ fn sample_three_groups_full() {
 fn sample_three_groups_full_reverse() {
     const N: usize = 10_000_000;
 
-    let mut rng = WyHash::<IntrinsicsMathsCore>::seed_from_u64(248_971);
+    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::seed_from_u64(248_971);
 
     let mut sampler = DynamicAliasMethodStackSampler::with_capacity(6);
 
@@ -570,18 +576,17 @@ fn debug_display_sampler() {
 
 // GRCOV_EXCL_START
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-struct DummyRng(Vec<u64>);
+struct DummyRng(Vec<f64>);
 
 impl DummyRng {
     fn new(mut vec: Vec<f64>) -> Self {
         vec.reverse();
 
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        Self(
-            vec.into_iter()
-                .map(|u01| ((u01 / f64::from_bits(0x3CA0_0000_0000_0000_u64)) as u64) << 11)
-                .collect(),
-        )
+        Self(vec)
+    }
+
+    fn sample_f64(&mut self) -> f64 {
+        self.0.pop().unwrap()
     }
 }
 
@@ -595,7 +600,115 @@ impl RngCore for DummyRng {
 
     #[must_use]
     fn sample_u64(&mut self) -> u64 {
-        self.0.pop().unwrap()
+        // #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        ((self.sample_f64() / f64::from_bits(0x3CA0_0000_0000_0000_u64)) as u64) << 11
+    }
+}
+
+impl Rng<IntrinsicsMathsCore> for DummyRng {
+    type Generator = Self;
+    type Sampler = DummyDistributionSamplers;
+
+    fn generator(&mut self) -> &mut Self::Generator {
+        self
+    }
+
+    fn sample_with<D: Distribution>(&mut self, params: D::Parameters) -> D::Sample
+    where
+        Self::Sampler: DistributionSampler<IntrinsicsMathsCore, Self::Generator, Self::Sampler, D>,
+    {
+        let samplers = DummyDistributionSamplers;
+
+        samplers.sample_with(self, &samplers, params)
+    }
+}
+
+struct DummyDistributionSamplers;
+
+impl DistributionSampler<IntrinsicsMathsCore, DummyRng, DummyDistributionSamplers, IndexUsize>
+    for DummyDistributionSamplers
+{
+    type ConcreteSampler = Self;
+
+    fn concrete(&self) -> &Self::ConcreteSampler {
+        self
+    }
+
+    fn sample_with(
+        &self,
+        rng: &mut DummyRng,
+        samplers: &DummyDistributionSamplers,
+        params: Length<NonZeroUsize>,
+    ) -> usize {
+        let length = params.0;
+
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
+        let index = IntrinsicsMathsCore::floor(rng.sample_f64() * (length.get() as f64)) as usize;
+
+        // Safety in case of f64 rounding errors
+        index.min(length.get() - 1)
+    }
+}
+
+impl DistributionSampler<IntrinsicsMathsCore, DummyRng, DummyDistributionSamplers, IndexU64>
+    for DummyDistributionSamplers
+{
+    type ConcreteSampler = Self;
+
+    fn concrete(&self) -> &Self::ConcreteSampler {
+        self
+    }
+
+    fn sample_with(
+        &self,
+        rng: &mut DummyRng,
+        samplers: &DummyDistributionSamplers,
+        params: Length<NonZeroU64>,
+    ) -> u64 {
+        let length = params.0;
+
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
+        let index = IntrinsicsMathsCore::floor(rng.sample_f64() * (length.get() as f64)) as u64;
+
+        // Safety in case of f64 rounding errors
+        index.min(length.get() - 1)
+    }
+}
+
+impl DistributionSampler<IntrinsicsMathsCore, DummyRng, DummyDistributionSamplers, IndexU128>
+    for DummyDistributionSamplers
+{
+    type ConcreteSampler = Self;
+
+    fn concrete(&self) -> &Self::ConcreteSampler {
+        self
+    }
+
+    fn sample_with(
+        &self,
+        rng: &mut DummyRng,
+        samplers: &DummyDistributionSamplers,
+        params: Length<NonZeroU128>,
+    ) -> u128 {
+        let length = params.0;
+
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
+        let index = IntrinsicsMathsCore::floor(rng.sample_f64() * (length.get() as f64)) as u128;
+
+        // Safety in case of f64 rounding errors
+        index.min(length.get() - 1)
     }
 }
 // GRCOV_EXCL_STOP
