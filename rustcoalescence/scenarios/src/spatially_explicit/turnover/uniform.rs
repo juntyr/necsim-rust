@@ -2,7 +2,9 @@ use std::{convert::TryFrom, marker::PhantomData, path::PathBuf};
 
 use serde::{Deserialize, Serialize, Serializer};
 
-use necsim_core::cogs::{DispersalSampler, Habitat, LineageStore, MathsCore, RngCore};
+use necsim_core::cogs::{
+    rng::IndexU64, DispersalSampler, DistributionSampler, Habitat, LineageStore, MathsCore, Rng,
+};
 use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64, PositiveF64};
 use necsim_partitioning_core::partition::Partition;
 
@@ -36,7 +38,10 @@ pub enum SpatiallyExplicitUniformTurnoverScenarioError {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct SpatiallyExplicitUniformTurnoverScenario<M: MathsCore, G: RngCore<M>> {
+pub struct SpatiallyExplicitUniformTurnoverScenario<M: MathsCore, G: Rng<M>>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+{
     habitat: InMemoryHabitat<M>,
     dispersal_map: Array2D<NonNegativeF64>,
     turnover_rate: UniformTurnoverRate,
@@ -44,15 +49,17 @@ pub struct SpatiallyExplicitUniformTurnoverScenario<M: MathsCore, G: RngCore<M>>
     _marker: PhantomData<G>,
 }
 
-impl<M: MathsCore, G: RngCore<M>> ScenarioParameters
-    for SpatiallyExplicitUniformTurnoverScenario<M, G>
+impl<M: MathsCore, G: Rng<M>> ScenarioParameters for SpatiallyExplicitUniformTurnoverScenario<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
 {
     type Arguments = SpatiallyExplicitUniformTurnoverArguments;
     type Error = SpatiallyExplicitUniformTurnoverScenarioError;
 }
 
-impl<M: MathsCore, G: RngCore<M>> Scenario<M, G>
-    for SpatiallyExplicitUniformTurnoverScenario<M, G>
+impl<M: MathsCore, G: Rng<M>> Scenario<M, G> for SpatiallyExplicitUniformTurnoverScenario<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
 {
     type Decomposition = EqualDecomposition<M, Self::Habitat>;
     type DecompositionAuxiliary = ();

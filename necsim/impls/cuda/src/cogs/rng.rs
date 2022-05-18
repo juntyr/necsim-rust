@@ -67,6 +67,15 @@ impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> Rng<M> for Cu
         self.inner.generator()
     }
 
+    fn map_generator<F: FnOnce(Self::Generator) -> Self::Generator>(self, map: F) -> Self {
+        let CudaRng { inner, marker } = self;
+
+        CudaRng {
+            inner: inner.map_generator(map),
+            marker,
+        }
+    }
+
     fn sample_with<D: Distribution>(&mut self, params: D::Parameters) -> D::Sample
     where
         Self::Sampler: DistributionSampler<M, Self::Generator, Self::Sampler, D>,

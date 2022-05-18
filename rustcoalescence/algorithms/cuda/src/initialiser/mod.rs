@@ -1,5 +1,8 @@
 use necsim_core::{
-    cogs::{DispersalSampler, EmigrationExit, MathsCore, PrimeableRng},
+    cogs::{
+        rng::{Event, IndexUsize, UniformClosedOpenUnit},
+        DispersalSampler, DistributionSampler, EmigrationExit, MathsCore, PrimeableRng, Rng,
+    },
     lineage::Lineage,
 };
 
@@ -28,7 +31,7 @@ pub mod resume;
 #[allow(clippy::module_name_repetitions)]
 pub trait CudaLineageStoreSampleInitialiser<
     M: MathsCore,
-    G: PrimeableRng<M> + RustToCuda,
+    G: Rng<M, Generator: PrimeableRng> + RustToCuda,
     O: Scenario<M, G>,
     Error: From<CudaError>,
 > where
@@ -36,6 +39,9 @@ pub trait CudaLineageStoreSampleInitialiser<
     O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda,
     O::TurnoverRate: RustToCuda,
     O::SpeciationProbability: RustToCuda,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     type DispersalSampler: DispersalSampler<M, O::Habitat, G> + RustToCuda;
     type ActiveLineageSampler<

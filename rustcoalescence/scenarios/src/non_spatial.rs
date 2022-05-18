@@ -2,7 +2,9 @@ use std::num::NonZeroU32;
 
 use serde::{Deserialize, Serialize};
 
-use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
+use necsim_core::cogs::{
+    rng::IndexU64, DispersalSampler, DistributionSampler, LineageStore, MathsCore, Rng,
+};
 use necsim_core_bond::{OffByOneU32, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::partition::Partition;
 
@@ -20,7 +22,10 @@ use necsim_impls_no_std::{
 use crate::{Scenario, ScenarioParameters};
 
 #[allow(clippy::module_name_repetitions)]
-pub struct NonSpatialScenario<M: MathsCore, G: RngCore<M>> {
+pub struct NonSpatialScenario<M: MathsCore, G: Rng<M>>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+{
     habitat: NonSpatialHabitat<M>,
     dispersal_sampler: NonSpatialDispersalSampler<M, G>,
     turnover_rate: UniformTurnoverRate,
@@ -34,12 +39,18 @@ pub struct NonSpatialArguments {
     pub deme: NonZeroU32,
 }
 
-impl<M: MathsCore, G: RngCore<M>> ScenarioParameters for NonSpatialScenario<M, G> {
+impl<M: MathsCore, G: Rng<M>> ScenarioParameters for NonSpatialScenario<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+{
     type Arguments = NonSpatialArguments;
     type Error = !;
 }
 
-impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for NonSpatialScenario<M, G> {
+impl<M: MathsCore, G: Rng<M>> Scenario<M, G> for NonSpatialScenario<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+{
     type Decomposition = ModuloDecomposition;
     type DecompositionAuxiliary = ();
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =

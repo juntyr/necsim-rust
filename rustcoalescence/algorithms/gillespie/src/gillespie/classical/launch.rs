@@ -1,7 +1,11 @@
 use std::{hint::unreachable_unchecked, marker::PhantomData};
 
 use necsim_core::{
-    cogs::{ActiveLineageSampler, LocallyCoherentLineageStore, MathsCore, SplittableRng},
+    cogs::{
+        rng::{Event, IndexUsize, UniformClosedOpenUnit},
+        ActiveLineageSampler, DistributionSampler, LocallyCoherentLineageStore, MathsCore, Rng,
+        SplittableRng,
+    },
     reporter::Reporter,
     simulation::SimulationBuilder,
 };
@@ -37,7 +41,7 @@ use super::initialiser::ClassicalLineageStoreSampleInitialiser;
 pub fn initialise_and_simulate<
     'p,
     M: MathsCore,
-    G: SplittableRng<M>,
+    G: Rng<M, Generator: SplittableRng>,
     O: Scenario<M, G, TurnoverRate = UniformTurnoverRate>,
     R: Reporter,
     P: LocalPartition<'p, R>,
@@ -56,6 +60,9 @@ pub fn initialise_and_simulate<
 where
     O::LineageStore<ClassicalLineageStore<M, O::Habitat>>:
         LocallyCoherentLineageStore<M, O::Habitat>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     match args.parallelism_mode {
         ParallelismMode::Monolithic => {
@@ -124,7 +131,9 @@ where
             }
         },
         non_monolithic_parallelism_mode => {
-            let rng = rng.split_to_stream(u64::from(local_partition.get_partition().rank()));
+            let rng = rng.map_generator(|rng| {
+                rng.split_to_stream(u64::from(local_partition.get_partition().rank()))
+            });
 
             let (
                 habitat,

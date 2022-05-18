@@ -1,13 +1,14 @@
 #![deny(clippy::pedantic)]
 #![feature(const_eval_limit)]
 #![const_eval_limit = "1000000000000"]
+#![feature(associated_type_bounds)]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LineageStore, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
+        LineageStore, MathsCore, PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
     },
     reporter::boolean::Boolean,
 };
@@ -38,7 +39,7 @@ pub type KernelCompilationCallback = dyn FnMut(&Function) -> CudaResult<()>;
 pub struct SimulationKernel<
     M: MathsCore,
     H: Habitat<M> + RustToCuda,
-    G: PrimeableRng<M> + RustToCuda,
+    G: Rng<M, Generator: PrimeableRng> + RustToCuda,
     S: LineageStore<M, H> + RustToCuda,
     X: EmigrationExit<M, H, G, S> + RustToCuda,
     D: DispersalSampler<M, H, G> + RustToCuda,
@@ -80,7 +81,7 @@ pub struct SimulationKernel<
 impl<
         M: MathsCore,
         H: Habitat<M> + RustToCuda,
-        G: PrimeableRng<M> + RustToCuda,
+        G: Rng<M, Generator: PrimeableRng> + RustToCuda,
         S: LineageStore<M, H> + RustToCuda,
         X: EmigrationExit<M, H, G, S> + RustToCuda,
         D: DispersalSampler<M, H, G> + RustToCuda,
@@ -139,7 +140,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M> + RustToCuda,
-        G: PrimeableRng<M> + RustToCuda,
+        G: Rng<M, Generator: PrimeableRng> + RustToCuda,
         S: LineageStore<M, H> + RustToCuda,
         X: EmigrationExit<M, H, G, S> + RustToCuda,
         D: DispersalSampler<M, H, G> + RustToCuda,

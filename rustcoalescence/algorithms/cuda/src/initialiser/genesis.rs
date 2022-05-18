@@ -1,5 +1,8 @@
 use necsim_core::{
-    cogs::{EmigrationExit, MathsCore, PrimeableRng},
+    cogs::{
+        rng::{Event, IndexUsize, UniformClosedOpenUnit},
+        DistributionSampler, EmigrationExit, MathsCore, PrimeableRng, Rng,
+    },
     lineage::Lineage,
 };
 
@@ -23,13 +26,16 @@ use super::CudaLineageStoreSampleInitialiser;
 #[allow(clippy::module_name_repetitions)]
 pub struct GenesisInitialiser;
 
-impl<M: MathsCore, G: PrimeableRng<M> + RustToCuda, O: Scenario<M, G>>
+impl<M: MathsCore, G: Rng<M, Generator: PrimeableRng> + RustToCuda, O: Scenario<M, G>>
     CudaLineageStoreSampleInitialiser<M, G, O, CudaError> for GenesisInitialiser
 where
     O::Habitat: RustToCuda,
     O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda,
     O::TurnoverRate: RustToCuda,
     O::SpeciationProbability: RustToCuda,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     type ActiveLineageSampler<
         X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>> + RustToCuda,

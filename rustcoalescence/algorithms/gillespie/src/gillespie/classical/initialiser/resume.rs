@@ -1,5 +1,9 @@
 use necsim_core::{
-    cogs::{EmigrationExit, ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, RngCore},
+    cogs::{
+        rng::{Event, Exponential, IndexUsize, UniformClosedOpenUnit},
+        DistributionSampler, EmigrationExit, ImmigrationEntry, LocallyCoherentLineageStore,
+        MathsCore, Rng,
+    },
     lineage::Lineage,
     reporter::Reporter,
 };
@@ -23,8 +27,13 @@ pub struct ResumeInitialiser<L: ExactSizeIterator<Item = Lineage>> {
     pub resume_after: Option<NonNegativeF64>,
 }
 
-impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
+impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: Rng<M>, O: Scenario<M, G>>
     ClassicalLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for ResumeInitialiser<L>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>
+        + DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
 {
     type ActiveLineageSampler<
         S: LocallyCoherentLineageStore<M, O::Habitat>,

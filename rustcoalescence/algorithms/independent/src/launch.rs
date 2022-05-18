@@ -1,7 +1,10 @@
 use std::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{MathsCore, PrimeableRng},
+    cogs::{
+        rng::{Event, IndexUsize, Normal2D, UniformClosedOpenUnit},
+        DistributionSampler, MathsCore, PrimeableRng, Rng,
+    },
     reporter::Reporter,
     simulation::SimulationBuilder,
 };
@@ -46,7 +49,7 @@ use crate::{
 pub fn initialise_and_simulate<
     'p,
     M: MathsCore,
-    G: PrimeableRng<M>,
+    G: Rng<M, Generator: PrimeableRng>,
     O: Scenario<M, G>,
     R: Reporter,
     P: LocalPartition<'p, R>,
@@ -61,7 +64,13 @@ pub fn initialise_and_simulate<
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
     lineage_store_sampler_initialiser: L,
-) -> Result<SimulationOutcome<M, G>, Error> {
+) -> Result<SimulationOutcome<M, G>, Error>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>
+        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
+{
     match args.parallelism_mode {
         ParallelismMode::Monolithic(MonolithicParallelismMode { event_slice })
         | ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { event_slice, .. })

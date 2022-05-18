@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
+use necsim_core::cogs::{
+    rng::Normal2D, DispersalSampler, DistributionSampler, LineageStore, MathsCore, Rng,
+};
 use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::partition::Partition;
 
@@ -21,7 +23,10 @@ use necsim_impls_no_std::{
 use crate::{Scenario, ScenarioParameters};
 
 #[allow(clippy::module_name_repetitions)]
-pub struct AlmostInfiniteScenario<M: MathsCore, G: RngCore<M>> {
+pub struct AlmostInfiniteScenario<M: MathsCore, G: Rng<M>>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
+{
     radius: u16,
 
     habitat: AlmostInfiniteHabitat<M>,
@@ -38,12 +43,18 @@ pub struct AlmostInfiniteArguments {
     pub sigma: NonNegativeF64,
 }
 
-impl<M: MathsCore, G: RngCore<M>> ScenarioParameters for AlmostInfiniteScenario<M, G> {
+impl<M: MathsCore, G: Rng<M>> ScenarioParameters for AlmostInfiniteScenario<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
+{
     type Arguments = AlmostInfiniteArguments;
     type Error = !;
 }
 
-impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteScenario<M, G> {
+impl<M: MathsCore, G: Rng<M>> Scenario<M, G> for AlmostInfiniteScenario<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
+{
     type Decomposition = RadialDecomposition;
     type DecompositionAuxiliary = ();
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
