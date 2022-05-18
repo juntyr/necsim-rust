@@ -229,6 +229,7 @@ impl Distribution for Normal2D {
 #[derive(Clone, Debug, TypeLayout)]
 #[layout(free = "M")]
 #[allow(clippy::module_name_repetitions)]
+#[repr(transparent)]
 pub struct SimpleRng<M: MathsCore, R: RngCore> {
     inner: R,
     marker: PhantomData<M>,
