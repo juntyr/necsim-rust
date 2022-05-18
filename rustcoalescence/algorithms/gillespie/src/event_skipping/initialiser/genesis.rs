@@ -1,7 +1,8 @@
 use necsim_core::{
     cogs::{
-        EmigrationExit, GloballyCoherentLineageStore, ImmigrationEntry, MathsCore, RngCore,
-        SeparableDispersalSampler,
+        rng::{Event, Exponential, IndexU128, IndexU64, IndexUsize, UniformClosedOpenUnit},
+        DistributionSampler, EmigrationExit, GloballyCoherentLineageStore, ImmigrationEntry,
+        MathsCore, Rng, SeparableDispersalSampler,
     },
     reporter::Reporter,
 };
@@ -22,11 +23,17 @@ use super::EventSkippingLineageStoreSampleInitialiser;
 #[allow(clippy::module_name_repetitions)]
 pub struct GenesisInitialiser;
 
-impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
+impl<M: MathsCore, G: Rng<M>, O: Scenario<M, G>>
     EventSkippingLineageStoreSampleInitialiser<M, G, O, !> for GenesisInitialiser
 where
     O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
         SeparableDispersalSampler<M, O::Habitat, G>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>
+        + DistributionSampler<M, G::Generator, G::Sampler, Exponential>
+        + DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
+        + DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
 {
     type ActiveLineageSampler<
         S: GloballyCoherentLineageStore<M, O::Habitat>,

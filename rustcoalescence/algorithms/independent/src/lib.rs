@@ -1,10 +1,15 @@
 #![deny(clippy::pedantic)]
 #![feature(never_type)]
+#![feature(associated_type_bounds)]
 
 #[macro_use]
 extern crate serde_derive_state;
 
-use necsim_core::{cogs::MathsCore, lineage::Lineage, reporter::Reporter};
+use necsim_core::{
+    cogs::{rng::SimpleRng, MathsCore},
+    lineage::Lineage,
+    reporter::Reporter,
+};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::cogs::{
@@ -41,11 +46,16 @@ impl AlgorithmDefaults for IndependentAlgorithm {
     type MathsCore = IntrinsicsMathsCore;
 }
 
-impl<'p, O: Scenario<M, WyHash<M>>, R: Reporter, P: LocalPartition<'p, R>, M: MathsCore>
-    Algorithm<'p, M, O, R, P> for IndependentAlgorithm
+impl<
+        'p,
+        O: Scenario<M, SimpleRng<M, WyHash>>,
+        R: Reporter,
+        P: LocalPartition<'p, R>,
+        M: MathsCore,
+    > Algorithm<'p, M, O, R, P> for IndependentAlgorithm
 {
     type LineageStore = IndependentLineageStore<M, O::Habitat>;
-    type Rng = WyHash<M>;
+    type Rng = SimpleRng<M, WyHash>;
 
     fn get_logical_partition(args: &Self::Arguments, local_partition: &P) -> Partition {
         match &args.parallelism_mode {

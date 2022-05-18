@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{LocallyCoherentLineageStore, MathsCore},
+    cogs::{rng::SimpleRng, LocallyCoherentLineageStore, MathsCore},
     lineage::Lineage,
     reporter::Reporter,
 };
@@ -31,14 +31,19 @@ use initialiser::{
 };
 
 // Default 'Gillespie' implementation for any turnover sampler
-impl<'p, O: Scenario<M, Pcg<M>>, R: Reporter, P: LocalPartition<'p, R>, M: MathsCore>
-    Algorithm<'p, M, O, R, P> for GillespieAlgorithm
+impl<
+        'p,
+        O: Scenario<M, SimpleRng<M, Pcg>>,
+        R: Reporter,
+        P: LocalPartition<'p, R>,
+        M: MathsCore,
+    > Algorithm<'p, M, O, R, P> for GillespieAlgorithm
 where
     O::LineageStore<ClassicalLineageStore<M, O::Habitat>>:
         LocallyCoherentLineageStore<M, O::Habitat>,
 {
     type LineageStore = O::LineageStore<ClassicalLineageStore<M, O::Habitat>>;
-    type Rng = Pcg<M>;
+    type Rng = SimpleRng<M, Pcg>;
 
     default fn get_logical_partition(args: &Self::Arguments, local_partition: &P) -> Partition {
         get_gillespie_logical_partition(args, local_partition)
