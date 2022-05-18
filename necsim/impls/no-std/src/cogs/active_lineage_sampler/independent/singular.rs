@@ -1,6 +1,6 @@
 use necsim_core::cogs::{
-    DispersalSampler, EmigrationExit, Habitat, MathsCore, PrimeableRng, Rng, SpeciationProbability,
-    TurnoverRate,
+    rng::UniformClosedOpenUnit, DispersalSampler, DistributionSampler, EmigrationExit, Habitat,
+    MathsCore, PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
 };
 
 use necsim_core::lineage::Lineage;
@@ -39,6 +39,8 @@ impl<
         IndependentEventSampler<M, H, G, X, D, T, N>,
         NeverImmigrationEntry,
     > for IndependentActiveLineageSampler<M, H, G, X, D, T, N, J>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     #[must_use]
     #[inline]

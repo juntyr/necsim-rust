@@ -1101,8 +1101,10 @@ impl RngCore for DummyRng {
 
     #[must_use]
     fn sample_u64(&mut self) -> u64 {
-        // #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        ((self.sample_f64() / f64::from_bits(0x3CA0_0000_0000_0000_u64)) as u64) << 11
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        {
+            ((self.sample_f64() / f64::from_bits(0x3CA0_0000_0000_0000_u64)) as u64) << 11
+        }
     }
 }
 
@@ -1138,7 +1140,7 @@ impl DistributionSampler<IntrinsicsMathsCore, DummyRng, DummyDistributionSampler
     fn sample_with(
         &self,
         rng: &mut DummyRng,
-        samplers: &DummyDistributionSamplers,
+        _samplers: &DummyDistributionSamplers,
         params: Length<NonZeroUsize>,
     ) -> usize {
         let length = params.0;
@@ -1167,7 +1169,7 @@ impl DistributionSampler<IntrinsicsMathsCore, DummyRng, DummyDistributionSampler
     fn sample_with(
         &self,
         rng: &mut DummyRng,
-        samplers: &DummyDistributionSamplers,
+        _samplers: &DummyDistributionSamplers,
         params: Length<NonZeroU64>,
     ) -> u64 {
         let length = params.0;
@@ -1196,7 +1198,7 @@ impl DistributionSampler<IntrinsicsMathsCore, DummyRng, DummyDistributionSampler
     fn sample_with(
         &self,
         rng: &mut DummyRng,
-        samplers: &DummyDistributionSamplers,
+        _samplers: &DummyDistributionSamplers,
         params: Length<NonZeroU128>,
     ) -> u128 {
         let length = params.0;

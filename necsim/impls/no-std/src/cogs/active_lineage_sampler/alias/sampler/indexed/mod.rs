@@ -199,9 +199,9 @@ impl<E: Eq + Hash + Backup> DynamicAliasMethodIndexedSampler<E> {
 
     pub fn sample_pop<M: MathsCore, G: Rng<M>>(&mut self, rng: &mut G) -> Option<E>
     where
-        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
-        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
-        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
+        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+            + DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
+            + DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
     {
         if let Some(total_weight) = NonZeroU128::new(self.total_weight) {
             let cdf_sample = if let [_group] = &self.groups[..] {

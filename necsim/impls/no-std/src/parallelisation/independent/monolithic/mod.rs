@@ -8,8 +8,8 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::{
     cogs::{
-        DispersalSampler, Habitat, MathsCore, PrimeableRng, Rng, SpeciationProbability,
-        TurnoverRate,
+        rng::UniformClosedOpenUnit, DispersalSampler, DistributionSampler, Habitat, MathsCore,
+        PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     reporter::{boolean::Boolean, Reporter},
@@ -91,7 +91,10 @@ pub fn simulate<
     NonNegativeF64,
     u64,
     impl IntoIterator<Item = Lineage>,
-) {
+)
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
+{
     let mut slow_lineages = lineages
         .into_iter()
         .map(|lineage| {
