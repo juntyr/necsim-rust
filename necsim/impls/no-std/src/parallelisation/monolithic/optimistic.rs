@@ -3,9 +3,9 @@ use core::ops::ControlFlow;
 
 use necsim_core::{
     cogs::{
-        backup::BackedUp, ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler,
-        EventSampler, Habitat, LocallyCoherentLineageStore, MathsCore, Rng,
-        SpeciationProbability, TurnoverRate,
+        backup::BackedUp, rng::UniformClosedOpenUnit, ActiveLineageSampler, Backup,
+        CoalescenceSampler, DispersalSampler, DistributionSampler, EventSampler, Habitat,
+        LocallyCoherentLineageStore, MathsCore, Rng, SpeciationProbability, TurnoverRate,
     },
     lineage::MigratingLineage,
     reporter::Reporter,
@@ -38,13 +38,13 @@ pub fn simulate<
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
     O: Decomposition<M, H>,
-    E: EventSampler<M, H, G, S, DomainEmigrationExit<M, H, O>, D, C, T, N>,
+    E: EventSampler<M, H, G, S, DomainEmigrationExit<M, H, G, O>, D, C, T, N>,
     A: ActiveLineageSampler<
         M,
         H,
         G,
         S,
-        DomainEmigrationExit<M, H, O>,
+        DomainEmigrationExit<M, H, G, O>,
         D,
         C,
         T,
@@ -60,7 +60,7 @@ pub fn simulate<
         H,
         G,
         S,
-        DomainEmigrationExit<M, H, O>,
+        DomainEmigrationExit<M, H, G, O>,
         D,
         C,
         T,
@@ -71,7 +71,10 @@ pub fn simulate<
     >,
     independent_time_slice: PositiveF64,
     local_partition: &mut L,
-) -> (Status, NonNegativeF64, u64) {
+) -> (Status, NonNegativeF64, u64)
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
+{
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(simulation.get_balanced_remaining_work().0);
 

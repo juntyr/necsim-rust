@@ -6,8 +6,8 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_core::cogs::{
     rng::{Exponential, IndexU128, IndexU64, IndexUsize},
     Backup, CoalescenceSampler, DispersalSampler, DistributionSampler, EmigrationExit,
-    EventSampler, Habitat, ImmigrationEntry, LocallyCoherentLineageStore,
-    MathsCore, Rng, SpeciationProbability, TurnoverRate,
+    EventSampler, Habitat, ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng,
+    SpeciationProbability, TurnoverRate,
 };
 
 use crate::cogs::{
@@ -56,10 +56,10 @@ impl<
         I: ImmigrationEntry<M>,
     > IndividualAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
+        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+        + DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
+        + DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
 {
     #[must_use]
     pub fn init_with_store<'h, O: TrustedOriginSampler<'h, M, Habitat = H>>(
@@ -168,10 +168,10 @@ impl<
         I: ImmigrationEntry<M>,
     > fmt::Debug for IndividualAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
+        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+        + DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
+        + DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("IndividualAliasActiveLineageSampler")
@@ -196,10 +196,10 @@ impl<
         I: ImmigrationEntry<M>,
     > Backup for IndividualAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
+        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+        + DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
+        + DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
