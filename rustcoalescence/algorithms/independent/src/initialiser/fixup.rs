@@ -1,5 +1,8 @@
 use necsim_core::{
-    cogs::{EmigrationExit, MathsCore, PrimeableRng},
+    cogs::{
+        rng::{Event, IndexUsize, UniformClosedOpenUnit},
+        DistributionSampler, EmigrationExit, MathsCore, PrimeableRng, Rng,
+    },
     lineage::Lineage,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -36,8 +39,16 @@ pub struct FixUpInitialiser<L: ExactSizeIterator<Item = Lineage>> {
     pub fixup_strategy: RestartFixUpStrategy,
 }
 
-impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: PrimeableRng<M>, O: Scenario<M, G>>
-    IndependentLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for FixUpInitialiser<L>
+impl<
+        L: ExactSizeIterator<Item = Lineage>,
+        M: MathsCore,
+        G: Rng<M, Generator: PrimeableRng>,
+        O: Scenario<M, G>,
+    > IndependentLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for FixUpInitialiser<L>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>
+        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
 {
     type ActiveLineageSampler<
         X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>,

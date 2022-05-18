@@ -2,6 +2,7 @@
 #![no_std]
 #![feature(const_eval_limit)]
 #![const_eval_limit = "1000000000000"]
+#![feature(associated_type_bounds)]
 #![cfg_attr(target_os = "cuda", feature(abi_ptx))]
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
 #![cfg_attr(target_os = "cuda", feature(panic_info_message))]
@@ -18,7 +19,7 @@ use core::ops::ControlFlow;
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LineageStore, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
+        LineageStore, MathsCore, PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
     },
     reporter::boolean::Boolean,
 };
@@ -38,7 +39,7 @@ use rust_cuda::common::RustToCuda;
 pub fn simulate<
     M: MathsCore,
     H: Habitat<M> + RustToCuda,
-    G: PrimeableRng<M> + RustToCuda,
+    G: Rng<M, Generator: PrimeableRng> + RustToCuda,
     S: LineageStore<M, H> + RustToCuda,
     X: EmigrationExit<M, H, G, S> + RustToCuda,
     D: DispersalSampler<M, H, G> + RustToCuda,

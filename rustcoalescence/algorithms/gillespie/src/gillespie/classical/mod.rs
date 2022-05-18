@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{LocallyCoherentLineageStore, MathsCore},
+    cogs::{rng::SimpleRng, LocallyCoherentLineageStore, MathsCore},
     lineage::Lineage,
     reporter::Reporter,
 };
@@ -31,7 +31,7 @@ use initialiser::{
 // Optimised 'Classical' implementation for the `UniformTurnoverSampler`
 impl<
         'p,
-        O: Scenario<M, Pcg<M>, TurnoverRate = UniformTurnoverRate>,
+        O: Scenario<M, SimpleRng<M, Pcg>, TurnoverRate = UniformTurnoverRate>,
         R: Reporter,
         P: LocalPartition<'p, R>,
         M: MathsCore,

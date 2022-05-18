@@ -2,8 +2,9 @@ use std::{hint::unreachable_unchecked, marker::PhantomData};
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, GloballyCoherentLineageStore, MathsCore, SeparableDispersalSampler,
-        SplittableRng,
+        rng::{Event, IndexUsize, UniformClosedOpenUnit},
+        ActiveLineageSampler, DistributionSampler, GloballyCoherentLineageStore, MathsCore, Rng,
+        SeparableDispersalSampler, SplittableRng,
     },
     reporter::Reporter,
     simulation::SimulationBuilder,
@@ -37,7 +38,7 @@ use crate::arguments::{
 pub fn initialise_and_simulate<
     'p,
     M: MathsCore,
-    G: SplittableRng<M>,
+    G: Rng<M, Generator: SplittableRng>,
     O: Scenario<M, G>,
     R: Reporter,
     P: LocalPartition<'p, R>,
@@ -58,6 +59,9 @@ where
         GloballyCoherentLineageStore<M, O::Habitat>,
     O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
         SeparableDispersalSampler<M, O::Habitat, G>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     match args.parallelism_mode {
         ParallelismMode::Monolithic => {
@@ -129,7 +133,9 @@ where
             }
         },
         non_monolithic_parallelism_mode => {
-            let rng = rng.split_to_stream(u64::from(local_partition.get_partition().rank()));
+            let rng = rng.map_generator(|rng| {
+                rng.split_to_stream(u64::from(local_partition.get_partition().rank()))
+            });
 
             let (
                 habitat,

@@ -2,7 +2,10 @@ use std::num::NonZeroU32;
 
 use serde::{Deserialize, Serialize};
 
-use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
+use necsim_core::cogs::{
+    rng::{Event, IndexU64},
+    DispersalSampler, DistributionSampler, LineageStore, MathsCore, Rng,
+};
 use necsim_core_bond::{OffByOneU32, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::partition::Partition;
 
@@ -22,7 +25,11 @@ use necsim_impls_no_std::{
 use crate::{Scenario, ScenarioParameters};
 
 #[allow(clippy::module_name_repetitions)]
-pub struct SpatiallyImplicitScenario<M: MathsCore, G: RngCore<M>> {
+pub struct SpatiallyImplicitScenario<M: MathsCore, G: Rng<M>>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+{
     habitat: SpatiallyImplicitHabitat<M>,
     dispersal_sampler: SpatiallyImplicitDispersalSampler<M, G>,
     turnover_rate: UniformTurnoverRate,
@@ -41,12 +48,20 @@ pub struct SpatiallyImplicitArguments {
     pub migration_probability_per_generation: PositiveUnitF64,
 }
 
-impl<M: MathsCore, G: RngCore<M>> ScenarioParameters for SpatiallyImplicitScenario<M, G> {
+impl<M: MathsCore, G: Rng<M>> ScenarioParameters for SpatiallyImplicitScenario<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+{
     type Arguments = SpatiallyImplicitArguments;
     type Error = !;
 }
 
-impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyImplicitScenario<M, G> {
+impl<M: MathsCore, G: Rng<M>> Scenario<M, G> for SpatiallyImplicitScenario<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
+        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+{
     type Decomposition = ModuloDecomposition;
     type DecompositionAuxiliary = ();
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
