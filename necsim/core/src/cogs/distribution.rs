@@ -6,13 +6,13 @@ use necsim_core_bond::{
 
 use crate::cogs::{MathsCore, RngCore, Samples};
 
-pub trait Distribution {
+#[allow(clippy::module_name_repetitions)]
+pub trait DistributionCore {
     type Parameters;
     type Sample;
 }
 
-#[allow(clippy::module_name_repetitions)]
-pub trait SampledDistribution: Distribution {
+pub trait Distribution: DistributionCore {
     fn sample_with<M: MathsCore, R: Samples<M, Self>>(
         rng: &mut R,
         params: Self::Parameters,
@@ -20,13 +20,13 @@ pub trait SampledDistribution: Distribution {
 
     fn sample<M: MathsCore, R: Samples<M, Self>>(rng: &mut R) -> Self::Sample
     where
-        Self: Distribution<Parameters = ()>,
+        Self: DistributionCore<Parameters = ()>,
     {
         Self::sample_with(rng, ())
     }
 }
 
-impl<D: Distribution> SampledDistribution for D {
+impl<D: DistributionCore> Distribution for D {
     fn sample_with<M: MathsCore, R: Samples<M, Self>>(
         rng: &mut R,
         params: Self::Parameters,
@@ -36,7 +36,7 @@ impl<D: Distribution> SampledDistribution for D {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub trait DistributionSampler<M: MathsCore, R: RngCore, S, D: Distribution> {
+pub trait DistributionSampler<M: MathsCore, R: RngCore, S, D: DistributionCore> {
     type ConcreteSampler: DistributionSampler<M, R, S, D>;
 
     #[must_use]
@@ -48,7 +48,7 @@ pub trait DistributionSampler<M: MathsCore, R: RngCore, S, D: Distribution> {
     #[must_use]
     fn sample(&self, rng: &mut R, samplers: &S) -> D::Sample
     where
-        D: Distribution<Parameters = ()>,
+        D: DistributionCore<Parameters = ()>,
     {
         self.sample_with(rng, samplers, ())
     }
@@ -56,14 +56,14 @@ pub trait DistributionSampler<M: MathsCore, R: RngCore, S, D: Distribution> {
 
 pub enum UniformClosedOpenUnit {}
 
-impl Distribution for UniformClosedOpenUnit {
+impl DistributionCore for UniformClosedOpenUnit {
     type Parameters = ();
     type Sample = ClosedOpenUnitF64;
 }
 
 pub enum UniformOpenClosedUnit {}
 
-impl Distribution for UniformOpenClosedUnit {
+impl DistributionCore for UniformOpenClosedUnit {
     type Parameters = ();
     type Sample = OpenClosedUnitF64;
 }
@@ -72,28 +72,28 @@ pub enum IndexUsize {}
 
 pub struct Length<T>(pub T);
 
-impl Distribution for IndexUsize {
+impl DistributionCore for IndexUsize {
     type Parameters = Length<NonZeroUsize>;
     type Sample = usize;
 }
 
 pub enum IndexU32 {}
 
-impl Distribution for IndexU32 {
+impl DistributionCore for IndexU32 {
     type Parameters = Length<NonZeroU32>;
     type Sample = u32;
 }
 
 pub enum IndexU64 {}
 
-impl Distribution for IndexU64 {
+impl DistributionCore for IndexU64 {
     type Parameters = Length<NonZeroU64>;
     type Sample = u64;
 }
 
 pub enum IndexU128 {}
 
-impl Distribution for IndexU128 {
+impl DistributionCore for IndexU128 {
     type Parameters = Length<NonZeroU128>;
     type Sample = u128;
 }
@@ -102,28 +102,28 @@ pub struct Lambda(pub PositiveF64);
 
 pub enum Exponential {}
 
-impl Distribution for Exponential {
+impl DistributionCore for Exponential {
     type Parameters = Lambda;
     type Sample = NonNegativeF64;
 }
 
 pub enum Poisson {}
 
-impl Distribution for Poisson {
+impl DistributionCore for Poisson {
     type Parameters = Lambda;
-    type Sample = usize;
+    type Sample = u64;
 }
 
 pub enum Bernoulli {}
 
-impl Distribution for Bernoulli {
+impl DistributionCore for Bernoulli {
     type Parameters = ClosedUnitF64;
     type Sample = bool;
 }
 
 pub enum StandardNormal2D {}
 
-impl Distribution for StandardNormal2D {
+impl DistributionCore for StandardNormal2D {
     type Parameters = ();
     type Sample = (f64, f64);
 }
@@ -135,7 +135,7 @@ pub struct Normal {
 
 pub enum Normal2D {}
 
-impl Distribution for Normal2D {
+impl DistributionCore for Normal2D {
     type Parameters = Normal;
     type Sample = (f64, f64);
 }

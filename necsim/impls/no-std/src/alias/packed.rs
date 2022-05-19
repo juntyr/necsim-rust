@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 
 use necsim_core::cogs::{
     distribution::{Bernoulli, IndexUsize, Length},
-    MathsCore, Rng, SampledDistribution, Samples,
+    Distribution, MathsCore, Rng, Samples,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 

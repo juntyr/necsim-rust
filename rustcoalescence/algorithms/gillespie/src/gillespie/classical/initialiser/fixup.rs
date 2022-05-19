@@ -1,8 +1,7 @@
 use necsim_core::{
     cogs::{
         distribution::{Bernoulli, Exponential, IndexUsize, UniformClosedOpenUnit},
-        DistributionSampler, EmigrationExit, ImmigrationEntry, LocallyCoherentLineageStore,
-        MathsCore, Rng,
+        EmigrationExit, ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng, Samples,
     },
     event::DispersalEvent,
     lineage::{Lineage, LineageInteraction},
@@ -47,13 +46,16 @@ pub struct FixUpInitialiser<L: ExactSizeIterator<Item = Lineage>> {
     pub fixup_strategy: RestartFixUpStrategy,
 }
 
-impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: Rng<M>, O: Scenario<M, G>>
-    ClassicalLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for FixUpInitialiser<L>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
-        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>
-        + DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
+impl<
+        L: ExactSizeIterator<Item = Lineage>,
+        M: MathsCore,
+        G: Rng<M>
+            + Samples<M, IndexUsize>
+            + Samples<M, Bernoulli>
+            + Samples<M, UniformClosedOpenUnit>
+            + Samples<M, Exponential>,
+        O: Scenario<M, G>,
+    > ClassicalLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for FixUpInitialiser<L>
 {
     type ActiveLineageSampler<
         S: LocallyCoherentLineageStore<M, O::Habitat>,

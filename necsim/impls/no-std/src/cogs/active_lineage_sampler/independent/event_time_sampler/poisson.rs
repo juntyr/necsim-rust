@@ -2,8 +2,7 @@ use necsim_core::{
     cogs::{
         distribution::{Lambda, Poisson, UniformClosedOpenUnit},
         rng::HabitatPrimeableRng,
-        DistributionSampler, Habitat, MathsCore, PrimeableRng, Rng, SampledDistribution, Samples,
-        TurnoverRate,
+        Distribution, Habitat, MathsCore, PrimeableRng, Rng, Samples, TurnoverRate,
     },
     landscape::IndexedLocation,
 };
@@ -32,7 +31,7 @@ impl PoissonEventTimeSampler {
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M, Generator: PrimeableRng> + Samples<M, Poisson>,
+        G: Rng<M, Generator: PrimeableRng> + Samples<M, Poisson> + Samples<M, UniformClosedOpenUnit>,
         T: TurnoverRate<M, H>,
     > EventTimeSampler<M, H, G, T> for PoissonEventTimeSampler
 {
@@ -47,8 +46,9 @@ impl<
     ) -> NonNegativeF64 {
         let lambda =
             turnover_rate.get_turnover_rate_at_location(indexed_location.location(), habitat);
-        let lambda_per_step = lambda * self.delta_t;
-        let no_event_probability_per_step = M::exp(-lambda_per_step.get());
+        // Safety: lambda is already >= 0, cannot be 0 if an event occurs at this
+        // location
+        let lambda_per_step = unsafe { PositiveF64::new_unchecked(lambda.get()) } * self.delta_t;
 
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
@@ -88,7 +88,7 @@ impl<
         rng.generator().prime_with_habitat(
             habitat,
             indexed_location,
-            time_step + INV_PHI.wrapping_mul(u64::from(event_index + 1)),
+            time_step + INV_PHI.wrapping_mul(event_index + 1),
         );
 
         event_time

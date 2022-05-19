@@ -2,8 +2,8 @@ use std::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        distribution::{Bernoulli, IndexUsize, Normal2D, UniformClosedOpenUnit},
-        DistributionSampler, MathsCore, PrimeableRng, Rng,
+        distribution::{Bernoulli, IndexUsize, Poisson, UniformClosedOpenUnit},
+        MathsCore, PrimeableRng, Rng, Samples,
     },
     reporter::Reporter,
     simulation::SimulationBuilder,
@@ -49,7 +49,11 @@ use crate::{
 pub fn initialise_and_simulate<
     'p,
     M: MathsCore,
-    G: Rng<M, Generator: PrimeableRng>,
+    G: Rng<M, Generator: PrimeableRng>
+        + Samples<M, UniformClosedOpenUnit>
+        + Samples<M, IndexUsize>
+        + Samples<M, Bernoulli>
+        + Samples<M, Poisson>,
     O: Scenario<M, G>,
     R: Reporter,
     P: LocalPartition<'p, R>,
@@ -64,13 +68,7 @@ pub fn initialise_and_simulate<
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
     lineage_store_sampler_initialiser: L,
-) -> Result<SimulationOutcome<M, G>, Error>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
-        + DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
-{
+) -> Result<SimulationOutcome<M, G>, Error> {
     match args.parallelism_mode {
         ParallelismMode::Monolithic(MonolithicParallelismMode { event_slice })
         | ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { event_slice, .. })
