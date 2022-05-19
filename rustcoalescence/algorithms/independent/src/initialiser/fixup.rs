@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
         distribution::{Bernoulli, IndexUsize, UniformClosedOpenUnit},
-        DistributionSampler, EmigrationExit, MathsCore, PrimeableRng, Rng,
+        EmigrationExit, MathsCore, PrimeableRng, Rng, Samples,
     },
     lineage::Lineage,
 };
@@ -42,13 +42,12 @@ pub struct FixUpInitialiser<L: ExactSizeIterator<Item = Lineage>> {
 impl<
         L: ExactSizeIterator<Item = Lineage>,
         M: MathsCore,
-        G: Rng<M, Generator: PrimeableRng>,
+        G: Rng<M, Generator: PrimeableRng>
+            + Samples<M, UniformClosedOpenUnit>
+            + Samples<M, IndexUsize>
+            + Samples<M, Bernoulli>,
         O: Scenario<M, G>,
     > IndependentLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for FixUpInitialiser<L>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     type ActiveLineageSampler<
         X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>,

@@ -6,8 +6,8 @@ use core::{
 use necsim_core::{
     cogs::{
         distribution::{Bernoulli, Exponential, IndexUsize, Lambda, Length, UniformClosedOpenUnit},
-        ActiveLineageSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LocallyCoherentLineageStore, MathsCore, Rng, SampledDistribution, Samples,
+        ActiveLineageSampler, DispersalSampler, Distribution, EmigrationExit, Habitat,
+        ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng, Samples,
         SpeciationProbability,
     },
     lineage::Lineage,

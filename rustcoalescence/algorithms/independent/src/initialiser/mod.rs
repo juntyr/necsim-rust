@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
         distribution::{Bernoulli, IndexUsize, UniformClosedOpenUnit},
-        DispersalSampler, DistributionSampler, EmigrationExit, MathsCore, PrimeableRng, Rng,
+        DispersalSampler, EmigrationExit, MathsCore, PrimeableRng, Rng, Samples,
     },
     lineage::Lineage,
 };
@@ -27,13 +27,13 @@ pub mod resume;
 #[allow(clippy::module_name_repetitions)]
 pub trait IndependentLineageStoreSampleInitialiser<
     M: MathsCore,
-    G: Rng<M, Generator: PrimeableRng>,
+    G: Rng<M, Generator: PrimeableRng>
+        + Samples<M, UniformClosedOpenUnit>
+        + Samples<M, IndexUsize>
+        + Samples<M, Bernoulli>,
     O: Scenario<M, G>,
     Error,
-> where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
+>
 {
     type DispersalSampler: DispersalSampler<M, O::Habitat, G>;
     type ActiveLineageSampler<X: EmigrationExit<
