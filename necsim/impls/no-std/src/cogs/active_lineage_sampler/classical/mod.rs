@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 use necsim_core::cogs::{
-    rng::{Event, Exponential, IndexUsize, UniformClosedOpenUnit},
+    distribution::{Bernoulli, Exponential, IndexUsize, UniformClosedOpenUnit},
     Backup, DispersalSampler, DistributionSampler, EmigrationExit, Habitat, ImmigrationEntry,
     LocallyCoherentLineageStore, MathsCore, Rng, SpeciationProbability,
 };
@@ -29,7 +29,7 @@ pub struct ClassicalActiveLineageSampler<
 > where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
         + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
         + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     active_lineage_references: Vec<S::LocalLineageReference>,
@@ -51,7 +51,7 @@ impl<
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
         + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
         + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     #[must_use]
@@ -147,7 +147,7 @@ impl<
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
         + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
         + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     unsafe fn backup_unchecked(&self) -> Self {

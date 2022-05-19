@@ -11,8 +11,8 @@ use fnv::FnvBuildHasher;
 use hashbrown::HashMap;
 
 use necsim_core::cogs::{
-    rng::{IndexU128, IndexU64, IndexUsize, Length},
-    Backup, DistributionSampler, MathsCore, Rng,
+    distribution::{IndexU128, IndexU64, IndexUsize, Length},
+    Backup, DistributionSampler, MathsCore, Rng, SampledDistribution,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
@@ -66,8 +66,10 @@ impl<E: Eq + Hash + Backup> RejectionSamplingGroup<E> {
 
         loop {
             // Safety: By construction, the group never contains zero elements
-            let index = rng
-                .sample_with::<IndexUsize>(Length(NonZeroUsize::new_unchecked(self.weights.len())));
+            let index = IndexUsize::sample_with(
+                rng,
+                Length(NonZeroUsize::new_unchecked(self.weights.len())),
+            );
             let height = rng.sample_u64() >> 11;
 
             // 53rd bit of weight is always 1, so sampling chance >= 50%
@@ -207,9 +209,9 @@ impl<E: Eq + Hash + Backup> DynamicAliasMethodIndexedSampler<E> {
             let cdf_sample = if let [_group] = &self.groups[..] {
                 0_u128
             } else if let Ok(total_weight) = NonZeroU64::try_from(total_weight) {
-                u128::from(rng.sample_with::<IndexU64>(Length(total_weight)))
+                u128::from(IndexU64::sample_with(rng, Length(total_weight)))
             } else {
-                rng.sample_with::<IndexU128>(Length(total_weight))
+                IndexU128::sample_with(rng, Length(total_weight))
             };
 
             let mut cdf_acc = 0_u128;

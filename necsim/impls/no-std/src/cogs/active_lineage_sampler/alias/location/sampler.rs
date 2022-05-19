@@ -2,10 +2,10 @@ use core::{num::NonZeroUsize, ops::ControlFlow};
 
 use necsim_core::{
     cogs::{
-        rng::{Exponential, IndexU128, IndexU64, IndexUsize, Lambda, Length},
+        distribution::{Exponential, IndexU128, IndexU64, IndexUsize, Lambda, Length},
         ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler, DistributionSampler,
         EmigrationExit, GloballyCoherentLineageStore, Habitat, ImmigrationEntry, MathsCore, Rng,
-        SpeciationProbability, TurnoverRate,
+        SampledDistribution, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -76,7 +76,7 @@ where
         let total_rate = self.alias_sampler.total_weight();
 
         if let Ok(lambda) = PositiveF64::new(total_rate.get()) {
-            let event_time = self.last_event_time + rng.sample_with::<Exponential>(Lambda(lambda));
+            let event_time = self.last_event_time + Exponential::sample_with(rng, Lambda(lambda));
 
             let next_event_time = PositiveF64::max_after(self.last_event_time, event_time);
 
@@ -99,9 +99,10 @@ where
 
             // Safety: `lineages_at_location` must be >0 since
             //         `chosen_active_location` can only be selected in that case
-            let chosen_lineage_index_at_location = rng.sample_with::<IndexUsize>(Length(unsafe {
-                NonZeroUsize::new_unchecked(lineages_at_location.len())
-            }));
+            let chosen_lineage_index_at_location = IndexUsize::sample_with(
+                rng,
+                Length(unsafe { NonZeroUsize::new_unchecked(lineages_at_location.len()) }),
+            );
             // Safety: reference clone is only used to then remove the lineage, which is
             //  owned
             let chosen_lineage_reference = unsafe {

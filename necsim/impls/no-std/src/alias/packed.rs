@@ -3,8 +3,8 @@ use core::{cmp::Ordering, num::NonZeroUsize};
 use alloc::vec::Vec;
 
 use necsim_core::cogs::{
-    rng::{Event, IndexUsize, Length},
-    DistributionSampler, MathsCore, Rng,
+    distribution::{Bernoulli, IndexUsize, Length},
+    DistributionSampler, MathsCore, Rng, SampledDistribution,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
@@ -117,17 +117,17 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
     ) -> E
     where
         G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-            + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+            + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
     {
         // Safety: alias_samplers is non-empty by the precondition
         let length = unsafe { NonZeroUsize::new_unchecked(alias_samplers.len()) };
 
-        let i = rng.sample_with::<IndexUsize>(Length(length)); // index into events
+        let i = IndexUsize::sample_with(rng, Length(length)); // index into events
 
         let sample = &alias_samplers[i];
 
         // Select E over K according to its bucket percentage U
-        if rng.sample_with::<Event>(sample.u) {
+        if Bernoulli::sample_with(rng, sample.u) {
             sample.e
         } else {
             sample.k

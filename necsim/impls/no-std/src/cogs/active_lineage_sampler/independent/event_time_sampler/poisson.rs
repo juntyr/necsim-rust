@@ -1,7 +1,8 @@
 use necsim_core::{
     cogs::{
-        rng::{Normal, Normal2D, UniformClosedOpenUnit},
-        DistributionSampler, Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng, Rng,
+        distribution::{Normal, Normal2D, UniformClosedOpenUnit},
+        rng::HabitatPrimeableRng,
+        DistributionSampler, Habitat, MathsCore, PrimeableRng, Rng, SampledDistribution,
         TurnoverRate,
     },
     landscape::IndexedLocation,
@@ -62,7 +63,7 @@ where
                 let mut prod = no_event_probability_per_step;
                 let mut acc = no_event_probability_per_step;
 
-                let u = rng.sample::<UniformClosedOpenUnit>();
+                let u = UniformClosedOpenUnit::sample(rng);
 
                 while u > acc && prod > 0.0_f64 {
                     poisson += 1;
@@ -74,13 +75,15 @@ where
             } else {
                 // Fallback in case no_event_probability_per_step underflows
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-                let normal_as_poisson = rng
-                    .sample_with::<Normal2D>(Normal {
+                let normal_as_poisson = Normal2D::sample_with(
+                    rng,
+                    Normal {
                         mu: lambda_per_step.get(),
                         sigma: lambda_per_step.sqrt::<M>(),
-                    })
-                    .0
-                    .max(0.0_f64) as u32;
+                    },
+                )
+                .0
+                .max(0.0_f64) as u32;
 
                 normal_as_poisson
             };
@@ -90,7 +93,7 @@ where
             for event_index in 0..number_events_at_time_steps {
                 #[allow(clippy::cast_precision_loss)]
                 let event_time = (NonNegativeF64::from(time_step)
-                    + NonNegativeF64::from(rng.sample::<UniformClosedOpenUnit>()))
+                    + NonNegativeF64::from(UniformClosedOpenUnit::sample(rng)))
                     * self.delta_t;
 
                 if event_time > time {

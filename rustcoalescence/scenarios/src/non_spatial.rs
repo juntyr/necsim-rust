@@ -3,7 +3,7 @@ use std::num::NonZeroU32;
 use serde::{Deserialize, Serialize};
 
 use necsim_core::cogs::{
-    rng::IndexU64, DispersalSampler, DistributionSampler, LineageStore, MathsCore, Rng,
+    distribution::IndexU64, DispersalSampler, DistributionSampler, LineageStore, MathsCore, Rng,
 };
 use necsim_core_bond::{OffByOneU32, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::partition::Partition;

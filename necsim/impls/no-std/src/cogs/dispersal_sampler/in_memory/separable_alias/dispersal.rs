@@ -1,7 +1,8 @@
 use necsim_core::{
     cogs::{
-        rng::{Event, IndexUsize},
-        DispersalSampler, DistributionSampler, Habitat, MathsCore, Rng, SeparableDispersalSampler,
+        distribution::{Bernoulli, IndexUsize},
+        DispersalSampler, DistributionSampler, Habitat, MathsCore, Rng, SampledDistribution,
+        SeparableDispersalSampler,
     },
     landscape::Location,
 };
@@ -14,7 +15,7 @@ impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> DispersalSampler<M, H, G>
     for InMemorySeparableAliasDispersalSampler<M, H, G>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     #[must_use]
     fn sample_dispersal_from_location(
@@ -31,7 +32,7 @@ where
         }
 
         if self_dispersal_at_location > 0.0_f64
-            && rng.sample_with::<Event>(self_dispersal_at_location)
+            && Bernoulli::sample_with(rng, self_dispersal_at_location)
         {
             return location.clone();
         }
@@ -45,7 +46,7 @@ impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> SeparableDispersalSampler<M, H, G>
     for InMemorySeparableAliasDispersalSampler<M, H, G>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     #[must_use]
     fn sample_non_self_dispersal_from_location(
