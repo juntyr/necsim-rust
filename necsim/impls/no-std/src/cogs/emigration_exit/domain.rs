@@ -6,7 +6,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_core::{
     cogs::{
         coalescence_sampler::CoalescenceRngSample, distribution::UniformClosedOpenUnit, Backup,
-        DistributionSampler, EmigrationExit, Habitat, LocallyCoherentLineageStore, MathsCore, Rng,
+        EmigrationExit, Habitat, LocallyCoherentLineageStore, MathsCore, Rng, Samples,
     },
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, MigratingLineage, TieBreaker},
@@ -17,20 +17,24 @@ use crate::decomposition::Decomposition;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct DomainEmigrationExit<M: MathsCore, H: Habitat<M>, G: Rng<M>, C: Decomposition<M, H>>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
-{
+pub struct DomainEmigrationExit<
+    M: MathsCore,
+    H: Habitat<M>,
+    G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
+    C: Decomposition<M, H>,
+> {
     decomposition: C,
     emigrants: Vec<(u32, MigratingLineage)>,
     _marker: PhantomData<(M, H, G)>,
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: Rng<M>, C: Decomposition<M, H>> Backup
-    for DomainEmigrationExit<M, H, G, C>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
+        C: Decomposition<M, H>,
+    > Backup for DomainEmigrationExit<M, H, G, C>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
@@ -52,11 +56,9 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         C: Decomposition<M, H>,
-        G: Rng<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
         S: LocallyCoherentLineageStore<M, H>,
     > EmigrationExit<M, H, G, S> for DomainEmigrationExit<M, H, G, C>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     #[must_use]
     #[debug_ensures(ret.is_some() == (
@@ -115,10 +117,12 @@ where
     }
 }
 
-impl<M: MathsCore, H: Habitat<M>, G: Rng<M>, C: Decomposition<M, H>>
-    DomainEmigrationExit<M, H, G, C>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
+        C: Decomposition<M, H>,
+    > DomainEmigrationExit<M, H, G, C>
 {
     #[must_use]
     pub fn new(decomposition: C) -> Self {
@@ -138,10 +142,12 @@ where
     }
 }
 
-impl<M: MathsCore, H: Habitat<M>, G: Rng<M>, C: Decomposition<M, H>> Iterator
-    for DomainEmigrationExit<M, H, G, C>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
+        C: Decomposition<M, H>,
+    > Iterator for DomainEmigrationExit<M, H, G, C>
 {
     type Item = (u32, MigratingLineage);
 

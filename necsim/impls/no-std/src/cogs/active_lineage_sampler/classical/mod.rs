@@ -3,8 +3,8 @@ use core::marker::PhantomData;
 
 use necsim_core::cogs::{
     distribution::{Bernoulli, Exponential, IndexUsize, UniformClosedOpenUnit},
-    Backup, DispersalSampler, DistributionSampler, EmigrationExit, Habitat, ImmigrationEntry,
-    LocallyCoherentLineageStore, MathsCore, Rng, SpeciationProbability,
+    Backup, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+    LocallyCoherentLineageStore, MathsCore, Rng, Samples, SpeciationProbability,
 };
 use necsim_core_bond::NonNegativeF64;
 
@@ -20,18 +20,17 @@ mod sampler;
 pub struct ClassicalActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: Rng<M>,
+    G: Rng<M>
+        + Samples<M, Exponential>
+        + Samples<M, IndexUsize>
+        + Samples<M, Bernoulli>
+        + Samples<M, UniformClosedOpenUnit>,
     S: LocallyCoherentLineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
     N: SpeciationProbability<M, H>,
     I: ImmigrationEntry<M>,
-> where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
-        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
-{
+> {
     active_lineage_references: Vec<S::LocalLineageReference>,
     last_event_time: NonNegativeF64,
     #[allow(clippy::type_complexity)]
@@ -41,18 +40,17 @@ pub struct ClassicalActiveLineageSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M>
+            + Samples<M, Exponential>
+            + Samples<M, IndexUsize>
+            + Samples<M, Bernoulli>
+            + Samples<M, UniformClosedOpenUnit>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
         N: SpeciationProbability<M, H>,
         I: ImmigrationEntry<M>,
     > ClassicalActiveLineageSampler<M, H, G, S, X, D, N, I>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
-        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     #[must_use]
     pub fn init_with_store<'h, O: TrustedOriginSampler<'h, M, Habitat = H>>(
@@ -137,18 +135,17 @@ where
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M>
+            + Samples<M, Exponential>
+            + Samples<M, IndexUsize>
+            + Samples<M, Bernoulli>
+            + Samples<M, UniformClosedOpenUnit>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
         N: SpeciationProbability<M, H>,
         I: ImmigrationEntry<M>,
     > Backup for ClassicalActiveLineageSampler<M, H, G, S, X, D, N, I>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
-        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {

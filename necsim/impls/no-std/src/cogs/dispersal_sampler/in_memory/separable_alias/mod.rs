@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use necsim_core::{
     cogs::{
         distribution::{Bernoulli, IndexUsize},
-        Backup, DistributionSampler, Habitat, MathsCore, Rng,
+        Backup, Habitat, MathsCore, Rng, Samples,
     },
     landscape::Location,
 };
@@ -20,22 +20,19 @@ mod dispersal;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct InMemorySeparableAliasDispersalSampler<M: MathsCore, H: Habitat<M>, G: Rng<M>>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
-{
+pub struct InMemorySeparableAliasDispersalSampler<
+    M: MathsCore,
+    H: Habitat<M>,
+    G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>,
+> {
     alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
     self_dispersal: Array2D<ClosedUnitF64>,
     _marker: PhantomData<(M, H, G)>,
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> InMemoryDispersalSampler<M, H, G>
-    for InMemorySeparableAliasDispersalSampler<M, H, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>>
+    InMemoryDispersalSampler<M, H, G> for InMemorySeparableAliasDispersalSampler<M, H, G>
 {
     /// Creates a new `InMemorySeparableAliasDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
@@ -122,11 +119,8 @@ where
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> Backup
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>> Backup
     for InMemorySeparableAliasDispersalSampler<M, H, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
