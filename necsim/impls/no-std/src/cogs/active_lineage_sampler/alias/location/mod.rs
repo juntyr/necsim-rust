@@ -5,7 +5,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::{
     cogs::{
-        rng::{Exponential, IndexU128, IndexU64, IndexUsize},
+        distribution::{Exponential, IndexU128, IndexU64, IndexUsize},
         Backup, CoalescenceSampler, DispersalSampler, DistributionSampler, EmigrationExit,
         GloballyCoherentLineageStore, Habitat, ImmigrationEntry, MathsCore, Rng,
         SpeciationProbability, TurnoverRate,

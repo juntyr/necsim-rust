@@ -3,13 +3,16 @@ use core::num::{NonZeroU128, NonZeroU64, NonZeroUsize};
 use alloc::{vec, vec::Vec};
 
 use necsim_core::cogs::{
-    rng::{IndexU128, IndexU64, IndexUsize, Length, SimpleRng},
-    Backup, Distribution, DistributionSampler, Rng, RngCore, SeedableRng,
+    distribution::{IndexU128, IndexU64, IndexUsize, Length},
+    Backup, DistributionSampler, Rng, RngCore, SeedableRng,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_core_maths::MathsCore;
 
-use crate::cogs::{maths::intrinsics::IntrinsicsMathsCore, rng::wyhash::WyHash};
+use crate::cogs::{
+    maths::intrinsics::IntrinsicsMathsCore,
+    rng::{simple::SimpleRng, wyhash::WyHash},
+};
 
 use super::{super::decompose_weight, DynamicAliasMethodStackSampler, RejectionSamplingGroup};
 
@@ -619,13 +622,10 @@ impl Rng<IntrinsicsMathsCore> for DummyRng {
         map(self)
     }
 
-    fn sample_with<D: Distribution>(&mut self, params: D::Parameters) -> D::Sample
-    where
-        Self::Sampler: DistributionSampler<IntrinsicsMathsCore, Self::Generator, Self::Sampler, D>,
-    {
+    fn with_rng<F: FnOnce(&mut Self::Generator, &Self::Sampler) -> Q, Q>(&mut self, inner: F) -> Q {
         let samplers = DummyDistributionSamplers;
 
-        samplers.sample_with(self, &samplers, params)
+        inner(self, &samplers)
     }
 }
 

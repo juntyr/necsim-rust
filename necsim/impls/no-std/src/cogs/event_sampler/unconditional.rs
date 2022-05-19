@@ -3,11 +3,11 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         coalescence_sampler::CoalescenceRngSample,
+        distribution::{Bernoulli, UniformClosedOpenUnit},
         event_sampler::EventHandler,
-        rng::{Event, UniformClosedOpenUnit},
         Backup, CoalescenceSampler, DispersalSampler, DistributionSampler, EmigrationExit,
-        EventSampler, Habitat, LocallyCoherentLineageStore, MathsCore, Rng, SpeciationProbability,
-        TurnoverRate,
+        EventSampler, Habitat, LocallyCoherentLineageStore, MathsCore, Rng, SampledDistribution,
+        SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
     lineage::Lineage,
@@ -28,7 +28,7 @@ pub struct UnconditionalEventSampler<
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
 > where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
         + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     #[allow(clippy::type_complexity)]
@@ -47,7 +47,7 @@ impl<
         N: SpeciationProbability<M, H>,
     > Default for UnconditionalEventSampler<M, H, G, S, X, D, C, T, N>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
         + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     fn default() -> Self {
@@ -70,7 +70,7 @@ impl<
         N: SpeciationProbability<M, H>,
     > Backup for UnconditionalEventSampler<M, H, G, S, X, D, C, T, N>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
         + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
@@ -94,7 +94,7 @@ impl<
     > EventSampler<M, H, G, S, X, D, C, T, N>
     for UnconditionalEventSampler<M, H, G, S, X, D, C, T, N>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
         + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     #[must_use]
@@ -121,7 +121,8 @@ where
         }: EventHandler<FS, FD, FE>,
         auxiliary: Aux,
     ) -> Q {
-        if rng.sample_with::<Event>(
+        if Bernoulli::sample_with(
+            rng,
             simulation
                 .speciation_probability
                 .get_speciation_probability_at_location(

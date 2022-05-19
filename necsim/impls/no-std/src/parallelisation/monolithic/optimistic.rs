@@ -3,7 +3,7 @@ use core::ops::ControlFlow;
 
 use necsim_core::{
     cogs::{
-        backup::BackedUp, rng::UniformClosedOpenUnit, ActiveLineageSampler, Backup,
+        backup::BackedUp, distribution::UniformClosedOpenUnit, ActiveLineageSampler, Backup,
         CoalescenceSampler, DispersalSampler, DistributionSampler, EventSampler, Habitat,
         LocallyCoherentLineageStore, MathsCore, Rng, SpeciationProbability, TurnoverRate,
     },

@@ -2,8 +2,9 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        rng::{Normal, Normal2D},
-        Backup, DispersalSampler, DistributionSampler, MathsCore, Rng, SeparableDispersalSampler,
+        distribution::{Normal, Normal2D},
+        Backup, DispersalSampler, DistributionSampler, MathsCore, Rng, SampledDistribution,
+        SeparableDispersalSampler,
     },
     landscape::Location,
 };
@@ -77,10 +78,13 @@ where
     ) -> Location {
         const WRAP: i64 = 1 << 32;
 
-        let (dx, dy): (f64, f64) = rng.sample_with::<Normal2D>(Normal {
-            mu: 0.0_f64,
-            sigma: self.sigma,
-        });
+        let (dx, dy): (f64, f64) = Normal2D::sample_with(
+            rng,
+            Normal {
+                mu: 0.0_f64,
+                sigma: self.sigma,
+            },
+        );
 
         // Discrete dispersal assumes lineage positions are centred on (0.5, 0.5),
         // i.e. |dispersal| >= 0.5 changes the cell

@@ -1,8 +1,8 @@
 use necsim_core::{
     cogs::{
-        rng::{Event, IndexU64},
+        distribution::{Bernoulli, IndexU64},
         Backup, DispersalSampler, DistributionSampler, Habitat, MathsCore, Rng,
-        SeparableDispersalSampler,
+        SampledDistribution, SeparableDispersalSampler,
     },
     landscape::Location,
 };
@@ -20,7 +20,7 @@ use crate::cogs::{
 pub struct SpatiallyImplicitDispersalSampler<M: MathsCore, G: Rng<M>>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     #[cfg_attr(feature = "cuda", cuda(embed))]
     local: NonSpatialDispersalSampler<M, G>,
@@ -32,7 +32,7 @@ where
 impl<M: MathsCore, G: Rng<M>> SpatiallyImplicitDispersalSampler<M, G>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     #[must_use]
     pub fn new(local_migration_probability_per_generation: PositiveUnitF64) -> Self {
@@ -48,7 +48,7 @@ where
 impl<M: MathsCore, G: Rng<M>> Backup for SpatiallyImplicitDispersalSampler<M, G>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
@@ -65,7 +65,7 @@ impl<M: MathsCore, G: Rng<M>> DispersalSampler<M, SpatiallyImplicitHabitat<M>, G
     for SpatiallyImplicitDispersalSampler<M, G>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     #[must_use]
     #[debug_ensures(habitat.meta().get_extent().contains(&ret) || (
@@ -84,7 +84,7 @@ where
         // By PRE, location must be habitable, i.e. either in the local or the meta
         //  habitat
         if habitat.local().get_extent().contains(location) {
-            if rng.sample_with::<Event>(self.local_migration_probability_per_generation.into()) {
+            if Bernoulli::sample_with(rng, self.local_migration_probability_per_generation.into()) {
                 // Provide a dummpy Location in the meta community to disperse from
                 self.meta.sample_dispersal_from_location(
                     &Location::new(
@@ -110,7 +110,7 @@ impl<M: MathsCore, G: Rng<M>> SeparableDispersalSampler<M, SpatiallyImplicitHabi
     for SpatiallyImplicitDispersalSampler<M, G>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     #[must_use]
     #[debug_ensures(habitat.meta().get_extent().contains(&ret) || (
@@ -129,7 +129,7 @@ where
         // By PRE, location must be habitable, i.e. either in the local or the meta
         //  habitat
         if habitat.local().get_extent().contains(location) {
-            if rng.sample_with::<Event>(self.local_migration_probability_per_generation.into()) {
+            if Bernoulli::sample_with(rng, self.local_migration_probability_per_generation.into()) {
                 // Provide a dummpy Location in the meta community to disperse from
                 // As the individual is dispersing to a different community,
                 //  we can use standard dispersal in the meta community

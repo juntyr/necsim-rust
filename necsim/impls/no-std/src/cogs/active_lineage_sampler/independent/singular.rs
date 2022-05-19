@@ -1,6 +1,6 @@
 use necsim_core::cogs::{
-    rng::UniformClosedOpenUnit, DispersalSampler, DistributionSampler, EmigrationExit, Habitat,
-    MathsCore, PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
+    distribution::UniformClosedOpenUnit, DispersalSampler, DistributionSampler, EmigrationExit,
+    Habitat, MathsCore, PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
 };
 
 use necsim_core::lineage::Lineage;

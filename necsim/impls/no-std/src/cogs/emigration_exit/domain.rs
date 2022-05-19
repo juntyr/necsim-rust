@@ -5,7 +5,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample, rng::UniformClosedOpenUnit, Backup,
+        coalescence_sampler::CoalescenceRngSample, distribution::UniformClosedOpenUnit, Backup,
         DistributionSampler, EmigrationExit, Habitat, LocallyCoherentLineageStore, MathsCore, Rng,
     },
     landscape::{IndexedLocation, Location},

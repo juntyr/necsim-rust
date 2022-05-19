@@ -1,7 +1,8 @@
 use necsim_core::{
     cogs::{
-        rng::{Exponential, Lambda},
-        DistributionSampler, Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng, Rng,
+        distribution::{Exponential, Lambda},
+        rng::HabitatPrimeableRng,
+        DistributionSampler, Habitat, MathsCore, PrimeableRng, Rng, SampledDistribution,
         TurnoverRate,
     },
     landscape::IndexedLocation,
@@ -67,7 +68,7 @@ where
         let mut sub_index: u64 = 0;
 
         loop {
-            event_time += rng.sample_with::<Exponential>(Lambda(lambda));
+            event_time += Exponential::sample_with(rng, Lambda(lambda));
 
             sub_index = sub_index.wrapping_add(INV_PHI);
 

@@ -1,6 +1,7 @@
 use necsim_core::{
     cogs::{
-        rng::UniformClosedOpenUnit, DispersalSampler, DistributionSampler, Habitat, MathsCore, Rng,
+        distribution::UniformClosedOpenUnit, DispersalSampler, DistributionSampler, Habitat,
+        MathsCore, Rng, SampledDistribution,
     },
     landscape::Location,
 };
@@ -30,7 +31,7 @@ where
         let cumulative_dispersals_at_location = &self.cumulative_dispersal
             [location_index * habitat_area..(location_index + 1) * habitat_area];
 
-        let cumulative_percentage_sample = rng.sample::<UniformClosedOpenUnit>().into();
+        let cumulative_percentage_sample = UniformClosedOpenUnit::sample(rng).into();
 
         let dispersal_target_index = usize::min(
             match cumulative_dispersals_at_location.binary_search(&cumulative_percentage_sample) {

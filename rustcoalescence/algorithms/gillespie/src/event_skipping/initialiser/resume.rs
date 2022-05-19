@@ -1,6 +1,8 @@
 use necsim_core::{
     cogs::{
-        rng::{Event, Exponential, IndexU128, IndexU64, IndexUsize, UniformClosedOpenUnit},
+        distribution::{
+            Bernoulli, Exponential, IndexU128, IndexU64, IndexUsize, UniformClosedOpenUnit,
+        },
         DistributionSampler, EmigrationExit, GloballyCoherentLineageStore, ImmigrationEntry,
         MathsCore, Rng, SeparableDispersalSampler,
     },
@@ -36,7 +38,7 @@ where
     O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
         SeparableDispersalSampler<M, O::Habitat, G>,
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
         + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>
         + DistributionSampler<M, G::Generator, G::Sampler, Exponential>
         + DistributionSampler<M, G::Generator, G::Sampler, IndexU64>

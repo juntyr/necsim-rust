@@ -3,7 +3,9 @@ use core::marker::PhantomData;
 use alloc::{boxed::Box, vec};
 
 use necsim_core::{
-    cogs::{rng::UniformClosedOpenUnit, Backup, DistributionSampler, Habitat, MathsCore, Rng},
+    cogs::{
+        distribution::UniformClosedOpenUnit, Backup, DistributionSampler, Habitat, MathsCore, Rng,
+    },
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};

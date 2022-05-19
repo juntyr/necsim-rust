@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 
 use necsim_core::{
     cogs::{
-        rng::{Event, IndexUsize},
+        distribution::{Bernoulli, IndexUsize},
         Backup, DistributionSampler, Habitat, MathsCore, Rng,
     },
     landscape::Location,
@@ -23,7 +23,7 @@ mod dispersal;
 pub struct InMemorySeparableAliasDispersalSampler<M: MathsCore, H: Habitat<M>, G: Rng<M>>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
     self_dispersal: Array2D<ClosedUnitF64>,
@@ -35,7 +35,7 @@ impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> InMemoryDispersalSampler<M, H, G>
     for InMemorySeparableAliasDispersalSampler<M, H, G>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     /// Creates a new `InMemorySeparableAliasDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
@@ -126,7 +126,7 @@ impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> Backup
     for InMemorySeparableAliasDispersalSampler<M, H, G>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {

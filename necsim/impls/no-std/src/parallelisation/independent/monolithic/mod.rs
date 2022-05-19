@@ -8,8 +8,8 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::{
     cogs::{
-        rng::UniformClosedOpenUnit, DispersalSampler, DistributionSampler, Habitat, MathsCore,
-        PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
+        distribution::UniformClosedOpenUnit, DispersalSampler, DistributionSampler, Habitat,
+        MathsCore, PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     reporter::{boolean::Boolean, Reporter},

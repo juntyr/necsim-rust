@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        rng::{Event, IndexUsize, UniformClosedOpenUnit},
+        distribution::{Bernoulli, IndexUsize, UniformClosedOpenUnit},
         DistributionSampler, EmigrationExit, MathsCore, PrimeableRng, Rng,
     },
     lineage::Lineage,
@@ -27,7 +27,7 @@ impl<M: MathsCore, G: Rng<M, Generator: PrimeableRng>, O: Scenario<M, G>>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>
         + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     type ActiveLineageSampler<
         X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>,

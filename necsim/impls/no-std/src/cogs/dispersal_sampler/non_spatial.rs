@@ -2,9 +2,9 @@ use core::{marker::PhantomData, num::NonZeroU64};
 
 use necsim_core::{
     cogs::{
-        rng::{IndexU64, Length},
+        distribution::{IndexU64, Length},
         Backup, DispersalSampler, DistributionSampler, Habitat, MathsCore, Rng,
-        SeparableDispersalSampler,
+        SampledDistribution, SeparableDispersalSampler,
     },
     landscape::Location,
 };
@@ -65,9 +65,10 @@ where
             habitat.get_extent().width().get() * habitat.get_extent().height().get();
 
         // Safety: habitat width and height are both > 0
-        let dispersal_target_index = rng.sample_with::<IndexU64>(Length(unsafe {
-            NonZeroU64::new_unchecked(habitat_index_max)
-        }));
+        let dispersal_target_index = IndexU64::sample_with(
+            rng,
+            Length(unsafe { NonZeroU64::new_unchecked(habitat_index_max) }),
+        );
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
@@ -106,9 +107,10 @@ where
 
         let dispersal_target_index = {
             // Safety: by PRE, `habitat_index_max` > 1
-            let dispersal_target_index = rng.sample_with::<IndexU64>(Length(unsafe {
-                NonZeroU64::new_unchecked(habitat_index_max - 1)
-            }));
+            let dispersal_target_index = IndexU64::sample_with(
+                rng,
+                Length(unsafe { NonZeroU64::new_unchecked(habitat_index_max - 1) }),
+            );
 
             if dispersal_target_index >= current_location_index {
                 dispersal_target_index + 1

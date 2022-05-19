@@ -2,8 +2,9 @@ use core::ops::ControlFlow;
 
 use necsim_core::{
     cogs::{
-        rng::UniformClosedOpenUnit, ActiveLineageSampler, DispersalSampler, DistributionSampler,
-        EmigrationExit, Habitat, MathsCore, PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
+        distribution::UniformClosedOpenUnit, ActiveLineageSampler, DispersalSampler,
+        DistributionSampler, EmigrationExit, Habitat, MathsCore, PrimeableRng, Rng,
+        SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,

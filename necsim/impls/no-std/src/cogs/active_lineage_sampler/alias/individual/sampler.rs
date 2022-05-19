@@ -2,10 +2,10 @@ use core::ops::ControlFlow;
 
 use necsim_core::{
     cogs::{
-        rng::{Exponential, IndexU128, IndexU64, IndexUsize, Lambda},
+        distribution::{Exponential, IndexU128, IndexU64, IndexUsize, Lambda},
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, DistributionSampler,
         EmigrationExit, EventSampler, Habitat, ImmigrationEntry, LocallyCoherentLineageStore,
-        MathsCore, Rng, SpeciationProbability, TurnoverRate,
+        MathsCore, Rng, SampledDistribution, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -69,7 +69,7 @@ where
         let total_rate = self.alias_sampler.total_weight();
 
         if let Ok(lambda) = PositiveF64::new(total_rate.get()) {
-            let event_time = self.last_event_time + rng.sample_with::<Exponential>(Lambda(lambda));
+            let event_time = self.last_event_time + Exponential::sample_with(rng, Lambda(lambda));
 
             let next_event_time = PositiveF64::max_after(self.last_event_time, event_time);
 

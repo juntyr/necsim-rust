@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     cogs::{
-        rng::UniformClosedOpenUnit, Backup, DistributionSampler, Habitat, LineageStore, MathsCore,
-        Rng,
+        distribution::UniformClosedOpenUnit, Backup, Habitat, LineageStore, MathsCore, Rng,
+        SampledDistribution, Samples,
     },
     landscape::{IndexedLocation, Location},
     lineage::LineageInteraction,
@@ -58,11 +58,8 @@ impl Eq for CoalescenceRngSample {}
 impl CoalescenceRngSample {
     #[must_use]
     #[inline]
-    pub fn new<M: MathsCore, G: Rng<M>>(rng: &mut G) -> Self
-    where
-        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
-    {
-        Self(rng.sample::<UniformClosedOpenUnit>())
+    pub fn new<M: MathsCore, G: Rng<M> + Samples<M, UniformClosedOpenUnit>>(rng: &mut G) -> Self {
+        Self(UniformClosedOpenUnit::sample(rng))
     }
 
     #[must_use]

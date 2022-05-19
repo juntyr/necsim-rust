@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        rng::{Event, IndexUsize, UniformClosedOpenUnit},
+        distribution::{Bernoulli, IndexUsize, UniformClosedOpenUnit},
         ActiveLineageSampler, DistributionSampler, EmigrationExit, GloballyCoherentLineageStore,
         ImmigrationEntry, MathsCore, Rng, SeparableDispersalSampler,
     },
@@ -31,7 +31,7 @@ pub trait EventSkippingLineageStoreSampleInitialiser<
     O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
         SeparableDispersalSampler<M, O::Habitat, G>,
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
         + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     type DispersalSampler: SeparableDispersalSampler<M, O::Habitat, G>;

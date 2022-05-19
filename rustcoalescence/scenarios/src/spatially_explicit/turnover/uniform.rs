@@ -3,7 +3,8 @@ use std::{convert::TryFrom, marker::PhantomData, path::PathBuf};
 use serde::{Deserialize, Serialize, Serializer};
 
 use necsim_core::cogs::{
-    rng::IndexU64, DispersalSampler, DistributionSampler, Habitat, LineageStore, MathsCore, Rng,
+    distribution::IndexU64, DispersalSampler, DistributionSampler, Habitat, LineageStore,
+    MathsCore, Rng,
 };
 use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64, PositiveF64};
 use necsim_partitioning_core::partition::Partition;

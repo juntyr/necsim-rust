@@ -1,7 +1,8 @@
 use necsim_core::{
     cogs::{
-        Backup, DispersalSampler, Habitat, MathsCore, Rng,
-        SeparableDispersalSampler, DistributionSampler, rng::{Normal2D, Event},
+        distribution::{Bernoulli, Normal2D},
+        Backup, DispersalSampler, DistributionSampler, Habitat, MathsCore, Rng,
+        SampledDistribution, SeparableDispersalSampler,
     },
     landscape::Location,
 };
@@ -18,8 +19,8 @@ use crate::cogs::{
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct WrappingNoiseApproximateNormalDispersalSampler<M: MathsCore, G: Rng<M>>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     #[cfg_attr(feature = "cuda", cuda(embed))]
     inner: AlmostInfiniteNormalDispersalSampler<M, G>,
@@ -27,8 +28,8 @@ where
 
 impl<M: MathsCore, G: Rng<M>> WrappingNoiseApproximateNormalDispersalSampler<M, G>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     #[must_use]
     pub fn new(sigma: NonNegativeF64) -> Self {
@@ -41,8 +42,8 @@ where
 #[contract_trait]
 impl<M: MathsCore, G: Rng<M>> Backup for WrappingNoiseApproximateNormalDispersalSampler<M, G>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
@@ -55,8 +56,8 @@ where
 impl<M: MathsCore, G: Rng<M>> DispersalSampler<M, WrappingNoiseHabitat<M>, G>
     for WrappingNoiseApproximateNormalDispersalSampler<M, G>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     #[must_use]
     #[inline]
@@ -71,7 +72,10 @@ where
         //  targets are rejected.
         // If seperable dispersal is not required, this can be implemented as a
         //  direct rejection sampling loop instead.
-        if rng.sample_with::<Event>(self.get_self_dispersal_probability_at_location(location, habitat)) {
+        if Bernoulli::sample_with(
+            rng,
+            self.get_self_dispersal_probability_at_location(location, habitat),
+        ) {
             location.clone()
         } else {
             self.sample_non_self_dispersal_from_location(location, habitat, rng)
@@ -83,8 +87,8 @@ where
 impl<M: MathsCore, G: Rng<M>> SeparableDispersalSampler<M, WrappingNoiseHabitat<M>, G>
     for WrappingNoiseApproximateNormalDispersalSampler<M, G>
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     #[must_use]
     fn sample_non_self_dispersal_from_location(

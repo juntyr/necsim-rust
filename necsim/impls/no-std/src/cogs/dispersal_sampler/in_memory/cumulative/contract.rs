@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{rng::UniformClosedOpenUnit, DistributionSampler, Habitat, MathsCore, Rng},
+    cogs::{distribution::UniformClosedOpenUnit, DistributionSampler, Habitat, MathsCore, Rng},
     landscape::Location,
 };
 

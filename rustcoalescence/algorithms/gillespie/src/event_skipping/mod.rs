@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{rng::SimpleRng, GloballyCoherentLineageStore, MathsCore, SeparableDispersalSampler},
+    cogs::{GloballyCoherentLineageStore, MathsCore, SeparableDispersalSampler},
     lineage::Lineage,
     reporter::Reporter,
 };
@@ -9,6 +9,7 @@ use necsim_impls_no_std::cogs::{
     dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
     lineage_store::coherent::globally::gillespie::GillespieLineageStore,
     maths::intrinsics::IntrinsicsMathsCore, origin_sampler::pre_sampler::OriginPreSampler,
+    rng::simple::SimpleRng,
 };
 use necsim_impls_std::cogs::rng::pcg::Pcg;
 use necsim_partitioning_core::{partition::Partition, LocalPartition};

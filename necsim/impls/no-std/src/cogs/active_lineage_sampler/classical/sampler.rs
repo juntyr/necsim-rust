@@ -5,9 +5,10 @@ use core::{
 
 use necsim_core::{
     cogs::{
-        rng::{Event, Exponential, IndexUsize, Lambda, Length, UniformClosedOpenUnit},
+        distribution::{Bernoulli, Exponential, IndexUsize, Lambda, Length, UniformClosedOpenUnit},
         ActiveLineageSampler, DispersalSampler, DistributionSampler, EmigrationExit, Habitat,
-        ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng, SpeciationProbability,
+        ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng, SampledDistribution,
+        SpeciationProbability,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -59,7 +60,7 @@ impl<
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
         + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
         + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, S: 'a, X: 'a, D: 'a, N: 'a, I: 'a;
@@ -117,7 +118,7 @@ where
             let lambda = simulation.turnover_rate.get_uniform_turnover_rate()
                 * PositiveF64::from(number_active_lineages);
 
-            let event_time = self.last_event_time + rng.sample_with::<Exponential>(Lambda(lambda));
+            let event_time = self.last_event_time + Exponential::sample_with(rng, Lambda(lambda));
 
             let next_event_time = PositiveF64::max_after(self.last_event_time, event_time);
 
@@ -129,9 +130,12 @@ where
 
             // Safety: The outer if statement has already shown that the number
             //         of remaining lineages is non-zero
-            let chosen_lineage_index = rng.sample_with::<IndexUsize>(Length(unsafe {
-                NonZeroUsize::new_unchecked(self.active_lineage_references.len())
-            }));
+            let chosen_lineage_index = IndexUsize::sample_with(
+                rng,
+                Length(unsafe {
+                    NonZeroUsize::new_unchecked(self.active_lineage_references.len())
+                }),
+            );
             let chosen_lineage_reference = self
                 .active_lineage_references
                 .swap_remove(chosen_lineage_index);

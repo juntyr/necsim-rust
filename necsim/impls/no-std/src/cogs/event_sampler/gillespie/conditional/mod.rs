@@ -2,10 +2,10 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample, event_sampler::EventHandler,
-        rng::UniformClosedOpenUnit, Backup, CoalescenceSampler, DistributionSampler,
+        coalescence_sampler::CoalescenceRngSample, distribution::UniformClosedOpenUnit,
+        event_sampler::EventHandler, Backup, CoalescenceSampler, DistributionSampler,
         EmigrationExit, EventSampler, GloballyCoherentLineageStore, Habitat, MathsCore, Rng,
-        SeparableDispersalSampler, SpeciationProbability, TurnoverRate,
+        SampledDistribution, SeparableDispersalSampler, SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
     landscape::Location,
@@ -143,7 +143,7 @@ where
             false,
         );
 
-        let event_sample = probability_at_location.total() * rng.sample::<UniformClosedOpenUnit>();
+        let event_sample = probability_at_location.total() * UniformClosedOpenUnit::sample(rng);
 
         if event_sample < probability_at_location.speciation() {
             // Speciation Event
