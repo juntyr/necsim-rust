@@ -3,7 +3,7 @@ use tiny_keccak::{Hasher, Keccak};
 use rustcoalescence_algorithms::{result::SimulationOutcome as AlgorithmOutcome, Algorithm};
 
 use necsim_core::{
-    cogs::{MathsCore, RngCore, SeedableRng},
+    cogs::{MathsCore, Rng, RngCore, SeedableRng},
     reporter::Reporter,
 };
 use necsim_core_bond::NonNegativeF64;
@@ -46,14 +46,14 @@ where
     Result<AlgorithmOutcome<M, A::Rng>, A::Error>:
         anyhow::Context<AlgorithmOutcome<M, A::Rng>, A::Error>,
 {
-    let rng: A::Rng = match parse::rng::parse_and_normalise(
+    let rng: <A::Rng as Rng<M>>::Generator = match parse::rng::parse_and_normalise(
         ron_args,
         normalised_args,
         &mut A::get_logical_partition(&algorithm_args, &local_partition),
     )? {
         RngConfig::Seed(seed) => SeedableRng::seed_from_u64(seed),
         RngConfig::Sponge(bytes) => {
-            let mut seed = <A::Rng as RngCore>::Seed::default();
+            let mut seed = <<A::Rng as Rng<M>>::Generator as RngCore>::Seed::default();
 
             let mut sponge = Keccak::v256();
             sponge.update(&bytes);
@@ -81,7 +81,6 @@ where
             steps,
             lineages,
             rng: paused_rng,
-            ..
         } => {
             normalised_args.rng(&RngConfig::State(Base32RngState::from(paused_rng)));
 

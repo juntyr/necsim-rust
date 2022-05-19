@@ -3,8 +3,6 @@ use core::{
     num::{NonZeroU128, NonZeroU32, NonZeroU64, NonZeroUsize},
 };
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
 use necsim_core::cogs::{
     distribution::{
         Bernoulli, Exponential, IndexU128, IndexU32, IndexU64, IndexUsize, Lambda, Length, Normal,
@@ -23,20 +21,18 @@ pub struct SimpleRng<M: MathsCore, R: RngCore> {
     marker: PhantomData<M>,
 }
 
-impl<M: MathsCore, R: RngCore> Serialize for SimpleRng<M, R> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.inner.serialize(serializer)
+impl<M: MathsCore, R: RngCore> From<R> for SimpleRng<M, R> {
+    fn from(inner: R) -> Self {
+        Self {
+            inner,
+            marker: PhantomData::<M>,
+        }
     }
 }
 
-impl<'de, M: MathsCore, R: RngCore> Deserialize<'de> for SimpleRng<M, R> {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let inner = R::deserialize(deserializer)?;
-
-        Ok(Self {
-            inner,
-            marker: PhantomData::<M>,
-        })
+impl<M: MathsCore, R: RngCore> SimpleRng<M, R> {
+    pub fn into(self) -> R {
+        self.inner
     }
 }
 
@@ -47,23 +43,6 @@ impl<M: MathsCore, R: RngCore> Backup for SimpleRng<M, R> {
             inner: self.inner.backup_unchecked(),
             marker: PhantomData::<M>,
         }
-    }
-}
-
-impl<M: MathsCore, R: RngCore> RngCore for SimpleRng<M, R> {
-    type Seed = R::Seed;
-
-    #[must_use]
-    fn from_seed(seed: Self::Seed) -> Self {
-        Self {
-            inner: R::from_seed(seed),
-            marker: PhantomData::<M>,
-        }
-    }
-
-    #[must_use]
-    fn sample_u64(&mut self) -> u64 {
-        self.inner.sample_u64()
     }
 }
 
@@ -84,7 +63,7 @@ impl<M: MathsCore, R: RngCore> Rng<M> for SimpleRng<M, R> {
         }
     }
 
-    fn with_rng<F: FnOnce(&mut Self::Generator, &Self::Sampler) -> Q, Q>(&mut self, inner: F) -> Q {
+    fn with<F: FnOnce(&mut Self::Generator, &Self::Sampler) -> Q, Q>(&mut self, inner: F) -> Q {
         let samplers = SimplerDistributionSamplers {
             _marker: PhantomData::<(M, R)>,
         };
