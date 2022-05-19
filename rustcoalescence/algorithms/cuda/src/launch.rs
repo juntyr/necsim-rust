@@ -58,13 +58,13 @@ pub fn initialise_and_simulate<
     Error: From<CudaError>,
 >(
     args: &CudaArguments,
-    rng: CudaRng<M, SimpleRng<M, WyHash>>,
+    rng: WyHash,
     scenario: O,
     pre_sampler: OriginPreSampler<M, I>,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
     lineage_store_sampler_initialiser: L,
-) -> Result<SimulationOutcome<M, CudaRng<M, SimpleRng<M, WyHash>>>, Error>
+) -> Result<SimulationOutcome<WyHash>, Error>
 where
     O::Habitat: RustToCuda,
     O::DispersalSampler<
@@ -120,6 +120,8 @@ where
         R::ReportDispersal,
     >,
 {
+    let rng = CudaRng::from(SimpleRng::from(rng));
+
     let (
         habitat,
         dispersal_sampler,
@@ -236,8 +238,7 @@ where
                 .into_iter()
                 .chain(passthrough.into_iter())
                 .collect(),
-            rng: simulation.rng_mut().clone(),
-            marker: PhantomData::<M>,
+            rng: simulation.rng_mut().clone().into().into(),
         }),
     }
 }

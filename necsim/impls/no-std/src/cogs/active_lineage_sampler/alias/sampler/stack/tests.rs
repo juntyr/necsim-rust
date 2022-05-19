@@ -105,7 +105,7 @@ fn sample_single_group() {
 
     let mut tally = [0_u64; 6];
 
-    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::seed_from_u64(24897);
+    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::from(WyHash::seed_from_u64(24897));
 
     for _ in 0..N {
         let (maybe_group, sample) = group.sample_pop(&mut rng);
@@ -405,7 +405,7 @@ fn add_remove_event_full() {
 fn sample_single_group_full() {
     const N: usize = 10_000_000;
 
-    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::seed_from_u64(471_093);
+    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::from(WyHash::seed_from_u64(471_093));
 
     let mut sampler = DynamicAliasMethodStackSampler::with_capacity(6);
 
@@ -454,7 +454,7 @@ fn sample_single_group_full() {
 fn sample_three_groups_full() {
     const N: usize = 10_000_000;
 
-    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::seed_from_u64(739_139);
+    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::from(WyHash::seed_from_u64(739_139));
 
     let mut sampler = DynamicAliasMethodStackSampler::with_capacity(6);
 
@@ -500,7 +500,7 @@ fn sample_three_groups_full() {
 fn sample_three_groups_full_reverse() {
     const N: usize = 10_000_000;
 
-    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::seed_from_u64(248_971);
+    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::from(WyHash::seed_from_u64(248_971));
 
     let mut sampler = DynamicAliasMethodStackSampler::with_capacity(6);
 
@@ -622,7 +622,7 @@ impl Rng<IntrinsicsMathsCore> for DummyRng {
         map(self)
     }
 
-    fn with_rng<F: FnOnce(&mut Self::Generator, &Self::Sampler) -> Q, Q>(&mut self, inner: F) -> Q {
+    fn with<F: FnOnce(&mut Self::Generator, &Self::Sampler) -> Q, Q>(&mut self, inner: F) -> Q {
         let samplers = DummyDistributionSamplers;
 
         inner(self, &samplers)
