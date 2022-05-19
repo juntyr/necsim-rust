@@ -2,7 +2,7 @@ use core::num::NonZeroU32;
 
 use necsim_core::{
     cogs::{
-        rng::IndexU64, Backup, DistributionSampler, Habitat, MathsCore, Rng,
+        distribution::IndexU64, Backup, DistributionSampler, Habitat, MathsCore, Rng,
         UniformlySampleableHabitat,
     },
     landscape::{IndexedLocation, LandscapeExtent, Location},

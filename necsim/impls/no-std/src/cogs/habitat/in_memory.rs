@@ -6,8 +6,9 @@ use r#final::Final;
 
 use necsim_core::{
     cogs::{
-        rng::{IndexU64, Length},
-        Backup, DistributionSampler, Habitat, MathsCore, Rng, UniformlySampleableHabitat,
+        distribution::{IndexU64, Length},
+        Backup, DistributionSampler, Habitat, MathsCore, Rng, SampledDistribution,
+        UniformlySampleableHabitat,
     },
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
@@ -117,7 +118,7 @@ where
     #[inline]
     fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
         let indexed_location_index =
-            rng.sample_with::<IndexU64>(Length(self.get_total_habitat().into()));
+            IndexU64::sample_with(rng, Length(self.get_total_habitat().into()));
 
         let location_index = match self.u64_injection.binary_search(&indexed_location_index) {
             Ok(index) => index,

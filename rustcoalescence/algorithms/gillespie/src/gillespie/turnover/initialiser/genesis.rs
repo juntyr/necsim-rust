@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        rng::{Event, Exponential, IndexU128, IndexU64, IndexUsize},
+        distribution::{Bernoulli, Exponential, IndexU128, IndexU64, IndexUsize},
         CoalescenceSampler, DistributionSampler, EmigrationExit, EventSampler, ImmigrationEntry,
         LocallyCoherentLineageStore, MathsCore, Rng,
     },
@@ -25,7 +25,7 @@ impl<M: MathsCore, G: Rng<M>, O: Scenario<M, G>> GillespieLineageStoreSampleInit
     for GenesisInitialiser
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
         + DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
         + DistributionSampler<M, G::Generator, G::Sampler, IndexU128>
         + DistributionSampler<M, G::Generator, G::Sampler, Exponential>,

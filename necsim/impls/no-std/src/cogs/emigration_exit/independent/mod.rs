@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample, rng::UniformClosedOpenUnit, Backup,
+        coalescence_sampler::CoalescenceRngSample, distribution::UniformClosedOpenUnit, Backup,
         DistributionSampler, EmigrationExit, Habitat, MathsCore, Rng,
     },
     landscape::{IndexedLocation, Location},

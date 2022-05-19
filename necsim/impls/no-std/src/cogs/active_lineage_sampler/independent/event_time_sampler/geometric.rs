@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
-        rng::Event, DistributionSampler, Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng,
-        Rng, TurnoverRate,
+        distribution::Bernoulli, rng::HabitatPrimeableRng, DistributionSampler, Habitat, MathsCore,
+        PrimeableRng, Rng, SampledDistribution, TurnoverRate,
     },
     landscape::IndexedLocation,
 };
@@ -27,7 +27,7 @@ impl GeometricEventTimeSampler {
 impl<M: MathsCore, H: Habitat<M>, G: Rng<M, Generator: PrimeableRng>, T: TurnoverRate<M, H>>
     EventTimeSampler<M, H, G, T> for GeometricEventTimeSampler
 where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Event>,
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
@@ -52,7 +52,7 @@ where
             rng.generator()
                 .prime_with_habitat(habitat, indexed_location, time_step);
 
-            if rng.sample_with::<Event>(event_probability_per_step) {
+            if Bernoulli::sample_with(rng, event_probability_per_step) {
                 break;
             }
 
