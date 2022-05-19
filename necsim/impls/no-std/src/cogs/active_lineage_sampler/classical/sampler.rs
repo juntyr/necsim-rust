@@ -6,8 +6,8 @@ use core::{
 use necsim_core::{
     cogs::{
         distribution::{Bernoulli, Exponential, IndexUsize, Lambda, Length, UniformClosedOpenUnit},
-        ActiveLineageSampler, DispersalSampler, DistributionSampler, EmigrationExit, Habitat,
-        ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng, SampledDistribution,
+        ActiveLineageSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+        LocallyCoherentLineageStore, MathsCore, Rng, SampledDistribution, Samples,
         SpeciationProbability,
     },
     lineage::Lineage,
@@ -27,7 +27,11 @@ use super::ClassicalActiveLineageSampler;
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M>
+            + Samples<M, Exponential>
+            + Samples<M, IndexUsize>
+            + Samples<M, Bernoulli>
+            + Samples<M, UniformClosedOpenUnit>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -57,11 +61,6 @@ impl<
         >,
         I,
     > for ClassicalActiveLineageSampler<M, H, G, S, X, D, N, I>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
-        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, S: 'a, X: 'a, D: 'a, N: 'a, I: 'a;
 

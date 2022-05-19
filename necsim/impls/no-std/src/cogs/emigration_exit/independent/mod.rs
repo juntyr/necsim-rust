@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         coalescence_sampler::CoalescenceRngSample, distribution::UniformClosedOpenUnit, Backup,
-        DistributionSampler, EmigrationExit, Habitat, MathsCore, Rng,
+        EmigrationExit, Habitat, MathsCore, Rng, Samples,
     },
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, MigratingLineage, TieBreaker},
@@ -23,12 +23,10 @@ use choice::EmigrationChoice;
 pub struct IndependentEmigrationExit<
     M: MathsCore,
     H: Habitat<M>,
-    G: Rng<M>,
+    G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
     C: Decomposition<M, H>,
     E: EmigrationChoice<M, H>,
-> where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
-{
+> {
     decomposition: C,
     choice: E,
     emigrant: Option<(u32, MigratingLineage)>,
@@ -36,10 +34,13 @@ pub struct IndependentEmigrationExit<
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: Rng<M>, C: Decomposition<M, H>, E: EmigrationChoice<M, H>>
-    Backup for IndependentEmigrationExit<M, H, G, C, E>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
+        C: Decomposition<M, H>,
+        E: EmigrationChoice<M, H>,
+    > Backup for IndependentEmigrationExit<M, H, G, C, E>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
@@ -57,11 +58,14 @@ where
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: Rng<M>, C: Decomposition<M, H>, E: EmigrationChoice<M, H>>
-    EmigrationExit<M, H, G, IndependentLineageStore<M, H>>
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
+        C: Decomposition<M, H>,
+        E: EmigrationChoice<M, H>,
+    > EmigrationExit<M, H, G, IndependentLineageStore<M, H>>
     for IndependentEmigrationExit<M, H, G, C, E>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     #[must_use]
     #[inline]
@@ -134,10 +138,13 @@ where
     }
 }
 
-impl<M: MathsCore, H: Habitat<M>, G: Rng<M>, C: Decomposition<M, H>, E: EmigrationChoice<M, H>>
-    IndependentEmigrationExit<M, H, G, C, E>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
+        C: Decomposition<M, H>,
+        E: EmigrationChoice<M, H>,
+    > IndependentEmigrationExit<M, H, G, C, E>
 {
     #[must_use]
     pub fn new(decomposition: C, choice: E) -> Self {
