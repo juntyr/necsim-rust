@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
         distribution::{Bernoulli, IndexUsize},
-        DispersalSampler, Habitat, MathsCore, Rng, SampledDistribution, Samples,
+        DispersalSampler, Distribution, Habitat, MathsCore, Rng, Samples,
         SeparableDispersalSampler,
     },
     landscape::Location,

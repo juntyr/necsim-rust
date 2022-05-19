@@ -3,8 +3,7 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         distribution::{Normal, Normal2D},
-        Backup, DispersalSampler, MathsCore, Rng, SampledDistribution, Samples,
-        SeparableDispersalSampler,
+        Backup, DispersalSampler, Distribution, MathsCore, Rng, Samples, SeparableDispersalSampler,
     },
     landscape::Location,
 };

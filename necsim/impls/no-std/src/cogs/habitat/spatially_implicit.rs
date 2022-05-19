@@ -2,7 +2,7 @@ use core::num::NonZeroU32;
 
 use necsim_core::{
     cogs::{
-        distribution::IndexU64, Backup, DistributionSampler, Habitat, MathsCore, Rng,
+        distribution::IndexU64, Backup, Habitat, MathsCore, Rng, Samples,
         UniformlySampleableHabitat,
     },
     landscape::{IndexedLocation, LandscapeExtent, Location},
@@ -131,9 +131,8 @@ impl<M: MathsCore> Habitat<M> for SpatiallyImplicitHabitat<M> {
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: Rng<M>> UniformlySampleableHabitat<M, G> for SpatiallyImplicitHabitat<M>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64>> UniformlySampleableHabitat<M, G>
+    for SpatiallyImplicitHabitat<M>
 {
     #[must_use]
     #[inline]

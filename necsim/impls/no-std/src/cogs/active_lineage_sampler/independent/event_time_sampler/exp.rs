@@ -2,7 +2,7 @@ use necsim_core::{
     cogs::{
         distribution::{Exponential, Lambda},
         rng::HabitatPrimeableRng,
-        Habitat, MathsCore, PrimeableRng, Rng, SampledDistribution, Samples, TurnoverRate,
+        Distribution, Habitat, MathsCore, PrimeableRng, Rng, Samples, TurnoverRate,
     },
     landscape::IndexedLocation,
 };

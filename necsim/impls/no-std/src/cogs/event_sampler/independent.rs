@@ -3,8 +3,8 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         coalescence_sampler::CoalescenceRngSample, distribution::UniformClosedOpenUnit,
-        event_sampler::EventHandler, Backup, CoalescenceSampler, DispersalSampler, EmigrationExit,
-        EventSampler, Habitat, MathsCore, Rng, SampledDistribution, Samples, SpeciationProbability,
+        event_sampler::EventHandler, Backup, CoalescenceSampler, DispersalSampler, Distribution,
+        EmigrationExit, EventSampler, Habitat, MathsCore, Rng, Samples, SpeciationProbability,
         TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},

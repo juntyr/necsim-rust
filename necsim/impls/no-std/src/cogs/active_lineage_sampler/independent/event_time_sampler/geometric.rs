@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
-        distribution::Bernoulli, rng::HabitatPrimeableRng, Habitat, MathsCore, PrimeableRng, Rng,
-        SampledDistribution, Samples, TurnoverRate,
+        distribution::Bernoulli, rng::HabitatPrimeableRng, Distribution, Habitat, MathsCore,
+        PrimeableRng, Rng, Samples, TurnoverRate,
     },
     landscape::IndexedLocation,
 };
