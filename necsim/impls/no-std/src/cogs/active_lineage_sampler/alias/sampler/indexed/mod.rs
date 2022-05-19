@@ -12,7 +12,7 @@ use hashbrown::HashMap;
 
 use necsim_core::cogs::{
     distribution::{IndexU128, IndexU64, IndexUsize, Length},
-    Backup, Distribution, MathsCore, Rng, Samples,
+    Backup, Distribution, MathsCore, Rng, RngCore, Samples,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
@@ -67,7 +67,7 @@ impl<E: Eq + Hash + Backup> RejectionSamplingGroup<E> {
                 rng,
                 Length(NonZeroUsize::new_unchecked(self.weights.len())),
             );
-            let height = rng.sample_u64() >> 11;
+            let height = rng.generator().sample_u64() >> 11;
 
             // 53rd bit of weight is always 1, so sampling chance >= 50%
             if height < self.weights[index] {

@@ -1,11 +1,9 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{MathsCore, Rng, RngCore};
-
 use const_type_layout::TypeGraphLayout;
 use rust_cuda::safety::StackOnly;
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use necsim_core::cogs::{MathsCore, Rng};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, rust_cuda::common::LendRustToCuda)]
@@ -38,22 +36,9 @@ impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> From<R> for C
     }
 }
 
-impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> RngCore for CudaRng<M, R> {
-    type Seed = <R as RngCore>::Seed;
-
-    #[must_use]
-    #[inline]
-    fn from_seed(seed: Self::Seed) -> Self {
-        Self {
-            inner: R::from_seed(seed),
-            marker: PhantomData::<M>,
-        }
-    }
-
-    #[must_use]
-    #[inline]
-    fn sample_u64(&mut self) -> u64 {
-        self.inner.sample_u64()
+impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> CudaRng<M, R> {
+    pub fn into(self) -> R {
+        self.inner
     }
 }
 
@@ -74,26 +59,7 @@ impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> Rng<M> for Cu
         }
     }
 
-    fn with_rng<F: FnOnce(&mut Self::Generator, &Self::Sampler) -> Q, Q>(&mut self, inner: F) -> Q {
-        self.inner.with_rng(inner)
-    }
-}
-
-impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> Serialize for CudaRng<M, R> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.inner.serialize(serializer)
-    }
-}
-
-impl<'de, M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> Deserialize<'de>
-    for CudaRng<M, R>
-{
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let inner = R::deserialize(deserializer)?;
-
-        Ok(Self {
-            inner,
-            marker: PhantomData::<M>,
-        })
+    fn with<F: FnOnce(&mut Self::Generator, &Self::Sampler) -> Q, Q>(&mut self, inner: F) -> Q {
+        self.inner.with(inner)
     }
 }

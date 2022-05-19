@@ -3,11 +3,11 @@ use core::{convert::AsMut, ptr::copy_nonoverlapping};
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
-    cogs::{DistributionCore, DistributionSampler, Habitat, MathsCore},
+    cogs::{Backup, DistributionCore, DistributionSampler, Habitat, MathsCore},
     landscape::IndexedLocation,
 };
 
-pub trait Rng<M: MathsCore>: RngCore {
+pub trait Rng<M: MathsCore>: Backup + Clone + core::fmt::Debug {
     type Generator: RngCore;
     type Sampler;
 
@@ -17,7 +17,7 @@ pub trait Rng<M: MathsCore>: RngCore {
     #[must_use]
     fn map_generator<F: FnOnce(Self::Generator) -> Self::Generator>(self, map: F) -> Self;
 
-    fn with_rng<F: FnOnce(&mut Self::Generator, &Self::Sampler) -> Q, Q>(&mut self, inner: F) -> Q;
+    fn with<F: FnOnce(&mut Self::Generator, &Self::Sampler) -> Q, Q>(&mut self, inner: F) -> Q;
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -121,6 +121,6 @@ where
 {
     #[must_use]
     fn sample_with(&mut self, params: D::Parameters) -> D::Sample {
-        self.with_rng(|rng, samplers| samplers.sample_with(rng, samplers, params))
+        self.with(|rng, samplers| samplers.sample_with(rng, samplers, params))
     }
 }
