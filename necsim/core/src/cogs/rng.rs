@@ -3,7 +3,7 @@ use core::{convert::AsMut, ptr::copy_nonoverlapping};
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
-    cogs::{Distribution, DistributionSampler, Habitat, MathsCore},
+    cogs::{DistributionCore, DistributionSampler, Habitat, MathsCore},
     landscape::IndexedLocation,
 };
 
@@ -102,20 +102,20 @@ pub trait SplittableRng: RngCore {
     fn split_to_stream(self, stream: u64) -> Self;
 }
 
-pub trait Samples<M: MathsCore, D: Distribution + ?Sized>: Rng<M> {
+pub trait Samples<M: MathsCore, D: DistributionCore + ?Sized>: Rng<M> {
     #[must_use]
     fn sample_with(&mut self, params: D::Parameters) -> D::Sample;
 
     #[must_use]
     fn sample(&mut self) -> D::Sample
     where
-        D: Distribution<Parameters = ()>,
+        D: DistributionCore<Parameters = ()>,
     {
         self.sample_with(())
     }
 }
 
-impl<M: MathsCore, D: Distribution, R: Rng<M>> Samples<M, D> for R
+impl<M: MathsCore, D: DistributionCore, R: Rng<M>> Samples<M, D> for R
 where
     R::Sampler: DistributionSampler<M, R::Generator, R::Sampler, D>,
 {

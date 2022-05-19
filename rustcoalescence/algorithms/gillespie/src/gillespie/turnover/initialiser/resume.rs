@@ -1,8 +1,8 @@
 use necsim_core::{
     cogs::{
         distribution::{Bernoulli, Exponential, IndexU128, IndexU64, IndexUsize},
-        CoalescenceSampler, DistributionSampler, EmigrationExit, EventSampler, ImmigrationEntry,
-        LocallyCoherentLineageStore, MathsCore, Rng,
+        CoalescenceSampler, EmigrationExit, EventSampler, ImmigrationEntry,
+        LocallyCoherentLineageStore, MathsCore, Rng, Samples,
     },
     lineage::Lineage,
     reporter::Reporter,
@@ -27,14 +27,17 @@ pub struct ResumeInitialiser<L: ExactSizeIterator<Item = Lineage>> {
     pub resume_after: Option<NonNegativeF64>,
 }
 
-impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: Rng<M>, O: Scenario<M, G>>
-    GillespieLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for ResumeInitialiser<L>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexU128>
-        + DistributionSampler<M, G::Generator, G::Sampler, Exponential>,
+impl<
+        L: ExactSizeIterator<Item = Lineage>,
+        M: MathsCore,
+        G: Rng<M>
+            + Samples<M, IndexUsize>
+            + Samples<M, Bernoulli>
+            + Samples<M, IndexU64>
+            + Samples<M, IndexU128>
+            + Samples<M, Exponential>,
+        O: Scenario<M, G>,
+    > GillespieLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for ResumeInitialiser<L>
 {
     type ActiveLineageSampler<
         S: LocallyCoherentLineageStore<M, O::Habitat>,

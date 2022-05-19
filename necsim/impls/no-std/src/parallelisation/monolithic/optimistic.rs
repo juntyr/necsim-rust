@@ -4,8 +4,8 @@ use core::ops::ControlFlow;
 use necsim_core::{
     cogs::{
         backup::BackedUp, distribution::UniformClosedOpenUnit, ActiveLineageSampler, Backup,
-        CoalescenceSampler, DispersalSampler, DistributionSampler, EventSampler, Habitat,
-        LocallyCoherentLineageStore, MathsCore, Rng, SpeciationProbability, TurnoverRate,
+        CoalescenceSampler, DispersalSampler, EventSampler, Habitat, LocallyCoherentLineageStore,
+        MathsCore, Rng, Samples, SpeciationProbability, TurnoverRate,
     },
     lineage::MigratingLineage,
     reporter::Reporter,
@@ -31,7 +31,7 @@ pub fn simulate<
     'p,
     M: MathsCore,
     H: Habitat<M>,
-    G: Rng<M>,
+    G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
     S: LocallyCoherentLineageStore<M, H>,
     D: DispersalSampler<M, H, G>,
     C: CoalescenceSampler<M, H, S>,
@@ -71,10 +71,7 @@ pub fn simulate<
     >,
     independent_time_slice: PositiveF64,
     local_partition: &mut L,
-) -> (Status, NonNegativeF64, u64)
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
-{
+) -> (Status, NonNegativeF64, u64) {
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(simulation.get_balanced_remaining_work().0);
 

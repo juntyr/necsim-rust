@@ -9,7 +9,7 @@ use core::{
 
 use necsim_core::cogs::{
     distribution::{IndexU128, IndexU64, IndexUsize, Length},
-    Backup, MathsCore, Rng, SampledDistribution, Samples,
+    Backup, Distribution, MathsCore, Rng, Samples,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 

@@ -3,9 +3,9 @@ use core::{num::NonZeroUsize, ops::ControlFlow};
 use necsim_core::{
     cogs::{
         distribution::{Exponential, IndexU128, IndexU64, IndexUsize, Lambda, Length},
-        ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler, DistributionSampler,
+        ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler, Distribution,
         EmigrationExit, GloballyCoherentLineageStore, Habitat, ImmigrationEntry, MathsCore, Rng,
-        SampledDistribution, Samples, SpeciationProbability, TurnoverRate,
+        Samples, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,

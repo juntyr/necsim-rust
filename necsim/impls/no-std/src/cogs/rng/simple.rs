@@ -267,7 +267,7 @@ impl<
         self
     }
 
-    fn sample_with(&self, rng: &mut R, samplers: &S, params: Lambda) -> usize {
+    fn sample_with(&self, rng: &mut R, samplers: &S, params: Lambda) -> u64 {
         let lambda = params.0;
         let no_event_probability = M::exp(-lambda.get());
 
@@ -284,13 +284,13 @@ impl<
                 },
             )
             .0
-            .max(0.0_f64) as usize;
+            .max(0.0_f64) as u64;
 
             return normal_as_poisson;
         }
 
         // https://en.wikipedia.org/wiki/Poisson_distribution#cite_ref-Devroye1986_54-0
-        let mut poisson = 0_usize;
+        let mut poisson = 0_u64;
         let mut prod = no_event_probability;
         let mut acc = no_event_probability;
 

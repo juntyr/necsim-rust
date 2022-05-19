@@ -3,8 +3,7 @@ use std::{hint::unreachable_unchecked, marker::PhantomData};
 use necsim_core::{
     cogs::{
         distribution::{Bernoulli, IndexUsize, UniformClosedOpenUnit},
-        ActiveLineageSampler, DistributionSampler, LocallyCoherentLineageStore, MathsCore, Rng,
-        SplittableRng,
+        ActiveLineageSampler, LocallyCoherentLineageStore, MathsCore, Rng, Samples, SplittableRng,
     },
     reporter::Reporter,
     simulation::SimulationBuilder,
@@ -41,7 +40,10 @@ use super::initialiser::ClassicalLineageStoreSampleInitialiser;
 pub fn initialise_and_simulate<
     'p,
     M: MathsCore,
-    G: Rng<M, Generator: SplittableRng>,
+    G: Rng<M, Generator: SplittableRng>
+        + Samples<M, IndexUsize>
+        + Samples<M, Bernoulli>
+        + Samples<M, UniformClosedOpenUnit>,
     O: Scenario<M, G, TurnoverRate = UniformTurnoverRate>,
     R: Reporter,
     P: LocalPartition<'p, R>,
@@ -60,9 +62,6 @@ pub fn initialise_and_simulate<
 where
     O::LineageStore<ClassicalLineageStore<M, O::Habitat>>:
         LocallyCoherentLineageStore<M, O::Habitat>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
-        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     match args.parallelism_mode {
         ParallelismMode::Monolithic => {

@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     cogs::{
-        distribution::UniformClosedOpenUnit, Backup, Habitat, LineageStore, MathsCore, Rng,
-        SampledDistribution, Samples,
+        distribution::UniformClosedOpenUnit, Backup, Distribution, Habitat, LineageStore,
+        MathsCore, Rng, Samples,
     },
     landscape::{IndexedLocation, Location},
     lineage::LineageInteraction,

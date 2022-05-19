@@ -13,7 +13,7 @@ pub mod rng;
 pub use rng::{PrimeableRng, Rng, RngCore, Samples, SeedableRng, SplittableRng};
 
 pub mod distribution;
-pub use distribution::{Distribution, DistributionSampler, SampledDistribution};
+pub use distribution::{Distribution, DistributionCore, DistributionSampler};
 
 pub mod dispersal_sampler;
 pub use dispersal_sampler::{DispersalSampler, SeparableDispersalSampler};

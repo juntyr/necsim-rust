@@ -3,7 +3,7 @@ use core::{marker::PhantomData, num::NonZeroU64};
 use necsim_core::{
     cogs::{
         distribution::{IndexU64, Length},
-        Backup, DispersalSampler, Habitat, MathsCore, Rng, SampledDistribution, Samples,
+        Backup, DispersalSampler, Distribution, Habitat, MathsCore, Rng, Samples,
         SeparableDispersalSampler,
     },
     landscape::Location,

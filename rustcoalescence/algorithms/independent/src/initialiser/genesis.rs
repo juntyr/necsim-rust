@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
         distribution::{Bernoulli, IndexUsize, UniformClosedOpenUnit},
-        DistributionSampler, EmigrationExit, MathsCore, PrimeableRng, Rng,
+        EmigrationExit, MathsCore, PrimeableRng, Rng, Samples,
     },
     lineage::Lineage,
 };
@@ -22,12 +22,14 @@ use super::IndependentLineageStoreSampleInitialiser;
 #[allow(clippy::module_name_repetitions)]
 pub struct GenesisInitialiser;
 
-impl<M: MathsCore, G: Rng<M, Generator: PrimeableRng>, O: Scenario<M, G>>
-    IndependentLineageStoreSampleInitialiser<M, G, O, !> for GenesisInitialiser
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
+impl<
+        M: MathsCore,
+        G: Rng<M, Generator: PrimeableRng>
+            + Samples<M, UniformClosedOpenUnit>
+            + Samples<M, IndexUsize>
+            + Samples<M, Bernoulli>,
+        O: Scenario<M, G>,
+    > IndependentLineageStoreSampleInitialiser<M, G, O, !> for GenesisInitialiser
 {
     type ActiveLineageSampler<
         X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>,

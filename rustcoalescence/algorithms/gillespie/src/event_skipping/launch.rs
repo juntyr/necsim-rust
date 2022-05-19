@@ -3,7 +3,7 @@ use std::{hint::unreachable_unchecked, marker::PhantomData};
 use necsim_core::{
     cogs::{
         distribution::{Bernoulli, IndexUsize, UniformClosedOpenUnit},
-        ActiveLineageSampler, DistributionSampler, GloballyCoherentLineageStore, MathsCore, Rng,
+        ActiveLineageSampler, GloballyCoherentLineageStore, MathsCore, Rng, Samples,
         SeparableDispersalSampler, SplittableRng,
     },
     reporter::Reporter,
@@ -38,7 +38,10 @@ use crate::arguments::{
 pub fn initialise_and_simulate<
     'p,
     M: MathsCore,
-    G: Rng<M, Generator: SplittableRng>,
+    G: Rng<M, Generator: SplittableRng>
+        + Samples<M, IndexUsize>
+        + Samples<M, Bernoulli>
+        + Samples<M, UniformClosedOpenUnit>,
     O: Scenario<M, G>,
     R: Reporter,
     P: LocalPartition<'p, R>,
@@ -59,9 +62,6 @@ where
         GloballyCoherentLineageStore<M, O::Habitat>,
     O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
         SeparableDispersalSampler<M, O::Habitat, G>,
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
-        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     match args.parallelism_mode {
         ParallelismMode::Monolithic => {

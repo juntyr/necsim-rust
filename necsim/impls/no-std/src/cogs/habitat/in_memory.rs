@@ -7,8 +7,7 @@ use r#final::Final;
 use necsim_core::{
     cogs::{
         distribution::{IndexU64, Length},
-        Backup, DistributionSampler, Habitat, MathsCore, Rng, SampledDistribution,
-        UniformlySampleableHabitat,
+        Backup, Distribution, Habitat, MathsCore, Rng, Samples, UniformlySampleableHabitat,
     },
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
@@ -110,9 +109,8 @@ impl<M: MathsCore> Habitat<M> for InMemoryHabitat<M> {
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: Rng<M>> UniformlySampleableHabitat<M, G> for InMemoryHabitat<M>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64>> UniformlySampleableHabitat<M, G>
+    for InMemoryHabitat<M>
 {
     #[must_use]
     #[inline]

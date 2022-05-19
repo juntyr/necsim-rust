@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
-        distribution::UniformClosedOpenUnit, DispersalSampler, Habitat, MathsCore, Rng,
-        SampledDistribution, Samples,
+        distribution::UniformClosedOpenUnit, DispersalSampler, Distribution, Habitat, MathsCore,
+        Rng, Samples,
     },
     landscape::Location,
 };

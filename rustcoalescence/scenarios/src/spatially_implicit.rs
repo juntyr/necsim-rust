@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use necsim_core::cogs::{
     distribution::{Bernoulli, IndexU64},
-    DispersalSampler, DistributionSampler, LineageStore, MathsCore, Rng,
+    DispersalSampler, LineageStore, MathsCore, Rng, Samples,
 };
 use necsim_core_bond::{OffByOneU32, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::partition::Partition;
@@ -25,11 +25,10 @@ use necsim_impls_no_std::{
 use crate::{Scenario, ScenarioParameters};
 
 #[allow(clippy::module_name_repetitions)]
-pub struct SpatiallyImplicitScenario<M: MathsCore, G: Rng<M>>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
-{
+pub struct SpatiallyImplicitScenario<
+    M: MathsCore,
+    G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>,
+> {
     habitat: SpatiallyImplicitHabitat<M>,
     dispersal_sampler: SpatiallyImplicitDispersalSampler<M, G>,
     turnover_rate: UniformTurnoverRate,
@@ -48,19 +47,15 @@ pub struct SpatiallyImplicitArguments {
     pub migration_probability_per_generation: PositiveUnitF64,
 }
 
-impl<M: MathsCore, G: Rng<M>> ScenarioParameters for SpatiallyImplicitScenario<M, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>> ScenarioParameters
+    for SpatiallyImplicitScenario<M, G>
 {
     type Arguments = SpatiallyImplicitArguments;
     type Error = !;
 }
 
-impl<M: MathsCore, G: Rng<M>> Scenario<M, G> for SpatiallyImplicitScenario<M, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>> Scenario<M, G>
+    for SpatiallyImplicitScenario<M, G>
 {
     type Decomposition = ModuloDecomposition;
     type DecompositionAuxiliary = ();
