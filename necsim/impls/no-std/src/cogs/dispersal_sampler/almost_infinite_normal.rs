@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         distribution::{Normal, Normal2D},
-        Backup, DispersalSampler, DistributionSampler, MathsCore, Rng, SampledDistribution,
+        Backup, DispersalSampler, MathsCore, Rng, SampledDistribution, Samples,
         SeparableDispersalSampler,
     },
     landscape::Location,
@@ -16,19 +16,13 @@ use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "G"))]
-pub struct AlmostInfiniteNormalDispersalSampler<M: MathsCore, G: Rng<M>>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
-{
+pub struct AlmostInfiniteNormalDispersalSampler<M: MathsCore, G: Rng<M> + Samples<M, Normal2D>> {
     sigma: NonNegativeF64,
     self_dispersal: ClosedUnitF64,
     marker: PhantomData<(M, G)>,
 }
 
-impl<M: MathsCore, G: Rng<M>> AlmostInfiniteNormalDispersalSampler<M, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
-{
+impl<M: MathsCore, G: Rng<M> + Samples<M, Normal2D>> AlmostInfiniteNormalDispersalSampler<M, G> {
     #[must_use]
     pub fn new(sigma: NonNegativeF64) -> Self {
         let self_dispersal_1d = if sigma > 0.0_f64 {
@@ -50,9 +44,8 @@ where
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: Rng<M>> Backup for AlmostInfiniteNormalDispersalSampler<M, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
+impl<M: MathsCore, G: Rng<M> + Samples<M, Normal2D>> Backup
+    for AlmostInfiniteNormalDispersalSampler<M, G>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
@@ -64,10 +57,9 @@ where
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: Rng<M>> DispersalSampler<M, AlmostInfiniteHabitat<M>, G>
+impl<M: MathsCore, G: Rng<M> + Samples<M, Normal2D>>
+    DispersalSampler<M, AlmostInfiniteHabitat<M>, G>
     for AlmostInfiniteNormalDispersalSampler<M, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
 {
     #[must_use]
     fn sample_dispersal_from_location(
@@ -104,10 +96,9 @@ where
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: Rng<M>> SeparableDispersalSampler<M, AlmostInfiniteHabitat<M>, G>
+impl<M: MathsCore, G: Rng<M> + Samples<M, Normal2D>>
+    SeparableDispersalSampler<M, AlmostInfiniteHabitat<M>, G>
     for AlmostInfiniteNormalDispersalSampler<M, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
 {
     #[must_use]
     fn sample_non_self_dispersal_from_location(

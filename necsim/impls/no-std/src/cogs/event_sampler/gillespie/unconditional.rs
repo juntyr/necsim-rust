@@ -5,8 +5,8 @@ use necsim_core::{
         coalescence_sampler::CoalescenceRngSample,
         distribution::{Bernoulli, UniformClosedOpenUnit},
         event_sampler::EventHandler,
-        Backup, CoalescenceSampler, DispersalSampler, DistributionSampler, EmigrationExit,
-        EventSampler, GloballyCoherentLineageStore, Habitat, MathsCore, Rng, SampledDistribution,
+        Backup, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
+        GloballyCoherentLineageStore, Habitat, MathsCore, Rng, SampledDistribution, Samples,
         SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
@@ -23,17 +23,14 @@ use super::GillespieEventSampler;
 pub struct UnconditionalGillespieEventSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: Rng<M>,
+    G: Rng<M> + Samples<M, Bernoulli> + Samples<M, UniformClosedOpenUnit>,
     S: GloballyCoherentLineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
     C: CoalescenceSampler<M, H, S>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
-> where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
-        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
-{
+> {
     #[allow(clippy::type_complexity)]
     marker: PhantomData<(M, H, G, S, X, D, C, T, N)>,
 }
@@ -41,7 +38,7 @@ pub struct UnconditionalGillespieEventSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M> + Samples<M, Bernoulli> + Samples<M, UniformClosedOpenUnit>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -49,9 +46,6 @@ impl<
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
     > Default for UnconditionalGillespieEventSampler<M, H, G, S, X, D, C, T, N>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
-        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     fn default() -> Self {
         Self {
@@ -64,7 +58,7 @@ where
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M> + Samples<M, Bernoulli> + Samples<M, UniformClosedOpenUnit>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -72,9 +66,6 @@ impl<
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
     > Backup for UnconditionalGillespieEventSampler<M, H, G, S, X, D, C, T, N>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
-        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
@@ -87,7 +78,7 @@ where
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M> + Samples<M, Bernoulli> + Samples<M, UniformClosedOpenUnit>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -96,9 +87,6 @@ impl<
         N: SpeciationProbability<M, H>,
     > EventSampler<M, H, G, S, X, D, C, T, N>
     for UnconditionalGillespieEventSampler<M, H, G, S, X, D, C, T, N>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
-        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     #[must_use]
     fn sample_event_for_lineage_at_event_time_or_emigrate<
@@ -198,7 +186,7 @@ where
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M> + Samples<M, Bernoulli> + Samples<M, UniformClosedOpenUnit>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -207,9 +195,6 @@ impl<
         N: SpeciationProbability<M, H>,
     > GillespieEventSampler<M, H, G, S, X, D, C, T, N>
     for UnconditionalGillespieEventSampler<M, H, G, S, X, D, C, T, N>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
-        + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     #[must_use]
     fn get_event_rate_at_location(

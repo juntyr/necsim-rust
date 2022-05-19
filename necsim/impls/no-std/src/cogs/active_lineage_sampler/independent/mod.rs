@@ -3,8 +3,8 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        distribution::UniformClosedOpenUnit, Backup, DispersalSampler, DistributionSampler,
-        EmigrationExit, Habitat, MathsCore, PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
+        distribution::UniformClosedOpenUnit, Backup, DispersalSampler, EmigrationExit, Habitat,
+        MathsCore, PrimeableRng, Rng, Samples, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
 };
@@ -30,15 +30,13 @@ use event_time_sampler::EventTimeSampler;
 pub struct IndependentActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: Rng<M, Generator: PrimeableRng>,
+    G: Rng<M, Generator: PrimeableRng> + Samples<M, UniformClosedOpenUnit>,
     X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
     D: DispersalSampler<M, H, G>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
     J: EventTimeSampler<M, H, G, T>,
-> where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
-{
+> {
     #[cfg_attr(
         feature = "cuda",
         cuda(embed = "Option<rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<Lineage>>")
@@ -54,15 +52,13 @@ pub struct IndependentActiveLineageSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M, Generator: PrimeableRng>,
+        G: Rng<M, Generator: PrimeableRng> + Samples<M, UniformClosedOpenUnit>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
         J: EventTimeSampler<M, H, G, T>,
     > IndependentActiveLineageSampler<M, H, G, X, D, T, N, J>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     #[must_use]
     pub fn init_with_store_and_lineages<'h, O: TrustedOriginSampler<'h, M, Habitat = H>>(
@@ -142,15 +138,13 @@ where
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M, Generator: PrimeableRng>,
+        G: Rng<M, Generator: PrimeableRng> + Samples<M, UniformClosedOpenUnit>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
         J: EventTimeSampler<M, H, G, T>,
     > Backup for IndependentActiveLineageSampler<M, H, G, X, D, T, N, J>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {

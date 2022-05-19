@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 
 use necsim_core::cogs::{
     distribution::{Bernoulli, IndexUsize, Length},
-    DistributionSampler, MathsCore, Rng, SampledDistribution,
+    MathsCore, Rng, SampledDistribution, Samples,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
@@ -111,14 +111,13 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
         old(alias_samplers).iter().map(|s| s.e).any(|e| e == ret),
         "returns one of the weighted events"
     )]
-    pub fn sample_event<M: MathsCore, G: Rng<M>>(
+    pub fn sample_event<
+        M: MathsCore,
+        G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>,
+    >(
         alias_samplers: &[AliasMethodSamplerAtom<E>],
         rng: &mut G,
-    ) -> E
-    where
-        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-            + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
-    {
+    ) -> E {
         // Safety: alias_samplers is non-empty by the precondition
         let length = unsafe { NonZeroUsize::new_unchecked(alias_samplers.len()) };
 

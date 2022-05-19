@@ -1,8 +1,8 @@
 use necsim_core::{
     cogs::{
         distribution::{Bernoulli, IndexU64},
-        Backup, DispersalSampler, DistributionSampler, Habitat, MathsCore, Rng,
-        SampledDistribution, SeparableDispersalSampler,
+        Backup, DispersalSampler, Habitat, MathsCore, Rng, SampledDistribution, Samples,
+        SeparableDispersalSampler,
     },
     landscape::Location,
 };
@@ -17,11 +17,10 @@ use crate::cogs::{
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
-pub struct SpatiallyImplicitDispersalSampler<M: MathsCore, G: Rng<M>>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
-{
+pub struct SpatiallyImplicitDispersalSampler<
+    M: MathsCore,
+    G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>,
+> {
     #[cfg_attr(feature = "cuda", cuda(embed))]
     local: NonSpatialDispersalSampler<M, G>,
     #[cfg_attr(feature = "cuda", cuda(embed))]
@@ -29,10 +28,8 @@ where
     local_migration_probability_per_generation: PositiveUnitF64,
 }
 
-impl<M: MathsCore, G: Rng<M>> SpatiallyImplicitDispersalSampler<M, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>>
+    SpatiallyImplicitDispersalSampler<M, G>
 {
     #[must_use]
     pub fn new(local_migration_probability_per_generation: PositiveUnitF64) -> Self {
@@ -45,10 +42,8 @@ where
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: Rng<M>> Backup for SpatiallyImplicitDispersalSampler<M, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>> Backup
+    for SpatiallyImplicitDispersalSampler<M, G>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
@@ -61,11 +56,9 @@ where
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: Rng<M>> DispersalSampler<M, SpatiallyImplicitHabitat<M>, G>
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>>
+    DispersalSampler<M, SpatiallyImplicitHabitat<M>, G>
     for SpatiallyImplicitDispersalSampler<M, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     #[must_use]
     #[debug_ensures(habitat.meta().get_extent().contains(&ret) || (
@@ -106,11 +99,9 @@ where
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: Rng<M>> SeparableDispersalSampler<M, SpatiallyImplicitHabitat<M>, G>
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>>
+    SeparableDispersalSampler<M, SpatiallyImplicitHabitat<M>, G>
     for SpatiallyImplicitDispersalSampler<M, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     #[must_use]
     #[debug_ensures(habitat.meta().get_extent().contains(&ret) || (

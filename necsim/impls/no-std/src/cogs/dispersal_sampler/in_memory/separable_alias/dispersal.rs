@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
         distribution::{Bernoulli, IndexUsize},
-        DispersalSampler, DistributionSampler, Habitat, MathsCore, Rng, SampledDistribution,
+        DispersalSampler, Habitat, MathsCore, Rng, SampledDistribution, Samples,
         SeparableDispersalSampler,
     },
     landscape::Location,
@@ -11,11 +11,8 @@ use necsim_core_bond::ClosedUnitF64;
 use super::InMemorySeparableAliasDispersalSampler;
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> DispersalSampler<M, H, G>
-    for InMemorySeparableAliasDispersalSampler<M, H, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>>
+    DispersalSampler<M, H, G> for InMemorySeparableAliasDispersalSampler<M, H, G>
 {
     #[must_use]
     fn sample_dispersal_from_location(
@@ -42,11 +39,8 @@ where
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> SeparableDispersalSampler<M, H, G>
-    for InMemorySeparableAliasDispersalSampler<M, H, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>>
+    SeparableDispersalSampler<M, H, G> for InMemorySeparableAliasDispersalSampler<M, H, G>
 {
     #[must_use]
     fn sample_non_self_dispersal_from_location(

@@ -3,8 +3,8 @@ use core::{marker::PhantomData, num::NonZeroU64};
 use necsim_core::{
     cogs::{
         distribution::{IndexU64, Length},
-        Backup, DispersalSampler, DistributionSampler, Habitat, MathsCore, Rng,
-        SampledDistribution, SeparableDispersalSampler,
+        Backup, DispersalSampler, Habitat, MathsCore, Rng, SampledDistribution, Samples,
+        SeparableDispersalSampler,
     },
     landscape::Location,
 };
@@ -16,17 +16,11 @@ use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "G"))]
-pub struct NonSpatialDispersalSampler<M: MathsCore, G: Rng<M>>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
-{
+pub struct NonSpatialDispersalSampler<M: MathsCore, G: Rng<M> + Samples<M, IndexU64>> {
     marker: PhantomData<(M, G)>,
 }
 
-impl<M: MathsCore, G: Rng<M>> Default for NonSpatialDispersalSampler<M, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
-{
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64>> Default for NonSpatialDispersalSampler<M, G> {
     #[must_use]
     fn default() -> Self {
         Self {
@@ -36,10 +30,7 @@ where
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: Rng<M>> Backup for NonSpatialDispersalSampler<M, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
-{
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64>> Backup for NonSpatialDispersalSampler<M, G> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             marker: PhantomData::<(M, G)>,
@@ -48,10 +39,8 @@ where
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: Rng<M>> DispersalSampler<M, NonSpatialHabitat<M>, G>
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64>> DispersalSampler<M, NonSpatialHabitat<M>, G>
     for NonSpatialDispersalSampler<M, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
 {
     #[must_use]
     #[inline]
@@ -85,10 +74,8 @@ where
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: Rng<M>> SeparableDispersalSampler<M, NonSpatialHabitat<M>, G>
-    for NonSpatialDispersalSampler<M, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>,
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64>>
+    SeparableDispersalSampler<M, NonSpatialHabitat<M>, G> for NonSpatialDispersalSampler<M, G>
 {
     #[must_use]
     #[debug_requires((

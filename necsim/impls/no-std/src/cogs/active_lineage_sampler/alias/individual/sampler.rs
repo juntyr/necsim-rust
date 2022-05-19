@@ -3,9 +3,9 @@ use core::ops::ControlFlow;
 use necsim_core::{
     cogs::{
         distribution::{Exponential, IndexU128, IndexU64, IndexUsize, Lambda},
-        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, DistributionSampler,
-        EmigrationExit, EventSampler, Habitat, ImmigrationEntry, LocallyCoherentLineageStore,
-        MathsCore, Rng, SampledDistribution, SpeciationProbability, TurnoverRate,
+        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
+        Habitat, ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng,
+        SampledDistribution, Samples, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -19,7 +19,11 @@ use super::IndividualAliasActiveLineageSampler;
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M>
+            + Samples<M, Exponential>
+            + Samples<M, IndexUsize>
+            + Samples<M, IndexU64>
+            + Samples<M, IndexU128>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -30,11 +34,6 @@ impl<
         I: ImmigrationEntry<M>,
     > ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
     for IndividualAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
 {
     type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, S: 'a, X: 'a, D: 'a, C: 'a, T: 'a, N: 'a, E: 'a, I: 'a;
 
