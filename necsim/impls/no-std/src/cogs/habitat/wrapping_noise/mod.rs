@@ -10,7 +10,7 @@ mod opensimplex_noise;
 use opensimplex_noise::OpenSimplexNoise;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, Rng, UniformlySampleableHabitat, RngCore},
+    cogs::{Backup, Habitat, MathsCore, Rng, RngCore, UniformlySampleableHabitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 

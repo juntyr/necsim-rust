@@ -4,7 +4,7 @@ use core::{fmt, marker::PhantomData};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::cogs::{
-    rng::{Exponential, IndexU128, IndexU64, IndexUsize},
+    distribution::{Exponential, IndexU128, IndexU64, IndexUsize},
     Backup, CoalescenceSampler, DispersalSampler, DistributionSampler, EmigrationExit,
     EventSampler, Habitat, ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng,
     SpeciationProbability, TurnoverRate,

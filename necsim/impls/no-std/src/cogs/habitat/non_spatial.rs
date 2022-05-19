@@ -5,8 +5,9 @@ use core::{
 
 use necsim_core::{
     cogs::{
-        rng::{IndexU64, Length},
-        Backup, DistributionSampler, Habitat, MathsCore, Rng, UniformlySampleableHabitat,
+        distribution::{IndexU64, Length},
+        Backup, DistributionSampler, Habitat, MathsCore, Rng, SampledDistribution,
+        UniformlySampleableHabitat,
     },
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
@@ -130,9 +131,10 @@ where
             self.extent.width().get() * self.extent.height().get() * u64::from(self.deme.get());
 
         // Safety: habitat width, height, and deme are all > 0
-        let mut dispersal_target_index = rng.sample_with::<IndexU64>(Length(unsafe {
-            NonZeroU64::new_unchecked(habitat_index_max)
-        }));
+        let mut dispersal_target_index = IndexU64::sample_with(
+            rng,
+            Length(unsafe { NonZeroU64::new_unchecked(habitat_index_max) }),
+        );
         #[allow(clippy::cast_possible_truncation)]
         let index = (dispersal_target_index % u64::from(self.deme.get())) as u32;
         dispersal_target_index /= u64::from(self.deme.get());

@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{rng::SimpleRng, LocallyCoherentLineageStore, MathsCore},
+    cogs::{LocallyCoherentLineageStore, MathsCore},
     lineage::Lineage,
     reporter::Reporter,
 };
@@ -7,7 +7,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::cogs::{
     lineage_store::coherent::locally::classical::ClassicalLineageStore,
-    origin_sampler::pre_sampler::OriginPreSampler,
+    origin_sampler::pre_sampler::OriginPreSampler, rng::simple::SimpleRng,
 };
 use necsim_impls_std::cogs::rng::pcg::Pcg;
 use necsim_partitioning_core::{partition::Partition, LocalPartition};

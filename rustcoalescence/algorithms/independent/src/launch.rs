@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        rng::{Event, IndexUsize, Normal2D, UniformClosedOpenUnit},
+        distribution::{Bernoulli, IndexUsize, Normal2D, UniformClosedOpenUnit},
         DistributionSampler, MathsCore, PrimeableRng, Rng,
     },
     reporter::Reporter,
@@ -68,7 +68,7 @@ pub fn initialise_and_simulate<
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>
         + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
         + DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
 {
     match args.parallelism_mode {

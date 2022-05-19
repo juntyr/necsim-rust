@@ -1,10 +1,6 @@
 use std::marker::PhantomData;
 
-use necsim_core::{
-    cogs::{rng::SimpleRng, MathsCore},
-    reporter::Reporter,
-    simulation::SimulationBuilder,
-};
+use necsim_core::{cogs::MathsCore, reporter::Reporter, simulation::SimulationBuilder};
 use necsim_core_bond::NonNegativeF64;
 
 use necsim_impls_cuda::cogs::rng::CudaRng;
@@ -20,7 +16,7 @@ use necsim_impls_no_std::{
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
         },
-        rng::wyhash::WyHash,
+        rng::{simple::SimpleRng, wyhash::WyHash},
     },
     parallelisation::Status,
 };

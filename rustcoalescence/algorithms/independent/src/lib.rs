@@ -5,16 +5,14 @@
 #[macro_use]
 extern crate serde_derive_state;
 
-use necsim_core::{
-    cogs::{rng::SimpleRng, MathsCore},
-    lineage::Lineage,
-    reporter::Reporter,
-};
+use necsim_core::{cogs::MathsCore, lineage::Lineage, reporter::Reporter};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::cogs::{
-    lineage_store::independent::IndependentLineageStore, maths::intrinsics::IntrinsicsMathsCore,
-    origin_sampler::pre_sampler::OriginPreSampler, rng::wyhash::WyHash,
+    lineage_store::independent::IndependentLineageStore,
+    maths::intrinsics::IntrinsicsMathsCore,
+    origin_sampler::pre_sampler::OriginPreSampler,
+    rng::{simple::SimpleRng, wyhash::WyHash},
 };
 use necsim_partitioning_core::{partition::Partition, LocalPartition};
 

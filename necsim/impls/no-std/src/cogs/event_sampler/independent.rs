@@ -2,10 +2,10 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample, event_sampler::EventHandler,
-        rng::UniformClosedOpenUnit, Backup, CoalescenceSampler, DispersalSampler,
+        coalescence_sampler::CoalescenceRngSample, distribution::UniformClosedOpenUnit,
+        event_sampler::EventHandler, Backup, CoalescenceSampler, DispersalSampler,
         DistributionSampler, EmigrationExit, EventSampler, Habitat, MathsCore, Rng,
-        SpeciationProbability, TurnoverRate,
+        SampledDistribution, SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
     lineage::Lineage,
@@ -156,7 +156,7 @@ where
         }: EventHandler<FS, FD, FE>,
         auxiliary: Aux,
     ) -> Q {
-        let speciation_sample = rng.sample::<UniformClosedOpenUnit>();
+        let speciation_sample = UniformClosedOpenUnit::sample(rng);
 
         SpeciationSample::update_min(
             &mut self.min_spec_sample,

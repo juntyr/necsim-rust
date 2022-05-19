@@ -3,7 +3,7 @@ use std::num::NonZeroU32;
 use serde::{Deserialize, Serialize};
 
 use necsim_core::cogs::{
-    rng::{Event, IndexU64},
+    distribution::{Bernoulli, IndexU64},
     DispersalSampler, DistributionSampler, LineageStore, MathsCore, Rng,
 };
 use necsim_core_bond::{OffByOneU32, OpenClosedUnitF64 as PositiveUnitF64};
@@ -28,7 +28,7 @@ use crate::{Scenario, ScenarioParameters};
 pub struct SpatiallyImplicitScenario<M: MathsCore, G: Rng<M>>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     habitat: SpatiallyImplicitHabitat<M>,
     dispersal_sampler: SpatiallyImplicitDispersalSampler<M, G>,
@@ -51,7 +51,7 @@ pub struct SpatiallyImplicitArguments {
 impl<M: MathsCore, G: Rng<M>> ScenarioParameters for SpatiallyImplicitScenario<M, G>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     type Arguments = SpatiallyImplicitArguments;
     type Error = !;
@@ -60,7 +60,7 @@ where
 impl<M: MathsCore, G: Rng<M>> Scenario<M, G> for SpatiallyImplicitScenario<M, G>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>,
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
 {
     type Decomposition = ModuloDecomposition;
     type DecompositionAuxiliary = ();

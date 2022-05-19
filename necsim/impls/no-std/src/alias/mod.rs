@@ -3,8 +3,8 @@ use core::num::NonZeroUsize;
 use alloc::vec::Vec;
 
 use necsim_core::cogs::{
-    rng::{Event, IndexUsize, Length},
-    DistributionSampler, MathsCore, Rng,
+    distribution::{Bernoulli, IndexUsize, Length},
+    MathsCore, Rng, SampledDistribution, Samples,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
@@ -94,18 +94,20 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
     }
 
     #[debug_ensures(self.Es.contains(&ret), "returns one of the weighted events")]
-    pub fn sample_event<M: MathsCore, G: Rng<M>>(&self, rng: &mut G) -> E
-    where
-        G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-            + DistributionSampler<M, G::Generator, G::Sampler, Event>,
-    {
+    pub fn sample_event<
+        M: MathsCore,
+        G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>,
+    >(
+        &self,
+        rng: &mut G,
+    ) -> E {
         // Safety: Es is non-empty by the precondition on construction
         let length = unsafe { NonZeroUsize::new_unchecked(self.Es.len()) };
 
-        let i = rng.sample_with::<IndexUsize>(Length(length)); // index into events
+        let i = IndexUsize::sample_with(rng, Length(length)); // index into events
 
         // Select Es[i] over Ks[i] according to its bucket percentage Us[i]
-        if rng.sample_with::<Event>(self.Us[i]) {
+        if Bernoulli::sample_with(rng, self.Us[i]) {
             self.Es[i]
         } else {
             self.Ks[i]

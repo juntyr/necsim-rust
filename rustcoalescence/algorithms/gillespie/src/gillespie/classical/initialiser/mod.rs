@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        rng::{Event, IndexUsize, UniformClosedOpenUnit},
+        distribution::{Bernoulli, IndexUsize, UniformClosedOpenUnit},
         ActiveLineageSampler, DispersalSampler, DistributionSampler, EmigrationExit,
         ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng,
     },
@@ -25,7 +25,7 @@ pub mod resume;
 pub trait ClassicalLineageStoreSampleInitialiser<M: MathsCore, G: Rng<M>, O: Scenario<M, G>, Error>
 where
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
         + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     type DispersalSampler: DispersalSampler<M, O::Habitat, G>;

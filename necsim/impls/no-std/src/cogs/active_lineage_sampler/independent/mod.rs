@@ -3,8 +3,8 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        rng::UniformClosedOpenUnit, Backup, DispersalSampler, DistributionSampler, EmigrationExit,
-        Habitat, MathsCore, PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
+        distribution::UniformClosedOpenUnit, Backup, DispersalSampler, DistributionSampler,
+        EmigrationExit, Habitat, MathsCore, PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
 };

@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        rng::{Event, IndexUsize, UniformClosedOpenUnit},
+        distribution::{Bernoulli, IndexUsize, UniformClosedOpenUnit},
         DistributionSampler, EmigrationExit, MathsCore, PrimeableRng, Rng,
     },
     lineage::Lineage,
@@ -44,7 +44,7 @@ where
     O::TurnoverRate: RustToCuda,
     O::SpeciationProbability: RustToCuda,
     G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Event>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>
         + DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     type ActiveLineageSampler<
