@@ -1,13 +1,12 @@
 use necsim_core::{
-    cogs::{distribution::UniformClosedOpenUnit, DistributionSampler, Habitat, MathsCore, Rng},
+    cogs::{distribution::UniformClosedOpenUnit, Habitat, MathsCore, Rng, Samples},
     landscape::Location,
 };
 
 use super::InMemoryCumulativeDispersalSampler;
 
-impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> InMemoryCumulativeDispersalSampler<M, H, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, UniformClosedOpenUnit>>
+    InMemoryCumulativeDispersalSampler<M, H, G>
 {
     pub(super) fn explicit_only_valid_targets_dispersal_contract(&self, habitat: &H) -> bool {
         let habitat_width = habitat.get_extent().width();

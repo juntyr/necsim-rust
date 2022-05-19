@@ -3,9 +3,9 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         coalescence_sampler::CoalescenceRngSample, distribution::UniformClosedOpenUnit,
-        event_sampler::EventHandler, Backup, CoalescenceSampler, DispersalSampler,
-        DistributionSampler, EmigrationExit, EventSampler, Habitat, MathsCore, Rng,
-        SampledDistribution, SpeciationProbability, TurnoverRate,
+        event_sampler::EventHandler, Backup, CoalescenceSampler, DispersalSampler, EmigrationExit,
+        EventSampler, Habitat, MathsCore, Rng, SampledDistribution, Samples, SpeciationProbability,
+        TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
     lineage::Lineage,
@@ -38,14 +38,12 @@ use super::tracking::{MinSpeciationTrackingEventSampler, SpeciationSample};
 pub struct IndependentEventSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: Rng<M>,
+    G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
     X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
     D: DispersalSampler<M, H, G>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
-> where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
-{
+> {
     #[cfg_attr(
         feature = "cuda",
         cuda(
@@ -59,14 +57,12 @@ pub struct IndependentEventSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
     > Default for IndependentEventSampler<M, H, G, X, D, T, N>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     fn default() -> Self {
         Self {
@@ -80,14 +76,12 @@ where
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
     > Backup for IndependentEventSampler<M, H, G, X, D, T, N>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
@@ -101,7 +95,7 @@ where
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,
@@ -118,8 +112,6 @@ impl<
         T,
         N,
     > for IndependentEventSampler<M, H, G, X, D, T, N>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     #[must_use]
     #[inline]
@@ -237,7 +229,7 @@ where
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,
@@ -254,8 +246,6 @@ impl<
         T,
         N,
     > for IndependentEventSampler<M, H, G, X, D, T, N>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     fn replace_min_speciation(
         &mut self,

@@ -1,8 +1,8 @@
 use necsim_core::{
     cogs::{
-        distribution::{Normal, Normal2D, UniformClosedOpenUnit},
+        distribution::{Lambda, Poisson, UniformClosedOpenUnit},
         rng::HabitatPrimeableRng,
-        DistributionSampler, Habitat, MathsCore, PrimeableRng, Rng, SampledDistribution,
+        DistributionSampler, Habitat, MathsCore, PrimeableRng, Rng, SampledDistribution, Samples,
         TurnoverRate,
     },
     landscape::IndexedLocation,
@@ -29,11 +29,12 @@ impl PoissonEventTimeSampler {
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: Rng<M, Generator: PrimeableRng>, T: TurnoverRate<M, H>>
-    EventTimeSampler<M, H, G, T> for PoissonEventTimeSampler
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>
-        + DistributionSampler<M, G::Generator, G::Sampler, Normal2D>,
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: Rng<M, Generator: PrimeableRng> + Samples<M, Poisson>,
+        T: TurnoverRate<M, H>,
+    > EventTimeSampler<M, H, G, T> for PoissonEventTimeSampler
 {
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
@@ -57,36 +58,7 @@ where
             rng.generator()
                 .prime_with_habitat(habitat, indexed_location, time_step);
 
-            let number_events_at_time_steps = if no_event_probability_per_step > 0.0_f64 {
-                // https://en.wikipedia.org/wiki/Poisson_distribution#cite_ref-Devroye1986_54-0
-                let mut poisson = 0_u32;
-                let mut prod = no_event_probability_per_step;
-                let mut acc = no_event_probability_per_step;
-
-                let u = UniformClosedOpenUnit::sample(rng);
-
-                while u > acc && prod > 0.0_f64 {
-                    poisson += 1;
-                    prod *= lambda_per_step.get() / f64::from(poisson);
-                    acc += prod;
-                }
-
-                poisson
-            } else {
-                // Fallback in case no_event_probability_per_step underflows
-                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-                let normal_as_poisson = Normal2D::sample_with(
-                    rng,
-                    Normal {
-                        mu: lambda_per_step.get(),
-                        sigma: lambda_per_step.sqrt::<M>(),
-                    },
-                )
-                .0
-                .max(0.0_f64) as u32;
-
-                normal_as_poisson
-            };
+            let number_events_at_time_steps = Poisson::sample_with(rng, Lambda(lambda_per_step));
 
             let mut next_event = None;
 

@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
         distribution::{Bernoulli, IndexUsize},
-        DispersalSampler, DistributionSampler, Habitat, MathsCore, Rng,
+        DispersalSampler, Habitat, MathsCore, Rng, Samples,
     },
     landscape::Location,
 };
@@ -9,11 +9,8 @@ use necsim_core::{
 use super::InMemoryAliasDispersalSampler;
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: Rng<M>> DispersalSampler<M, H, G>
-    for InMemoryAliasDispersalSampler<M, H, G>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>>
+    DispersalSampler<M, H, G> for InMemoryAliasDispersalSampler<M, H, G>
 {
     #[must_use]
     fn sample_dispersal_from_location(

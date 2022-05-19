@@ -3,8 +3,8 @@ use core::ops::ControlFlow;
 use necsim_core::{
     cogs::{
         distribution::UniformClosedOpenUnit, ActiveLineageSampler, DispersalSampler,
-        DistributionSampler, EmigrationExit, Habitat, MathsCore, PrimeableRng, Rng,
-        SpeciationProbability, TurnoverRate,
+        EmigrationExit, Habitat, MathsCore, PrimeableRng, Rng, Samples, SpeciationProbability,
+        TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -24,7 +24,7 @@ use super::{EventTimeSampler, IndependentActiveLineageSampler};
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M, Generator: PrimeableRng>,
+        G: Rng<M, Generator: PrimeableRng> + Samples<M, UniformClosedOpenUnit>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,
@@ -44,8 +44,6 @@ impl<
         IndependentEventSampler<M, H, G, X, D, T, N>,
         NeverImmigrationEntry,
     > for IndependentActiveLineageSampler<M, H, G, X, D, T, N, J>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, UniformClosedOpenUnit>,
 {
     type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, X: 'a, D: 'a, T: 'a, N: 'a, J: 'a;
 

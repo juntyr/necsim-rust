@@ -6,9 +6,8 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_core::{
     cogs::{
         distribution::{Exponential, IndexU128, IndexU64, IndexUsize},
-        Backup, CoalescenceSampler, DispersalSampler, DistributionSampler, EmigrationExit,
-        GloballyCoherentLineageStore, Habitat, ImmigrationEntry, MathsCore, Rng,
-        SpeciationProbability, TurnoverRate,
+        Backup, CoalescenceSampler, DispersalSampler, EmigrationExit, GloballyCoherentLineageStore,
+        Habitat, ImmigrationEntry, MathsCore, Rng, Samples, SpeciationProbability, TurnoverRate,
     },
     landscape::Location,
 };
@@ -27,7 +26,11 @@ mod sampler;
 pub struct LocationAliasActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: Rng<M>,
+    G: Rng<M>
+        + Samples<M, Exponential>
+        + Samples<M, IndexUsize>
+        + Samples<M, IndexU64>
+        + Samples<M, IndexU128>,
     S: GloballyCoherentLineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
@@ -36,12 +39,7 @@ pub struct LocationAliasActiveLineageSampler<
     N: SpeciationProbability<M, H>,
     E: GillespieEventSampler<M, H, G, S, X, D, C, T, N>,
     I: ImmigrationEntry<M>,
-> where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
-{
+> {
     alias_sampler: DynamicAliasMethodIndexedSampler<Location>,
     number_active_lineages: usize,
     last_event_time: NonNegativeF64,
@@ -52,7 +50,11 @@ pub struct LocationAliasActiveLineageSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M>
+            + Samples<M, Exponential>
+            + Samples<M, IndexUsize>
+            + Samples<M, IndexU64>
+            + Samples<M, IndexU128>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -62,11 +64,6 @@ impl<
         E: GillespieEventSampler<M, H, G, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
     > LocationAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
 {
     #[must_use]
     pub fn init_with_store<'h, O: TrustedOriginSampler<'h, M, Habitat = H>>(
@@ -211,7 +208,11 @@ where
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M>
+            + Samples<M, Exponential>
+            + Samples<M, IndexUsize>
+            + Samples<M, IndexU64>
+            + Samples<M, IndexU128>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -221,11 +222,6 @@ impl<
         E: GillespieEventSampler<M, H, G, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
     > core::fmt::Debug for LocationAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct("LocationAliasActiveLineageSampler")
@@ -239,7 +235,11 @@ where
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M>
+            + Samples<M, Exponential>
+            + Samples<M, IndexUsize>
+            + Samples<M, IndexU64>
+            + Samples<M, IndexU128>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -249,11 +249,6 @@ impl<
         E: GillespieEventSampler<M, H, G, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
     > Backup for LocationAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {

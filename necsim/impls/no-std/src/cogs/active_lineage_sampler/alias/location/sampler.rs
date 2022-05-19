@@ -5,7 +5,7 @@ use necsim_core::{
         distribution::{Exponential, IndexU128, IndexU64, IndexUsize, Lambda, Length},
         ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler, DistributionSampler,
         EmigrationExit, GloballyCoherentLineageStore, Habitat, ImmigrationEntry, MathsCore, Rng,
-        SampledDistribution, SpeciationProbability, TurnoverRate,
+        SampledDistribution, Samples, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -21,7 +21,11 @@ use super::LocationAliasActiveLineageSampler;
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>,
+        G: Rng<M>
+            + Samples<M, Exponential>
+            + Samples<M, IndexUsize>
+            + Samples<M, IndexU64>
+            + Samples<M, IndexU128>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -32,11 +36,6 @@ impl<
         I: ImmigrationEntry<M>,
     > ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
     for LocationAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
-where
-    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Exponential>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexUsize>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexU64>
-        + DistributionSampler<M, G::Generator, G::Sampler, IndexU128>,
 {
     type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, S: 'a, X: 'a, D: 'a, C: 'a, T: 'a, N: 'a, E: 'a, I: 'a;
 
