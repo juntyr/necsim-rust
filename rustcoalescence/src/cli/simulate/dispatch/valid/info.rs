@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 use rustcoalescence_algorithms::{result::SimulationOutcome, Algorithm};
 
 use necsim_core::{
-    cogs::MathsCore,
+    cogs::{MathsCore, Rng},
     reporter::{boolean::Boolean, Reporter},
 };
 use necsim_core_bond::NonNegativeF64;
@@ -31,17 +31,17 @@ pub(super) fn dispatch<
     P: LocalPartition<'p, R>,
 >(
     algorithm_args: A::Arguments,
-    rng: A::Rng,
+    rng: <A::Rng as Rng<M>>::Generator,
     scenario: O,
     sample: Sample,
     pause_before: Option<NonNegativeF64>,
     mut local_partition: P,
 
     normalised_args: &BufferingSimulateArgsBuilder,
-) -> anyhow::Result<SimulationOutcome<M, A::Rng>>
+) -> anyhow::Result<SimulationOutcome<<A::Rng as Rng<M>>::Generator>>
 where
-    Result<SimulationOutcome<M, A::Rng>, A::Error>:
-        anyhow::Context<SimulationOutcome<M, A::Rng>, A::Error>,
+    Result<SimulationOutcome<<A::Rng as Rng<M>>::Generator>, A::Error>:
+        anyhow::Context<SimulationOutcome<<A::Rng as Rng<M>>::Generator>, A::Error>,
 {
     let config_str = normalised_args
         .build()
