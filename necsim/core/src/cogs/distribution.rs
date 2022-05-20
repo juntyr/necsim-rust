@@ -36,22 +36,43 @@ impl<D: DistributionCore> Distribution for D {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub trait DistributionSampler<M: MathsCore, R: RngCore, S, D: DistributionCore> {
+pub trait RawDistribution: DistributionCore {
+    fn sample_raw_with<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, Self>>(
+        rng: &mut R,
+        samplers: &S,
+        params: Self::Parameters,
+    ) -> Self::Sample;
+
+    fn sample_raw<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, Self>>(
+        rng: &mut R,
+        samplers: &S,
+    ) -> Self::Sample
+    where
+        Self: DistributionCore<Parameters = ()>,
+    {
+        Self::sample_raw_with(rng, samplers, ())
+    }
+}
+
+impl<D: DistributionCore> RawDistribution for D {
+    fn sample_raw_with<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, Self>>(
+        rng: &mut R,
+        samplers: &S,
+        params: Self::Parameters,
+    ) -> Self::Sample {
+        samplers.sample_distribution(rng, samplers, params)
+    }
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub trait DistributionSampler<M: MathsCore, R: RngCore, S, D: DistributionCore + ?Sized> {
     type ConcreteSampler: DistributionSampler<M, R, S, D>;
 
     #[must_use]
     fn concrete(&self) -> &Self::ConcreteSampler;
 
     #[must_use]
-    fn sample_with(&self, rng: &mut R, samplers: &S, params: D::Parameters) -> D::Sample;
-
-    #[must_use]
-    fn sample(&self, rng: &mut R, samplers: &S) -> D::Sample
-    where
-        D: DistributionCore<Parameters = ()>,
-    {
-        self.sample_with(rng, samplers, ())
-    }
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: D::Parameters) -> D::Sample;
 }
 
 pub enum UniformClosedOpenUnit {}

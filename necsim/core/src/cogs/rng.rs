@@ -121,6 +121,6 @@ where
 {
     #[must_use]
     fn sample_with(&mut self, params: D::Parameters) -> D::Sample {
-        self.with(|rng, samplers| samplers.sample_with(rng, samplers, params))
+        self.with(|rng, samplers| samplers.sample_distribution(rng, samplers, params))
     }
 }

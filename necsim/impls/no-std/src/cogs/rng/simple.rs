@@ -6,7 +6,8 @@ use core::{
 use necsim_core::cogs::{
     distribution::{
         Bernoulli, Exponential, IndexU128, IndexU32, IndexU64, IndexUsize, Lambda, Length, Normal,
-        Normal2D, Poisson, StandardNormal2D, UniformClosedOpenUnit, UniformOpenClosedUnit,
+        Normal2D, Poisson, RawDistribution, StandardNormal2D, UniformClosedOpenUnit,
+        UniformOpenClosedUnit,
     },
     Backup, DistributionSampler, MathsCore, Rng, RngCore,
 };
@@ -86,7 +87,7 @@ impl<M: MathsCore, R: RngCore, S> DistributionSampler<M, R, S, UniformClosedOpen
         self
     }
 
-    fn sample_with(&self, rng: &mut R, _samplers: &S, _params: ()) -> ClosedOpenUnitF64 {
+    fn sample_distribution(&self, rng: &mut R, _samplers: &S, _params: ()) -> ClosedOpenUnitF64 {
         // http://prng.di.unimi.it -> Generating uniform doubles in the unit interval
         #[allow(clippy::cast_precision_loss)]
         let u01 = ((rng.sample_u64() >> 11) as f64) * f64::from_bits(0x3CA0_0000_0000_0000_u64); // 0x1.0p-53
@@ -104,7 +105,7 @@ impl<M: MathsCore, R: RngCore, S> DistributionSampler<M, R, S, UniformOpenClosed
         self
     }
 
-    fn sample_with(&self, rng: &mut R, _samplers: &S, _params: ()) -> OpenClosedUnitF64 {
+    fn sample_distribution(&self, rng: &mut R, _samplers: &S, _params: ()) -> OpenClosedUnitF64 {
         // http://prng.di.unimi.it -> Generating uniform doubles in the unit interval
         #[allow(clippy::cast_precision_loss)]
         let u01 =
@@ -123,10 +124,15 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpen
         self
     }
 
-    fn sample_with(&self, rng: &mut R, samplers: &S, params: Length<NonZeroUsize>) -> usize {
+    fn sample_distribution(
+        &self,
+        rng: &mut R,
+        samplers: &S,
+        params: Length<NonZeroUsize>,
+    ) -> usize {
         let length = params.0;
 
-        let u01: ClosedOpenUnitF64 = samplers.sample(rng, samplers);
+        let u01 = UniformClosedOpenUnit::sample_raw(rng, samplers);
 
         #[allow(
             clippy::cast_precision_loss,
@@ -149,10 +155,10 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpen
         self
     }
 
-    fn sample_with(&self, rng: &mut R, samplers: &S, params: Length<NonZeroU32>) -> u32 {
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: Length<NonZeroU32>) -> u32 {
         let length = params.0;
 
-        let u01: ClosedOpenUnitF64 = samplers.sample(rng, samplers);
+        let u01 = UniformClosedOpenUnit::sample_raw(rng, samplers);
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let index = M::floor(u01.get() * f64::from(length.get())) as u32;
@@ -171,10 +177,10 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpen
         self
     }
 
-    fn sample_with(&self, rng: &mut R, samplers: &S, params: Length<NonZeroU64>) -> u64 {
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: Length<NonZeroU64>) -> u64 {
         let length = params.0;
 
-        let u01: ClosedOpenUnitF64 = samplers.sample(rng, samplers);
+        let u01 = UniformClosedOpenUnit::sample_raw(rng, samplers);
 
         #[allow(
             clippy::cast_precision_loss,
@@ -197,10 +203,10 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpen
         self
     }
 
-    fn sample_with(&self, rng: &mut R, samplers: &S, params: Length<NonZeroU128>) -> u128 {
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: Length<NonZeroU128>) -> u128 {
         let length = params.0;
 
-        let u01: ClosedOpenUnitF64 = samplers.sample(rng, samplers);
+        let u01 = UniformClosedOpenUnit::sample_raw(rng, samplers);
 
         #[allow(
             clippy::cast_precision_loss,
@@ -223,10 +229,10 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformOpenClosed
         self
     }
 
-    fn sample_with(&self, rng: &mut R, samplers: &S, params: Lambda) -> NonNegativeF64 {
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: Lambda) -> NonNegativeF64 {
         let lambda = params.0;
 
-        let u01: OpenClosedUnitF64 = samplers.sample(rng, samplers);
+        let u01 = UniformOpenClosedUnit::sample_raw(rng, samplers);
 
         // Inverse transform sample: X = -ln(U(0,1]) / lambda
         -u01.ln::<M>() / lambda
@@ -246,15 +252,14 @@ impl<
         self
     }
 
-    fn sample_with(&self, rng: &mut R, samplers: &S, params: Lambda) -> u64 {
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: Lambda) -> u64 {
         let lambda = params.0;
         let no_event_probability = M::exp(-lambda.get());
 
         if no_event_probability <= 0.0_f64 {
             // Fallback in case no_event_probability_per_step underflows
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-            let normal_as_poisson = DistributionSampler::<M, R, S, Normal2D>::sample_with(
-                samplers,
+            let normal_as_poisson = Normal2D::sample_raw_with(
                 rng,
                 samplers,
                 Normal {
@@ -273,8 +278,7 @@ impl<
         let mut prod = no_event_probability;
         let mut acc = no_event_probability;
 
-        let u =
-            DistributionSampler::<M, R, S, UniformClosedOpenUnit>::sample(samplers, rng, samplers);
+        let u = UniformClosedOpenUnit::sample_raw(rng, samplers);
 
         #[allow(clippy::cast_precision_loss)]
         while u > acc && prod > 0.0_f64 {
@@ -296,10 +300,10 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpen
         self
     }
 
-    fn sample_with(&self, rng: &mut R, samplers: &S, params: ClosedUnitF64) -> bool {
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: ClosedUnitF64) -> bool {
         let probability = params;
 
-        let u01: ClosedOpenUnitF64 = samplers.sample(rng, samplers);
+        let u01 = UniformClosedOpenUnit::sample_raw(rng, samplers);
 
         // if probability == 1, then U[0, 1) always < 1.0
         // if probability == 0, then U[0, 1) never < 0.0
@@ -320,12 +324,10 @@ impl<
         self
     }
 
-    fn sample_with(&self, rng: &mut R, samplers: &S, _params: ()) -> (f64, f64) {
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, _params: ()) -> (f64, f64) {
         // Basic Box-Muller transform
-        let u0 =
-            DistributionSampler::<M, R, S, UniformOpenClosedUnit>::sample(samplers, rng, samplers);
-        let u1 =
-            DistributionSampler::<M, R, S, UniformClosedOpenUnit>::sample(samplers, rng, samplers);
+        let u0 = UniformOpenClosedUnit::sample_raw(rng, samplers);
+        let u1 = UniformClosedOpenUnit::sample_raw(rng, samplers);
 
         let r = M::sqrt(-2.0_f64 * M::ln(u0.get()));
         let theta = -core::f64::consts::TAU * u1.get();
@@ -343,8 +345,8 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, StandardNormal2D>
         self
     }
 
-    fn sample_with(&self, rng: &mut R, samplers: &S, params: Normal) -> (f64, f64) {
-        let (z0, z1) = samplers.sample(rng, samplers);
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: Normal) -> (f64, f64) {
+        let (z0, z1) = StandardNormal2D::sample_raw(rng, samplers);
 
         (
             z0 * params.sigma.get() + params.mu,
