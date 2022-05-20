@@ -121,7 +121,7 @@ where
                         )
                         .cloned()
                         .collect(),
-                    rng: simulation.rng_mut().clone(),
+                    rng: simulation.rng_mut().clone().into(),
                 }),
             }
         },
@@ -137,7 +137,7 @@ where
                 speciation_probability,
                 origin_sampler_auxiliary,
                 decomposition_auxiliary,
-            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, G>>();
+            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, SimpleRng<M, G>>>();
             let coalescence_sampler = UnconditionalCoalescenceSampler::default();
             let event_sampler = UnconditionalEventSampler::default();
 
