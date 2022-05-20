@@ -43,8 +43,8 @@ pub(super) fn dispatch<
     normalised_args: &mut BufferingSimulateArgsBuilder,
 ) -> anyhow::Result<SimulationOutcome>
 where
-    Result<AlgorithmOutcome<M, A::Rng>, A::Error>:
-        anyhow::Context<AlgorithmOutcome<M, A::Rng>, A::Error>,
+    Result<AlgorithmOutcome<<A::Rng as Rng<M>>::Generator>, A::Error>:
+        anyhow::Context<AlgorithmOutcome<<A::Rng as Rng<M>>::Generator>, A::Error>,
 {
     let rng: <A::Rng as Rng<M>>::Generator = match parse::rng::parse_and_normalise(
         ron_args,
