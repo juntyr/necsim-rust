@@ -640,7 +640,7 @@ impl DistributionSampler<IntrinsicsMathsCore, DummyRng, DummyDistributionSampler
         self
     }
 
-    fn sample_with(
+    fn sample_distribution(
         &self,
         rng: &mut DummyRng,
         _samplers: &DummyDistributionSamplers,
@@ -669,7 +669,7 @@ impl DistributionSampler<IntrinsicsMathsCore, DummyRng, DummyDistributionSampler
         self
     }
 
-    fn sample_with(
+    fn sample_distribution(
         &self,
         rng: &mut DummyRng,
         _samplers: &DummyDistributionSamplers,
@@ -698,7 +698,7 @@ impl DistributionSampler<IntrinsicsMathsCore, DummyRng, DummyDistributionSampler
         self
     }
 
-    fn sample_with(
+    fn sample_distribution(
         &self,
         rng: &mut DummyRng,
         _samplers: &DummyDistributionSamplers,
