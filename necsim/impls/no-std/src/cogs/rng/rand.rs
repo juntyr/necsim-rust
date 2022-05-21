@@ -454,6 +454,7 @@ impl<M: MathsCore, R: RngCore + RandRngCore, S> DistributionSampler<M, R, S, Poi
         // Safety: PositiveF64 asserts that lambda > 0
         let poisson = unsafe { RandPoisson::new(lambda.get()).unwrap_unchecked() };
 
+        // Note: rust clamps f64 as u64 to [0, 2^64 - 1]
         #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         {
             poisson.sample(rng) as u64
