@@ -124,6 +124,7 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpen
         self
     }
 
+    #[inline]
     fn sample_distribution(
         &self,
         rng: &mut R,
@@ -132,15 +133,20 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpen
     ) -> usize {
         let u01 = UniformClosedOpenUnit::sample_raw(rng, samplers);
 
-        #[allow(
-            clippy::cast_precision_loss,
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss
-        )]
-        let index = M::floor(u01.get() * (length.get() as f64)) as usize;
+        // Safety: U[0, 1) * length in [0, 2^[32/64]) is a valid [u32/u64]
+        //         since (1 - 2^-53) * 2^[32/64] <= (2^[32/64] - 1)
+        #[allow(clippy::cast_precision_loss)]
+        let index =
+            unsafe { M::floor(u01.get() * (length.get() as f64)).to_int_unchecked::<usize>() };
 
-        // Safety in case of f64 rounding errors
-        index.min(length.get() - 1)
+        if cfg!(target_pointer_width = "32") {
+            // Note: [0, 2^32) is losslessly represented in f64
+            index
+        } else {
+            // Note: Ensure index < length despite
+            //       usize->f64->usize precision loss
+            index.min(length.get() - 1)
+        }
     }
 }
 
@@ -161,11 +167,9 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpen
     ) -> u32 {
         let u01 = UniformClosedOpenUnit::sample_raw(rng, samplers);
 
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let index = M::floor(u01.get() * f64::from(length.get())) as u32;
-
-        // Safety in case of f64 rounding errors
-        index.min(length.get() - 1)
+        // Safety: U[0, 1) * length in [0, 2^32) is losslessly represented
+        //         in both f64 and u32
+        unsafe { M::floor(u01.get() * f64::from(length.get())).to_int_unchecked::<u32>() }
     }
 }
 
@@ -186,14 +190,13 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpen
     ) -> u64 {
         let u01 = UniformClosedOpenUnit::sample_raw(rng, samplers);
 
-        #[allow(
-            clippy::cast_precision_loss,
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss
-        )]
-        let index = M::floor(u01.get() * (length.get() as f64)) as u64;
+        // Safety: U[0, 1) * length in [0, 2^64) is a valid u64
+        //         since (1 - 2^-53) * 2^64 <= (2^64 - 1)
+        #[allow(clippy::cast_precision_loss)]
+        let index =
+            unsafe { M::floor(u01.get() * (length.get() as f64)).to_int_unchecked::<u64>() };
 
-        // Safety in case of f64 rounding errors
+        // Note: Ensure index < length despite u64->f64->u64 precision loss
         index.min(length.get() - 1)
     }
 }
@@ -215,14 +218,13 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpen
     ) -> u128 {
         let u01 = UniformClosedOpenUnit::sample_raw(rng, samplers);
 
-        #[allow(
-            clippy::cast_precision_loss,
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss
-        )]
-        let index = M::floor(u01.get() * (length.get() as f64)) as u128;
+        // Safety: U[0, 1) * length in [0, 2^128) is a valid u128
+        //         since (1 - 2^-53) * 2^128 <= (2^128 - 1)
+        #[allow(clippy::cast_precision_loss)]
+        let index =
+            unsafe { M::floor(u01.get() * (length.get() as f64)).to_int_unchecked::<u128>() };
 
-        // Safety in case of f64 rounding errors
+        // Note: Ensure index < length despite u128->f64->u128 precision loss
         index.min(length.get() - 1)
     }
 }
@@ -267,6 +269,7 @@ impl<
 
         if no_event_probability <= 0.0_f64 {
             // Fallback in case no_event_probability_per_step underflows
+            // Note: rust clamps f64 as u64 to [0, 2^64 - 1]
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let normal_as_poisson = Normal2D::sample_raw_with(
                 rng,
@@ -276,8 +279,7 @@ impl<
                     sigma: NonNegativeF64::from(lambda).sqrt::<M>(),
                 },
             )
-            .0
-            .max(0.0_f64) as u64;
+            .0 as u64;
 
             return normal_as_poisson;
         }
@@ -300,8 +302,8 @@ impl<
     }
 }
 
-impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpenUnit>>
-    DistributionSampler<M, R, S, Bernoulli> for SimplerDistributionSamplers<M, R>
+impl<M: MathsCore, R: RngCore, S> DistributionSampler<M, R, S, Bernoulli>
+    for SimplerDistributionSamplers<M, R>
 {
     type ConcreteSampler = Self;
 
@@ -309,12 +311,21 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpen
         self
     }
 
-    fn sample_distribution(&self, rng: &mut R, samplers: &S, probability: ClosedUnitF64) -> bool {
-        let u01 = UniformClosedOpenUnit::sample_raw(rng, samplers);
+    fn sample_distribution(&self, rng: &mut R, _samplers: &S, probability: ClosedUnitF64) -> bool {
+        #[allow(clippy::cast_precision_loss)]
+        const SCALE: f64 = 2.0 * (1u64 << 63) as f64;
 
-        // if probability == 1, then U[0, 1) always < 1.0
-        // if probability == 0, then U[0, 1) never < 0.0
-        u01 < probability
+        // Safety:
+        //  (a) 0 <= probability < 1: probability * SCALE is in [0, 2^64)
+        //                            since 1 - 2^-53 is before 1.0
+        //  (b) probability == 1    : p_u64 is undefined
+        //                            this case is checked for in the return
+        let p_u64 = unsafe { (probability.get() * SCALE).to_int_unchecked::<u64>() };
+
+        #[allow(clippy::float_cmp)]
+        {
+            (rng.sample_u64() < p_u64) || (probability == 1.0_f64)
+        }
     }
 }
 

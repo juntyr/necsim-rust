@@ -196,7 +196,7 @@ impl<M: MathsCore, G: Rng<M>> UniformlySampleableHabitat<M, G> for WrappingNoise
     fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
         // Rejection sample until a habitable location is found
         let location = loop {
-            let index = rng.sample_u64();
+            let index = rng.generator().sample_u64();
 
             let location = Location::new(
                 (index & 0xFFFF_FFFF) as u32,
