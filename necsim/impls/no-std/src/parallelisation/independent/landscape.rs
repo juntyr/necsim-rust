@@ -1,7 +1,7 @@
 use alloc::{collections::VecDeque, vec::Vec};
 use core::{
     iter::FromIterator,
-    num::{NonZeroU64, Wrapping},
+    num::{NonZeroU32, NonZeroU64, Wrapping},
     ops::ControlFlow,
 };
 
@@ -184,12 +184,17 @@ pub fn simulate<
                 tie_breaker: _,
             } = immigrant;
 
+            // Safety: immigrant can only migrate to habitable target
+            let habitat_at_location = unsafe {
+                NonZeroU32::new_unchecked(
+                    simulation
+                        .habitat()
+                        .get_habitat_at_location(&dispersal_target),
+                )
+            };
+
             // Finish sampling the dispersal of the immigrating individual
-            let target_index = coalescence_rng_sample.sample_coalescence_index::<M>(
-                simulation
-                    .habitat()
-                    .get_habitat_at_location(&dispersal_target),
-            );
+            let target_index = coalescence_rng_sample.sample_coalescence_index(habitat_at_location);
             let dispersal_target = IndexedLocation::new(dispersal_target, target_index);
 
             // Cache the immigration event

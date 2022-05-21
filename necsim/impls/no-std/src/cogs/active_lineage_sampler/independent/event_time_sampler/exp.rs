@@ -56,13 +56,13 @@ impl<
             )
         };
 
+        // Note: rust clamps f64 as u64 to [0, 2^64 - 1]
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let mut time_step = M::floor(time.get() / self.delta_t.get()) as u64;
 
         let mut event_time = NonNegativeF64::from(time_step) * self.delta_t;
         let mut time_slice_end = NonNegativeF64::from(time_step + 1) * self.delta_t;
 
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         rng.generator()
             .prime_with_habitat(habitat, indexed_location, time_step);
 

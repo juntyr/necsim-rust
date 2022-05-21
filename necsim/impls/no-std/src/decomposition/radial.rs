@@ -37,6 +37,8 @@ impl<M: MathsCore, H: Habitat<M>> Decomposition<M, H> for RadialDecomposition {
     }
 
     fn map_location_to_subdomain_rank(&self, location: &Location, habitat: &H) -> u32 {
+        const BELOW_ONE: f64 = f64::from_bits(0x3FEF_FFFF_FFFF_FFFF_u64);
+
         let extent = habitat.get_extent();
 
         let neutral_x = location.x().wrapping_sub(extent.x());
@@ -50,10 +52,12 @@ impl<M: MathsCore, H: Habitat<M>> Decomposition<M, H> for RadialDecomposition {
             * 0.5_f64)
             + 0.5_f64;
 
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        {
-            (M::floor(f64::from(self.subdomain.size().get()) * fraction) as u32)
-                .min(self.subdomain.size().get() - 1)
+        let fraction = fraction.clamp(0.0_f64, BELOW_ONE);
+
+        // Safety: [0, 1) * subdomain.size in [0, 2^32) is losslessly
+        //         represented in both f64 and u32
+        unsafe {
+            M::floor(fraction * f64::from(self.subdomain.size().get())).to_int_unchecked::<u32>()
         }
     }
 }

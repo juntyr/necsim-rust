@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 use necsim_core::cogs::{
-    distribution::{Bernoulli, Exponential, IndexUsize, UniformClosedOpenUnit},
+    distribution::{Bernoulli, Exponential, IndexUsize},
     Backup, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
     LocallyCoherentLineageStore, MathsCore, Rng, Samples, SpeciationProbability,
 };
@@ -20,11 +20,7 @@ mod sampler;
 pub struct ClassicalActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: Rng<M>
-        + Samples<M, Exponential>
-        + Samples<M, IndexUsize>
-        + Samples<M, Bernoulli>
-        + Samples<M, UniformClosedOpenUnit>,
+    G: Rng<M> + Samples<M, Exponential> + Samples<M, IndexUsize> + Samples<M, Bernoulli>,
     S: LocallyCoherentLineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
@@ -40,11 +36,7 @@ pub struct ClassicalActiveLineageSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>
-            + Samples<M, Exponential>
-            + Samples<M, IndexUsize>
-            + Samples<M, Bernoulli>
-            + Samples<M, UniformClosedOpenUnit>,
+        G: Rng<M> + Samples<M, Exponential> + Samples<M, IndexUsize> + Samples<M, Bernoulli>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -135,11 +127,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>
-            + Samples<M, Exponential>
-            + Samples<M, IndexUsize>
-            + Samples<M, Bernoulli>
-            + Samples<M, UniformClosedOpenUnit>,
+        G: Rng<M> + Samples<M, Exponential> + Samples<M, IndexUsize> + Samples<M, Bernoulli>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,

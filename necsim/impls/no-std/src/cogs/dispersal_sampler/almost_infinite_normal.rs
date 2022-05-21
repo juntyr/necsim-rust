@@ -78,8 +78,9 @@ impl<M: MathsCore, G: Rng<M> + Samples<M, Normal2D>>
         );
 
         // Discrete dispersal assumes lineage positions are centred on (0.5, 0.5),
-        // i.e. |dispersal| >= 0.5 changes the cell
-        // (dx and dy must be rounded to nearest int away from 0.0)
+        //  i.e. |dispersal| >= 0.5 changes the cell
+        // dx and dy must be rounded to nearest int away from 0.0
+        // Note: rust clamps f64 as i64 to [-2^-63, 2^63 - 1]
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let (dx, dy): (i64, i64) = (M::round(dx) as i64, M::round(dy) as i64);
 

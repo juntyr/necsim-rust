@@ -50,8 +50,8 @@ impl<
         // location
         let lambda_per_step = unsafe { PositiveF64::new_unchecked(lambda.get()) } * self.delta_t;
 
-        #[allow(clippy::cast_possible_truncation)]
-        #[allow(clippy::cast_sign_loss)]
+        // Note: rust clamps f64 as u64 to [0, 2^64 - 1]
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let mut time_step = M::floor(time.get() / self.delta_t.get()) as u64;
 
         let (event_time, event_index) = loop {
