@@ -1,7 +1,7 @@
 use necsim_core_bond::ClosedUnitF64;
 
 use crate::{
-    cogs::{MathsCore, Rng},
+    cogs::{Backup, MathsCore, Rng},
     landscape::Location,
 };
 
@@ -12,7 +12,7 @@ use super::Habitat;
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
 pub trait DispersalSampler<M: MathsCore, H: Habitat<M>, G: Rng<M>>:
-    crate::cogs::Backup + core::fmt::Debug
+    Backup + core::fmt::Debug
 {
     #[must_use]
     #[debug_requires(habitat.is_location_habitable(location), "location is habitable")]

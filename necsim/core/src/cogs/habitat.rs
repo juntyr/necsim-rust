@@ -2,7 +2,7 @@ use necsim_core_bond::OffByOneU64;
 
 use crate::landscape::{IndexedLocation, LandscapeExtent, Location};
 
-use super::{MathsCore, Rng};
+use super::{Backup, MathsCore, Rng};
 
 #[allow(
     clippy::inline_always,
@@ -10,7 +10,7 @@ use super::{MathsCore, Rng};
     clippy::no_effect_underscore_binding
 )]
 #[contract_trait]
-pub trait Habitat<M: MathsCore>: crate::cogs::Backup + core::fmt::Debug + Sized {
+pub trait Habitat<M: MathsCore>: Backup + core::fmt::Debug {
     type LocationIterator<'a>: Iterator<Item = Location> + 'a
     where
         Self: 'a;
