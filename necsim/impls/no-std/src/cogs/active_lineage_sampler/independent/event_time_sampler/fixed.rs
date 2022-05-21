@@ -27,8 +27,8 @@ impl<M: MathsCore, H: Habitat<M>, G: Rng<M, Generator: PrimeableRng>, T: Turnove
         let lambda =
             turnover_rate.get_turnover_rate_at_location(indexed_location.location(), habitat);
 
-        #[allow(clippy::cast_possible_truncation)]
-        #[allow(clippy::cast_sign_loss)]
+        // Note: rust clamps f64 as u64 to [0, 2^64 - 1]
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let time_step = M::floor(time.get() * lambda.get()) as u64 + 1;
 
         rng.generator()

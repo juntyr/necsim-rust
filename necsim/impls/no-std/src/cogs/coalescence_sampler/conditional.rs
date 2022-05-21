@@ -1,4 +1,4 @@
-use core::marker::PhantomData;
+use core::{marker::PhantomData, num::NonZeroU32};
 
 use necsim_core::{
     cogs::{
@@ -73,11 +73,11 @@ impl<M: MathsCore, H: Habitat<M>, S: GloballyCoherentLineageStore<M, H>>
         let lineages_at_location =
             lineage_store.get_local_lineage_references_at_location_unordered(&location, habitat);
 
+        // Safety: individuals can only occupy habitable locations
         #[allow(clippy::cast_possible_truncation)]
-        let population = lineages_at_location.len() as u32;
+        let population = unsafe { NonZeroU32::new_unchecked(lineages_at_location.len() as u32) };
 
-        let chosen_coalescence_index =
-            coalescence_rng_sample.sample_coalescence_index::<M>(population);
+        let chosen_coalescence_index = coalescence_rng_sample.sample_coalescence_index(population);
         let chosen_coalescence = &lineages_at_location[chosen_coalescence_index as usize];
 
         let lineage = &lineage_store[chosen_coalescence];

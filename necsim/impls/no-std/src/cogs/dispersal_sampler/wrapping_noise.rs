@@ -2,7 +2,7 @@ use necsim_core::{
     cogs::{
         distribution::{Bernoulli, Normal2D},
         Backup, DispersalSampler, DistributionSampler, Habitat, MathsCore, Rng,
-        SampledDistribution, SeparableDispersalSampler,
+        Distribution, SeparableDispersalSampler,
     },
     landscape::Location,
 };

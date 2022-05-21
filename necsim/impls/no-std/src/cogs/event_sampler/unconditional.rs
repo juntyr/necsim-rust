@@ -2,12 +2,10 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample,
-        distribution::{Bernoulli, UniformClosedOpenUnit},
-        event_sampler::EventHandler,
-        Backup, CoalescenceSampler, DispersalSampler, Distribution, EmigrationExit, EventSampler,
-        Habitat, LocallyCoherentLineageStore, MathsCore, Rng, Samples, SpeciationProbability,
-        TurnoverRate,
+        coalescence_sampler::CoalescenceRngSample, distribution::Bernoulli,
+        event_sampler::EventHandler, Backup, CoalescenceSampler, DispersalSampler, Distribution,
+        EmigrationExit, EventSampler, Habitat, LocallyCoherentLineageStore, MathsCore, Rng,
+        Samples, SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
     lineage::Lineage,
@@ -20,7 +18,7 @@ use necsim_core_bond::PositiveF64;
 pub struct UnconditionalEventSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: Rng<M> + Samples<M, Bernoulli> + Samples<M, UniformClosedOpenUnit>,
+    G: Rng<M> + Samples<M, Bernoulli>,
     S: LocallyCoherentLineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
@@ -35,7 +33,7 @@ pub struct UnconditionalEventSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M> + Samples<M, Bernoulli> + Samples<M, UniformClosedOpenUnit>,
+        G: Rng<M> + Samples<M, Bernoulli>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -55,7 +53,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M> + Samples<M, Bernoulli> + Samples<M, UniformClosedOpenUnit>,
+        G: Rng<M> + Samples<M, Bernoulli>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -75,7 +73,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M> + Samples<M, Bernoulli> + Samples<M, UniformClosedOpenUnit>,
+        G: Rng<M> + Samples<M, Bernoulli>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,

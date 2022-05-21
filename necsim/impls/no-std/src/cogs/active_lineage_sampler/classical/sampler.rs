@@ -5,7 +5,7 @@ use core::{
 
 use necsim_core::{
     cogs::{
-        distribution::{Bernoulli, Exponential, IndexUsize, Lambda, Length, UniformClosedOpenUnit},
+        distribution::{Bernoulli, Exponential, IndexUsize, Lambda, Length},
         ActiveLineageSampler, DispersalSampler, Distribution, EmigrationExit, Habitat,
         ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng, Samples,
         SpeciationProbability,
@@ -27,11 +27,7 @@ use super::ClassicalActiveLineageSampler;
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: Rng<M>
-            + Samples<M, Exponential>
-            + Samples<M, IndexUsize>
-            + Samples<M, Bernoulli>
-            + Samples<M, UniformClosedOpenUnit>,
+        G: Rng<M> + Samples<M, Exponential> + Samples<M, IndexUsize> + Samples<M, Bernoulli>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,

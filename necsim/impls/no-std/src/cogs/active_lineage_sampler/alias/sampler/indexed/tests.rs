@@ -1145,19 +1145,25 @@ impl DistributionSampler<IntrinsicsMathsCore, DummyRng, DummyDistributionSampler
         &self,
         rng: &mut DummyRng,
         _samplers: &DummyDistributionSamplers,
-        params: Length<NonZeroUsize>,
+        Length(length): Length<NonZeroUsize>,
     ) -> usize {
-        let length = params.0;
+        let u01 = rng.sample_f64();
 
-        #[allow(
-            clippy::cast_precision_loss,
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss
-        )]
-        let index = IntrinsicsMathsCore::floor(rng.sample_f64() * (length.get() as f64)) as usize;
+        // Safety: U[0, 1) * length in [0, 2^[32/64]) is a valid [u32/u64]
+        //         since (1 - 2^-53) * 2^[32/64] <= (2^[32/64] - 1)
+        #[allow(clippy::cast_precision_loss)]
+        let index = unsafe {
+            IntrinsicsMathsCore::floor(u01 * (length.get() as f64)).to_int_unchecked::<usize>()
+        };
 
-        // Safety in case of f64 rounding errors
-        index.min(length.get() - 1)
+        if cfg!(target_pointer_width = "32") {
+            // Note: [0, 2^32) is losslessly represented in f64
+            index
+        } else {
+            // Note: Ensure index < length despite
+            //       usize->f64->usize precision loss
+            index.min(length.get() - 1)
+        }
     }
 }
 
@@ -1174,18 +1180,18 @@ impl DistributionSampler<IntrinsicsMathsCore, DummyRng, DummyDistributionSampler
         &self,
         rng: &mut DummyRng,
         _samplers: &DummyDistributionSamplers,
-        params: Length<NonZeroU64>,
+        Length(length): Length<NonZeroU64>,
     ) -> u64 {
-        let length = params.0;
+        let u01 = rng.sample_f64();
 
-        #[allow(
-            clippy::cast_precision_loss,
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss
-        )]
-        let index = IntrinsicsMathsCore::floor(rng.sample_f64() * (length.get() as f64)) as u64;
+        // Safety: U[0, 1) * length in [0, 2^64) is a valid u64
+        //         since (1 - 2^-53) * 2^64 <= (2^64 - 1)
+        #[allow(clippy::cast_precision_loss)]
+        let index = unsafe {
+            IntrinsicsMathsCore::floor(u01 * (length.get() as f64)).to_int_unchecked::<u64>()
+        };
 
-        // Safety in case of f64 rounding errors
+        // Note: Ensure index < length despite u64->f64->u64 precision loss
         index.min(length.get() - 1)
     }
 }
@@ -1203,18 +1209,18 @@ impl DistributionSampler<IntrinsicsMathsCore, DummyRng, DummyDistributionSampler
         &self,
         rng: &mut DummyRng,
         _samplers: &DummyDistributionSamplers,
-        params: Length<NonZeroU128>,
+        Length(length): Length<NonZeroU128>,
     ) -> u128 {
-        let length = params.0;
+        let u01 = rng.sample_f64();
 
-        #[allow(
-            clippy::cast_precision_loss,
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss
-        )]
-        let index = IntrinsicsMathsCore::floor(rng.sample_f64() * (length.get() as f64)) as u128;
+        // Safety: U[0, 1) * length in [0, 2^128) is a valid u128
+        //         since (1 - 2^-53) * 2^128 <= (2^128 - 1)
+        #[allow(clippy::cast_precision_loss)]
+        let index = unsafe {
+            IntrinsicsMathsCore::floor(u01 * (length.get() as f64)).to_int_unchecked::<u128>()
+        };
 
-        // Safety in case of f64 rounding errors
+        // Note: Ensure index < length despite u128->f64->u128 precision loss
         index.min(length.get() - 1)
     }
 }
