@@ -3,7 +3,7 @@ use necsim_core::cogs::{Backup, PrimeableRng, RngCore};
 use serde::{Deserialize, Serialize};
 
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
-#[derive(Clone, Debug, Serialize, Deserialize, TypeLayout)]
+#[derive(Debug, Serialize, Deserialize, TypeLayout)]
 #[serde(deny_unknown_fields)]
 pub struct SeaHash {
     seed: u64,
@@ -15,7 +15,12 @@ pub struct SeaHash {
 #[contract_trait]
 impl Backup for SeaHash {
     unsafe fn backup_unchecked(&self) -> Self {
-        self.clone()
+        Self {
+            seed: self.seed,
+            location: self.location,
+            time: self.time,
+            offset: self.offset,
+        }
     }
 }
 

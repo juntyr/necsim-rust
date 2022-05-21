@@ -20,16 +20,14 @@ use pre_sampler::OriginPreSampler;
 /// `Lineage`s produced by the sampler's iterator must have
 /// * unique global references
 pub trait UntrustedOriginSampler<'h, M: MathsCore>:
-    core::fmt::Debug + core::iter::Iterator<Item = Lineage>
+    Sized + core::fmt::Debug + core::iter::Iterator<Item = Lineage>
 {
     type Habitat: 'h + Habitat<M>;
     type PreSampler: Iterator<Item = u64>;
 
     fn habitat(&self) -> &'h Self::Habitat;
 
-    fn into_pre_sampler(self) -> OriginPreSampler<M, Self::PreSampler>
-    where
-        Self: Sized;
+    fn into_pre_sampler(self) -> OriginPreSampler<M, Self::PreSampler>;
 
     fn full_upper_bound_size_hint(&self) -> u64;
 }

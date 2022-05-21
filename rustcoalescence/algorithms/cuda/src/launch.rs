@@ -238,7 +238,7 @@ where
                 .into_iter()
                 .chain(passthrough.into_iter())
                 .collect(),
-            rng: simulation.rng_mut().clone().into().into(),
+            rng: simulation.deconstruct().rng.into_inner().into_inner(),
         }),
     }
 }

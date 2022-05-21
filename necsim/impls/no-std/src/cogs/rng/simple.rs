@@ -13,7 +13,7 @@ use necsim_core::cogs::{
 };
 use necsim_core_bond::{ClosedOpenUnitF64, ClosedUnitF64, NonNegativeF64, OpenClosedUnitF64};
 
-#[derive(Clone, Debug, TypeLayout)]
+#[derive(Debug, TypeLayout)]
 #[allow(clippy::module_name_repetitions)]
 #[layout(free = "M")]
 #[repr(transparent)]
@@ -32,7 +32,7 @@ impl<M: MathsCore, R: RngCore> From<R> for SimpleRng<M, R> {
 }
 
 impl<M: MathsCore, R: RngCore> SimpleRng<M, R> {
-    pub fn into(self) -> R {
+    pub fn into_inner(self) -> R {
         self.inner
     }
 }

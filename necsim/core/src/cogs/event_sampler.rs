@@ -1,8 +1,8 @@
 use necsim_core_bond::PositiveF64;
 
 use super::{
-    CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, LineageStore, MathsCore, Rng,
-    SpeciationProbability, TurnoverRate,
+    Backup, CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, LineageStore, MathsCore,
+    Rng, SpeciationProbability, TurnoverRate,
 };
 use crate::{
     event::{DispersalEvent, SpeciationEvent},
@@ -28,7 +28,7 @@ pub trait EventSampler<
     C: CoalescenceSampler<M, H, S>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
->: crate::cogs::Backup + core::fmt::Debug
+>: Backup + core::fmt::Debug
 {
     #[must_use]
     fn sample_event_for_lineage_at_event_time_or_emigrate<

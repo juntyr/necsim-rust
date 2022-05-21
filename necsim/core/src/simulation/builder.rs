@@ -287,4 +287,37 @@ impl<
     pub fn immigration_entry_mut(&mut self) -> &mut I {
         &mut self.immigration_entry
     }
+
+    pub fn deconstruct(self) -> SimulationBuilder<M, H, G, S, X, D, C, T, N, E, I, A> {
+        let Simulation {
+            maths,
+            habitat,
+            lineage_store,
+            dispersal_sampler,
+            coalescence_sampler,
+            turnover_rate,
+            speciation_probability,
+            emigration_exit,
+            event_sampler,
+            active_lineage_sampler,
+            rng,
+            immigration_entry,
+            migration_balance: _,
+        } = self;
+
+        SimulationBuilder {
+            maths,
+            habitat,
+            lineage_store,
+            dispersal_sampler,
+            coalescence_sampler,
+            turnover_rate,
+            speciation_probability,
+            emigration_exit,
+            event_sampler,
+            active_lineage_sampler,
+            rng,
+            immigration_entry,
+        }
+    }
 }

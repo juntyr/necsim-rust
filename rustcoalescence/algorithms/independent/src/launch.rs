@@ -159,7 +159,7 @@ pub fn initialise_and_simulate<
                         .into_iter()
                         .chain(passthrough.into_iter())
                         .collect(),
-                    rng: simulation.rng_mut().clone().into(),
+                    rng: simulation.deconstruct().rng.into_inner(),
                 }),
             }
         },

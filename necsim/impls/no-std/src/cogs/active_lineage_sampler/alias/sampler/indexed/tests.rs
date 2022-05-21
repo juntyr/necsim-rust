@@ -1079,7 +1079,7 @@ fn debug_display_sampler() {
 }
 
 // GRCOV_EXCL_START
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct DummyRng(Vec<f64>);
 
 impl DummyRng {
