@@ -121,7 +121,7 @@ where
                         )
                         .cloned()
                         .collect(),
-                    rng: simulation.rng_mut().clone().into(),
+                    rng: simulation.deconstruct().rng.into_inner(),
                 }),
             }
         },

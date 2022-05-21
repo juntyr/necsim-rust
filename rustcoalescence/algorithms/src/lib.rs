@@ -35,7 +35,7 @@ pub trait Algorithm<
     O: Scenario<M, Self::Rng>,
     R: Reporter,
     P: LocalPartition<'p, R>,
->: Sized + AlgorithmParamters + AlgorithmDefaults
+>: AlgorithmParamters + AlgorithmDefaults
 {
     type Rng: Rng<M>;
     type LineageStore: LineageStore<M, O::Habitat>;

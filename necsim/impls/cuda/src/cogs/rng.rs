@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use const_type_layout::TypeGraphLayout;
 use rust_cuda::safety::StackOnly;
 
-use necsim_core::cogs::{MathsCore, Rng};
+use necsim_core::cogs::{Backup, MathsCore, Rng};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, rust_cuda::common::LendRustToCuda)]
@@ -14,15 +14,6 @@ where
 {
     inner: R,
     marker: PhantomData<M>,
-}
-
-impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> Clone for CudaRng<M, R> {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-            marker: PhantomData::<M>,
-        }
-    }
 }
 
 impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> From<R> for CudaRng<M, R> {
@@ -37,8 +28,18 @@ impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> From<R> for C
 }
 
 impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> CudaRng<M, R> {
-    pub fn into(self) -> R {
+    pub fn into_inner(self) -> R {
         self.inner
+    }
+}
+
+#[contract_trait]
+impl<M: MathsCore, R: Rng<M> + StackOnly + ~const TypeGraphLayout> Backup for CudaRng<M, R> {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            inner: self.inner.backup_unchecked(),
+            marker: PhantomData::<M>,
+        }
     }
 }
 

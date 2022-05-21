@@ -6,7 +6,7 @@ use rand_core::{RngCore as RandRngCore, SeedableRng as RandSeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, TypeLayout)]
+#[derive(TypeLayout)]
 #[repr(transparent)]
 pub struct RandRng<G: RandRngCore + RandSeedableRng + Clone + Serialize + DeserializeOwned> {
     inner: G,
@@ -58,7 +58,9 @@ impl<G: RandRngCore + RandSeedableRng + Clone + Serialize + DeserializeOwned> Ba
     for RandRng<G>
 {
     unsafe fn backup_unchecked(&self) -> Self {
-        self.clone()
+        Self {
+            inner: self.inner.clone(),
+        }
     }
 }
 
