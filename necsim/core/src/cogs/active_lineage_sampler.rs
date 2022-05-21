@@ -3,8 +3,8 @@ use core::ops::ControlFlow;
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use super::{
-    CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, ImmigrationEntry,
-    LineageStore, MathsCore, Rng, SpeciationProbability, TurnoverRate,
+    Backup, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat,
+    ImmigrationEntry, LineageStore, MathsCore, Rng, SpeciationProbability, TurnoverRate,
 };
 
 use crate::{lineage::Lineage, simulation::partial::active_lineage_sampler::PartialSimulation};
@@ -24,7 +24,7 @@ pub trait ActiveLineageSampler<
     N: SpeciationProbability<M, H>,
     E: EventSampler<M, H, G, S, X, D, C, T, N>,
     I: ImmigrationEntry<M>,
->: crate::cogs::Backup + core::fmt::Debug
+>: Backup + core::fmt::Debug
 {
     type LineageIterator<'a>: Iterator<Item = &'a Lineage>
     where

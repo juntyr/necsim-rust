@@ -7,7 +7,7 @@ use crate::{
     landscape::IndexedLocation,
 };
 
-pub trait Rng<M: MathsCore>: Backup + Clone + core::fmt::Debug {
+pub trait Rng<M: MathsCore>: Backup + core::fmt::Debug {
     type Generator: RngCore;
     type Sampler;
 
@@ -21,9 +21,7 @@ pub trait Rng<M: MathsCore>: Backup + Clone + core::fmt::Debug {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub trait RngCore:
-    crate::cogs::Backup + Sized + Clone + core::fmt::Debug + Serialize + DeserializeOwned
-{
+pub trait RngCore: Backup + Sized + core::fmt::Debug + Serialize + DeserializeOwned {
     type Seed: AsMut<[u8]> + Default + Sized;
 
     #[must_use]

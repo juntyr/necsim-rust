@@ -16,7 +16,7 @@ use crate::{
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait CoalescenceSampler<M: MathsCore, H: Habitat<M>, S: LineageStore<M, H>>:
-    crate::cogs::Backup + core::fmt::Debug
+    Backup + core::fmt::Debug
 {
     #[must_use]
     #[debug_requires(habitat.get_habitat_at_location(&location) > 0, "location is habitable")]
