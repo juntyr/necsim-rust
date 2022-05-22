@@ -6,12 +6,19 @@ use core::{
 use necsim_core::cogs::{
     distribution::{
         Bernoulli, Exponential, IndexU128, IndexU32, IndexU64, IndexUsize, Lambda, Length, Normal,
-        Normal2D, Poisson, RawDistribution, StandardNormal2D, UniformClosedOpenUnit,
-        UniformOpenClosedUnit,
+        Normal2D, Poisson, StandardNormal2D, UniformClosedOpenUnit, UniformOpenClosedUnit,
     },
     Backup, DistributionSampler, MathsCore, Rng, RngCore,
 };
 use necsim_core_bond::{ClosedOpenUnitF64, ClosedUnitF64, NonNegativeF64, OpenClosedUnitF64};
+
+use crate::cogs::distribution::{
+    bernoulli_64b::Bernoulli64BitSampler, exp_inversion::ExponentialInverseTransformSampler,
+    index_from_unit::IndexFromUnitSampler, normal2d::Normal2dSampler,
+    poisson_inversion::PoissonInverseTransformOrNormalSampler,
+    std_normal2d_box_muller::StandardNormal2DBoxMullerSampler,
+    uniform_53b_unit::Uniform53BitUnitSampler,
+};
 
 #[derive(Debug, TypeLayout)]
 #[allow(clippy::module_name_repetitions)]
@@ -49,7 +56,7 @@ impl<M: MathsCore, R: RngCore> Backup for SimpleRng<M, R> {
 
 impl<M: MathsCore, R: RngCore> Rng<M> for SimpleRng<M, R> {
     type Generator = R;
-    type Sampler = SimplerDistributionSamplers<M, R>;
+    type Sampler = SimpleDistributionSamplers<M, R>;
 
     fn generator(&mut self) -> &mut Self::Generator {
         &mut self.inner
@@ -65,7 +72,14 @@ impl<M: MathsCore, R: RngCore> Rng<M> for SimpleRng<M, R> {
     }
 
     fn with<F: FnOnce(&mut Self::Generator, &Self::Sampler) -> Q, Q>(&mut self, inner: F) -> Q {
-        let samplers = SimplerDistributionSamplers {
+        let samplers = SimpleDistributionSamplers {
+            u01: Uniform53BitUnitSampler,
+            index: IndexFromUnitSampler,
+            exp: ExponentialInverseTransformSampler,
+            poisson: PoissonInverseTransformOrNormalSampler,
+            bernoulli: Bernoulli64BitSampler,
+            std_normal_2d: StandardNormal2DBoxMullerSampler,
+            normal_2d: Normal2dSampler,
             _marker: PhantomData::<(M, R)>,
         };
 
@@ -74,54 +88,58 @@ impl<M: MathsCore, R: RngCore> Rng<M> for SimpleRng<M, R> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct SimplerDistributionSamplers<M: MathsCore, R: RngCore> {
+pub struct SimpleDistributionSamplers<M: MathsCore, R: RngCore> {
+    u01: Uniform53BitUnitSampler,
+    index: IndexFromUnitSampler,
+    exp: ExponentialInverseTransformSampler,
+    poisson: PoissonInverseTransformOrNormalSampler,
+    bernoulli: Bernoulli64BitSampler,
+    std_normal_2d: StandardNormal2DBoxMullerSampler,
+    normal_2d: Normal2dSampler,
     _marker: PhantomData<(M, R)>,
 }
 
 impl<M: MathsCore, R: RngCore, S> DistributionSampler<M, R, S, UniformClosedOpenUnit>
-    for SimplerDistributionSamplers<M, R>
+    for SimpleDistributionSamplers<M, R>
 {
-    type ConcreteSampler = Self;
+    type ConcreteSampler = Uniform53BitUnitSampler;
 
     fn concrete(&self) -> &Self::ConcreteSampler {
-        self
+        &self.u01
     }
 
-    fn sample_distribution(&self, rng: &mut R, _samplers: &S, _params: ()) -> ClosedOpenUnitF64 {
-        // http://prng.di.unimi.it -> Generating uniform doubles in the unit interval
-        #[allow(clippy::cast_precision_loss)]
-        let u01 = ((rng.sample_u64() >> 11) as f64) * f64::from_bits(0x3CA0_0000_0000_0000_u64); // 0x1.0p-53
-
-        unsafe { ClosedOpenUnitF64::new_unchecked(u01) }
+    #[inline]
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: ()) -> ClosedOpenUnitF64 {
+        DistributionSampler::<M, R, _, UniformClosedOpenUnit>::sample_distribution(
+            &self.u01, rng, samplers, params,
+        )
     }
 }
 
 impl<M: MathsCore, R: RngCore, S> DistributionSampler<M, R, S, UniformOpenClosedUnit>
-    for SimplerDistributionSamplers<M, R>
+    for SimpleDistributionSamplers<M, R>
 {
-    type ConcreteSampler = Self;
+    type ConcreteSampler = Uniform53BitUnitSampler;
 
     fn concrete(&self) -> &Self::ConcreteSampler {
-        self
+        &self.u01
     }
 
-    fn sample_distribution(&self, rng: &mut R, _samplers: &S, _params: ()) -> OpenClosedUnitF64 {
-        // http://prng.di.unimi.it -> Generating uniform doubles in the unit interval
-        #[allow(clippy::cast_precision_loss)]
-        let u01 =
-            (((rng.sample_u64() >> 11) + 1) as f64) * f64::from_bits(0x3CA0_0000_0000_0000_u64); // 0x1.0p-53
-
-        unsafe { OpenClosedUnitF64::new_unchecked(u01) }
+    #[inline]
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: ()) -> OpenClosedUnitF64 {
+        DistributionSampler::<M, R, _, UniformOpenClosedUnit>::sample_distribution(
+            &self.u01, rng, samplers, params,
+        )
     }
 }
 
 impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpenUnit>>
-    DistributionSampler<M, R, S, IndexUsize> for SimplerDistributionSamplers<M, R>
+    DistributionSampler<M, R, S, IndexUsize> for SimpleDistributionSamplers<M, R>
 {
-    type ConcreteSampler = Self;
+    type ConcreteSampler = IndexFromUnitSampler;
 
     fn concrete(&self) -> &Self::ConcreteSampler {
-        self
+        &self.index
     }
 
     #[inline]
@@ -129,125 +147,91 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpen
         &self,
         rng: &mut R,
         samplers: &S,
-        Length(length): Length<NonZeroUsize>,
+        params: Length<NonZeroUsize>,
     ) -> usize {
-        let u01 = UniformClosedOpenUnit::sample_raw(rng, samplers);
-
-        // Safety: U[0, 1) * length in [0, 2^[32/64]) is a valid [u32/u64]
-        //         since (1 - 2^-53) * 2^[32/64] <= (2^[32/64] - 1)
-        #[allow(clippy::cast_precision_loss)]
-        let index =
-            unsafe { M::floor(u01.get() * (length.get() as f64)).to_int_unchecked::<usize>() };
-
-        if cfg!(target_pointer_width = "32") {
-            // Note: [0, 2^32) is losslessly represented in f64
-            index
-        } else {
-            // Note: Ensure index < length despite
-            //       usize->f64->usize precision loss
-            index.min(length.get() - 1)
-        }
+        DistributionSampler::<M, R, _, IndexUsize>::sample_distribution(
+            &self.index,
+            rng,
+            samplers,
+            params,
+        )
     }
 }
 
 impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpenUnit>>
-    DistributionSampler<M, R, S, IndexU32> for SimplerDistributionSamplers<M, R>
+    DistributionSampler<M, R, S, IndexU32> for SimpleDistributionSamplers<M, R>
 {
-    type ConcreteSampler = Self;
+    type ConcreteSampler = IndexFromUnitSampler;
 
     fn concrete(&self) -> &Self::ConcreteSampler {
-        self
+        &self.index
     }
 
-    fn sample_distribution(
-        &self,
-        rng: &mut R,
-        samplers: &S,
-        Length(length): Length<NonZeroU32>,
-    ) -> u32 {
-        let u01 = UniformClosedOpenUnit::sample_raw(rng, samplers);
-
-        // Safety: U[0, 1) * length in [0, 2^32) is losslessly represented
-        //         in both f64 and u32
-        unsafe { M::floor(u01.get() * f64::from(length.get())).to_int_unchecked::<u32>() }
+    #[inline]
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: Length<NonZeroU32>) -> u32 {
+        DistributionSampler::<M, R, _, IndexU32>::sample_distribution(
+            &self.index,
+            rng,
+            samplers,
+            params,
+        )
     }
 }
 
 impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpenUnit>>
-    DistributionSampler<M, R, S, IndexU64> for SimplerDistributionSamplers<M, R>
+    DistributionSampler<M, R, S, IndexU64> for SimpleDistributionSamplers<M, R>
 {
-    type ConcreteSampler = Self;
+    type ConcreteSampler = IndexFromUnitSampler;
 
     fn concrete(&self) -> &Self::ConcreteSampler {
-        self
+        &self.index
     }
 
-    fn sample_distribution(
-        &self,
-        rng: &mut R,
-        samplers: &S,
-        Length(length): Length<NonZeroU64>,
-    ) -> u64 {
-        let u01 = UniformClosedOpenUnit::sample_raw(rng, samplers);
-
-        // Safety: U[0, 1) * length in [0, 2^64) is a valid u64
-        //         since (1 - 2^-53) * 2^64 <= (2^64 - 1)
-        #[allow(clippy::cast_precision_loss)]
-        let index =
-            unsafe { M::floor(u01.get() * (length.get() as f64)).to_int_unchecked::<u64>() };
-
-        // Note: Ensure index < length despite u64->f64->u64 precision loss
-        index.min(length.get() - 1)
+    #[inline]
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: Length<NonZeroU64>) -> u64 {
+        DistributionSampler::<M, R, _, IndexU64>::sample_distribution(
+            &self.index,
+            rng,
+            samplers,
+            params,
+        )
     }
 }
 
 impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformClosedOpenUnit>>
-    DistributionSampler<M, R, S, IndexU128> for SimplerDistributionSamplers<M, R>
+    DistributionSampler<M, R, S, IndexU128> for SimpleDistributionSamplers<M, R>
 {
-    type ConcreteSampler = Self;
+    type ConcreteSampler = IndexFromUnitSampler;
 
     fn concrete(&self) -> &Self::ConcreteSampler {
-        self
+        &self.index
     }
 
-    fn sample_distribution(
-        &self,
-        rng: &mut R,
-        samplers: &S,
-        Length(length): Length<NonZeroU128>,
-    ) -> u128 {
-        let u01 = UniformClosedOpenUnit::sample_raw(rng, samplers);
-
-        // Safety: U[0, 1) * length in [0, 2^128) is a valid u128
-        //         since (1 - 2^-53) * 2^128 <= (2^128 - 1)
-        #[allow(clippy::cast_precision_loss)]
-        let index =
-            unsafe { M::floor(u01.get() * (length.get() as f64)).to_int_unchecked::<u128>() };
-
-        // Note: Ensure index < length despite u128->f64->u128 precision loss
-        index.min(length.get() - 1)
+    #[inline]
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: Length<NonZeroU128>) -> u128 {
+        DistributionSampler::<M, R, _, IndexU128>::sample_distribution(
+            &self.index,
+            rng,
+            samplers,
+            params,
+        )
     }
 }
 
 impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformOpenClosedUnit>>
-    DistributionSampler<M, R, S, Exponential> for SimplerDistributionSamplers<M, R>
+    DistributionSampler<M, R, S, Exponential> for SimpleDistributionSamplers<M, R>
 {
-    type ConcreteSampler = Self;
+    type ConcreteSampler = ExponentialInverseTransformSampler;
 
     fn concrete(&self) -> &Self::ConcreteSampler {
-        self
+        &self.exp
     }
 
-    fn sample_distribution(
-        &self,
-        rng: &mut R,
-        samplers: &S,
-        Lambda(lambda): Lambda,
-    ) -> NonNegativeF64 {
-        let u01 = UniformOpenClosedUnit::sample_raw(rng, samplers);
-
-        // Inverse transform sample: X = -ln(U(0,1]) / lambda
-        -u01.ln::<M>() / lambda
+    #[inline]
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: Lambda) -> NonNegativeF64 {
+        DistributionSampler::<M, R, _, Exponential>::sample_distribution(
+            &self.exp, rng, samplers, params,
+        )
     }
 }
 
@@ -256,76 +240,42 @@ impl<
         R: RngCore,
         S: DistributionSampler<M, R, S, UniformClosedOpenUnit>
             + DistributionSampler<M, R, S, Normal2D>,
-    > DistributionSampler<M, R, S, Poisson> for SimplerDistributionSamplers<M, R>
+    > DistributionSampler<M, R, S, Poisson> for SimpleDistributionSamplers<M, R>
 {
-    type ConcreteSampler = Self;
+    type ConcreteSampler = PoissonInverseTransformOrNormalSampler;
 
     fn concrete(&self) -> &Self::ConcreteSampler {
-        self
+        &self.poisson
     }
 
-    fn sample_distribution(&self, rng: &mut R, samplers: &S, Lambda(lambda): Lambda) -> u64 {
-        let no_event_probability = M::exp(-lambda.get());
-
-        if no_event_probability <= 0.0_f64 {
-            // Fallback in case no_event_probability_per_step underflows
-            // Note: rust clamps f64 as u64 to [0, 2^64 - 1]
-            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-            let normal_as_poisson = Normal2D::sample_raw_with(
-                rng,
-                samplers,
-                Normal {
-                    mu: lambda.get(),
-                    sigma: NonNegativeF64::from(lambda).sqrt::<M>(),
-                },
-            )
-            .0 as u64;
-
-            return normal_as_poisson;
-        }
-
-        // https://en.wikipedia.org/wiki/Poisson_distribution#cite_ref-Devroye1986_54-0
-        let mut poisson = 0_u64;
-        let mut prod = no_event_probability;
-        let mut acc = no_event_probability;
-
-        let u = UniformClosedOpenUnit::sample_raw(rng, samplers);
-
-        #[allow(clippy::cast_precision_loss)]
-        while u > acc && prod > 0.0_f64 {
-            poisson += 1;
-            prod *= lambda.get() / (poisson as f64);
-            acc += prod;
-        }
-
-        poisson
+    #[inline]
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: Lambda) -> u64 {
+        DistributionSampler::<M, R, _, Poisson>::sample_distribution(
+            &self.poisson,
+            rng,
+            samplers,
+            params,
+        )
     }
 }
 
 impl<M: MathsCore, R: RngCore, S> DistributionSampler<M, R, S, Bernoulli>
-    for SimplerDistributionSamplers<M, R>
+    for SimpleDistributionSamplers<M, R>
 {
-    type ConcreteSampler = Self;
+    type ConcreteSampler = Bernoulli64BitSampler;
 
     fn concrete(&self) -> &Self::ConcreteSampler {
-        self
+        &self.bernoulli
     }
 
-    fn sample_distribution(&self, rng: &mut R, _samplers: &S, probability: ClosedUnitF64) -> bool {
-        #[allow(clippy::cast_precision_loss)]
-        const SCALE: f64 = 2.0 * (1u64 << 63) as f64;
-
-        // Safety:
-        //  (a) 0 <= probability < 1: probability * SCALE is in [0, 2^64)
-        //                            since 1 - 2^-53 is before 1.0
-        //  (b) probability == 1    : p_u64 is undefined
-        //                            this case is checked for in the return
-        let p_u64 = unsafe { (probability.get() * SCALE).to_int_unchecked::<u64>() };
-
-        #[allow(clippy::float_cmp)]
-        {
-            (rng.sample_u64() < p_u64) || (probability == 1.0_f64)
-        }
+    #[inline]
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: ClosedUnitF64) -> bool {
+        DistributionSampler::<M, R, _, Bernoulli>::sample_distribution(
+            &self.bernoulli,
+            rng,
+            samplers,
+            params,
+        )
     }
 }
 
@@ -334,43 +284,41 @@ impl<
         R: RngCore,
         S: DistributionSampler<M, R, S, UniformClosedOpenUnit>
             + DistributionSampler<M, R, S, UniformOpenClosedUnit>,
-    > DistributionSampler<M, R, S, StandardNormal2D> for SimplerDistributionSamplers<M, R>
+    > DistributionSampler<M, R, S, StandardNormal2D> for SimpleDistributionSamplers<M, R>
 {
-    type ConcreteSampler = Self;
+    type ConcreteSampler = StandardNormal2DBoxMullerSampler;
 
     fn concrete(&self) -> &Self::ConcreteSampler {
-        self
+        &self.std_normal_2d
     }
 
-    fn sample_distribution(&self, rng: &mut R, samplers: &S, _params: ()) -> (f64, f64) {
-        // Basic Box-Muller transform
-        let u0 = UniformOpenClosedUnit::sample_raw(rng, samplers);
-        let u1 = UniformClosedOpenUnit::sample_raw(rng, samplers);
-
-        let r = M::sqrt(-2.0_f64 * M::ln(u0.get()));
-        let theta = -core::f64::consts::TAU * u1.get();
-
-        (r * M::sin(theta), r * M::cos(theta))
+    #[inline]
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: ()) -> (f64, f64) {
+        DistributionSampler::<M, R, _, StandardNormal2D>::sample_distribution(
+            &self.std_normal_2d,
+            rng,
+            samplers,
+            params,
+        )
     }
 }
 
 impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, StandardNormal2D>>
-    DistributionSampler<M, R, S, Normal2D> for SimplerDistributionSamplers<M, R>
+    DistributionSampler<M, R, S, Normal2D> for SimpleDistributionSamplers<M, R>
 {
-    type ConcreteSampler = Self;
+    type ConcreteSampler = Normal2dSampler;
 
     fn concrete(&self) -> &Self::ConcreteSampler {
-        self
+        &self.normal_2d
     }
 
-    fn sample_distribution(
-        &self,
-        rng: &mut R,
-        samplers: &S,
-        Normal { mu, sigma }: Normal,
-    ) -> (f64, f64) {
-        let (z0, z1) = StandardNormal2D::sample_raw(rng, samplers);
-
-        (z0 * sigma.get() + mu, z1 * sigma.get() + mu)
+    #[inline]
+    fn sample_distribution(&self, rng: &mut R, samplers: &S, params: Normal) -> (f64, f64) {
+        DistributionSampler::<M, R, _, Normal2D>::sample_distribution(
+            &self.normal_2d,
+            rng,
+            samplers,
+            params,
+        )
     }
 }
