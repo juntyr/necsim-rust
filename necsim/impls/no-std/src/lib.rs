@@ -12,6 +12,7 @@
 #![feature(impl_trait_in_assoc_type)]
 #![feature(associated_type_bounds)]
 #![feature(const_float_bits_conv)]
+#![feature(core_intrinsics)]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 
