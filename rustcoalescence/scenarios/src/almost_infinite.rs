@@ -104,7 +104,7 @@ impl<M: MathsCore, G: Rng<M> + Samples<M, Normal2D>> Scenario<M, G>
 
     fn sample_habitat<'h, I: Iterator<Item = u64>>(
         habitat: &'h Self::Habitat,
-        pre_sampler: OriginPreSampler<M, I>,
+        pre_sampler: OriginPreSampler<I>,
         (radius,): Self::OriginSamplerAuxiliary,
     ) -> Self::OriginSampler<'h, I>
     where

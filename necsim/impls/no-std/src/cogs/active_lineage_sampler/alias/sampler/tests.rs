@@ -3,7 +3,7 @@ use core::num::{NonZeroU128, NonZeroU64, NonZeroUsize};
 
 use necsim_core::cogs::{
     distribution::{IndexU128, IndexU64, IndexUsize, Length, UniformClosedOpenUnit},
-    DistributionSampler, Rng, RngCore,
+    Backup, DistributionSampler, Rng, RngCore,
 };
 use necsim_core_bond::{ClosedOpenUnitF64, NonNegativeF64, PositiveF64};
 use necsim_core_maths::MathsCore;
@@ -186,6 +186,13 @@ impl RngCore for DummyRng {
         {
             ((self.sample_f64() / f64::from_bits(0x3CA0_0000_0000_0000_u64)) as u64) << 11
         }
+    }
+}
+
+#[contract_trait]
+impl Backup for DummyRng {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self(self.0.clone())
     }
 }
 
