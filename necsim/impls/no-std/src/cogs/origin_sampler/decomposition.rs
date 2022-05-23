@@ -12,6 +12,8 @@ use crate::{
     decomposition::Decomposition,
 };
 
+// Note: The MathsCore should not be utilised in the origin sampler
+//       (only in the decomposition) to improve compatibility
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct DecompositionOriginSampler<
@@ -49,7 +51,7 @@ impl<'d, M: MathsCore, O: UntrustedOriginSampler<'d, M>, D: Decomposition<M, O::
         self.origin_sampler.habitat()
     }
 
-    fn into_pre_sampler(self) -> OriginPreSampler<M, Self::PreSampler> {
+    fn into_pre_sampler(self) -> OriginPreSampler<Self::PreSampler> {
         self.origin_sampler.into_pre_sampler()
     }
 

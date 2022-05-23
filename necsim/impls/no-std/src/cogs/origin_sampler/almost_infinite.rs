@@ -15,9 +15,11 @@ use super::{TrustedOriginSampler, UntrustedOriginSampler};
 
 const HABITAT_CENTRE: u32 = u32::MAX / 2;
 
+// Note: The MathsCore should not be utilised in the origin sampler
+//       to improve compatibility
 #[allow(clippy::module_name_repetitions)]
 pub struct AlmostInfiniteOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
-    pre_sampler: OriginPreSampler<M, I>,
+    pre_sampler: OriginPreSampler<I>,
     last_index: u64,
     location_iterator: LocationIterator,
     radius_squared: u64,
@@ -43,7 +45,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
 impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteOriginSampler<'h, M, I> {
     #[must_use]
     pub fn new(
-        pre_sampler: OriginPreSampler<M, I>,
+        pre_sampler: OriginPreSampler<I>,
         habitat: &'h AlmostInfiniteHabitat<M>,
         radius: u16,
     ) -> Self {
@@ -60,12 +62,11 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteOriginSampler<'h, 
         );
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let upper_bound_size_hint = M::ceil(
-            f64::from(radius)
-                * f64::from(radius)
-                * core::f64::consts::PI
-                * pre_sampler.get_sample_proportion().get(),
-        ) as u64;
+        let upper_bound_size_hint = (f64::from(radius)
+            * f64::from(radius)
+            * core::f64::consts::PI
+            * pre_sampler.get_sample_proportion().get()
+            + 1.0_f64) as u64;
 
         Self {
             pre_sampler,
@@ -89,7 +90,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
         self.habitat
     }
 
-    fn into_pre_sampler(self) -> OriginPreSampler<M, Self::PreSampler> {
+    fn into_pre_sampler(self) -> OriginPreSampler<Self::PreSampler> {
         self.pre_sampler
     }
 

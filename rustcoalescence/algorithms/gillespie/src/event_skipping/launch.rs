@@ -49,7 +49,7 @@ pub fn initialise_and_simulate<
     args: GillespieArguments,
     rng: G,
     scenario: O,
-    pre_sampler: OriginPreSampler<M, I>,
+    pre_sampler: OriginPreSampler<I>,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
     lineage_store_sampler_initialiser: L,

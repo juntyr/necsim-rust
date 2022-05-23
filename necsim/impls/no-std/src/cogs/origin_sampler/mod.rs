@@ -19,6 +19,9 @@ use pre_sampler::OriginPreSampler;
 #[allow(clippy::module_name_repetitions)]
 /// `Lineage`s produced by the sampler's iterator must have
 /// * unique global references
+///
+/// Note: The MathsCore should not be utilised in the origin sampler
+///       to improve compatibility
 pub trait UntrustedOriginSampler<'h, M: MathsCore>:
     Sized + core::fmt::Debug + core::iter::Iterator<Item = Lineage>
 {
@@ -27,7 +30,7 @@ pub trait UntrustedOriginSampler<'h, M: MathsCore>:
 
     fn habitat(&self) -> &'h Self::Habitat;
 
-    fn into_pre_sampler(self) -> OriginPreSampler<M, Self::PreSampler>;
+    fn into_pre_sampler(self) -> OriginPreSampler<Self::PreSampler>;
 
     fn full_upper_bound_size_hint(&self) -> u64;
 }
