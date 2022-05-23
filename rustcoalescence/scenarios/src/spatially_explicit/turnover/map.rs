@@ -130,7 +130,7 @@ impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64>> Scenario<M, G>
 
     fn sample_habitat<'h, I: Iterator<Item = u64>>(
         habitat: &'h Self::Habitat,
-        pre_sampler: OriginPreSampler<M, I>,
+        pre_sampler: OriginPreSampler<I>,
         _auxiliary: Self::OriginSamplerAuxiliary,
     ) -> Self::OriginSampler<'h, I>
     where
