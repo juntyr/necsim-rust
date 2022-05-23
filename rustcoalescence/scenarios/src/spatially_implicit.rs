@@ -114,7 +114,7 @@ impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>> Sce
 
     fn sample_habitat<'h, I: Iterator<Item = u64>>(
         habitat: &'h Self::Habitat,
-        pre_sampler: OriginPreSampler<M, I>,
+        pre_sampler: OriginPreSampler<I>,
         _auxiliary: Self::OriginSamplerAuxiliary,
     ) -> Self::OriginSampler<'h, I>
     where

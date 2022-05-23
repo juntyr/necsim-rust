@@ -1,5 +1,3 @@
-use libm::atan2;
-
 use necsim_core::{
     cogs::{Backup, Habitat, MathsCore},
     landscape::Location,
@@ -45,7 +43,7 @@ impl<M: MathsCore, H: Habitat<M>> Decomposition<M, H> for RadialDecomposition {
         let neutral_y = location.y().wrapping_sub(extent.y());
 
         #[allow(clippy::cast_precision_loss)]
-        let fraction = (atan2(
+        let fraction = (libm::atan2(
             (i64::from(neutral_y) - i64::from(extent.height()) / 2) as f64,
             (i64::from(neutral_x) - i64::from(extent.width()) / 2) as f64,
         ) * core::f64::consts::FRAC_1_PI
