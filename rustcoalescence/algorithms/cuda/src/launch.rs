@@ -199,6 +199,7 @@ where
             Stream::new(StreamFlags::NON_BLOCKING, None)?,
             grid_size.clone(),
             block_size.clone(),
+            args.ptx_jit,
             Box::new(|kernel| {
                 crate::info::print_kernel_function_attributes(kernel);
                 Ok(())

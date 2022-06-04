@@ -70,6 +70,7 @@ pub struct SimulationKernel<
     stream: CudaDropWrapper<Stream>,
     grid: GridSize,
     block: BlockSize,
+    ptx_jit: bool,
     watcher: Box<dyn FnMut(&Function) -> CudaResult<()>>,
 }
 
@@ -97,6 +98,7 @@ impl<
         stream: Stream,
         grid: GridSize,
         block: BlockSize,
+        ptx_jit: bool,
         on_compile: Box<dyn FnMut(&Function) -> CudaResult<()>>,
     ) -> CudaResult<Self>
     where
@@ -125,6 +127,7 @@ impl<
             stream,
             grid,
             block,
+            ptx_jit,
             watcher: on_compile,
         })
     }
@@ -172,6 +175,7 @@ impl<
                 grid: self.grid.clone(),
                 block: self.block.clone(),
                 shared_memory_size: 0_u32,
+                ptx_jit: self.ptx_jit,
             },
 
             kernel: &mut self.kernel,
