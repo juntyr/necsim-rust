@@ -3,8 +3,7 @@ use std::sync::atomic::AtomicU64;
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LineageReference, LineageStore, MathsCore, PrimeableRng, SpeciationProbability,
-        TurnoverRate,
+        LineageStore, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     reporter::boolean::{Boolean, False, True},
@@ -42,29 +41,28 @@ unsafe impl<
         M: MathsCore,
         H: Habitat<M> + RustToCuda,
         G: PrimeableRng<M> + RustToCuda,
-        R: LineageReference<M, H>,
-        S: LineageStore<M, H, R> + RustToCuda,
-        X: EmigrationExit<M, H, G, R, S> + RustToCuda,
+        S: LineageStore<M, H> + RustToCuda,
+        X: EmigrationExit<M, H, G, S> + RustToCuda,
         D: DispersalSampler<M, H, G> + RustToCuda,
-        C: CoalescenceSampler<M, H, R, S> + RustToCuda,
+        C: CoalescenceSampler<M, H, S> + RustToCuda,
         T: TurnoverRate<M, H> + RustToCuda,
         N: SpeciationProbability<M, H> + RustToCuda,
-        E: MinSpeciationTrackingEventSampler<M, H, G, R, S, X, D, C, T, N> + RustToCuda,
+        E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda,
         I: ImmigrationEntry<M> + RustToCuda,
-        A: SingularActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
+        A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda,
         ReportSpeciation: Boolean,
         ReportDispersal: Boolean,
-    > SimulatableKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
-    for SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
+    > SimulatableKernel<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
+    for SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
 where
-    SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, False, False>:
-        SimulatableKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, False, False>,
-    SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, False, True>:
-        SimulatableKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, False, True>,
-    SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, True, False>:
-        SimulatableKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, True, False>,
-    SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, True, True>:
-        SimulatableKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, True, True>,
+    SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, False, False>:
+        SimulatableKernel<M, H, G, S, X, D, C, T, N, E, I, A, False, False>,
+    SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, False, True>:
+        SimulatableKernel<M, H, G, S, X, D, C, T, N, E, I, A, False, True>,
+    SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, True, False>:
+        SimulatableKernel<M, H, G, S, X, D, C, T, N, E, I, A, True, False>,
+    SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, True, True>:
+        SimulatableKernel<M, H, G, S, X, D, C, T, N, E, I, A, True, True>,
 {
     default fn get_ptx_str() -> &'static str {
         unsafe { unreachable_cuda_simulation_linking_reporter() }
@@ -76,7 +74,6 @@ where
                 M,
                 H,
                 G,
-                R,
                 S,
                 X,
                 D,
@@ -96,7 +93,7 @@ where
 
     default fn simulate(
         &mut self,
-        _simulation: &mut Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A>,
+        _simulation: &mut Simulation<M, H, G, S, X, D, C, T, N, E, I, A>,
         _task_list: &mut ValueBuffer<Lineage, true, true>,
         _event_buffer_reporter: &mut EventBuffer<ReportSpeciation, ReportDispersal>,
         _min_spec_sample_buffer: &mut ValueBuffer<SpeciationSample, false, true>,
@@ -111,7 +108,11 @@ where
 
     default fn simulate_raw(
         &mut self,
-        _simulation: HostAndDeviceMutRef<DeviceAccessible<<Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A> as RustToCuda>::CudaRepresentation>>,
+        _simulation: HostAndDeviceMutRef<
+            DeviceAccessible<
+                <Simulation<M, H, G, S, X, D, C, T, N, E, I, A> as RustToCuda>::CudaRepresentation,
+            >,
+        >,
         _task_list: HostAndDeviceMutRef<
             DeviceAccessible<<ValueBuffer<Lineage, true, true> as RustToCuda>::CudaRepresentation>,
         >,

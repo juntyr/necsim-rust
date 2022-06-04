@@ -10,16 +10,12 @@ use crate::{
     lineage::LineageInteraction,
 };
 
-use super::{Habitat, LineageReference, LineageStore};
+use super::{Habitat, LineageStore};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait CoalescenceSampler<
-    M: MathsCore,
-    H: Habitat<M>,
-    R: LineageReference<M, H>,
-    S: LineageStore<M, H, R>,
->: crate::cogs::Backup + core::fmt::Debug
+pub trait CoalescenceSampler<M: MathsCore, H: Habitat<M>, S: LineageStore<M, H>>:
+    crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
     #[debug_requires(habitat.get_habitat_at_location(&location) > 0, "location is habitable")]

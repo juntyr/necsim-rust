@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, EmigrationExit, EventSampler, ImmigrationEntry, LineageReference,
+        CoalescenceSampler, EmigrationExit, EventSampler, ImmigrationEntry,
         LocallyCoherentLineageStore, MathsCore, RngCore,
     },
     reporter::Reporter,
@@ -25,15 +25,13 @@ impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
     GillespieLineageStoreSampleInitialiser<M, G, O, !> for GenesisInitialiser
 {
     type ActiveLineageSampler<
-        R: LineageReference<M, O::Habitat>,
-        S: LocallyCoherentLineageStore<M, O::Habitat, R>,
-        X: EmigrationExit<M, O::Habitat, G, R, S>,
-        C: CoalescenceSampler<M, O::Habitat, R, S>,
+        S: LocallyCoherentLineageStore<M, O::Habitat>,
+        X: EmigrationExit<M, O::Habitat, G, S>,
+        C: CoalescenceSampler<M, O::Habitat, S>,
         E: EventSampler<
             M,
             O::Habitat,
             G,
-            R,
             S,
             X,
             Self::DispersalSampler,
@@ -46,7 +44,6 @@ impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
         M,
         O::Habitat,
         G,
-        R,
         S,
         X,
         Self::DispersalSampler,
@@ -62,15 +59,13 @@ impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
         'h,
         'p,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
-        R: LineageReference<M, O::Habitat>,
-        S: LocallyCoherentLineageStore<M, O::Habitat, R>,
-        X: EmigrationExit<M, O::Habitat, G, R, S>,
-        C: CoalescenceSampler<M, O::Habitat, R, S>,
+        S: LocallyCoherentLineageStore<M, O::Habitat>,
+        X: EmigrationExit<M, O::Habitat, G, S>,
+        C: CoalescenceSampler<M, O::Habitat, S>,
         E: EventSampler<
             M,
             O::Habitat,
             G,
-            R,
             S,
             X,
             Self::DispersalSampler,
@@ -91,7 +86,7 @@ impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
         (
             S,
             Self::DispersalSampler,
-            Self::ActiveLineageSampler<R, S, X, C, E, I>,
+            Self::ActiveLineageSampler<S, X, C, E, I>,
         ),
         !,
     >

@@ -1,8 +1,8 @@
 use core::marker::PhantomData;
 
 use crate::cogs::{
-    CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, LineageReference,
-    LineageStore, MathsCore, RngCore, SpeciationProbability, TurnoverRate,
+    CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, LineageStore,
+    MathsCore, RngCore, SpeciationProbability, TurnoverRate,
 };
 
 #[repr(C)]
@@ -10,18 +10,16 @@ pub struct PartialSimulation<
     M: MathsCore,
     H: Habitat<M>,
     G: RngCore<M>,
-    R: LineageReference<M, H>,
-    S: LineageStore<M, H, R>,
-    X: EmigrationExit<M, H, G, R, S>,
+    S: LineageStore<M, H>,
+    X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
-    C: CoalescenceSampler<M, H, R, S>,
+    C: CoalescenceSampler<M, H, S>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
-    E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+    E: EventSampler<M, H, G, S, X, D, C, T, N>,
 > {
     pub maths: PhantomData<M>,
     pub habitat: H,
-    pub lineage_reference: PhantomData<R>,
     pub lineage_store: S,
     pub dispersal_sampler: D,
     pub coalescence_sampler: C,
@@ -37,20 +35,19 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: LineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: LineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
+        C: CoalescenceSampler<M, H, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-        E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
-    > PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>
+        E: EventSampler<M, H, G, S, X, D, C, T, N>,
+    > PartialSimulation<M, H, G, S, X, D, C, T, N, E>
 {
     #[inline]
     pub fn with_split_event_sampler<
         Q,
-        F: FnOnce(&E, &super::event_sampler::PartialSimulation<M, H, G, R, S, X, D, C, T, N>) -> Q,
+        F: FnOnce(&E, &super::event_sampler::PartialSimulation<M, H, G, S, X, D, C, T, N>) -> Q,
     >(
         &self,
         func: F,
@@ -63,7 +60,6 @@ impl<
                 M,
                 H,
                 G,
-                R,
                 S,
                 X,
                 D,
@@ -81,7 +77,7 @@ impl<
         Q,
         F: FnOnce(
             &mut E,
-            &mut super::event_sampler::PartialSimulation<M, H, G, R, S, X, D, C, T, N>,
+            &mut super::event_sampler::PartialSimulation<M, H, G, S, X, D, C, T, N>,
         ) -> Q,
     >(
         &mut self,
@@ -95,7 +91,6 @@ impl<
                 M,
                 H,
                 G,
-                R,
                 S,
                 X,
                 D,

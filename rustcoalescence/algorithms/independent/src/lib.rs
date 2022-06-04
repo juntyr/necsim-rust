@@ -5,11 +5,7 @@
 #[macro_use]
 extern crate serde_derive_state;
 
-use necsim_core::{
-    cogs::MathsCore,
-    lineage::{GlobalLineageReference, Lineage},
-    reporter::Reporter,
-};
+use necsim_core::{cogs::MathsCore, lineage::Lineage, reporter::Reporter};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::cogs::{
@@ -50,7 +46,6 @@ impl AlgorithmDefaults for IndependentAlgorithm {
 impl<'p, O: Scenario<M, WyHash<M>>, R: Reporter, P: LocalPartition<'p, R>, M: MathsCore>
     Algorithm<'p, M, O, R, P> for IndependentAlgorithm
 {
-    type LineageReference = GlobalLineageReference;
     type LineageStore = IndependentLineageStore<M, O::Habitat>;
     type Rng = WyHash<M>;
 

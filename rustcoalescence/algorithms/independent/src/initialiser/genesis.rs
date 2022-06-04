@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{EmigrationExit, MathsCore, PrimeableRng},
-    lineage::{GlobalLineageReference, Lineage},
+    lineage::Lineage,
 };
 
 use necsim_impls_no_std::cogs::{
@@ -24,13 +24,7 @@ impl<M: MathsCore, G: PrimeableRng<M>, O: Scenario<M, G>>
     IndependentLineageStoreSampleInitialiser<M, G, O, !> for GenesisInitialiser
 {
     type ActiveLineageSampler<
-        X: EmigrationExit<
-            M,
-            O::Habitat,
-            G,
-            GlobalLineageReference,
-            IndependentLineageStore<M, O::Habitat>,
-        >,
+        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>,
         J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate>,
     > = IndependentActiveLineageSampler<
         M,
@@ -48,13 +42,7 @@ impl<M: MathsCore, G: PrimeableRng<M>, O: Scenario<M, G>>
         'h,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
         J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate>,
-        X: EmigrationExit<
-            M,
-            O::Habitat,
-            G,
-            GlobalLineageReference,
-            IndependentLineageStore<M, O::Habitat>,
-        >,
+        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>,
     >(
         self,
         origin_sampler: T,

@@ -1,9 +1,6 @@
 use std::marker::PhantomData;
 
-use necsim_core::{
-    cogs::MathsCore, lineage::GlobalLineageReference, reporter::Reporter,
-    simulation::SimulationBuilder,
-};
+use necsim_core::{cogs::MathsCore, reporter::Reporter, simulation::SimulationBuilder};
 use necsim_core_bond::NonNegativeF64;
 
 use necsim_impls_cuda::cogs::rng::CudaRng;
@@ -77,7 +74,6 @@ where
         M,
         O::Habitat,
         CudaRng<M, WyHash<M>>,
-        GlobalLineageReference,
         IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         L::DispersalSampler,
@@ -101,7 +97,6 @@ where
         M,
         O::Habitat,
         CudaRng<M, WyHash<M>>,
-        GlobalLineageReference,
         IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         L::DispersalSampler,
@@ -174,7 +169,6 @@ where
     let mut simulation = SimulationBuilder {
         maths: PhantomData::<M>,
         habitat,
-        lineage_reference: PhantomData::<GlobalLineageReference>,
         lineage_store,
         dispersal_sampler,
         coalescence_sampler,

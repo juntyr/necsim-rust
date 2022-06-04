@@ -10,7 +10,6 @@ use necsim_impls_no_std::{
     cogs::{
         dispersal_sampler::non_spatial::NonSpatialDispersalSampler,
         habitat::non_spatial::NonSpatialHabitat,
-        lineage_reference::in_memory::InMemoryLineageReference,
         origin_sampler::{non_spatial::NonSpatialOriginSampler, pre_sampler::OriginPreSampler},
         speciation_probability::uniform::UniformSpeciationProbability,
         turnover_rate::uniform::UniformTurnoverRate,
@@ -46,8 +45,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for NonSpatialScenario<M, G> {
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
         NonSpatialDispersalSampler<M, G>;
     type Habitat = NonSpatialHabitat<M>;
-    type LineageReference = InMemoryLineageReference;
-    type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>> = L;
+    type LineageStore<L: LineageStore<M, Self::Habitat>> = L;
     type OriginSampler<'h, I: Iterator<Item = u64>> = NonSpatialOriginSampler<'h, M, I> where G: 'h;
     type OriginSamplerAuxiliary = ();
     type SpeciationProbability = UniformSpeciationProbability;

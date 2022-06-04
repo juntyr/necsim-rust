@@ -5,7 +5,7 @@ use necsim_core::{
         coalescence_sampler::CoalescenceRngSample, Backup, CoalescenceSampler, Habitat, MathsCore,
     },
     landscape::{IndexedLocation, Location},
-    lineage::{GlobalLineageReference, LineageInteraction},
+    lineage::LineageInteraction,
 };
 
 use crate::cogs::lineage_store::independent::IndependentLineageStore;
@@ -30,8 +30,7 @@ impl<M: MathsCore, H: Habitat<M>> Backup for IndependentCoalescenceSampler<M, H>
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>>
-    CoalescenceSampler<M, H, GlobalLineageReference, IndependentLineageStore<M, H>>
+impl<M: MathsCore, H: Habitat<M>> CoalescenceSampler<M, H, IndependentLineageStore<M, H>>
     for IndependentCoalescenceSampler<M, H>
 {
     #[must_use]

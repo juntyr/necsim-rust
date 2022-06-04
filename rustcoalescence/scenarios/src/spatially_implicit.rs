@@ -10,7 +10,6 @@ use necsim_impls_no_std::{
     cogs::{
         dispersal_sampler::spatially_implicit::SpatiallyImplicitDispersalSampler,
         habitat::spatially_implicit::SpatiallyImplicitHabitat,
-        lineage_reference::in_memory::InMemoryLineageReference,
         origin_sampler::{
             pre_sampler::OriginPreSampler, spatially_implicit::SpatiallyImplicitOriginSampler,
         },
@@ -53,8 +52,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyImplicitScenario<M
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
         SpatiallyImplicitDispersalSampler<M, G>;
     type Habitat = SpatiallyImplicitHabitat<M>;
-    type LineageReference = InMemoryLineageReference;
-    type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>> = L;
+    type LineageStore<L: LineageStore<M, Self::Habitat>> = L;
     type OriginSampler<'h, I: Iterator<Item = u64>> = SpatiallyImplicitOriginSampler<'h, M, I> where G: 'h;
     type OriginSamplerAuxiliary = ();
     type SpeciationProbability = SpatiallyImplicitSpeciationProbability;

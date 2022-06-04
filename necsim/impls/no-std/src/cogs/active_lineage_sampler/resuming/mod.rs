@@ -4,8 +4,8 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler, EmigrationExit,
-        EventSampler, Habitat, ImmigrationEntry, LineageReference, LineageStore, MathsCore,
-        RngCore, SpeciationProbability, TurnoverRate,
+        EventSampler, Habitat, ImmigrationEntry, LineageStore, MathsCore, RngCore,
+        SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
 };
@@ -21,38 +21,36 @@ pub struct RestartFixUpActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
     G: RngCore<M>,
-    R: LineageReference<M, H>,
-    S: LineageStore<M, H, R>,
-    X: EmigrationExit<M, H, G, R, S>,
+    S: LineageStore<M, H>,
+    X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
-    C: CoalescenceSampler<M, H, R, S>,
+    C: CoalescenceSampler<M, H, S>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
-    E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+    E: EventSampler<M, H, G, S, X, D, C, T, N>,
     I: ImmigrationEntry<M>,
-    A: ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>,
+    A: ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>,
 > {
     inner: A,
     restart_time: PositiveF64,
     fixable_lineages: Vec<Lineage>,
-    _marker: PhantomData<(M, H, G, R, S, X, D, C, T, N, E, I)>,
+    _marker: PhantomData<(M, H, G, S, X, D, C, T, N, E, I)>,
 }
 
 impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: LineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: LineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
+        C: CoalescenceSampler<M, H, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-        E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+        E: EventSampler<M, H, G, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
-        A: ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>,
-    > RestartFixUpActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I, A>
+        A: ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>,
+    > RestartFixUpActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I, A>
 {
     #[must_use]
     pub fn new(
@@ -64,7 +62,7 @@ impl<
             inner: active_lineage_sampler,
             restart_time,
             fixable_lineages,
-            _marker: PhantomData::<(M, H, G, R, S, X, D, C, T, N, E, I)>,
+            _marker: PhantomData::<(M, H, G, S, X, D, C, T, N, E, I)>,
         }
     }
 }
@@ -74,24 +72,23 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: LineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: LineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
+        C: CoalescenceSampler<M, H, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-        E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+        E: EventSampler<M, H, G, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
-        A: ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>,
-    > Backup for RestartFixUpActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I, A>
+        A: ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>,
+    > Backup for RestartFixUpActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I, A>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             inner: self.inner.backup_unchecked(),
             restart_time: self.restart_time,
             fixable_lineages: self.fixable_lineages.clone(),
-            _marker: PhantomData::<(M, H, G, R, S, X, D, C, T, N, E, I)>,
+            _marker: PhantomData::<(M, H, G, S, X, D, C, T, N, E, I)>,
         }
     }
 }

@@ -6,7 +6,6 @@ use necsim_core::{
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::cogs::{
-    lineage_reference::in_memory::InMemoryLineageReference,
     lineage_store::coherent::locally::classical::ClassicalLineageStore,
     origin_sampler::pre_sampler::OriginPreSampler, turnover_rate::uniform::UniformTurnoverRate,
 };
@@ -33,19 +32,14 @@ use initialiser::{
 #[allow(clippy::type_complexity)]
 impl<
         'p,
-        O: Scenario<
-            M,
-            Pcg<M>,
-            LineageReference = InMemoryLineageReference,
-            TurnoverRate = UniformTurnoverRate,
-        >,
+        O: Scenario<M, Pcg<M>, TurnoverRate = UniformTurnoverRate>,
         R: Reporter,
         P: LocalPartition<'p, R>,
         M: MathsCore,
     > Algorithm<'p, M, O, R, P> for GillespieAlgorithm
 where
     O::LineageStore<ClassicalLineageStore<M, O::Habitat>>:
-        LocallyCoherentLineageStore<M, O::Habitat, InMemoryLineageReference>,
+        LocallyCoherentLineageStore<M, O::Habitat>,
 {
     #[allow(clippy::too_many_lines)]
     fn initialise_and_simulate<I: Iterator<Item = u64>>(

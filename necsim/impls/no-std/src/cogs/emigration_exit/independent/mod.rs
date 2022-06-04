@@ -58,7 +58,7 @@ impl<
         C: Decomposition<M, H>,
         E: EmigrationChoice<M, H>,
         G: RngCore<M>,
-    > EmigrationExit<M, H, G, GlobalLineageReference, IndependentLineageStore<M, H>>
+    > EmigrationExit<M, H, G, IndependentLineageStore<M, H>>
     for IndependentEmigrationExit<M, H, C, E>
 {
     #[must_use]
@@ -82,13 +82,7 @@ impl<
         dispersal_target: Location,
         prior_time: NonNegativeF64,
         event_time: PositiveF64,
-        simulation: &mut PartialSimulation<
-            M,
-            H,
-            G,
-            GlobalLineageReference,
-            IndependentLineageStore<M, H>,
-        >,
+        simulation: &mut PartialSimulation<M, H, G, IndependentLineageStore<M, H>>,
         rng: &mut G,
     ) -> Option<(
         GlobalLineageReference,

@@ -7,8 +7,7 @@
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LineageReference, LineageStore, MathsCore, PrimeableRng, SpeciationProbability,
-        TurnoverRate,
+        LineageStore, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
     },
     reporter::boolean::Boolean,
 };
@@ -38,16 +37,15 @@ pub struct SimulationKernel<
     M: MathsCore,
     H: Habitat<M> + RustToCuda,
     G: PrimeableRng<M> + RustToCuda,
-    R: LineageReference<M, H>,
-    S: LineageStore<M, H, R> + RustToCuda,
-    X: EmigrationExit<M, H, G, R, S> + RustToCuda,
+    S: LineageStore<M, H> + RustToCuda,
+    X: EmigrationExit<M, H, G, S> + RustToCuda,
     D: DispersalSampler<M, H, G> + RustToCuda,
-    C: CoalescenceSampler<M, H, R, S> + RustToCuda,
+    C: CoalescenceSampler<M, H, S> + RustToCuda,
     T: TurnoverRate<M, H> + RustToCuda,
     N: SpeciationProbability<M, H> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<M, H, G, R, S, X, D, C, T, N> + RustToCuda,
+    E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda,
     I: ImmigrationEntry<M> + RustToCuda,
-    A: SingularActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
+    A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda,
     ReportSpeciation: Boolean,
     ReportDispersal: Boolean,
 > {
@@ -56,7 +54,6 @@ pub struct SimulationKernel<
             M,
             H,
             G,
-            R,
             S,
             X,
             D,
@@ -80,19 +77,18 @@ impl<
         M: MathsCore,
         H: Habitat<M> + RustToCuda,
         G: PrimeableRng<M> + RustToCuda,
-        R: LineageReference<M, H>,
-        S: LineageStore<M, H, R> + RustToCuda,
-        X: EmigrationExit<M, H, G, R, S> + RustToCuda,
+        S: LineageStore<M, H> + RustToCuda,
+        X: EmigrationExit<M, H, G, S> + RustToCuda,
         D: DispersalSampler<M, H, G> + RustToCuda,
-        C: CoalescenceSampler<M, H, R, S> + RustToCuda,
+        C: CoalescenceSampler<M, H, S> + RustToCuda,
         T: TurnoverRate<M, H> + RustToCuda,
         N: SpeciationProbability<M, H> + RustToCuda,
-        E: MinSpeciationTrackingEventSampler<M, H, G, R, S, X, D, C, T, N> + RustToCuda,
+        E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda,
         I: ImmigrationEntry<M> + RustToCuda,
-        A: SingularActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
+        A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda,
         ReportSpeciation: Boolean,
         ReportDispersal: Boolean,
-    > SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
+    > SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
 {
     /// # Errors
     ///
@@ -108,7 +104,6 @@ impl<
             M,
             H,
             G,
-            R,
             S,
             X,
             D,
@@ -139,27 +134,25 @@ impl<
         M: MathsCore,
         H: Habitat<M> + RustToCuda,
         G: PrimeableRng<M> + RustToCuda,
-        R: LineageReference<M, H>,
-        S: LineageStore<M, H, R> + RustToCuda,
-        X: EmigrationExit<M, H, G, R, S> + RustToCuda,
+        S: LineageStore<M, H> + RustToCuda,
+        X: EmigrationExit<M, H, G, S> + RustToCuda,
         D: DispersalSampler<M, H, G> + RustToCuda,
-        C: CoalescenceSampler<M, H, R, S> + RustToCuda,
+        C: CoalescenceSampler<M, H, S> + RustToCuda,
         T: TurnoverRate<M, H> + RustToCuda,
         N: SpeciationProbability<M, H> + RustToCuda,
-        E: MinSpeciationTrackingEventSampler<M, H, G, R, S, X, D, C, T, N> + RustToCuda,
+        E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda,
         I: ImmigrationEntry<M> + RustToCuda,
-        A: SingularActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
+        A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda,
         ReportSpeciation: Boolean,
         ReportDispersal: Boolean,
     > Launcher
-    for SimulationKernel<M, H, G, R, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
+    for SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
 {
     type CompilationWatcher = Box<dyn FnMut(&Function) -> CudaResult<()>>;
     type KernelTraitObject = dyn SimulatableKernel<
         M,
         H,
         G,
-        R,
         S,
         X,
         D,

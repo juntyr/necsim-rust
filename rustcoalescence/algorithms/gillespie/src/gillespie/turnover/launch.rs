@@ -14,7 +14,6 @@ use necsim_impls_no_std::{
         emigration_exit::{domain::DomainEmigrationExit, never::NeverEmigrationExit},
         event_sampler::unconditional::UnconditionalEventSampler,
         immigration_entry::{buffered::BufferedImmigrationEntry, never::NeverImmigrationEntry},
-        lineage_reference::in_memory::InMemoryLineageReference,
         lineage_store::coherent::locally::classical::ClassicalLineageStore,
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
@@ -38,7 +37,7 @@ pub fn initialise_and_simulate<
     'p,
     M: MathsCore,
     G: SplittableRng<M>,
-    O: Scenario<M, G, LineageReference = InMemoryLineageReference>,
+    O: Scenario<M, G>,
     R: Reporter,
     P: LocalPartition<'p, R>,
     I: Iterator<Item = u64>,
@@ -55,7 +54,7 @@ pub fn initialise_and_simulate<
 ) -> Result<SimulationOutcome<M, G>, Error>
 where
     O::LineageStore<ClassicalLineageStore<M, O::Habitat>>:
-        LocallyCoherentLineageStore<M, O::Habitat, InMemoryLineageReference>,
+        LocallyCoherentLineageStore<M, O::Habitat>,
 {
     match args.parallelism_mode {
         ParallelismMode::Monolithic => {
@@ -87,7 +86,6 @@ where
             let mut simulation = SimulationBuilder {
                 maths: PhantomData::<M>,
                 habitat,
-                lineage_reference: PhantomData::<InMemoryLineageReference>,
                 lineage_store,
                 dispersal_sampler,
                 coalescence_sampler,
@@ -166,7 +164,6 @@ where
             let mut simulation = SimulationBuilder {
                 maths: PhantomData::<M>,
                 habitat,
-                lineage_reference: PhantomData::<InMemoryLineageReference>,
                 lineage_store,
                 dispersal_sampler,
                 coalescence_sampler,

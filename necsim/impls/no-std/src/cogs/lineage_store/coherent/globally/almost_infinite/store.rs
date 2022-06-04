@@ -18,11 +18,8 @@ use crate::cogs::{
 use super::AlmostInfiniteLineageStore;
 
 #[contract_trait]
-impl<M: MathsCore> LineageStore<M, AlmostInfiniteHabitat<M>, InMemoryLineageReference>
-    for AlmostInfiniteLineageStore<M>
-{
-    #[allow(clippy::type_complexity)]
-    type LineageReferenceIterator<'a> = impl Iterator<Item = InMemoryLineageReference>;
+impl<M: MathsCore> LineageStore<M, AlmostInfiniteHabitat<M>> for AlmostInfiniteLineageStore<M> {
+    type LocalLineageReference = InMemoryLineageReference;
 
     fn with_capacity(_habitat: &AlmostInfiniteHabitat<M>, capacity: usize) -> Self {
         Self {
@@ -36,13 +33,6 @@ impl<M: MathsCore> LineageStore<M, AlmostInfiniteHabitat<M>, InMemoryLineageRefe
     }
 
     #[must_use]
-    fn iter_local_lineage_references(&self) -> Self::LineageReferenceIterator<'_> {
-        self.lineages_store
-            .iter()
-            .map(|(reference, _)| InMemoryLineageReference::from(reference))
-    }
-
-    #[must_use]
     fn get_lineage_for_local_reference(
         &self,
         reference: InMemoryLineageReference,
@@ -52,8 +42,7 @@ impl<M: MathsCore> LineageStore<M, AlmostInfiniteHabitat<M>, InMemoryLineageRefe
 }
 
 #[contract_trait]
-impl<M: MathsCore>
-    LocallyCoherentLineageStore<M, AlmostInfiniteHabitat<M>, InMemoryLineageReference>
+impl<M: MathsCore> LocallyCoherentLineageStore<M, AlmostInfiniteHabitat<M>>
     for AlmostInfiniteLineageStore<M>
 {
     #[must_use]
@@ -106,8 +95,7 @@ impl<M: MathsCore>
 }
 
 #[contract_trait]
-impl<M: MathsCore>
-    GloballyCoherentLineageStore<M, AlmostInfiniteHabitat<M>, InMemoryLineageReference>
+impl<M: MathsCore> GloballyCoherentLineageStore<M, AlmostInfiniteHabitat<M>>
     for AlmostInfiniteLineageStore<M>
 {
     type LocationIterator<'a> = impl Iterator<Item = Location>;

@@ -8,7 +8,6 @@ use necsim_impls_no_std::{
     cogs::{
         dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
         habitat::almost_infinite::AlmostInfiniteHabitat,
-        lineage_reference::in_memory::InMemoryLineageReference,
         lineage_store::coherent::globally::almost_infinite::AlmostInfiniteLineageStore,
         origin_sampler::{
             almost_infinite::AlmostInfiniteOriginSampler, pre_sampler::OriginPreSampler,
@@ -49,9 +48,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteScenario<M, G
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
         AlmostInfiniteNormalDispersalSampler<M, G>;
     type Habitat = AlmostInfiniteHabitat<M>;
-    type LineageReference = InMemoryLineageReference;
-    type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>> =
-        AlmostInfiniteLineageStore<M>;
+    type LineageStore<L: LineageStore<M, Self::Habitat>> = AlmostInfiniteLineageStore<M>;
     type OriginSampler<'h, I: Iterator<Item = u64>> = AlmostInfiniteOriginSampler<'h, M, I> where G: 'h;
     type OriginSamplerAuxiliary = (u16,);
     type SpeciationProbability = UniformSpeciationProbability;

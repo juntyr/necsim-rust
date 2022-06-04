@@ -15,10 +15,8 @@ use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use super::ClassicalLineageStore;
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
-    for ClassicalLineageStore<M, H>
-{
-    type LineageReferenceIterator<'a> = impl Iterator<Item = InMemoryLineageReference> where H: 'a;
+impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H> for ClassicalLineageStore<M, H> {
+    type LocalLineageReference = InMemoryLineageReference;
 
     fn with_capacity(_habitat: &H, capacity: usize) -> Self {
         Self {
@@ -32,13 +30,6 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
     }
 
     #[must_use]
-    fn iter_local_lineage_references(&self) -> Self::LineageReferenceIterator<'_> {
-        self.lineages_store
-            .iter()
-            .map(|(reference, _)| InMemoryLineageReference::from(reference))
-    }
-
-    #[must_use]
     fn get_lineage_for_local_reference(
         &self,
         reference: InMemoryLineageReference,
@@ -48,7 +39,7 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H, InMemoryLineageReference>
+impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H>
     for ClassicalLineageStore<M, H>
 {
     #[must_use]

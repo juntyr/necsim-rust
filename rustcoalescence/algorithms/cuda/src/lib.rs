@@ -4,11 +4,7 @@
 #[macro_use]
 extern crate serde_derive_state;
 
-use necsim_core::{
-    cogs::MathsCore,
-    lineage::{GlobalLineageReference, Lineage},
-    reporter::Reporter,
-};
+use necsim_core::{cogs::MathsCore, lineage::Lineage, reporter::Reporter};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_cuda::cogs::{maths::NvptxMathsCore, rng::CudaRng};
@@ -93,7 +89,6 @@ where
         M,
         O::Habitat,
         CudaRng<M, WyHash<M>>,
-        GlobalLineageReference,
         IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         O::DispersalSampler<
@@ -132,7 +127,6 @@ where
         M,
         O::Habitat,
         CudaRng<M, WyHash<M>>,
-        GlobalLineageReference,
         IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         O::DispersalSampler<
@@ -172,7 +166,6 @@ where
         M,
         O::Habitat,
         CudaRng<M, WyHash<M>>,
-        GlobalLineageReference,
         IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         TrespassingDispersalSampler<
@@ -229,7 +222,6 @@ where
         M,
         O::Habitat,
         CudaRng<M, WyHash<M>>,
-        GlobalLineageReference,
         IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         TrespassingDispersalSampler<
@@ -284,7 +276,6 @@ where
         R::ReportDispersal,
     >,
 {
-    type LineageReference = GlobalLineageReference;
     type LineageStore = IndependentLineageStore<M, O::Habitat>;
     type Rng = CudaRng<M, WyHash<M>>;
 

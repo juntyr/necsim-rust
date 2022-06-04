@@ -3,7 +3,7 @@ use necsim_core::cogs::{
     TurnoverRate,
 };
 
-use necsim_core::lineage::{GlobalLineageReference, Lineage};
+use necsim_core::lineage::Lineage;
 use necsim_core_bond::NonNegativeF64;
 
 use crate::cogs::{
@@ -20,7 +20,7 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: PrimeableRng<M>,
-        X: EmigrationExit<M, H, G, GlobalLineageReference, IndependentLineageStore<M, H>>,
+        X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
@@ -30,7 +30,6 @@ impl<
         M,
         H,
         G,
-        GlobalLineageReference,
         IndependentLineageStore<M, H>,
         X,
         D,

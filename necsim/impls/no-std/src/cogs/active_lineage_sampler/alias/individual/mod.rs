@@ -5,8 +5,8 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::cogs::{
     Backup, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat,
-    ImmigrationEntry, LineageReference, LocallyCoherentLineageStore, MathsCore, RngCore,
-    SpeciationProbability, TurnoverRate,
+    ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, RngCore, SpeciationProbability,
+    TurnoverRate,
 };
 
 use crate::cogs::{
@@ -24,36 +24,34 @@ pub struct IndividualAliasActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
     G: RngCore<M>,
-    R: LineageReference<M, H>,
-    S: LocallyCoherentLineageStore<M, H, R>,
-    X: EmigrationExit<M, H, G, R, S>,
+    S: LocallyCoherentLineageStore<M, H>,
+    X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
-    C: CoalescenceSampler<M, H, R, S>,
+    C: CoalescenceSampler<M, H, S>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
-    E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+    E: EventSampler<M, H, G, S, X, D, C, T, N>,
     I: ImmigrationEntry<M>,
 > {
-    alias_sampler: DynamicAliasMethodStackSampler<R>,
+    alias_sampler: DynamicAliasMethodStackSampler<S::LocalLineageReference>,
     number_active_lineages: usize,
     last_event_time: NonNegativeF64,
-    marker: PhantomData<(M, H, G, R, S, X, D, C, T, N, E, I)>,
+    marker: PhantomData<(M, H, G, S, X, D, C, T, N, E, I)>,
 }
 
 impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: LocallyCoherentLineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: LocallyCoherentLineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
+        C: CoalescenceSampler<M, H, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-        E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+        E: EventSampler<M, H, G, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
-    > IndividualAliasActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
+    > IndividualAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
 {
     #[must_use]
     pub fn init_with_store<'h, O: TrustedOriginSampler<'h, M, Habitat = H>>(
@@ -141,7 +139,7 @@ impl<
                 alias_sampler,
                 number_active_lineages,
                 last_event_time,
-                marker: PhantomData::<(M, H, G, R, S, X, D, C, T, N, E, I)>,
+                marker: PhantomData::<(M, H, G, S, X, D, C, T, N, E, I)>,
             },
             exceptional_lineages,
         )
@@ -152,16 +150,15 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: LocallyCoherentLineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: LocallyCoherentLineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
+        C: CoalescenceSampler<M, H, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-        E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+        E: EventSampler<M, H, G, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
-    > fmt::Debug for IndividualAliasActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
+    > fmt::Debug for IndividualAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("IndividualAliasActiveLineageSampler")
@@ -176,23 +173,22 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: LocallyCoherentLineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: LocallyCoherentLineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
+        C: CoalescenceSampler<M, H, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-        E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+        E: EventSampler<M, H, G, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
-    > Backup for IndividualAliasActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
+    > Backup for IndividualAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             alias_sampler: self.alias_sampler.clone(),
             number_active_lineages: self.number_active_lineages,
             last_event_time: self.last_event_time,
-            marker: PhantomData::<(M, H, G, R, S, X, D, C, T, N, E, I)>,
+            marker: PhantomData::<(M, H, G, S, X, D, C, T, N, E, I)>,
         }
     }
 }

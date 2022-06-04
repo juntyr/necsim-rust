@@ -3,8 +3,8 @@ use core::{num::NonZeroUsize, ops::ControlFlow};
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit,
-        GloballyCoherentLineageStore, Habitat, ImmigrationEntry, LineageReference, MathsCore,
-        RngCore, SpeciationProbability, TurnoverRate,
+        GloballyCoherentLineageStore, Habitat, ImmigrationEntry, MathsCore, RngCore,
+        SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -21,19 +21,18 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: GloballyCoherentLineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: GloballyCoherentLineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
+        C: CoalescenceSampler<M, H, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-        E: GillespieEventSampler<M, H, G, R, S, X, D, C, T, N>,
+        E: GillespieEventSampler<M, H, G, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
-    > ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
-    for LocationAliasActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
+    > ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
+    for LocationAliasActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
 {
-    type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, R: 'a, S: 'a, X: 'a, D: 'a, C: 'a, T: 'a, N: 'a, E: 'a, I: 'a;
+    type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, S: 'a, X: 'a, D: 'a, C: 'a, T: 'a, N: 'a, E: 'a, I: 'a;
 
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -64,7 +63,7 @@ impl<
     #[must_use]
     fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> ControlFlow<(), ()>>(
         &mut self,
-        simulation: &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>,
+        simulation: &mut PartialSimulation<M, H, G, S, X, D, C, T, N, E>,
         rng: &mut G,
         early_peek_stop: F,
     ) -> Option<(Lineage, PositiveF64)> {
@@ -146,7 +145,7 @@ impl<
     fn push_active_lineage(
         &mut self,
         lineage: Lineage,
-        simulation: &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>,
+        simulation: &mut PartialSimulation<M, H, G, S, X, D, C, T, N, E>,
         _rng: &mut G,
     ) {
         self.last_event_time = lineage.last_event_time;

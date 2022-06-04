@@ -8,30 +8,27 @@ use crate::{
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait LineageStore<M: MathsCore, H: Habitat<M>, R: LineageReference<M, H>>:
+pub trait LineageStore<M: MathsCore, H: Habitat<M>>:
     crate::cogs::Backup + Sized + core::fmt::Debug
 {
-    type LineageReferenceIterator<'a>: Iterator<Item = R>
-    where
-        M: 'a,
-        Self: 'a;
+    type LocalLineageReference: LineageReference<M, H>;
 
     #[must_use]
     fn with_capacity(habitat: &H, capacity: usize) -> Self;
 
     #[must_use]
-    fn iter_local_lineage_references(&self) -> Self::LineageReferenceIterator<'_>;
-
-    #[must_use]
-    fn get_lineage_for_local_reference(&self, reference: R) -> Option<&Lineage>;
+    fn get_lineage_for_local_reference(
+        &self,
+        reference: Self::LocalLineageReference,
+    ) -> Option<&Lineage>;
 }
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[allow(clippy::no_effect_underscore_binding)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
-pub trait LocallyCoherentLineageStore<M: MathsCore, H: Habitat<M>, R: LineageReference<M, H>>:
-    LineageStore<M, H, R> + Index<R, Output = Lineage>
+pub trait LocallyCoherentLineageStore<M: MathsCore, H: Habitat<M>>:
+    LineageStore<M, H> + Index<Self::LocalLineageReference, Output = Lineage>
 {
     #[must_use]
     #[debug_requires(
@@ -61,7 +58,11 @@ pub trait LocallyCoherentLineageStore<M: MathsCore, H: Habitat<M>, R: LineageRef
         ) == Some(&self[ret.clone()].global_reference),
         "lineage is now indexed at indexed_location"
     )]
-    fn insert_lineage_locally_coherent(&mut self, lineage: Lineage, habitat: &H) -> R;
+    fn insert_lineage_locally_coherent(
+        &mut self,
+        lineage: Lineage,
+        habitat: &H,
+    ) -> Self::LocalLineageReference;
 
     #[must_use]
     #[debug_requires(self.get_lineage_for_local_reference(
@@ -80,15 +81,19 @@ pub trait LocallyCoherentLineageStore<M: MathsCore, H: Habitat<M>, R: LineageRef
     #[debug_ensures(self.get_global_lineage_reference_at_indexed_location(
         &ret.indexed_location, old(habitat)
     ).is_none(), "lineage is no longer indexed at its prior IndexedLocation")]
-    fn extract_lineage_locally_coherent(&mut self, reference: R, habitat: &H) -> Lineage;
+    fn extract_lineage_locally_coherent(
+        &mut self,
+        reference: Self::LocalLineageReference,
+        habitat: &H,
+    ) -> Lineage;
 }
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[allow(clippy::no_effect_underscore_binding)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
-pub trait GloballyCoherentLineageStore<M: MathsCore, H: Habitat<M>, R: LineageReference<M, H>>:
-    LocallyCoherentLineageStore<M, H, R>
+pub trait GloballyCoherentLineageStore<M: MathsCore, H: Habitat<M>>:
+    LocallyCoherentLineageStore<M, H>
 {
     type LocationIterator<'a>: Iterator<Item = Location>
     where
@@ -104,7 +109,7 @@ pub trait GloballyCoherentLineageStore<M: MathsCore, H: Habitat<M>, R: LineageRe
         &self,
         location: &Location,
         habitat: &H,
-    ) -> &[R];
+    ) -> &[Self::LocalLineageReference];
 
     #[debug_ensures(
         self.get_local_lineage_references_at_location_unordered(
@@ -120,7 +125,11 @@ pub trait GloballyCoherentLineageStore<M: MathsCore, H: Habitat<M>, R: LineageRe
         ).len(),
         "unordered active lineage index at given location has grown by 1"
     )]
-    fn insert_lineage_globally_coherent(&mut self, lineage: Lineage, habitat: &H) -> R {
+    fn insert_lineage_globally_coherent(
+        &mut self,
+        lineage: Lineage,
+        habitat: &H,
+    ) -> Self::LocalLineageReference {
         self.insert_lineage_locally_coherent(lineage, habitat)
     }
 
@@ -133,7 +142,11 @@ pub trait GloballyCoherentLineageStore<M: MathsCore, H: Habitat<M>, R: LineageRe
             self[reference.clone()].indexed_location.location(),
             old(habitat),
         ).len()), "unordered active lineage index at returned location has shrunk by 1")]
-    fn extract_lineage_globally_coherent(&mut self, reference: R, habitat: &H) -> Lineage {
+    fn extract_lineage_globally_coherent(
+        &mut self,
+        reference: Self::LocalLineageReference,
+        habitat: &H,
+    ) -> Lineage {
         self.extract_lineage_locally_coherent(reference, habitat)
     }
 }

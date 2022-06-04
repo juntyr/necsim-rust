@@ -4,8 +4,8 @@ use necsim_core::{
     cogs::{
         coalescence_sampler::CoalescenceRngSample, event_sampler::EventHandler, Backup,
         CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        GloballyCoherentLineageStore, Habitat, LineageReference, MathsCore, RngCore,
-        SpeciationProbability, TurnoverRate,
+        GloballyCoherentLineageStore, Habitat, MathsCore, RngCore, SpeciationProbability,
+        TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
     landscape::Location,
@@ -22,30 +22,28 @@ pub struct UnconditionalGillespieEventSampler<
     M: MathsCore,
     H: Habitat<M>,
     G: RngCore<M>,
-    R: LineageReference<M, H>,
-    S: GloballyCoherentLineageStore<M, H, R>,
-    X: EmigrationExit<M, H, G, R, S>,
+    S: GloballyCoherentLineageStore<M, H>,
+    X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
-    C: CoalescenceSampler<M, H, R, S>,
+    C: CoalescenceSampler<M, H, S>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
->(PhantomData<(M, H, G, R, S, X, D, C, T, N)>);
+>(PhantomData<(M, H, G, S, X, D, C, T, N)>);
 
 impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: GloballyCoherentLineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: GloballyCoherentLineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
+        C: CoalescenceSampler<M, H, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-    > Default for UnconditionalGillespieEventSampler<M, H, G, R, S, X, D, C, T, N>
+    > Default for UnconditionalGillespieEventSampler<M, H, G, S, X, D, C, T, N>
 {
     fn default() -> Self {
-        Self(PhantomData::<(M, H, G, R, S, X, D, C, T, N)>)
+        Self(PhantomData::<(M, H, G, S, X, D, C, T, N)>)
     }
 }
 
@@ -54,17 +52,16 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: GloballyCoherentLineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: GloballyCoherentLineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
+        C: CoalescenceSampler<M, H, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-    > Backup for UnconditionalGillespieEventSampler<M, H, G, R, S, X, D, C, T, N>
+    > Backup for UnconditionalGillespieEventSampler<M, H, G, S, X, D, C, T, N>
 {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(PhantomData::<(M, H, G, R, S, X, D, C, T, N)>)
+        Self(PhantomData::<(M, H, G, S, X, D, C, T, N)>)
     }
 }
 
@@ -73,15 +70,14 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: GloballyCoherentLineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: GloballyCoherentLineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
+        C: CoalescenceSampler<M, H, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-    > EventSampler<M, H, G, R, S, X, D, C, T, N>
-    for UnconditionalGillespieEventSampler<M, H, G, R, S, X, D, C, T, N>
+    > EventSampler<M, H, G, S, X, D, C, T, N>
+    for UnconditionalGillespieEventSampler<M, H, G, S, X, D, C, T, N>
 {
     #[must_use]
     fn sample_event_for_lineage_at_event_time_or_emigrate<
@@ -98,7 +94,7 @@ impl<
             indexed_location: dispersal_origin,
         }: Lineage,
         event_time: PositiveF64,
-        simulation: &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N>,
+        simulation: &mut PartialSimulation<M, H, G, S, X, D, C, T, N>,
         rng: &mut G,
         EventHandler {
             speciation,
@@ -183,15 +179,14 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: GloballyCoherentLineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: GloballyCoherentLineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
+        C: CoalescenceSampler<M, H, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-    > GillespieEventSampler<M, H, G, R, S, X, D, C, T, N>
-    for UnconditionalGillespieEventSampler<M, H, G, R, S, X, D, C, T, N>
+    > GillespieEventSampler<M, H, G, S, X, D, C, T, N>
+    for UnconditionalGillespieEventSampler<M, H, G, S, X, D, C, T, N>
 {
     #[must_use]
     fn get_event_rate_at_location(

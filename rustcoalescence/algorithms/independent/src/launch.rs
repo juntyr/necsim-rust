@@ -2,7 +2,6 @@ use std::marker::PhantomData;
 
 use necsim_core::{
     cogs::{MathsCore, PrimeableRng},
-    lineage::GlobalLineageReference,
     reporter::Reporter,
     simulation::SimulationBuilder,
 };
@@ -120,7 +119,6 @@ pub fn initialise_and_simulate<
             let mut simulation = SimulationBuilder {
                 maths: PhantomData::<M>,
                 habitat,
-                lineage_reference: PhantomData::<GlobalLineageReference>,
                 lineage_store,
                 dispersal_sampler,
                 coalescence_sampler,
@@ -192,7 +190,6 @@ pub fn initialise_and_simulate<
             let mut simulation = SimulationBuilder {
                 maths: PhantomData::<M>,
                 habitat,
-                lineage_reference: PhantomData::<GlobalLineageReference>,
                 lineage_store,
                 dispersal_sampler,
                 coalescence_sampler,
@@ -254,7 +251,6 @@ pub fn initialise_and_simulate<
             let mut simulation = SimulationBuilder {
                 maths: PhantomData::<M>,
                 habitat,
-                lineage_reference: PhantomData::<GlobalLineageReference>,
                 lineage_store,
                 dispersal_sampler,
                 coalescence_sampler,
@@ -320,7 +316,6 @@ pub fn initialise_and_simulate<
             let mut simulation = SimulationBuilder {
                 maths: PhantomData::<M>,
                 habitat,
-                lineage_reference: PhantomData::<GlobalLineageReference>,
                 lineage_store,
                 dispersal_sampler,
                 coalescence_sampler,

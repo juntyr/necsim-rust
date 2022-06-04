@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, EmigrationExit, EventSampler, ImmigrationEntry, LineageReference,
+        CoalescenceSampler, EmigrationExit, EventSampler, ImmigrationEntry,
         LocallyCoherentLineageStore, MathsCore, RngCore,
     },
     lineage::Lineage,
@@ -31,15 +31,13 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
     GillespieLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for ResumeInitialiser<L>
 {
     type ActiveLineageSampler<
-        R: LineageReference<M, O::Habitat>,
-        S: LocallyCoherentLineageStore<M, O::Habitat, R>,
-        X: EmigrationExit<M, O::Habitat, G, R, S>,
-        C: CoalescenceSampler<M, O::Habitat, R, S>,
+        S: LocallyCoherentLineageStore<M, O::Habitat>,
+        X: EmigrationExit<M, O::Habitat, G, S>,
+        C: CoalescenceSampler<M, O::Habitat, S>,
         E: EventSampler<
             M,
             O::Habitat,
             G,
-            R,
             S,
             X,
             Self::DispersalSampler,
@@ -52,7 +50,6 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
         M,
         O::Habitat,
         G,
-        R,
         S,
         X,
         Self::DispersalSampler,
@@ -68,15 +65,13 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
         'h,
         'p,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
-        R: LineageReference<M, O::Habitat>,
-        S: LocallyCoherentLineageStore<M, O::Habitat, R>,
-        X: EmigrationExit<M, O::Habitat, G, R, S>,
-        C: CoalescenceSampler<M, O::Habitat, R, S>,
+        S: LocallyCoherentLineageStore<M, O::Habitat>,
+        X: EmigrationExit<M, O::Habitat, G, S>,
+        C: CoalescenceSampler<M, O::Habitat, S>,
         E: EventSampler<
             M,
             O::Habitat,
             G,
-            R,
             S,
             X,
             Self::DispersalSampler,
@@ -97,7 +92,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
         (
             S,
             Self::DispersalSampler,
-            Self::ActiveLineageSampler<R, S, X, C, E, I>,
+            Self::ActiveLineageSampler<S, X, C, E, I>,
         ),
         ResumeError<!>,
     >

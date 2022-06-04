@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 use necsim_core::cogs::{
-    Backup, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry, LineageReference,
+    Backup, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
     LocallyCoherentLineageStore, MathsCore, RngCore, SpeciationProbability,
 };
 use necsim_core_bond::NonNegativeF64;
@@ -20,14 +20,13 @@ pub struct ClassicalActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
     G: RngCore<M>,
-    R: LineageReference<M, H>,
-    S: LocallyCoherentLineageStore<M, H, R>,
-    X: EmigrationExit<M, H, G, R, S>,
+    S: LocallyCoherentLineageStore<M, H>,
+    X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
     N: SpeciationProbability<M, H>,
     I: ImmigrationEntry<M>,
 > {
-    active_lineage_references: Vec<R>,
+    active_lineage_references: Vec<S::LocalLineageReference>,
     last_event_time: NonNegativeF64,
     #[allow(clippy::type_complexity)]
     _marker: PhantomData<(M, H, G, S, X, D, N, I)>,
@@ -37,13 +36,12 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: LocallyCoherentLineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: LocallyCoherentLineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
         N: SpeciationProbability<M, H>,
         I: ImmigrationEntry<M>,
-    > ClassicalActiveLineageSampler<M, H, G, R, S, X, D, N, I>
+    > ClassicalActiveLineageSampler<M, H, G, S, X, D, N, I>
 {
     #[must_use]
     pub fn init_with_store<'h, O: TrustedOriginSampler<'h, M, Habitat = H>>(
@@ -129,13 +127,12 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: LocallyCoherentLineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: LocallyCoherentLineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
         N: SpeciationProbability<M, H>,
         I: ImmigrationEntry<M>,
-    > Backup for ClassicalActiveLineageSampler<M, H, G, R, S, X, D, N, I>
+    > Backup for ClassicalActiveLineageSampler<M, H, G, S, X, D, N, I>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {

@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{EmigrationExit, MathsCore, PrimeableRng},
-    lineage::{GlobalLineageReference, Lineage},
+    lineage::Lineage,
 };
 use necsim_core_bond::NonNegativeF64;
 
@@ -30,13 +30,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: PrimeableRng<M>, O: 
     IndependentLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for ResumeInitialiser<L>
 {
     type ActiveLineageSampler<
-        X: EmigrationExit<
-            M,
-            O::Habitat,
-            G,
-            GlobalLineageReference,
-            IndependentLineageStore<M, O::Habitat>,
-        >,
+        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>,
         J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate>,
     > = IndependentActiveLineageSampler<
         M,
@@ -54,13 +48,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: PrimeableRng<M>, O: 
         'h,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
         J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate>,
-        X: EmigrationExit<
-            M,
-            O::Habitat,
-            G,
-            GlobalLineageReference,
-            IndependentLineageStore<M, O::Habitat>,
-        >,
+        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>,
     >(
         self,
         origin_sampler: T,

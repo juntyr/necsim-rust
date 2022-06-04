@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, DispersalSampler, EmigrationExit, ImmigrationEntry, LineageReference,
+        ActiveLineageSampler, DispersalSampler, EmigrationExit, ImmigrationEntry,
         LocallyCoherentLineageStore, MathsCore, RngCore,
     },
     reporter::Reporter,
@@ -31,30 +31,27 @@ pub trait ClassicalLineageStoreSampleInitialiser<
 {
     type DispersalSampler: DispersalSampler<M, O::Habitat, G>;
     type ActiveLineageSampler<
-        R: LineageReference<M, O::Habitat>,
-        S: LocallyCoherentLineageStore<M, O::Habitat, R>,
-        X: EmigrationExit<M, O::Habitat, G, R, S>,
+        S: LocallyCoherentLineageStore<M, O::Habitat>,
+        X: EmigrationExit<M, O::Habitat, G, S>,
         I: ImmigrationEntry<M>,
     >: ActiveLineageSampler<
         M,
         O::Habitat,
         G,
-        R,
         S,
         X,
         Self::DispersalSampler,
-        UnconditionalCoalescenceSampler<M, O::Habitat, R, S>,
+        UnconditionalCoalescenceSampler<M, O::Habitat, S>,
         UniformTurnoverRate,
         O::SpeciationProbability,
         UnconditionalEventSampler<
             M,
             O::Habitat,
             G,
-            R,
             S,
             X,
             Self::DispersalSampler,
-            UnconditionalCoalescenceSampler<M, O::Habitat, R, S>,
+            UnconditionalCoalescenceSampler<M, O::Habitat, S>,
             UniformTurnoverRate,
             O::SpeciationProbability,
         >,
@@ -65,9 +62,8 @@ pub trait ClassicalLineageStoreSampleInitialiser<
         'h,
         'p,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
-        R: LineageReference<M, O::Habitat>,
-        S: LocallyCoherentLineageStore<M, O::Habitat, R>,
-        X: EmigrationExit<M, O::Habitat, G, R, S>,
+        S: LocallyCoherentLineageStore<M, O::Habitat>,
+        X: EmigrationExit<M, O::Habitat, G, S>,
         I: ImmigrationEntry<M>,
         Q: Reporter,
         P: LocalPartition<'p, Q>,
@@ -80,7 +76,7 @@ pub trait ClassicalLineageStoreSampleInitialiser<
         (
             S,
             Self::DispersalSampler,
-            Self::ActiveLineageSampler<R, S, X, I>,
+            Self::ActiveLineageSampler<S, X, I>,
         ),
         Error,
     >

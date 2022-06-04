@@ -16,7 +16,6 @@ use necsim_impls_no_std::{
         dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
         emigration_exit::{domain::DomainEmigrationExit, never::NeverEmigrationExit},
         immigration_entry::{buffered::BufferedImmigrationEntry, never::NeverImmigrationEntry},
-        lineage_reference::in_memory::InMemoryLineageReference,
         lineage_store::coherent::globally::gillespie::GillespieLineageStore,
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
@@ -39,7 +38,7 @@ pub fn initialise_and_simulate<
     'p,
     M: MathsCore,
     G: SplittableRng<M>,
-    O: Scenario<M, G, LineageReference = InMemoryLineageReference>,
+    O: Scenario<M, G>,
     R: Reporter,
     P: LocalPartition<'p, R>,
     I: Iterator<Item = u64>,
@@ -56,7 +55,7 @@ pub fn initialise_and_simulate<
 ) -> Result<SimulationOutcome<M, G>, Error>
 where
     O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
-        GloballyCoherentLineageStore<M, O::Habitat, InMemoryLineageReference>,
+        GloballyCoherentLineageStore<M, O::Habitat>,
     O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
         SeparableDispersalSampler<M, O::Habitat, G>,
 {
@@ -92,7 +91,6 @@ where
             let mut simulation = SimulationBuilder {
                 maths: PhantomData::<M>,
                 habitat,
-                lineage_reference: PhantomData::<InMemoryLineageReference>,
                 lineage_store,
                 dispersal_sampler,
                 coalescence_sampler,
@@ -173,7 +171,6 @@ where
             let mut simulation = SimulationBuilder {
                 maths: PhantomData::<M>,
                 habitat,
-                lineage_reference: PhantomData::<InMemoryLineageReference>,
                 lineage_store,
                 dispersal_sampler,
                 coalescence_sampler,

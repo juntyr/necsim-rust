@@ -11,7 +11,7 @@ use necsim_core::{
     cogs::{
         DispersalSampler, Habitat, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
     },
-    lineage::{GlobalLineageReference, Lineage},
+    lineage::Lineage,
     reporter::Reporter,
     simulation::Simulation,
 };
@@ -47,7 +47,6 @@ pub fn simulate<
         M,
         H,
         G,
-        GlobalLineageReference,
         IndependentLineageStore<M, H>,
         NeverEmigrationExit,
         D,
@@ -65,7 +64,6 @@ pub fn simulate<
         M,
         H,
         G,
-        GlobalLineageReference,
         IndependentLineageStore<M, H>,
         NeverEmigrationExit,
         D,

@@ -19,8 +19,7 @@ use core::ops::ControlFlow;
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LineageReference, LineageStore, MathsCore, PrimeableRng, SpeciationProbability,
-        TurnoverRate,
+        LineageStore, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
     },
     reporter::boolean::Boolean,
 };
@@ -40,23 +39,22 @@ pub fn simulate<
     M: MathsCore,
     H: Habitat<M> + RustToCuda,
     G: PrimeableRng<M> + RustToCuda,
-    R: LineageReference<M, H>,
-    S: LineageStore<M, H, R> + RustToCuda,
-    X: EmigrationExit<M, H, G, R, S> + RustToCuda,
+    S: LineageStore<M, H> + RustToCuda,
+    X: EmigrationExit<M, H, G, S> + RustToCuda,
     D: DispersalSampler<M, H, G> + RustToCuda,
-    C: CoalescenceSampler<M, H, R, S> + RustToCuda,
+    C: CoalescenceSampler<M, H, S> + RustToCuda,
     T: TurnoverRate<M, H> + RustToCuda,
     N: SpeciationProbability<M, H> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<M, H, G, R, S, X, D, C, T, N> + RustToCuda,
+    E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda,
     I: ImmigrationEntry<M> + RustToCuda,
-    A: SingularActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I> + RustToCuda,
+    A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda,
     ReportSpeciation: Boolean,
     ReportDispersal: Boolean,
 >(
     #[rustfmt::skip]
     #[kernel(pass = LendRustToCuda, jit)]
     simulation: &mut ShallowCopy<
-        necsim_core::simulation::Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A>,
+        necsim_core::simulation::Simulation<M, H, G, S, X, D, C, T, N, E, I, A>,
     >,
     #[rustfmt::skip]
     #[kernel(pass = LendRustToCuda, jit)]

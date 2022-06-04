@@ -3,8 +3,8 @@ use core::ops::ControlFlow;
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        Habitat, ImmigrationEntry, LineageReference, LineageStore, MathsCore, RngCore,
-        SpeciationProbability, TurnoverRate,
+        Habitat, ImmigrationEntry, LineageStore, MathsCore, RngCore, SpeciationProbability,
+        TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -17,20 +17,19 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: LineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: LineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
+        C: CoalescenceSampler<M, H, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-        E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+        E: EventSampler<M, H, G, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
-        A: ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>,
-    > ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>
-    for RestartFixUpActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I, A>
+        A: ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>,
+    > ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
+    for RestartFixUpActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I, A>
 {
-    type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, R: 'a, S: 'a, X: 'a, D: 'a, C: 'a, T: 'a, N: 'a, E: 'a, I: 'a, A: 'a;
+    type LineageIterator<'a> = impl Iterator<Item = &'a Lineage> where H: 'a, G: 'a, S: 'a, X: 'a, D: 'a, C: 'a, T: 'a, N: 'a, E: 'a, I: 'a, A: 'a;
 
     #[must_use]
     fn number_active_lineages(&self) -> usize {
@@ -100,7 +99,7 @@ impl<
     } else { true }, "updates the time of the last event")]
     fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> ControlFlow<(), ()>>(
         &mut self,
-        simulation: &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>,
+        simulation: &mut PartialSimulation<M, H, G, S, X, D, C, T, N, E>,
         rng: &mut G,
         early_peek_stop: F,
     ) -> Option<(Lineage, PositiveF64)> {
@@ -114,7 +113,7 @@ impl<
         F: FnOnce(PositiveF64) -> ControlFlow<(), ()>,
     >(
         &mut self,
-        simulation: &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>,
+        simulation: &mut PartialSimulation<M, H, G, S, X, D, C, T, N, E>,
         rng: &mut G,
         early_peek_stop: F,
     ) -> Option<(Lineage, PositiveF64)> {
@@ -146,7 +145,7 @@ impl<
     fn push_active_lineage(
         &mut self,
         lineage: Lineage,
-        simulation: &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>,
+        simulation: &mut PartialSimulation<M, H, G, S, X, D, C, T, N, E>,
         rng: &mut G,
     ) {
         // All pre- and post-conditions are maintained
@@ -156,7 +155,7 @@ impl<
     fn __contracts_impl_push_active_lineage(
         &mut self,
         lineage: Lineage,
-        simulation: &mut PartialSimulation<M, H, G, R, S, X, D, C, T, N, E>,
+        simulation: &mut PartialSimulation<M, H, G, S, X, D, C, T, N, E>,
         rng: &mut G,
     ) {
         self.inner.push_active_lineage(lineage, simulation, rng);

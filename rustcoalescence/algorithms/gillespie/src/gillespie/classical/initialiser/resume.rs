@@ -1,8 +1,5 @@
 use necsim_core::{
-    cogs::{
-        EmigrationExit, ImmigrationEntry, LineageReference, LocallyCoherentLineageStore, MathsCore,
-        RngCore,
-    },
+    cogs::{EmigrationExit, ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, RngCore},
     lineage::Lineage,
     reporter::Reporter,
 };
@@ -31,15 +28,13 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
     ClassicalLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for ResumeInitialiser<L>
 {
     type ActiveLineageSampler<
-        R: LineageReference<M, O::Habitat>,
-        S: LocallyCoherentLineageStore<M, O::Habitat, R>,
-        X: EmigrationExit<M, O::Habitat, G, R, S>,
+        S: LocallyCoherentLineageStore<M, O::Habitat>,
+        X: EmigrationExit<M, O::Habitat, G, S>,
         I: ImmigrationEntry<M>,
     > = ClassicalActiveLineageSampler<
         M,
         O::Habitat,
         G,
-        R,
         S,
         X,
         Self::DispersalSampler,
@@ -52,9 +47,8 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
         'h,
         'p,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
-        R: LineageReference<M, O::Habitat>,
-        S: LocallyCoherentLineageStore<M, O::Habitat, R>,
-        X: EmigrationExit<M, O::Habitat, G, R, S>,
+        S: LocallyCoherentLineageStore<M, O::Habitat>,
+        X: EmigrationExit<M, O::Habitat, G, S>,
         I: ImmigrationEntry<M>,
         Q: Reporter,
         P: LocalPartition<'p, Q>,
@@ -67,7 +61,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
         (
             S,
             Self::DispersalSampler,
-            Self::ActiveLineageSampler<R, S, X, I>,
+            Self::ActiveLineageSampler<S, X, I>,
         ),
         ResumeError<!>,
     >

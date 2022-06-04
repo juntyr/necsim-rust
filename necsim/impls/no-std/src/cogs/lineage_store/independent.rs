@@ -31,18 +31,11 @@ impl<M: MathsCore, H: Habitat<M>> Backup for IndependentLineageStore<M, H> {
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, GlobalLineageReference>
-    for IndependentLineageStore<M, H>
-{
-    type LineageReferenceIterator<'a> = impl Iterator<Item = GlobalLineageReference> where H: 'a;
+impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H> for IndependentLineageStore<M, H> {
+    type LocalLineageReference = GlobalLineageReference;
 
     fn with_capacity(_habitat: &H, _capacity: usize) -> Self {
         Self::default()
-    }
-
-    #[must_use]
-    fn iter_local_lineage_references(&self) -> Self::LineageReferenceIterator<'_> {
-        core::iter::empty()
     }
 
     #[must_use]

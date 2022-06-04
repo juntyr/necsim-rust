@@ -13,7 +13,6 @@ use necsim_impls_no_std::{
             contract::explicit_in_memory_dispersal_check_contract, InMemoryDispersalSampler,
         },
         habitat::in_memory::InMemoryHabitat,
-        lineage_reference::in_memory::InMemoryLineageReference,
         origin_sampler::{in_memory::InMemoryOriginSampler, pre_sampler::OriginPreSampler},
         speciation_probability::uniform::UniformSpeciationProbability,
         turnover_rate::uniform::UniformTurnoverRate,
@@ -59,8 +58,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G>
     type DecompositionAuxiliary = ();
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> = D;
     type Habitat = InMemoryHabitat<M>;
-    type LineageReference = InMemoryLineageReference;
-    type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>> = L;
+    type LineageStore<L: LineageStore<M, Self::Habitat>> = L;
     type OriginSampler<'h, I: Iterator<Item = u64>> = InMemoryOriginSampler<'h, M, I> where G: 'h;
     type OriginSamplerAuxiliary = ();
     type SpeciationProbability = UniformSpeciationProbability;

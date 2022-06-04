@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{DispersalSampler, EmigrationExit, MathsCore, PrimeableRng},
-    lineage::{GlobalLineageReference, Lineage},
+    lineage::Lineage,
 };
 
 use necsim_impls_no_std::cogs::{
@@ -35,10 +35,9 @@ pub trait IndependentLineageStoreSampleInitialiser<
         M,
         O::Habitat,
         G,
-        GlobalLineageReference,
         IndependentLineageStore<M, O::Habitat>,
     >, J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate>>: SingularActiveLineageSampler<
-        M, O::Habitat, G, GlobalLineageReference, IndependentLineageStore<M, O::Habitat>,
+        M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>,
         X, Self::DispersalSampler, IndependentCoalescenceSampler<M, O::Habitat>, O::TurnoverRate,
         O::SpeciationProbability, IndependentEventSampler<
             M, O::Habitat, G, X, Self::DispersalSampler, O::TurnoverRate, O::SpeciationProbability
@@ -49,13 +48,7 @@ pub trait IndependentLineageStoreSampleInitialiser<
         'h,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
         J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate>,
-        X: EmigrationExit<
-            M,
-            O::Habitat,
-            G,
-            GlobalLineageReference,
-            IndependentLineageStore<M, O::Habitat>,
-        >,
+        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>,
     >(
         self,
         origin_sampler: T,

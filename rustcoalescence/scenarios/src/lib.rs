@@ -7,8 +7,8 @@
 extern crate log;
 
 use necsim_core::cogs::{
-    DispersalSampler, LineageReference, LineageStore, MathsCore, RngCore, SpeciationProbability,
-    TurnoverRate, UniformlySampleableHabitat,
+    DispersalSampler, LineageStore, MathsCore, RngCore, SpeciationProbability, TurnoverRate,
+    UniformlySampleableHabitat,
 };
 use necsim_core_bond::OpenClosedUnitF64 as PositiveUnitF64;
 use necsim_partitioning_core::partition::Partition;
@@ -45,12 +45,7 @@ pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioParameters {
     type OriginSamplerAuxiliary;
     type Decomposition: Decomposition<M, Self::Habitat>;
     type DecompositionAuxiliary;
-    type LineageReference: LineageReference<M, Self::Habitat>;
-    type LineageStore<L: LineageStore<M, Self::Habitat, Self::LineageReference>>: LineageStore<
-        M,
-        Self::Habitat,
-        Self::LineageReference,
-    >;
+    type LineageStore<L: LineageStore<M, Self::Habitat>>: LineageStore<M, Self::Habitat>;
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>>: DispersalSampler<
         M,
         Self::Habitat,

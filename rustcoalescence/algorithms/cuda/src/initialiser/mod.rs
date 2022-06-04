@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{DispersalSampler, EmigrationExit, MathsCore, PrimeableRng},
-    lineage::{GlobalLineageReference, Lineage},
+    lineage::Lineage,
 };
 
 use necsim_impls_no_std::cogs::{
@@ -44,12 +44,11 @@ pub trait CudaLineageStoreSampleInitialiser<
             M,
             O::Habitat,
             G,
-            GlobalLineageReference,
             IndependentLineageStore<M, O::Habitat>,
         > + RustToCuda,
         J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
     >: SingularActiveLineageSampler<
-        M, O::Habitat, G, GlobalLineageReference, IndependentLineageStore<M, O::Habitat>,
+        M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>,
         X, Self::DispersalSampler, IndependentCoalescenceSampler<M, O::Habitat>, O::TurnoverRate,
         O::SpeciationProbability, IndependentEventSampler<
             M, O::Habitat, G, X, Self::DispersalSampler, O::TurnoverRate, O::SpeciationProbability
@@ -60,13 +59,7 @@ pub trait CudaLineageStoreSampleInitialiser<
         'h,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
         J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
-        X: EmigrationExit<
-                M,
-                O::Habitat,
-                G,
-                GlobalLineageReference,
-                IndependentLineageStore<M, O::Habitat>,
-            > + RustToCuda,
+        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>> + RustToCuda,
     >(
         self,
         origin_sampler: T,

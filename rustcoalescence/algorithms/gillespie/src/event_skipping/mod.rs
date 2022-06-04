@@ -7,7 +7,6 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::cogs::{
     dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
-    lineage_reference::in_memory::InMemoryLineageReference,
     lineage_store::coherent::globally::gillespie::GillespieLineageStore,
     maths::intrinsics::IntrinsicsMathsCore, origin_sampler::pre_sampler::OriginPreSampler,
 };
@@ -43,20 +42,14 @@ impl AlgorithmDefaults for EventSkippingAlgorithm {
 }
 
 #[allow(clippy::type_complexity)]
-impl<
-        'p,
-        O: Scenario<M, Pcg<M>, LineageReference = InMemoryLineageReference>,
-        R: Reporter,
-        P: LocalPartition<'p, R>,
-        M: MathsCore,
-    > Algorithm<'p, M, O, R, P> for EventSkippingAlgorithm
+impl<'p, O: Scenario<M, Pcg<M>>, R: Reporter, P: LocalPartition<'p, R>, M: MathsCore>
+    Algorithm<'p, M, O, R, P> for EventSkippingAlgorithm
 where
     O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
-        GloballyCoherentLineageStore<M, O::Habitat, InMemoryLineageReference>,
+        GloballyCoherentLineageStore<M, O::Habitat>,
     O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, Pcg<M>>>:
         SeparableDispersalSampler<M, O::Habitat, Pcg<M>>,
 {
-    type LineageReference = InMemoryLineageReference;
     type LineageStore = O::LineageStore<GillespieLineageStore<M, O::Habitat>>;
     type Rng = Pcg<M>;
 

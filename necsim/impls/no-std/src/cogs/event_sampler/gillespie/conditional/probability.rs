@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
-        GloballyCoherentLineageStore, Habitat, LineageReference, MathsCore, RngCore,
-        SeparableDispersalSampler, SpeciationProbability,
+        GloballyCoherentLineageStore, Habitat, MathsCore, RngCore, SeparableDispersalSampler,
+        SpeciationProbability,
     },
     landscape::Location,
 };
@@ -22,8 +22,7 @@ impl ProbabilityAtLocation {
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: GloballyCoherentLineageStore<M, H, R>,
+        S: GloballyCoherentLineageStore<M, H>,
         D: SeparableDispersalSampler<M, H, G>,
         N: SpeciationProbability<M, H>,
     >(
@@ -31,7 +30,7 @@ impl ProbabilityAtLocation {
         habitat: &H,
         lineage_store: &S,
         dispersal_sampler: &D,
-        coalescence_sampler: &ConditionalCoalescenceSampler<M, H, R, S>,
+        coalescence_sampler: &ConditionalCoalescenceSampler<M, H, S>,
         speciation_probability: &N,
         lineage_store_includes_self: bool,
     ) -> Self {

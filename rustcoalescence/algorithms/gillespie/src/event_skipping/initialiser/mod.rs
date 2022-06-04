@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
         ActiveLineageSampler, EmigrationExit, GloballyCoherentLineageStore, ImmigrationEntry,
-        LineageReference, MathsCore, RngCore, SeparableDispersalSampler,
+        MathsCore, RngCore, SeparableDispersalSampler,
     },
     reporter::Reporter,
 };
@@ -33,26 +33,23 @@ pub trait EventSkippingLineageStoreSampleInitialiser<
 {
     type DispersalSampler: SeparableDispersalSampler<M, O::Habitat, G>;
     type ActiveLineageSampler<
-        R: LineageReference<M, O::Habitat>,
-        S: GloballyCoherentLineageStore<M, O::Habitat, R>,
-        X: EmigrationExit<M, O::Habitat, G, R, S>,
+        S: GloballyCoherentLineageStore<M, O::Habitat>,
+        X: EmigrationExit<M, O::Habitat, G, S>,
         I: ImmigrationEntry<M>,
     >: ActiveLineageSampler<
         M,
         O::Habitat,
         G,
-        R,
         S,
         X,
         Self::DispersalSampler,
-        ConditionalCoalescenceSampler<M, O::Habitat, R, S>,
+        ConditionalCoalescenceSampler<M, O::Habitat, S>,
         O::TurnoverRate,
         O::SpeciationProbability,
         ConditionalGillespieEventSampler<
             M,
             O::Habitat,
             G,
-            R,
             S,
             X,
             Self::DispersalSampler,
@@ -66,9 +63,8 @@ pub trait EventSkippingLineageStoreSampleInitialiser<
         'h,
         'p,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
-        R: LineageReference<M, O::Habitat>,
-        S: GloballyCoherentLineageStore<M, O::Habitat, R>,
-        X: EmigrationExit<M, O::Habitat, G, R, S>,
+        S: GloballyCoherentLineageStore<M, O::Habitat>,
+        X: EmigrationExit<M, O::Habitat, G, S>,
         I: ImmigrationEntry<M>,
         Q: Reporter,
         P: LocalPartition<'p, Q>,
@@ -78,7 +74,7 @@ pub trait EventSkippingLineageStoreSampleInitialiser<
         dispersal_sampler: O::DispersalSampler<
             InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>,
         >,
-        coalescence_sampler: &ConditionalCoalescenceSampler<M, O::Habitat, R, S>,
+        coalescence_sampler: &ConditionalCoalescenceSampler<M, O::Habitat, S>,
         turnover_rate: &O::TurnoverRate,
         speciation_probability: &O::SpeciationProbability,
         local_partition: &mut P,
@@ -90,14 +86,13 @@ pub trait EventSkippingLineageStoreSampleInitialiser<
                 M,
                 O::Habitat,
                 G,
-                R,
                 S,
                 X,
                 Self::DispersalSampler,
                 O::TurnoverRate,
                 O::SpeciationProbability,
             >,
-            Self::ActiveLineageSampler<R, S, X, I>,
+            Self::ActiveLineageSampler<S, X, I>,
         ),
         Error,
     >

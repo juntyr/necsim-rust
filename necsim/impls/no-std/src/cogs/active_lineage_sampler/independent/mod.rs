@@ -6,7 +6,7 @@ use necsim_core::{
         Backup, DispersalSampler, EmigrationExit, Habitat, MathsCore, PrimeableRng,
         SpeciationProbability, TurnoverRate,
     },
-    lineage::{GlobalLineageReference, Lineage},
+    lineage::Lineage,
 };
 use necsim_core_bond::NonNegativeF64;
 
@@ -37,7 +37,7 @@ pub struct IndependentActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
     G: PrimeableRng<M>,
-    X: EmigrationExit<M, H, G, GlobalLineageReference, IndependentLineageStore<M, H>>,
+    X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
     D: DispersalSampler<M, H, G>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
@@ -58,7 +58,7 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: PrimeableRng<M>,
-        X: EmigrationExit<M, H, G, GlobalLineageReference, IndependentLineageStore<M, H>>,
+        X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
@@ -144,7 +144,7 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: PrimeableRng<M>,
-        X: EmigrationExit<M, H, G, GlobalLineageReference, IndependentLineageStore<M, H>>,
+        X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,

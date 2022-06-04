@@ -1,8 +1,8 @@
 use core::marker::PhantomData;
 
 use crate::cogs::{
-    CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, LineageReference, LineageStore,
-    MathsCore, RngCore, SpeciationProbability, TurnoverRate,
+    CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, LineageStore, MathsCore,
+    RngCore, SpeciationProbability, TurnoverRate,
 };
 
 #[repr(C)]
@@ -10,17 +10,15 @@ pub struct PartialSimulation<
     M: MathsCore,
     H: Habitat<M>,
     G: RngCore<M>,
-    R: LineageReference<M, H>,
-    S: LineageStore<M, H, R>,
-    X: EmigrationExit<M, H, G, R, S>,
+    S: LineageStore<M, H>,
+    X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
-    C: CoalescenceSampler<M, H, R, S>,
+    C: CoalescenceSampler<M, H, S>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
 > {
     pub maths: PhantomData<M>,
     pub habitat: H,
-    pub lineage_reference: PhantomData<R>,
     pub lineage_store: S,
     pub dispersal_sampler: D,
     pub coalescence_sampler: C,
@@ -35,19 +33,18 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: LineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: LineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
+        C: CoalescenceSampler<M, H, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-    > PartialSimulation<M, H, G, R, S, X, D, C, T, N>
+    > PartialSimulation<M, H, G, S, X, D, C, T, N>
 {
     #[inline]
     pub fn with_mut_split_emigration_exit<
         Q,
-        F: FnOnce(&mut X, &mut super::emigration_exit::PartialSimulation<M, H, G, R, S>) -> Q,
+        F: FnOnce(&mut X, &mut super::emigration_exit::PartialSimulation<M, H, G, S>) -> Q,
     >(
         &mut self,
         func: F,
@@ -57,7 +54,7 @@ impl<
         //  subsequence of Self's type and layout
         let partial_simulation = unsafe {
             &mut *(self as *mut Self)
-                .cast::<super::emigration_exit::PartialSimulation<M, H, G, R, S>>()
+                .cast::<super::emigration_exit::PartialSimulation<M, H, G, S>>()
         };
 
         func(&mut self.emigration_exit, partial_simulation)

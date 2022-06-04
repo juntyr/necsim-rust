@@ -38,7 +38,6 @@ macro_rules! link_kernel {
                     necsim_impls_cuda::cogs::maths::NvptxMathsCore
                 >,
             >,
-            necsim_core::lineage::GlobalLineageReference,
             necsim_impls_no_std::cogs::lineage_store::independent::IndependentLineageStore<
                 necsim_impls_cuda::cogs::maths::NvptxMathsCore,
                 $habitat,
@@ -94,7 +93,6 @@ macro_rules! link_kernel {
                     necsim_impls_cuda::cogs::maths::NvptxMathsCore
                 >,
             >,
-            necsim_core::lineage::GlobalLineageReference,
             necsim_impls_no_std::cogs::lineage_store::independent::IndependentLineageStore<
                 necsim_impls_cuda::cogs::maths::NvptxMathsCore,
                 $habitat,

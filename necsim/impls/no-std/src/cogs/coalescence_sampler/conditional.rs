@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use necsim_core::{
     cogs::{
         coalescence_sampler::CoalescenceRngSample, Backup, CoalescenceSampler,
-        GloballyCoherentLineageStore, Habitat, LineageReference, MathsCore,
+        GloballyCoherentLineageStore, Habitat, MathsCore,
     },
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, LineageInteraction},
@@ -17,42 +17,29 @@ use super::optional_coalescence;
 pub struct ConditionalCoalescenceSampler<
     M: MathsCore,
     H: Habitat<M>,
-    R: LineageReference<M, H>,
-    S: GloballyCoherentLineageStore<M, H, R>,
->(PhantomData<(M, H, R, S)>);
+    S: GloballyCoherentLineageStore<M, H>,
+>(PhantomData<(M, H, S)>);
 
-impl<
-        M: MathsCore,
-        H: Habitat<M>,
-        R: LineageReference<M, H>,
-        S: GloballyCoherentLineageStore<M, H, R>,
-    > Default for ConditionalCoalescenceSampler<M, H, R, S>
+impl<M: MathsCore, H: Habitat<M>, S: GloballyCoherentLineageStore<M, H>> Default
+    for ConditionalCoalescenceSampler<M, H, S>
 {
     fn default() -> Self {
-        Self(PhantomData::<(M, H, R, S)>)
+        Self(PhantomData::<(M, H, S)>)
     }
 }
 
 #[contract_trait]
-impl<
-        M: MathsCore,
-        H: Habitat<M>,
-        R: LineageReference<M, H>,
-        S: GloballyCoherentLineageStore<M, H, R>,
-    > Backup for ConditionalCoalescenceSampler<M, H, R, S>
+impl<M: MathsCore, H: Habitat<M>, S: GloballyCoherentLineageStore<M, H>> Backup
+    for ConditionalCoalescenceSampler<M, H, S>
 {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(PhantomData::<(M, H, R, S)>)
+        Self(PhantomData::<(M, H, S)>)
     }
 }
 
 #[contract_trait]
-impl<
-        M: MathsCore,
-        H: Habitat<M>,
-        R: LineageReference<M, H>,
-        S: GloballyCoherentLineageStore<M, H, R>,
-    > CoalescenceSampler<M, H, R, S> for ConditionalCoalescenceSampler<M, H, R, S>
+impl<M: MathsCore, H: Habitat<M>, S: GloballyCoherentLineageStore<M, H>> CoalescenceSampler<M, H, S>
+    for ConditionalCoalescenceSampler<M, H, S>
 {
     #[must_use]
     fn sample_interaction_at_location(
@@ -71,12 +58,8 @@ impl<
     }
 }
 
-impl<
-        M: MathsCore,
-        H: Habitat<M>,
-        R: LineageReference<M, H>,
-        S: GloballyCoherentLineageStore<M, H, R>,
-    > ConditionalCoalescenceSampler<M, H, R, S>
+impl<M: MathsCore, H: Habitat<M>, S: GloballyCoherentLineageStore<M, H>>
+    ConditionalCoalescenceSampler<M, H, S>
 {
     #[must_use]
     #[allow(clippy::unused_self)]

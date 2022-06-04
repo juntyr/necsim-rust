@@ -4,7 +4,7 @@
 use std::error::Error as StdError;
 
 use necsim_core::{
-    cogs::{LineageReference, LineageStore, MathsCore, RngCore},
+    cogs::{LineageStore, MathsCore, RngCore},
     lineage::Lineage,
     reporter::Reporter,
 };
@@ -39,8 +39,7 @@ pub trait Algorithm<
 >: Sized + AlgorithmParamters + AlgorithmDefaults
 {
     type Rng: RngCore<M>;
-    type LineageReference: LineageReference<M, O::Habitat>;
-    type LineageStore: LineageStore<M, O::Habitat, Self::LineageReference>;
+    type LineageStore: LineageStore<M, O::Habitat>;
 
     fn get_logical_partition(args: &Self::Arguments, local_partition: &P) -> Partition;
 

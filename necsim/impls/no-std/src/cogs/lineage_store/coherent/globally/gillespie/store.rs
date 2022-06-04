@@ -18,11 +18,8 @@ use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 use super::GillespieLineageStore;
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
-    for GillespieLineageStore<M, H>
-{
-    #[allow(clippy::type_complexity)]
-    type LineageReferenceIterator<'a> = impl Iterator<Item = InMemoryLineageReference> where H: 'a;
+impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H> for GillespieLineageStore<M, H> {
+    type LocalLineageReference = InMemoryLineageReference;
 
     fn with_capacity(_habitat: &H, capacity: usize) -> Self {
         Self {
@@ -37,13 +34,6 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
     }
 
     #[must_use]
-    fn iter_local_lineage_references(&self) -> Self::LineageReferenceIterator<'_> {
-        self.lineages_store
-            .iter()
-            .map(|(reference, _)| InMemoryLineageReference::from(reference))
-    }
-
-    #[must_use]
     fn get_lineage_for_local_reference(
         &self,
         reference: InMemoryLineageReference,
@@ -53,7 +43,7 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H, InMemoryLineageReference>
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H, InMemoryLineageReference>
+impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H>
     for GillespieLineageStore<M, H>
 {
     #[must_use]
@@ -131,7 +121,7 @@ impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H, InMemoryLine
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>> GloballyCoherentLineageStore<M, H, InMemoryLineageReference>
+impl<M: MathsCore, H: Habitat<M>> GloballyCoherentLineageStore<M, H>
     for GillespieLineageStore<M, H>
 {
     type LocationIterator<'a> = impl Iterator<Item = Location> where H: 'a;

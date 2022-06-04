@@ -1,6 +1,6 @@
 use necsim_core::{
     cogs::{EmigrationExit, MathsCore, PrimeableRng},
-    lineage::{GlobalLineageReference, Lineage},
+    lineage::Lineage,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
@@ -54,13 +54,7 @@ where
     O::SpeciationProbability: RustToCuda,
 {
     type ActiveLineageSampler<
-        X: EmigrationExit<
-                M,
-                O::Habitat,
-                G,
-                GlobalLineageReference,
-                IndependentLineageStore<M, O::Habitat>,
-            > + RustToCuda,
+        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>> + RustToCuda,
         J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
     > = IndependentActiveLineageSampler<
         M,
@@ -84,13 +78,7 @@ where
         'h,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
         J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
-        X: EmigrationExit<
-                M,
-                O::Habitat,
-                G,
-                GlobalLineageReference,
-                IndependentLineageStore<M, O::Habitat>,
-            > + RustToCuda,
+        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>> + RustToCuda,
     >(
         self,
         origin_sampler: T,

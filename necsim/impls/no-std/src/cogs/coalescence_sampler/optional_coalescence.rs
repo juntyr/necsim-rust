@@ -1,7 +1,6 @@
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample, Habitat, LineageReference,
-        LocallyCoherentLineageStore, MathsCore,
+        coalescence_sampler::CoalescenceRngSample, Habitat, LocallyCoherentLineageStore, MathsCore,
     },
     landscape::{IndexedLocation, Location},
     lineage::LineageInteraction,
@@ -11,8 +10,7 @@ use necsim_core::{
 pub fn sample_interaction_at_location<
     M: MathsCore,
     H: Habitat<M>,
-    R: LineageReference<M, H>,
-    S: LocallyCoherentLineageStore<M, H, R>,
+    S: LocallyCoherentLineageStore<M, H>,
 >(
     location: Location,
     habitat: &H,

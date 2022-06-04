@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
-        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat,
-        LineageReference, LineageStore, MathsCore, RngCore, SpeciationProbability, TurnoverRate,
+        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, LineageStore,
+        MathsCore, RngCore, SpeciationProbability, TurnoverRate,
     },
     landscape::Location,
 };
@@ -17,14 +17,13 @@ pub trait GillespieEventSampler<
     M: MathsCore,
     H: Habitat<M>,
     G: RngCore<M>,
-    R: LineageReference<M, H>,
-    S: LineageStore<M, H, R>,
-    X: EmigrationExit<M, H, G, R, S>,
+    S: LineageStore<M, H>,
+    X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
-    C: CoalescenceSampler<M, H, R, S>,
+    C: CoalescenceSampler<M, H, S>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
->: EventSampler<M, H, G, R, S, X, D, C, T, N>
+>: EventSampler<M, H, G, S, X, D, C, T, N>
 {
     /// Pre: all lineages must be active in the lineage store
     #[must_use]

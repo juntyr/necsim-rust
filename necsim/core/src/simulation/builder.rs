@@ -4,8 +4,8 @@ use core::{marker::PhantomData, num::Wrapping};
 
 use crate::cogs::{
     ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-    Habitat, ImmigrationEntry, LineageReference, LineageStore, MathsCore, RngCore,
-    SpeciationProbability, TurnoverRate,
+    Habitat, ImmigrationEntry, LineageStore, MathsCore, RngCore, SpeciationProbability,
+    TurnoverRate,
 };
 
 #[derive(Debug)]
@@ -14,20 +14,18 @@ pub struct SimulationBuilder<
     M: MathsCore,
     H: Habitat<M>,
     G: RngCore<M>,
-    R: LineageReference<M, H>,
-    S: LineageStore<M, H, R>,
-    X: EmigrationExit<M, H, G, R, S>,
+    S: LineageStore<M, H>,
+    X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
-    C: CoalescenceSampler<M, H, R, S>,
+    C: CoalescenceSampler<M, H, S>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
-    E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+    E: EventSampler<M, H, G, S, X, D, C, T, N>,
     I: ImmigrationEntry<M>,
-    A: ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>,
+    A: ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>,
 > {
     pub maths: PhantomData<M>,
     pub habitat: H,
-    pub lineage_reference: PhantomData<R>,
     pub lineage_store: S,
     pub dispersal_sampler: D,
     pub coalescence_sampler: C,
@@ -44,24 +42,22 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: LineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: LineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
+        C: CoalescenceSampler<M, H, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-        E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+        E: EventSampler<M, H, G, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
-        A: ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>,
-    > SimulationBuilder<M, H, G, R, S, X, D, C, T, N, E, I, A>
+        A: ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>,
+    > SimulationBuilder<M, H, G, S, X, D, C, T, N, E, I, A>
 {
     #[allow(clippy::type_complexity)]
-    pub fn build(self) -> Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A> {
+    pub fn build(self) -> Simulation<M, H, G, S, X, D, C, T, N, E, I, A> {
         let SimulationBuilder {
             maths,
             habitat,
-            lineage_reference,
             lineage_store,
             dispersal_sampler,
             coalescence_sampler,
@@ -77,7 +73,6 @@ impl<
         Simulation {
             maths,
             habitat,
-            lineage_reference,
             lineage_store,
             dispersal_sampler,
             coalescence_sampler,
@@ -111,21 +106,19 @@ pub struct Simulation<
     M: MathsCore,
     H: Habitat<M>,
     G: RngCore<M>,
-    R: LineageReference<M, H>,
-    S: LineageStore<M, H, R>,
-    X: EmigrationExit<M, H, G, R, S>,
+    S: LineageStore<M, H>,
+    X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
-    C: CoalescenceSampler<M, H, R, S>,
+    C: CoalescenceSampler<M, H, S>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
-    E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+    E: EventSampler<M, H, G, S, X, D, C, T, N>,
     I: ImmigrationEntry<M>,
-    A: ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>,
+    A: ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>,
 > {
     pub(super) maths: PhantomData<M>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) habitat: H,
-    pub(super) lineage_reference: PhantomData<R>,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     pub(super) lineage_store: S,
     #[cfg_attr(feature = "cuda", r2cEmbed)]
@@ -154,17 +147,16 @@ impl<
         M: MathsCore,
         H: Habitat<M>,
         G: RngCore<M>,
-        R: LineageReference<M, H>,
-        S: LineageStore<M, H, R>,
-        X: EmigrationExit<M, H, G, R, S>,
+        S: LineageStore<M, H>,
+        X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
-        C: CoalescenceSampler<M, H, R, S>,
+        C: CoalescenceSampler<M, H, S>,
         T: TurnoverRate<M, H>,
         N: SpeciationProbability<M, H>,
-        E: EventSampler<M, H, G, R, S, X, D, C, T, N>,
+        E: EventSampler<M, H, G, S, X, D, C, T, N>,
         I: ImmigrationEntry<M>,
-        A: ActiveLineageSampler<M, H, G, R, S, X, D, C, T, N, E, I>,
-    > Simulation<M, H, G, R, S, X, D, C, T, N, E, I, A>
+        A: ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>,
+    > Simulation<M, H, G, S, X, D, C, T, N, E, I, A>
 {
     #[inline]
     pub fn with_mut_split_active_lineage_sampler_and_rng_and_migration_balance<
@@ -175,7 +167,6 @@ impl<
                 M,
                 H,
                 G,
-                R,
                 S,
                 X,
                 D,
@@ -201,7 +192,6 @@ impl<
                     M,
                     H,
                     G,
-                    R,
                     S,
                     X,
                     D,
@@ -225,7 +215,7 @@ impl<
         Q,
         F: FnOnce(
             &mut E,
-            &super::partial::event_sampler::PartialSimulation<M, H, G, R, S, X, D, C, T, N>,
+            &super::partial::event_sampler::PartialSimulation<M, H, G, S, X, D, C, T, N>,
             &mut G,
         ) -> Q,
     >(
@@ -241,7 +231,6 @@ impl<
                 M,
                 H,
                 G,
-                R,
                 S,
                 X,
                 D,
