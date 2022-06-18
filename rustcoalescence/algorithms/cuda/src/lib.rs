@@ -1,5 +1,7 @@
 #![deny(clippy::pedantic)]
 #![feature(generic_associated_types)]
+#![allow(incomplete_features)]
+#![feature(inline_const_pat)]
 
 #[macro_use]
 extern crate serde_derive_state;
@@ -43,6 +45,7 @@ use rust_cuda::common::RustToCuda;
 
 mod arguments;
 mod cuda;
+mod error;
 mod info;
 mod initialiser;
 mod launch;
@@ -50,14 +53,11 @@ mod parallelisation;
 
 use crate::{
     arguments::{CudaArguments, IsolatedParallelismMode, ParallelismMode},
+    error::CudaError,
     initialiser::{
         fixup::FixUpInitialiser, genesis::GenesisInitialiser, resume::ResumeInitialiser,
     },
 };
-
-#[derive(thiserror::Error, Debug)]
-#[error(transparent)]
-pub struct CudaError(#[from] anyhow::Error);
 
 #[allow(clippy::module_name_repetitions, clippy::empty_enum)]
 pub enum CudaAlgorithm {}

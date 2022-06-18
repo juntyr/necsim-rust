@@ -41,8 +41,9 @@ use crate::{
         CudaArguments, IsolatedParallelismMode, MonolithicParallelismMode, ParallelismMode,
     },
     cuda::with_initialised_cuda,
+    error::CudaError,
     initialiser::CudaLineageStoreSampleInitialiser,
-    parallelisation, CudaError,
+    parallelisation,
 };
 
 #[allow(clippy::too_many_lines)]

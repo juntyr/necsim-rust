@@ -1,5 +1,3 @@
-use anyhow::Result;
-
 use rust_cuda::rustacuda::{
     context::{Context, CurrentContext, ResourceLimit},
     prelude::*,
@@ -7,10 +5,13 @@ use rust_cuda::rustacuda::{
 
 use rust_cuda::host::CudaDropWrapper;
 
-use crate::info;
+use crate::{error::CudaError, info};
 
 #[allow(clippy::module_name_repetitions)]
-pub fn with_initialised_cuda<O, F: FnOnce() -> Result<O>>(device: u32, inner: F) -> Result<O> {
+pub fn with_initialised_cuda<O, E: Into<CudaError>, F: FnOnce() -> Result<O, E>>(
+    device: u32,
+    inner: F,
+) -> Result<O, CudaError> {
     // Initialize the CUDA API
     rust_cuda::rustacuda::init(CudaFlags::empty())?;
 
@@ -32,5 +33,5 @@ pub fn with_initialised_cuda<O, F: FnOnce() -> Result<O>>(device: u32, inner: F)
     // Explicit drop of the current CUDA context to explicitly end its scope
     std::mem::drop(context);
 
-    result
+    result.map_err(E::into)
 }
