@@ -3,7 +3,7 @@
 #[macro_use]
 extern crate log;
 
-mod species;
+mod individuals;
 
 // Register the reporter plugin
-necsim_plugins_core::export_plugin!(Species => species::SpeciesLocationsReporter);
+necsim_plugins_core::export_plugin!(IndividualSpecies => individuals::IndividualLocationSpeciesReporter);

@@ -18,7 +18,7 @@ mod reporter;
 struct SpeciesIdentity(u64, u64, u64);
 
 #[allow(clippy::module_name_repetitions)]
-pub struct SpeciesLocationsReporter {
+pub struct IndividualLocationSpeciesReporter {
     last_parent_prior_time: Option<(GlobalLineageReference, NonNegativeF64)>,
     last_speciation_event: Option<SpeciationEvent>,
     last_dispersal_event: Option<DispersalEvent>,
@@ -38,9 +38,9 @@ pub struct SpeciesLocationsReporter {
     connection: Connection,
 }
 
-impl fmt::Debug for SpeciesLocationsReporter {
+impl fmt::Debug for IndividualLocationSpeciesReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct(stringify!(SpeciesLocationsReporter))
+        fmt.debug_struct(stringify!(IndividualLocationSpeciesReporter))
             .field("output", &self.output)
             .field("table", &self.table)
             .field("mode", &self.mode)
@@ -49,9 +49,9 @@ impl fmt::Debug for SpeciesLocationsReporter {
     }
 }
 
-impl serde::Serialize for SpeciesLocationsReporter {
+impl serde::Serialize for IndividualLocationSpeciesReporter {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        SpeciesLocationsReporterArgs {
+        IndividualLocationSpeciesReporterArgs {
             output: self.output.clone(),
             table: self.table.clone(),
             mode: self.mode.clone(),
@@ -61,9 +61,9 @@ impl serde::Serialize for SpeciesLocationsReporter {
     }
 }
 
-impl<'de> Deserialize<'de> for SpeciesLocationsReporter {
+impl<'de> Deserialize<'de> for IndividualLocationSpeciesReporter {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let args = SpeciesLocationsReporterArgs::deserialize(deserializer)?;
+        let args = IndividualLocationSpeciesReporterArgs::deserialize(deserializer)?;
 
         let connection = Connection::open_with_flags(
             &args.output,
@@ -97,7 +97,8 @@ impl<'de> Deserialize<'de> for SpeciesLocationsReporter {
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct SpeciesLocationsReporterArgs {
+#[serde(rename = "IndividualLocationSpeciesReporter")]
+struct IndividualLocationSpeciesReporterArgs {
     output: PathBuf,
     #[serde(default = "default_table_name")]
     table: String,

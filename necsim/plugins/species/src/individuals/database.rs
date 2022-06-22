@@ -9,11 +9,11 @@ use bincode::Options;
 use rusqlite::{named_params, types::Value};
 use serde::{Deserialize, Serialize};
 
-use super::{SpeciesIdentity, SpeciesLocationsMode, SpeciesLocationsReporter};
+use super::{IndividualLocationSpeciesReporter, SpeciesIdentity, SpeciesLocationsMode};
 
 const METADATA_TABLE: &str = "__SPECIES_REPORTER_META";
 
-impl SpeciesLocationsReporter {
+impl IndividualLocationSpeciesReporter {
     pub(super) fn store_individual_origin(
         &mut self,
         individual: &GlobalLineageReference,
@@ -39,12 +39,48 @@ impl SpeciesLocationsReporter {
         let index = u64::from(origin.index()) << 16;
         let time = time.get().to_bits();
 
+        let location_bytes = seahash_diffuse(location).to_le_bytes();
+        let index_bytes = seahash_diffuse(index).to_le_bytes();
+        let time_bytes = seahash_diffuse(time).to_le_bytes();
+
+        // Shuffle and mix all 24 bytes of the species identity
+        let lower = u64::from_le_bytes([
+            location_bytes[3],
+            time_bytes[0],
+            index_bytes[5],
+            location_bytes[1],
+            time_bytes[4],
+            time_bytes[7],
+            time_bytes[5],
+            location_bytes[5],
+        ]);
+        let middle = u64::from_le_bytes([
+            time_bytes[6],
+            index_bytes[4],
+            location_bytes[0],
+            location_bytes[6],
+            index_bytes[2],
+            index_bytes[1],
+            location_bytes[7],
+            index_bytes[3],
+        ]);
+        let upper = u64::from_le_bytes([
+            location_bytes[4],
+            location_bytes[2],
+            time_bytes[2],
+            index_bytes[0],
+            time_bytes[3],
+            time_bytes[1],
+            index_bytes[7],
+            index_bytes[6],
+        ]);
+
         self.species.insert(
             parent,
             SpeciesIdentity(
-                seahash_diffuse(location),
-                seahash_diffuse(index),
-                seahash_diffuse(time),
+                seahash_diffuse(lower),
+                seahash_diffuse(middle),
+                seahash_diffuse(upper),
             ),
         );
     }
