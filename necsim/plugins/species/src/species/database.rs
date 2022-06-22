@@ -76,6 +76,9 @@ impl SpeciesLocationsReporter {
 
     #[allow(clippy::too_many_lines)]
     pub(super) fn initialise_sqlite_connection(&mut self) -> rusqlite::Result<()> {
+        self.connection
+            .pragma_update(None, "cache_size", self.cache.get())?;
+
         // Create the species locations table in `Create` mode
         if let SpeciesLocationsMode::Create = self.mode {
             self.connection
@@ -239,24 +242,29 @@ impl SpeciesLocationsReporter {
 
         // Resume from the existing species locations in the table
         while let Some(row) = query.next()? {
-            let id: u64 = row.get("id")?;
-            let x: u32 = row.get("x")?;
-            let y: u32 = row.get("y")?;
-            let i: u32 = row.get("i")?;
+            let id: i64 = row.get("id")?;
+            let x: i32 = row.get("x")?;
+            let y: i32 = row.get("y")?;
+            let i: i32 = row.get("i")?;
 
-            let parent: Option<u64> = row.get("parent")?;
+            let parent: Option<i64> = row.get("parent")?;
             let species: Option<String> = row.get("species")?;
 
-            let id =
-                unsafe { GlobalLineageReference::from_inner(NonZeroOneU64::new_unchecked(id + 2)) };
+            let id = unsafe {
+                GlobalLineageReference::from_inner(NonZeroOneU64::new_unchecked(from_i64(id) + 2))
+            };
 
             // Populate the individual `origins` lookup
-            self.origins
-                .insert(id.clone(), IndexedLocation::new(Location::new(x, y), i));
+            self.origins.insert(
+                id.clone(),
+                IndexedLocation::new(Location::new(from_i32(x), from_i32(y)), from_i32(i)),
+            );
 
             if let Some(parent) = parent {
                 let parent = unsafe {
-                    GlobalLineageReference::from_inner(NonZeroOneU64::new_unchecked(parent + 2))
+                    GlobalLineageReference::from_inner(NonZeroOneU64::new_unchecked(
+                        from_i64(parent) + 2,
+                    ))
                 };
 
                 // Populate the individual `parents` lookup
@@ -347,22 +355,39 @@ impl SpeciesLocationsReporter {
             self.table,
         ))?;
 
+        // Lineage ancestor union-find with path compression
+        let mut ancestors = self.parents.clone();
+
+        let mut family = Vec::new();
+
         for (lineage, origin) in self.origins {
-            let mut ancestor = &lineage;
-            while let Some(ancestor_parent) = self.parents.get(ancestor) {
-                ancestor = ancestor_parent;
+            // Find the ancestor that originated the species
+            let mut ancestor = lineage.clone();
+            while let Some(ancestor_parent) = ancestors.get(&ancestor) {
+                family.push(ancestor.clone());
+                ancestor = ancestor_parent.clone();
             }
 
-            insertion.execute(named_params! {
-                ":id": lineage.to_string(),
-                ":x": origin.location().x(),
-                ":y": origin.location().y(),
-                ":i": origin.index(),
-                ":parent": self.parents.get(&lineage).map(|parent| format!("{}", parent)),
-                ":species": self.species.get(ancestor).map(|species| {
+            // Compress the ancestry paths for all visited lineages
+            for child in family.drain(..) {
+                ancestors.insert(child, ancestor.clone());
+            }
+
+            // Positional parameters boost performance
+            insertion.execute(rusqlite::params![
+                /* :id */ to_i64(unsafe { lineage.clone().into_inner().get() - 2 }),
+                /* :x */ to_i32(origin.location().x()),
+                /* :y */ to_i32(origin.location().y()),
+                /* :i */ to_i32(origin.index()),
+                /* :parent */
+                self.parents
+                    .get(&lineage)
+                    .map(|parent| to_i64(unsafe { parent.clone().into_inner().get() - 2 })),
+                /* :species */
+                self.species.get(&ancestor).map(|species| {
                     format!("{:016x}{:016x}{:016x}", species.0, species.1, species.2)
                 }),
-            })?;
+            ])?;
         }
 
         insertion.finalize()?;
@@ -397,6 +422,22 @@ impl SpeciesLocationsReporter {
 
         self.connection.close().map_err(|(_, err)| err)
     }
+}
+
+const fn to_i32(x: u32) -> i32 {
+    i32::from_ne_bytes(x.to_ne_bytes())
+}
+
+const fn to_i64(x: u64) -> i64 {
+    i64::from_ne_bytes(x.to_ne_bytes())
+}
+
+const fn from_i32(x: i32) -> u32 {
+    u32::from_ne_bytes(x.to_ne_bytes())
+}
+
+const fn from_i64(x: i64) -> u64 {
+    u64::from_ne_bytes(x.to_ne_bytes())
 }
 
 const fn seahash_diffuse(mut x: u64) -> u64 {

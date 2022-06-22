@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, path::PathBuf};
+use std::{collections::HashMap, fmt, num::NonZeroI32, path::PathBuf};
 
 use fnv::FnvBuildHasher;
 use rusqlite::{Connection, OpenFlags};
@@ -33,6 +33,7 @@ pub struct SpeciesLocationsReporter {
     output: PathBuf,
     table: String,
     mode: SpeciesLocationsMode,
+    cache: NonZeroI32,
 
     connection: Connection,
 }
@@ -42,6 +43,8 @@ impl fmt::Debug for SpeciesLocationsReporter {
         fmt.debug_struct(stringify!(SpeciesLocationsReporter))
             .field("output", &self.output)
             .field("table", &self.table)
+            .field("mode", &self.mode)
+            .field("cache", &self.cache)
             .finish()
     }
 }
@@ -52,6 +55,7 @@ impl serde::Serialize for SpeciesLocationsReporter {
             output: self.output.clone(),
             table: self.table.clone(),
             mode: self.mode.clone(),
+            cache: self.cache,
         }
         .serialize(serializer)
     }
@@ -84,6 +88,7 @@ impl<'de> Deserialize<'de> for SpeciesLocationsReporter {
             output: args.output,
             table: args.table,
             mode: args.mode,
+            cache: args.cache,
 
             connection,
         })
@@ -98,13 +103,19 @@ struct SpeciesLocationsReporterArgs {
     table: String,
     #[serde(default)]
     mode: SpeciesLocationsMode,
+    #[serde(default = "default_cache_size")]
+    cache: NonZeroI32,
 }
 
 fn default_table_name() -> String {
     String::from("SPECIES_LOCATIONS")
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+fn default_cache_size() -> NonZeroI32 {
+    NonZeroI32::new(1_000_000_i32).unwrap()
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 enum SpeciesLocationsMode {
     Create,
     Resume,
