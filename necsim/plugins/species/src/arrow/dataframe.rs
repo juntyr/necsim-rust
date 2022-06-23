@@ -2,6 +2,8 @@ use std::{collections::BTreeMap, fs::File, io::BufWriter};
 
 use arrow2::{
     array::{FixedSizeBinaryArray, PrimitiveArray},
+    bitmap::MutableBitmap,
+    buffer::Buffer,
     chunk::Chunk,
     datatypes::{DataType, Field, Schema},
     io::ipc::write::{FileWriter, WriteOptions},
@@ -124,7 +126,7 @@ impl IndividualLocationSpeciesReporter {
             Field::new("x", DataType::UInt32, false),
             Field::new("y", DataType::UInt32, false),
             Field::new("i", DataType::UInt32, false),
-            Field::new("parent", DataType::UInt64, true),
+            Field::new("parent", DataType::UInt64, false),
             Field::new("species", DataType::FixedSizeBinary(24), true),
         ];
 
@@ -161,44 +163,62 @@ impl IndividualLocationSpeciesReporter {
         let mut ys = Vec::with_capacity(self.origins.len());
         let mut is = Vec::with_capacity(self.origins.len());
         let mut parents = Vec::with_capacity(self.origins.len());
-        let mut species = Vec::with_capacity(self.origins.len());
+
+        for (lineage, origin) in &self.origins {
+            ids.push(unsafe { lineage.clone().into_inner().get() - 2 });
+
+            xs.push(origin.location().x());
+            ys.push(origin.location().y());
+            is.push(origin.index());
+
+            parents.push(unsafe {
+                self.parents
+                    .get(lineage)
+                    .unwrap_or(lineage)
+                    .clone()
+                    .into_inner()
+                    .get()
+                    - 2
+            });
+        }
+
+        let mut species = Vec::with_capacity(self.origins.len() * 24);
+        let mut has_speciated = MutableBitmap::from_len_zeroed(self.origins.len());
 
         // Lineage ancestor union-find with path compression
-        let mut ancestors = self.parents.clone();
-
         let mut family = Vec::new();
 
-        for (lineage, origin) in std::mem::take(&mut self.origins) {
+        for (i, lineage) in self.origins.keys().enumerate() {
             // Find the ancestor that originated the species
             let mut ancestor = lineage.clone();
-            while let Some(ancestor_parent) = ancestors.get(&ancestor) {
+            while let Some(ancestor_parent) = self.parents.get(&ancestor) {
                 family.push(ancestor.clone());
                 ancestor = ancestor_parent.clone();
             }
 
             // Compress the ancestry paths for all visited lineages
             for child in family.drain(..) {
-                ancestors.insert(child, ancestor.clone());
+                self.parents.insert(child, ancestor.clone());
             }
 
-            ids.push(unsafe { lineage.clone().into_inner().get() - 2 });
-            xs.push(origin.location().x());
-            ys.push(origin.location().y());
-            is.push(origin.index());
-            parents.push(
-                self.parents
-                    .get(&lineage)
-                    .map(|parent| unsafe { parent.clone().into_inner().get() - 2 }),
-            );
-            species.push(self.species.get(&ancestor).map(|species| species.0));
+            if let Some(identity) = self.species.get(&ancestor) {
+                species.extend_from_slice(&identity.0);
+                has_speciated.set(i, true);
+            } else {
+                species.extend_from_slice(&[0; 24]);
+            }
         }
 
         let ids = PrimitiveArray::from_vec(ids);
         let xs = PrimitiveArray::from_vec(xs);
         let ys = PrimitiveArray::from_vec(ys);
         let is = PrimitiveArray::from_vec(is);
-        let parents = PrimitiveArray::from_trusted_len_iter(parents.into_iter());
-        let species = FixedSizeBinaryArray::from_iter(species.into_iter(), 24);
+        let parents = PrimitiveArray::from_vec(parents);
+        let species = FixedSizeBinaryArray::try_new(
+            DataType::FixedSizeBinary(24),
+            Buffer::from(species),
+            Some(has_speciated.into()),
+        )?;
 
         let chunk = Chunk::try_new(vec![
             ids.arced(),

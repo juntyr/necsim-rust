@@ -94,7 +94,7 @@ impl<'de> Deserialize<'de> for IndividualLocationSpeciesReporter {
                 Field::new("x", DataType::UInt32, false),
                 Field::new("y", DataType::UInt32, false),
                 Field::new("i", DataType::UInt32, false),
-                Field::new("parent", DataType::UInt64, true),
+                Field::new("parent", DataType::UInt64, false),
                 Field::new("species", DataType::FixedSizeBinary(24), true),
             ];
 
@@ -190,7 +190,7 @@ impl<'de> Deserialize<'de> for IndividualLocationSpeciesReporter {
                     .zip(xs.values_iter())
                     .zip(ys.values_iter())
                     .zip(is.values_iter())
-                    .zip(parents.iter())
+                    .zip(parents.values_iter())
                     .zip(species.iter())
                 {
                     let id = unsafe {
@@ -201,14 +201,15 @@ impl<'de> Deserialize<'de> for IndividualLocationSpeciesReporter {
                     self_origins
                         .insert(id.clone(), IndexedLocation::new(Location::new(*x, *y), *i));
 
-                    if let Some(parent) = parent {
-                        let parent = unsafe {
-                            GlobalLineageReference::from_inner(NonZeroOneU64::new_unchecked(
-                                *parent + 2,
-                            ))
-                        };
+                    let parent = unsafe {
+                        GlobalLineageReference::from_inner(NonZeroOneU64::new_unchecked(
+                            *parent + 2,
+                        ))
+                    };
 
-                        // Populate the individual `parents` lookup
+                    // Populate the individual `parents` lookup
+                    // parent == id -> individual does NOT have a parent
+                    if parent != id {
                         self_parents.insert(id.clone(), parent);
                     }
 
