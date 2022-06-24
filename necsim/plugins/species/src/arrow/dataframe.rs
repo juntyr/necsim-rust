@@ -16,20 +16,20 @@ use super::{IndividualLocationSpeciesReporter, LastEventState, SpeciesIdentity};
 impl IndividualLocationSpeciesReporter {
     pub(super) fn store_individual_origin(
         &mut self,
-        individual: &GlobalLineageReference,
+        lineage: &GlobalLineageReference,
         origin: &IndexedLocation,
     ) {
-        self.origins.insert(individual.clone(), origin.clone());
+        self.origins.insert(lineage.clone(), origin.clone());
     }
 
     pub(super) fn store_individual_speciation(
         &mut self,
-        parent: &GlobalLineageReference,
+        lineage: &GlobalLineageReference,
         origin: &IndexedLocation,
         time: PositiveF64,
     ) {
         // Resolve the actual parent, irrespective of duplicate individuals
-        let mut parent = parent;
+        let mut parent = lineage;
         while let Some(parent_parent) = self.parents.get(parent) {
             parent = parent_parent;
         }
