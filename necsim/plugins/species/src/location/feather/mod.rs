@@ -41,7 +41,7 @@ pub struct LocationSpeciesFeatherReporter {
     speciated: Vec<(Location, SpeciesIdentity, u64)>,
 
     output: PathBuf,
-    compression_probability: ClosedUnitF64,
+    deduplication_probability: ClosedUnitF64,
     mode: SpeciesLocationsMode,
     init: bool,
 }
@@ -59,8 +59,8 @@ impl fmt::Debug for LocationSpeciesFeatherReporter {
         fmt.debug_struct(stringify!(LocationSpeciesFeatherReporter))
             .field("output", &self.output)
             .field(
-                "compression",
-                &SpeciesCompressionMode::from(self.compression_probability),
+                "deduplication",
+                &SpeciesDeduplicationMode::from(self.deduplication_probability),
             )
             .field("mode", &self.mode)
             .finish()
@@ -71,7 +71,7 @@ impl serde::Serialize for LocationSpeciesFeatherReporter {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         LocationSpeciesFeatherReporterArgs {
             output: self.output.clone(),
-            compression: SpeciesCompressionMode::from(self.compression_probability),
+            deduplication: SpeciesDeduplicationMode::from(self.deduplication_probability),
             mode: self.mode.clone(),
         }
         .serialize(serializer)
@@ -232,10 +232,10 @@ impl<'de> Deserialize<'de> for LocationSpeciesFeatherReporter {
             species: HashMap::default(),
             speciated: self_speciated,
 
-            compression_probability: match args.compression {
-                SpeciesCompressionMode::None => ClosedUnitF64::zero(),
-                SpeciesCompressionMode::Fixed(SpeciesCompressionLevel { level }) => level,
-                SpeciesCompressionMode::Full => ClosedUnitF64::one(),
+            deduplication_probability: match args.deduplication {
+                SpeciesDeduplicationMode::None => ClosedUnitF64::zero(),
+                SpeciesDeduplicationMode::Fixed(SpeciesDeduplicationLevel { level }) => level,
+                SpeciesDeduplicationMode::Full => ClosedUnitF64::one(),
             },
 
             output: args.output,
@@ -251,7 +251,7 @@ impl<'de> Deserialize<'de> for LocationSpeciesFeatherReporter {
 struct LocationSpeciesFeatherReporterArgs {
     output: PathBuf,
     #[serde(default)]
-    compression: SpeciesCompressionMode,
+    deduplication: SpeciesDeduplicationMode,
     #[serde(default)]
     mode: SpeciesLocationsMode,
 }
@@ -269,33 +269,33 @@ impl Default for SpeciesLocationsMode {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-enum SpeciesCompressionMode {
+enum SpeciesDeduplicationMode {
     Full,
     None,
-    Fixed(SpeciesCompressionLevel),
+    Fixed(SpeciesDeduplicationLevel),
 }
 
-impl Default for SpeciesCompressionMode {
+impl Default for SpeciesDeduplicationMode {
     fn default() -> Self {
-        Self::Fixed(SpeciesCompressionLevel {
+        Self::Fixed(SpeciesDeduplicationLevel {
             level: ClosedUnitF64::new(0.0625_f64).unwrap(),
         })
     }
 }
 
-impl From<ClosedUnitF64> for SpeciesCompressionMode {
+impl From<ClosedUnitF64> for SpeciesDeduplicationMode {
     fn from(level: ClosedUnitF64) -> Self {
         if level == ClosedUnitF64::zero() {
             Self::None
         } else if level == ClosedUnitF64::one() {
             Self::Full
         } else {
-            Self::Fixed(SpeciesCompressionLevel { level })
+            Self::Fixed(SpeciesDeduplicationLevel { level })
         }
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-struct SpeciesCompressionLevel {
+struct SpeciesDeduplicationLevel {
     level: ClosedUnitF64,
 }

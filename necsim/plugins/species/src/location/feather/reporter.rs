@@ -34,11 +34,11 @@ impl Reporter for LocationSpeciesFeatherReporter {
             self.store_individual_origin(&dispersal.global_lineage_reference, dispersal.origin.location());
         }
 
-        // Only update the active frontier with `compression_probability`
+        // Only update the active frontier with `deduplication_probability`
         // All probabilities result in fully correct results,
         //  but higher probabilities reduce the dataframe size between
         //  pause and resume with the Independent algorithm
-        if self.compression_probability > dispersal.event_time.get().fract() {
+        if self.deduplication_probability > dispersal.event_time.get().fract() {
             self.activity.insert(dispersal.global_lineage_reference.clone(), dispersal.event_time);
         }
 
