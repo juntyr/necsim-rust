@@ -8,11 +8,11 @@ use rusqlite::{named_params, types::Value};
 
 use crate::{LastEventState, SpeciesIdentity};
 
-use super::{IndividualLocationSpeciesReporter, SpeciesLocationsMode};
+use super::{IndividualSpeciesSQLiteReporter, SpeciesLocationsMode};
 
 const METADATA_TABLE: &str = "__SPECIES_REPORTER_META";
 
-impl IndividualLocationSpeciesReporter {
+impl IndividualSpeciesSQLiteReporter {
     pub(super) fn store_individual_origin(
         &mut self,
         lineage: &GlobalLineageReference,

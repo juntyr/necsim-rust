@@ -1,8 +1,8 @@
 use necsim_core::{impl_finalise, impl_report, reporter::Reporter};
 
-use super::IndividualLocationSpeciesReporter;
+use super::IndividualSpeciesSQLiteReporter;
 
-impl Reporter for IndividualLocationSpeciesReporter {
+impl Reporter for IndividualSpeciesSQLiteReporter {
     impl_report!(speciation(&mut self, speciation: Used) {
         if speciation.prior_time == 0.0_f64 {
             self.store_individual_origin(&speciation.global_lineage_reference, &speciation.origin);

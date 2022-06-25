@@ -9,10 +9,10 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use necsim_core::{
     event::{DispersalEvent, SpeciationEvent},
-    landscape::{IndexedLocation, Location},
+    landscape::Location,
     lineage::GlobalLineageReference,
 };
-use necsim_core_bond::{NonNegativeF64, NonZeroOneU64};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveF64};
 
 use crate::{LastEventState, SpeciesIdentity};
 
@@ -20,24 +20,33 @@ mod dataframe;
 mod reporter;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct IndividualLocationSpeciesReporter {
+pub struct LocationSpeciesFeatherReporter {
     last_parent_prior_time: Option<(GlobalLineageReference, NonNegativeF64)>,
     last_speciation_event: Option<SpeciationEvent>,
     last_dispersal_event: Option<DispersalEvent>,
 
+    // Representation counts for all resumed lineages
+    counts: HashMap<GlobalLineageReference, u64, FnvBuildHasher>,
+    // Last event time of all lineages
+    activity: HashMap<GlobalLineageReference, PositiveF64, FnvBuildHasher>,
     // Original (present-time) locations of all lineages
-    origins: HashMap<GlobalLineageReference, IndexedLocation, FnvBuildHasher>,
+    origins: HashMap<GlobalLineageReference, Location, FnvBuildHasher>,
+
     // Child -> Parent lineage mapping
     parents: HashMap<GlobalLineageReference, GlobalLineageReference, FnvBuildHasher>,
-    // Species originator -> Species identities mapping
+
+    // Species originator -> Species identity mapping
     species: HashMap<GlobalLineageReference, SpeciesIdentity, FnvBuildHasher>,
+    // All speciated location-species records from before a resume
+    speciated: Vec<(Location, SpeciesIdentity, u64)>,
 
     output: PathBuf,
+    compression_probability: ClosedUnitF64,
     mode: SpeciesLocationsMode,
     init: bool,
 }
 
-impl Drop for IndividualLocationSpeciesReporter {
+impl Drop for LocationSpeciesFeatherReporter {
     fn drop(&mut self) {
         if matches!(self.mode, SpeciesLocationsMode::Create) && !self.init {
             std::mem::drop(std::fs::remove_file(&self.output));
@@ -45,19 +54,24 @@ impl Drop for IndividualLocationSpeciesReporter {
     }
 }
 
-impl fmt::Debug for IndividualLocationSpeciesReporter {
+impl fmt::Debug for LocationSpeciesFeatherReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct(stringify!(IndividualLocationSpeciesReporter))
+        fmt.debug_struct(stringify!(LocationSpeciesFeatherReporter))
             .field("output", &self.output)
+            .field(
+                "compression",
+                &SpeciesCompressionMode::from(self.compression_probability),
+            )
             .field("mode", &self.mode)
             .finish()
     }
 }
 
-impl serde::Serialize for IndividualLocationSpeciesReporter {
+impl serde::Serialize for LocationSpeciesFeatherReporter {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        IndividualLocationSpeciesReporterArgs {
+        LocationSpeciesFeatherReporterArgs {
             output: self.output.clone(),
+            compression: SpeciesCompressionMode::from(self.compression_probability),
             mode: self.mode.clone(),
         }
         .serialize(serializer)
@@ -65,17 +79,20 @@ impl serde::Serialize for IndividualLocationSpeciesReporter {
 }
 
 #[allow(clippy::too_many_lines)]
-impl<'de> Deserialize<'de> for IndividualLocationSpeciesReporter {
+impl<'de> Deserialize<'de> for LocationSpeciesFeatherReporter {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let args = IndividualLocationSpeciesReporterArgs::deserialize(deserializer)?;
+        let args = LocationSpeciesFeatherReporterArgs::deserialize(deserializer)?;
 
         let mut self_last_parent_prior_time = None;
         let mut self_last_speciation_event = None;
         let mut self_last_dispersal_event = None;
 
+        let mut self_counts = HashMap::default();
         let mut self_origins = HashMap::default();
+
         let mut self_parents = HashMap::default();
-        let mut self_species = HashMap::default();
+
+        let mut self_speciated = Vec::default();
 
         if matches!(args.mode, SpeciesLocationsMode::Resume) {
             let file = File::options()
@@ -88,12 +105,10 @@ impl<'de> Deserialize<'de> for IndividualLocationSpeciesReporter {
                 .map_err(serde::de::Error::custom)?;
 
             let expected_fields = vec![
-                Field::new("id", DataType::UInt64, false),
                 Field::new("x", DataType::UInt32, false),
                 Field::new("y", DataType::UInt32, false),
-                Field::new("i", DataType::UInt32, false),
-                Field::new("parent", DataType::UInt64, false),
-                Field::new("species", DataType::FixedSizeBinary(24), true),
+                Field::new("species", DataType::FixedSizeBinary(24), false),
+                Field::new("count", DataType::UInt64, false),
             ];
 
             if metadata.schema.fields != expected_fields {
@@ -120,20 +135,11 @@ impl<'de> Deserialize<'de> for IndividualLocationSpeciesReporter {
             for chunk in arrow2::io::ipc::read::FileReader::new(reader, metadata, None) {
                 let chunk = chunk.map_err(serde::de::Error::custom)?;
 
-                let (ids, xs, ys, is, parents, species) = match chunk.columns() {
-                    [ids, xs, ys, is, parents, species] => (ids, xs, ys, is, parents, species),
+                let (xs, ys, species, counts) = match chunk.columns() {
+                    [xs, ys, species, counts] => (xs, ys, species, counts),
                     _ => {
                         return Err(serde::de::Error::custom(
                             "corrupted species dataframe schema",
-                        ))
-                    },
-                };
-
-                let ids = match ids.as_any().downcast_ref::<PrimitiveArray<u64>>() {
-                    Some(ids) => ids,
-                    None => {
-                        return Err(serde::de::Error::custom(
-                            "corrupted species dataframe id column",
                         ))
                     },
                 };
@@ -156,24 +162,6 @@ impl<'de> Deserialize<'de> for IndividualLocationSpeciesReporter {
                     },
                 };
 
-                let is = match is.as_any().downcast_ref::<PrimitiveArray<u32>>() {
-                    Some(is) => is,
-                    None => {
-                        return Err(serde::de::Error::custom(
-                            "corrupted species dataframe i column",
-                        ))
-                    },
-                };
-
-                let parents = match parents.as_any().downcast_ref::<PrimitiveArray<u64>>() {
-                    Some(parents) => parents,
-                    None => {
-                        return Err(serde::de::Error::custom(
-                            "corrupted species dataframe parent column",
-                        ))
-                    },
-                };
-
                 let species = match species.as_any().downcast_ref::<FixedSizeBinaryArray>() {
                     Some(species) if species.size() == 24 => species,
                     _ => {
@@ -183,44 +171,42 @@ impl<'de> Deserialize<'de> for IndividualLocationSpeciesReporter {
                     },
                 };
 
-                for (((((id, x), y), i), parent), species) in ids
-                    .values_iter()
-                    .zip(xs.values_iter())
-                    .zip(ys.values_iter())
-                    .zip(is.values_iter())
-                    .zip(parents.values_iter())
-                    .zip(species.iter())
-                {
-                    let id = unsafe {
-                        GlobalLineageReference::from_inner(NonZeroOneU64::new_unchecked(*id + 2))
-                    };
-
-                    // Populate the individual `origins` lookup
-                    self_origins
-                        .insert(id.clone(), IndexedLocation::new(Location::new(*x, *y), *i));
-
-                    let parent = unsafe {
-                        GlobalLineageReference::from_inner(NonZeroOneU64::new_unchecked(
-                            *parent + 2,
+                let counts = match counts.as_any().downcast_ref::<PrimitiveArray<u64>>() {
+                    Some(counts) => counts,
+                    None => {
+                        return Err(serde::de::Error::custom(
+                            "corrupted species dataframe count column",
                         ))
-                    };
+                    },
+                };
 
-                    // Populate the individual `parents` lookup
-                    // parent == id -> individual does NOT have a parent
-                    if parent != id {
-                        self_parents.insert(id.clone(), parent);
-                    }
+                for (((x, y), species), count) in xs
+                    .values_iter()
+                    .zip(ys.values_iter())
+                    .zip(species.iter_values())
+                    .zip(counts.values_iter())
+                {
+                    let origin = Location::new(*x, *y);
+                    let species = SpeciesIdentity::try_from(species).map_err(|_| {
+                        serde::de::Error::custom("corrupted species dataframe species value")
+                    })?;
+                    let count = *count;
 
-                    if let Some(species) = species {
-                        // Populate the individual `species` lookup
-                        self_species.insert(
-                            id,
-                            SpeciesIdentity::try_from(species).map_err(|_| {
-                                serde::de::Error::custom(
-                                    "corrupted species dataframe species value",
-                                )
-                            })?,
-                        );
+                    match species.try_into_unspeciated() {
+                        Ok((lineage, anchor)) => {
+                            if count != 1 {
+                                self_counts.insert(lineage.clone(), count);
+                            }
+
+                            self_origins.insert(lineage.clone(), origin);
+
+                            if lineage != anchor {
+                                self_parents.insert(lineage, anchor);
+                            }
+                        },
+                        Err(species) => {
+                            self_speciated.push((origin, species, count));
+                        },
                     }
                 }
             }
@@ -237,9 +223,20 @@ impl<'de> Deserialize<'de> for IndividualLocationSpeciesReporter {
             last_speciation_event: self_last_speciation_event,
             last_dispersal_event: self_last_dispersal_event,
 
+            counts: self_counts,
+            activity: HashMap::default(),
             origins: self_origins,
+
             parents: self_parents,
-            species: self_species,
+
+            species: HashMap::default(),
+            speciated: self_speciated,
+
+            compression_probability: match args.compression {
+                SpeciesCompressionMode::None => ClosedUnitF64::zero(),
+                SpeciesCompressionMode::Fixed(SpeciesCompressionLevel { level }) => level,
+                SpeciesCompressionMode::Full => ClosedUnitF64::one(),
+            },
 
             output: args.output,
             mode: args.mode,
@@ -250,9 +247,11 @@ impl<'de> Deserialize<'de> for IndividualLocationSpeciesReporter {
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[serde(rename = "IndividualLocationSpeciesReporter")]
-struct IndividualLocationSpeciesReporterArgs {
+#[serde(rename = "LocationSpeciesFeatherReporter")]
+struct LocationSpeciesFeatherReporterArgs {
     output: PathBuf,
+    #[serde(default)]
+    compression: SpeciesCompressionMode,
     #[serde(default)]
     mode: SpeciesLocationsMode,
 }
@@ -267,4 +266,36 @@ impl Default for SpeciesLocationsMode {
     fn default() -> Self {
         SpeciesLocationsMode::Create
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+enum SpeciesCompressionMode {
+    Full,
+    None,
+    Fixed(SpeciesCompressionLevel),
+}
+
+impl Default for SpeciesCompressionMode {
+    fn default() -> Self {
+        Self::Fixed(SpeciesCompressionLevel {
+            level: ClosedUnitF64::new(0.0625_f64).unwrap(),
+        })
+    }
+}
+
+impl From<ClosedUnitF64> for SpeciesCompressionMode {
+    fn from(level: ClosedUnitF64) -> Self {
+        if level == ClosedUnitF64::zero() {
+            Self::None
+        } else if level == ClosedUnitF64::one() {
+            Self::Full
+        } else {
+            Self::Fixed(SpeciesCompressionLevel { level })
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct SpeciesCompressionLevel {
+    level: ClosedUnitF64,
 }

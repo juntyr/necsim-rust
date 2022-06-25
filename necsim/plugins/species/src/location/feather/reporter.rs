@@ -1,8 +1,8 @@
 use necsim_core::{impl_finalise, impl_report, reporter::Reporter};
 
-use super::LocationGroupedSpeciesReporter;
+use super::LocationSpeciesFeatherReporter;
 
-impl Reporter for LocationGroupedSpeciesReporter {
+impl Reporter for LocationSpeciesFeatherReporter {
     impl_report!(speciation(&mut self, speciation: Used) {
         self.init = true;
 

@@ -20,9 +20,9 @@ use necsim_core_bond::PositiveF64;
 
 use crate::{LastEventState, SpeciesIdentity};
 
-use super::LocationGroupedSpeciesReporter;
+use super::LocationSpeciesFeatherReporter;
 
-impl LocationGroupedSpeciesReporter {
+impl LocationSpeciesFeatherReporter {
     pub(super) fn store_individual_origin(
         &mut self,
         lineage: &GlobalLineageReference,
