@@ -1,18 +1,10 @@
-use std::{
-    collections::{hash_map::Entry, HashMap},
-    convert::TryFrom,
-    fmt,
-    fs::File,
-    io::BufReader,
-    path::PathBuf,
-};
+use std::{collections::HashMap, convert::TryFrom, fmt, fs::File, io::BufReader, path::PathBuf};
 
 use arrow2::{
     array::{FixedSizeBinaryArray, PrimitiveArray},
     datatypes::{DataType, Field},
 };
 use fnv::FnvBuildHasher;
-use partitions::PartitionVec;
 use serde::{Deserialize, Deserializer, Serialize};
 
 use necsim_core::{
@@ -20,7 +12,7 @@ use necsim_core::{
     landscape::Location,
     lineage::GlobalLineageReference,
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveF64};
 
 use crate::{LastEventState, SpeciesIdentity};
 
@@ -40,10 +32,8 @@ pub struct LocationGroupedSpeciesReporter {
     // Original (present-time) locations of all lineages
     origins: HashMap<GlobalLineageReference, Location, FnvBuildHasher>,
 
-    // Indices into the union-find PartitionVec
-    indices: HashMap<GlobalLineageReference, usize, FnvBuildHasher>,
-    // Species-unions of all lineages
-    unions: PartitionVec<GlobalLineageReference>,
+    // Child -> Parent lineage mapping
+    parents: HashMap<GlobalLineageReference, GlobalLineageReference, FnvBuildHasher>,
 
     // Species originator -> Species identity mapping
     species: HashMap<GlobalLineageReference, SpeciesIdentity, FnvBuildHasher>,
@@ -51,6 +41,7 @@ pub struct LocationGroupedSpeciesReporter {
     speciated: Vec<(Location, SpeciesIdentity, u64)>,
 
     output: PathBuf,
+    compression_probability: ClosedUnitF64,
     mode: SpeciesLocationsMode,
     init: bool,
 }
@@ -65,8 +56,12 @@ impl Drop for LocationGroupedSpeciesReporter {
 
 impl fmt::Debug for LocationGroupedSpeciesReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct(stringify!(IndividualLocationSpeciesReporter))
+        fmt.debug_struct(stringify!(LocationGroupedSpeciesReporter))
             .field("output", &self.output)
+            .field(
+                "compression",
+                &SpeciesCompressionMode::from(self.compression_probability),
+            )
             .field("mode", &self.mode)
             .finish()
     }
@@ -76,6 +71,7 @@ impl serde::Serialize for LocationGroupedSpeciesReporter {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         IndividualLocationSpeciesReporterArgs {
             output: self.output.clone(),
+            compression: SpeciesCompressionMode::from(self.compression_probability),
             mode: self.mode.clone(),
         }
         .serialize(serializer)
@@ -92,11 +88,9 @@ impl<'de> Deserialize<'de> for LocationGroupedSpeciesReporter {
         let mut self_last_dispersal_event = None;
 
         let mut self_counts = HashMap::default();
-        let mut self_activity = HashMap::default();
         let mut self_origins = HashMap::default();
 
-        let mut self_indices = HashMap::default();
-        let mut self_unions = PartitionVec::default();
+        let mut self_parents = HashMap::default();
 
         let mut self_speciated = Vec::default();
 
@@ -199,35 +193,15 @@ impl<'de> Deserialize<'de> for LocationGroupedSpeciesReporter {
                     let count = *count;
 
                     match species.try_into_unspeciated() {
-                        Ok((lineage, activity, anchor)) => {
-                            match self_counts.entry(lineage.clone()) {
-                                Entry::Occupied(_) => {
-                                    return Err(serde::de::Error::custom(
-                                        "resuming duplicate lineage",
-                                    ))
-                                },
-                                Entry::Vacant(vacant) => vacant.insert(count),
-                            };
+                        Ok((lineage, anchor)) => {
+                            if count != 1 {
+                                self_counts.insert(lineage.clone(), count);
+                            }
 
-                            self_activity.insert(lineage.clone(), activity);
                             self_origins.insert(lineage.clone(), origin);
 
-                            let lineage_index =
-                                *self_indices.entry(lineage.clone()).or_insert_with(|| {
-                                    let index = self_unions.len();
-                                    self_unions.push(lineage.clone());
-                                    index
-                                });
-
-                            if anchor != lineage {
-                                let anchor_index =
-                                    *self_indices.entry(anchor.clone()).or_insert_with(|| {
-                                        let index = self_unions.len();
-                                        self_unions.push(anchor);
-                                        index
-                                    });
-
-                                self_unions.union(lineage_index, anchor_index);
+                            if lineage != anchor {
+                                self_parents.insert(lineage, anchor);
                             }
                         },
                         Err(species) => {
@@ -250,14 +224,19 @@ impl<'de> Deserialize<'de> for LocationGroupedSpeciesReporter {
             last_dispersal_event: self_last_dispersal_event,
 
             counts: self_counts,
-            activity: self_activity,
+            activity: HashMap::default(),
             origins: self_origins,
 
-            indices: self_indices,
-            unions: self_unions,
+            parents: self_parents,
 
             species: HashMap::default(),
             speciated: self_speciated,
+
+            compression_probability: match args.compression {
+                SpeciesCompressionMode::None => ClosedUnitF64::zero(),
+                SpeciesCompressionMode::Fixed(SpeciesCompressionLevel { level }) => level,
+                SpeciesCompressionMode::Full => ClosedUnitF64::one(),
+            },
 
             output: args.output,
             mode: args.mode,
@@ -272,6 +251,8 @@ impl<'de> Deserialize<'de> for LocationGroupedSpeciesReporter {
 struct IndividualLocationSpeciesReporterArgs {
     output: PathBuf,
     #[serde(default)]
+    compression: SpeciesCompressionMode,
+    #[serde(default)]
     mode: SpeciesLocationsMode,
 }
 
@@ -285,4 +266,36 @@ impl Default for SpeciesLocationsMode {
     fn default() -> Self {
         SpeciesLocationsMode::Create
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+enum SpeciesCompressionMode {
+    Full,
+    None,
+    Fixed(SpeciesCompressionLevel),
+}
+
+impl Default for SpeciesCompressionMode {
+    fn default() -> Self {
+        Self::Fixed(SpeciesCompressionLevel {
+            level: ClosedUnitF64::new(0.0625_f64).unwrap(),
+        })
+    }
+}
+
+impl From<ClosedUnitF64> for SpeciesCompressionMode {
+    fn from(level: ClosedUnitF64) -> Self {
+        if level == ClosedUnitF64::zero() {
+            Self::None
+        } else if level == ClosedUnitF64::one() {
+            Self::Full
+        } else {
+            Self::Fixed(SpeciesCompressionLevel { level })
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct SpeciesCompressionLevel {
+    level: ClosedUnitF64,
 }

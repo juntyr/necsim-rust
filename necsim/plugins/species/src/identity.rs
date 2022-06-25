@@ -40,7 +40,7 @@ impl From<[u8; 24]> for SpeciesIdentity {
 impl SpeciesIdentity {
     pub fn from_speciation(origin: &IndexedLocation, time: PositiveF64) -> SpeciesIdentity {
         let location = (u64::from(origin.location().y()) << 32) | u64::from(origin.location().x());
-        let index = u64::from(origin.index()) << 16;
+        let index = (u64::from(origin.index()) + 1) << 16;
         let time = time.get().to_bits();
 
         Self::from_raw(location, index, time)
@@ -48,23 +48,20 @@ impl SpeciesIdentity {
 
     pub fn from_unspeciated(
         lineage: GlobalLineageReference,
-        activity: PositiveF64,
         anchor: GlobalLineageReference,
     ) -> SpeciesIdentity {
         let lineage = unsafe { lineage.into_inner().get() - 2 };
-
+        let marker = 0x0;
         let anchor = unsafe { anchor.into_inner().get() - 2 };
-        assert!(anchor <= (u64::MAX >> 1), "excessive number of species");
-        let anchor = (anchor << 1) | 0x1;
 
-        let activity = activity.get().to_bits();
-
-        Self::from_raw(lineage, anchor, activity)
+        Self::from_raw(lineage, marker, anchor)
     }
 
     #[allow(dead_code)]
     pub fn try_into_speciation(self) -> Result<(IndexedLocation, PositiveF64), Self> {
         let (location, index, time) = self.copy_into_raw();
+
+        let index = index.wrapping_sub(1 << 16);
 
         if index & 0xFFFF_0000_0000_FFFF_u64 != 0x0 {
             return Err(self);
@@ -88,21 +85,15 @@ impl SpeciesIdentity {
 
     pub fn try_into_unspeciated(
         self,
-    ) -> Result<(GlobalLineageReference, PositiveF64, GlobalLineageReference), Self> {
-        let (lineage, anchor, activity) = self.copy_into_raw();
+    ) -> Result<(GlobalLineageReference, GlobalLineageReference), Self> {
+        let (lineage, marker, anchor) = self.copy_into_raw();
 
-        if anchor & 0x1 == 0x0 {
+        if marker != 0x0 {
             return Err(self);
         }
 
-        let anchor = anchor >> 1;
-
         let lineage = match NonZeroOneU64::new(lineage.wrapping_add(2)) {
             Ok(lineage) => unsafe { GlobalLineageReference::from_inner(lineage) },
-            Err(_) => return Err(self),
-        };
-        let activity = match PositiveF64::new(f64::from_bits(activity)) {
-            Ok(activity) => activity,
             Err(_) => return Err(self),
         };
         let anchor = match NonZeroOneU64::new(anchor.wrapping_add(2)) {
@@ -110,7 +101,7 @@ impl SpeciesIdentity {
             Err(_) => return Err(self),
         };
 
-        Ok((lineage, activity, anchor))
+        Ok((lineage, anchor))
     }
 
     const fn from_raw(a: u64, b: u64, c: u64) -> Self {
@@ -292,14 +283,6 @@ mod tests {
                 }
             };
 
-            let activity = loop {
-                let a = f64::from_bits(rng.next_u64());
-
-                if a.is_finite() && a > 0.0_f64 {
-                    break PositiveF64::new(a).unwrap();
-                }
-            };
-
             let anchor = loop {
                 let a = rng.next_u64();
 
@@ -313,17 +296,13 @@ mod tests {
                 }
             };
 
-            let identity =
-                SpeciesIdentity::from_unspeciated(lineage.clone(), activity, anchor.clone());
+            let identity = SpeciesIdentity::from_unspeciated(lineage.clone(), anchor.clone());
 
             assert_eq!(
                 identity.clone().try_into_speciation(),
                 Err(identity.clone())
             );
-            assert_eq!(
-                identity.try_into_unspeciated(),
-                Ok((lineage, activity, anchor))
-            );
+            assert_eq!(identity.try_into_unspeciated(), Ok((lineage, anchor)));
         }
     }
 }

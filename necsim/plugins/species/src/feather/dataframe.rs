@@ -37,13 +37,14 @@ impl LocationGroupedSpeciesReporter {
         origin: &IndexedLocation,
         time: PositiveF64,
     ) {
-        if let Entry::Vacant(vacant) = self.indices.entry(lineage.clone()) {
-            vacant.insert(self.unions.len());
-            self.unions.push(lineage.clone());
+        // Resolve the actual parent, irrespective of duplicate individuals
+        let mut parent = lineage;
+        while let Some(parent_parent) = self.parents.get(parent) {
+            parent = parent_parent;
         }
 
         self.species.insert(
-            lineage.clone(),
+            parent.clone(),
             SpeciesIdentity::from_speciation(origin, time),
         );
     }
@@ -53,25 +54,24 @@ impl LocationGroupedSpeciesReporter {
         child: &GlobalLineageReference,
         parent: &GlobalLineageReference,
     ) {
-        let child_index = match self.indices.entry(child.clone()) {
-            Entry::Occupied(occupied) => *occupied.get(),
-            Entry::Vacant(vacant) => {
-                let index = *vacant.insert(self.unions.len());
-                self.unions.push(child.clone());
-                index
-            },
-        };
+        // Resolve the actual child, irrespective of duplicate individuals
+        let mut child = child;
+        while let Some(child_parent) = self.parents.get(child) {
+            child = child_parent;
+        }
+        let child = child.clone();
 
-        let parent_index = match self.indices.entry(parent.clone()) {
-            Entry::Occupied(occupied) => *occupied.get(),
-            Entry::Vacant(vacant) => {
-                let index = *vacant.insert(self.unions.len());
-                self.unions.push(parent.clone());
-                index
-            },
-        };
+        // Resolve the actual parent, irrespective of duplicate individuals
+        let mut parent = parent;
+        while let Some(parent_parent) = self.parents.get(parent) {
+            parent = parent_parent;
+        }
+        let parent = parent.clone();
 
-        self.unions.union(child_index, parent_index);
+        // Prevent a lookup-loop, can occur after `Resume`
+        if child != parent {
+            self.parents.insert(child, parent);
+        }
     }
 
     #[allow(clippy::too_many_lines)]
@@ -134,108 +134,103 @@ impl LocationGroupedSpeciesReporter {
             counts.push(count);
         }
 
-        let mut union_species = Vec::new();
-        let mut union_activity = Vec::new();
+        let mut activities: HashMap<GlobalLineageReference, (PositiveF64, GlobalLineageReference)> =
+            HashMap::default();
 
-        for union in self.unions.all_sets() {
-            let mut species = None;
-            let mut activity = None;
+        // Lineage ancestor union-find with path compression
+        let mut family = Vec::new();
 
-            for (_, lineage) in union {
-                // Find if the union has speciated
-                if let Some(identity) = self.species.get(lineage) {
-                    species = Some(identity.clone());
+        let mut unspeciated = Vec::new();
+
+        for (lineage, origin) in std::mem::take(&mut self.origins) {
+            // Find the ancestor that originated the species
+            let mut ancestor = lineage.clone();
+            while let Some(ancestor_parent) = self.parents.get(&ancestor) {
+                family.push(ancestor.clone());
+                ancestor = ancestor_parent.clone();
+            }
+
+            // Compress the ancestry paths for all visited lineages
+            for child in family.drain(..) {
+                self.parents.insert(child, ancestor.clone());
+            }
+
+            let count = self.counts.get(&lineage).copied().unwrap_or(1_u64);
+
+            if let Some(identity) = self.species.get(&ancestor) {
+                match species_index.entry((origin.clone(), identity.clone())) {
+                    // Update the existing per-location-species record
+                    Entry::Occupied(occupied) => counts[*occupied.get()] += count,
+                    // Create a new per-location-species record
+                    Entry::Vacant(vacant) => {
+                        vacant.insert(counts.len());
+
+                        xs.push(origin.x());
+                        ys.push(origin.y());
+                        species.extend_from_slice(&**identity);
+                        counts.push(count);
+                    },
                 }
 
-                // Find possible union-anchor lineages in the active frontier
-                if let Some(a) = self.activity.get(lineage) {
-                    if let Some((b, _)) = &activity {
-                        if *a > *b {
-                            activity = Some((*a, lineage.clone()));
+                continue;
+            }
+
+            if let Some(a) = self.activity.get(&lineage) {
+                match activities.entry(ancestor.clone()) {
+                    Entry::Occupied(mut occupied) => {
+                        if *a > occupied.get().0 {
+                            occupied.insert((*a, lineage.clone()));
                         }
-                    }
+                    },
+                    Entry::Vacant(vacant) => {
+                        vacant.insert((*a, lineage.clone()));
+                    },
                 }
             }
 
-            union_species.push(species);
-            union_activity.push(activity);
+            unspeciated.push((lineage, origin, ancestor, count));
         }
 
-        for ((union, identity), activity) in self
-            .unions
-            .all_sets()
-            .zip(union_species.into_iter())
-            .zip(union_activity.into_iter())
-        {
-            if let Some(identity) = identity {
-                // The species-union has already speciated
-                for (_, lineage) in union {
-                    if let Some(origin) = self.origins.get(lineage) {
-                        let count = self.counts.get(lineage).copied().unwrap_or(1_u64);
+        for (lineage, origin, ancestor, count) in unspeciated {
+            // If no active frontier exists, every lineage must be considered
+            //  to be part of the active frontier
+            //  -> in this case the ancestor is a pseudo-anchor
+            let (anchor_activity, anchor) = match activities.get(&ancestor) {
+                Some((anchor_activity, anchor)) => (Some(anchor_activity), anchor.clone()),
+                None => (None, ancestor.clone()),
+            };
 
-                        match species_index.entry((origin.clone(), identity.clone())) {
-                            // Update the existing per-location-species record
-                            Entry::Occupied(occupied) => counts[*occupied.get()] += count,
-                            // Create a new per-location-species record
-                            Entry::Vacant(vacant) => {
-                                vacant.insert(counts.len());
-
-                                xs.push(origin.x());
-                                ys.push(origin.y());
-                                species.extend_from_slice(&*identity);
-                                counts.push(count);
-                            },
-                        }
-                    }
-                }
-            } else if let Some((anchor_activity, anchor)) = activity {
-                // The unspeciated species-union has one fallback anchor
-                let anchor_identity = SpeciesIdentity::from_unspeciated(
+            // Lineages in the active frontier of the species-union,
+            //  excluding the anchor, have unique location-species records
+            if self.activity.get(&lineage) == anchor_activity && lineage != anchor {
+                xs.push(origin.x());
+                ys.push(origin.y());
+                species.extend_from_slice(&*SpeciesIdentity::from_unspeciated(
+                    lineage.clone(),
                     anchor.clone(),
-                    anchor_activity,
-                    anchor.clone(),
-                );
+                ));
+                counts.push(count);
 
-                for (_, lineage) in union {
-                    if let Some(origin) = self.origins.get(lineage) {
-                        let count = self.counts.get(lineage).copied().unwrap_or(1_u64);
+                continue;
+            }
 
-                        if let Some(activity) = self.activity.get(lineage).copied() {
-                            // Lineages in the active frontier of the species-union,
-                            //  excluding the anchor, have unique location-species records
-                            if activity == anchor_activity && lineage != &anchor {
-                                xs.push(origin.x());
-                                ys.push(origin.y());
-                                species.extend_from_slice(&*SpeciesIdentity::from_unspeciated(
-                                    lineage.clone(),
-                                    activity,
-                                    anchor.clone(),
-                                ));
-                                counts.push(count);
+            // The unspeciated species-union has one fallback anchor
+            let anchor_identity = SpeciesIdentity::from_unspeciated(anchor.clone(), anchor.clone());
 
-                                continue;
-                            }
-                        }
+            // No-longer activate lineages and the anchor may share
+            //  location-species records with each other
+            match species_index.entry((origin.clone(), anchor_identity.clone())) {
+                // Update the existing per-location-species record
+                Entry::Occupied(occupied) => counts[*occupied.get()] += count,
+                // Create a new per-location-species record
+                Entry::Vacant(vacant) => {
+                    vacant.insert(counts.len());
 
-                        // No-longer activate lineages and the anchor may share
-                        //  location-species records with each other
-                        match species_index.entry((origin.clone(), anchor_identity.clone())) {
-                            // Update the existing per-location-species record
-                            Entry::Occupied(occupied) => counts[*occupied.get()] += count,
-                            // Create a new per-location-species record
-                            Entry::Vacant(vacant) => {
-                                vacant.insert(counts.len());
-
-                                xs.push(origin.x());
-                                ys.push(origin.y());
-                                species.extend_from_slice(&*anchor_identity);
-                                counts.push(count);
-                            },
-                        }
-                    }
-                }
-            } else {
-                unreachable!("all lineage unions must either speciate or have an active frontier")
+                    xs.push(origin.x());
+                    ys.push(origin.y());
+                    species.extend_from_slice(&*anchor_identity);
+                    counts.push(count);
+                },
             }
         }
 

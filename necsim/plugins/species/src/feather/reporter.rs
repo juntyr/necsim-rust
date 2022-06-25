@@ -10,9 +10,6 @@ impl Reporter for LocationGroupedSpeciesReporter {
             self.store_individual_origin(&speciation.global_lineage_reference, speciation.origin.location());
         }
 
-        // No activity is needed for speciated individuals
-        self.activity.remove(&speciation.global_lineage_reference);
-
         if Some(speciation) == self.last_speciation_event.as_ref() {
             if let Some((parent, prior_time)) = &self.last_parent_prior_time {
                 if prior_time != &speciation.prior_time {
@@ -37,11 +34,11 @@ impl Reporter for LocationGroupedSpeciesReporter {
             self.store_individual_origin(&dispersal.global_lineage_reference, dispersal.origin.location());
         }
 
-        if dispersal.interaction.is_coalescence() {
-            // Definitely coalesced individuals must NOT have an activity
-            self.activity.remove(&dispersal.global_lineage_reference);
-        } else {
-            // Store the latest event time of the lineage
+        // Only update the active frontier with `compression_probability`
+        // All probabilities result in fully correct results,
+        //  but higher probabilities reduce the dataframe size between
+        //  pause and resume with the Independent algorithm
+        if self.compression_probability > dispersal.event_time.get().fract() {
             self.activity.insert(dispersal.global_lineage_reference.clone(), dispersal.event_time);
         }
 
