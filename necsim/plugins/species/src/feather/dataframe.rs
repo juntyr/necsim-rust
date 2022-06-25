@@ -18,7 +18,9 @@ use necsim_core::{
 };
 use necsim_core_bond::PositiveF64;
 
-use super::{LastEventState, LocationGroupedSpeciesReporter, SpeciesIdentity};
+use crate::{LastEventState, SpeciesIdentity};
+
+use super::LocationGroupedSpeciesReporter;
 
 impl LocationGroupedSpeciesReporter {
     pub(super) fn store_individual_origin(
@@ -42,7 +44,7 @@ impl LocationGroupedSpeciesReporter {
 
         self.species.insert(
             lineage.clone(),
-            create_species_identity_from_speciation(origin, time),
+            SpeciesIdentity::from_speciation(origin, time),
         );
     }
 
@@ -124,11 +126,11 @@ impl LocationGroupedSpeciesReporter {
             HashMap::default();
 
         for (origin, identity, count) in std::mem::take(&mut self.speciated) {
-            species_index.insert((origin.clone(), SpeciesIdentity(identity.0)), counts.len());
+            species_index.insert((origin.clone(), identity.clone()), counts.len());
 
             xs.push(origin.x());
             ys.push(origin.y());
-            species.extend_from_slice(&identity.0);
+            species.extend_from_slice(&*identity);
             counts.push(count);
         }
 
@@ -142,7 +144,7 @@ impl LocationGroupedSpeciesReporter {
             for (_, lineage) in union {
                 // Find if the union has speciated
                 if let Some(identity) = self.species.get(lineage) {
-                    species = Some(SpeciesIdentity(identity.0));
+                    species = Some(identity.clone());
                 }
 
                 // Find possible union-anchor lineages in the active frontier
@@ -171,7 +173,7 @@ impl LocationGroupedSpeciesReporter {
                     if let Some(origin) = self.origins.get(lineage) {
                         let count = self.counts.get(lineage).copied().unwrap_or(1_u64);
 
-                        match species_index.entry((origin.clone(), SpeciesIdentity(identity.0))) {
+                        match species_index.entry((origin.clone(), identity.clone())) {
                             // Update the existing per-location-species record
                             Entry::Occupied(occupied) => counts[*occupied.get()] += count,
                             // Create a new per-location-species record
@@ -180,7 +182,7 @@ impl LocationGroupedSpeciesReporter {
 
                                 xs.push(origin.x());
                                 ys.push(origin.y());
-                                species.extend_from_slice(&identity.0);
+                                species.extend_from_slice(&*identity);
                                 counts.push(count);
                             },
                         }
@@ -188,7 +190,7 @@ impl LocationGroupedSpeciesReporter {
                 }
             } else if let Some((anchor_activity, anchor)) = activity {
                 // The unspeciated species-union has one fallback anchor
-                let anchor_identity = create_species_identity_from_unspeciated(
+                let anchor_identity = SpeciesIdentity::from_unspeciated(
                     anchor.clone(),
                     anchor_activity,
                     anchor.clone(),
@@ -204,14 +206,11 @@ impl LocationGroupedSpeciesReporter {
                             if activity == anchor_activity && lineage != &anchor {
                                 xs.push(origin.x());
                                 ys.push(origin.y());
-                                species.extend_from_slice(
-                                    &create_species_identity_from_unspeciated(
-                                        lineage.clone(),
-                                        activity,
-                                        anchor.clone(),
-                                    )
-                                    .0,
-                                );
+                                species.extend_from_slice(&*SpeciesIdentity::from_unspeciated(
+                                    lineage.clone(),
+                                    activity,
+                                    anchor.clone(),
+                                ));
                                 counts.push(count);
 
                                 continue;
@@ -220,9 +219,7 @@ impl LocationGroupedSpeciesReporter {
 
                         // No-longer activate lineages and the anchor may share
                         //  location-species records with each other
-                        match species_index
-                            .entry((origin.clone(), SpeciesIdentity(anchor_identity.0)))
-                        {
+                        match species_index.entry((origin.clone(), anchor_identity.clone())) {
                             // Update the existing per-location-species record
                             Entry::Occupied(occupied) => counts[*occupied.get()] += count,
                             // Create a new per-location-species record
@@ -231,7 +228,7 @@ impl LocationGroupedSpeciesReporter {
 
                                 xs.push(origin.x());
                                 ys.push(origin.y());
-                                species.extend_from_slice(&anchor_identity.0);
+                                species.extend_from_slice(&*anchor_identity);
                                 counts.push(count);
                             },
                         }
@@ -261,84 +258,4 @@ impl LocationGroupedSpeciesReporter {
 
         writer.finish()
     }
-}
-
-fn create_species_identity_from_speciation(
-    origin: &IndexedLocation,
-    time: PositiveF64,
-) -> SpeciesIdentity {
-    let location = (u64::from(origin.location().y()) << 32) | u64::from(origin.location().x());
-    let index = u64::from(origin.index()) << 16;
-    let time = time.get().to_bits();
-
-    create_species_identity_from_raw(location, index, time)
-}
-
-fn create_species_identity_from_unspeciated(
-    lineage: GlobalLineageReference,
-    activity: PositiveF64,
-    anchor: GlobalLineageReference,
-) -> SpeciesIdentity {
-    let lineage = unsafe { lineage.into_inner().get() - 2 };
-
-    let anchor = unsafe { anchor.into_inner().get() - 2 };
-    assert!(anchor <= (u64::MAX >> 1), "excessive number of species");
-    let anchor = (anchor << 1) | 0x1;
-
-    let activity = activity.get().to_bits();
-
-    create_species_identity_from_raw(lineage, anchor, activity)
-}
-
-const fn create_species_identity_from_raw(a: u64, b: u64, c: u64) -> SpeciesIdentity {
-    let a_bytes = seahash_diffuse(a).to_le_bytes();
-    let b_bytes = seahash_diffuse(b).to_le_bytes();
-    let c_bytes = seahash_diffuse(c).to_le_bytes();
-
-    // Shuffle and mix all 24 bytes of the species identity
-    let lower = seahash_diffuse(u64::from_le_bytes([
-        a_bytes[3], c_bytes[0], b_bytes[5], a_bytes[1], c_bytes[4], c_bytes[7], c_bytes[5],
-        a_bytes[5],
-    ]))
-    .to_le_bytes();
-    let middle = seahash_diffuse(u64::from_le_bytes([
-        c_bytes[6], b_bytes[4], a_bytes[0], a_bytes[6], b_bytes[2], b_bytes[1], a_bytes[7],
-        b_bytes[3],
-    ]))
-    .to_le_bytes();
-    let upper = seahash_diffuse(u64::from_le_bytes([
-        a_bytes[4], a_bytes[2], c_bytes[2], b_bytes[0], c_bytes[3], c_bytes[1], b_bytes[7],
-        b_bytes[6],
-    ]))
-    .to_le_bytes();
-
-    SpeciesIdentity([
-        lower[0], lower[1], lower[2], lower[3], lower[4], lower[5], lower[6], lower[7], middle[0],
-        middle[1], middle[2], middle[3], middle[4], middle[5], middle[6], middle[7], upper[0],
-        upper[1], upper[2], upper[3], upper[4], upper[5], upper[6], upper[7],
-    ])
-}
-
-const fn seahash_diffuse(mut x: u64) -> u64 {
-    // SeaHash diffusion function
-    // https://docs.rs/seahash/4.1.0/src/seahash/helper.rs.html#75-92
-
-    // These are derived from the PCG RNG's round. Thanks to @Veedrac for proposing
-    // this. The basic idea is that we use dynamic shifts, which are determined
-    // by the input itself. The shift is chosen by the higher bits, which means
-    // that changing those flips the lower bits, which scatters upwards because
-    // of the multiplication.
-
-    x = x.wrapping_add(0x9e37_79b9_7f4a_7c15);
-
-    x = x.wrapping_mul(0x6eed_0e9d_a4d9_4a4f);
-
-    let a = x >> 32;
-    let b = x >> 60;
-
-    x ^= a >> b;
-
-    x = x.wrapping_mul(0x6eed_0e9d_a4d9_4a4f);
-
-    x
 }

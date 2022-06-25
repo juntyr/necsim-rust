@@ -1,10 +1,9 @@
-use std::{collections::HashMap, convert::TryInto, fmt, fs::File, io::BufReader, path::PathBuf};
+use std::{collections::HashMap, convert::TryFrom, fmt, fs::File, io::BufReader, path::PathBuf};
 
 use arrow2::{
     array::{FixedSizeBinaryArray, PrimitiveArray},
     datatypes::{DataType, Field},
 };
-use bincode::Options;
 use fnv::FnvBuildHasher;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -15,11 +14,10 @@ use necsim_core::{
 };
 use necsim_core_bond::{NonNegativeF64, NonZeroOneU64};
 
+use crate::{LastEventState, SpeciesIdentity};
+
 mod dataframe;
 mod reporter;
-
-#[derive(Debug)]
-struct SpeciesIdentity([u8; 24]);
 
 #[allow(clippy::module_name_repetitions)]
 pub struct IndividualLocationSpeciesReporter {
@@ -214,12 +212,15 @@ impl<'de> Deserialize<'de> for IndividualLocationSpeciesReporter {
                     }
 
                     if let Some(species) = species {
-                        let species: [u8; 24] = species.try_into().map_err(|_| {
-                            serde::de::Error::custom("corrupted species dataframe species value")
-                        })?;
-
                         // Populate the individual `species` lookup
-                        self_species.insert(id, SpeciesIdentity(species));
+                        self_species.insert(
+                            id,
+                            SpeciesIdentity::try_from(species).map_err(|_| {
+                                serde::de::Error::custom(
+                                    "corrupted species dataframe species value",
+                                )
+                            })?,
+                        );
                     }
                 }
             }
@@ -265,26 +266,5 @@ enum SpeciesLocationsMode {
 impl Default for SpeciesLocationsMode {
     fn default() -> Self {
         SpeciesLocationsMode::Create
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-struct LastEventState {
-    last_parent_prior_time: Option<(GlobalLineageReference, NonNegativeF64)>,
-    last_speciation_event: Option<SpeciationEvent>,
-    last_dispersal_event: Option<DispersalEvent>,
-}
-
-impl LastEventState {
-    fn into_string(self) -> Result<String, ()> {
-        let bytes = bincode::options().serialize(&self).map_err(|_| ())?;
-
-        Ok(base32::encode(base32::Alphabet::Crockford, &bytes))
-    }
-
-    fn from_string(string: &str) -> Result<LastEventState, ()> {
-        let bytes = base32::decode(base32::Alphabet::Crockford, string).ok_or(())?;
-
-        bincode::options().deserialize(&bytes).map_err(|_| ())
     }
 }

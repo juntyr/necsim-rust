@@ -1,6 +1,6 @@
 use std::{
     collections::{hash_map::Entry, HashMap},
-    convert::TryInto,
+    convert::TryFrom,
     fmt,
     fs::File,
     io::BufReader,
@@ -11,7 +11,6 @@ use arrow2::{
     array::{FixedSizeBinaryArray, PrimitiveArray},
     datatypes::{DataType, Field},
 };
-use bincode::Options;
 use fnv::FnvBuildHasher;
 use partitions::PartitionVec;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -21,14 +20,12 @@ use necsim_core::{
     landscape::Location,
     lineage::GlobalLineageReference,
 };
-use necsim_core_bond::{NonNegativeF64, NonZeroOneU64, PositiveF64};
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
+
+use crate::{LastEventState, SpeciesIdentity};
 
 mod dataframe;
 mod reporter;
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(transparent)]
-struct SpeciesIdentity([u8; 24]);
 
 #[allow(clippy::module_name_repetitions)]
 pub struct LocationGroupedSpeciesReporter {
@@ -196,12 +193,12 @@ impl<'de> Deserialize<'de> for LocationGroupedSpeciesReporter {
                     .zip(counts.values_iter())
                 {
                     let origin = Location::new(*x, *y);
-                    let species = SpeciesIdentity(species.try_into().map_err(|_| {
+                    let species = SpeciesIdentity::try_from(species).map_err(|_| {
                         serde::de::Error::custom("corrupted species dataframe species value")
-                    })?);
+                    })?;
                     let count = *count;
 
-                    match try_species_identity_into_unspeciated(species) {
+                    match species.try_into_unspeciated() {
                         Ok((lineage, activity, anchor)) => {
                             match self_counts.entry(lineage.clone()) {
                                 Entry::Occupied(_) => {
@@ -288,133 +285,4 @@ impl Default for SpeciesLocationsMode {
     fn default() -> Self {
         SpeciesLocationsMode::Create
     }
-}
-
-#[derive(Serialize, Deserialize)]
-struct LastEventState {
-    last_parent_prior_time: Option<(GlobalLineageReference, NonNegativeF64)>,
-    last_speciation_event: Option<SpeciationEvent>,
-    last_dispersal_event: Option<DispersalEvent>,
-}
-
-impl LastEventState {
-    fn into_string(self) -> Result<String, ()> {
-        let bytes = bincode::options().serialize(&self).map_err(|_| ())?;
-
-        Ok(base32::encode(base32::Alphabet::Crockford, &bytes))
-    }
-
-    fn from_string(string: &str) -> Result<LastEventState, ()> {
-        let bytes = base32::decode(base32::Alphabet::Crockford, string).ok_or(())?;
-
-        bincode::options().deserialize(&bytes).map_err(|_| ())
-    }
-}
-
-fn try_species_identity_into_unspeciated(
-    identity: SpeciesIdentity,
-) -> Result<(GlobalLineageReference, PositiveF64, GlobalLineageReference), SpeciesIdentity> {
-    let (lineage, anchor, activity) = species_identity_into_raw(&identity);
-
-    if anchor & 0x1 == 0x0 {
-        return Err(identity);
-    }
-
-    let lineage =
-        unsafe { GlobalLineageReference::from_inner(NonZeroOneU64::new_unchecked(lineage + 2)) };
-    let activity = unsafe { PositiveF64::new_unchecked(f64::from_bits(activity)) };
-    let anchor =
-        unsafe { GlobalLineageReference::from_inner(NonZeroOneU64::new_unchecked(anchor + 2)) };
-
-    Ok((lineage, activity, anchor))
-}
-
-const fn species_identity_into_raw(identity: &SpeciesIdentity) -> (u64, u64, u64) {
-    let lower_bytes = seahash_undiffuse(u64::from_le_bytes([
-        identity.0[0],
-        identity.0[1],
-        identity.0[2],
-        identity.0[3],
-        identity.0[4],
-        identity.0[5],
-        identity.0[6],
-        identity.0[7],
-    ]))
-    .to_le_bytes();
-    let middle_bytes = seahash_undiffuse(u64::from_le_bytes([
-        identity.0[8],
-        identity.0[9],
-        identity.0[10],
-        identity.0[11],
-        identity.0[12],
-        identity.0[13],
-        identity.0[14],
-        identity.0[15],
-    ]))
-    .to_le_bytes();
-    let upper_bytes = seahash_undiffuse(u64::from_le_bytes([
-        identity.0[16],
-        identity.0[17],
-        identity.0[18],
-        identity.0[19],
-        identity.0[20],
-        identity.0[21],
-        identity.0[22],
-        identity.0[23],
-    ]))
-    .to_le_bytes();
-
-    let a = seahash_undiffuse(u64::from_le_bytes([
-        middle_bytes[2],
-        lower_bytes[3],
-        upper_bytes[1],
-        lower_bytes[0],
-        upper_bytes[0],
-        lower_bytes[7],
-        middle_bytes[3],
-        middle_bytes[6],
-    ]));
-    let b = seahash_undiffuse(u64::from_le_bytes([
-        upper_bytes[3],
-        middle_bytes[5],
-        middle_bytes[4],
-        middle_bytes[7],
-        middle_bytes[1],
-        lower_bytes[2],
-        upper_bytes[7],
-        upper_bytes[6],
-    ]));
-    let c = seahash_undiffuse(u64::from_le_bytes([
-        lower_bytes[1],
-        upper_bytes[5],
-        upper_bytes[2],
-        upper_bytes[4],
-        lower_bytes[4],
-        lower_bytes[6],
-        middle_bytes[0],
-        lower_bytes[5],
-    ]));
-
-    (a, b, c)
-}
-
-pub const fn seahash_undiffuse(mut x: u64) -> u64 {
-    // SeaHash undiffusion function
-    // https://docs.rs/seahash/4.1.0/src/seahash/helper.rs.html#94-105
-
-    // 0x2f72b4215a3d8caf is the modular multiplicative inverse of the constant used
-    // in `diffuse`.
-
-    x = x.wrapping_mul(0x2f72_b421_5a3d_8caf);
-
-    let a = x >> 32;
-    let b = x >> 60;
-
-    x ^= a >> b;
-
-    x = x.wrapping_mul(0x2f72_b421_5a3d_8caf);
-
-    x = x.wrapping_sub(0x9e37_79b9_7f4a_7c15);
-
-    x
 }

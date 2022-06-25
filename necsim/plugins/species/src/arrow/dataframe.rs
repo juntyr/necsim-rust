@@ -11,7 +11,9 @@ use arrow2::{
 use necsim_core::{landscape::IndexedLocation, lineage::GlobalLineageReference};
 use necsim_core_bond::PositiveF64;
 
-use super::{IndividualLocationSpeciesReporter, LastEventState, SpeciesIdentity};
+use crate::{LastEventState, SpeciesIdentity};
+
+use super::IndividualLocationSpeciesReporter;
 
 impl IndividualLocationSpeciesReporter {
     pub(super) fn store_individual_origin(
@@ -33,59 +35,10 @@ impl IndividualLocationSpeciesReporter {
         while let Some(parent_parent) = self.parents.get(parent) {
             parent = parent_parent;
         }
-        let parent = parent.clone();
-
-        let location = (u64::from(origin.location().y()) << 32) | u64::from(origin.location().x());
-        let index = u64::from(origin.index()) << 16;
-        let time = time.get().to_bits();
-
-        let location_bytes = seahash_diffuse(location).to_le_bytes();
-        let index_bytes = seahash_diffuse(index).to_le_bytes();
-        let time_bytes = seahash_diffuse(time).to_le_bytes();
-
-        // Shuffle and mix all 24 bytes of the species identity
-        let lower = seahash_diffuse(u64::from_le_bytes([
-            location_bytes[3],
-            time_bytes[0],
-            index_bytes[5],
-            location_bytes[1],
-            time_bytes[4],
-            time_bytes[7],
-            time_bytes[5],
-            location_bytes[5],
-        ]))
-        .to_le_bytes();
-        let middle = seahash_diffuse(u64::from_le_bytes([
-            time_bytes[6],
-            index_bytes[4],
-            location_bytes[0],
-            location_bytes[6],
-            index_bytes[2],
-            index_bytes[1],
-            location_bytes[7],
-            index_bytes[3],
-        ]))
-        .to_le_bytes();
-        let upper = seahash_diffuse(u64::from_le_bytes([
-            location_bytes[4],
-            location_bytes[2],
-            time_bytes[2],
-            index_bytes[0],
-            time_bytes[3],
-            time_bytes[1],
-            index_bytes[7],
-            index_bytes[6],
-        ]))
-        .to_le_bytes();
 
         self.species.insert(
-            parent,
-            SpeciesIdentity([
-                lower[0], lower[1], lower[2], lower[3], lower[4], lower[5], lower[6], lower[7],
-                middle[0], middle[1], middle[2], middle[3], middle[4], middle[5], middle[6],
-                middle[7], upper[0], upper[1], upper[2], upper[3], upper[4], upper[5], upper[6],
-                upper[7],
-            ]),
+            parent.clone(),
+            SpeciesIdentity::from_speciation(origin, time),
         );
     }
 
@@ -202,7 +155,7 @@ impl IndividualLocationSpeciesReporter {
             }
 
             if let Some(identity) = self.species.get(&ancestor) {
-                species.extend_from_slice(&identity.0);
+                species.extend_from_slice(&**identity);
                 has_speciated.set(i, true);
             } else {
                 species.extend_from_slice(&[0; 24]);
@@ -232,28 +185,4 @@ impl IndividualLocationSpeciesReporter {
 
         writer.finish()
     }
-}
-
-const fn seahash_diffuse(mut x: u64) -> u64 {
-    // SeaHash diffusion function
-    // https://docs.rs/seahash/4.1.0/src/seahash/helper.rs.html#75-92
-
-    // These are derived from the PCG RNG's round. Thanks to @Veedrac for proposing
-    // this. The basic idea is that we use dynamic shifts, which are determined
-    // by the input itself. The shift is chosen by the higher bits, which means
-    // that changing those flips the lower bits, which scatters upwards because
-    // of the multiplication.
-
-    x = x.wrapping_add(0x9e37_79b9_7f4a_7c15);
-
-    x = x.wrapping_mul(0x6eed_0e9d_a4d9_4a4f);
-
-    let a = x >> 32;
-    let b = x >> 60;
-
-    x ^= a >> b;
-
-    x = x.wrapping_mul(0x6eed_0e9d_a4d9_4a4f);
-
-    x
 }

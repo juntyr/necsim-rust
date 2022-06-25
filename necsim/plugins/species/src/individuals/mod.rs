@@ -11,11 +11,10 @@ use necsim_core::{
 };
 use necsim_core_bond::NonNegativeF64;
 
+use crate::SpeciesIdentity;
+
 mod database;
 mod reporter;
-
-#[derive(Debug)]
-struct SpeciesIdentity(u64, u64, u64);
 
 #[allow(clippy::module_name_repetitions)]
 pub struct IndividualLocationSpeciesReporter {
