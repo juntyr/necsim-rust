@@ -71,7 +71,7 @@ impl AlgorithmDefaults for CudaAlgorithm {
     type MathsCore = NvptxMathsCore;
 }
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::trait_duplication_in_bounds)]
 impl<
         'p,
         M: MathsCore,

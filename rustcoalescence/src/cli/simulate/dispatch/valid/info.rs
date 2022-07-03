@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use anyhow::{Context, Result};
 
 use rustcoalescence_algorithms::{result::SimulationOutcome, Algorithm};
@@ -59,12 +61,12 @@ where
         SampleMode::Resume => resume_pause.push_str("resume"),
         SampleMode::FixUp(_) => resume_pause.push_str("fix-up for a restart"),
         SampleMode::Restart(SampleModeRestart { after, .. }) => {
-            resume_pause.push_str(&format!("restart after {}", after));
+            write!(resume_pause, "restart after {}", after)?;
         },
     }
     match pause_before {
         None => resume_pause.push('.'),
-        Some(before) => resume_pause.push_str(&format!(" and pause before {}.", before)),
+        Some(before) => write!(resume_pause, " and pause before {}.", before)?,
     }
     info!("{}", resume_pause);
 

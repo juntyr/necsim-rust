@@ -109,9 +109,7 @@ impl<'de> Deserialize<'de> for MpiPartitioning {
 }
 
 impl MpiPartitioning {
-    #[doc(hidden)]
     const MPI_DEFAULT_MIGRATION_INTERVAL: Duration = Duration::from_millis(100_u64);
-    #[doc(hidden)]
     const MPI_DEFAULT_PROGRESS_INTERVAL: Duration = Duration::from_millis(100_u64);
     const MPI_MIGRATION_TAG: Tag = 1;
     const MPI_PROGRESS_TAG: Tag = 0;

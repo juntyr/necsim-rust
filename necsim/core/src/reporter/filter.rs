@@ -43,12 +43,12 @@ impl<R: Reporter, KeepSpeciation: Boolean, KeepDispersal: Boolean, KeepProgress:
     }
 }
 
-impl<R: Reporter, KeepSpeciation: Boolean, KeepDispersal: Boolean, KeepProgress: Boolean> Reporter
-    for FilteredReporter<R, KeepSpeciation, KeepDispersal, KeepProgress>
-where
-    KeepSpeciation: And<R::ReportSpeciation>,
-    KeepDispersal: And<R::ReportDispersal>,
-    KeepProgress: And<R::ReportProgress>,
+impl<
+        R: Reporter,
+        KeepSpeciation: Boolean + And<R::ReportSpeciation>,
+        KeepDispersal: Boolean + And<R::ReportDispersal>,
+        KeepProgress: Boolean + And<R::ReportProgress>,
+    > Reporter for FilteredReporter<R, KeepSpeciation, KeepDispersal, KeepProgress>
 {
     impl_report!(speciation(&mut self, speciation: MaybeUsed<
         <KeepSpeciation as And<R::ReportSpeciation>
