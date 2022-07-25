@@ -1,4 +1,4 @@
-use tiff::{decoder::DecodingBuffer, tags::SampleFormat};
+use tiff::{decoder::DecodingResult, tags::SampleFormat};
 
 #[allow(clippy::module_name_repetitions)]
 pub trait TiffDataType:
@@ -11,15 +11,18 @@ pub trait TiffDataType:
     const BIT_WIDTH: u8;
     const SAMPLE_FORMAT: SampleFormat;
 
-    fn decoding_buffer_from_data(data: &mut [Self]) -> DecodingBuffer;
+    fn decoding_result_to_data(result: DecodingResult) -> Option<Vec<Self>>;
 }
 
 impl TiffDataType for u8 {
     const BIT_WIDTH: u8 = 8_u8;
     const SAMPLE_FORMAT: SampleFormat = SampleFormat::Uint;
 
-    fn decoding_buffer_from_data(data: &mut [Self]) -> DecodingBuffer {
-        DecodingBuffer::U8(data)
+    fn decoding_result_to_data(result: DecodingResult) -> Option<Vec<Self>> {
+        match result {
+            DecodingResult::U8(data) => Some(data),
+            _ => None,
+        }
     }
 }
 
@@ -27,8 +30,11 @@ impl TiffDataType for u16 {
     const BIT_WIDTH: u8 = 16_u8;
     const SAMPLE_FORMAT: SampleFormat = SampleFormat::Uint;
 
-    fn decoding_buffer_from_data(data: &mut [Self]) -> DecodingBuffer {
-        DecodingBuffer::U16(data)
+    fn decoding_result_to_data(result: DecodingResult) -> Option<Vec<Self>> {
+        match result {
+            DecodingResult::U16(data) => Some(data),
+            _ => None,
+        }
     }
 }
 
@@ -36,8 +42,11 @@ impl TiffDataType for u32 {
     const BIT_WIDTH: u8 = 32_u8;
     const SAMPLE_FORMAT: SampleFormat = SampleFormat::Uint;
 
-    fn decoding_buffer_from_data(data: &mut [Self]) -> DecodingBuffer {
-        DecodingBuffer::U32(data)
+    fn decoding_result_to_data(result: DecodingResult) -> Option<Vec<Self>> {
+        match result {
+            DecodingResult::U32(data) => Some(data),
+            _ => None,
+        }
     }
 }
 
@@ -45,8 +54,11 @@ impl TiffDataType for u64 {
     const BIT_WIDTH: u8 = 64_u8;
     const SAMPLE_FORMAT: SampleFormat = SampleFormat::Uint;
 
-    fn decoding_buffer_from_data(data: &mut [Self]) -> DecodingBuffer {
-        DecodingBuffer::U64(data)
+    fn decoding_result_to_data(result: DecodingResult) -> Option<Vec<Self>> {
+        match result {
+            DecodingResult::U64(data) => Some(data),
+            _ => None,
+        }
     }
 }
 
@@ -54,8 +66,11 @@ impl TiffDataType for f32 {
     const BIT_WIDTH: u8 = 32_u8;
     const SAMPLE_FORMAT: SampleFormat = SampleFormat::IEEEFP;
 
-    fn decoding_buffer_from_data(data: &mut [Self]) -> DecodingBuffer {
-        DecodingBuffer::F32(data)
+    fn decoding_result_to_data(result: DecodingResult) -> Option<Vec<Self>> {
+        match result {
+            DecodingResult::F32(data) => Some(data),
+            _ => None,
+        }
     }
 }
 
@@ -63,7 +78,10 @@ impl TiffDataType for f64 {
     const BIT_WIDTH: u8 = 64_u8;
     const SAMPLE_FORMAT: SampleFormat = SampleFormat::IEEEFP;
 
-    fn decoding_buffer_from_data(data: &mut [Self]) -> DecodingBuffer {
-        DecodingBuffer::F64(data)
+    fn decoding_result_to_data(result: DecodingResult) -> Option<Vec<Self>> {
+        match result {
+            DecodingResult::F64(data) => Some(data),
+            _ => None,
+        }
     }
 }

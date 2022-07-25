@@ -82,21 +82,17 @@ pub fn load_map_from_tiff<D: TiffDataType>(path: &Path, strict_load: bool) -> Re
         .dimensions()
         .context("Could not read image dimensions.")?;
 
-    let mut image_data = vec![D::default(); (width as usize) * (height as usize)];
+    let decoding_result = decoder
+        .read_image()
+        .context("Failed to decode the image data.")?;
 
-    let rows_per_strip = decoder.get_tag_u32(Tag::RowsPerStrip).unwrap_or(height) as usize;
-    let samples_per_strip = (width as usize) * rows_per_strip /* only one sample per pixel */;
-
-    for i in 0..(decoder
-        .strip_count()
-        .context("Could not read strip count.")? as usize)
-    {
-        let image_buffer = D::decoding_buffer_from_data(&mut image_data[(samples_per_strip * i)..]);
-
-        decoder
-            .read_strip_to_buffer(image_buffer)
-            .with_context(|| format!("Could not read strip {}.", i))?;
-    }
+    let mut image_data = match D::decoding_result_to_data(decoding_result) {
+        Some(image_data) => image_data,
+        None => anyhow::bail!(
+            "Failed to decode the image data as {}",
+            std::any::type_name::<D>()
+        ),
+    };
 
     if !strict_load {
         // If strict loading is disabled, check for a GDAL no data value
