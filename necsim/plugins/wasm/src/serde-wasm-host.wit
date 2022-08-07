@@ -70,7 +70,7 @@ resource deserializer {
 }
 
 resource seq-access {
-  erased-next-element: func(seed: deserialize-seed-handle) -> expected<de-value-handle, de-error>
+  erased-next-element: func(seed: deserialize-seed-handle) -> expected<option<de-value-handle>, de-error>
   erased-size-hint: func() -> option<usize>
 }
 
@@ -82,13 +82,12 @@ resource map-access {
 }
 
 resource enum-access {
-  erased-variant: func(seed: deserialize-seed-handle) -> expected<tuple<de-value-handle, variant-access>, de-error>
+  erased-variant-seed: func(seed: deserialize-seed-handle) -> expected<tuple<de-value-handle, variant-access>, de-error>
 }
 
 resource variant-access {
   unit-variant: func() -> expected<unit, de-error>
   newtype-variant-seed: func(seed: deserialize-seed-handle) -> expected<de-value-handle, de-error>
-  newtype-variant: func() -> expected<de-value-handle, de-error>
   tuple-variant: func(len: usize, visitor: visitor-handle) -> expected<de-value-handle, de-error>
   struct-variant: func(fields: list<string>, visitor: visitor-handle) -> expected<de-value-handle, de-error>
 }

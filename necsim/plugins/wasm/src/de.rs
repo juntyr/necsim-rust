@@ -1247,11 +1247,13 @@ impl<'de, 'a> serde::de::EnumAccess<'de> for &'a mut dyn EnumAccess<'de> {
 }
 
 pub struct Variant<'de> {
-    data: Any,
-    unit_variant: unsafe fn(Any) -> Result<(), Error>,
-    visit_newtype: unsafe fn(Any, seed: &mut dyn DeserializeSeed<'de>) -> Result<Out, Error>,
-    tuple_variant: unsafe fn(Any, len: usize, visitor: &mut dyn Visitor<'de>) -> Result<Out, Error>,
-    struct_variant: unsafe fn(
+    pub(crate) data: Any,
+    pub(crate) unit_variant: unsafe fn(Any) -> Result<(), Error>,
+    pub(crate) visit_newtype:
+        unsafe fn(Any, seed: &mut dyn DeserializeSeed<'de>) -> Result<Out, Error>,
+    pub(crate) tuple_variant:
+        unsafe fn(Any, len: usize, visitor: &mut dyn Visitor<'de>) -> Result<Out, Error>,
+    pub(crate) struct_variant: unsafe fn(
         Any,
         fields: &'static [&'static str],
         visitor: &mut dyn Visitor<'de>,

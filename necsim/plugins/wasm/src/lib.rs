@@ -11,12 +11,14 @@ mod map;
 wit_bindgen_rust::import!("src/serde-wasm-host.wit");
 wit_bindgen_rust::export!("src/serde-wasm-guest.wit");
 
-struct DeValue {
+#[doc(hidden)]
+pub struct DeValue {
     inner: RefCell<Option<de::Out>>,
 }
 
-struct DeserializeSeed {
-    inner: Box<RefCell<dyn de::DeserializeSeed<'static>>>,
+#[doc(hidden)]
+pub struct DeserializeSeed {
+    inner: RefCell<&'static mut dyn de::DeserializeSeed<'static>>,
 }
 
 impl serde_wasm_guest::DeserializeSeed for DeserializeSeed {
@@ -32,7 +34,8 @@ impl serde_wasm_guest::DeserializeSeed for DeserializeSeed {
     }
 }
 
-struct Visitor {
+#[doc(hidden)]
+pub struct Visitor {
     inner: RefCell<&'static mut dyn de::Visitor<'static>>,
 }
 
@@ -61,6 +64,70 @@ fn map_bridge_result(
     }
 }
 
+fn map_bridge_option_result(
+    result: Result<Option<serde_wasm_host::DeValueHandle>, serde_wasm_host::DeError>,
+) -> Result<Option<de::Out>, Error> {
+    match result {
+        Ok(Some(handle)) => {
+            let handle: wit_bindgen_rust::Handle<DeValue> =
+                unsafe { wit_bindgen_rust::Handle::from_raw(handle.handle) };
+            let out = handle.inner.borrow_mut().take().unwrap();
+            Ok(Some(out))
+        },
+        Ok(None) => Ok(None),
+        Err(err) => Err(Error { inner: err }),
+    }
+}
+
+fn map_bridge_option_pair_result(
+    result: Result<
+        Option<(
+            serde_wasm_host::DeValueHandle,
+            serde_wasm_host::DeValueHandle,
+        )>,
+        serde_wasm_host::DeError,
+    >,
+) -> Result<Option<(de::Out, de::Out)>, Error> {
+    match result {
+        Ok(Some((handle_a, handle_b))) => {
+            let handle_a: wit_bindgen_rust::Handle<DeValue> =
+                unsafe { wit_bindgen_rust::Handle::from_raw(handle_a.handle) };
+            let out_a = handle_a.inner.borrow_mut().take().unwrap();
+
+            let handle_b: wit_bindgen_rust::Handle<DeValue> =
+                unsafe { wit_bindgen_rust::Handle::from_raw(handle_b.handle) };
+            let out_b = handle_b.inner.borrow_mut().take().unwrap();
+
+            Ok(Some((out_a, out_b)))
+        },
+        Ok(None) => Ok(None),
+        Err(err) => Err(Error { inner: err }),
+    }
+}
+
+fn map_bridge_enum_result(
+    result: Result<
+        (
+            serde_wasm_host::DeValueHandle,
+            serde_wasm_host::VariantAccess,
+        ),
+        serde_wasm_host::DeError,
+    >,
+) -> Result<(de::Out, VariantAccess), Error> {
+    match result {
+        Ok((handle, variant)) => {
+            let handle: wit_bindgen_rust::Handle<DeValue> =
+                unsafe { wit_bindgen_rust::Handle::from_raw(handle.handle) };
+            let out = handle.inner.borrow_mut().take().unwrap();
+
+            let variant = VariantAccess { inner: variant };
+
+            Ok((out, variant))
+        },
+        Err(err) => Err(Error { inner: err }),
+    }
+}
+
 impl From<Error> for serde_wasm_guest::DeErrorHandle {
     fn from(err: Error) -> Self {
         Self {
@@ -77,6 +144,30 @@ impl From<serde_wasm_guest::DeserializerHandle> for Deserializer {
     }
 }
 
+impl From<serde_wasm_guest::SeqAccessHandle> for SeqAccess {
+    fn from(seq: serde_wasm_guest::SeqAccessHandle) -> Self {
+        Self {
+            inner: unsafe { serde_wasm_host::SeqAccess::from_raw(seq.handle) },
+        }
+    }
+}
+
+impl From<serde_wasm_guest::MapAccessHandle> for MapAccess {
+    fn from(map: serde_wasm_guest::MapAccessHandle) -> Self {
+        Self {
+            inner: unsafe { serde_wasm_host::MapAccess::from_raw(map.handle) },
+        }
+    }
+}
+
+impl From<serde_wasm_guest::EnumAccessHandle> for EnumAccess {
+    fn from(r#enum: serde_wasm_guest::EnumAccessHandle) -> Self {
+        Self {
+            inner: unsafe { serde_wasm_host::EnumAccess::from_raw(r#enum.handle) },
+        }
+    }
+}
+
 impl<'a, 'de> From<&'a mut dyn de::Visitor<'de>> for serde_wasm_host::VisitorHandle {
     fn from(visitor: &'a mut dyn de::Visitor<'de>) -> Self {
         let visitor: &'static mut dyn de::Visitor<'static> =
@@ -86,6 +177,24 @@ impl<'a, 'de> From<&'a mut dyn de::Visitor<'de>> for serde_wasm_host::VisitorHan
         };
 
         let handle = wit_bindgen_rust::Handle::new(visitor);
+
+        Self {
+            handle: wit_bindgen_rust::Handle::into_raw(handle),
+        }
+    }
+}
+
+impl<'a, 'de> From<&'a mut dyn de::DeserializeSeed<'de>>
+    for serde_wasm_host::DeserializeSeedHandle
+{
+    fn from(deserialize_seed: &'a mut dyn de::DeserializeSeed<'de>) -> Self {
+        let deserialize_seed: &'static mut dyn de::DeserializeSeed<'static> =
+            unsafe { std::mem::transmute(deserialize_seed) };
+        let deserialize_seed = DeserializeSeed {
+            inner: RefCell::new(deserialize_seed),
+        };
+
+        let handle = wit_bindgen_rust::Handle::new(deserialize_seed);
 
         Self {
             handle: wit_bindgen_rust::Handle::into_raw(handle),
@@ -281,21 +390,33 @@ impl serde_wasm_guest::Visitor for Visitor {
         &self,
         seq: serde_wasm_guest::SeqAccessHandle,
     ) -> Result<wit_bindgen_rust::Handle<DeValue>, serde_wasm_guest::DeErrorHandle> {
-        todo!()
+        map_erased_result(
+            self.inner
+                .borrow_mut()
+                .erased_visit_seq(&mut SeqAccess::from(seq)),
+        )
     }
 
     fn erased_visit_map(
         &self,
         map: serde_wasm_guest::MapAccessHandle,
     ) -> Result<wit_bindgen_rust::Handle<DeValue>, serde_wasm_guest::DeErrorHandle> {
-        todo!()
+        map_erased_result(
+            self.inner
+                .borrow_mut()
+                .erased_visit_map(&mut MapAccess::from(map)),
+        )
     }
 
     fn erased_visit_enum(
         &self,
         data: serde_wasm_guest::EnumAccessHandle,
     ) -> Result<wit_bindgen_rust::Handle<DeValue>, serde_wasm_guest::DeErrorHandle> {
-        todo!()
+        map_erased_result(
+            self.inner
+                .borrow_mut()
+                .erased_visit_enum(&mut EnumAccess::from(data)),
+        )
     }
 }
 
@@ -318,6 +439,12 @@ impl From<usize> for serde_wasm_host::Usize {
         }
 
         unsafe { usize_must_be_u32(size) }
+    }
+}
+
+impl From<serde_wasm_host::Usize> for usize {
+    fn from(size: serde_wasm_host::Usize) -> Self {
+        size.size as usize
     }
 }
 
@@ -422,6 +549,124 @@ impl<'a> From<serde::de::Unexpected<'a>> for serde_wasm_host::Unexpected<'a> {
             Other(o) => Self::Other(o),
         }
     }
+}
+
+struct SeqAccess {
+    inner: serde_wasm_host::SeqAccess,
+}
+
+impl<'de> de::SeqAccess<'de> for SeqAccess {
+    fn erased_next_element(
+        &mut self,
+        d: &mut dyn de::DeserializeSeed<'de>,
+    ) -> Result<Option<de::Out>, Error> {
+        map_bridge_option_result(self.inner.erased_next_element(d.into()))
+    }
+
+    fn erased_size_hint(&self) -> Option<usize> {
+        self.inner.erased_size_hint().map(Into::into)
+    }
+}
+
+struct MapAccess {
+    inner: serde_wasm_host::MapAccess,
+}
+
+impl<'de> de::MapAccess<'de> for MapAccess {
+    fn erased_next_key(
+        &mut self,
+        d: &mut dyn de::DeserializeSeed<'de>,
+    ) -> Result<Option<de::Out>, Error> {
+        map_bridge_option_result(self.inner.erased_next_key(d.into()))
+    }
+
+    fn erased_next_value(
+        &mut self,
+        d: &mut dyn de::DeserializeSeed<'de>,
+    ) -> Result<de::Out, Error> {
+        map_bridge_result(self.inner.erased_next_value(d.into()))
+    }
+
+    fn erased_next_entry(
+        &mut self,
+        key: &mut dyn de::DeserializeSeed<'de>,
+        value: &mut dyn de::DeserializeSeed<'de>,
+    ) -> Result<Option<(de::Out, de::Out)>, Error> {
+        map_bridge_option_pair_result(self.inner.erased_next_entry(key.into(), value.into()))
+    }
+
+    fn erased_size_hint(&self) -> Option<usize> {
+        self.inner.erased_size_hint().map(Into::into)
+    }
+}
+
+struct EnumAccess {
+    inner: serde_wasm_host::EnumAccess,
+}
+
+impl<'de> de::EnumAccess<'de> for EnumAccess {
+    fn erased_variant_seed(
+        &mut self,
+        d: &mut dyn de::DeserializeSeed<'de>,
+    ) -> Result<(de::Out, de::Variant<'de>), Error> {
+        let (value, variant) = map_bridge_enum_result(self.inner.erased_variant_seed(d.into()))?;
+
+        let erased_variant = de::Variant {
+            data: unsafe { any::Any::new(variant) },
+            unit_variant: {
+                unsafe fn unit_variant(a: any::Any) -> Result<(), Error> {
+                    let variant = a.take::<VariantAccess>();
+
+                    variant
+                        .inner
+                        .unit_variant()
+                        .map_err(|err| Error { inner: err })
+                }
+                unit_variant
+            },
+            visit_newtype: {
+                unsafe fn visit_newtype(
+                    a: any::Any,
+                    seed: &mut dyn de::DeserializeSeed,
+                ) -> Result<de::Out, Error> {
+                    let variant = a.take::<VariantAccess>();
+
+                    map_bridge_result(variant.inner.newtype_variant_seed(seed.into()))
+                }
+                visit_newtype
+            },
+            tuple_variant: {
+                unsafe fn tuple_variant(
+                    a: any::Any,
+                    len: usize,
+                    visitor: &mut dyn de::Visitor,
+                ) -> Result<de::Out, Error> {
+                    let variant = a.take::<VariantAccess>();
+
+                    map_bridge_result(variant.inner.tuple_variant(len.into(), visitor.into()))
+                }
+                tuple_variant
+            },
+            struct_variant: {
+                unsafe fn struct_variant(
+                    a: any::Any,
+                    fields: &'static [&'static str],
+                    visitor: &mut dyn de::Visitor,
+                ) -> Result<de::Out, Error> {
+                    let variant = a.take::<VariantAccess>();
+
+                    map_bridge_result(variant.inner.struct_variant(fields, visitor.into()))
+                }
+                struct_variant
+            },
+        };
+
+        Ok((value, erased_variant))
+    }
+}
+
+struct VariantAccess {
+    inner: serde_wasm_host::VariantAccess,
 }
 
 struct Deserializer {
