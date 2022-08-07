@@ -13,15 +13,22 @@ pub struct ReporterPluginDeclaration {
     pub rustc_version: &'static str,
     pub core_version: &'static str,
 
-    pub init: unsafe extern "C" fn(&'static dyn log::Log, log::LevelFilter),
+    pub init: unsafe extern "C" fn(&'static dyn log::Log, &log::LevelFilter),
 
+    // SOLUTION I : deserialiser wrapper which never calls
+    //              - visit_string (visit_str instead)
+    //              - visit_byte_buf (visit_bytes instead)
+
+    // TODO: the value can also contain strings and vecs constructed on the main side by the
+    // deserializer TODO: the error can be constructed both on the main side (deserialiser
+    // error) or on the plugin side (derialisee error) and we have no clue which it is here
     pub deserialise:
         unsafe extern "C" fn(
             &mut dyn erased_serde::Deserializer,
         )
             -> Result<ManuallyDrop<UnsafeReporterPlugin>, erased_serde::Error>,
 
-    pub library_path: unsafe extern "C" fn() -> Option<::std::path::PathBuf>,
+    pub library_path: unsafe extern "C" fn() -> Option<&'static ::std::path::Path>,
 
     pub drop: unsafe extern "C" fn(ManuallyDrop<UnsafeReporterPlugin>),
 }
@@ -78,37 +85,6 @@ impl<R: SerializeableReporter> From<R> for UnsafeReporterPlugin {
 #[allow(clippy::module_name_repetitions)]
 macro_rules! export_plugin {
     ($($name:ident => $plugin:ty),+$(,)?) => {
-        #[doc(hidden)]
-        extern "C" fn __necsim_reporter_plugin_init(
-            log: &'static dyn $crate::log::Log,
-            max_level: $crate::log::LevelFilter,
-        ) {
-            let _ = $crate::log::set_logger(log);
-
-            $crate::log::set_max_level(max_level);
-        }
-
-        #[doc(hidden)]
-        extern "C" fn __necsim_reporter_plugin_deserialise<'de>(
-            deserializer: &mut dyn $crate::erased_serde::Deserializer<'de>,
-        ) -> Result<
-            ::std::mem::ManuallyDrop<$crate::export::UnsafeReporterPlugin>,
-            $crate::erased_serde::Error,
-        > {
-            #[allow(clippy::enum_variant_names)]
-            #[derive($crate::serde::Deserialize)]
-            #[serde(crate = "::necsim_plugins_core::serde")]
-            enum Reporters {
-                $($name($plugin)),*
-            }
-
-            $crate::erased_serde::deserialize::<Reporters>(deserializer).map(|reporter| {
-                match reporter {
-                    $(Reporters::$name(reporter) => reporter.into()),*
-                }
-            }).map(::std::mem::ManuallyDrop::new)
-        }
-
         $(impl $crate::export::SerializeableReporter for $plugin {
             fn reporter_name(&self) -> &'static str {
                 stringify!($name)
@@ -116,29 +92,66 @@ macro_rules! export_plugin {
         })*
 
         #[doc(hidden)]
-        extern "C" fn __necsim_reporter_plugin_library_path() -> Option<::std::path::PathBuf> {
-            ::necsim_plugins_core::process_path::get_dylib_path()
-        }
-
-        #[doc(hidden)]
-        extern "C" fn __necsim_reporter_plugin_drop(
-            plugin: ::std::mem::ManuallyDrop<$crate::export::UnsafeReporterPlugin>,
-        ) {
-            ::std::mem::drop(::std::mem::ManuallyDrop::into_inner(plugin))
-        }
-
-        #[doc(hidden)]
         #[no_mangle]
-        pub static NECSIM_REPORTER_PLUGIN_DECLARATION: $crate::export::ReporterPluginDeclaration =
+        pub static NECSIM_REPORTER_PLUGIN_DECLARATION: $crate::export::ReporterPluginDeclaration = {
+            extern "C" fn necsim_reporter_plugin_init(
+                log: &'static dyn $crate::log::Log,
+                max_level: &$crate::log::LevelFilter,
+            ) {
+                let _ = $crate::log::set_logger(log);
+
+                $crate::log::set_max_level(*max_level);
+            }
+
+            extern "C" fn necsim_reporter_plugin_deserialise<'de>(
+                deserializer: &mut dyn $crate::erased_serde::Deserializer<'de>,
+            ) -> Result<
+                ::std::mem::ManuallyDrop<$crate::export::UnsafeReporterPlugin>,
+                $crate::erased_serde::Error,
+            > {
+                #[allow(clippy::enum_variant_names)]
+                #[derive($crate::serde::Deserialize)]
+                #[serde(crate = "::necsim_plugins_core::serde")]
+                enum Reporters {
+                    $($name($plugin)),*
+                }
+
+                $crate::erased_serde::deserialize::<Reporters>(deserializer).map(|reporter| {
+                    match reporter {
+                        $(Reporters::$name(reporter) => reporter.into()),*
+                    }
+                }).map(::std::mem::ManuallyDrop::new)
+            }
+
+            extern "C" fn necsim_reporter_plugin_library_path() -> Option<&'static ::std::path::Path> {
+                static LIBRARY_PATH_INIT: ::std::sync::Once = ::std::sync::Once::new();
+                static mut LIBRARY_PATH_VAL: Option::<::std::path::PathBuf> = None;
+
+                // Safety: LIBRARY_PATH_VAL is only mutated here, only once
+                LIBRARY_PATH_INIT.call_once(|| unsafe {
+                    LIBRARY_PATH_VAL = None;//::necsim_plugins_core::process_path::get_dylib_path();
+                });
+
+                // Safety: LIBRARY_PATH_VAL is only mutated once, always before
+                unsafe { LIBRARY_PATH_VAL.as_deref() }
+            }
+
+            extern "C" fn necsim_reporter_plugin_drop(
+                plugin: ::std::mem::ManuallyDrop<$crate::export::UnsafeReporterPlugin>,
+            ) {
+                ::std::mem::drop(::std::mem::ManuallyDrop::into_inner(plugin))
+            }
+
             $crate::export::ReporterPluginDeclaration {
                 rustc_version: $crate::RUSTC_VERSION,
                 core_version: $crate::CORE_VERSION,
 
-                init: __necsim_reporter_plugin_init,
-                deserialise: __necsim_reporter_plugin_deserialise,
-                library_path: __necsim_reporter_plugin_library_path,
-                drop: __necsim_reporter_plugin_drop,
-            };
+                init: necsim_reporter_plugin_init,
+                deserialise: necsim_reporter_plugin_deserialise,
+                library_path: necsim_reporter_plugin_library_path,
+                drop: necsim_reporter_plugin_drop,
+            }
+        };
     };
 }
 

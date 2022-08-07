@@ -110,7 +110,7 @@ struct TskitProvenanceEnvironmentOs {
 
 impl TskitProvenanceEnvironmentOs {
     pub fn try_new() -> io::Result<Self> {
-        let uname = uname::uname()?;
+        /*let uname = uname::uname()?;
 
         Ok(Self {
             system: uname.sysname,
@@ -118,7 +118,9 @@ impl TskitProvenanceEnvironmentOs {
             release: uname.release,
             version: uname.version,
             machine: uname.machine,
-        })
+        })*/
+
+        io::Result::Err(io::Error::new(io::ErrorKind::Other, "abc"))
     }
 }
 

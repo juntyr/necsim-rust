@@ -3,7 +3,7 @@ use std::{
     convert::TryFrom, fmt, io, iter::IntoIterator, mem::ManuallyDrop, path::PathBuf, rc::Rc,
 };
 
-use libloading::Library;
+//use libloading::Library;
 use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
 
 use crate::{export::ReporterPluginDeclaration, import::ReporterPlugin};
@@ -37,7 +37,7 @@ impl<'de> Deserialize<'de> for ReporterPluginLibrary {
 #[serde(try_from = "PathBuf")]
 pub(crate) struct PluginLibrary {
     pub(crate) path: PathBuf,
-    pub(crate) _library: Library,
+    //pub(crate) _library: Library,
     pub(crate) declaration: ReporterPluginDeclaration,
 }
 
@@ -45,8 +45,10 @@ impl TryFrom<PathBuf> for PluginLibrary {
     type Error = io::Error;
 
     fn try_from(library_path: PathBuf) -> Result<Self, Self::Error> {
+        Err(io::Error::new(io::ErrorKind::Other, "no library"))
+
         // Load the plugin library into memory
-        let library = unsafe { Library::new(library_path.clone()) }
+        /*let library = unsafe { Library::new(library_path.clone()) }
             .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
 
         // Load the plugin declaration symbol
@@ -82,16 +84,19 @@ impl TryFrom<PathBuf> for PluginLibrary {
         }
 
         unsafe {
-            (declaration.init)(log::logger(), log::max_level());
+            (declaration.init)(log::logger(), &log::max_level());
         }
 
-        let path = unsafe { (declaration.library_path)() }.unwrap_or(library_path);
+        let path = unsafe { (declaration.library_path)() };
 
         Ok(Self {
-            path,
+            path: match path {
+                Some(path) => path.to_owned(),
+                None => library_path,
+            },
             _library: library,
             declaration,
-        })
+        })*/
     }
 }
 

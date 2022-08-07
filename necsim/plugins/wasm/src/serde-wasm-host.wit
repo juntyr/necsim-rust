@@ -1,0 +1,106 @@
+record usize {
+  size: u32,
+}
+
+variant unexpected {
+  %bool(bool),
+  unsigned(u64),
+  signed(s64),
+  float(float64),
+  %char(char),
+  str(string),
+  bytes(list<u8>),
+  %unit,
+  %option,
+  newtype-struct,
+  seq,
+  map,
+  %enum,
+  unit-variant,
+  newtype-variant,
+  tuple-variant,
+  struct-variant,
+  other(string),
+}
+
+resource de-error {
+  static custom: func(msg: string) -> de-error
+  static invalid-type: func(unexp: unexpected, exp: string) -> de-error
+  static invalid-value: func(unexp: unexpected, exp: string) -> de-error
+  static invalid-length: func(len: usize, exp: string) -> de-error
+  static unknown-variant: func(%variant: string, %expected: list<string>) -> de-error
+  static unknown-field: func(field: string, %expected: list<string>) -> de-error
+  static missing-field: func(field: string) -> de-error
+  static duplicate-field: func(field: string) -> de-error
+}
+
+resource deserializer {
+  erased-deserialize-any: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-bool: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-u8: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-u16: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-u32: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-u64: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-i8: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-i16: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-i32: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-i64: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-i128: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-u128: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-f32: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-f64: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-char: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-str: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-string: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-bytes: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-byte-buf: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-option: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-unit: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-unit-struct: func(name: string, visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-newtype-struct: func(name: string, visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-seq: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-tuple: func(len: usize, visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-tuple-struct: func(name: string, len: usize, visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-map: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-struct: func(name: string, fields: list<string>, visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-identifier: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-enum: func(name: string, variants: list<string>, visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-deserialize-ignored-any: func(visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  erased-is-human-readable: func() -> bool
+}
+
+resource seq-access {
+  erased-next-element: func(seed: deserialize-seed-handle) -> expected<de-value-handle, de-error>
+  erased-size-hint: func() -> option<usize>
+}
+
+resource map-access {
+  erased-next-key: func(seed: deserialize-seed-handle) -> expected<option<de-value-handle>, de-error>
+  erased-next-value: func(seed: deserialize-seed-handle) -> expected<de-value-handle, de-error>
+  erased-next-entry: func(kseed: deserialize-seed-handle, vseed: deserialize-seed-handle) -> expected<option<tuple<de-value-handle, de-value-handle>>, de-error>
+  erased-size-hint: func() -> option<usize>
+}
+
+resource enum-access {
+  erased-variant: func(seed: deserialize-seed-handle) -> expected<tuple<de-value-handle, variant-access>, de-error>
+}
+
+resource variant-access {
+  unit-variant: func() -> expected<unit, de-error>
+  newtype-variant-seed: func(seed: deserialize-seed-handle) -> expected<de-value-handle, de-error>
+  newtype-variant: func() -> expected<de-value-handle, de-error>
+  tuple-variant: func(len: usize, visitor: visitor-handle) -> expected<de-value-handle, de-error>
+  struct-variant: func(fields: list<string>, visitor: visitor-handle) -> expected<de-value-handle, de-error>
+}
+
+record visitor-handle {
+  %handle: s32
+}
+
+record de-value-handle {
+  %handle: s32
+}
+
+record deserialize-seed-handle {
+  %handle: s32
+}
