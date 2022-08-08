@@ -1,4 +1,4 @@
-pub(crate) use crate::Error;
+pub(crate) use crate::guest::DeError as Error;
 
 // use core::fmt::{self, Display};
 
