@@ -37,9 +37,9 @@ use crate::{
 pub struct MpiParallelPartition<'p, R: Reporter> {
     _universe: Universe,
     world: SystemCommunicator,
-    mpi_local_global_wait: DataOrRequest<'p, (bool, bool)>,
-    mpi_local_remaining: DataOrRequest<'p, u64>,
-    mpi_migration_buffers: Box<[DataOrRequest<'p, Vec<MigratingLineage>>]>,
+    mpi_local_global_wait: DataOrRequest<'p, (bool, bool), bool>,
+    mpi_local_remaining: DataOrRequest<'p, u64, u64>,
+    mpi_migration_buffers: Box<[DataOrRequest<'p, Vec<MigratingLineage>, [MpiMigratingLineage]>]>,
     migration_buffers: Box<[Vec<MigratingLineage>]>,
     last_report_time: Instant,
     last_migration_times: Box<[Instant]>,
@@ -60,9 +60,11 @@ impl<'p, R: Reporter> MpiParallelPartition<'p, R> {
     #[must_use]
     pub(crate) fn new(
         universe: Universe,
-        mpi_local_global_wait: DataOrRequest<'p, (bool, bool)>,
-        mpi_local_remaining: DataOrRequest<'p, u64>,
-        mpi_migration_buffers: Box<[DataOrRequest<'p, Vec<MigratingLineage>>]>,
+        mpi_local_global_wait: DataOrRequest<'p, (bool, bool), bool>,
+        mpi_local_remaining: DataOrRequest<'p, u64, u64>,
+        mpi_migration_buffers: Box<
+            [DataOrRequest<'p, Vec<MigratingLineage>, [MpiMigratingLineage]>],
+        >,
         mut recorder: EventLogRecorder,
         migration_interval: Duration,
         progress_interval: Duration,

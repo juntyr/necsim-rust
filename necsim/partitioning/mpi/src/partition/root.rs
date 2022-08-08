@@ -38,8 +38,8 @@ use crate::{
 pub struct MpiRootPartition<'p, R: Reporter> {
     _universe: Universe,
     world: SystemCommunicator,
-    mpi_local_global_wait: DataOrRequest<'p, (bool, bool)>,
-    mpi_migration_buffers: Box<[DataOrRequest<'p, Vec<MigratingLineage>>]>,
+    mpi_local_global_wait: DataOrRequest<'p, (bool, bool), bool>,
+    mpi_migration_buffers: Box<[DataOrRequest<'p, Vec<MigratingLineage>, [MpiMigratingLineage]>]>,
     migration_buffers: Box<[Vec<MigratingLineage>]>,
     all_remaining: Box<[u64]>,
     last_report_time: Instant,
@@ -76,8 +76,10 @@ impl<'p, R: Reporter> MpiRootPartition<'p, R> {
     #[must_use]
     pub(crate) fn new(
         universe: Universe,
-        mpi_local_global_wait: DataOrRequest<'p, (bool, bool)>,
-        mpi_migration_buffers: Box<[DataOrRequest<'p, Vec<MigratingLineage>>]>,
+        mpi_local_global_wait: DataOrRequest<'p, (bool, bool), bool>,
+        mpi_migration_buffers: Box<
+            [DataOrRequest<'p, Vec<MigratingLineage>, [MpiMigratingLineage]>],
+        >,
         reporter: FilteredReporter<R, False, False, True>,
         mut recorder: EventLogRecorder,
         migration_interval: Duration,
