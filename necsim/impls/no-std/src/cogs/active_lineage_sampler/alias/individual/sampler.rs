@@ -15,6 +15,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use super::IndividualAliasActiveLineageSampler;
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<
         M: MathsCore,

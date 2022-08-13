@@ -8,6 +8,7 @@ use necsim_core::{
 
 use super::InMemoryAliasDispersalSampler;
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>>
     DispersalSampler<M, H, G> for InMemoryAliasDispersalSampler<M, H, G>

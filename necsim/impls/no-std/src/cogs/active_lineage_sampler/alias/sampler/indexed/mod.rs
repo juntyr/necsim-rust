@@ -193,6 +193,7 @@ impl<E: Eq + Hash + Backup> DynamicAliasMethodIndexedSampler<E> {
         self.groups.iter().flat_map(RejectionSamplingGroup::iter)
     }
 
+    #[allow(clippy::trait_duplication_in_bounds)]
     pub fn sample_pop<
         M: MathsCore,
         G: Rng<M> + Samples<M, IndexUsize> + Samples<M, IndexU64> + Samples<M, IndexU128>,

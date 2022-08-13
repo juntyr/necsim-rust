@@ -26,6 +26,7 @@ use super::CudaLineageStoreSampleInitialiser;
 #[allow(clippy::module_name_repetitions)]
 pub struct GenesisInitialiser;
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<
         M: MathsCore,
         G: Rng<M, Generator: PrimeableRng>

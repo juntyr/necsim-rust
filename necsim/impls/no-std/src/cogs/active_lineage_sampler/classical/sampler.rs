@@ -23,6 +23,7 @@ use crate::cogs::{
 
 use super::ClassicalActiveLineageSampler;
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<
         M: MathsCore,
