@@ -17,7 +17,6 @@ pub struct ProbabilityAtLocation {
 }
 
 impl ProbabilityAtLocation {
-    #[allow(clippy::type_complexity)]
     pub fn new<
         M: MathsCore,
         H: Habitat<M>,

@@ -101,7 +101,6 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G>
         })
     }
 
-    #[allow(clippy::type_complexity)]
     fn build<D: InMemoryDispersalSampler<M, Self::Habitat, G>>(
         self,
     ) -> (

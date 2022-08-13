@@ -16,7 +16,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use super::GillespieEventSampler;
 
-#[allow(clippy::module_name_repetitions, clippy::type_complexity)]
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct UnconditionalGillespieEventSampler<
     M: MathsCore,
@@ -28,7 +28,10 @@ pub struct UnconditionalGillespieEventSampler<
     C: CoalescenceSampler<M, H, S>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
->(PhantomData<(M, H, G, S, X, D, C, T, N)>);
+> {
+    #[allow(clippy::type_complexity)]
+    marker: PhantomData<(M, H, G, S, X, D, C, T, N)>,
+}
 
 impl<
         M: MathsCore,
@@ -43,7 +46,9 @@ impl<
     > Default for UnconditionalGillespieEventSampler<M, H, G, S, X, D, C, T, N>
 {
     fn default() -> Self {
-        Self(PhantomData::<(M, H, G, S, X, D, C, T, N)>)
+        Self {
+            marker: PhantomData::<(M, H, G, S, X, D, C, T, N)>,
+        }
     }
 }
 
@@ -61,7 +66,9 @@ impl<
     > Backup for UnconditionalGillespieEventSampler<M, H, G, S, X, D, C, T, N>
 {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(PhantomData::<(M, H, G, S, X, D, C, T, N)>)
+        Self {
+            marker: PhantomData::<(M, H, G, S, X, D, C, T, N)>,
+        }
     }
 }
 

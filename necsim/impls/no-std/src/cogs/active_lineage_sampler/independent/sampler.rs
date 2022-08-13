@@ -65,7 +65,6 @@ impl<
     }
 
     #[must_use]
-    #[allow(clippy::type_complexity)]
     #[inline]
     fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> ControlFlow<(), ()>>(
         &mut self,
@@ -120,7 +119,6 @@ impl<
         self.number_active_lineages() == 0,
         "does not overwrite the independent lineage"
     )]
-    #[allow(clippy::type_complexity)]
     #[inline]
     fn push_active_lineage(
         &mut self,

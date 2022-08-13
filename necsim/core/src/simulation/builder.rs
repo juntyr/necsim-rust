@@ -1,5 +1,3 @@
-#![allow(clippy::type_complexity)]
-
 use core::{marker::PhantomData, num::Wrapping};
 
 use crate::cogs::{
@@ -53,7 +51,6 @@ impl<
         A: ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>,
     > SimulationBuilder<M, H, G, S, X, D, C, T, N, E, I, A>
 {
-    #[allow(clippy::type_complexity)]
     pub fn build(self) -> Simulation<M, H, G, S, X, D, C, T, N, E, I, A> {
         let SimulationBuilder {
             maths,

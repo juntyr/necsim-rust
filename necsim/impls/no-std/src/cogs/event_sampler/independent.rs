@@ -104,7 +104,6 @@ impl<
     > for IndependentEventSampler<M, H, G, X, D, T, N>
 {
     #[must_use]
-    #[allow(clippy::type_complexity)]
     #[inline]
     fn sample_event_for_lineage_at_event_time_or_emigrate<
         Q,

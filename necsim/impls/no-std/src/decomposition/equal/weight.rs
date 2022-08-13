@@ -43,7 +43,6 @@ impl<M: MathsCore, H: Habitat<M>> EqualDecomposition<M, H> {
         let mut cumulative_habitat = 0;
         let mut last_rank = 0;
 
-        #[allow(clippy::type_complexity)]
         let indices: Vec<u64> = indices
             .into_iter()
             .filter_map(|(index, habitat)| {

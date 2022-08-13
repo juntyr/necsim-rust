@@ -79,7 +79,6 @@ impl<
     }
 
     #[must_use]
-    #[allow(clippy::type_complexity)]
     fn pop_active_lineage_and_event_time<F: FnOnce(PositiveF64) -> ControlFlow<(), ()>>(
         &mut self,
         simulation: &mut PartialSimulation<
@@ -143,7 +142,6 @@ impl<
         }
     }
 
-    #[allow(clippy::type_complexity, clippy::cast_possible_truncation)]
     fn push_active_lineage(
         &mut self,
         lineage: Lineage,

@@ -31,7 +31,6 @@ use initialiser::{
 };
 
 // Default 'Gillespie' implementation for any turnover sampler
-#[allow(clippy::type_complexity)]
 impl<'p, O: Scenario<M, Pcg<M>>, R: Reporter, P: LocalPartition<'p, R>, M: MathsCore>
     Algorithm<'p, M, O, R, P> for GillespieAlgorithm
 where

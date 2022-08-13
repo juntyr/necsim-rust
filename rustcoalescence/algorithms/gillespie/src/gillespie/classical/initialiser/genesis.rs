@@ -17,7 +17,6 @@ use super::ClassicalLineageStoreSampleInitialiser;
 #[allow(clippy::module_name_repetitions)]
 pub struct GenesisInitialiser;
 
-#[allow(clippy::type_complexity)]
 impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
     ClassicalLineageStoreSampleInitialiser<M, G, O, !> for GenesisInitialiser
 {

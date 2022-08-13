@@ -18,7 +18,6 @@ pub mod fixup;
 pub mod genesis;
 pub mod resume;
 
-#[allow(clippy::type_complexity)]
 #[allow(clippy::module_name_repetitions)]
 pub trait GillespieLineageStoreSampleInitialiser<
     M: MathsCore,
@@ -48,6 +47,7 @@ pub trait GillespieLineageStoreSampleInitialiser<
         I,
     >;
 
+    #[allow(clippy::type_complexity)]
     fn init<
         'h,
         'p,

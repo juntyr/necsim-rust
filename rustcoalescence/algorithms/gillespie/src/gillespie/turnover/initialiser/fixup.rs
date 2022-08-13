@@ -43,7 +43,6 @@ pub struct FixUpInitialiser<L: ExactSizeIterator<Item = Lineage>> {
     pub fixup_strategy: RestartFixUpStrategy,
 }
 
-#[allow(clippy::type_complexity)]
 impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
     GillespieLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for FixUpInitialiser<L>
 {

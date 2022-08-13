@@ -29,7 +29,6 @@ use initialiser::{
 };
 
 // Optimised 'Classical' implementation for the `UniformTurnoverSampler`
-#[allow(clippy::type_complexity)]
 impl<
         'p,
         O: Scenario<M, Pcg<M>, TurnoverRate = UniformTurnoverRate>,

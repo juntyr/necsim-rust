@@ -25,7 +25,6 @@ pub struct ResumeInitialiser<L: ExactSizeIterator<Item = Lineage>> {
     pub resume_after: Option<NonNegativeF64>,
 }
 
-#[allow(clippy::type_complexity)]
 impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: PrimeableRng<M>, O: Scenario<M, G>>
     IndependentLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for ResumeInitialiser<L>
 {

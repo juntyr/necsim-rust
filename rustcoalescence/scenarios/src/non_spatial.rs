@@ -69,7 +69,6 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for NonSpatialScenario<M, G> {
         })
     }
 
-    #[allow(clippy::type_complexity)]
     fn build<D: DispersalSampler<M, Self::Habitat, G>>(
         self,
     ) -> (

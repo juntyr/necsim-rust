@@ -21,7 +21,6 @@ pub mod fixup;
 pub mod genesis;
 pub mod resume;
 
-#[allow(clippy::type_complexity)]
 #[allow(clippy::module_name_repetitions)]
 pub trait IndependentLineageStoreSampleInitialiser<
     M: MathsCore,
@@ -44,6 +43,7 @@ pub trait IndependentLineageStoreSampleInitialiser<
         >, NeverImmigrationEntry,
     >;
 
+    #[allow(clippy::type_complexity)]
     fn init<
         'h,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,

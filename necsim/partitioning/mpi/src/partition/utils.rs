@@ -1,4 +1,7 @@
-use std::os::raw::{c_int, c_void};
+use std::{
+    mem::MaybeUninit,
+    os::raw::{c_int, c_void},
+};
 
 use memoffset::offset_of;
 use mpi::{
@@ -95,11 +98,15 @@ impl MpiMigratingLineage {
         }
     }
 
-    pub fn from_mut_slice(slice: &mut [MigratingLineage]) -> &mut [MpiMigratingLineage] {
+    pub fn from_mut_uninit_slice(
+        slice: &mut [MaybeUninit<MigratingLineage>],
+    ) -> &mut [MaybeUninit<MpiMigratingLineage>] {
         // Safety: cast to transparent newtype wrapper
         unsafe {
             std::slice::from_raw_parts_mut(
-                slice.as_mut_ptr().cast::<MpiMigratingLineage>(),
+                slice
+                    .as_mut_ptr()
+                    .cast::<MaybeUninit<MpiMigratingLineage>>(),
                 slice.len(),
             )
         }

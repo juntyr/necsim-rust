@@ -9,7 +9,6 @@
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![cfg_attr(target_os = "cuda", feature(stdsimd))]
 #![cfg_attr(target_os = "cuda", feature(control_flow_enum))]
-#![allow(clippy::type_complexity)]
 
 extern crate alloc;
 
@@ -35,6 +34,7 @@ use rust_cuda::common::RustToCuda;
     pub use link_kernel! as impl SimulatableKernel<SimulationKernelArgs> for SimulationKernel
 )]
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::type_complexity)]
 pub fn simulate<
     M: MathsCore,
     H: Habitat<M> + RustToCuda,

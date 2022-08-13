@@ -41,7 +41,6 @@ impl AlgorithmDefaults for EventSkippingAlgorithm {
     type MathsCore = IntrinsicsMathsCore;
 }
 
-#[allow(clippy::type_complexity)]
 impl<'p, O: Scenario<M, Pcg<M>>, R: Reporter, P: LocalPartition<'p, R>, M: MathsCore>
     Algorithm<'p, M, O, R, P> for EventSkippingAlgorithm
 where
@@ -57,7 +56,6 @@ where
         get_gillespie_logical_partition(args, local_partition)
     }
 
-    #[allow(clippy::shadow_unrelated, clippy::too_many_lines)]
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         rng: Self::Rng,
@@ -81,7 +79,6 @@ where
     ///
     /// Returns a `ContinueError::Sample` if initialising the resuming
     ///  simulation failed
-    #[allow(clippy::too_many_lines)]
     fn resume_and_simulate<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: Self::Rng,
@@ -110,7 +107,6 @@ where
     ///
     /// Returns a `ContinueError<Self::Error>` if fixing up the restarting
     ///  simulation (incl. running the algorithm) failed
-    #[allow(clippy::too_many_lines)]
     fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: Self::Rng,

@@ -23,7 +23,6 @@ use super::CudaLineageStoreSampleInitialiser;
 #[allow(clippy::module_name_repetitions)]
 pub struct GenesisInitialiser;
 
-#[allow(clippy::type_complexity)]
 impl<M: MathsCore, G: PrimeableRng<M> + RustToCuda, O: Scenario<M, G>>
     CudaLineageStoreSampleInitialiser<M, G, O, CudaError> for GenesisInitialiser
 where

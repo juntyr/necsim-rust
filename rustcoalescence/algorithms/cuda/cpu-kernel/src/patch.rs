@@ -36,7 +36,7 @@ extern "C" {
     fn unreachable_cuda_simulation_linking_reporter() -> !;
 }
 
-#[allow(clippy::type_complexity, clippy::trait_duplication_in_bounds)]
+#[allow(clippy::trait_duplication_in_bounds)]
 unsafe impl<
         M: MathsCore,
         H: Habitat<M> + RustToCuda,

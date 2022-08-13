@@ -58,7 +58,6 @@ impl<
         A: ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>,
     > BackedUp<Simulation<M, H, G, S, X, D, C, T, N, E, I, A>>
 {
-    #[allow(clippy::type_complexity)]
     pub fn resume(&self) -> Simulation<M, H, G, S, X, D, C, T, N, E, I, A> {
         unsafe {
             Simulation {

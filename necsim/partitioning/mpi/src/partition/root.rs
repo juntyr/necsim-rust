@@ -1,7 +1,7 @@
 use std::{
     fmt,
     marker::PhantomData,
-    mem::ManuallyDrop,
+    mem::{ManuallyDrop, MaybeUninit},
     num::{NonZeroU32, Wrapping},
     time::{Duration, Instant},
 };
@@ -186,18 +186,22 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
 
                 let receive_start = immigration_buffer.len();
 
-                #[allow(clippy::uninit_vec)]
-                // Safety: The uninitialised `number_immigrants` items are initialised in the
-                //         following `matched_receive_into` call
+                immigration_buffer.reserve(number_immigrants);
+
+                let immigration_slice = MpiMigratingLineage::from_mut_uninit_slice(
+                    &mut immigration_buffer.spare_capacity_mut()[..number_immigrants],
+                );
+
+                // FIXME: `MaybeUninit::slice_assume_init_mut` is unsafe here
+                //        but the API does not accept `MaybeUninit` to be equivalent
                 unsafe {
-                    immigration_buffer.reserve(number_immigrants);
+                    msg.matched_receive_into(MaybeUninit::slice_assume_init_mut(immigration_slice));
+                }
+
+                // Safety: The uninitialised `number_immigrants` items were just initialised
+                //         in the `matched_receive_into` call
+                unsafe {
                     immigration_buffer.set_len(receive_start + number_immigrants);
-
-                    let immigration_slice = MpiMigratingLineage::from_mut_slice(
-                        &mut immigration_buffer[receive_start..],
-                    );
-
-                    msg.matched_receive_into(immigration_slice);
                 }
             }
         }

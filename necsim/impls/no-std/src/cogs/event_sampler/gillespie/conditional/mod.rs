@@ -23,7 +23,7 @@ mod probability;
 
 use probability::ProbabilityAtLocation;
 
-#[allow(clippy::module_name_repetitions, clippy::type_complexity)]
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct ConditionalGillespieEventSampler<
     M: MathsCore,
@@ -34,7 +34,10 @@ pub struct ConditionalGillespieEventSampler<
     D: SeparableDispersalSampler<M, H, G>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
->(PhantomData<(M, H, G, S, X, D, T, N)>);
+> {
+    #[allow(clippy::type_complexity)]
+    marker: PhantomData<(M, H, G, S, X, D, T, N)>,
+}
 
 impl<
         M: MathsCore,
@@ -48,7 +51,9 @@ impl<
     > Default for ConditionalGillespieEventSampler<M, H, G, S, X, D, T, N>
 {
     fn default() -> Self {
-        Self(PhantomData::<(M, H, G, S, X, D, T, N)>)
+        Self {
+            marker: PhantomData::<(M, H, G, S, X, D, T, N)>,
+        }
     }
 }
 
@@ -65,7 +70,9 @@ impl<
     > Backup for ConditionalGillespieEventSampler<M, H, G, S, X, D, T, N>
 {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(PhantomData::<(M, H, G, S, X, D, T, N)>)
+        Self {
+            marker: PhantomData::<(M, H, G, S, X, D, T, N)>,
+        }
     }
 }
 
@@ -83,7 +90,6 @@ impl<
     for ConditionalGillespieEventSampler<M, H, G, S, X, D, T, N>
 {
     #[must_use]
-    #[allow(clippy::type_complexity)]
     fn sample_event_for_lineage_at_event_time_or_emigrate<
         Q,
         Aux,
@@ -236,7 +242,6 @@ impl<
     for ConditionalGillespieEventSampler<M, H, G, S, X, D, T, N>
 {
     #[must_use]
-    #[allow(clippy::type_complexity)]
     fn get_event_rate_at_location(
         &self,
         location: &Location,

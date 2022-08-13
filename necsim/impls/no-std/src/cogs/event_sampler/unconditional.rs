@@ -12,7 +12,7 @@ use necsim_core::{
 };
 use necsim_core_bond::PositiveF64;
 
-#[allow(clippy::module_name_repetitions, clippy::type_complexity)]
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct UnconditionalEventSampler<
     M: MathsCore,
@@ -24,7 +24,10 @@ pub struct UnconditionalEventSampler<
     C: CoalescenceSampler<M, H, S>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
->(PhantomData<(M, H, G, S, X, D, C, T, N)>);
+> {
+    #[allow(clippy::type_complexity)]
+    marker: PhantomData<(M, H, G, S, X, D, C, T, N)>,
+}
 
 impl<
         M: MathsCore,
@@ -39,7 +42,9 @@ impl<
     > Default for UnconditionalEventSampler<M, H, G, S, X, D, C, T, N>
 {
     fn default() -> Self {
-        Self(PhantomData::<(M, H, G, S, X, D, C, T, N)>)
+        Self {
+            marker: PhantomData::<(M, H, G, S, X, D, C, T, N)>,
+        }
     }
 }
 
@@ -57,7 +62,9 @@ impl<
     > Backup for UnconditionalEventSampler<M, H, G, S, X, D, C, T, N>
 {
     unsafe fn backup_unchecked(&self) -> Self {
-        Self(PhantomData::<(M, H, G, S, X, D, C, T, N)>)
+        Self {
+            marker: PhantomData::<(M, H, G, S, X, D, C, T, N)>,
+        }
     }
 }
 

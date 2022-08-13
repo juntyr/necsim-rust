@@ -22,7 +22,6 @@ use super::EventSkippingLineageStoreSampleInitialiser;
 #[allow(clippy::module_name_repetitions)]
 pub struct GenesisInitialiser;
 
-#[allow(clippy::type_complexity)]
 impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
     EventSkippingLineageStoreSampleInitialiser<M, G, O, !> for GenesisInitialiser
 where

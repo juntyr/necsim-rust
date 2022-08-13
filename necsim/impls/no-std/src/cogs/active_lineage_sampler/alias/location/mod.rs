@@ -22,7 +22,6 @@ use super::sampler::indexed::DynamicAliasMethodIndexedSampler;
 mod sampler;
 
 #[allow(clippy::module_name_repetitions)]
-#[allow(clippy::type_complexity)]
 pub struct LocationAliasActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
@@ -39,6 +38,7 @@ pub struct LocationAliasActiveLineageSampler<
     alias_sampler: DynamicAliasMethodIndexedSampler<Location>,
     number_active_lineages: usize,
     last_event_time: NonNegativeF64,
+    #[allow(clippy::type_complexity)]
     marker: PhantomData<(M, H, G, S, X, D, C, T, N, E, I)>,
 }
 

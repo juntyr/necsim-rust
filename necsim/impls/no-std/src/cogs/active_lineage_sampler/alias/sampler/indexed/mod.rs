@@ -170,7 +170,7 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodIndexedSampler<E> {
     }
 
     #[must_use]
-    #[allow(dead_code)]
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn with_capacity(capacity: usize) -> Self {
         let capacity_log2_approx = (usize::BITS - capacity.leading_zeros()) as usize;
 

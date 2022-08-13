@@ -23,7 +23,6 @@ fn singular_event_group() {
 }
 
 #[test]
-#[allow(clippy::shadow_unrelated)]
 fn add_sample_pop_event_group() {
     let mut group = RejectionSamplingGroup::new(0_u8, 1_u64);
     assert_eq!(group.total_weight, 1_u128);

@@ -32,7 +32,9 @@ use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
 mod link;
 mod patch;
 
-#[allow(clippy::type_complexity, clippy::module_name_repetitions)]
+pub type KernelCompilationCallback = dyn FnMut(&Function) -> CudaResult<()>;
+
+#[allow(clippy::module_name_repetitions)]
 pub struct SimulationKernel<
     M: MathsCore,
     H: Habitat<M> + RustToCuda,
@@ -49,6 +51,7 @@ pub struct SimulationKernel<
     ReportSpeciation: Boolean,
     ReportDispersal: Boolean,
 > {
+    #[allow(clippy::type_complexity)]
     kernel: TypedKernel<
         dyn SimulatableKernel<
             M,
@@ -71,7 +74,7 @@ pub struct SimulationKernel<
     grid: GridSize,
     block: BlockSize,
     ptx_jit: bool,
-    watcher: Box<dyn FnMut(&Function) -> CudaResult<()>>,
+    watcher: Box<KernelCompilationCallback>,
 }
 
 impl<
@@ -99,7 +102,7 @@ impl<
         grid: GridSize,
         block: BlockSize,
         ptx_jit: bool,
-        on_compile: Box<dyn FnMut(&Function) -> CudaResult<()>>,
+        on_compile: Box<KernelCompilationCallback>,
     ) -> CudaResult<Self>
     where
         Self: SimulatableKernel<
@@ -151,7 +154,7 @@ impl<
     > Launcher
     for SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
 {
-    type CompilationWatcher = Box<dyn FnMut(&Function) -> CudaResult<()>>;
+    type CompilationWatcher = Box<KernelCompilationCallback>;
     type KernelTraitObject = dyn SimulatableKernel<
         M,
         H,

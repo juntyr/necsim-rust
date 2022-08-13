@@ -42,7 +42,6 @@ impl AlgorithmDefaults for IndependentAlgorithm {
     type MathsCore = IntrinsicsMathsCore;
 }
 
-#[allow(clippy::type_complexity)]
 impl<'p, O: Scenario<M, WyHash<M>>, R: Reporter, P: LocalPartition<'p, R>, M: MathsCore>
     Algorithm<'p, M, O, R, P> for IndependentAlgorithm
 {
