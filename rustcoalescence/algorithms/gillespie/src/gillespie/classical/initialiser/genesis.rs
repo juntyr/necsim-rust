@@ -20,6 +20,7 @@ use super::ClassicalLineageStoreSampleInitialiser;
 #[allow(clippy::module_name_repetitions)]
 pub struct GenesisInitialiser;
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<
         M: MathsCore,
         G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli> + Samples<M, Exponential>,

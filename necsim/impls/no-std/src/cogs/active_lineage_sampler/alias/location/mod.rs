@@ -23,6 +23,7 @@ use super::sampler::indexed::DynamicAliasMethodIndexedSampler;
 mod sampler;
 
 #[allow(clippy::module_name_repetitions)]
+#[allow(clippy::trait_duplication_in_bounds)]
 pub struct LocationAliasActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
@@ -47,6 +48,7 @@ pub struct LocationAliasActiveLineageSampler<
     marker: PhantomData<(M, H, G, S, X, D, C, T, N, E, I)>,
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<
         M: MathsCore,
         H: Habitat<M>,
@@ -205,6 +207,7 @@ impl<
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<
         M: MathsCore,
         H: Habitat<M>,
@@ -231,6 +234,7 @@ impl<
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<
         M: MathsCore,

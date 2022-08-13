@@ -25,6 +25,7 @@ use necsim_impls_no_std::{
 use crate::{Scenario, ScenarioParameters};
 
 #[allow(clippy::module_name_repetitions)]
+#[allow(clippy::trait_duplication_in_bounds)]
 pub struct SpatiallyImplicitScenario<
     M: MathsCore,
     G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>,
@@ -47,6 +48,7 @@ pub struct SpatiallyImplicitArguments {
     pub migration_probability_per_generation: PositiveUnitF64,
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>> ScenarioParameters
     for SpatiallyImplicitScenario<M, G>
 {
@@ -54,6 +56,7 @@ impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>> Sce
     type Error = !;
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>> Scenario<M, G>
     for SpatiallyImplicitScenario<M, G>
 {

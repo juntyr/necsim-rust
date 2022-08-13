@@ -16,6 +16,7 @@ use crate::cogs::{
 mod sampler;
 
 #[allow(clippy::module_name_repetitions)]
+#[allow(clippy::trait_duplication_in_bounds)]
 #[derive(Debug)]
 pub struct ClassicalActiveLineageSampler<
     M: MathsCore,
@@ -33,6 +34,7 @@ pub struct ClassicalActiveLineageSampler<
     _marker: PhantomData<(M, H, G, S, X, D, N, I)>,
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<
         M: MathsCore,
         H: Habitat<M>,
@@ -123,6 +125,7 @@ impl<
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<
         M: MathsCore,

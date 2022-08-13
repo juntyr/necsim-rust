@@ -93,6 +93,7 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
         Self { Us, Es, Ks }
     }
 
+    #[allow(clippy::trait_duplication_in_bounds)]
     #[debug_ensures(self.Es.contains(&ret), "returns one of the weighted events")]
     pub fn sample_event<
         M: MathsCore,
