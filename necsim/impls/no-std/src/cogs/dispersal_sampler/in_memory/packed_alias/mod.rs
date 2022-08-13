@@ -1,3 +1,5 @@
+#![allow(clippy::trait_duplication_in_bounds)]
+
 use alloc::{boxed::Box, vec::Vec};
 use core::{marker::PhantomData, ops::Range};
 use necsim_core_bond::NonNegativeF64;
@@ -57,6 +59,7 @@ pub struct InMemoryPackedAliasDispersalSampler<
     marker: PhantomData<(M, H, G)>,
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>>
     InMemoryDispersalSampler<M, H, G> for InMemoryPackedAliasDispersalSampler<M, H, G>
@@ -119,6 +122,7 @@ impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>>
     core::fmt::Debug for InMemoryPackedAliasDispersalSampler<M, H, G>
 {
@@ -137,6 +141,7 @@ impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>> Backup
     for InMemoryPackedAliasDispersalSampler<M, H, G>
