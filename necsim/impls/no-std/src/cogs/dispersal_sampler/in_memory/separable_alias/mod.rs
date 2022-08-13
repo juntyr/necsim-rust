@@ -19,6 +19,7 @@ use crate::{
 mod dispersal;
 
 #[allow(clippy::module_name_repetitions)]
+#[allow(clippy::trait_duplication_in_bounds)]
 #[derive(Debug)]
 pub struct InMemorySeparableAliasDispersalSampler<
     M: MathsCore,
@@ -30,6 +31,7 @@ pub struct InMemorySeparableAliasDispersalSampler<
     _marker: PhantomData<(M, H, G)>,
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>>
     InMemoryDispersalSampler<M, H, G> for InMemorySeparableAliasDispersalSampler<M, H, G>
@@ -118,6 +120,7 @@ impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>> Backup
     for InMemorySeparableAliasDispersalSampler<M, H, G>

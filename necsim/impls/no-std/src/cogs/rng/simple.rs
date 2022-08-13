@@ -235,6 +235,7 @@ impl<M: MathsCore, R: RngCore, S: DistributionSampler<M, R, S, UniformOpenClosed
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<
         M: MathsCore,
         R: RngCore,
@@ -279,6 +280,7 @@ impl<M: MathsCore, R: RngCore, S> DistributionSampler<M, R, S, Bernoulli>
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<
         M: MathsCore,
         R: RngCore,

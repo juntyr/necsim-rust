@@ -32,6 +32,7 @@ pub struct ResumeInitialiser<L: ExactSizeIterator<Item = Lineage>> {
 }
 
 #[allow(clippy::type_complexity)]
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<
         L: ExactSizeIterator<Item = Lineage>,
         M: MathsCore,

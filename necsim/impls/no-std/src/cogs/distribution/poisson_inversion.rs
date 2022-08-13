@@ -7,6 +7,7 @@ use necsim_core_bond::NonNegativeF64;
 #[allow(clippy::module_name_repetitions)]
 pub struct PoissonInverseTransformOrNormalSampler;
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<
         M: MathsCore,
         R: RngCore,

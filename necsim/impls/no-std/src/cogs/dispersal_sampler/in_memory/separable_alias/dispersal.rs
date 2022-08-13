@@ -10,6 +10,7 @@ use necsim_core_bond::ClosedUnitF64;
 
 use super::InMemorySeparableAliasDispersalSampler;
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>>
     DispersalSampler<M, H, G> for InMemorySeparableAliasDispersalSampler<M, H, G>
@@ -38,6 +39,7 @@ impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>>
     SeparableDispersalSampler<M, H, G> for InMemorySeparableAliasDispersalSampler<M, H, G>

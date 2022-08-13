@@ -7,6 +7,7 @@ use necsim_core::cogs::{
 
 pub struct StandardNormal2DBoxMullerSampler;
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<
         M: MathsCore,
         R: RngCore,

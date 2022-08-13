@@ -106,6 +106,7 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
     }
 
     #[allow(clippy::no_effect_underscore_binding)]
+    #[allow(clippy::trait_duplication_in_bounds)]
     #[debug_requires(!alias_samplers.is_empty(), "alias_samplers is non-empty")]
     #[debug_ensures(
         old(alias_samplers).iter().map(|s| s.e).any(|e| e == ret),

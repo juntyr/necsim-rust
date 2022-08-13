@@ -17,6 +17,7 @@ use crate::cogs::event_sampler::gillespie::GillespieEventSampler;
 
 use super::LocationAliasActiveLineageSampler;
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<
         M: MathsCore,

@@ -25,6 +25,7 @@ pub mod genesis;
 pub mod resume;
 
 #[allow(clippy::module_name_repetitions)]
+#[allow(clippy::trait_duplication_in_bounds)]
 pub trait IndependentLineageStoreSampleInitialiser<
     M: MathsCore,
     G: Rng<M, Generator: PrimeableRng>
