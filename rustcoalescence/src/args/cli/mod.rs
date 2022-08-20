@@ -1,18 +1,16 @@
-use structopt::StructOpt;
+use clap::Parser;
 
 pub mod replay;
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub enum RustcoalescenceArgs {
     Simulate(CommandArgs),
     Replay(CommandArgs),
 }
 
-#[derive(Debug, StructOpt)]
-#[structopt(template("{bin} {version}\n\nUSAGE:\n    {usage} args..\n\n{all-args}"))]
-#[structopt(setting(structopt::clap::AppSettings::AllowLeadingHyphen))]
+#[derive(Debug, Parser)]
+#[clap(setting(clap::AppSettings::AllowLeadingHyphen))]
 pub struct CommandArgs {
-    #[structopt(hidden(true))]
     args: Vec<String>,
 }
 

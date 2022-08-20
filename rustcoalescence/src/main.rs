@@ -10,7 +10,7 @@ extern crate serde_derive_state;
 extern crate log;
 
 use anyhow::{Context, Result};
-use structopt::StructOpt;
+use clap::Parser;
 
 mod args;
 mod cli;
