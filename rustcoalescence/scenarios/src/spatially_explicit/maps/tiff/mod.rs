@@ -1,7 +1,10 @@
 use std::{fs::File, path::Path};
 
 use anyhow::{Context, Result};
-use tiff::{decoder::Decoder, tags::Tag};
+use tiff::{
+    decoder::{Decoder, Limits},
+    tags::Tag,
+};
 
 use necsim_impls_no_std::array2d::Array2D;
 
@@ -24,7 +27,13 @@ impl<T: data_type::TiffDataType> TiffDataType for T {}
 pub fn load_map_from_tiff<D: TiffDataType>(path: &Path, strict_load: bool) -> Result<Array2D<D>> {
     let file = File::open(path).context("Could not read file.")?;
 
-    let mut decoder = Decoder::new(file).context("Could not decode TIFF file.")?;
+    // Set no limit to the map file size, users can deal with OOM on setup
+    let mut decoder_limits = Limits::default();
+    decoder_limits.decoding_buffer_size = usize::MAX;
+
+    let mut decoder = Decoder::new(file)
+        .context("Could not decode TIFF file.")?
+        .with_limits(decoder_limits);
 
     let colortype = decoder
         .colortype()
@@ -82,21 +91,17 @@ pub fn load_map_from_tiff<D: TiffDataType>(path: &Path, strict_load: bool) -> Re
         .dimensions()
         .context("Could not read image dimensions.")?;
 
-    let mut image_data = vec![D::default(); (width as usize) * (height as usize)];
+    let any_image = decoder
+        .read_image()
+        .context("Could not decode the image.")?;
 
-    let rows_per_strip = decoder.get_tag_u32(Tag::RowsPerStrip).unwrap_or(height) as usize;
-    let samples_per_strip = (width as usize) * rows_per_strip /* only one sample per pixel */;
-
-    for i in 0..(decoder
-        .strip_count()
-        .context("Could not read strip count.")? as usize)
-    {
-        let image_buffer = D::decoding_buffer_from_data(&mut image_data[(samples_per_strip * i)..]);
-
-        decoder
-            .read_strip_to_buffer(image_buffer)
-            .with_context(|| format!("Could not read strip {}.", i))?;
-    }
+    let mut image_data = match D::decoding_result_to_data(any_image) {
+        Some(image_data) => image_data,
+        None => anyhow::bail!(
+            "Failed to decode the image data as {}.",
+            std::any::type_name::<D>()
+        ),
+    };
 
     if !strict_load {
         // If strict loading is disabled, check for a GDAL no data value
