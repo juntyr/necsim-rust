@@ -1,7 +1,7 @@
 use std::{
     fmt,
     marker::PhantomData,
-    mem::{ManuallyDrop, MaybeUninit},
+    mem::ManuallyDrop,
     num::{NonZeroU32, Wrapping},
     time::{Duration, Instant},
 };
@@ -192,11 +192,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
                     &mut immigration_buffer.spare_capacity_mut()[..number_immigrants],
                 );
 
-                // FIXME: `MaybeUninit::slice_assume_init_mut` is unsafe here
-                //        but the API does not accept `MaybeUninit` to be equivalent
-                unsafe {
-                    msg.matched_receive_into(MaybeUninit::slice_assume_init_mut(immigration_slice));
-                }
+                msg.matched_receive_into(immigration_slice);
 
                 // Safety: The uninitialised `number_immigrants` items were just initialised
                 //         in the `matched_receive_into` call
