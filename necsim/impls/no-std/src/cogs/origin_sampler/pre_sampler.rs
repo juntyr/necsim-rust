@@ -61,7 +61,7 @@ impl<M: MathsCore> OriginPreSampler<M, Empty<u64>> {
     #[must_use]
     pub fn none() -> Self {
         Self {
-            inner: Empty::default(),
+            inner: core::iter::empty(),
             proportion: ClosedUnitF64::zero(),
             _marker: PhantomData::<M>,
         }
