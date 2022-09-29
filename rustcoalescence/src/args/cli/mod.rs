@@ -9,8 +9,8 @@ pub enum RustcoalescenceArgs {
 }
 
 #[derive(Debug, Parser)]
-#[clap(setting(clap::AppSettings::AllowLeadingHyphen))]
 pub struct CommandArgs {
+    #[arg(allow_hyphen_values = true)]
     args: Vec<String>,
 }
 

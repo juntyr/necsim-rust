@@ -27,7 +27,7 @@ fn main() -> Result<()> {
     log::set_logger(&MINIMAL_LOGGER)?;
 
     // Parse and validate all command line arguments
-    let args = RustcoalescenceArgs::from_args();
+    let args = RustcoalescenceArgs::parse();
 
     match args {
         RustcoalescenceArgs::Simulate(simulate_args) => {
