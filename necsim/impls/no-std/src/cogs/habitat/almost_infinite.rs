@@ -67,6 +67,7 @@ impl<M: MathsCore> Habitat<M> for AlmostInfiniteHabitat<M> {
 #[contract_trait]
 impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for AlmostInfiniteHabitat<M> {
     #[must_use]
+    #[inline]
     fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
         let index = rng.sample_u64();
 

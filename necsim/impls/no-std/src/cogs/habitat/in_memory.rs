@@ -102,6 +102,7 @@ impl<M: MathsCore> Habitat<M> for InMemoryHabitat<M> {
 #[contract_trait]
 impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for InMemoryHabitat<M> {
     #[must_use]
+    #[inline]
     fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
         use necsim_core::cogs::RngSampler;
 
