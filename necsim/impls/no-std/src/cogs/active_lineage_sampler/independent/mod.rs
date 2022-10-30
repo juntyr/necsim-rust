@@ -26,21 +26,7 @@ use event_time_sampler::EventTimeSampler;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-#[cfg_attr(feature = "cuda", cuda(layout::free = "M"))]
-#[cfg_attr(feature = "cuda", cuda(bound = "H: rust_cuda::common::RustToCuda"))]
-#[cfg_attr(feature = "cuda", cuda(layout::free = "H"))]
-#[cfg_attr(feature = "cuda", cuda(bound = "G: rust_cuda::common::RustToCuda"))]
-#[cfg_attr(feature = "cuda", cuda(layout::free = "G"))]
-#[cfg_attr(feature = "cuda", cuda(bound = "X: rust_cuda::common::RustToCuda"))]
-#[cfg_attr(feature = "cuda", cuda(layout::free = "X"))]
-#[cfg_attr(feature = "cuda", cuda(bound = "D: rust_cuda::common::RustToCuda"))]
-#[cfg_attr(feature = "cuda", cuda(layout::free = "D"))]
-#[cfg_attr(feature = "cuda", cuda(bound = "T: rust_cuda::common::RustToCuda"))]
-#[cfg_attr(feature = "cuda", cuda(layout::free = "T"))]
-#[cfg_attr(feature = "cuda", cuda(bound = "N: rust_cuda::common::RustToCuda"))]
-#[cfg_attr(feature = "cuda", cuda(layout::free = "N"))]
-#[cfg_attr(feature = "cuda", cuda(bound = "J: rust_cuda::common::RustToCuda"))]
-#[cfg_attr(feature = "cuda", cuda(layout::free = "J"))]
+#[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct IndependentActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,

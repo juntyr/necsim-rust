@@ -13,7 +13,10 @@ use core::ops::{Index, IndexMut};
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(
     feature = "cuda",
-    cuda(bound = "T: rust_cuda::safety::StackOnly + ~const const_type_layout::TypeGraphLayout")
+    cuda(
+        free = "T",
+        bound = "T: rust_cuda::safety::StackOnly + ~const const_type_layout::TypeGraphLayout"
+    )
 )]
 pub struct Array2D<T> {
     #[cfg_attr(feature = "cuda", cuda(embed))]

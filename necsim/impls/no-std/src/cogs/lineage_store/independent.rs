@@ -8,9 +8,7 @@ use necsim_core::{
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-#[cfg_attr(feature = "cuda", cuda(bound = "H: rust_cuda::common::RustToCuda"))]
-#[cfg_attr(feature = "cuda", cuda(layout::free = "M"))]
-#[cfg_attr(feature = "cuda", cuda(layout::free = "H"))]
+#[cfg_attr(feature = "cuda", cuda(free = "M", free = "H"))]
 pub struct IndependentLineageStore<M: MathsCore, H: Habitat<M>> {
     marker: PhantomData<(M, H)>,
 }

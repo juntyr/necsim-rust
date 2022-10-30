@@ -23,8 +23,7 @@ use super::utils::MaybeSome;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(rust_cuda::common::LendRustToCuda)]
-#[cuda(layout::free = "ReportSpeciation")]
-#[cuda(layout::free = "ReportDispersal")]
+#[cuda(free = "ReportSpeciation", free = "ReportDispersal")]
 pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
     #[cuda(embed)]
     speciation_mask:

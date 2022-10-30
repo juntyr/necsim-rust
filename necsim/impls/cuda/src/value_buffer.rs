@@ -19,6 +19,7 @@ use rust_cuda::rustacuda::{
 use super::utils::MaybeSome;
 
 #[derive(rust_cuda::common::LendRustToCuda)]
+#[cuda(free = "T")]
 #[allow(clippy::module_name_repetitions)]
 pub struct ValueBuffer<T, const M2D: bool, const M2H: bool>
 where

@@ -29,13 +29,7 @@ pub trait AntiTrespassingDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCor
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-#[cfg_attr(feature = "cuda", cuda(layout::free = "M"))]
-#[cfg_attr(feature = "cuda", cuda(layout::free = "H"))]
-#[cfg_attr(feature = "cuda", cuda(layout::free = "G"))]
-#[cfg_attr(feature = "cuda", cuda(bound = "D: rust_cuda::common::RustToCuda"))]
-#[cfg_attr(feature = "cuda", cuda(layout::free = "D"))]
-#[cfg_attr(feature = "cuda", cuda(bound = "T: rust_cuda::common::RustToCuda"))]
-#[cfg_attr(feature = "cuda", cuda(layout::free = "T"))]
+#[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct TrespassingDispersalSampler<
     M: MathsCore,
     H: Habitat<M>,
