@@ -1,7 +1,7 @@
 #[cfg(not(target_os = "cuda"))]
 use core::iter::Iterator;
 
-use const_type_layout::TypeLayout;
+use const_type_layout::TypeGraphLayout;
 use rust_cuda::{
     safety::StackOnly,
     utils::{
@@ -20,7 +20,10 @@ use super::utils::MaybeSome;
 
 #[derive(rust_cuda::common::LendRustToCuda)]
 #[allow(clippy::module_name_repetitions)]
-pub struct ValueBuffer<T: StackOnly + TypeLayout, const M2D: bool, const M2H: bool> {
+pub struct ValueBuffer<T, const M2D: bool, const M2H: bool>
+where
+    T: StackOnly + ~const TypeGraphLayout,
+{
     #[r2cEmbed]
     mask: SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<bool, true, true>, 1_usize>,
     #[r2cEmbed]
@@ -29,7 +32,9 @@ pub struct ValueBuffer<T: StackOnly + TypeLayout, const M2D: bool, const M2H: bo
 }
 
 #[cfg(not(target_os = "cuda"))]
-impl<T: StackOnly + TypeLayout, const M2D: bool, const M2H: bool> ValueBuffer<T, M2D, M2H> {
+impl<T: StackOnly + ~const TypeGraphLayout, const M2D: bool, const M2H: bool>
+    ValueBuffer<T, M2D, M2H>
+{
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     pub fn new(block_size: &BlockSize, grid_size: &GridSize) -> CudaResult<Self> {
@@ -63,7 +68,7 @@ impl<T: StackOnly + TypeLayout, const M2D: bool, const M2H: bool> ValueBuffer<T,
 }
 
 #[cfg(not(target_os = "cuda"))]
-impl<T: StackOnly + TypeLayout, const M2D: bool> ValueBuffer<T, M2D, true> {
+impl<T: StackOnly + ~const TypeGraphLayout, const M2D: bool> ValueBuffer<T, M2D, true> {
     pub fn iter(&self) -> impl Iterator<Item = Option<&T>> {
         self.mask
             .iter()
@@ -86,7 +91,7 @@ impl<T: StackOnly + TypeLayout, const M2D: bool> ValueBuffer<T, M2D, true> {
 }
 
 #[cfg(target_os = "cuda")]
-impl<T: StackOnly + TypeLayout> ValueBuffer<T, true, true> {
+impl<T: StackOnly + ~const TypeGraphLayout> ValueBuffer<T, true, true> {
     pub fn with_value_for_core<F: FnOnce(Option<T>) -> Option<T>>(&mut self, inner: F) {
         let value = if self
             .mask
@@ -113,7 +118,7 @@ impl<T: StackOnly + TypeLayout> ValueBuffer<T, true, true> {
 }
 
 #[cfg(target_os = "cuda")]
-impl<T: StackOnly + TypeLayout, const M2H: bool> ValueBuffer<T, true, M2H> {
+impl<T: StackOnly + ~const TypeGraphLayout, const M2H: bool> ValueBuffer<T, true, M2H> {
     pub fn take_value_for_core(&mut self) -> Option<T> {
         #[allow(clippy::option_if_let_else)]
         if let Some(mask) = self.mask.get_mut(0) {
@@ -131,7 +136,7 @@ impl<T: StackOnly + TypeLayout, const M2H: bool> ValueBuffer<T, true, M2H> {
 }
 
 #[cfg(target_os = "cuda")]
-impl<T: StackOnly + TypeLayout, const M2D: bool> ValueBuffer<T, M2D, true> {
+impl<T: StackOnly + ~const TypeGraphLayout, const M2D: bool> ValueBuffer<T, M2D, true> {
     pub fn put_value_for_core(&mut self, value: Option<T>) {
         if let Some(mask) = self.mask.get_mut(0) {
             mask.write(value.is_some());

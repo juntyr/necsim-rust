@@ -148,7 +148,7 @@ fn display_progress(total: u64, remaining: u64) {
     // Display a simple progress bar to stdout
     print!("\r{:>13} [", total - remaining);
     if display_progress == 0 {
-        print!("{:>rest$}", "", rest = (UPDATE_PRECISION));
+        print!("{:>UPDATE_PRECISION$}", "");
     } else if remaining > 0 {
         print!(
             "{:=<progress$}>{:>rest$}",
@@ -158,7 +158,7 @@ fn display_progress(total: u64, remaining: u64) {
             rest = (UPDATE_PRECISION - display_progress)
         );
     } else {
-        print!("{:=<progress$}", "", progress = (UPDATE_PRECISION));
+        print!("{:=<UPDATE_PRECISION$}", "");
     }
-    print!("] {:<13}", total);
+    print!("] {total:<13}");
 }

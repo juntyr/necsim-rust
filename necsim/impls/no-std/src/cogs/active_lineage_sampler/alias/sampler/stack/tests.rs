@@ -534,7 +534,7 @@ fn debug_display_sampler() {
     let mut sampler = DynamicAliasMethodStackSampler::with_capacity(6);
 
     assert_eq!(
-        &alloc::format!("{:?}", sampler),
+        &alloc::format!("{sampler:?}"),
         "DynamicAliasMethodStackSampler { exponents: [], total_weight: 0.0 }"
     );
 
@@ -543,7 +543,7 @@ fn debug_display_sampler() {
     }
 
     assert_eq!(
-        &alloc::format!("{:?}", sampler),
+        &alloc::format!("{sampler:?}"),
         "DynamicAliasMethodStackSampler { exponents: [2, 1, 0], total_weight: 21.0 }"
     );
 
@@ -559,11 +559,11 @@ fn debug_display_sampler() {
     );
 
     assert_eq!(
-        &alloc::format!("{:?}", sampler),
+        &alloc::format!("{sampler:?}"),
         "DynamicAliasMethodStackSampler { exponents: [2, 1, 0], total_weight: 18.0 }"
     );
     assert_eq!(
-        &alloc::format!("{:?}", sampler_clone),
+        &alloc::format!("{sampler_clone:?}"),
         "DynamicAliasMethodStackSampler { exponents: [2, 1], total_weight: 20.0 }"
     );
 }

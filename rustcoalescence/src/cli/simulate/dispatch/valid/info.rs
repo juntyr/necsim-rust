@@ -61,12 +61,12 @@ where
         SampleMode::Resume => resume_pause.push_str("resume"),
         SampleMode::FixUp(_) => resume_pause.push_str("fix-up for a restart"),
         SampleMode::Restart(SampleModeRestart { after, .. }) => {
-            write!(resume_pause, "restart after {}", after)?;
+            write!(resume_pause, "restart after {after}")?;
         },
     }
     match pause_before {
         None => resume_pause.push('.'),
-        Some(before) => write!(resume_pause, " and pause before {}.", before)?,
+        Some(before) => write!(resume_pause, " and pause before {before}.")?,
     }
     info!("{}", resume_pause);
 

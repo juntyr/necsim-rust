@@ -124,7 +124,7 @@ impl TskitTreeReporter {
         // Insert the lineage as an individual
         let individual_id = self
             .table
-            .add_individual_with_metadata(TSK_FLAGS_EMPTY, &location, parents, metadata)
+            .add_individual_with_metadata(TSK_FLAGS_EMPTY, location, parents, metadata)
             .unwrap();
 
         // Create corresponding node

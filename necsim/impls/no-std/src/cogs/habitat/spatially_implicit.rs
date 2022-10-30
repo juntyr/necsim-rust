@@ -11,6 +11,7 @@ use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", r2cLayout(free = "M"))]
 pub struct SpatiallyImplicitHabitat<M: MathsCore> {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     local: NonSpatialHabitat<M>,
@@ -77,7 +78,7 @@ impl<M: MathsCore> Backup for SpatiallyImplicitHabitat<M> {
 
 #[contract_trait]
 impl<M: MathsCore> Habitat<M> for SpatiallyImplicitHabitat<M> {
-    type LocationIterator<'a> = impl Iterator<Item = Location>;
+    type LocationIterator<'a> = impl Iterator<Item = Location> + 'a;
 
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {

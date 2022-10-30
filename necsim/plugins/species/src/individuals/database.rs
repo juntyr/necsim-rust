@@ -127,11 +127,11 @@ impl IndividualLocationSpeciesReporter {
                             parent  INTEGER,
                             species TEXT
                         );
-                        CREATE TABLE {} (
+                        CREATE TABLE {METADATA_TABLE} (
                             key     TEXT PRIMARY KEY NOT NULL,
                             value   TEXT NOT NULL
                         );",
-                    self.table, METADATA_TABLE,
+                    self.table,
                 ))
                 .map(|_| ())?;
         }

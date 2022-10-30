@@ -27,7 +27,7 @@ pub fn load_dispersal_map(
 
         Ok(unsafe { std::mem::transmute(map) })
     })()
-    .with_context(|| format!("Failed to load the dispersal map from {:?}.", path))
+    .with_context(|| format!("Failed to load the dispersal map from {path:?}."))
 }
 
 pub fn load_turnover_map(
@@ -49,7 +49,7 @@ pub fn load_turnover_map(
 
         Ok(unsafe { std::mem::transmute(map) })
     })()
-    .with_context(|| format!("Failed to load the turnover map from {:?}.", path))
+    .with_context(|| format!("Failed to load the turnover map from {path:?}."))
 }
 
 pub fn load_habitat_map(
@@ -65,7 +65,7 @@ pub fn load_habitat_map(
             MapLoadingMode::Strict => true,
         },
     )
-    .with_context(|| format!("Failed to load the habiat map from {:?}.", path))?;
+    .with_context(|| format!("Failed to load the habiat map from {path:?}."))?;
 
     match loading_mode {
         MapLoadingMode::FixMe => {
@@ -107,6 +107,7 @@ fn fix_habitat_map(
             if h_before <= 1 {
                 // If there is no turnover, there cannot be habitat at this location
                 // If there is any dispersal from this location, it must be habitat
+                #[allow(clippy::bool_to_int_with_if)]
                 let h_fixed = if turnover.map_or(false, |turnover| turnover[(y, x)] == 0.0_f64) {
                     0
                 } else if dispersal

@@ -9,6 +9,8 @@ use necsim_core::{
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", r2cLayout(free = "M"))]
+#[cfg_attr(feature = "cuda", r2cLayout(free = "H"))]
 pub struct IndependentLineageStore<M: MathsCore, H: Habitat<M>> {
     marker: PhantomData<(M, H)>,
 }

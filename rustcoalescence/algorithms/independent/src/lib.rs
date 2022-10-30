@@ -1,6 +1,5 @@
 #![deny(clippy::pedantic)]
 #![feature(never_type)]
-#![feature(generic_associated_types)]
 
 #[macro_use]
 extern crate serde_derive_state;

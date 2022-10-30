@@ -46,7 +46,6 @@ impl From<IndexedLocation> for Location {
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
 #[serde(from = "IndexedLocationRaw", into = "IndexedLocationRaw")]
 #[repr(C)]
-#[layout(free = "LocationIndex")]
 pub struct IndexedLocation {
     location: Location,
     index: LocationIndex,

@@ -12,6 +12,8 @@ use crate::cogs::{
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", r2cLayout(free = "M"))]
+#[cfg_attr(feature = "cuda", r2cLayout(free = "G"))]
 pub struct SpatiallyImplicitDispersalSampler<M: MathsCore, G: RngCore<M>> {
     #[cfg_attr(feature = "cuda", r2cEmbed)]
     local: NonSpatialDispersalSampler<M, G>,
