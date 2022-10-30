@@ -13,9 +13,9 @@ use crate::cogs::lineage_store::independent::IndependentLineageStore;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-#[cfg_attr(feature = "cuda", r2cLayout(free = "M"))]
-#[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cLayout(free = "H"))]
+#[cfg_attr(feature = "cuda", cuda(layout::free = "M"))]
+#[cfg_attr(feature = "cuda", cuda(bound = "H: rust_cuda::common::RustToCuda"))]
+#[cfg_attr(feature = "cuda", cuda(layout::free = "H"))]
 pub struct IndependentCoalescenceSampler<M: MathsCore, H: Habitat<M>>(PhantomData<(M, H)>);
 
 impl<M: MathsCore, H: Habitat<M>> Default for IndependentCoalescenceSampler<M, H> {

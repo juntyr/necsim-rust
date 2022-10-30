@@ -11,11 +11,11 @@ use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-#[cfg_attr(feature = "cuda", r2cLayout(free = "M"))]
+#[cfg_attr(feature = "cuda", cuda(layout::free = "M"))]
 pub struct SpatiallyImplicitHabitat<M: MathsCore> {
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     local: NonSpatialHabitat<M>,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     meta: NonSpatialHabitat<M>,
     extent: LandscapeExtent,
 }

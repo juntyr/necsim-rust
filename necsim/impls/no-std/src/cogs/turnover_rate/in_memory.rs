@@ -14,7 +14,7 @@ use crate::{array2d::Array2D, cogs::habitat::in_memory::InMemoryHabitat};
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 pub struct InMemoryTurnoverRate {
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     turnover_rate: Final<Box<[NonNegativeF64]>>,
 }
 

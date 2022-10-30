@@ -9,8 +9,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, rust_cuda::common::LendRustToCuda)]
-#[r2cLayout(free = "M")]
-#[r2cLayout(free = "R")]
+#[cuda(layout::free = "M")]
+#[cuda(layout::free = "R")]
 pub struct CudaRng<M: MathsCore, R>
 where
     R: RngCore<M> + StackOnly + ~const TypeGraphLayout,

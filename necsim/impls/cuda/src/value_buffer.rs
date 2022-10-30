@@ -24,9 +24,9 @@ pub struct ValueBuffer<T, const M2D: bool, const M2H: bool>
 where
     T: StackOnly + ~const TypeGraphLayout,
 {
-    #[r2cEmbed]
+    #[cuda(embed)]
     mask: SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<bool, true, true>, 1_usize>,
-    #[r2cEmbed]
+    #[cuda(embed)]
     buffer:
         SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<MaybeSome<T>, M2D, M2H>, 1_usize>,
 }

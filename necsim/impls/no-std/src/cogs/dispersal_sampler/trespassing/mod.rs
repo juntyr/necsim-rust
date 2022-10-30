@@ -29,13 +29,13 @@ pub trait AntiTrespassingDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCor
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-#[cfg_attr(feature = "cuda", r2cLayout(free = "M"))]
-#[cfg_attr(feature = "cuda", r2cLayout(free = "H"))]
-#[cfg_attr(feature = "cuda", r2cLayout(free = "G"))]
-#[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cLayout(free = "D"))]
-#[cfg_attr(feature = "cuda", r2cBound(T: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cLayout(free = "T"))]
+#[cfg_attr(feature = "cuda", cuda(layout::free = "M"))]
+#[cfg_attr(feature = "cuda", cuda(layout::free = "H"))]
+#[cfg_attr(feature = "cuda", cuda(layout::free = "G"))]
+#[cfg_attr(feature = "cuda", cuda(bound = "D: rust_cuda::common::RustToCuda"))]
+#[cfg_attr(feature = "cuda", cuda(layout::free = "D"))]
+#[cfg_attr(feature = "cuda", cuda(bound = "T: rust_cuda::common::RustToCuda"))]
+#[cfg_attr(feature = "cuda", cuda(layout::free = "T"))]
 pub struct TrespassingDispersalSampler<
     M: MathsCore,
     H: Habitat<M>,
@@ -43,9 +43,9 @@ pub struct TrespassingDispersalSampler<
     D: DispersalSampler<M, H, G>,
     T: AntiTrespassingDispersalSampler<M, H, G>,
 > {
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     legal_dispersal_sampler: D,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     trespassing_dispersal_sampler: T,
     marker: PhantomData<(M, H, G)>,
 }
