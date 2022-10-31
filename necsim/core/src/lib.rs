@@ -1,5 +1,4 @@
 #![deny(clippy::pedantic)]
-#![allow(clippy::type_repetition_in_bounds)]
 #![no_std]
 #![feature(const_trait_impl)]
 #![feature(const_type_name)]

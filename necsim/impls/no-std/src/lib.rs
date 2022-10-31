@@ -1,5 +1,4 @@
 #![deny(clippy::pedantic)]
-#![allow(clippy::type_repetition_in_bounds)]
 #![no_std]
 #![feature(iter_advance_by)]
 #![feature(drain_filter)]
