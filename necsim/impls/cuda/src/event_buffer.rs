@@ -23,18 +23,19 @@ use super::utils::MaybeSome;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(rust_cuda::common::LendRustToCuda)]
+#[cuda(free = "ReportSpeciation", free = "ReportDispersal")]
 pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
-    #[r2cEmbed]
+    #[cuda(embed)]
     speciation_mask:
         SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<bool, true, true>, 1_usize>,
-    #[r2cEmbed]
+    #[cuda(embed)]
     speciation_buffer: SplitSliceOverCudaThreadsConstStride<
         CudaExchangeBuffer<MaybeSome<SpeciationEvent>, false, true>,
         1_usize,
     >,
-    #[r2cEmbed]
+    #[cuda(embed)]
     dispersal_mask: SplitSliceOverCudaThreadsDynamicStride<CudaExchangeBuffer<bool, true, true>>,
-    #[r2cEmbed]
+    #[cuda(embed)]
     dispersal_buffer: SplitSliceOverCudaThreadsDynamicStride<
         CudaExchangeBuffer<MaybeSome<DispersalEvent>, false, true>,
     >,

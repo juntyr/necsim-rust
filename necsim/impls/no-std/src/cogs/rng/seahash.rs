@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
 #[derive(Clone, Debug, Serialize, Deserialize, TypeLayout)]
 #[serde(deny_unknown_fields)]
+#[layout(free = "M")]
 pub struct SeaHash<M: MathsCore> {
     seed: u64,
     location: u64,

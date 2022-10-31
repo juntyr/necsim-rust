@@ -109,13 +109,6 @@ pub enum TypedEvent {
     Dispersal(DispersalEvent),
 }
 
-#[allow(dead_code)]
-const EXCESSIVE_OPTION_TYPED_EVENT_ERROR: [(); 1 - {
-    const ASSERT: bool =
-        core::mem::size_of::<Option<TypedEvent>>() == core::mem::size_of::<TypedEvent>();
-    ASSERT
-} as usize] = [];
-
 impl From<SpeciationEvent> for PackedEvent {
     fn from(event: SpeciationEvent) -> Self {
         Self {

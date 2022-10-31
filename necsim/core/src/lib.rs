@@ -2,11 +2,9 @@
 #![no_std]
 #![feature(const_trait_impl)]
 #![feature(const_type_name)]
-#![feature(const_ptr_offset_from)]
 #![feature(const_mut_refs)]
 #![feature(const_refs_to_cell)]
 #![feature(control_flow_enum)]
-#![feature(generic_associated_types)]
 
 #[doc(hidden)]
 pub extern crate alloc;

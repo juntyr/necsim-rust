@@ -186,7 +186,7 @@ impl EventLogRecorder {
             .create(true)
             .truncate(true)
             .write(true)
-            .open(&segment_path)?;
+            .open(segment_path)?;
         let mut buf_writer = BufWriter::new(segment_file);
 
         bincode::serialize_into(

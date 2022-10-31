@@ -5,12 +5,10 @@
 #![feature(type_alias_impl_trait)]
 #![feature(const_trait_impl)]
 #![feature(const_type_name)]
-#![feature(const_ptr_offset_from)]
 #![feature(const_mut_refs)]
 #![feature(const_refs_to_cell)]
 #![feature(control_flow_enum)]
 #![feature(negative_impls)]
-#![feature(generic_associated_types)]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 

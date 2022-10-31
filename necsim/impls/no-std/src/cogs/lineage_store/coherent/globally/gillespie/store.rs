@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 use fnv::FnvBuildHasher;
@@ -65,7 +64,7 @@ impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H>
         let lineages_at_location = self
             .location_to_lineage_references
             .entry(lineage.indexed_location.location().clone())
-            .or_insert(Vec::new());
+            .or_default();
 
         self.indexed_location_to_lineage_reference.insert(
             lineage.indexed_location.clone(),
@@ -124,7 +123,7 @@ impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H>
 impl<M: MathsCore, H: Habitat<M>> GloballyCoherentLineageStore<M, H>
     for GillespieLineageStore<M, H>
 {
-    type LocationIterator<'a> = impl Iterator<Item = Location> where H: 'a;
+    type LocationIterator<'a> = impl Iterator<Item = Location> + 'a where H: 'a;
 
     #[must_use]
     fn iter_active_locations(&self, _habitat: &H) -> Self::LocationIterator<'_> {

@@ -68,5 +68,5 @@ fn try_parse_inner<
             ))
         },
     }
-    .with_context(|| format!("Failed to parse the {} subcommand arguments.", subcommand))
+    .with_context(|| format!("Failed to parse the {subcommand} subcommand arguments."))
 }

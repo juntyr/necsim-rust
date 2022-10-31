@@ -15,10 +15,11 @@ use crate::array2d::Array2D;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct InMemoryHabitat<M: MathsCore> {
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     habitat: Final<Box<[u32]>>,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     u64_injection: Final<Box<[u64]>>,
     extent: LandscapeExtent,
     marker: PhantomData<M>,
@@ -38,7 +39,7 @@ impl<M: MathsCore> Backup for InMemoryHabitat<M> {
 
 #[contract_trait]
 impl<M: MathsCore> Habitat<M> for InMemoryHabitat<M> {
-    type LocationIterator<'a> = impl Iterator<Item = Location>;
+    type LocationIterator<'a> = impl Iterator<Item = Location> + 'a;
 
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {

@@ -72,7 +72,7 @@ impl TryFrom<GlobalTurnoverReporterArgs> for GlobalTurnoverReporter {
 impl GlobalTurnoverReporter {
     fn write_turnover(&mut self, turnover: f64) {
         if let Some(writer) = &mut self.writer {
-            std::mem::drop(writeln!(writer, "{}", turnover));
+            std::mem::drop(writeln!(writer, "{turnover}"));
         }
     }
 }

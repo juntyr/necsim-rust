@@ -3,7 +3,6 @@
 #![feature(core_intrinsics)]
 #![feature(const_trait_impl)]
 #![feature(const_type_name)]
-#![feature(const_ptr_offset_from)]
 #![feature(const_mut_refs)]
 #![feature(const_refs_to_cell)]
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]

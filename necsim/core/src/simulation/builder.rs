@@ -87,17 +87,7 @@ impl<
 
 #[derive(Debug, TypeLayout)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(S: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(X: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(C: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(T: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(N: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(E: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(I: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(A: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", cuda(free = "M"))]
 #[repr(C)]
 pub struct Simulation<
     M: MathsCore,
@@ -114,29 +104,28 @@ pub struct Simulation<
     A: ActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>,
 > {
     pub(super) maths: PhantomData<M>,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     pub(super) habitat: H,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     pub(super) lineage_store: S,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     pub(super) dispersal_sampler: D,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     pub(super) coalescence_sampler: C,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     pub(super) turnover_rate: T,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     pub(super) speciation_probability: N,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     pub(super) emigration_exit: X,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     pub(super) event_sampler: E,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     pub(super) active_lineage_sampler: A,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     pub(super) rng: G,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     pub(super) immigration_entry: I,
-    #[cfg_attr(feature = "cuda", r2cIgnore)]
     pub(super) migration_balance: Wrapping<u64>,
 }
 

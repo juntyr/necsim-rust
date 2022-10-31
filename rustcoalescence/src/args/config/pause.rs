@@ -135,7 +135,7 @@ impl TryFrom<PathBuf> for ResumeConfig {
 
 impl ResumeConfig {
     pub fn write(mut self, config: &str) -> anyhow::Result<()> {
-        std::io::Write::write_fmt(&mut self.file, format_args!("{}\n", config))?;
+        std::io::Write::write_fmt(&mut self.file, format_args!("{config}\n"))?;
 
         self.temp = false;
 

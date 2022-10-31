@@ -26,13 +26,7 @@ use event_time_sampler::EventTimeSampler;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(X: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(T: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(N: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(J: rust_cuda::common::RustToCuda))]
+#[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct IndependentActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
@@ -43,13 +37,14 @@ pub struct IndependentActiveLineageSampler<
     N: SpeciationProbability<M, H>,
     J: EventTimeSampler<M, H, G, T>,
 > {
-    #[cfg_attr(feature = "cuda", r2cEmbed(
-        Option<rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<Lineage>>
-    ))]
+    #[cfg_attr(
+        feature = "cuda",
+        cuda(embed = "Option<rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<Lineage>>")
+    )]
     active_lineage: Option<Lineage>,
     min_event_time: NonNegativeF64,
     last_event_time: NonNegativeF64,
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     event_time_sampler: J,
     marker: PhantomData<(M, H, G, X, D, T, N)>,
 }

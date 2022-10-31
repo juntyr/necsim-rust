@@ -22,12 +22,18 @@ use super::tracking::{MinSpeciationTrackingEventSampler, SpeciationSample};
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(H: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(G: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(X: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(D: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(T: rust_cuda::common::RustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(N: rust_cuda::common::RustToCuda))]
+#[cfg_attr(
+    feature = "cuda",
+    cuda(
+        free = "M",
+        free = "H",
+        free = "G",
+        free = "X",
+        free = "D",
+        free = "T",
+        free = "N"
+    )
+)]
 pub struct IndependentEventSampler<
     M: MathsCore,
     H: Habitat<M>,
@@ -37,9 +43,12 @@ pub struct IndependentEventSampler<
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
 > {
-    #[cfg_attr(feature = "cuda", r2cEmbed(
-        Option<rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<SpeciationSample>>
-    ))]
+    #[cfg_attr(
+        feature = "cuda",
+        cuda(
+            embed = "Option<rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<SpeciationSample>>"
+        )
+    )]
     min_spec_sample: Option<SpeciationSample>,
     marker: PhantomData<(M, H, G, X, D, T, N)>,
 }

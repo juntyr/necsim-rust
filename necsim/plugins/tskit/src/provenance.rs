@@ -161,7 +161,7 @@ mod rustc_version {
         channel: &Channel,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
-        serializer.collect_str(&format!("{:?}", channel))
+        serializer.collect_str(&format!("{channel:?}"))
     }
 
     fn serialize_llvm_version<S: serde::Serializer>(

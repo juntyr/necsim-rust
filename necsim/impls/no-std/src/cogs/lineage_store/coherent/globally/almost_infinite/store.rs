@@ -98,7 +98,7 @@ impl<M: MathsCore> LocallyCoherentLineageStore<M, AlmostInfiniteHabitat<M>>
 impl<M: MathsCore> GloballyCoherentLineageStore<M, AlmostInfiniteHabitat<M>>
     for AlmostInfiniteLineageStore<M>
 {
-    type LocationIterator<'a> = impl Iterator<Item = Location>;
+    type LocationIterator<'a> = impl Iterator<Item = Location> + 'a;
 
     #[must_use]
     fn iter_active_locations(

@@ -1,5 +1,4 @@
 #![deny(clippy::pedantic)]
-#![feature(generic_associated_types)]
 #![allow(incomplete_features)]
 #![feature(inline_const_pat)]
 

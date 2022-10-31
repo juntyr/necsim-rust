@@ -192,7 +192,7 @@ impl TryFrom<SpatiallyExplicitUniformTurnoverArgumentsRaw>
         );
 
         let mut dispersal_map = maps::load_dispersal_map(&raw.dispersal_map, raw.loading_mode)
-            .map_err(|err| format!("{:?}", err))?;
+            .map_err(|err| format!("{err:?}"))?;
 
         info!(
             "Successfully loaded the dispersal map {:?} with dimensions {}x{} [cols x rows].",
@@ -208,7 +208,7 @@ impl TryFrom<SpatiallyExplicitUniformTurnoverArgumentsRaw>
 
         let habitat_map =
             maps::load_habitat_map(&raw.habitat_map, None, &mut dispersal_map, raw.loading_mode)
-                .map_err(|err| format!("{:?}", err))?;
+                .map_err(|err| format!("{err:?}"))?;
 
         info!(
             "Successfully loaded the habitat map {:?} with dimensions {}x{} [cols x rows].",

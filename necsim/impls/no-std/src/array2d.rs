@@ -11,9 +11,15 @@ use core::ops::{Index, IndexMut};
 /// A fixed sized two-dimensional array.
 #[derive(Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
-#[cfg_attr(feature = "cuda", r2cBound(T: rust_cuda::safety::StackOnly + const_type_layout::TypeLayout))]
+#[cfg_attr(
+    feature = "cuda",
+    cuda(
+        free = "T",
+        bound = "T: rust_cuda::safety::StackOnly + ~const const_type_layout::TypeGraphLayout"
+    )
+)]
 pub struct Array2D<T> {
-    #[cfg_attr(feature = "cuda", r2cEmbed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     array: Box<[T]>,
     num_rows: usize,
 }

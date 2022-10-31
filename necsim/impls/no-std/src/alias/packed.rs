@@ -6,20 +6,19 @@ use necsim_core::cogs::{MathsCore, RngCore};
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
 #[allow(clippy::module_name_repetitions)]
-#[allow(non_snake_case)]
 #[derive(Clone, Debug, TypeLayout)]
 #[repr(C)]
 pub struct AliasMethodSamplerAtom<E: Copy + PartialEq> {
-    U: ClosedUnitF64,
-    E: E,
-    K: E,
+    u: ClosedUnitF64,
+    e: E,
+    k: E,
 }
 
-#[allow(dead_code, non_snake_case)]
+#[allow(dead_code)]
 struct AliasMethodSamplerAtomRaw<E: Copy + PartialEq> {
-    U: NonNegativeF64,
-    E: E,
-    K: E,
+    u: NonNegativeF64,
+    e: E,
+    k: E,
 }
 
 impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
@@ -30,13 +29,13 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
         "all event weights are non-negative"
     )]
     #[debug_ensures(
-        ret.iter().map(|s| &s.E).eq(old(event_weights).iter().map(|(e, _p)| e)),
+        ret.iter().map(|s| &s.e).eq(old(event_weights).iter().map(|(e, _p)| e)),
         "stores exactly the input events"
     )]
     #[debug_ensures(
         ret.iter().all(|s| {
-            let full_bucket = s.U == ClosedUnitF64::one();
-            !full_bucket || (s.E == s.K)
+            let full_bucket = s.u == ClosedUnitF64::one();
+            !full_bucket || (s.e == s.k)
         }),
         "full buckets sample the same event just in case"
     )]
@@ -50,17 +49,17 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
 
         for (event, weight) in event_weights {
             alias_samplers.push(AliasMethodSamplerAtomRaw {
-                U: *weight * n / total_weight,
-                E: *event,
-                K: *event,
+                u: *weight * n / total_weight,
+                e: *event,
+                k: *event,
             });
         }
 
         let mut overfull_indices: Vec<usize> = (0..alias_samplers.len())
-            .filter(|i| alias_samplers[*i].U > 1.0_f64)
+            .filter(|i| alias_samplers[*i].u > 1.0_f64)
             .collect();
         let mut underfull_indices: Vec<usize> = (0..alias_samplers.len())
-            .filter(|i| alias_samplers[*i].U < 1.0_f64)
+            .filter(|i| alias_samplers[*i].u < 1.0_f64)
             .collect();
 
         while let Some((overfull_index, underfull_index)) =
@@ -68,16 +67,16 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
         {
             // Safety: alias_samplers[overfull_index].U > 1.0,
             //         so (alias_samplers[overfull_index].U - 1.0) > 0.0
-            alias_samplers[overfull_index].U = unsafe {
+            alias_samplers[overfull_index].u = unsafe {
                 NonNegativeF64::new_unchecked(
-                    alias_samplers[overfull_index].U.get()
-                        + alias_samplers[underfull_index].U.get()
+                    alias_samplers[overfull_index].u.get()
+                        + alias_samplers[underfull_index].u.get()
                         - 1.0_f64,
                 )
             };
-            alias_samplers[underfull_index].K = alias_samplers[overfull_index].E;
+            alias_samplers[underfull_index].k = alias_samplers[overfull_index].e;
 
-            match alias_samplers[overfull_index].U.partial_cmp(&1.0_f64) {
+            match alias_samplers[overfull_index].u.partial_cmp(&1.0_f64) {
                 Some(Ordering::Less) => underfull_indices.push(overfull_index),
                 Some(Ordering::Greater) => overfull_indices.push(overfull_index),
                 _ => (),
@@ -90,10 +89,10 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
         // 9,   pp. 972-975, Sept. 1991, doi: 10.1109/32.92917.
         overfull_indices
             .into_iter()
-            .for_each(|i| alias_samplers[i].U = NonNegativeF64::one());
+            .for_each(|i| alias_samplers[i].u = NonNegativeF64::one());
         underfull_indices
             .into_iter()
-            .for_each(|i| alias_samplers[i].U = NonNegativeF64::one());
+            .for_each(|i| alias_samplers[i].u = NonNegativeF64::one());
 
         // Safety: The bucket weights are now probabilities in [0.0; 1.0]
         unsafe {
@@ -106,7 +105,7 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
     #[allow(clippy::no_effect_underscore_binding)]
     #[debug_requires(!alias_samplers.is_empty(), "alias_samplers is non-empty")]
     #[debug_ensures(
-        old(alias_samplers).iter().map(|s| s.E).any(|e| e == ret),
+        old(alias_samplers).iter().map(|s| s.e).any(|e| e == ret),
         "returns one of the weighted events"
     )]
     pub fn sample_event<M: MathsCore, G: RngCore<M>>(
@@ -129,10 +128,10 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
 
         let sample = &alias_samplers[i];
 
-        if y < sample.U.get() {
-            sample.E
+        if y < sample.u.get() {
+            sample.e
         } else {
-            sample.K
+            sample.k
         }
     }
 }

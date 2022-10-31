@@ -7,6 +7,7 @@ use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializ
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, TypeLayout)]
+#[layout(free = "M")]
 #[repr(transparent)]
 pub struct RandRng<
     M: MathsCore,

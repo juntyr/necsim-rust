@@ -10,6 +10,7 @@ use super::AntiTrespassingDispersalSampler;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", cuda(free = "M", free = "H", free = "G"))]
 pub struct UniformAntiTrespassingDispersalSampler<
     M: MathsCore,
     H: UniformlySampleableHabitat<M, G>,
