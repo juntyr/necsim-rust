@@ -272,8 +272,7 @@ impl IndividualSpeciesSQLiteReporter {
                             extended_code: 0,
                         },
                         Some(format!(
-                            "Invalid species identity {:?} for individual #{}",
-                            species, id,
+                            "Invalid species identity {species:?} for individual #{id}",
                         )),
                     )
                 })?;
@@ -286,10 +285,7 @@ impl IndividualSpeciesSQLiteReporter {
         let last_event: String = self
             .connection
             .query_row(
-                &format!(
-                    "SELECT value FROM {} WHERE key='last-event'",
-                    METADATA_TABLE
-                ),
+                &format!("SELECT value FROM {METADATA_TABLE} WHERE key='last-event'",),
                 [],
                 |row| row.get("value"),
             )
@@ -367,7 +363,7 @@ impl IndividualSpeciesSQLiteReporter {
                 /* :species */
                 self.species
                     .get(&ancestor)
-                    .map(|species| hex::encode(&**species)),
+                    .map(|species| hex::encode(**species)),
             ])?;
         }
 
@@ -392,10 +388,7 @@ impl IndividualSpeciesSQLiteReporter {
         })?;
 
         tx.execute(
-            &format!(
-                "INSERT OR REPLACE INTO {} VALUES (:key, :value)",
-                METADATA_TABLE
-            ),
+            &format!("INSERT OR REPLACE INTO {METADATA_TABLE} VALUES (:key, :value)",),
             named_params! { ":key": "last-event", ":value": last_event_state },
         )?;
 

@@ -65,7 +65,7 @@ impl Reporter for LocationSpeciesFeatherReporter {
         let output = self.output.clone();
 
         if let Err(err) = self.output_to_dataframe() {
-            error!("Failed to write the species dataframe to {:?}:\n{}", output, err);
+            error!("Failed to write the species dataframe to {output:?}:\n{err}");
         }
     });
 
