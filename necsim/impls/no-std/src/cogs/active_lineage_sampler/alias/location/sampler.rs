@@ -2,7 +2,7 @@ use core::{num::NonZeroUsize, ops::ControlFlow};
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit,
+        ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler, EmigrationExit,
         GloballyCoherentLineageStore, Habitat, ImmigrationEntry, MathsCore, RngCore,
         SpeciationProbability, TurnoverRate,
     },
@@ -51,7 +51,7 @@ impl<
                 lineage_store
                     .get_local_lineage_references_at_location_unordered(location, habitat)
                     .iter()
-                    .map(move |local_reference| &lineage_store[local_reference.clone()])
+                    .map(move |local_reference| &lineage_store[local_reference])
             })
     }
 
@@ -97,8 +97,11 @@ impl<
             //         `chosen_active_location` can only be selected in that case
             let chosen_lineage_index_at_location = rng
                 .sample_index(unsafe { NonZeroUsize::new_unchecked(lineages_at_location.len()) });
-            let chosen_lineage_reference =
-                lineages_at_location[chosen_lineage_index_at_location].clone();
+            // Safety: reference clone is only used to then remove the lineage, which is
+            // owned
+            let chosen_lineage_reference = unsafe {
+                lineages_at_location[chosen_lineage_index_at_location].backup_unchecked()
+            };
 
             let chosen_lineage = simulation
                 .lineage_store

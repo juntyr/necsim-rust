@@ -6,7 +6,8 @@ use slab::Slab;
 
 use necsim_core::{
     cogs::{
-        GloballyCoherentLineageStore, Habitat, LineageStore, LocallyCoherentLineageStore, MathsCore,
+        Backup, GloballyCoherentLineageStore, Habitat, LineageStore, LocallyCoherentLineageStore,
+        MathsCore,
     },
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},
@@ -35,7 +36,7 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H> for GillespieLineageStore<M
     #[must_use]
     fn get_lineage_for_local_reference(
         &self,
-        reference: InMemoryLineageReference,
+        reference: &InMemoryLineageReference,
     ) -> Option<&Lineage> {
         self.lineages_store.get(usize::from(reference))
     }
@@ -71,10 +72,12 @@ impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H>
             (lineage.global_reference.clone(), lineages_at_location.len()),
         );
 
+        // Safety: a new unique reference is issued here, no cloning occurs
         let local_lineage_reference =
-            InMemoryLineageReference::from(self.lineages_store.insert(lineage));
+            unsafe { InMemoryLineageReference::issue(self.lineages_store.insert(lineage)) };
 
-        lineages_at_location.push(local_lineage_reference);
+        // Safety: the clone stays internal behind a reference
+        lineages_at_location.push(unsafe { local_lineage_reference.backup_unchecked() });
 
         local_lineage_reference
     }
@@ -104,7 +107,7 @@ impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H>
         // Only executed if reference was not the last item in lineages_at_location
         if let Some(replacement_local_reference) = lineages_at_location.get(local_index) {
             let replacement_location =
-                &self.lineages_store[usize::from(*replacement_local_reference)].indexed_location;
+                &self.lineages_store[usize::from(replacement_local_reference)].indexed_location;
 
             // Always executed since the replacement lineage is active
             if let Some((_replacement_global_reference, replacement_index)) = self

@@ -5,6 +5,7 @@
 #![feature(const_mut_refs)]
 #![feature(const_refs_to_cell)]
 #![feature(control_flow_enum)]
+#![feature(min_specialization)]
 
 #[doc(hidden)]
 pub extern crate alloc;

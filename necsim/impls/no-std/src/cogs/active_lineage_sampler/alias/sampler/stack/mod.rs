@@ -6,29 +6,28 @@ use core::{
     num::{NonZeroU128, NonZeroUsize},
 };
 
-use necsim_core::cogs::{MathsCore, RngCore, RngSampler};
+use necsim_core::cogs::{Backup, MathsCore, RngCore, RngSampler};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 #[cfg(test)]
 mod tests;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-struct RejectionSamplingGroup<E: Eq + Hash> {
+#[derive(Debug, PartialEq, Eq)]
+struct RejectionSamplingGroup<E: Eq + Hash + Backup> {
     events: Vec<E>,
     weights: Vec<u64>,
     total_weight: u128,
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone)]
-pub struct DynamicAliasMethodStackSampler<E: Eq + Hash + Clone> {
+pub struct DynamicAliasMethodStackSampler<E: Eq + Hash + Backup> {
     exponents: Vec<i16>,
     groups: Vec<RejectionSamplingGroup<E>>,
     min_exponent: i16,
     total_weight: u128,
 }
 
-impl<E: Eq + Hash + Clone> fmt::Debug for DynamicAliasMethodStackSampler<E> {
+impl<E: Eq + Hash + Backup> fmt::Debug for DynamicAliasMethodStackSampler<E> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("DynamicAliasMethodStackSampler")
             .field("exponents", &self.exponents)
@@ -37,7 +36,7 @@ impl<E: Eq + Hash + Clone> fmt::Debug for DynamicAliasMethodStackSampler<E> {
     }
 }
 
-impl<E: Eq + Hash> RejectionSamplingGroup<E> {
+impl<E: Eq + Hash + Backup> RejectionSamplingGroup<E> {
     fn iter(&self) -> impl Iterator<Item = &E> {
         self.events.iter()
     }
@@ -93,7 +92,7 @@ impl<E: Eq + Hash> RejectionSamplingGroup<E> {
     }
 }
 
-impl<E: Eq + Hash + Clone> DynamicAliasMethodStackSampler<E> {
+impl<E: Eq + Hash + Backup> DynamicAliasMethodStackSampler<E> {
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -223,8 +222,31 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodStackSampler<E> {
     }
 }
 
-impl<E: Eq + Hash + Clone> Default for DynamicAliasMethodStackSampler<E> {
+impl<E: Eq + Hash + Backup> Default for DynamicAliasMethodStackSampler<E> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[contract_trait]
+impl<E: Eq + Hash + Backup> Backup for RejectionSamplingGroup<E> {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            events: self.events.iter().map(|x| x.backup_unchecked()).collect(),
+            weights: self.weights.clone(),
+            total_weight: self.total_weight,
+        }
+    }
+}
+
+#[contract_trait]
+impl<E: Eq + Hash + Backup> Backup for DynamicAliasMethodStackSampler<E> {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            exponents: self.exponents.clone(),
+            groups: self.groups.iter().map(|x| x.backup_unchecked()).collect(),
+            min_exponent: self.min_exponent,
+            total_weight: self.total_weight,
+        }
     }
 }

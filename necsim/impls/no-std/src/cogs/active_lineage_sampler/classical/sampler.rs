@@ -71,7 +71,7 @@ impl<
     ) -> Self::LineageIterator<'a> {
         self.active_lineage_references
             .iter()
-            .map(move |local_reference| &lineage_store[local_reference.clone()])
+            .map(move |local_reference| &lineage_store[local_reference])
     }
 
     fn get_last_event_time(&self) -> NonNegativeF64 {

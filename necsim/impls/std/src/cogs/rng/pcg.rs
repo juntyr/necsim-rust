@@ -4,7 +4,7 @@ use pcg_rand::{seeds::PcgSeeder, PCGStateInfo, Pcg64};
 use rand_core::{RngCore as _, SeedableRng};
 use serde::{Deserialize, Serialize};
 
-use necsim_core::cogs::{Backup, MathsCore, RngCore, SplittableRng};
+use necsim_core::cogs::{MathsCore, RngCore, SplittableRng};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Serialize, Deserialize)]
@@ -31,13 +31,6 @@ impl<M: MathsCore> fmt::Debug for Pcg<M> {
             .field("state", &state.state)
             .field("stream", &(state.increment >> 1))
             .finish()
-    }
-}
-
-#[contract_trait]
-impl<M: MathsCore> Backup for Pcg<M> {
-    unsafe fn backup_unchecked(&self) -> Self {
-        self.clone()
     }
 }
 

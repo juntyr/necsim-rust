@@ -5,7 +5,7 @@ use hashbrown::HashMap;
 use slab::Slab;
 
 use necsim_core::{
-    cogs::{Habitat, LineageStore, LocallyCoherentLineageStore, MathsCore},
+    cogs::{Backup, Habitat, LineageStore, LocallyCoherentLineageStore, MathsCore},
     landscape::IndexedLocation,
     lineage::{GlobalLineageReference, Lineage},
 };
@@ -32,7 +32,7 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H> for ClassicalLineageStore<M
     #[must_use]
     fn get_lineage_for_local_reference(
         &self,
-        reference: InMemoryLineageReference,
+        reference: &InMemoryLineageReference,
     ) -> Option<&Lineage> {
         self.lineages_store.get(usize::from(reference))
     }
@@ -50,7 +50,7 @@ impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H>
     ) -> Option<&GlobalLineageReference> {
         self.indexed_location_to_lineage_reference
             .get(indexed_location)
-            .map(|local_reference| &self[*local_reference].global_reference)
+            .map(|local_reference| &self[local_reference].global_reference)
     }
 
     fn insert_lineage_locally_coherent(
@@ -60,11 +60,15 @@ impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H>
     ) -> InMemoryLineageReference {
         let indexed_location = lineage.indexed_location.clone();
 
+        // Safety: a new unique reference is issued here, no cloning occurs
         let local_lineage_reference =
-            InMemoryLineageReference::from(self.lineages_store.insert(lineage));
+            unsafe { InMemoryLineageReference::issue(self.lineages_store.insert(lineage)) };
 
+        // Safety: the clone stays internal behind a reference
         self.indexed_location_to_lineage_reference
-            .insert(indexed_location, local_lineage_reference);
+            .insert(indexed_location, unsafe {
+                local_lineage_reference.backup_unchecked()
+            });
 
         local_lineage_reference
     }

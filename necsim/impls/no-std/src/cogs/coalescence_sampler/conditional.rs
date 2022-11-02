@@ -78,7 +78,7 @@ impl<M: MathsCore, H: Habitat<M>, S: GloballyCoherentLineageStore<M, H>>
 
         let chosen_coalescence_index =
             coalescence_rng_sample.sample_coalescence_index::<M>(population);
-        let chosen_coalescence = lineages_at_location[chosen_coalescence_index as usize].clone();
+        let chosen_coalescence = &lineages_at_location[chosen_coalescence_index as usize];
 
         let lineage = &lineage_store[chosen_coalescence];
 

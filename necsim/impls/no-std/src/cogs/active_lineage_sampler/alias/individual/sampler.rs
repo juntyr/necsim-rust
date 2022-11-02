@@ -45,7 +45,7 @@ impl<
     ) -> Self::LineageIterator<'a> {
         self.alias_sampler
             .iter_all_events_ordered()
-            .map(move |local_reference| &lineage_store[local_reference.clone()])
+            .map(move |local_reference| &lineage_store[local_reference])
     }
 
     #[must_use]

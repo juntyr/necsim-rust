@@ -5,26 +5,25 @@ use core::{
     hash::Hash,
     num::{NonZeroU128, NonZeroUsize},
 };
-use fnv::FnvBuildHasher;
 
+use fnv::FnvBuildHasher;
 use hashbrown::HashMap;
 
-use necsim_core::cogs::{MathsCore, RngCore, RngSampler};
+use necsim_core::cogs::{Backup, MathsCore, RngCore, RngSampler};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 #[cfg(test)]
 mod tests;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-struct RejectionSamplingGroup<E: Eq + Hash> {
+#[derive(Debug, PartialEq, Eq)]
+struct RejectionSamplingGroup<E: Eq + Hash + Backup> {
     events: Vec<E>,
     weights: Vec<u64>,
     total_weight: u128,
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone)]
-pub struct DynamicAliasMethodIndexedSampler<E: Eq + Hash + Clone> {
+pub struct DynamicAliasMethodIndexedSampler<E: Eq + Hash + Backup> {
     exponents: Vec<i16>,
     groups: Vec<RejectionSamplingGroup<E>>,
     lookup: HashMap<E, EventLocation, FnvBuildHasher>,
@@ -32,7 +31,7 @@ pub struct DynamicAliasMethodIndexedSampler<E: Eq + Hash + Clone> {
     total_weight: u128,
 }
 
-impl<E: Eq + Hash + Clone> fmt::Debug for DynamicAliasMethodIndexedSampler<E> {
+impl<E: Eq + Hash + Backup> fmt::Debug for DynamicAliasMethodIndexedSampler<E> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("DynamicAliasMethodIndexedSampler")
             .field("exponents", &self.exponents)
@@ -41,7 +40,7 @@ impl<E: Eq + Hash + Clone> fmt::Debug for DynamicAliasMethodIndexedSampler<E> {
     }
 }
 
-impl<E: Eq + Hash> RejectionSamplingGroup<E> {
+impl<E: Eq + Hash + Backup> RejectionSamplingGroup<E> {
     fn iter(&self) -> impl Iterator<Item = &E> {
         self.events.iter()
     }
@@ -157,7 +156,7 @@ struct EventLocation {
     group_index: usize,
 }
 
-impl<E: Eq + Hash + Clone> DynamicAliasMethodIndexedSampler<E> {
+impl<E: Eq + Hash + Backup> DynamicAliasMethodIndexedSampler<E> {
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -249,13 +248,21 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodIndexedSampler<E> {
             Ok(i) => {
                 let group_mut = unsafe { self.groups.get_unchecked_mut(i) };
 
-                group_mut.add(event.clone(), weight_decomposed.mantissa)
+                // Safety: the sampler will not leak the unsafe backup
+                group_mut.add(
+                    unsafe { event.backup_unchecked() },
+                    weight_decomposed.mantissa,
+                )
             },
             Err(i) => {
                 self.exponents.insert(i, weight_decomposed.exponent);
+                // Safety: the sampler will not leak the unsafe backup
                 self.groups.insert(
                     i,
-                    RejectionSamplingGroup::new(event.clone(), weight_decomposed.mantissa),
+                    RejectionSamplingGroup::new(
+                        unsafe { event.backup_unchecked() },
+                        weight_decomposed.mantissa,
+                    ),
                 );
 
                 let old_min_exponent = self.min_exponent;
@@ -335,8 +342,36 @@ impl<E: Eq + Hash + Clone> DynamicAliasMethodIndexedSampler<E> {
     }
 }
 
-impl<E: Eq + Hash + Clone> Default for DynamicAliasMethodIndexedSampler<E> {
+impl<E: Eq + Hash + Backup> Default for DynamicAliasMethodIndexedSampler<E> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[contract_trait]
+impl<E: Eq + Hash + Backup> Backup for RejectionSamplingGroup<E> {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            events: self.events.iter().map(|x| x.backup_unchecked()).collect(),
+            weights: self.weights.clone(),
+            total_weight: self.total_weight,
+        }
+    }
+}
+
+#[contract_trait]
+impl<E: Eq + Hash + Backup> Backup for DynamicAliasMethodIndexedSampler<E> {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            exponents: self.exponents.clone(),
+            groups: self.groups.iter().map(|x| x.backup_unchecked()).collect(),
+            lookup: self
+                .lookup
+                .iter()
+                .map(|(k, v)| (k.backup_unchecked(), v.clone()))
+                .collect(),
+            min_exponent: self.min_exponent,
+            total_weight: self.total_weight,
+        }
     }
 }

@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{Backup, MathsCore, PrimeableRng, RngCore};
+use necsim_core::cogs::{MathsCore, PrimeableRng, RngCore};
 
 use const_type_layout::TypeGraphLayout;
 use rust_cuda::safety::StackOnly;
@@ -35,13 +35,6 @@ impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> From<R> f
             inner: rng,
             marker: PhantomData::<M>,
         }
-    }
-}
-
-#[contract_trait]
-impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> Backup for CudaRng<M, R> {
-    unsafe fn backup_unchecked(&self) -> Self {
-        self.clone()
     }
 }
 

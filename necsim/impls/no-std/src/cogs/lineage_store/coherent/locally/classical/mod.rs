@@ -23,7 +23,9 @@ pub struct ClassicalLineageStore<M: MathsCore, H: Habitat<M>> {
     _marker: PhantomData<(M, H)>,
 }
 
-impl<M: MathsCore, H: Habitat<M>> Index<InMemoryLineageReference> for ClassicalLineageStore<M, H> {
+impl<'a, M: MathsCore, H: Habitat<M>> Index<&'a InMemoryLineageReference>
+    for ClassicalLineageStore<M, H>
+{
     type Output = Lineage;
 
     #[must_use]
@@ -31,7 +33,7 @@ impl<M: MathsCore, H: Habitat<M>> Index<InMemoryLineageReference> for ClassicalL
         self.lineages_store.contains(reference.into()),
         "lineage reference is valid in the lineage store"
     )]
-    fn index(&self, reference: InMemoryLineageReference) -> &Self::Output {
+    fn index(&self, reference: &'a InMemoryLineageReference) -> &Self::Output {
         &self.lineages_store[usize::from(reference)]
     }
 }
@@ -43,7 +45,9 @@ impl<M: MathsCore, H: Habitat<M>> Backup for ClassicalLineageStore<M, H> {
             lineages_store: self.lineages_store.clone(),
             indexed_location_to_lineage_reference: self
                 .indexed_location_to_lineage_reference
-                .clone(),
+                .iter()
+                .map(|(k, v)| (k.clone(), v.backup_unchecked()))
+                .collect(),
             _marker: PhantomData::<(M, H)>,
         }
     }

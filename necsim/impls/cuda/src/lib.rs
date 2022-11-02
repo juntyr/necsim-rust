@@ -14,7 +14,7 @@ extern crate alloc;
 #[macro_use]
 extern crate const_type_layout;
 
-#[macro_use]
+#[cfg_attr(target_os = "cuda", macro_use)]
 extern crate contracts;
 
 pub mod cogs;

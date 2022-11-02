@@ -41,7 +41,7 @@ impl<M: MathsCore, H: Habitat<M>> LineageStore<M, H> for IndependentLineageStore
     #[must_use]
     fn get_lineage_for_local_reference(
         &self,
-        _reference: GlobalLineageReference,
+        _reference: &GlobalLineageReference,
     ) -> Option<&Lineage> {
         None
     }

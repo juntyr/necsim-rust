@@ -136,7 +136,11 @@ impl<
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
-            active_lineage_references: self.active_lineage_references.clone(),
+            active_lineage_references: self
+                .active_lineage_references
+                .iter()
+                .map(|x| x.backup_unchecked())
+                .collect(),
             last_event_time: self.last_event_time,
             _marker: PhantomData::<(M, H, G, S, X, D, N, I)>,
         }

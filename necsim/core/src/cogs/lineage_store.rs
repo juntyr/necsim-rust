@@ -19,7 +19,7 @@ pub trait LineageStore<M: MathsCore, H: Habitat<M>>:
     #[must_use]
     fn get_lineage_for_local_reference(
         &self,
-        reference: Self::LocalLineageReference,
+        reference: &Self::LocalLineageReference,
     ) -> Option<&Lineage>;
 }
 
@@ -28,7 +28,7 @@ pub trait LineageStore<M: MathsCore, H: Habitat<M>>:
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
 pub trait LocallyCoherentLineageStore<M: MathsCore, H: Habitat<M>>:
-    LineageStore<M, H> + Index<Self::LocalLineageReference, Output = Lineage>
+    LineageStore<M, H> + for<'a> Index<&'a Self::LocalLineageReference, Output = Lineage>
 {
     #[must_use]
     #[debug_requires(
@@ -46,16 +46,16 @@ pub trait LocallyCoherentLineageStore<M: MathsCore, H: Habitat<M>>:
         "indexed location is inside habitat"
     )]
     #[debug_ensures(self.get_lineage_for_local_reference(
-        ret.clone()
+        &ret
     ).is_some(), "lineage was activated")]
     #[debug_ensures(
-        self[ret.clone()].indexed_location == old(lineage.indexed_location.clone()),
+        self[&ret].indexed_location == old(lineage.indexed_location.clone()),
         "lineage was added to indexed_location"
     )]
     #[debug_ensures(
         self.get_global_lineage_reference_at_indexed_location(
             &old(lineage.indexed_location.clone()), old(habitat)
-        ) == Some(&self[ret.clone()].global_reference),
+        ) == Some(&self[&ret].global_reference),
         "lineage is now indexed at indexed_location"
     )]
     fn insert_lineage_locally_coherent(
@@ -66,16 +66,16 @@ pub trait LocallyCoherentLineageStore<M: MathsCore, H: Habitat<M>>:
 
     #[must_use]
     #[debug_requires(self.get_lineage_for_local_reference(
-        reference.clone()
+        &reference
     ).is_some(), "lineage is active")]
     #[debug_ensures(old(habitat).contains(
         ret.indexed_location.location()
     ), "prior location is inside habitat")]
     #[debug_ensures(self.get_lineage_for_local_reference(
-        old(reference.clone())
+        &old(unsafe { crate::cogs::Backup::backup_unchecked(&reference) })
     ).is_none(), "lineage was deactivated")]
     #[debug_ensures(
-        ret == old(self[reference.clone()].clone()),
+        ret == old(self[&reference].clone()),
         "returns the individual corresponding to reference"
     )]
     #[debug_ensures(self.get_global_lineage_reference_at_indexed_location(
@@ -139,7 +139,7 @@ pub trait GloballyCoherentLineageStore<M: MathsCore, H: Habitat<M>>:
             ret.indexed_location.location(),
             old(habitat),
         ).len() + 1 == old(self.get_local_lineage_references_at_location_unordered(
-            self[reference.clone()].indexed_location.location(),
+            self[&reference].indexed_location.location(),
             old(habitat),
         ).len()), "unordered active lineage index at returned location has shrunk by 1")]
     fn extract_lineage_globally_coherent(

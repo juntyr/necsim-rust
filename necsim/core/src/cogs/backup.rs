@@ -22,3 +22,23 @@ impl<T: Backup> Deref for BackedUp<T> {
         &self.0
     }
 }
+
+impl<T: Clone> Backup for T {
+    #[inline]
+    default unsafe fn backup_unchecked(&self) -> Self {
+        self.__contracts_impl_backup_unchecked()
+    }
+
+    #[inline]
+    default unsafe fn __contracts_impl_backup_unchecked(&self) -> Self {
+        self.clone()
+    }
+}
+
+#[contract_trait]
+impl<T: Copy> Backup for T {
+    #[inline]
+    unsafe fn backup_unchecked(&self) -> Self {
+        *self
+    }
+}

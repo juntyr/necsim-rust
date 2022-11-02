@@ -185,7 +185,7 @@ impl<
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
-            alias_sampler: self.alias_sampler.clone(),
+            alias_sampler: self.alias_sampler.backup_unchecked(),
             number_active_lineages: self.number_active_lineages,
             last_event_time: self.last_event_time,
             marker: PhantomData::<(M, H, G, S, X, D, C, T, N, E, I)>,

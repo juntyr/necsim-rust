@@ -22,7 +22,7 @@ pub struct AlmostInfiniteLineageStore<M: MathsCore> {
     _marker: PhantomData<M>,
 }
 
-impl<M: MathsCore> Index<InMemoryLineageReference> for AlmostInfiniteLineageStore<M> {
+impl<'a, M: MathsCore> Index<&'a InMemoryLineageReference> for AlmostInfiniteLineageStore<M> {
     type Output = Lineage;
 
     #[must_use]
@@ -30,7 +30,7 @@ impl<M: MathsCore> Index<InMemoryLineageReference> for AlmostInfiniteLineageStor
         self.lineages_store.contains(reference.into()),
         "lineage reference is valid in the lineage store"
     )]
-    fn index(&self, reference: InMemoryLineageReference) -> &Self::Output {
+    fn index(&self, reference: &'a InMemoryLineageReference) -> &Self::Output {
         &self.lineages_store[usize::from(reference)]
     }
 }
@@ -40,7 +40,11 @@ impl<M: MathsCore> Backup for AlmostInfiniteLineageStore<M> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             lineages_store: self.lineages_store.clone(),
-            location_to_lineage_reference: self.location_to_lineage_reference.clone(),
+            location_to_lineage_reference: self
+                .location_to_lineage_reference
+                .iter()
+                .map(|(k, v)| (k.clone(), v.backup_unchecked()))
+                .collect(),
             _marker: PhantomData::<M>,
         }
     }

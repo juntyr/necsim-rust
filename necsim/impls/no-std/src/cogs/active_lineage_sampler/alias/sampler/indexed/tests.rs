@@ -1049,7 +1049,7 @@ fn debug_display_sampler() {
         "DynamicAliasMethodIndexedSampler { exponents: [2, 1, 0], total_weight: 21.0 }"
     );
 
-    let mut sampler_clone = sampler.clone();
+    let mut sampler_clone = unsafe { sampler.backup_unchecked() };
 
     assert_eq!(
         sampler.sample_pop(&mut DummyRng::new(vec![0.75, 0.0, 0.0])),

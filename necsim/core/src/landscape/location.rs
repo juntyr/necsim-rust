@@ -2,6 +2,8 @@ use core::num::NonZeroU32;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use crate::cogs::Backup;
+
 #[allow(clippy::unsafe_derive_deserialize)]
 #[derive(
     Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize, TypeLayout,
@@ -11,6 +13,13 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 pub struct Location {
     x: u32,
     y: u32,
+}
+
+#[contract_trait]
+impl Backup for Location {
+    unsafe fn backup_unchecked(&self) -> Self {
+        self.clone()
+    }
 }
 
 impl Location {
