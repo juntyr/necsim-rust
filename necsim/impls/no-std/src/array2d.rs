@@ -11,6 +11,7 @@ use core::ops::{Index, IndexMut};
 /// A fixed sized two-dimensional array.
 #[derive(Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", cuda(async = false))]
 #[cfg_attr(
     feature = "cuda",
     cuda(

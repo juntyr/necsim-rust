@@ -22,6 +22,7 @@ use crate::cogs::{
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
+#[cfg_attr(feature = "cuda", cuda(async = false))]
 pub struct WrappingNoiseHabitat<M: MathsCore> {
     #[cfg_attr(feature = "cuda", cuda(embed))]
     inner: AlmostInfiniteHabitat<M>,
