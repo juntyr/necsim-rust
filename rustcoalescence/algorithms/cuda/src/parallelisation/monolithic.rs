@@ -3,7 +3,10 @@ use std::{collections::VecDeque, convert::TryInto, num::NonZeroU64, sync::atomic
 use rust_cuda::{
     common::RustToCuda,
     host::{HostAndDeviceMutRef, LendToCuda},
-    rustacuda::function::{BlockSize, GridSize},
+    rustacuda::{
+        function::{BlockSize, GridSize},
+        stream::Stream,
+    },
     utils::exchange::wrapper::ExchangeWrapperOnHost,
 };
 
@@ -44,10 +47,15 @@ use crate::error::CudaError;
 
 type Result<T, E = CudaError> = std::result::Result<T, E>;
 
-#[allow(clippy::type_complexity, clippy::too_many_lines)]
+#[allow(
+    clippy::type_complexity,
+    clippy::too_many_lines,
+    clippy::too_many_arguments
+)]
 pub fn simulate<
     'l,
     'p,
+    'stream,
     M: MathsCore,
     H: Habitat<M> + RustToCuda,
     G: Rng<M, Generator: PrimeableRng> + RustToCuda,
@@ -83,6 +91,7 @@ pub fn simulate<
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
     >,
     config: (GridSize, BlockSize, DedupCache, NonZeroU64),
+    stream: &'stream Stream,
     lineages: LI,
     event_slice: EventSlice,
     pause_before: Option<NonNegativeF64>,
@@ -195,8 +204,14 @@ pub fn simulate<
 
     HostAndDeviceMutRef::with_new(&mut total_time_max, |total_time_max| -> Result<()> {
         HostAndDeviceMutRef::with_new(&mut total_steps_sum, |total_steps_sum| -> Result<()> {
-            // TODO: Pipeline async launches and callbacks of simulation/event analysis
             simulation.lend_to_cuda_mut(|mut simulation_cuda_repr| -> Result<()> {
+                // Move the event buffer and min speciation sample buffer to CUDA
+                let mut event_buffer_cuda = event_buffer.move_to_device_async(stream)?;
+                let mut min_spec_sample_buffer_cuda =
+                    min_spec_sample_buffer.move_to_device_async(stream)?;
+                let mut next_event_time_buffer_cuda =
+                    next_event_time_buffer.move_to_device_async(stream)?;
+
                 while !slow_lineages.is_empty()
                     && pause_before.map_or(true, |pause_before| level_time < pause_before)
                 {
@@ -263,29 +278,32 @@ pub fn simulate<
 
                         // Move the task list, event buffer and min speciation sample buffer
                         // to CUDA
-                        let mut event_buffer_cuda = event_buffer.move_to_device()?;
-                        let mut min_spec_sample_buffer_cuda =
-                            min_spec_sample_buffer.move_to_device()?;
-                        let mut next_event_time_buffer_cuda =
-                            next_event_time_buffer.move_to_device()?;
-                        let mut task_list_cuda = task_list.move_to_device()?;
+                        let mut task_list_cuda = task_list.move_to_device_async(stream)?;
 
-                        kernel.simulate_raw(
-                            simulation_cuda_repr.as_mut(),
-                            task_list_cuda.as_mut(),
-                            event_buffer_cuda.as_mut(),
-                            min_spec_sample_buffer_cuda.as_mut(),
-                            next_event_time_buffer_cuda.as_mut(),
-                            total_time_max.as_ref(),
-                            total_steps_sum.as_ref(),
+                        // TODO: Investigate distributing over several streams
+                        kernel.simulate_async(
+                            stream,
+                            simulation_cuda_repr.as_mut().as_async(),
+                            task_list_cuda.as_mut_async(),
+                            event_buffer_cuda.as_mut_async(),
+                            min_spec_sample_buffer_cuda.as_mut_async(),
+                            next_event_time_buffer_cuda.as_mut_async(),
+                            total_time_max.as_ref().as_async(),
+                            total_steps_sum.as_ref().as_async(),
                             step_slice.get().into(),
                             level_time.into(),
                         )?;
 
-                        min_spec_sample_buffer = min_spec_sample_buffer_cuda.move_to_host()?;
-                        next_event_time_buffer = next_event_time_buffer_cuda.move_to_host()?;
-                        task_list = task_list_cuda.move_to_host()?;
-                        event_buffer = event_buffer_cuda.move_to_host()?;
+                        let min_spec_sample_buffer_host =
+                            min_spec_sample_buffer_cuda.move_to_host_async(stream)?;
+                        let next_event_time_buffer_host =
+                            next_event_time_buffer_cuda.move_to_host_async(stream)?;
+                        let task_list_host = task_list_cuda.move_to_host_async(stream)?;
+                        let event_buffer_host = event_buffer_cuda.move_to_host_async(stream)?;
+
+                        min_spec_sample_buffer = min_spec_sample_buffer_host.sync_to_host()?;
+                        next_event_time_buffer = next_event_time_buffer_host.sync_to_host()?;
+                        task_list = task_list_host.sync_to_host()?;
 
                         // Fetch the completion of the tasks
                         for ((mut spec_sample, mut next_event_time), mut task) in
@@ -314,7 +332,14 @@ pub fn simulate<
                             }
                         }
 
+                        min_spec_sample_buffer_cuda =
+                            min_spec_sample_buffer.move_to_device_async(stream)?;
+                        next_event_time_buffer_cuda =
+                            next_event_time_buffer.move_to_device_async(stream)?;
+
+                        event_buffer = event_buffer_host.sync_to_host()?;
                         event_buffer.report_events_unordered(&mut proxy);
+                        event_buffer_cuda = event_buffer.move_to_device_async(stream)?;
 
                         proxy.local_partition().get_reporter().report_progress(
                             &((slow_lineages.len() as u64) + (fast_lineages.len() as u64)).into(),

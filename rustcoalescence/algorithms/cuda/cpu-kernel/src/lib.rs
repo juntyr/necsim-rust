@@ -20,11 +20,10 @@ use necsim_impls_no_std::cogs::{
 
 use rust_cuda::{
     common::RustToCuda,
-    host::{CudaDropWrapper, LaunchConfig, LaunchPackage, Launcher, TypedKernel},
+    host::{LaunchConfig, LaunchPackage, Launcher, TypedKernel},
     rustacuda::{
         error::CudaResult,
         function::{BlockSize, Function, GridSize},
-        stream::Stream,
     },
 };
 
@@ -71,7 +70,6 @@ pub struct SimulationKernel<
             ReportDispersal,
         >,
     >,
-    stream: CudaDropWrapper<Stream>,
     grid: GridSize,
     block: BlockSize,
     ptx_jit: bool,
@@ -99,7 +97,6 @@ impl<
     ///
     /// Returns a `CudaError` if loading the CUDA kernel failed.
     pub fn try_new(
-        stream: Stream,
         grid: GridSize,
         block: BlockSize,
         ptx_jit: bool,
@@ -123,12 +120,10 @@ impl<
             ReportDispersal,
         >,
     {
-        let stream = CudaDropWrapper::from(stream);
         let kernel = Self::new_kernel()?;
 
         Ok(Self {
             kernel,
-            stream,
             grid,
             block,
             ptx_jit,
@@ -181,10 +176,7 @@ impl<
                 shared_memory_size: 0_u32,
                 ptx_jit: self.ptx_jit,
             },
-
             kernel: &mut self.kernel,
-            stream: &mut self.stream,
-
             watcher: &mut self.watcher,
         }
     }

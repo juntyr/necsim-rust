@@ -18,8 +18,8 @@ use necsim_impls_no_std::cogs::{
 
 use rust_cuda::{
     common::{DeviceAccessible, RustToCuda},
-    host::{HostAndDeviceConstRef, HostAndDeviceMutRef, TypedKernel},
-    rustacuda::error::CudaResult,
+    host::{HostAndDeviceConstRefAsync, HostAndDeviceMutRefAsync, TypedKernel},
+    rustacuda::{error::CudaResult, stream::Stream},
     utils::device_copy::SafeDeviceCopyWrapper,
 };
 
@@ -91,8 +91,9 @@ where
         unsafe { unreachable_cuda_simulation_linking_reporter() }
     }
 
-    default fn simulate(
+    default fn simulate<'stream>(
         &mut self,
+        _stream: &'stream Stream,
         _simulation: &mut Simulation<M, H, G, S, X, D, C, T, N, E, I, A>,
         _task_list: &mut ValueBuffer<Lineage, true, true>,
         _event_buffer_reporter: &mut EventBuffer<ReportSpeciation, ReportDispersal>,
@@ -106,33 +107,34 @@ where
         unsafe { unreachable_cuda_simulation_linking_reporter() }
     }
 
-    default fn simulate_raw(
+    default fn simulate_async<'stream>(
         &mut self,
-        _simulation: HostAndDeviceMutRef<
+        _stream: &'stream Stream,
+        _simulation: HostAndDeviceMutRefAsync<
             DeviceAccessible<
                 <Simulation<M, H, G, S, X, D, C, T, N, E, I, A> as RustToCuda>::CudaRepresentation,
             >,
         >,
-        _task_list: HostAndDeviceMutRef<
+        _task_list: HostAndDeviceMutRefAsync<
             DeviceAccessible<<ValueBuffer<Lineage, true, true> as RustToCuda>::CudaRepresentation>,
         >,
-        _event_buffer_reporter: HostAndDeviceMutRef<
+        _event_buffer_reporter: HostAndDeviceMutRefAsync<
             DeviceAccessible<
                 <EventBuffer<ReportSpeciation, ReportDispersal> as RustToCuda>::CudaRepresentation,
             >,
         >,
-        _min_spec_sample_buffer: HostAndDeviceMutRef<
+        _min_spec_sample_buffer: HostAndDeviceMutRefAsync<
             DeviceAccessible<
                 <ValueBuffer<SpeciationSample, false, true> as RustToCuda>::CudaRepresentation,
             >,
         >,
-        _next_event_time_buffer: HostAndDeviceMutRef<
+        _next_event_time_buffer: HostAndDeviceMutRefAsync<
             DeviceAccessible<
                 <ValueBuffer<PositiveF64, false, true> as RustToCuda>::CudaRepresentation,
             >,
         >,
-        _total_time_max: HostAndDeviceConstRef<SafeDeviceCopyWrapper<AtomicU64>>,
-        _total_steps_sum: HostAndDeviceConstRef<SafeDeviceCopyWrapper<AtomicU64>>,
+        _total_time_max: HostAndDeviceConstRefAsync<SafeDeviceCopyWrapper<AtomicU64>>,
+        _total_steps_sum: HostAndDeviceConstRefAsync<SafeDeviceCopyWrapper<AtomicU64>>,
         _max_steps: SafeDeviceCopyWrapper<u64>,
         _max_next_event_time: SafeDeviceCopyWrapper<NonNegativeF64>,
     ) -> CudaResult<()> {

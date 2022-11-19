@@ -30,6 +30,7 @@ use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
 
 use rust_cuda::{
     common::RustToCuda,
+    host::CudaDropWrapper,
     rustacuda::{
         function::{BlockSize, GridSize},
         prelude::{Stream, StreamFlags},
@@ -202,8 +203,9 @@ where
     };
 
     let (mut status, time, steps, lineages) = with_initialised_cuda(args.device, || {
+        let stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
+
         let kernel = SimulationKernel::try_new(
-            Stream::new(StreamFlags::NON_BLOCKING, None)?,
             grid_size.clone(),
             block_size.clone(),
             args.ptx_jit,
@@ -217,6 +219,7 @@ where
             &mut simulation,
             kernel,
             (grid_size, block_size, args.dedup_cache, args.step_slice),
+            &stream,
             lineages,
             event_slice,
             pause_before,

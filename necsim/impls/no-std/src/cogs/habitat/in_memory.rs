@@ -19,6 +19,7 @@ use crate::array2d::Array2D;
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
+#[cfg_attr(feature = "cuda", cuda(async = false))]
 pub struct InMemoryHabitat<M: MathsCore> {
     #[cfg_attr(feature = "cuda", cuda(embed))]
     habitat: Final<Box<[u32]>>,
