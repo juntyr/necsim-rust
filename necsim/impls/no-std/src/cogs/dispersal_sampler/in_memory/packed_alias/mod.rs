@@ -33,7 +33,7 @@ impl From<Range<usize>> for AliasSamplerRange {
     fn from(range: Range<usize>) -> Self {
         Self {
             start: range.start,
-            end: range.start,
+            end: range.end,
         }
     }
 }
