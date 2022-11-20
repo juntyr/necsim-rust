@@ -134,7 +134,7 @@ impl MathsCore for NvptxMathsCore {
 
         #[cfg(target_os = "cuda")]
         unsafe {
-            core::arch::asm!("copysign.f64 {}, {}, {};", out(reg64) offset, in(reg64) x, const ROUND_TRUNC_OFFSET.to_bits(), options(pure, nomem, nostack));
+            core::arch::asm!("copysign.f64 {}, {}, {};", out(reg64) offset, in(reg64) x, in(reg64) ROUND_TRUNC_OFFSET, options(pure, nomem, nostack));
         }
         #[cfg(not(target_os = "cuda"))]
         unsafe {

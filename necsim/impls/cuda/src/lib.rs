@@ -6,8 +6,6 @@
 #![feature(const_mut_refs)]
 #![feature(const_refs_to_cell)]
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
-#![cfg_attr(target_os = "cuda", feature(asm_const))]
-#![cfg_attr(target_os = "cuda", feature(const_float_bits_conv))]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 
