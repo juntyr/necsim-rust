@@ -3,7 +3,17 @@
 #[macro_use]
 extern crate log;
 
-mod individuals;
+mod identity;
+mod individual;
+mod location;
+mod state;
 
-// Register the reporter plugin
-necsim_plugins_core::export_plugin!(IndividualSpecies => individuals::IndividualLocationSpeciesReporter);
+use identity::SpeciesIdentity;
+use state::LastEventState;
+
+// Register the reporter plugins
+necsim_plugins_core::export_plugin!(
+    IndividualSpeciesSQLite => individual::sqlite::IndividualSpeciesSQLiteReporter,
+    IndividualSpeciesFeather => individual::feather::IndividualSpeciesFeatherReporter,
+    LocationSpeciesFeather => location::feather::LocationSpeciesFeatherReporter,
+);

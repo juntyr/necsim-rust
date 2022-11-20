@@ -11,14 +11,13 @@ use necsim_core::{
 };
 use necsim_core_bond::NonNegativeF64;
 
+use crate::SpeciesIdentity;
+
 mod database;
 mod reporter;
 
-#[derive(Debug)]
-struct SpeciesIdentity(u64, u64, u64);
-
 #[allow(clippy::module_name_repetitions)]
-pub struct IndividualLocationSpeciesReporter {
+pub struct IndividualSpeciesSQLiteReporter {
     last_parent_prior_time: Option<(GlobalLineageReference, NonNegativeF64)>,
     last_speciation_event: Option<SpeciationEvent>,
     last_dispersal_event: Option<DispersalEvent>,
@@ -38,9 +37,9 @@ pub struct IndividualLocationSpeciesReporter {
     connection: Connection,
 }
 
-impl fmt::Debug for IndividualLocationSpeciesReporter {
+impl fmt::Debug for IndividualSpeciesSQLiteReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct(stringify!(IndividualLocationSpeciesReporter))
+        fmt.debug_struct(stringify!(IndividualSpeciesSQLiteReporter))
             .field("output", &self.output)
             .field("table", &self.table)
             .field("mode", &self.mode)
@@ -49,9 +48,9 @@ impl fmt::Debug for IndividualLocationSpeciesReporter {
     }
 }
 
-impl serde::Serialize for IndividualLocationSpeciesReporter {
+impl serde::Serialize for IndividualSpeciesSQLiteReporter {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        IndividualLocationSpeciesReporterArgs {
+        IndividualSpeciesSQLiteReporterArgs {
             output: self.output.clone(),
             table: self.table.clone(),
             mode: self.mode.clone(),
@@ -61,9 +60,9 @@ impl serde::Serialize for IndividualLocationSpeciesReporter {
     }
 }
 
-impl<'de> Deserialize<'de> for IndividualLocationSpeciesReporter {
+impl<'de> Deserialize<'de> for IndividualSpeciesSQLiteReporter {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let args = IndividualLocationSpeciesReporterArgs::deserialize(deserializer)?;
+        let args = IndividualSpeciesSQLiteReporterArgs::deserialize(deserializer)?;
 
         let connection = Connection::open_with_flags(
             &args.output,
@@ -97,8 +96,8 @@ impl<'de> Deserialize<'de> for IndividualLocationSpeciesReporter {
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[serde(rename = "IndividualLocationSpeciesReporter")]
-struct IndividualLocationSpeciesReporterArgs {
+#[serde(rename = "IndividualSpeciesSQLiteReporter")]
+struct IndividualSpeciesSQLiteReporterArgs {
     output: PathBuf,
     #[serde(default = "default_table_name")]
     table: String,

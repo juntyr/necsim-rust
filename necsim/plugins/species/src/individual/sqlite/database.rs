@@ -1,87 +1,41 @@
 use necsim_core::{
-    event::{DispersalEvent, SpeciationEvent},
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
 };
-use necsim_core_bond::{NonNegativeF64, NonZeroOneU64, PositiveF64};
+use necsim_core_bond::{NonZeroOneU64, PositiveF64};
 
-use bincode::Options;
 use rusqlite::{named_params, types::Value};
-use serde::{Deserialize, Serialize};
 
-use super::{IndividualLocationSpeciesReporter, SpeciesIdentity, SpeciesLocationsMode};
+use crate::{LastEventState, SpeciesIdentity};
+
+use super::{IndividualSpeciesSQLiteReporter, SpeciesLocationsMode};
 
 const METADATA_TABLE: &str = "__SPECIES_REPORTER_META";
 
-impl IndividualLocationSpeciesReporter {
+impl IndividualSpeciesSQLiteReporter {
     pub(super) fn store_individual_origin(
         &mut self,
-        individual: &GlobalLineageReference,
+        lineage: &GlobalLineageReference,
         origin: &IndexedLocation,
     ) {
-        self.origins.insert(individual.clone(), origin.clone());
+        self.origins.insert(lineage.clone(), origin.clone());
     }
 
     pub(super) fn store_individual_speciation(
         &mut self,
-        parent: &GlobalLineageReference,
+        lineage: &GlobalLineageReference,
         origin: &IndexedLocation,
         time: PositiveF64,
     ) {
         // Resolve the actual parent, irrespective of duplicate individuals
-        let mut parent = parent;
+        let mut parent = lineage;
         while let Some(parent_parent) = self.parents.get(parent) {
             parent = parent_parent;
         }
-        let parent = parent.clone();
-
-        let location = (u64::from(origin.location().y()) << 32) | u64::from(origin.location().x());
-        let index = u64::from(origin.index()) << 16;
-        let time = time.get().to_bits();
-
-        let location_bytes = seahash_diffuse(location).to_le_bytes();
-        let index_bytes = seahash_diffuse(index).to_le_bytes();
-        let time_bytes = seahash_diffuse(time).to_le_bytes();
-
-        // Shuffle and mix all 24 bytes of the species identity
-        let lower = u64::from_le_bytes([
-            location_bytes[3],
-            time_bytes[0],
-            index_bytes[5],
-            location_bytes[1],
-            time_bytes[4],
-            time_bytes[7],
-            time_bytes[5],
-            location_bytes[5],
-        ]);
-        let middle = u64::from_le_bytes([
-            time_bytes[6],
-            index_bytes[4],
-            location_bytes[0],
-            location_bytes[6],
-            index_bytes[2],
-            index_bytes[1],
-            location_bytes[7],
-            index_bytes[3],
-        ]);
-        let upper = u64::from_le_bytes([
-            location_bytes[4],
-            location_bytes[2],
-            time_bytes[2],
-            index_bytes[0],
-            time_bytes[3],
-            time_bytes[1],
-            index_bytes[7],
-            index_bytes[6],
-        ]);
 
         self.species.insert(
-            parent,
-            SpeciesIdentity(
-                seahash_diffuse(lower),
-                seahash_diffuse(middle),
-                seahash_diffuse(upper),
-            ),
+            parent.clone(),
+            SpeciesIdentity::from_speciation(origin, time),
         );
     }
 
@@ -308,43 +262,30 @@ impl IndividualLocationSpeciesReporter {
             }
 
             if let Some(species) = species {
-                // Try to parse the species identity from its String form
-                let species = (|| -> Result<_, _> {
-                    if species.len() != 48 || !species.is_ascii() {
-                        return Err(());
-                    }
+                let mut identity = [0_u8; 24];
 
-                    Ok(SpeciesIdentity(
-                        u64::from_str_radix(&species[0..16], 16).map_err(|_| ())?,
-                        u64::from_str_radix(&species[16..32], 16).map_err(|_| ())?,
-                        u64::from_str_radix(&species[32..48], 16).map_err(|_| ())?,
-                    ))
-                })()
-                .map_err(|_| {
+                // Try to parse the species identity from its String form
+                hex::decode_to_slice(&species, &mut identity).map_err(|_| {
                     rusqlite::Error::SqliteFailure(
                         rusqlite::ffi::Error {
                             code: rusqlite::ffi::ErrorCode::TypeMismatch,
                             extended_code: 0,
                         },
                         Some(format!(
-                            "Invalid species identity {:?} for individual #{}",
-                            species, id,
+                            "Invalid species identity {species:?} for individual #{id}",
                         )),
                     )
                 })?;
 
                 // Populate the individual `species` lookup
-                self.species.insert(id, species);
+                self.species.insert(id, SpeciesIdentity::from(identity));
             }
         }
 
         let last_event: String = self
             .connection
             .query_row(
-                &format!(
-                    "SELECT value FROM {} WHERE key='last-event'",
-                    METADATA_TABLE
-                ),
+                &format!("SELECT value FROM {METADATA_TABLE} WHERE key='last-event'",),
                 [],
                 |row| row.get("value"),
             )
@@ -420,9 +361,9 @@ impl IndividualLocationSpeciesReporter {
                     .get(&lineage)
                     .map(|parent| to_i64(unsafe { parent.clone().into_inner().get() - 2 })),
                 /* :species */
-                self.species.get(&ancestor).map(|species| {
-                    format!("{:016x}{:016x}{:016x}", species.0, species.1, species.2)
-                }),
+                self.species
+                    .get(&ancestor)
+                    .map(|species| hex::encode(**species)),
             ])?;
         }
 
@@ -447,10 +388,7 @@ impl IndividualLocationSpeciesReporter {
         })?;
 
         tx.execute(
-            &format!(
-                "INSERT OR REPLACE INTO {} VALUES (:key, :value)",
-                METADATA_TABLE
-            ),
+            &format!("INSERT OR REPLACE INTO {METADATA_TABLE} VALUES (:key, :value)",),
             named_params! { ":key": "last-event", ":value": last_event_state },
         )?;
 
@@ -474,49 +412,4 @@ const fn from_i32(x: i32) -> u32 {
 
 const fn from_i64(x: i64) -> u64 {
     u64::from_ne_bytes(x.to_ne_bytes())
-}
-
-const fn seahash_diffuse(mut x: u64) -> u64 {
-    // SeaHash diffusion function
-    // https://docs.rs/seahash/4.1.0/src/seahash/helper.rs.html#75-92
-
-    // These are derived from the PCG RNG's round. Thanks to @Veedrac for proposing
-    // this. The basic idea is that we use dynamic shifts, which are determined
-    // by the input itself. The shift is chosen by the higher bits, which means
-    // that changing those flips the lower bits, which scatters upwards because
-    // of the multiplication.
-
-    x = x.wrapping_add(0x9e37_79b9_7f4a_7c15);
-
-    x = x.wrapping_mul(0x6eed_0e9d_a4d9_4a4f);
-
-    let a = x >> 32;
-    let b = x >> 60;
-
-    x ^= a >> b;
-
-    x = x.wrapping_mul(0x6eed_0e9d_a4d9_4a4f);
-
-    x
-}
-
-#[derive(Serialize, Deserialize)]
-struct LastEventState {
-    last_parent_prior_time: Option<(GlobalLineageReference, NonNegativeF64)>,
-    last_speciation_event: Option<SpeciationEvent>,
-    last_dispersal_event: Option<DispersalEvent>,
-}
-
-impl LastEventState {
-    fn into_string(self) -> Result<String, ()> {
-        let bytes = bincode::options().serialize(&self).map_err(|_| ())?;
-
-        Ok(base32::encode(base32::Alphabet::Crockford, &bytes))
-    }
-
-    fn from_string(string: &str) -> Result<LastEventState, ()> {
-        let bytes = base32::decode(base32::Alphabet::Crockford, string).ok_or(())?;
-
-        bincode::options().deserialize(&bytes).map_err(|_| ())
-    }
 }

@@ -1,8 +1,8 @@
 use necsim_core::{impl_finalise, impl_report, reporter::Reporter};
 
-use super::IndividualLocationSpeciesReporter;
+use super::IndividualSpeciesSQLiteReporter;
 
-impl Reporter for IndividualLocationSpeciesReporter {
+impl Reporter for IndividualSpeciesSQLiteReporter {
     impl_report!(speciation(&mut self, speciation: Used) {
         if speciation.prior_time == 0.0_f64 {
             self.store_individual_origin(&speciation.global_lineage_reference, &speciation.origin);
@@ -54,16 +54,13 @@ impl Reporter for IndividualLocationSpeciesReporter {
         let output = self.output.clone();
 
         if let Err(err) = self.output_to_database() {
-            error!("Failed to write the lineage locations to table {:?} at {:?}:\n{}", table, output, err);
+            error!("Failed to write the lineage locations to table {table:?} at {output:?}:\n{err}");
         }
     });
 
     fn initialise(&mut self) -> Result<(), String> {
         self.initialise_sqlite_connection().map_err(|err| {
-            format!(
-                "Failed to initialise the SQLite species location list:\n{}",
-                err
-            )
+            format!("Failed to initialise the SQLite species location list:\n{err}",)
         })
     }
 }
