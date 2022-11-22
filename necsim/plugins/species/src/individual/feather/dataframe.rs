@@ -174,12 +174,12 @@ impl IndividualSpeciesFeatherReporter {
         )?;
 
         let chunk = Chunk::try_new(vec![
-            ids.arced(),
-            xs.arced(),
-            ys.arced(),
-            is.arced(),
-            parents.arced(),
-            species.arced(),
+            ids.boxed(),
+            xs.boxed(),
+            ys.boxed(),
+            is.boxed(),
+            parents.boxed(),
+            species.boxed(),
         ])?;
         writer.write(&chunk, None)?;
 

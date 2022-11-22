@@ -117,7 +117,7 @@ impl<'de> Deserialize<'de> for IndividualSpeciesFeatherReporter {
             self_last_speciation_event = last_event.last_speciation_event;
             self_last_dispersal_event = last_event.last_dispersal_event;
 
-            for chunk in arrow2::io::ipc::read::FileReader::new(reader, metadata, None) {
+            for chunk in arrow2::io::ipc::read::FileReader::new(reader, metadata, None, None) {
                 let chunk = chunk.map_err(serde::de::Error::custom)?;
 
                 let (ids, xs, ys, is, parents, species) = match chunk.columns() {

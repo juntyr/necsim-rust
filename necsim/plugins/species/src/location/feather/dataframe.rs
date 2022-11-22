@@ -244,10 +244,10 @@ impl LocationSpeciesFeatherReporter {
         let counts = PrimitiveArray::from_vec(counts);
 
         let chunk = Chunk::try_new(vec![
-            xs.arced(),
-            ys.arced(),
-            species.arced(),
-            counts.arced(),
+            xs.boxed(),
+            ys.boxed(),
+            species.boxed(),
+            counts.boxed(),
         ])?;
         writer.write(&chunk, None)?;
 
