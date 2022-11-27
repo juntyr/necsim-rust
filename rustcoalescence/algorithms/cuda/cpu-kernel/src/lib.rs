@@ -27,7 +27,7 @@ use rust_cuda::{
     },
 };
 
-use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
+use rustcoalescence_algorithms_cuda_gpu_kernel::{SimulatableKernel, SortableKernel};
 
 mod link;
 mod patch;
@@ -167,6 +167,66 @@ impl<
         ReportSpeciation,
         ReportDispersal,
     >;
+
+    fn get_launch_package(&mut self) -> LaunchPackage<Self> {
+        LaunchPackage {
+            config: LaunchConfig {
+                grid: self.grid.clone(),
+                block: self.block.clone(),
+                shared_memory_size: 0_u32,
+                ptx_jit: self.ptx_jit,
+            },
+            kernel: &mut self.kernel,
+            watcher: &mut self.watcher,
+        }
+    }
+
+    fn on_compile(kernel: &Function, watcher: &mut Self::CompilationWatcher) -> CudaResult<()> {
+        (watcher)(kernel)
+    }
+}
+
+pub struct SortKernel<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
+    #[allow(clippy::type_complexity)]
+    kernel: TypedKernel<dyn SortableKernel<ReportSpeciation, ReportDispersal>>,
+    grid: GridSize,
+    block: BlockSize,
+    ptx_jit: bool,
+    watcher: Box<KernelCompilationCallback>,
+}
+
+impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
+    SortKernel<ReportSpeciation, ReportDispersal>
+{
+    /// # Errors
+    ///
+    /// Returns a `CudaError` if loading the CUDA kernel failed.
+    pub fn try_new(
+        grid: GridSize,
+        block: BlockSize,
+        ptx_jit: bool,
+        on_compile: Box<KernelCompilationCallback>,
+    ) -> CudaResult<Self>
+    where
+        Self: SortableKernel<ReportSpeciation, ReportDispersal>,
+    {
+        let kernel = Self::new_kernel()?;
+
+        Ok(Self {
+            kernel,
+            grid,
+            block,
+            ptx_jit,
+            watcher: on_compile,
+        })
+    }
+}
+
+impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Launcher
+    for SortKernel<ReportSpeciation, ReportDispersal>
+{
+    type CompilationWatcher = Box<KernelCompilationCallback>;
+    type KernelTraitObject = dyn SortableKernel<ReportSpeciation, ReportDispersal>;
 
     fn get_launch_package(&mut self) -> LaunchPackage<Self> {
         LaunchPackage {
