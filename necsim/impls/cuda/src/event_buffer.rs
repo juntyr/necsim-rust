@@ -129,26 +129,324 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
     where
         P: Reporter<ReportSpeciation = ReportSpeciation, ReportDispersal = ReportDispersal>,
     {
-        for (mask, event) in self.event_mask.iter_mut().zip(self.event_buffer.iter()) {
-            if *mask.read() {
-                let event: TypedEvent = unsafe { event.read().assume_some_read() }.into();
-
-                match event {
-                    TypedEvent::Speciation(ref speciation) => {
-                        reporter.report_speciation(speciation.into());
-                    },
-                    TypedEvent::Dispersal(ref dispersal) => {
-                        reporter.report_dispersal(dispersal.into());
-                    },
+        if ReportDispersal::VALUE {
+            for (mask, dispersal) in self
+                .dispersal_mask
+                .iter_mut()
+                .zip(self.dispersal_buffer.iter())
+            {
+                if *mask.read() {
+                    reporter.report_dispersal(unsafe { dispersal.read().assume_some_ref() }.into());
                 }
-            }
 
-            mask.write(false);
+                mask.write(false);
+            }
+        }
+
+        if ReportSpeciation::VALUE {
+            for (mask, speciation) in self
+                .speciation_mask
+                .iter_mut()
+                .zip(self.speciation_buffer.iter())
+            {
+                if *mask.read() {
+                    reporter
+                        .report_speciation(unsafe { speciation.read().assume_some_ref() }.into());
+                }
+
+                mask.write(false);
+            }
         }
     }
+}
 
-    pub fn max_events_per_individual(&self) -> usize {
-        self.max_events
+#[cfg(not(target_os = "cuda"))]
+impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
+    EventBuffer<ReportSpeciation, ReportDispersal>
+{
+    pub fn sort_events(&mut self) {
+        if ReportDispersal::VALUE {
+            let mut events: alloc::vec::Vec<DispersalEvent> = alloc::vec::Vec::new();
+
+            for (mask, dispersal) in self
+                .dispersal_mask
+                .iter_mut()
+                .zip(self.dispersal_buffer.iter())
+            {
+                if *mask.read() {
+                    events.push(unsafe { dispersal.read().assume_some_read() });
+                }
+
+                mask.write(false);
+            }
+
+            events.sort_unstable();
+
+            for ((event, mask), dispersal) in events
+                .into_iter()
+                .zip(self.dispersal_mask.iter_mut())
+                .zip(self.dispersal_buffer.iter_mut())
+            {
+                *dispersal.as_scratch_mut() = MaybeSome::Some(event);
+                mask.write(true);
+            }
+        }
+
+        if ReportSpeciation::VALUE {
+            let mut events: alloc::vec::Vec<SpeciationEvent> = alloc::vec::Vec::new();
+
+            for (mask, speciation) in self
+                .speciation_mask
+                .iter_mut()
+                .zip(self.speciation_buffer.iter())
+            {
+                if *mask.read() {
+                    events.push(unsafe { speciation.read().assume_some_read() });
+                }
+
+                mask.write(false);
+            }
+
+            events.sort_unstable();
+
+            for ((event, mask), speciation) in events
+                .into_iter()
+                .zip(self.speciation_mask.iter_mut())
+                .zip(self.speciation_buffer.iter_mut())
+            {
+                *speciation.as_scratch_mut() = MaybeSome::Some(event);
+                mask.write(true);
+            }
+        }
+    }
+}
+
+#[cfg(target_os = "cuda")]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum SortStepDirection {
+    Less,
+    Greater,
+}
+
+#[cfg(target_os = "cuda")]
+impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
+    EventBuffer<ReportSpeciation, ReportDispersal>
+{
+    #[allow(clippy::too_many_lines)]
+    /// # Safety
+    ///
+    /// All CUDA threads must call this method with the same size, stride, and
+    /// direction arguments. Only one call per kernel launch is safe without
+    /// further synchronisation.
+    pub unsafe fn sort_events_step(
+        &mut self,
+        size: usize,
+        stride: usize,
+        direction: SortStepDirection,
+    ) {
+        use core::cmp::Ordering;
+
+        if ReportDispersal::VALUE {
+            let idx = rust_cuda::device::utils::index();
+
+            // odd-even merge position
+            let pos = 2 * idx - (idx & (stride - 1));
+
+            let (pos_a, pos_b) = if stride < (size / 2) {
+                (pos - stride, pos)
+            } else {
+                (pos, pos + stride)
+            };
+
+            let offset = idx & ((size / 2) - 1);
+
+            if (stride >= (size / 2)) || (offset >= stride) {
+                let mask_a: bool = *self.dispersal_mask.alias_unchecked()[pos_a].read();
+                let mask_b: bool = *self.dispersal_mask.alias_unchecked()[pos_b].read();
+
+                let cmp = match (mask_a, mask_b) {
+                    (false, false) => Ordering::Equal,
+                    (false, true) => Ordering::Greater,
+                    (true, false) => Ordering::Less,
+                    (true, true) => {
+                        // Safety: both masks indicate that the two events exist
+                        let event_a: &DispersalEvent = unsafe {
+                            self.dispersal_buffer.alias_unchecked()[pos_a]
+                                .as_uninit()
+                                .assume_init_ref()
+                                .assume_some_ref()
+                        };
+                        let event_b: &DispersalEvent = unsafe {
+                            self.dispersal_buffer.alias_unchecked()[pos_b]
+                                .as_uninit()
+                                .assume_init_ref()
+                                .assume_some_ref()
+                        };
+
+                        event_a.cmp(event_b)
+                    },
+                };
+
+                if let (SortStepDirection::Greater, Ordering::Greater)
+                | (SortStepDirection::Less, Ordering::Less) = (direction, cmp)
+                {
+                    self.dispersal_mask.alias_mut_unchecked()[pos_a].write(mask_b);
+                    self.dispersal_mask.alias_mut_unchecked()[pos_b].write(mask_a);
+
+                    match (mask_a, mask_b) {
+                        (false, false) => (),
+                        (false, true) => {
+                            let event_b: DispersalEvent = unsafe {
+                                self.dispersal_buffer.alias_unchecked()[pos_b]
+                                    .as_uninit()
+                                    .assume_init_ref()
+                                    .assume_some_read()
+                            };
+
+                            unsafe {
+                                self.dispersal_buffer.alias_mut_unchecked()[pos_a]
+                                    .write(MaybeSome::Some(event_b));
+                            }
+                        },
+                        (true, false) => {
+                            let event_a: DispersalEvent = unsafe {
+                                self.dispersal_buffer.alias_unchecked()[pos_a]
+                                    .as_uninit()
+                                    .assume_init_ref()
+                                    .assume_some_read()
+                            };
+
+                            unsafe {
+                                self.dispersal_buffer.alias_mut_unchecked()[pos_b]
+                                    .write(MaybeSome::Some(event_a));
+                            }
+                        },
+                        (true, true) => {
+                            let event_a: DispersalEvent = unsafe {
+                                self.dispersal_buffer.alias_unchecked()[pos_a]
+                                    .as_uninit()
+                                    .assume_init_ref()
+                                    .assume_some_read()
+                            };
+                            let event_b: DispersalEvent = unsafe {
+                                self.dispersal_buffer.alias_unchecked()[pos_b]
+                                    .as_uninit()
+                                    .assume_init_ref()
+                                    .assume_some_read()
+                            };
+
+                            unsafe {
+                                self.dispersal_buffer.alias_mut_unchecked()[pos_a]
+                                    .write(MaybeSome::Some(event_b));
+                                self.dispersal_buffer.alias_mut_unchecked()[pos_b]
+                                    .write(MaybeSome::Some(event_a));
+                            }
+                        },
+                    }
+                }
+            }
+        }
+
+        if ReportSpeciation::VALUE {
+            let idx = rust_cuda::device::utils::index();
+
+            // odd-even merge position
+            let pos = 2 * idx - (idx & (stride - 1));
+
+            let (pos_a, pos_b) = if stride < (size / 2) {
+                (pos - stride, pos)
+            } else {
+                (pos, pos + stride)
+            };
+
+            let offset = idx & ((size / 2) - 1);
+
+            if (stride >= (size / 2)) || (offset >= stride) {
+                let mask_a: bool = *self.speciation_mask.alias_unchecked()[pos_a].read();
+                let mask_b: bool = *self.speciation_mask.alias_unchecked()[pos_b].read();
+
+                let cmp = match (mask_a, mask_b) {
+                    (false, false) => Ordering::Equal,
+                    (false, true) => Ordering::Greater,
+                    (true, false) => Ordering::Less,
+                    (true, true) => {
+                        // Safety: both masks indicate that the two events exist
+                        let event_a: &SpeciationEvent = unsafe {
+                            self.speciation_buffer.alias_unchecked()[pos_a]
+                                .as_uninit()
+                                .assume_init_ref()
+                                .assume_some_ref()
+                        };
+                        let event_b: &SpeciationEvent = unsafe {
+                            self.speciation_buffer.alias_unchecked()[pos_b]
+                                .as_uninit()
+                                .assume_init_ref()
+                                .assume_some_ref()
+                        };
+
+                        event_a.cmp(event_b)
+                    },
+                };
+
+                if let (SortStepDirection::Greater, Ordering::Greater)
+                | (SortStepDirection::Less, Ordering::Less) = (direction, cmp)
+                {
+                    self.speciation_mask.alias_mut_unchecked()[pos_a].write(mask_b);
+                    self.speciation_mask.alias_mut_unchecked()[pos_b].write(mask_a);
+
+                    match (mask_a, mask_b) {
+                        (false, false) => (),
+                        (false, true) => {
+                            let event_b: SpeciationEvent = unsafe {
+                                self.speciation_buffer.alias_unchecked()[pos_b]
+                                    .as_uninit()
+                                    .assume_init_ref()
+                                    .assume_some_read()
+                            };
+
+                            unsafe {
+                                self.speciation_buffer.alias_mut_unchecked()[pos_a]
+                                    .write(MaybeSome::Some(event_b));
+                            }
+                        },
+                        (true, false) => {
+                            let event_a: SpeciationEvent = unsafe {
+                                self.speciation_buffer.alias_unchecked()[pos_a]
+                                    .as_uninit()
+                                    .assume_init_ref()
+                                    .assume_some_read()
+                            };
+
+                            unsafe {
+                                self.speciation_buffer.alias_mut_unchecked()[pos_b]
+                                    .write(MaybeSome::Some(event_a));
+                            }
+                        },
+                        (true, true) => {
+                            let event_a: SpeciationEvent = unsafe {
+                                self.speciation_buffer.alias_unchecked()[pos_a]
+                                    .as_uninit()
+                                    .assume_init_ref()
+                                    .assume_some_read()
+                            };
+                            let event_b: SpeciationEvent = unsafe {
+                                self.speciation_buffer.alias_unchecked()[pos_b]
+                                    .as_uninit()
+                                    .assume_init_ref()
+                                    .assume_some_read()
+                            };
+
+                            unsafe {
+                                self.speciation_buffer.alias_mut_unchecked()[pos_a]
+                                    .write(MaybeSome::Some(event_b));
+                                self.speciation_buffer.alias_mut_unchecked()[pos_b]
+                                    .write(MaybeSome::Some(event_a));
+                            }
+                        },
+                    }
+                }
+            }
+        }
     }
 }
 

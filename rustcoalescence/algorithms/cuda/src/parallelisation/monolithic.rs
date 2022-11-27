@@ -259,6 +259,8 @@ pub fn simulate<
                     // Simulate all slow lineages until they have finished or exceeded the
                     // new water  level
                     while !slow_lineages.is_empty() {
+                        let mut num_tasks = 0_usize;
+
                         // Upload the new tasks from the front of the task queue
                         for mut task in task_list.iter_mut() {
                             let next_slow_lineage = loop {
@@ -274,6 +276,7 @@ pub fn simulate<
                             };
 
                             task.replace(next_slow_lineage);
+                            num_tasks += 1;
                         }
 
                         // Move the task list, event buffer and min speciation sample buffer
@@ -300,6 +303,23 @@ pub fn simulate<
                             next_event_time_buffer_cuda.move_to_host_async(stream)?;
                         let task_list_host = task_list_cuda.move_to_host_async(stream)?;
                         let event_buffer_host = event_buffer_cuda.move_to_host_async(stream)?;
+
+                        let mut size = 2;
+
+                        // TODO: dispersal and speciation have different buffer lengths
+                        while size <= num_tasks {
+                            let mut stride = size / 2;
+
+                            while stride > 0 {
+                                // oddEvenMergeGlobal<<<(batchSize * arrayLength) / 512, 256>>>(
+                                // d_DstKey, d_DstVal, d_DstKey, d_DstVal, arrayLength, size, stride,
+                                // dir);
+
+                                stride >>= 1;
+                            }
+
+                            size <<= 1;
+                        }
 
                         min_spec_sample_buffer = min_spec_sample_buffer_host.sync_to_host()?;
                         next_event_time_buffer = next_event_time_buffer_host.sync_to_host()?;
@@ -338,6 +358,7 @@ pub fn simulate<
                             next_event_time_buffer.move_to_device_async(stream)?;
 
                         event_buffer = event_buffer_host.sync_to_host()?;
+                        // event_buffer.sort_events();
                         event_buffer.report_events_unordered(&mut proxy);
                         event_buffer_cuda = event_buffer.move_to_device_async(stream)?;
 

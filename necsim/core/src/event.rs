@@ -307,6 +307,35 @@ impl PartialEq for SpeciationEvent {
     }
 }
 
+impl Ord for SpeciationEvent {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Order `Event`s in lexicographical order:
+        //  (1) event_time                different events
+        //  (2) origin                    different events
+        //  (3) prior_time               parent + offspring
+        //  (4) global_lineage_reference
+
+        (
+            &self.event_time,
+            &self.origin,
+            &self.prior_time,
+            &self.global_lineage_reference,
+        )
+            .cmp(&(
+                &other.event_time,
+                &other.origin,
+                &other.prior_time,
+                &other.global_lineage_reference,
+            ))
+    }
+}
+
+impl PartialOrd for SpeciationEvent {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl Eq for DispersalEvent {}
 
 impl PartialEq for DispersalEvent {
@@ -351,5 +380,39 @@ mod tests {
         assert_eq!((0.0_f64).make_negative().to_bits(), (-0.0_f64).to_bits());
         assert_eq!((42.0_f64).make_negative().to_bits(), (-42.0_f64).to_bits());
         assert_eq!((-24.0_f64).make_negative().to_bits(), (-24.0_f64).to_bits());
+    }
+}
+
+impl Ord for DispersalEvent {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Order `Event`s in lexicographical order:
+        //  (1) event_time                       /=\
+        //  (2) origin                  different | events
+        //  (3) target and interaction           \=/
+        //  (4) prior_time              parent + offspring
+        //  (5) global_lineage_reference
+
+        (
+            &self.event_time,
+            &self.origin,
+            &self.target,
+            &self.interaction,
+            &self.prior_time,
+            &self.global_lineage_reference,
+        )
+            .cmp(&(
+                &other.event_time,
+                &other.origin,
+                &other.target,
+                &other.interaction,
+                &other.prior_time,
+                &other.global_lineage_reference,
+            ))
+    }
+}
+
+impl PartialOrd for DispersalEvent {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }

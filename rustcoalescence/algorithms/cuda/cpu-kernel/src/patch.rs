@@ -23,9 +23,9 @@ use rust_cuda::{
     utils::device_copy::SafeDeviceCopyWrapper,
 };
 
-use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
+use rustcoalescence_algorithms_cuda_gpu_kernel::{SimulatableKernel, SortableKernel};
 
-use crate::SimulationKernel;
+use crate::{SimulationKernel, SortKernel};
 
 // If `Kernel` is implemented for `ReportSpeciation` x `ReportDispersal`, i.e.
 //  for {`False`, `True`} x {`False`, `True`} then it is implemented for all
@@ -137,6 +137,50 @@ where
         _total_steps_sum: HostAndDeviceConstRefAsync<SafeDeviceCopyWrapper<AtomicU64>>,
         _max_steps: SafeDeviceCopyWrapper<u64>,
         _max_next_event_time: SafeDeviceCopyWrapper<NonNegativeF64>,
+    ) -> CudaResult<()> {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+}
+
+#[allow(clippy::trait_duplication_in_bounds)]
+unsafe impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
+    SortableKernel<ReportSpeciation, ReportDispersal>
+    for SortKernel<ReportSpeciation, ReportDispersal>
+where
+    SortKernel<False, False>: SortableKernel<False, False>,
+    SortKernel<False, True>: SortableKernel<False, True>,
+    SortKernel<True, False>: SortableKernel<True, False>,
+    SortKernel<True, True>: SortableKernel<True, True>,
+{
+    default fn get_ptx_str() -> &'static str {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+
+    default fn new_kernel(
+    ) -> CudaResult<TypedKernel<dyn SortableKernel<ReportSpeciation, ReportDispersal>>> {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+
+    default fn sort_events<'stream>(
+        &mut self,
+        _stream: &'stream Stream,
+        _event_buffer_reporter: &mut EventBuffer<ReportSpeciation, ReportDispersal>,
+        _size: usize,
+        _stride: usize,
+    ) -> CudaResult<()> {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+
+    default fn sort_events_async<'stream>(
+        &mut self,
+        _stream: &'stream Stream,
+        _event_buffer_reporter: HostAndDeviceMutRefAsync<
+            DeviceAccessible<
+                <EventBuffer<ReportSpeciation, ReportDispersal> as RustToCuda>::CudaRepresentation,
+            >,
+        >,
+        _size: SafeDeviceCopyWrapper<usize>,
+        _stride: SafeDeviceCopyWrapper<usize>,
     ) -> CudaResult<()> {
         unsafe { unreachable_cuda_simulation_linking_reporter() }
     }

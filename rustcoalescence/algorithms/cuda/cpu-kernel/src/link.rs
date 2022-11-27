@@ -1,6 +1,8 @@
-use rustcoalescence_algorithms_cuda_gpu_kernel::{SimulatableKernel, SimulationKernelArgs};
+use rustcoalescence_algorithms_cuda_gpu_kernel::{
+    SimulatableKernel, SimulationKernelArgs, SortKernelArgs, SortableKernel,
+};
 
-use crate::SimulationKernel;
+use crate::{SimulationKernel, SortKernel};
 
 macro_rules! link_kernel {
     ($habitat:ty, $dispersal:ty, $turnover:ty, $speciation:ty) => {
@@ -325,4 +327,21 @@ link_kernel!(
     >,
     necsim_impls_no_std::cogs::turnover_rate::uniform::UniformTurnoverRate,
     necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
+);
+
+rustcoalescence_algorithms_cuda_gpu_kernel::link_sort_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_sort_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::True,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_sort_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_sort_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::True,
 );
