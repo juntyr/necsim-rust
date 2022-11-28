@@ -220,6 +220,11 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
             watcher: on_compile,
         })
     }
+
+    pub fn with_grid(&mut self, grid: GridSize) -> &mut Self {
+        self.grid = grid;
+        self
+    }
 }
 
 impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Launcher

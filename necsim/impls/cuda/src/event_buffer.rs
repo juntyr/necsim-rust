@@ -158,6 +158,22 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
             }
         }
     }
+
+    pub fn max_events_per_type_individual(&self) -> usize {
+        #[allow(clippy::bool_to_int_with_if)]
+        let max_speciation_events = if ReportSpeciation::VALUE {
+            1_usize
+        } else {
+            0_usize
+        };
+        let max_dispersal_events = if ReportDispersal::VALUE {
+            self.max_events
+        } else {
+            0_usize
+        };
+
+        max_speciation_events.max(max_dispersal_events)
+    }
 }
 
 #[cfg(not(target_os = "cuda"))]
@@ -260,7 +276,10 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
 
             let offset = idx & ((size / 2) - 1);
 
-            if (stride >= (size / 2)) || (offset >= stride) {
+            if (pos_a < self.dispersal_mask.alias_unchecked().len())
+                && (pos_b < self.dispersal_mask.alias_unchecked().len())
+                && ((stride >= (size / 2)) || (offset >= stride))
+            {
                 let mask_a: bool = *self.dispersal_mask.alias_unchecked()[pos_a].read();
                 let mask_b: bool = *self.dispersal_mask.alias_unchecked()[pos_b].read();
 
@@ -361,7 +380,10 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
 
             let offset = idx & ((size / 2) - 1);
 
-            if (stride >= (size / 2)) || (offset >= stride) {
+            if (pos_a < self.speciation_mask.alias_unchecked().len())
+                && (pos_b < self.speciation_mask.alias_unchecked().len())
+                && ((stride >= (size / 2)) || (offset >= stride))
+            {
                 let mask_a: bool = *self.speciation_mask.alias_unchecked()[pos_a].read();
                 let mask_b: bool = *self.speciation_mask.alias_unchecked()[pos_b].read();
 
