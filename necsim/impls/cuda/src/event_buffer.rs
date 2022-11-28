@@ -130,26 +130,42 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
         P: Reporter<ReportSpeciation = ReportSpeciation, ReportDispersal = ReportDispersal>,
     {
         if ReportDispersal::VALUE {
+            let mut last_time = 0.0_f64;
+            // let mut times = alloc::vec::Vec::new();
+
             for (mask, dispersal) in self
                 .dispersal_mask
                 .iter_mut()
                 .zip(self.dispersal_buffer.iter())
             {
                 if *mask.read() {
+                    let new_time: f64 = unsafe { dispersal.read().assume_some_ref() }.event_time.get();
+                    // times.push(Some(new_time));
+                    assert!(new_time >= last_time, "{} {}", new_time, last_time);
+                    last_time = new_time;
                     reporter.report_dispersal(unsafe { dispersal.read().assume_some_ref() }.into());
-                }
+                } // else {
+                    // times.push(None);
+                // }
 
                 mask.write(false);
             }
+
+            // panic!("{:?}", times);
         }
 
         if ReportSpeciation::VALUE {
+            let mut last_time = 0.0_f64;
+
             for (mask, speciation) in self
                 .speciation_mask
                 .iter_mut()
                 .zip(self.speciation_buffer.iter())
             {
                 if *mask.read() {
+                    let new_time: f64 = unsafe { speciation.read().assume_some_ref() }.event_time.get();
+                    assert!(new_time >= last_time, "{} {}", new_time, last_time);
+                    last_time = new_time;
                     reporter
                         .report_speciation(unsafe { speciation.read().assume_some_ref() }.into());
                 }

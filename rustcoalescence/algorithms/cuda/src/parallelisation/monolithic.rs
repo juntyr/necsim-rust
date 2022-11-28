@@ -316,12 +316,12 @@ pub fn simulate<
 
                         let mut size = 2;
 
-                        while size <= num_tasks * max_events_per_type_individual {
-                            let mut stride = size / 2;
+                        loop {
+                            let mut stride = size >> 1;
 
                             while stride > 0 {
                                 let grid = u32::try_from(
-                                    num_tasks * max_events_per_type_individual / 512,
+                                    (num_tasks * max_events_per_type_individual + 511) / 512,
                                 )
                                 .map_err(|_| {
                                     rust_cuda::rustacuda::error::CudaError::LaunchOutOfResources
@@ -335,6 +335,10 @@ pub fn simulate<
                                 )?;
 
                                 stride >>= 1;
+                            }
+
+                            if size >= (num_tasks * max_events_per_type_individual) {
+                                break;
                             }
 
                             size <<= 1;
