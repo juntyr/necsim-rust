@@ -25,7 +25,7 @@ use necsim_partitioning_core::LocalPartition;
 use rustcoalescence_algorithms::result::SimulationOutcome;
 use rustcoalescence_scenarios::Scenario;
 
-use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernel;
+use rustcoalescence_algorithms_cuda_cpu_kernel::{SimulationKernel, SortKernel};
 use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
 
 use rust_cuda::{
@@ -210,7 +210,17 @@ where
             block_size.clone(),
             args.ptx_jit,
             Box::new(|kernel| {
-                crate::info::print_kernel_function_attributes(kernel);
+                crate::info::print_kernel_function_attributes("Simulation", kernel);
+                Ok(())
+            }),
+        )?;
+
+        let sort_kernel = SortKernel::try_new(
+            GridSize::from(0),
+            BlockSize::from(256),
+            args.ptx_jit,
+            Box::new(|kernel| {
+                crate::info::print_kernel_function_attributes("Sorting", kernel);
                 Ok(())
             }),
         )?;
@@ -218,6 +228,7 @@ where
         parallelisation::monolithic::simulate(
             &mut simulation,
             kernel,
+            sort_kernel,
             (grid_size, block_size, args.dedup_cache, args.step_slice),
             &stream,
             lineages,

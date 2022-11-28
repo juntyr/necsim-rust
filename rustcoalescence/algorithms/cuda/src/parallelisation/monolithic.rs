@@ -1,4 +1,9 @@
-use std::{collections::VecDeque, convert::TryInto, num::NonZeroU64, sync::atomic::AtomicU64};
+use std::{
+    collections::VecDeque,
+    convert::{TryFrom, TryInto},
+    num::NonZeroU64,
+    sync::atomic::AtomicU64,
+};
 
 use rust_cuda::{
     common::RustToCuda,
@@ -40,8 +45,8 @@ use necsim_partitioning_core::LocalPartition;
 
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
-use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernel;
-use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
+use rustcoalescence_algorithms_cuda_cpu_kernel::{SimulationKernel, SortKernel};
+use rustcoalescence_algorithms_cuda_gpu_kernel::{SimulatableKernel, SortableKernel};
 
 use crate::error::CudaError;
 
@@ -89,6 +94,10 @@ pub fn simulate<
         A,
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
+    >,
+    mut sort_kernel: SortKernel<
+    <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
+    <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
     >,
     config: (GridSize, BlockSize, DedupCache, NonZeroU64),
     stream: &'stream Stream,
@@ -188,6 +197,8 @@ pub fn simulate<
         ExchangeWrapperOnHost::new(ValueBuffer::new(&block_size, &grid_size)?)?;
     let mut next_event_time_buffer =
         ExchangeWrapperOnHost::new(ValueBuffer::new(&block_size, &grid_size)?)?;
+
+    let max_events_per_type_individual = event_buffer.max_events_per_type_individual();
 
     let mut min_spec_samples = dedup_cache.construct(slow_lineages.len());
 
@@ -302,24 +313,34 @@ pub fn simulate<
                         let next_event_time_buffer_host =
                             next_event_time_buffer_cuda.move_to_host_async(stream)?;
                         let task_list_host = task_list_cuda.move_to_host_async(stream)?;
-                        let event_buffer_host = event_buffer_cuda.move_to_host_async(stream)?;
 
                         let mut size = 2;
 
-                        // TODO: dispersal and speciation have different buffer lengths
-                        while size <= num_tasks {
+                        while size <= num_tasks * max_events_per_type_individual {
                             let mut stride = size / 2;
 
                             while stride > 0 {
-                                // oddEvenMergeGlobal<<<(batchSize * arrayLength) / 512, 256>>>(
-                                // d_DstKey, d_DstVal, d_DstKey, d_DstVal, arrayLength, size, stride,
-                                // dir);
+                                let grid = u32::try_from(
+                                    num_tasks * max_events_per_type_individual / 512,
+                                )
+                                .map_err(|_| {
+                                    rust_cuda::rustacuda::error::CudaError::LaunchOutOfResources
+                                })?;
+
+                                sort_kernel.with_grid(grid.into()).sort_events_async(
+                                    stream,
+                                    event_buffer_cuda.as_mut_async(),
+                                    size.into(),
+                                    stride.into(),
+                                )?;
 
                                 stride >>= 1;
                             }
 
                             size <<= 1;
                         }
+
+                        let event_buffer_host = event_buffer_cuda.move_to_host_async(stream)?;
 
                         min_spec_sample_buffer = min_spec_sample_buffer_host.sync_to_host()?;
                         next_event_time_buffer = next_event_time_buffer_host.sync_to_host()?;
