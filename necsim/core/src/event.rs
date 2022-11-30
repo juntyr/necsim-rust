@@ -255,6 +255,7 @@ impl PartialEq for PackedEvent {
 }
 
 impl Ord for PackedEvent {
+    #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
         // Order `Event`s in lexicographical order:
         //  (1) event_time                       /=\

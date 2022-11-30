@@ -390,7 +390,6 @@ pub fn simulate<
                             next_event_time_buffer.move_to_device_async(stream)?;
 
                         event_buffer = event_buffer_host.sync_to_host()?;
-                        // event_buffer.sort_events();
                         event_buffer.report_events_unordered(&mut proxy);
                         event_buffer_cuda = event_buffer.move_to_device_async(stream)?;
 
