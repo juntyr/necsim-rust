@@ -135,7 +135,7 @@ pub fn simulate<
 #[rust_cuda::common::kernel(
     pub use link_sort_kernel! as impl SortableKernel<SortKernelArgs> for SortKernel
 )]
-pub fn sort_events<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
+pub fn sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
     #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut ShallowCopy<
         necsim_impls_cuda::event_buffer::EventBuffer<ReportSpeciation, ReportDispersal>,
     >,
@@ -144,11 +144,7 @@ pub fn sort_events<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
 ) {
     // Safety: size, stride, and direction are the same on every CUDA thread
     unsafe {
-        event_buffer_reporter.sort_events_step(
-            size,
-            stride,
-            necsim_impls_cuda::event_buffer::SortStepDirection::Greater,
-        );
+        event_buffer_reporter.sort_events_step(size, stride);
     }
 }
 

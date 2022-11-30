@@ -99,7 +99,7 @@ pub fn simulate<
     <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
     <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
     >,
-    config: (GridSize, BlockSize, DedupCache, NonZeroU64),
+    config: (GridSize, BlockSize, DedupCache, NonZeroU64, usize),
     stream: &'stream Stream,
     lineages: LI,
     event_slice: EventSlice,
@@ -161,7 +161,7 @@ pub fn simulate<
         L,
     >>::WaterLevelReporter::new(event_slice.get(), local_partition);
 
-    let (grid_size, block_size, dedup_cache, step_slice) = config;
+    let (grid_size, block_size, dedup_cache, step_slice, sort_block_size) = config;
 
     #[allow(clippy::or_fun_call)]
     let intial_max_time = slow_lineages
@@ -198,7 +198,7 @@ pub fn simulate<
     let mut next_event_time_buffer =
         ExchangeWrapperOnHost::new(ValueBuffer::new(&block_size, &grid_size)?)?;
 
-    let max_events_per_type_individual = event_buffer.max_events_per_type_individual();
+    let max_events_per_individual = event_buffer.max_events_per_individual();
 
     let mut min_spec_samples = dedup_cache.construct(slow_lineages.len());
 
@@ -314,34 +314,41 @@ pub fn simulate<
                             next_event_time_buffer_cuda.move_to_host_async(stream)?;
                         let task_list_host = task_list_cuda.move_to_host_async(stream)?;
 
-                        let mut size = 2;
+                        if max_events_per_individual > 0 {
+                            // Each individual generates its events in sorted order
+                            // If the number of events per individual is aligned to some
+                            //  power of two, these first sorting steps can be skipped
+                            let mut size = 2.max(0x1 << max_events_per_individual.trailing_zeros());
 
-                        loop {
-                            let mut stride = size >> 1;
+                            loop {
+                                let mut stride = size >> 1;
 
-                            while stride > 0 {
-                                let grid = u32::try_from(
-                                    (num_tasks * max_events_per_type_individual + 511) / 512,
-                                )
-                                .map_err(|_| {
-                                    rust_cuda::rustacuda::error::CudaError::LaunchOutOfResources
-                                })?;
+                                while stride > 0 {
+                                    let grid = u32::try_from(
+                                        (num_tasks * max_events_per_individual + sort_block_size
+                                            - 1)
+                                            / sort_block_size,
+                                    )
+                                    .map_err(|_| {
+                                        rust_cuda::rustacuda::error::CudaError::LaunchOutOfResources
+                                    })?;
 
-                                sort_kernel.with_grid(grid.into()).sort_events_async(
-                                    stream,
-                                    event_buffer_cuda.as_mut_async(),
-                                    size.into(),
-                                    stride.into(),
-                                )?;
+                                    sort_kernel.with_grid(grid.into()).sort_events_step_async(
+                                        stream,
+                                        event_buffer_cuda.as_mut_async(),
+                                        size.into(),
+                                        stride.into(),
+                                    )?;
 
-                                stride >>= 1;
+                                    stride >>= 1;
+                                }
+
+                                if size >= (num_tasks * max_events_per_individual) {
+                                    break;
+                                }
+
+                                size <<= 1;
                             }
-
-                            if size >= (num_tasks * max_events_per_type_individual) {
-                                break;
-                            }
-
-                            size <<= 1;
                         }
 
                         let event_buffer_host = event_buffer_cuda.move_to_host_async(stream)?;
