@@ -191,8 +191,8 @@ where
     .build();
 
     // Note: It seems to be more performant to spawn smaller blocks
-    let block_size = BlockSize::x(args.block_size);
-    let grid_size = GridSize::x(args.grid_size);
+    let block_size = BlockSize::x(args.block_size.get());
+    let grid_size = GridSize::x(args.grid_size.get());
 
     let event_slice = match args.parallelism_mode {
         ParallelismMode::Monolithic(MonolithicParallelismMode { event_slice })
@@ -216,8 +216,8 @@ where
         )?;
 
         let sort_kernel = SortKernel::try_new(
-            GridSize::from(0),
-            BlockSize::from(256),
+            GridSize::x(0),
+            BlockSize::x(args.sort_block_size.get()),
             args.ptx_jit,
             Box::new(|kernel| {
                 crate::info::print_kernel_function_attributes("Sorting", kernel);
@@ -229,7 +229,13 @@ where
             &mut simulation,
             kernel,
             sort_kernel,
-            (grid_size, block_size, args.dedup_cache, args.step_slice),
+            (
+                grid_size,
+                block_size,
+                args.dedup_cache,
+                args.step_slice,
+                args.sort_block_size.get() as usize,
+            ),
             &stream,
             lineages,
             event_slice,

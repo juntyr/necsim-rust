@@ -161,7 +161,7 @@ where
         unsafe { unreachable_cuda_simulation_linking_reporter() }
     }
 
-    default fn sort_events<'stream>(
+    default fn sort_events_step<'stream>(
         &mut self,
         _stream: &'stream Stream,
         _event_buffer_reporter: &mut EventBuffer<ReportSpeciation, ReportDispersal>,
@@ -171,7 +171,7 @@ where
         unsafe { unreachable_cuda_simulation_linking_reporter() }
     }
 
-    default fn sort_events_async<'stream>(
+    default fn sort_events_step_async<'stream>(
         &mut self,
         _stream: &'stream Stream,
         _event_buffer_reporter: HostAndDeviceMutRefAsync<
