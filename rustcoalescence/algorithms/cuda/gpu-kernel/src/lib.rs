@@ -10,6 +10,8 @@
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![cfg_attr(target_os = "cuda", feature(stdsimd))]
 #![cfg_attr(target_os = "cuda", feature(control_flow_enum))]
+#![allow(incomplete_features)]
+#![feature(generic_const_exprs)]
 
 extern crate alloc;
 
@@ -132,10 +134,27 @@ pub fn simulate<
     });
 }
 
+// #[rust_cuda::common::kernel(
+//     pub use link_sort_kernel! as impl SortableKernel<SortKernelArgs> for
+// SortKernel )]
+// pub fn sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
+//     #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut
+// ShallowCopy<
+//         necsim_impls_cuda::event_buffer::EventBuffer<ReportSpeciation,
+// ReportDispersal>,     >,
+//     #[kernel(pass = SafeDeviceCopy)] size: usize,
+//     #[kernel(pass = SafeDeviceCopy)] stride: usize,
+// ) {
+//     // Safety: size and stride are the same on every CUDA thread
+//     unsafe {
+//         event_buffer_reporter.odd_even_sort_events_step(size, stride);
+//     }
+// }
+
 #[rust_cuda::common::kernel(
-    pub use link_sort_kernel! as impl SortableKernel<SortKernelArgs> for SortKernel
+    pub use link_even_odd_sort_kernel! as impl EvenOddSortableKernel<EvenOddSortKernelArgs> for EvenOddSortKernel
 )]
-pub fn sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
+pub fn even_odd_sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
     #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut ShallowCopy<
         necsim_impls_cuda::event_buffer::EventBuffer<ReportSpeciation, ReportDispersal>,
     >,
@@ -148,37 +167,49 @@ pub fn sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
     }
 }
 
-// #[rust_cuda::common::kernel(
-//     pub use link_even_odd_sort_kernel! as impl EvenOddSortableKernel<EvenOddSortKernelArgs> for EvenOddSortKernel
-// )]
-// pub fn even_odd_sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
-//     #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut ShallowCopy<
-//         necsim_impls_cuda::event_buffer::EventBuffer<ReportSpeciation, ReportDispersal>,
-//     >,
-//     #[kernel(pass = SafeDeviceCopy)] size: usize,
-//     #[kernel(pass = SafeDeviceCopy)] stride: usize,
-// ) {
-//     // Safety: size and stride are the same on every CUDA thread
-//     unsafe {
-//         event_buffer_reporter.odd_even_sort_events_step(size, stride);
-//     }
-// }
+#[rust_cuda::common::kernel(
+    pub use link_bitonic_global_sort_step_kernel! as impl BitonicGlobalSortSteppableKernel<BitonicGlobalSortStepKernelArgs> for BitonicGlobalSortStepKernel
+)]
+pub fn bitonic_global_sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
+    #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut ShallowCopy<
+        necsim_impls_cuda::event_buffer::EventBuffer<ReportSpeciation, ReportDispersal>,
+    >,
+    #[kernel(pass = SafeDeviceCopy)] size: usize,
+    #[kernel(pass = SafeDeviceCopy)] stride: usize,
+) {
+    // Safety: size and stride are the same on every CUDA thread
+    unsafe {
+        event_buffer_reporter.bitonic_sort_events_step(size, stride);
+    }
+}
 
-// #[rust_cuda::common::kernel(
-//     pub use link_bitonic_sort_kernel! as impl BitonicSortableKernel<BitonicSortKernelArgs> for BitonicSortKernel
-// )]
-// pub fn bitonic_sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
-//     #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut ShallowCopy<
-//         necsim_impls_cuda::event_buffer::EventBuffer<ReportSpeciation, ReportDispersal>,
-//     >,
-//     #[kernel(pass = SafeDeviceCopy)] size: usize,
-//     #[kernel(pass = SafeDeviceCopy)] stride: usize,
-// ) {
-//     // Safety: size and stride are the same on every CUDA thread
-//     unsafe {
-//         event_buffer_reporter.bitonic_sort_events_step(size, stride);
-//     }
-// }
+#[rust_cuda::common::kernel(
+    pub use link_bitonic_shared_sort_step_kernel! as impl BitonicSharedSortSteppableKernel<BitonicSharedSortStepKernelArgs> for BitonicSharedSortStepKernel
+)]
+pub fn bitonic_shared_sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
+    #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut ShallowCopy<
+        necsim_impls_cuda::event_buffer::EventBuffer<ReportSpeciation, ReportDispersal>,
+    >,
+    #[kernel(pass = SafeDeviceCopy)] size: usize,
+) {
+    // Safety: size is the same on every CUDA thread
+    unsafe {
+        event_buffer_reporter.bitonic_sort_events_shared_step(size);
+    }
+}
+
+#[rust_cuda::common::kernel(
+    pub use link_bitonic_shared_sort_prep_kernel! as impl BitonicSharedSortPreparableKernel<BitonicSharedSortPrepKernelArgs> for BitonicSharedSortPrepKernel
+)]
+pub fn bitonic_shared_sort_events_prep<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
+    #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut ShallowCopy<
+        necsim_impls_cuda::event_buffer::EventBuffer<ReportSpeciation, ReportDispersal>,
+    >,
+) {
+    unsafe {
+        event_buffer_reporter.bitonic_sort_events_shared_prep();
+    }
+}
 
 #[cfg(target_os = "cuda")]
 mod cuda_prelude {

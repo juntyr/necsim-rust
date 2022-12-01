@@ -8,6 +8,7 @@ use rust_cuda::safety::StackOnly;
 pub struct MaybeSome<T: StackOnly>(MaybeUninit<T>);
 
 impl<T: StackOnly> MaybeSome<T> {
+    #[cfg(not(target_os = "cuda"))]
     #[allow(non_upper_case_globals)]
     pub(crate) const None: Self = Self(MaybeUninit::uninit());
 

@@ -1,8 +1,14 @@
 use rustcoalescence_algorithms_cuda_gpu_kernel::{
-    SimulatableKernel, SimulationKernelArgs, SortKernelArgs, SortableKernel,
+    BitonicGlobalSortStepKernelArgs, BitonicGlobalSortSteppableKernel,
+    BitonicSharedSortPrepKernelArgs, BitonicSharedSortPreparableKernel,
+    BitonicSharedSortStepKernelArgs, BitonicSharedSortSteppableKernel, EvenOddSortKernelArgs,
+    EvenOddSortableKernel, SimulatableKernel, SimulationKernelArgs,
 };
 
-use crate::{SimulationKernel, SortKernel};
+use crate::{
+    BitonicGlobalSortStepKernel, BitonicSharedSortPrepKernel, BitonicSharedSortStepKernel,
+    EvenOddSortKernel, SimulationKernel,
+};
 
 macro_rules! link_kernel {
     ($habitat:ty, $dispersal:ty, $turnover:ty, $speciation:ty) => {
@@ -329,19 +335,70 @@ link_kernel!(
     necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
 );
 
-rustcoalescence_algorithms_cuda_gpu_kernel::link_sort_kernel!(
+rustcoalescence_algorithms_cuda_gpu_kernel::link_even_odd_sort_kernel!(
     necsim_core::reporter::boolean::False,
     necsim_core::reporter::boolean::False,
 );
-rustcoalescence_algorithms_cuda_gpu_kernel::link_sort_kernel!(
+rustcoalescence_algorithms_cuda_gpu_kernel::link_even_odd_sort_kernel!(
     necsim_core::reporter::boolean::False,
     necsim_core::reporter::boolean::True,
 );
-rustcoalescence_algorithms_cuda_gpu_kernel::link_sort_kernel!(
+rustcoalescence_algorithms_cuda_gpu_kernel::link_even_odd_sort_kernel!(
     necsim_core::reporter::boolean::True,
     necsim_core::reporter::boolean::False,
 );
-rustcoalescence_algorithms_cuda_gpu_kernel::link_sort_kernel!(
+rustcoalescence_algorithms_cuda_gpu_kernel::link_even_odd_sort_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::True,
+);
+
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_global_sort_step_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_global_sort_step_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::True,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_global_sort_step_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_global_sort_step_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::True,
+);
+
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_prep_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_prep_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::True,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_prep_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_prep_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::True,
+);
+
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_step_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_step_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::True,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_step_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_step_kernel!(
     necsim_core::reporter::boolean::True,
     necsim_core::reporter::boolean::True,
 );
