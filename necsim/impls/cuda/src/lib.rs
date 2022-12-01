@@ -6,6 +6,7 @@
 #![feature(const_mut_refs)]
 #![feature(const_refs_to_cell)]
 #![feature(generic_const_exprs)]
+#![feature(arbitrary_self_types)]
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![cfg_attr(target_os = "cuda", feature(stdsimd))]
 #![allow(incomplete_features)]

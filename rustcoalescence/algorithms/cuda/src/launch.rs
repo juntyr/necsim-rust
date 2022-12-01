@@ -25,7 +25,10 @@ use necsim_partitioning_core::LocalPartition;
 use rustcoalescence_algorithms::result::SimulationOutcome;
 use rustcoalescence_scenarios::Scenario;
 
-use rustcoalescence_algorithms_cuda_cpu_kernel::{SimulationKernel, SortKernel};
+use rustcoalescence_algorithms_cuda_cpu_kernel::{
+    BitonicGlobalSortStepKernel, BitonicSharedSortPrepKernel, BitonicSharedSortStepKernel,
+    EvenOddSortKernel, SimulationKernel,
+};
 use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
 
 use rust_cuda::{
@@ -215,12 +218,52 @@ where
             }),
         )?;
 
-        let sort_kernel = SortKernel::try_new(
+        let even_odd_sort_kernel = EvenOddSortKernel::try_new(
             GridSize::x(0),
             BlockSize::x(args.sort_block_size.get()),
             args.ptx_jit,
             Box::new(|kernel| {
-                crate::info::print_kernel_function_attributes("Sorting", kernel);
+                crate::info::print_kernel_function_attributes(
+                    "Even Odd Sorting Global Step",
+                    kernel,
+                );
+                Ok(())
+            }),
+        )?;
+
+        let bitonic_sort_shared_prep_kernel = BitonicSharedSortPrepKernel::try_new(
+            GridSize::x(0),
+            args.ptx_jit,
+            Box::new(|kernel| {
+                crate::info::print_kernel_function_attributes(
+                    "Bitonic Sorting Shared Prep",
+                    kernel,
+                );
+                Ok(())
+            }),
+        )?;
+
+        let bitonic_sort_shared_step_kernel = BitonicSharedSortStepKernel::try_new(
+            GridSize::x(0),
+            args.ptx_jit,
+            Box::new(|kernel| {
+                crate::info::print_kernel_function_attributes(
+                    "Bitonic Sorting Shared Step",
+                    kernel,
+                );
+                Ok(())
+            }),
+        )?;
+
+        let bitonic_sort_global_step_kernel = BitonicGlobalSortStepKernel::try_new(
+            GridSize::x(0),
+            BlockSize::x(args.sort_block_size.get()),
+            args.ptx_jit,
+            Box::new(|kernel| {
+                crate::info::print_kernel_function_attributes(
+                    "Bitonic Sorting Global Step",
+                    kernel,
+                );
                 Ok(())
             }),
         )?;
@@ -228,13 +271,19 @@ where
         parallelisation::monolithic::simulate(
             &mut simulation,
             kernel,
-            sort_kernel,
+            (
+                even_odd_sort_kernel,
+                bitonic_sort_shared_prep_kernel,
+                bitonic_sort_shared_step_kernel,
+                bitonic_sort_global_step_kernel,
+            ),
             (
                 grid_size,
                 block_size,
                 args.dedup_cache,
                 args.step_slice,
                 args.sort_block_size.get() as usize,
+                args.sort_mode,
             ),
             &stream,
             lineages,

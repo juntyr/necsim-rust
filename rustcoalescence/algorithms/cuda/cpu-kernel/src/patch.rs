@@ -23,9 +23,15 @@ use rust_cuda::{
     utils::device_copy::SafeDeviceCopyWrapper,
 };
 
-use rustcoalescence_algorithms_cuda_gpu_kernel::{SimulatableKernel, SortableKernel};
+use rustcoalescence_algorithms_cuda_gpu_kernel::{
+    BitonicGlobalSortSteppableKernel, BitonicSharedSortPreparableKernel,
+    BitonicSharedSortSteppableKernel, EvenOddSortableKernel, SimulatableKernel,
+};
 
-use crate::{SimulationKernel, SortKernel};
+use crate::{
+    BitonicGlobalSortStepKernel, BitonicSharedSortPrepKernel, BitonicSharedSortStepKernel,
+    EvenOddSortKernel, SimulationKernel,
+};
 
 // If `Kernel` is implemented for `ReportSpeciation` x `ReportDispersal`, i.e.
 //  for {`False`, `True`} x {`False`, `True`} then it is implemented for all
@@ -144,24 +150,24 @@ where
 
 #[allow(clippy::trait_duplication_in_bounds)]
 unsafe impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
-    SortableKernel<ReportSpeciation, ReportDispersal>
-    for SortKernel<ReportSpeciation, ReportDispersal>
+    EvenOddSortableKernel<ReportSpeciation, ReportDispersal>
+    for EvenOddSortKernel<ReportSpeciation, ReportDispersal>
 where
-    SortKernel<False, False>: SortableKernel<False, False>,
-    SortKernel<False, True>: SortableKernel<False, True>,
-    SortKernel<True, False>: SortableKernel<True, False>,
-    SortKernel<True, True>: SortableKernel<True, True>,
+    EvenOddSortKernel<False, False>: EvenOddSortableKernel<False, False>,
+    EvenOddSortKernel<False, True>: EvenOddSortableKernel<False, True>,
+    EvenOddSortKernel<True, False>: EvenOddSortableKernel<True, False>,
+    EvenOddSortKernel<True, True>: EvenOddSortableKernel<True, True>,
 {
     default fn get_ptx_str() -> &'static str {
         unsafe { unreachable_cuda_simulation_linking_reporter() }
     }
 
     default fn new_kernel(
-    ) -> CudaResult<TypedKernel<dyn SortableKernel<ReportSpeciation, ReportDispersal>>> {
+    ) -> CudaResult<TypedKernel<dyn EvenOddSortableKernel<ReportSpeciation, ReportDispersal>>> {
         unsafe { unreachable_cuda_simulation_linking_reporter() }
     }
 
-    default fn sort_events_step<'stream>(
+    default fn even_odd_sort_events_step<'stream>(
         &mut self,
         _stream: &'stream Stream,
         _event_buffer_reporter: &mut EventBuffer<ReportSpeciation, ReportDispersal>,
@@ -171,7 +177,7 @@ where
         unsafe { unreachable_cuda_simulation_linking_reporter() }
     }
 
-    default fn sort_events_step_async<'stream>(
+    default fn even_odd_sort_events_step_async<'stream>(
         &mut self,
         _stream: &'stream Stream,
         _event_buffer_reporter: HostAndDeviceMutRefAsync<
@@ -181,6 +187,135 @@ where
         >,
         _size: SafeDeviceCopyWrapper<usize>,
         _stride: SafeDeviceCopyWrapper<usize>,
+    ) -> CudaResult<()> {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+}
+
+#[allow(clippy::trait_duplication_in_bounds)]
+unsafe impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
+    BitonicGlobalSortSteppableKernel<ReportSpeciation, ReportDispersal>
+    for BitonicGlobalSortStepKernel<ReportSpeciation, ReportDispersal>
+where
+    BitonicGlobalSortStepKernel<False, False>: BitonicGlobalSortSteppableKernel<False, False>,
+    BitonicGlobalSortStepKernel<False, True>: BitonicGlobalSortSteppableKernel<False, True>,
+    BitonicGlobalSortStepKernel<True, False>: BitonicGlobalSortSteppableKernel<True, False>,
+    BitonicGlobalSortStepKernel<True, True>: BitonicGlobalSortSteppableKernel<True, True>,
+{
+    default fn get_ptx_str() -> &'static str {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+
+    default fn new_kernel() -> CudaResult<
+        TypedKernel<dyn BitonicGlobalSortSteppableKernel<ReportSpeciation, ReportDispersal>>,
+    > {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+
+    default fn bitonic_global_sort_events_step<'stream>(
+        &mut self,
+        _stream: &'stream Stream,
+        _event_buffer_reporter: &mut EventBuffer<ReportSpeciation, ReportDispersal>,
+        _size: usize,
+        _stride: usize,
+    ) -> CudaResult<()> {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+
+    default fn bitonic_global_sort_events_step_async<'stream>(
+        &mut self,
+        _stream: &'stream Stream,
+        _event_buffer_reporter: HostAndDeviceMutRefAsync<
+            DeviceAccessible<
+                <EventBuffer<ReportSpeciation, ReportDispersal> as RustToCuda>::CudaRepresentation,
+            >,
+        >,
+        _size: SafeDeviceCopyWrapper<usize>,
+        _stride: SafeDeviceCopyWrapper<usize>,
+    ) -> CudaResult<()> {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+}
+
+#[allow(clippy::trait_duplication_in_bounds)]
+unsafe impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
+    BitonicSharedSortSteppableKernel<ReportSpeciation, ReportDispersal>
+    for BitonicSharedSortStepKernel<ReportSpeciation, ReportDispersal>
+where
+    BitonicSharedSortStepKernel<False, False>: BitonicSharedSortSteppableKernel<False, False>,
+    BitonicSharedSortStepKernel<False, True>: BitonicSharedSortSteppableKernel<False, True>,
+    BitonicSharedSortStepKernel<True, False>: BitonicSharedSortSteppableKernel<True, False>,
+    BitonicSharedSortStepKernel<True, True>: BitonicSharedSortSteppableKernel<True, True>,
+{
+    default fn get_ptx_str() -> &'static str {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+
+    default fn new_kernel() -> CudaResult<
+        TypedKernel<dyn BitonicSharedSortSteppableKernel<ReportSpeciation, ReportDispersal>>,
+    > {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+
+    default fn bitonic_shared_sort_events_step<'stream>(
+        &mut self,
+        _stream: &'stream Stream,
+        _event_buffer_reporter: &mut EventBuffer<ReportSpeciation, ReportDispersal>,
+        _size: usize,
+    ) -> CudaResult<()> {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+
+    default fn bitonic_shared_sort_events_step_async<'stream>(
+        &mut self,
+        _stream: &'stream Stream,
+        _event_buffer_reporter: HostAndDeviceMutRefAsync<
+            DeviceAccessible<
+                <EventBuffer<ReportSpeciation, ReportDispersal> as RustToCuda>::CudaRepresentation,
+            >,
+        >,
+        _size: SafeDeviceCopyWrapper<usize>,
+    ) -> CudaResult<()> {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+}
+
+#[allow(clippy::trait_duplication_in_bounds)]
+unsafe impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
+    BitonicSharedSortPreparableKernel<ReportSpeciation, ReportDispersal>
+    for BitonicSharedSortPrepKernel<ReportSpeciation, ReportDispersal>
+where
+    BitonicSharedSortPrepKernel<False, False>: BitonicSharedSortPreparableKernel<False, False>,
+    BitonicSharedSortPrepKernel<False, True>: BitonicSharedSortPreparableKernel<False, True>,
+    BitonicSharedSortPrepKernel<True, False>: BitonicSharedSortPreparableKernel<True, False>,
+    BitonicSharedSortPrepKernel<True, True>: BitonicSharedSortPreparableKernel<True, True>,
+{
+    default fn get_ptx_str() -> &'static str {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+
+    default fn new_kernel() -> CudaResult<
+        TypedKernel<dyn BitonicSharedSortPreparableKernel<ReportSpeciation, ReportDispersal>>,
+    > {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+
+    default fn bitonic_shared_sort_events_prep<'stream>(
+        &mut self,
+        _stream: &'stream Stream,
+        _event_buffer_reporter: &mut EventBuffer<ReportSpeciation, ReportDispersal>,
+    ) -> CudaResult<()> {
+        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    }
+
+    default fn bitonic_shared_sort_events_prep_async<'stream>(
+        &mut self,
+        _stream: &'stream Stream,
+        _event_buffer_reporter: HostAndDeviceMutRefAsync<
+            DeviceAccessible<
+                <EventBuffer<ReportSpeciation, ReportDispersal> as RustToCuda>::CudaRepresentation,
+            >,
+        >,
     ) -> CudaResult<()> {
         unsafe { unreachable_cuda_simulation_linking_reporter() }
     }
