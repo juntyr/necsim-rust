@@ -1,3 +1,5 @@
+use core::ops::ControlFlow;
+
 use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::reporter::{
@@ -21,9 +23,11 @@ pub trait WaterLevelReporterProxy<'l, 'p, R: Reporter, P: LocalPartition<'p, R>>
         ReportProgress = False,
     >
 {
-    fn new(capacity: usize, local_partition: &'l mut P) -> Self;
+    fn new(capacity: usize, local_partition: &'l mut P, sort_batch_size: usize) -> Self;
 
     fn water_level(&self) -> NonNegativeF64;
+
+    fn partial_sort_step(&mut self) -> ControlFlow<()>;
 
     #[debug_requires(water_level >= self.water_level(), "advances the water level")]
     #[debug_ensures(self.water_level() == old(water_level))]

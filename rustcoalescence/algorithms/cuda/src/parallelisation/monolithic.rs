@@ -2,7 +2,7 @@ use std::{
     collections::VecDeque,
     convert::{TryFrom, TryInto},
     num::NonZeroU64,
-    sync::atomic::AtomicU64,
+    sync::atomic::AtomicU64, ops::ControlFlow,
 };
 
 use rust_cuda::{
@@ -122,7 +122,7 @@ pub fn simulate<
             <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
         >,
     ),
-    config: (GridSize, BlockSize, DedupCache, NonZeroU64, usize, SortMode),
+    config: (GridSize, BlockSize, DedupCache, NonZeroU64, usize, SortMode, usize),
     stream: &'stream Stream,
     lineages: LI,
     event_slice: EventSlice,
@@ -178,13 +178,13 @@ pub fn simulate<
 
     let event_slice = event_slice.capacity(slow_lineages.len());
 
+    let (grid_size, block_size, dedup_cache, step_slice, sort_block_size, sort_mode, sort_batch_size) = config;
+
     let mut proxy = <WaterLevelReporterStrategy as WaterLevelReporterConstructor<
         L::IsLive,
         P,
         L,
-    >>::WaterLevelReporter::new(event_slice.get(), local_partition);
-
-    let (grid_size, block_size, dedup_cache, step_slice, sort_block_size, sort_mode) = config;
+    >>::WaterLevelReporter::new(event_slice.get(), local_partition, sort_batch_size);
 
     #[allow(clippy::or_fun_call)]
     let intial_max_time = slow_lineages
@@ -235,6 +235,10 @@ pub fn simulate<
     let cpu_habitat = simulation.habitat().backup();
     let cpu_turnover_rate = simulation.turnover_rate().backup();
     let cpu_speciation_probability = simulation.speciation_probability().backup();
+
+    let kernel_event = rust_cuda::host::CudaDropWrapper::from(rust_cuda::rustacuda::event::Event::new(
+        rust_cuda::rustacuda::event::EventFlags::DISABLE_TIMING
+    )?);
 
     HostAndDeviceMutRef::with_new(&mut total_time_max, |total_time_max| -> Result<()> {
         HostAndDeviceMutRef::with_new(&mut total_steps_sum, |total_steps_sum| -> Result<()> {
@@ -463,6 +467,15 @@ pub fn simulate<
                         }
 
                         let event_buffer_host = event_buffer_cuda.move_to_host_async(stream)?;
+
+                        kernel_event.record(stream)?;
+
+                        while let rust_cuda::rustacuda::event::EventStatus::NotReady = kernel_event.query()? {
+                            if let ControlFlow::Break(()) = proxy.partial_sort_step() {
+                                kernel_event.synchronize()?;
+                                break;
+                            }
+                        }
 
                         min_spec_sample_buffer = min_spec_sample_buffer_host.sync_to_host()?;
                         next_event_time_buffer = next_event_time_buffer_host.sync_to_host()?;
