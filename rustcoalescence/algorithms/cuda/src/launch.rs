@@ -284,6 +284,7 @@ where
                 args.step_slice,
                 args.sort_block_size.get() as usize,
                 args.sort_mode,
+                args.sort_batch_size.get(),
             ),
             &stream,
             lineages,

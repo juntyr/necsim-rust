@@ -1,4 +1,4 @@
-use std::num::{NonZeroU32, NonZeroU64};
+use std::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
 
 use serde::{Deserialize, Serialize};
 use serde_state::DeserializeState;
@@ -70,6 +70,7 @@ pub struct CudaArguments {
     pub block_size: NonZeroU32,
     pub grid_size: NonZeroU32,
     pub sort_block_size: NonZeroU32,
+    pub sort_batch_size: NonZeroUsize,
     pub sort_mode: SortMode,
     pub step_slice: NonZeroU64,
     pub dedup_cache: DedupCache,
@@ -104,6 +105,7 @@ impl<'de> DeserializeState<'de, Partition> for CudaArguments {
             block_size: raw.block_size,
             grid_size: raw.grid_size,
             sort_block_size: raw.sort_block_size,
+            sort_batch_size: raw.sort_batch_size,
             sort_mode: raw.sort_mode,
             step_slice: raw.step_slice,
             dedup_cache: raw.dedup_cache,
@@ -122,6 +124,7 @@ pub struct CudaArgumentsRaw {
     pub block_size: NonZeroU32,
     pub grid_size: NonZeroU32,
     pub sort_block_size: NonZeroU32,
+    pub sort_batch_size: NonZeroUsize,
     pub sort_mode: SortMode,
     pub step_slice: NonZeroU64,
     pub dedup_cache: DedupCache,
@@ -138,6 +141,7 @@ impl Default for CudaArgumentsRaw {
             block_size: NonZeroU32::new(64_u32).unwrap(),
             grid_size: NonZeroU32::new(64_u32).unwrap(),
             sort_block_size: NonZeroU32::new(512_u32).unwrap(),
+            sort_batch_size: NonZeroUsize::new(100_000_usize).unwrap(),
             sort_mode: SortMode::None,
             step_slice: NonZeroU64::new(150_u64).unwrap(),
             dedup_cache: DedupCache::Relative(RelativeCapacity {

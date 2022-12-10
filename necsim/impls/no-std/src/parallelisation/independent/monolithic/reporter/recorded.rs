@@ -1,4 +1,4 @@
-use core::{fmt, marker::PhantomData};
+use core::{fmt, marker::PhantomData, ops::ControlFlow};
 use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::{impl_report, reporter::Reporter};
@@ -51,7 +51,7 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> Reporter
 impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> WaterLevelReporterProxy<'l, 'p, R, P>
     for RecordedWaterLevelReporterProxy<'l, 'p, R, P>
 {
-    fn new(_capacity: usize, local_partition: &'l mut P) -> Self {
+    fn new(_capacity: usize, local_partition: &'l mut P, _sort_batch_size: usize) -> Self {
         info!("Events will be reported using the recorded water-level algorithm ...");
 
         Self {
@@ -64,6 +64,10 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> WaterLevelReporterProxy<'l, 
 
     fn water_level(&self) -> NonNegativeF64 {
         self.water_level
+    }
+
+    fn partial_sort_step(&mut self) -> ControlFlow<()> {
+        ControlFlow::Break(())
     }
 
     fn advance_water_level(&mut self, water_level: NonNegativeF64) {

@@ -13,6 +13,8 @@
 #![feature(associated_type_bounds)]
 #![feature(const_float_bits_conv)]
 #![feature(core_intrinsics)]
+#![feature(ptr_sub_ptr)]
+#![feature(is_sorted)]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 

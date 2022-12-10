@@ -115,7 +115,7 @@ pub fn simulate<
         P::IsLive,
         R,
         P,
-    >>::WaterLevelReporter::new(event_slice.get(), local_partition);
+    >>::WaterLevelReporter::new(event_slice.get(), local_partition, 100_000); // TODO: configure here as well
     let mut min_spec_samples = dedup_cache.construct(slow_lineages.len());
 
     let mut total_steps = 0_u64;
