@@ -2,7 +2,8 @@ use std::{
     collections::VecDeque,
     convert::{TryFrom, TryInto},
     num::NonZeroU64,
-    sync::atomic::AtomicU64, ops::ControlFlow,
+    ops::ControlFlow,
+    sync::atomic::{AtomicU64, Ordering},
 };
 
 use rust_cuda::{
@@ -178,13 +179,23 @@ pub fn simulate<
 
     let event_slice = event_slice.capacity(slow_lineages.len());
 
-    let (grid_size, block_size, dedup_cache, step_slice, sort_block_size, sort_mode, sort_batch_size) = config;
+    let (
+        grid_size,
+        block_size,
+        dedup_cache,
+        step_slice,
+        sort_block_size,
+        sort_mode,
+        sort_batch_size,
+    ) = config;
 
     let mut proxy = <WaterLevelReporterStrategy as WaterLevelReporterConstructor<
         L::IsLive,
         P,
         L,
-    >>::WaterLevelReporter::new(event_slice.get(), local_partition, sort_batch_size);
+    >>::WaterLevelReporter::new(
+        event_slice.get(), local_partition, sort_batch_size
+    );
 
     #[allow(clippy::or_fun_call)]
     let intial_max_time = slow_lineages
@@ -236,9 +247,8 @@ pub fn simulate<
     let cpu_turnover_rate = simulation.turnover_rate().backup();
     let cpu_speciation_probability = simulation.speciation_probability().backup();
 
-    let kernel_event = rust_cuda::host::CudaDropWrapper::from(rust_cuda::rustacuda::event::Event::new(
-        rust_cuda::rustacuda::event::EventFlags::DISABLE_TIMING
-    )?);
+    let cuda_kernel_cycle = AtomicU64::new(0);
+    let mut host_kernel_cycle = 0_u64;
 
     HostAndDeviceMutRef::with_new(&mut total_time_max, |total_time_max| -> Result<()> {
         HostAndDeviceMutRef::with_new(&mut total_steps_sum, |total_steps_sum| -> Result<()> {
@@ -295,7 +305,7 @@ pub fn simulate<
                     proxy.advance_water_level(level_time);
 
                     // Simulate all slow lineages until they have finished or exceeded the
-                    // new water  level
+                    //  new water level
                     while !slow_lineages.is_empty() {
                         let mut num_tasks = 0_usize;
 
@@ -318,7 +328,7 @@ pub fn simulate<
                         }
 
                         // Move the task list, event buffer and min speciation sample buffer
-                        // to CUDA
+                        //  to CUDA
                         let mut task_list_cuda = task_list.move_to_device_async(stream)?;
 
                         // TODO: Investigate distributing over several streams
@@ -468,11 +478,18 @@ pub fn simulate<
 
                         let event_buffer_host = event_buffer_cuda.move_to_host_async(stream)?;
 
-                        kernel_event.record(stream)?;
+                        host_kernel_cycle = host_kernel_cycle.wrapping_add(1);
 
-                        while let rust_cuda::rustacuda::event::EventStatus::NotReady = kernel_event.query()? {
-                            if let ControlFlow::Break(()) = proxy.partial_sort_step() {
-                                kernel_event.synchronize()?;
+                        // Note: The stream ensures that the stores from subsequent
+                        //       cycles are ordered, so no compare_exchange is needed.
+                        stream.add_callback(Box::new(|_| {
+                            cuda_kernel_cycle.store(host_kernel_cycle, Ordering::SeqCst);
+                        }))?;
+
+                        // While CUDA runs the simulation kernel, do some incremental
+                        //  sorting of the events that have already been produced
+                        while let ControlFlow::Continue(()) = proxy.partial_sort_step() {
+                            if cuda_kernel_cycle.load(Ordering::SeqCst) == host_kernel_cycle {
                                 break;
                             }
                         }
@@ -496,9 +513,8 @@ pub fn simulate<
                                 (task.take(), next_event_time.take())
                             {
                                 if !duplicate_individual {
-                                    // Reclassify lineages as either slow (still below
-                                    // water) or
-                                    // fast
+                                    // Reclassify lineages as either slow
+                                    // (still below water) or fast
                                     if next_event_time < level_time {
                                         slow_lineages.push_back((task, next_event_time.into()));
                                     } else {
