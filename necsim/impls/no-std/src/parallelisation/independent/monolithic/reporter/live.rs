@@ -1,4 +1,4 @@
-use alloc::{vec::Vec, collections::VecDeque};
+use alloc::{collections::VecDeque, vec::Vec};
 use core::{fmt, marker::PhantomData, ops::ControlFlow};
 use necsim_core_bond::NonNegativeF64;
 
@@ -115,7 +115,11 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> LiveWaterLevelReporterProxy<
                 || (n >= 3 && self.runs[n - 3].len <= self.runs[n - 2].len + self.runs[n - 1].len)
                 || (n >= 4 && self.runs[n - 4].len <= self.runs[n - 3].len + self.runs[n - 2].len))
         {
-            if n >= 3 && self.runs[n - 3].len < self.runs[n - 1].len { Some(n - 3) } else { Some(n - 2) }
+            if n >= 3 && self.runs[n - 3].len < self.runs[n - 1].len {
+                Some(n - 3)
+            } else {
+                Some(n - 2)
+            }
         } else {
             None
         }
@@ -157,30 +161,36 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> LiveWaterLevelReporterProxy<
         let v = v.as_mut_ptr();
         let (v_mid, v_end) = unsafe { (v.add(mid), v.add(len)) };
 
-        // The merge process first copies the shorter run into `buf`. Then it traces the newly copied
-        // run and the longer run forwards (or backwards), comparing their next unconsumed elements and
-        // copying the lesser (or greater) one into `v`.
+        // The merge process first copies the shorter run into `buf`. Then it traces the
+        // newly copied run and the longer run forwards (or backwards),
+        // comparing their next unconsumed elements and copying the lesser (or
+        // greater) one into `v`.
         //
-        // As soon as the shorter run is fully consumed, the process is done. If the longer run gets
-        // consumed first, then we must copy whatever is left of the shorter run into the remaining
-        // hole in `v`.
+        // As soon as the shorter run is fully consumed, the process is done. If the
+        // longer run gets consumed first, then we must copy whatever is left of
+        // the shorter run into the remaining hole in `v`.
         //
-        // Intermediate state of the process is always tracked by `hole`, which serves two purposes:
-        // 1. Protects integrity of `v` from panics in `is_less`.
+        // Intermediate state of the process is always tracked by `hole`, which serves
+        // two purposes: 1. Protects integrity of `v` from panics in `is_less`.
         // 2. Fills the remaining hole in `v` if the longer run gets consumed first.
         //
         // Panic safety:
         //
-        // If `is_less` panics at any point during the process, `hole` will get dropped and fill the
-        // hole in `v` with the unconsumed range in `buf`, thus ensuring that `v` still holds every
-        // object it initially held exactly once.
+        // If `is_less` panics at any point during the process, `hole` will get dropped
+        // and fill the hole in `v` with the unconsumed range in `buf`, thus
+        // ensuring that `v` still holds every object it initially held exactly
+        // once.
         let mut hole;
 
         if mid <= len - mid {
             // The left run is shorter.
             unsafe {
                 core::ptr::copy_nonoverlapping(v, buf, mid);
-                hole = MergeHole { start: buf, end: buf.add(mid), dest: v };
+                hole = MergeHole {
+                    start: buf,
+                    end: buf.add(mid),
+                    dest: v,
+                };
             }
 
             // Initially, these pointers point to the beginnings of their arrays.
@@ -204,7 +214,11 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> LiveWaterLevelReporterProxy<
             // The right run is shorter.
             unsafe {
                 core::ptr::copy_nonoverlapping(v_mid, buf, len - mid);
-                hole = MergeHole { start: buf, end: buf.add(len - mid), dest: v_mid };
+                hole = MergeHole {
+                    start: buf,
+                    end: buf.add(len - mid),
+                    dest: v_mid,
+                };
             }
 
             // Initially, these pointers point past the ends of their arrays.
@@ -225,39 +239,24 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> LiveWaterLevelReporterProxy<
                 }
             }
         }
-        // Finally, `hole` gets dropped. If the shorter run was not fully consumed, whatever remains of
-        // it will now be copied into the hole in `v`.
+        // Finally, `hole` gets dropped. If the shorter run was not fully
+        // consumed, whatever remains of it will now be copied into the
+        // hole in `v`.
     }
 
     fn sort_slow_events_step(&mut self, force_merge: bool) -> ControlFlow<()> {
-        let r = loop {
-            if let Some(r) = self.collapse(force_merge && self.overflow.is_empty()) {
-                break r;
-            }
-
+        let Some(r) = self.collapse(force_merge && self.overflow.is_empty() && self.run.len == 0) else {
             let next_run = match self.overflow.pop_front() {
                 Some(next_run) => next_run,
                 None if self.run.len > 0 => core::mem::replace(&mut self.run, Run { start: self.slow_events.len(), len: 0 }),
                 None => return ControlFlow::Break(()),
             };
 
-            // let Some(mut next_run) = self.overflow.pop_front() else {
-            //     return ControlFlow::Break(());
-            // };
-
-            // if next_run.len < self.sort_batch_size {
-            //     while next_run.len < self.sort_batch_size {
-            //         let Some(extra_run) = self.overflow.pop_front() else {
-            //             break;
-            //         };
-            //         next_run.len += extra_run.len;
-            //     }
-            //     self.slow_events[next_run.start..next_run.start+next_run.len].sort_unstable();
-            // }
-
             self.slow_events[next_run.start..next_run.start+next_run.len].sort_unstable();
 
             self.runs.push(next_run);
+
+            return ControlFlow::Continue(());
         };
 
         let left = self.runs[r];
@@ -266,7 +265,8 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> LiveWaterLevelReporterProxy<
         let min_len = left.len.min(right.len);
 
         if min_len > self.tmp_events.capacity() {
-            self.tmp_events.reserve(min_len - self.tmp_events.capacity());
+            self.tmp_events
+                .reserve(min_len - self.tmp_events.capacity());
         }
 
         unsafe {
@@ -278,7 +278,10 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> LiveWaterLevelReporterProxy<
             );
         }
 
-        self.runs[r] = Run { start: left.start, len: left.len + right.len };
+        self.runs[r] = Run {
+            start: left.start,
+            len: left.len + right.len,
+        };
         self.runs.remove(r + 1);
 
         ControlFlow::Continue(())
@@ -319,6 +322,8 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> WaterLevelReporterProxy<'l, 
         let mut i = 0;
 
         // Report all events below the water level in sorted order
+        // TODO: Should we detect if no partial sort steps were taken
+        //       and revert to a full unstable sort in that case?
         while let ControlFlow::Continue(()) = self.sort_slow_events_step(true) {
             if (i % 100) == 0 {
                 info!("{:?}", self);
@@ -350,14 +355,20 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> WaterLevelReporterProxy<'l, 
         self.water_level = water_level;
 
         // Move fast events below the new water level into slow events
-        for event in self.fast_events.drain_filter(|event| event.event_time() < water_level) {
+        for event in self
+            .fast_events
+            .drain_filter(|event| event.event_time() < water_level)
+        {
             let new_run = self.run.len > self.sort_batch_size; // self.slow_events.last().map_or(true, |prev| prev > &event);
 
             if new_run {
-                let old_run = core::mem::replace(&mut self.run, Run {
-                    start: self.slow_events.len(),
-                    len: 1,
-                });
+                let old_run = core::mem::replace(
+                    &mut self.run,
+                    Run {
+                        start: self.slow_events.len(),
+                        len: 1,
+                    },
+                );
                 self.overflow.push_back(old_run);
             } else {
                 self.run.len += 1;
