@@ -1,19 +1,19 @@
 (
-    speciation: 0.1,
+    speciation: 0.0001,
     sample: Sample(percentage: 1.0),
-    rng: Entropy,
+    rng: Seed(42),
     
-    algorithm: EventSkipping(),
+    algorithm: CUDA(step_slice: 150, block_size: 64, grid_size: 128, sort_block_size: 512, sort_mode: None, sort_batch_size: 3500),
 
     scenario: NonSpatial(
         area: (100, 100),
-        deme: 100,
+        deme: 1000,
     ),
     
     reporters: [
         Plugin(
             library: "target/release/deps/libnecsim_plugins_common.so",
-            reporters: [Biodiversity(), Execution(), Progress()],
+            reporters: [Biodiversity(), Execution(), Progress(), Counter()],
         ),
     ],
 )

@@ -12,7 +12,7 @@ use necsim_partitioning_core::LocalPartition;
 
 use super::WaterLevelReporterProxy;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct Run {
     start: usize,
     len: usize,
@@ -49,6 +49,7 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> fmt::Debug
             .field("water_level", &self.water_level)
             .field("runs", &self.runs.len())
             .field("overflow", &self.overflow.len())
+            .field("run", &self.run)
             .field("slow_events", &EventBufferLen(self.slow_events.len()))
             .field("fast_events", &EventBufferLen(self.fast_events.len()))
             .finish()
@@ -319,17 +320,35 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> WaterLevelReporterProxy<'l, 
     }
 
     fn advance_water_level(&mut self, water_level: NonNegativeF64) {
-        let mut i = 0;
+        info!("{:?}", self);
+
+        if self.run.len > 0 {
+            let last_run = core::mem::replace(
+                &mut self.run,
+                Run {
+                    start: self.slow_events.len(),
+                    len: 0,
+                },
+            );
+            self.overflow.push_back(last_run);
+        }
+
+        if let (Some(Run { start, .. }), Some(Run { start: middle, len })) = (
+            self.overflow.front().copied(),
+            self.overflow.back().copied(),
+        ) {
+            self.slow_events[start..middle + len].sort_unstable();
+            self.overflow.clear();
+            self.runs.push(Run {
+                start,
+                len: middle + len - start,
+            });
+        }
 
         // Report all events below the water level in sorted order
         // TODO: Should we detect if no partial sort steps were taken
         //       and revert to a full unstable sort in that case?
-        while let ControlFlow::Continue(()) = self.sort_slow_events_step(true) {
-            if (i % 100) == 0 {
-                info!("{:?}", self);
-            }
-            i += 1;
-        }
+        while let ControlFlow::Continue(()) = self.sort_slow_events_step(true) {}
 
         debug_assert!(self.slow_events.is_sorted());
 
@@ -387,6 +406,31 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> Drop
     for LiveWaterLevelReporterProxy<'l, 'p, R, P>
 {
     fn drop(&mut self) {
+        info!("{:?}", self);
+
+        if self.run.len > 0 {
+            let last_run = core::mem::replace(
+                &mut self.run,
+                Run {
+                    start: self.slow_events.len(),
+                    len: 0,
+                },
+            );
+            self.overflow.push_back(last_run);
+        }
+
+        if let (Some(Run { start, .. }), Some(Run { start: middle, len })) = (
+            self.overflow.front().copied(),
+            self.overflow.back().copied(),
+        ) {
+            self.slow_events[start..middle + len].sort_unstable();
+            self.overflow.clear();
+            self.runs.push(Run {
+                start,
+                len: middle + len - start,
+            });
+        }
+
         // Report all events below the water level in sorted order
         while let ControlFlow::Continue(()) = self.sort_slow_events_step(true) {}
 
@@ -411,7 +455,7 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> Drop
         self.run = Run { start: 0, len: 0 };
 
         // Report all events above the water level in sorted order
-        self.fast_events.sort();
+        self.fast_events.sort_unstable();
 
         for event in self.fast_events.drain(..) {
             match event.into() {
@@ -427,5 +471,7 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> Drop
                 },
             }
         }
+
+        info!("{:?}", self);
     }
 }

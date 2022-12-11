@@ -135,7 +135,7 @@ pub fn simulate<
                 ));
             }
 
-            immigrants.sort();
+            immigrants.sort_unstable();
 
             // A global rollback is required if at least one partition received unexpected
             // immigration
