@@ -42,6 +42,11 @@ impl<M: MathsCore> Habitat<M> for InMemoryHabitat<M> {
     type LocationIterator<'a> = impl Iterator<Item = Location> + 'a;
 
     #[must_use]
+    fn is_finite(&self) -> bool {
+        true
+    }
+
+    #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
         &self.extent
     }

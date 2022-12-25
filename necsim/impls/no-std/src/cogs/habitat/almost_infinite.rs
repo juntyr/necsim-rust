@@ -41,6 +41,11 @@ impl<M: MathsCore> Habitat<M> for AlmostInfiniteHabitat<M> {
     type LocationIterator<'a> = impl Iterator<Item = Location>;
 
     #[must_use]
+    fn is_finite(&self) -> bool {
+        false
+    }
+
+    #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
         &self.extent
     }

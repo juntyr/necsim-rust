@@ -7,6 +7,7 @@ use rustcoalescence_scenarios::{
         SpatiallyExplicitTurnoverMapArguments, SpatiallyExplicitUniformTurnoverArguments,
     },
     spatially_implicit::SpatiallyImplicitArguments,
+    wrapping_noise::WrappingNoiseArguments,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -17,4 +18,5 @@ pub enum Scenario {
     NonSpatial(NonSpatialArguments),
     SpatiallyImplicit(SpatiallyImplicitArguments),
     AlmostInfinite(AlmostInfiniteArguments),
+    WrappingNoise(WrappingNoiseArguments),
 }

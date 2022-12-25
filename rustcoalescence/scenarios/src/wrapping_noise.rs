@@ -1,15 +1,17 @@
-use serde::Deserialize;
+use std::num::NonZeroUsize;
+
+use serde::{Deserialize, Serialize};
 
 use necsim_core::{
     cogs::{DispersalSampler, LineageStore, MathsCore, RngCore},
     landscape::LandscapeExtent,
 };
-use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::partition::Partition;
 
 use necsim_impls_no_std::{
     cogs::{
-        dispersal_sampler::wrapping_noise::WrappingNoiseNormalDispersalSampler,
+        dispersal_sampler::wrapping_noise::WrappingNoiseApproximateNormalDispersalSampler,
         habitat::wrapping_noise::WrappingNoiseHabitat,
         lineage_store::coherent::globally::singleton_demes::SingletonDemesLineageStore,
         origin_sampler::{
@@ -28,17 +30,20 @@ pub struct WrappingNoiseScenario<M: MathsCore, G: RngCore<M>> {
     sample: LandscapeExtent,
 
     habitat: WrappingNoiseHabitat<M>,
-    dispersal_sampler: WrappingNoiseNormalDispersalSampler<M, G>,
+    dispersal_sampler: WrappingNoiseApproximateNormalDispersalSampler<M, G>,
     turnover_rate: UniformTurnoverRate,
     speciation_probability: UniformSpeciationProbability,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
-#[serde(rename = "AlmostInfinite")]
+#[serde(rename = "WrappingNoise")]
 pub struct WrappingNoiseArguments {
     pub seed: i64,
-    pub threshold: f64,
+    pub coverage: ClosedUnitF64,
+    pub scale: PositiveUnitF64,
+    pub persistence: PositiveUnitF64,
+    pub octaves: NonZeroUsize,
     pub sample: LandscapeExtent,
     pub sigma: NonNegativeF64,
 }
@@ -52,7 +57,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for WrappingNoiseScenario<M, G>
     type Decomposition = RadialDecomposition;
     type DecompositionAuxiliary = ();
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
-        WrappingNoiseNormalDispersalSampler<M, G>;
+        WrappingNoiseApproximateNormalDispersalSampler<M, G>;
     type Habitat = WrappingNoiseHabitat<M>;
     type LineageStore<L: LineageStore<M, Self::Habitat>> =
         SingletonDemesLineageStore<M, Self::Habitat>;
@@ -65,8 +70,14 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for WrappingNoiseScenario<M, G>
         args: Self::Arguments,
         speciation_probability_per_generation: PositiveUnitF64,
     ) -> Result<Self, Self::Error> {
-        let habitat = WrappingNoiseHabitat::new(args.seed, args.threshold);
-        let dispersal_sampler = WrappingNoiseNormalDispersalSampler::new(args.sigma);
+        let habitat = WrappingNoiseHabitat::new(
+            args.seed,
+            args.coverage,
+            args.scale,
+            args.persistence,
+            args.octaves,
+        );
+        let dispersal_sampler = WrappingNoiseApproximateNormalDispersalSampler::new(args.sigma);
         let turnover_rate = UniformTurnoverRate::default();
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation.into());

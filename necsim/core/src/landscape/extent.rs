@@ -3,7 +3,7 @@ use necsim_core_bond::OffByOneU32;
 use super::Location;
 
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
-#[derive(PartialEq, Eq, Clone, Debug, serde::Deserialize, TypeLayout)]
+#[derive(PartialEq, Eq, Clone, Debug, serde::Deserialize, serde::Serialize, TypeLayout)]
 #[serde(rename = "Extent")]
 #[serde(deny_unknown_fields)]
 #[repr(C)]

@@ -32,6 +32,7 @@ pub struct AlmostInfiniteScenario<M: MathsCore, G: RngCore<M>> {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
+#[serde(rename = "AlmostInfinite")]
 pub struct AlmostInfiniteArguments {
     pub radius: u16,
     pub sigma: NonNegativeF64,

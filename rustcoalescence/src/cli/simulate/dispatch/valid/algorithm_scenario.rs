@@ -20,6 +20,7 @@ use rustcoalescence_scenarios::{
         SpatiallyExplicitTurnoverMapScenario, SpatiallyExplicitUniformTurnoverScenario,
     },
     spatially_implicit::SpatiallyImplicitScenario,
+    wrapping_noise::WrappingNoiseScenario,
     Scenario,
 };
 
@@ -186,6 +187,13 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
         },
         ScenarioArgs::SpatiallyImplicit(scenario_args) => {
             SpatiallyImplicitScenario::initialise(
+                scenario_args,
+                speciation_probability_per_generation,
+            )
+            .into_ok()
+        },
+        ScenarioArgs::WrappingNoise(scenario_args) => {
+            WrappingNoiseScenario::initialise(
                 scenario_args,
                 speciation_probability_per_generation,
             )

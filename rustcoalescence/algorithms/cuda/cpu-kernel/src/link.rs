@@ -291,3 +291,20 @@ link_kernel!(
     necsim_impls_no_std::cogs::turnover_rate::in_memory::InMemoryTurnoverRate,
     necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
 );
+
+link_kernel!(
+    necsim_impls_no_std::cogs::habitat::wrapping_noise::WrappingNoiseHabitat<
+        necsim_impls_cuda::cogs::maths::NvptxMathsCore
+    >,
+    necsim_impls_no_std::cogs::dispersal_sampler::wrapping_noise::WrappingNoiseApproximateNormalDispersalSampler<
+        necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+        necsim_impls_cuda::cogs::rng::CudaRng<
+            necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+            necsim_impls_no_std::cogs::rng::wyhash::WyHash<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore
+            >,
+        >,
+    >,
+    necsim_impls_no_std::cogs::turnover_rate::uniform::UniformTurnoverRate,
+    necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
+);

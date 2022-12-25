@@ -7,7 +7,7 @@ use core::{
 
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::OffByOneU32;
+use crate::{ClosedUnitF64, OffByOneU32};
 
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
@@ -148,5 +148,16 @@ impl Mul for OffByOneU64 {
 
     fn mul(self, other: Self) -> Self {
         Self((self.0 + 1) * (other.0 + 1) - 1)
+    }
+}
+
+impl Mul<ClosedUnitF64> for OffByOneU64 {
+    type Output = Self;
+
+    fn mul(self, other: ClosedUnitF64) -> Self::Output {
+        #[allow(clippy::cast_possible_truncation)]
+        #[allow(clippy::cast_sign_loss)]
+        #[allow(clippy::cast_precision_loss)]
+        Self(((((self.get() as f64) * other.get()) as u128) - 1) as u64)
     }
 }
