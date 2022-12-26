@@ -3,7 +3,9 @@ use core::{f64::consts::PI, fmt, num::NonZeroUsize};
 use necsim_core_bond::{ClosedUnitF64, OffByOneU64, OpenClosedUnitF64 as PositiveUnitF64};
 use r#final::Final;
 
-use opensimplex_noise_rs::{OpenSimplexNoise, PermTable as OpenSimplexTable};
+mod opensimplex_noise;
+
+use opensimplex_noise::OpenSimplexNoise;
 
 use necsim_core::{
     cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
@@ -27,7 +29,7 @@ pub struct WrappingNoiseHabitat<M: MathsCore> {
     persistence: PositiveUnitF64,
     octaves: NonZeroUsize,
     #[cfg_attr(feature = "cuda", cuda(embed))]
-    noise: Final<Box<OpenSimplexTable>>,
+    noise: Final<Box<OpenSimplexNoise>>,
 }
 
 impl<M: MathsCore> fmt::Debug for WrappingNoiseHabitat<M> {
@@ -89,7 +91,7 @@ impl<M: MathsCore> WrappingNoiseHabitat<M> {
             scale,
             persistence,
             octaves,
-            noise: Final::new(unsafe { core::mem::transmute(noise) }),
+            noise: Final::new(noise),
         }
     }
 
@@ -160,11 +162,13 @@ impl<M: MathsCore> Habitat<M> for WrappingNoiseHabitat<M> {
             return 1;
         }
 
-        let noise: &OpenSimplexTable = &self.noise;
-        let noise: &OpenSimplexNoise = unsafe { &*(noise as *const OpenSimplexTable).cast() };
-
-        let noise =
-            sum_noise_octaves::<M>(noise, location, self.persistence, self.scale, self.octaves);
+        let noise = sum_noise_octaves::<M>(
+            &self.noise,
+            location,
+            self.persistence,
+            self.scale,
+            self.octaves,
+        );
 
         u32::from(noise <= self.threshold)
     }
@@ -227,7 +231,7 @@ fn sum_noise_octaves<M: MathsCore>(
 
     for _ in 0..octaves.get() {
         let (x, y, z, w) = location_to_wrapping_4d::<M>(location, frequency);
-        result += noise.eval_4d(x, y, z, w) * amplitude;
+        result += noise.eval_4d::<M>(x, y, z, w) * amplitude;
         max_amplitude += amplitude;
         amplitude *= persistence.get();
         frequency *= 2.0_f64;
