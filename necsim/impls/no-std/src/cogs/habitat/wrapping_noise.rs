@@ -106,7 +106,7 @@ impl<M: MathsCore> WrappingNoiseHabitat<M> {
 impl<M: MathsCore> Default for WrappingNoiseHabitat<M> {
     fn default() -> Self {
         Self::new(
-            0,
+            0_i64,
             ClosedUnitF64::half(),
             unsafe { PositiveUnitF64::new_unchecked(0.07_f64) },
             unsafe { PositiveUnitF64::new_unchecked(0.5_f64) },
@@ -183,6 +183,32 @@ impl<M: MathsCore> Habitat<M> for WrappingNoiseHabitat<M> {
     }
 }
 
+#[contract_trait]
+impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for WrappingNoiseHabitat<M> {
+    #[must_use]
+    fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
+        // Rejection sample until a habitable location is found
+        let location = loop {
+            let index = rng.sample_u64();
+
+            let location = Location::new(
+                (index & 0xFFFF_FFFF) as u32,
+                ((index >> 32) & 0xFFFF_FFFF) as u32,
+            );
+
+            if self.get_habitat_at_location(&location) > 0 {
+                break location;
+            }
+        };
+
+        IndexedLocation::new(location, 0)
+    }
+}
+
+impl<M: MathsCore> SingletonDemesHabitat<M> for WrappingNoiseHabitat<M> {}
+
+const U32_MAX_AS_F64: f64 = (u32::MAX as f64) + 1.0_f64;
+
 // Adapted from Christian Maher's article "Working with Simplex Noise"
 // Licensed under CC BY 3.0
 // Published at https://cmaher.github.io/posts/working-with-simplex-noise/
@@ -209,32 +235,6 @@ fn sum_noise_octaves<M: MathsCore>(
 
     result / max_amplitude
 }
-
-#[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for WrappingNoiseHabitat<M> {
-    #[must_use]
-    fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
-        // Rejection sample until a habitable location is found
-        let location = loop {
-            let index = rng.sample_u64();
-
-            let location = Location::new(
-                (index & 0xFFFF_FFFF) as u32,
-                ((index >> 32) & 0xFFFF_FFFF) as u32,
-            );
-
-            if self.get_habitat_at_location(&location) > 0 {
-                break location;
-            }
-        };
-
-        IndexedLocation::new(location, 0)
-    }
-}
-
-impl<M: MathsCore> SingletonDemesHabitat<M> for WrappingNoiseHabitat<M> {}
-
-const U32_MAX_AS_F64: f64 = (u32::MAX as f64) + 1.0_f64;
 
 // Adapted from JTippetts' Seamless Noise article on gamedev.net:
 //  https://www.gamedev.net/blog/33/entry-2138456-seamless-noise/
