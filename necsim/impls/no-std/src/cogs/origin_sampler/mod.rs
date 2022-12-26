@@ -10,6 +10,7 @@ pub mod non_spatial;
 pub mod pre_sampler;
 pub mod resuming;
 pub mod spatially_implicit;
+pub mod wrapping_noise;
 
 use pre_sampler::OriginPreSampler;
 

@@ -241,10 +241,46 @@
             migration: (0.0 < f64 <= 1.0),
         )
         /* (almost) infinite spatially-explicit scenario with Gaussian distributed dispersal
-         *  the entire infinite landscape is habitat but, without loss of generality, has deme 1 */
+         * the entire infinite landscape is habitat but, without loss of generality, has deme 1
+         * the landscape is on a (wrapping) torus with 0 <= x < 2^32 and 0 <= y < 2^32 */
       | AlmostInfinite(
             /* radius of a circle from which individuals are sampled */
             radius: (u16),
+            /* sigma for the Gaussian dispersal kernel N(0, sigma^2) */
+            sigma: (0.0 <= f64),
+        )
+        /* (almost) infinite spatially-explicit scenario with (approximate) Gaussian distributed dispersal
+           each location (x, y) in the landscape has either habitat for exactly one individual,
+            or is inhabitable, depending on a sample from an OpenSimplexNoise
+           the landscape is on a (wrapping) torus with 0 <= x < 2^32 and 0 <= y < 2^32 */
+      | WrappingNoise(
+            /* random seed for the noise */
+            seed: (i64),
+            /* percentage of the habitat that will be habitable */
+            coverage: (0.0 <= f64 <= 1.0),
+            /* scale of the noise, is doubled on each octave
+             * choose 0.025 for a reasonable default */
+            scale: (0.0 < f64 <= 1.0),
+            /* geometric persistence factor for noise amplitude across octaves
+             * choose 0.5 for a reasonable default */
+            persistence: (0.0 < f64 <= 1.0),
+            /* number of noise octaves that are accumulated for each sample
+             * a larger number of octaves provides finer-grained habitat boundaries
+                but is less efficient to simulate
+             * choose 1 for only one noise sample per location and maximum efficiency */
+            octaves: (0 < usize),
+            /* rectangular sample area, individuals living in here are simulated
+             * the sample area can wrap around the torus */
+            sample: Extent(
+                /* lower-left origin x of the sample area */
+                x: (u32),
+                /* lower-left origin y of the sample area */
+                y: (u32),
+                /* width of the sample area */
+                width: (1 <= u64 <= 2^32),
+                /* height of the sample area */
+                height: (1 <= u64 <= 2^32),
+            ),
             /* sigma for the Gaussian dispersal kernel N(0, sigma^2) */
             sigma: (0.0 <= f64),
         )

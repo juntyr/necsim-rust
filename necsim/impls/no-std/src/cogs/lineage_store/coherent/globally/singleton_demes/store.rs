@@ -12,25 +12,24 @@ use necsim_core::{
     lineage::{GlobalLineageReference, Lineage},
 };
 
-use crate::cogs::{
-    habitat::almost_infinite::AlmostInfiniteHabitat,
-    lineage_reference::in_memory::InMemoryLineageReference,
-};
+use crate::cogs::lineage_reference::in_memory::InMemoryLineageReference;
 
-use super::AlmostInfiniteLineageStore;
+use super::{SingletonDemesHabitat, SingletonDemesLineageStore};
 
 #[contract_trait]
-impl<M: MathsCore> LineageStore<M, AlmostInfiniteHabitat<M>> for AlmostInfiniteLineageStore<M> {
+impl<M: MathsCore, H: SingletonDemesHabitat<M>> LineageStore<M, H>
+    for SingletonDemesLineageStore<M, H>
+{
     type LocalLineageReference = InMemoryLineageReference;
 
-    fn with_capacity(_habitat: &AlmostInfiniteHabitat<M>, capacity: usize) -> Self {
+    fn with_capacity(_habitat: &H, capacity: usize) -> Self {
         Self {
             lineages_store: Slab::with_capacity(capacity),
             location_to_lineage_reference: HashMap::with_capacity_and_hasher(
                 capacity,
                 FnvBuildHasher::default(),
             ),
-            _marker: PhantomData::<M>,
+            _marker: PhantomData::<(M, H)>,
         }
     }
 
@@ -44,15 +43,15 @@ impl<M: MathsCore> LineageStore<M, AlmostInfiniteHabitat<M>> for AlmostInfiniteL
 }
 
 #[contract_trait]
-impl<M: MathsCore> LocallyCoherentLineageStore<M, AlmostInfiniteHabitat<M>>
-    for AlmostInfiniteLineageStore<M>
+impl<M: MathsCore, H: SingletonDemesHabitat<M>> LocallyCoherentLineageStore<M, H>
+    for SingletonDemesLineageStore<M, H>
 {
     #[must_use]
     #[debug_requires(indexed_location.index() == 0, "only one lineage per location")]
     fn get_global_lineage_reference_at_indexed_location(
         &self,
         indexed_location: &IndexedLocation,
-        _habitat: &AlmostInfiniteHabitat<M>,
+        _habitat: &H,
     ) -> Option<&GlobalLineageReference> {
         self.location_to_lineage_reference
             .get(indexed_location.location())
@@ -63,7 +62,7 @@ impl<M: MathsCore> LocallyCoherentLineageStore<M, AlmostInfiniteHabitat<M>>
     fn insert_lineage_locally_coherent(
         &mut self,
         lineage: Lineage,
-        _habitat: &AlmostInfiniteHabitat<M>,
+        _habitat: &H,
     ) -> InMemoryLineageReference {
         let location = lineage.indexed_location.location().clone();
 
@@ -87,7 +86,7 @@ impl<M: MathsCore> LocallyCoherentLineageStore<M, AlmostInfiniteHabitat<M>>
     fn extract_lineage_locally_coherent(
         &mut self,
         reference: InMemoryLineageReference,
-        _habitat: &AlmostInfiniteHabitat<M>,
+        _habitat: &H,
     ) -> Lineage {
         // We know from the trait preconditions that the lineage exists
         let lineage = self.lineages_store.remove(usize::from(reference));
@@ -100,16 +99,13 @@ impl<M: MathsCore> LocallyCoherentLineageStore<M, AlmostInfiniteHabitat<M>>
 }
 
 #[contract_trait]
-impl<M: MathsCore> GloballyCoherentLineageStore<M, AlmostInfiniteHabitat<M>>
-    for AlmostInfiniteLineageStore<M>
+impl<M: MathsCore, H: SingletonDemesHabitat<M>> GloballyCoherentLineageStore<M, H>
+    for SingletonDemesLineageStore<M, H>
 {
-    type LocationIterator<'a> = impl Iterator<Item = Location> + 'a;
+    type LocationIterator<'a> = impl Iterator<Item = Location> + 'a where H: 'a;
 
     #[must_use]
-    fn iter_active_locations(
-        &self,
-        _habitat: &AlmostInfiniteHabitat<M>,
-    ) -> Self::LocationIterator<'_> {
+    fn iter_active_locations(&self, _habitat: &H) -> Self::LocationIterator<'_> {
         self.lineages_store
             .iter()
             .map(|(_, lineage)| lineage.indexed_location.location())
@@ -120,7 +116,7 @@ impl<M: MathsCore> GloballyCoherentLineageStore<M, AlmostInfiniteHabitat<M>>
     fn get_local_lineage_references_at_location_unordered(
         &self,
         location: &Location,
-        _habitat: &AlmostInfiniteHabitat<M>,
+        _habitat: &H,
     ) -> &[InMemoryLineageReference] {
         match self.location_to_lineage_reference.get(location) {
             Some(local_reference) => core::slice::from_ref(local_reference),

@@ -89,6 +89,11 @@ impl ClosedUnitF64 {
     }
 
     #[must_use]
+    pub const fn half() -> Self {
+        Self(0.5_f64)
+    }
+
+    #[must_use]
     pub const fn one() -> Self {
         Self(1.0_f64)
     }

@@ -16,6 +16,9 @@ pub trait Habitat<M: MathsCore>: crate::cogs::Backup + core::fmt::Debug + Sized 
         Self: 'a;
 
     #[must_use]
+    fn is_finite(&self) -> bool;
+
+    #[must_use]
     fn get_extent(&self) -> &LandscapeExtent;
 
     #[must_use]
@@ -24,7 +27,7 @@ pub trait Habitat<M: MathsCore>: crate::cogs::Backup + core::fmt::Debug + Sized 
     }
 
     #[must_use]
-    #[debug_ensures(ret.get() == {
+    #[debug_ensures(!self.is_finite() || ret.get() == {
         self.iter_habitable_locations()
             .map(|location| u128::from(self.get_habitat_at_location(&location)))
             .sum()

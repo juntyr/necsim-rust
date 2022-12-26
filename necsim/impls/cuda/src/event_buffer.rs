@@ -48,7 +48,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> fmt::Debug
     for EventBuffer<ReportSpeciation, ReportDispersal>
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("EventBuffer")
+        fmt.debug_struct(stringify!(EventBuffer))
             .field("max_events", &self.max_events)
             .field("event_counter", &self.event_counter)
             .finish()

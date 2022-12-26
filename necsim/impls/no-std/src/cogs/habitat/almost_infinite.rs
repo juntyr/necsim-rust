@@ -6,6 +6,8 @@ use necsim_core::{
 };
 use necsim_core_bond::{OffByOneU32, OffByOneU64};
 
+use crate::cogs::lineage_store::coherent::globally::singleton_demes::SingletonDemesHabitat;
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
@@ -37,6 +39,11 @@ impl<M: MathsCore> Backup for AlmostInfiniteHabitat<M> {
 #[contract_trait]
 impl<M: MathsCore> Habitat<M> for AlmostInfiniteHabitat<M> {
     type LocationIterator<'a> = impl Iterator<Item = Location>;
+
+    #[must_use]
+    fn is_finite(&self) -> bool {
+        false
+    }
 
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
@@ -81,3 +88,5 @@ impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for AlmostInf
         )
     }
 }
+
+impl<M: MathsCore> SingletonDemesHabitat<M> for AlmostInfiniteHabitat<M> {}
