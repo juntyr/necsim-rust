@@ -16,7 +16,7 @@ use crate::cogs::{
 
 #[allow(clippy::module_name_repetitions)]
 pub struct WrappingNoiseOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
-    pre_sampler: OriginPreSampler<M, I>,
+    pre_sampler: OriginPreSampler<I>,
     last_index: u64,
     location_iterator: Peekable<LocationIterator>,
     habitat: &'h WrappingNoiseHabitat<M>,
@@ -40,7 +40,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
 impl<'h, M: MathsCore, I: Iterator<Item = u64>> WrappingNoiseOriginSampler<'h, M, I> {
     #[must_use]
     pub fn new(
-        pre_sampler: OriginPreSampler<M, I>,
+        pre_sampler: OriginPreSampler<I>,
         habitat: &'h WrappingNoiseHabitat<M>,
         sample: LandscapeExtent,
     ) -> Self {
@@ -65,7 +65,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
         self.habitat
     }
 
-    fn into_pre_sampler(self) -> OriginPreSampler<M, Self::PreSampler> {
+    fn into_pre_sampler(self) -> OriginPreSampler<Self::PreSampler> {
         self.pre_sampler
     }
 
