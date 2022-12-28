@@ -1,6 +1,6 @@
 # necsim-rust &emsp; [![CI Status]][workflow] [![Rust Doc]][docs] [![License Status]][fossa] [![Code Coverage]][codecov] [![Binder Demo]][binder] [![Gitpod Ready-to-Code]][gitpod] [![DOI]][zenodo]
 
-[CI Status]: https://img.shields.io/github/workflow/status/MomoLangenstein/necsim-rust/CI/main?label=CI
+[CI Status]: https://img.shields.io/github/actions/workflow/status/MomoLangenstein/necsim-rust/ci.yml?branch=main
 [workflow]: https://github.com/MomoLangenstein/necsim-rust/actions/workflows/ci.yml?query=branch%3Amain
 
 [Rust Doc]: https://img.shields.io/badge/docs-main-blue
