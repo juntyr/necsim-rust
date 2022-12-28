@@ -1,4 +1,4 @@
-use core::marker::PhantomData;
+use core::{fmt, marker::PhantomData};
 
 use necsim_core::{
     cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
@@ -8,19 +8,25 @@ use necsim_core_bond::{OffByOneU32, OffByOneU64};
 
 use crate::cogs::lineage_store::coherent::globally::singleton_demes::SingletonDemesHabitat;
 
+const ALMOST_INFINITE_EXTENT: LandscapeExtent =
+    LandscapeExtent::new(0, 0, OffByOneU32::max(), OffByOneU32::max());
+
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct AlmostInfiniteHabitat<M: MathsCore> {
-    extent: LandscapeExtent,
     marker: PhantomData<M>,
+}
+
+impl<M: MathsCore> fmt::Debug for AlmostInfiniteHabitat<M> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct(stringify!(AlmostInfiniteHabitat)).finish()
+    }
 }
 
 impl<M: MathsCore> Default for AlmostInfiniteHabitat<M> {
     fn default() -> Self {
         Self {
-            extent: LandscapeExtent::new(0_u32, 0_u32, OffByOneU32::max(), OffByOneU32::max()),
             marker: PhantomData::<M>,
         }
     }
@@ -30,7 +36,6 @@ impl<M: MathsCore> Default for AlmostInfiniteHabitat<M> {
 impl<M: MathsCore> Backup for AlmostInfiniteHabitat<M> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
-            extent: self.extent.clone(),
             marker: PhantomData::<M>,
         }
     }
@@ -47,7 +52,7 @@ impl<M: MathsCore> Habitat<M> for AlmostInfiniteHabitat<M> {
 
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
-        &self.extent
+        &ALMOST_INFINITE_EXTENT
     }
 
     #[must_use]

@@ -22,19 +22,17 @@ impl Backup for Location {
 
 impl Location {
     #[must_use]
-    #[debug_ensures(ret.x() == x, "stores x")]
-    #[debug_ensures(ret.y() == y, "stores y")]
-    pub fn new(x: u32, y: u32) -> Self {
+    pub const fn new(x: u32, y: u32) -> Self {
         Self { x, y }
     }
 
     #[must_use]
-    pub fn x(&self) -> u32 {
+    pub const fn x(&self) -> u32 {
         self.x
     }
 
     #[must_use]
-    pub fn y(&self) -> u32 {
+    pub const fn y(&self) -> u32 {
         self.y
     }
 }
@@ -58,22 +56,17 @@ pub struct IndexedLocation {
 
 impl IndexedLocation {
     #[must_use]
-    #[debug_ensures(
-        ret.location.x() == old(location.x()) && ret.location.y() == old(location.y()),
-        "stores location"
-    )]
-    #[debug_ensures(ret.index() == index, "stores index")]
-    pub fn new(location: Location, index: u32) -> Self {
+    pub const fn new(location: Location, index: u32) -> Self {
         Self { location, index }
     }
 
     #[must_use]
-    pub fn location(&self) -> &Location {
+    pub const fn location(&self) -> &Location {
         &self.location
     }
 
     #[must_use]
-    pub fn index(&self) -> u32 {
+    pub const fn index(&self) -> u32 {
         self.index
     }
 }

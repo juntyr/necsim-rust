@@ -35,7 +35,6 @@ pub struct WrappingNoiseHabitat<M: MathsCore> {
 impl<M: MathsCore> fmt::Debug for WrappingNoiseHabitat<M> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(WrappingNoiseHabitat))
-            .field("inner", &self.inner)
             .field("coverage", &self.coverage)
             .field("scale", &self.scale)
             .field("persistence", &self.persistence)

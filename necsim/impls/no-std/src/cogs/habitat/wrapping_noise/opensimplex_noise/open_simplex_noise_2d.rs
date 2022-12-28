@@ -71,8 +71,7 @@ impl NoiseEvaluator<Vec2<f64>> for OpenSimplexNoise2D {
 }
 
 impl OpenSimplexNoise2D {
-    #[allow(clippy::inline_always)]
-    #[cfg_attr(target_os = "cuda", inline(always))]
+    #[cfg_attr(target_os = "cuda", inline)]
     fn get_value<M: MathsCore>(
         grid: Vec2<f64>,
         origin: Vec2<f64>,

@@ -32,15 +32,7 @@ pub struct SpeciationSample {
     speciation_sample: ClosedOpenUnitF64,
     sample_time: PositiveF64,
     sample_location: IndexedLocation,
-    niche: bool, // only serves to enable the same-sized Option
 }
-
-#[allow(dead_code)]
-const EXCESSIVE_OPTION_SPECIATION_SAMPLE_ERROR: [(); 1 - {
-    const ASSERT: bool = core::mem::size_of::<Option<SpeciationSample>>()
-        == core::mem::size_of::<SpeciationSample>();
-    ASSERT
-} as usize] = [];
 
 impl SpeciationSample {
     pub fn update_min(
@@ -56,7 +48,6 @@ impl SpeciationSample {
                     speciation_sample,
                     sample_time,
                     sample_location: sample_location.clone(),
-                    niche: false,
                 });
             },
         };
