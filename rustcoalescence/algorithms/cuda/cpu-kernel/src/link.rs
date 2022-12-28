@@ -317,7 +317,10 @@ link_kernel!(
         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
         necsim_impls_cuda::cogs::rng::CudaRng<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-            necsim_impls_no_std::cogs::rng::wyhash::WyHash,
+            necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                necsim_impls_no_std::cogs::rng::wyhash::WyHash,
+            >,
         >,
     >,
     necsim_impls_no_std::cogs::turnover_rate::uniform::UniformTurnoverRate,
