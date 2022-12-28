@@ -44,13 +44,29 @@ impl NoiseEvaluator<Vec3<f64>> for OpenSimplexNoise3D {
     const SQUISH_POINT: Vec3<f64> = Vec3::new(SQUISH, SQUISH, SQUISH);
     const STRETCH_POINT: Vec3<f64> = Vec3::new(STRETCH, STRETCH, STRETCH);
 
-    fn extrapolate(grid: Vec3<f64>, delta: Vec3<f64>, perm: &PermTable) -> f64 {
+    fn extrapolate<M: MathsCore>(
+        grid: Vec3<f64>,
+        delta: Vec3<f64>,
+        perm: &PermTable,
+        wrap: f64,
+    ) -> f64 {
+        let input = (grid + (Self::SQUISH_POINT * grid.sum())).map(|i| {
+            if i >= wrap {
+                i - wrap
+            } else if i < 0.0 {
+                i + wrap
+            } else {
+                i
+            }
+        });
+        let grid = (input + (Self::STRETCH_POINT * input.sum())).map(M::floor);
+
         let point = GRAD_TABLE[Self::get_grad_table_index(grid, perm)];
 
         point.x * delta.x + point.y * delta.y + point.z * delta.z
     }
 
-    fn eval<M: MathsCore>(input: Vec3<f64>, perm: &PermTable) -> f64 {
+    fn eval<M: MathsCore>(input: Vec3<f64>, perm: &PermTable, wrap: f64) -> f64 {
         let stretch: Vec3<f64> = input + (Self::STRETCH_POINT * input.sum());
         let grid = stretch.map(M::floor);
 
@@ -58,18 +74,25 @@ impl NoiseEvaluator<Vec3<f64>> for OpenSimplexNoise3D {
         let ins = stretch - grid;
         let origin = input - squashed;
 
-        Self::get_value(grid, origin, ins, perm)
+        Self::get_value::<M>(grid, origin, ins, perm, wrap)
     }
 }
 
 impl OpenSimplexNoise3D {
-    fn get_value(grid: Vec3<f64>, origin: Vec3<f64>, ins: Vec3<f64>, perm: &PermTable) -> f64 {
+    fn get_value<M: MathsCore>(
+        grid: Vec3<f64>,
+        origin: Vec3<f64>,
+        ins: Vec3<f64>,
+        perm: &PermTable,
+        wrap: f64,
+    ) -> f64 {
         let contribute = |x: f64, y: f64, z: f64| {
-            utils::contribute::<OpenSimplexNoise3D, Vec3<f64>>(
+            utils::contribute::<OpenSimplexNoise3D, Vec3<f64>, M>(
                 Vec3::new(x, y, z),
                 origin,
                 grid,
                 perm,
+                wrap,
             )
         };
 

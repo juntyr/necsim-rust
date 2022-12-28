@@ -8,6 +8,8 @@
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![cfg_attr(target_os = "cuda", feature(asm_const))]
 #![cfg_attr(target_os = "cuda", feature(const_float_bits_conv))]
+#![allow(incomplete_features)]
+#![feature(specialization)]
 
 extern crate alloc;
 

@@ -47,20 +47,34 @@ impl OpenSimplexNoise {
 
     #[allow(dead_code)]
     #[must_use]
-    pub fn eval_2d<M: MathsCore>(&self, x: f64, y: f64) -> f64 {
-        OpenSimplexNoise2D::eval::<M>(Vec2::new(x, y), &self.perm)
+    pub fn eval_2d<M: MathsCore>(&self, x: f64, y: f64, wrap: f64) -> f64 {
+        OpenSimplexNoise2D::eval::<M>(Vec2::new(x, y), &self.perm, wrap)
     }
 
     #[allow(dead_code)]
     #[must_use]
-    pub fn eval_3d<M: MathsCore>(&self, x: f64, y: f64, z: f64) -> f64 {
-        OpenSimplexNoise3D::eval::<M>(Vec3::new(x, y, z), &self.perm)
+    pub fn eval_3d<M: MathsCore>(&self, x: f64, y: f64, z: f64, wrap: f64) -> f64 {
+        OpenSimplexNoise3D::eval::<M>(Vec3::new(x, y, z), &self.perm, wrap)
     }
 
     #[allow(dead_code)]
     #[must_use]
-    pub fn eval_4d<M: MathsCore>(&self, x: f64, y: f64, z: f64, w: f64) -> f64 {
-        OpenSimplexNoise4D::eval::<M>(Vec4::new(x, y, z, w), &self.perm)
+    pub fn eval_4d<M: MathsCore>(&self, x: f64, y: f64, z: f64, w: f64, wrap: f64) -> f64 {
+        OpenSimplexNoise4D::eval::<M>(Vec4::new(x, y, z, w), &self.perm, wrap)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use necsim_core_maths::IntrinsicsMathsCore;
+
+    use super::OpenSimplexNoise;
+
+    #[test]
+    fn test_wrapping() {
+        let noise = OpenSimplexNoise::new(Some(42));
+
+        let _ = noise.eval_2d::<IntrinsicsMathsCore>((f64::from(u32::MAX) + 1.0_f64)*0.025-100.0, 0.0, (f64::from(u32::MAX) + 1.0_f64) * 0.025);
     }
 }
 
@@ -68,8 +82,8 @@ pub trait NoiseEvaluator<T: vector::VecType<f64>> {
     const STRETCH_POINT: T;
     const SQUISH_POINT: T;
 
-    fn eval<M: MathsCore>(point: T, perm: &PermTable) -> f64;
-    fn extrapolate(grid: T, delta: T, perm: &PermTable) -> f64;
+    fn eval<M: MathsCore>(point: T, perm: &PermTable, wrap: f64) -> f64;
+    fn extrapolate<M: MathsCore>(grid: T, delta: T, perm: &PermTable, wrap: f64) -> f64;
 }
 
 fn generate_perm_array(seed: i64) -> PermTable {

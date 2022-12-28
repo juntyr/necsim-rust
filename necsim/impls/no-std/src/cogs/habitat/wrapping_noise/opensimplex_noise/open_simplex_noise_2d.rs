@@ -11,16 +11,16 @@ const SQUISH: f64 = 0.366_025_403_784_439; // (sqrt(2 + 1) - 1) / 2
 
 const NORMALIZING_SCALAR: f64 = 47.0;
 
-const GRAD_TABLE: [Vec2<f64>; 8] = [
-    Vec2::new(5.0, 2.0),
-    Vec2::new(2.0, 5.0),
-    Vec2::new(-5.0, 2.0),
-    Vec2::new(-2.0, 5.0),
-    Vec2::new(5.0, -2.0),
-    Vec2::new(2.0, -5.0),
-    Vec2::new(-5.0, -2.0),
-    Vec2::new(-2.0, -5.0),
-];
+// const GRAD_TABLE: [Vec2<f64>; 8] = [
+//     Vec2::new(5.0, 2.0),
+//     Vec2::new(2.0, 5.0),
+//     Vec2::new(-5.0, 2.0),
+//     Vec2::new(-2.0, 5.0),
+//     Vec2::new(5.0, -2.0),
+//     Vec2::new(2.0, -5.0),
+//     Vec2::new(-5.0, -2.0),
+//     Vec2::new(-2.0, -5.0),
+// ];
 
 pub enum OpenSimplexNoise2D {}
 
@@ -28,12 +28,46 @@ impl NoiseEvaluator<Vec2<f64>> for OpenSimplexNoise2D {
     const SQUISH_POINT: Vec2<f64> = Vec2::new(SQUISH, SQUISH);
     const STRETCH_POINT: Vec2<f64> = Vec2::new(STRETCH, STRETCH);
 
-    fn extrapolate(grid: Vec2<f64>, delta: Vec2<f64>, perm: &PermTable) -> f64 {
-        let point = GRAD_TABLE[Self::get_grad_table_index(grid, perm)];
+    fn extrapolate<M: MathsCore>(
+        grid: Vec2<f64>,
+        delta: Vec2<f64>,
+        perm: &PermTable,
+        wrap: f64,
+    ) -> f64 {
+        let grid_old = grid;
+        let input = (grid + (Self::SQUISH_POINT * grid.sum())).map(|i| {
+            // if i >= wrap {
+            //     i - wrap
+            // } else if i < 0.0 {
+            //     i + wrap
+            // } else {
+            //     i
+            // }
+            i - M::floor(i / wrap) * wrap
+        });
+        let grid = (input + (Self::STRETCH_POINT * input.sum())).map(M::floor);
+
+        panic!("{:?} {:?} {:?}", grid_old, input, grid);
+
+        let idx = Self::get_grad_table_index(grid, perm);
+
+        let mut point = if (idx & 1) == 0 {
+            Vec2::new(5.0, 2.0)
+        } else {
+            Vec2::new(2.0, 5.0)
+        };
+        if (idx & 2) != 0 {
+            point.x *= -1.0;
+        }
+        if (idx & 4) != 0 {
+            point.y *= -1.0;
+        }
+
+        // let point = GRAD_TABLE[Self::get_grad_table_index(grid, perm)];
         point.x * delta.x + point.y * delta.y
     }
 
-    fn eval<M: MathsCore>(input: Vec2<f64>, perm: &PermTable) -> f64 {
+    fn eval<M: MathsCore>(input: Vec2<f64>, perm: &PermTable, wrap: f64) -> f64 {
         let stretch: Vec2<f64> = input + (Self::STRETCH_POINT * input.sum());
         let grid = stretch.map(M::floor);
 
@@ -41,14 +75,28 @@ impl NoiseEvaluator<Vec2<f64>> for OpenSimplexNoise2D {
         let ins = stretch - grid;
         let origin = input - squashed;
 
-        OpenSimplexNoise2D::get_value(grid, origin, ins, perm)
+        OpenSimplexNoise2D::get_value::<M>(grid, origin, ins, perm, wrap)
     }
 }
 
 impl OpenSimplexNoise2D {
-    fn get_value(grid: Vec2<f64>, origin: Vec2<f64>, ins: Vec2<f64>, perm: &PermTable) -> f64 {
+    #[allow(clippy::inline_always)]
+    #[cfg_attr(target_os = "cuda", inline(always))]
+    fn get_value<M: MathsCore>(
+        grid: Vec2<f64>,
+        origin: Vec2<f64>,
+        ins: Vec2<f64>,
+        perm: &PermTable,
+        wrap: f64,
+    ) -> f64 {
         let contribute = |x, y| -> f64 {
-            utils::contribute::<OpenSimplexNoise2D, Vec2<f64>>(Vec2::new(x, y), origin, grid, perm)
+            utils::contribute::<OpenSimplexNoise2D, Vec2<f64>, M>(
+                Vec2::new(x, y),
+                origin,
+                grid,
+                perm,
+                wrap,
+            )
         };
 
         let value = contribute(1.0, 0.0)

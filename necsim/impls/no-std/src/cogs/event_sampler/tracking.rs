@@ -32,6 +32,7 @@ pub struct SpeciationSample {
     speciation_sample: ClosedOpenUnitF64,
     sample_time: PositiveF64,
     sample_location: IndexedLocation,
+    niche: bool, // only serves to enable the same-sized Option
 }
 
 #[allow(dead_code)]
@@ -55,6 +56,7 @@ impl SpeciationSample {
                     speciation_sample,
                     sample_time,
                     sample_location: sample_location.clone(),
+                    niche: false,
                 });
             },
         };

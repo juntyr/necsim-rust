@@ -221,7 +221,7 @@ fn sum_noise_octaves<M: MathsCore>(
     scale: PositiveUnitF64,
     octaves: NonZeroUsize,
 ) -> f64 {
-    const F64_2_31: f64 = (1 << 31) as f64;
+    const F64_2_32: f64 = (u32::MAX as f64) + 1.0_f64;
 
     let mut max_amplitude = 0.0_f64;
     let mut amplitude = 1.0_f64;
@@ -231,11 +231,11 @@ fn sum_noise_octaves<M: MathsCore>(
 
     for _ in 0..octaves.get() {
         let (x, y) = (
-            (f64::from(location.x()) - F64_2_31) * frequency,
-            (f64::from(location.y()) - F64_2_31) * frequency,
+            f64::from(location.x()) * frequency,
+            f64::from(location.y()) * frequency,
         );
 
-        result += noise.eval_2d::<M>(x, y) * amplitude;
+        result += noise.eval_2d::<M>(x, y, F64_2_32 * frequency) * amplitude;
         max_amplitude += amplitude;
         amplitude *= persistence.get();
         frequency *= 2.0_f64;

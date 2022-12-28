@@ -1,6 +1,4 @@
-use core::num::NonZeroU32;
-
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
 use crate::cogs::Backup;
 
@@ -47,8 +45,6 @@ impl From<IndexedLocation> for Location {
     }
 }
 
-// IndexedLocation uses a NonZeroU32 index internally to enable same-size
-//  Option optimisation
 #[derive(
     Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize, TypeLayout,
 )]
@@ -57,7 +53,7 @@ impl From<IndexedLocation> for Location {
 #[repr(C)]
 pub struct IndexedLocation {
     location: Location,
-    index: LocationIndex,
+    index: u32,
 }
 
 impl IndexedLocation {
@@ -68,10 +64,7 @@ impl IndexedLocation {
     )]
     #[debug_ensures(ret.index() == index, "stores index")]
     pub fn new(location: Location, index: u32) -> Self {
-        Self {
-            location,
-            index: LocationIndex::new(index),
-        }
+        Self { location, index }
     }
 
     #[must_use]
@@ -81,35 +74,7 @@ impl IndexedLocation {
 
     #[must_use]
     pub fn index(&self) -> u32 {
-        self.index.get()
-    }
-}
-
-#[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Copy, Hash, Debug, TypeLayout)]
-#[repr(transparent)]
-struct LocationIndex(NonZeroU32);
-
-impl LocationIndex {
-    fn new(index: u32) -> Self {
-        Self(unsafe { NonZeroU32::new_unchecked(index + 1) })
-    }
-
-    fn get(self) -> u32 {
-        self.0.get() - 1
-    }
-}
-
-impl Serialize for LocationIndex {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        (self.0.get() - 1).serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for LocationIndex {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let inner = u32::deserialize(deserializer)?;
-
-        Ok(Self(unsafe { NonZeroU32::new_unchecked(inner + 1) }))
+        self.index
     }
 }
 
@@ -121,7 +86,7 @@ struct IndexedLocationRaw {
     x: u32,
     y: u32,
     #[serde(alias = "i")]
-    index: LocationIndex,
+    index: u32,
 }
 
 impl From<IndexedLocation> for IndexedLocationRaw {

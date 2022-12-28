@@ -118,7 +118,7 @@ impl IndividualSpeciesFeatherReporter {
         let mut parents = Vec::with_capacity(self.origins.len());
 
         for (lineage, origin) in &self.origins {
-            ids.push(unsafe { lineage.clone().into_inner().get() - 2 });
+            ids.push(unsafe { lineage.clone().into_inner() });
 
             xs.push(origin.location().x());
             ys.push(origin.location().y());
@@ -130,8 +130,6 @@ impl IndividualSpeciesFeatherReporter {
                     .unwrap_or(lineage)
                     .clone()
                     .into_inner()
-                    .get()
-                    - 2
             });
         }
 

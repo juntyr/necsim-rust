@@ -1,10 +1,5 @@
-use std::{
-    array::TryFromSliceError,
-    convert::{TryFrom, TryInto},
-    io,
-};
+use std::{array::TryFromSliceError, convert::TryInto, io};
 
-use necsim_core_bond::NonZeroOneU64;
 use tskit::metadata::{IndividualMetadata, MetadataError, MetadataRoundtrip, NodeMetadata};
 
 use necsim_core::lineage::GlobalLineageReference;
@@ -15,8 +10,8 @@ pub struct GlobalLineageMetadata(GlobalLineageReference);
 
 impl MetadataRoundtrip for GlobalLineageMetadata {
     fn encode(&self) -> Result<Vec<u8>, MetadataError> {
-        // Store the internal u64 without the +2 offset
-        Ok((unsafe { self.0.clone().into_inner() }.get() - 2)
+        // Store the internal u64
+        Ok(unsafe { self.0.clone().into_inner() }
             .to_le_bytes()
             .to_vec())
     }
@@ -32,17 +27,9 @@ impl MetadataRoundtrip for GlobalLineageMetadata {
             }
         })?;
 
-        // Convert the bytes into an u64 with the needed +2 offset
-        let value = u64::from_le_bytes(value_bytes) + 2;
-
-        // Create the internal `NonZeroOneU64` representation of the reference
-        let value_inner =
-            NonZeroOneU64::try_from(value).map_err(|err| MetadataError::RoundtripError {
-                value: Box::new(io::Error::new(io::ErrorKind::InvalidData, err.to_string())),
-            })?;
-
+        // Convert the bytes into an u64 and a GlobalLineageReference
         Ok(Self(unsafe {
-            GlobalLineageReference::from_inner(value_inner)
+            GlobalLineageReference::from_inner(u64::from_le_bytes(value_bytes))
         }))
     }
 }

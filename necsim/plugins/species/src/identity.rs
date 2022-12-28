@@ -8,7 +8,7 @@ use necsim_core::{
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
 };
-use necsim_core_bond::{NonZeroOneU64, PositiveF64};
+use necsim_core_bond::PositiveF64;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -50,9 +50,9 @@ impl SpeciesIdentity {
         lineage: GlobalLineageReference,
         anchor: GlobalLineageReference,
     ) -> SpeciesIdentity {
-        let lineage = unsafe { lineage.into_inner().get() - 2 };
+        let lineage = unsafe { lineage.into_inner() };
         let marker = 0x0;
-        let anchor = unsafe { anchor.into_inner().get() - 2 };
+        let anchor = unsafe { anchor.into_inner() };
 
         Self::from_raw(lineage, marker, anchor)
     }
@@ -92,14 +92,8 @@ impl SpeciesIdentity {
             return Err(self);
         }
 
-        let lineage = match NonZeroOneU64::new(lineage.wrapping_add(2)) {
-            Ok(lineage) => unsafe { GlobalLineageReference::from_inner(lineage) },
-            Err(_) => return Err(self),
-        };
-        let anchor = match NonZeroOneU64::new(anchor.wrapping_add(2)) {
-            Ok(anchor) => unsafe { GlobalLineageReference::from_inner(anchor) },
-            Err(_) => return Err(self),
-        };
+        let lineage = unsafe { GlobalLineageReference::from_inner(lineage) };
+        let anchor = unsafe { GlobalLineageReference::from_inner(anchor) };
 
         Ok((lineage, anchor))
     }
@@ -237,7 +231,7 @@ mod tests {
         landscape::{IndexedLocation, Location},
         lineage::GlobalLineageReference,
     };
-    use necsim_core_bond::{NonZeroOneU64, PositiveF64};
+    use necsim_core_bond::PositiveF64;
 
     use super::SpeciesIdentity;
 
@@ -274,27 +268,8 @@ mod tests {
         let mut rng = StdRng::from_entropy();
 
         for _ in 0..1_000_000 {
-            let lineage = loop {
-                let l = rng.next_u64();
-
-                match NonZeroOneU64::new(l) {
-                    Ok(l) => break unsafe { GlobalLineageReference::from_inner(l) },
-                    Err(_) => continue,
-                }
-            };
-
-            let anchor = loop {
-                let a = rng.next_u64();
-
-                if a > (u64::MAX >> 1) {
-                    continue;
-                }
-
-                match NonZeroOneU64::new(a) {
-                    Ok(a) => break unsafe { GlobalLineageReference::from_inner(a) },
-                    Err(_) => continue,
-                }
-            };
+            let lineage = unsafe { GlobalLineageReference::from_inner(rng.next_u64()) };
+            let anchor = unsafe { GlobalLineageReference::from_inner(rng.next_u64()) };
 
             let identity = SpeciesIdentity::from_unspeciated(lineage.clone(), anchor.clone());
 
