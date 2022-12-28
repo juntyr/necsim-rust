@@ -7,6 +7,8 @@
 // OpenSimplex noise implementation vendored from
 // https://github.com/Mapet13/opensimplex_noise_rust
 // by Jakub Sordyl, licensed under the Unlicense
+//
+// Adapted to use MathsCore and support wrapping
 
 use necsim_core_maths::MathsCore;
 
@@ -61,20 +63,6 @@ impl OpenSimplexNoise {
     #[must_use]
     pub fn eval_4d<M: MathsCore>(&self, x: f64, y: f64, z: f64, w: f64, wrap: f64) -> f64 {
         OpenSimplexNoise4D::eval::<M>(Vec4::new(x, y, z, w), &self.perm, wrap)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use necsim_core_maths::IntrinsicsMathsCore;
-
-    use super::OpenSimplexNoise;
-
-    #[test]
-    fn test_wrapping() {
-        let noise = OpenSimplexNoise::new(Some(42));
-
-        let _ = noise.eval_2d::<IntrinsicsMathsCore>((f64::from(u32::MAX) + 1.0_f64)*0.025-100.0, 0.0, (f64::from(u32::MAX) + 1.0_f64) * 0.025);
     }
 }
 

@@ -50,16 +50,8 @@ impl NoiseEvaluator<Vec3<f64>> for OpenSimplexNoise3D {
         perm: &PermTable,
         wrap: f64,
     ) -> f64 {
-        let input = (grid + (Self::SQUISH_POINT * grid.sum())).map(|i| {
-            if i >= wrap {
-                i - wrap
-            } else if i < 0.0 {
-                i + wrap
-            } else {
-                i
-            }
-        });
-        let grid = (input + (Self::STRETCH_POINT * input.sum())).map(M::floor);
+        // Wrap the grid to put in the range [0; wrap), then snap to grid points
+        let grid = grid.map(|i| i - M::floor(i / wrap) * wrap).map(M::floor);
 
         let point = GRAD_TABLE[Self::get_grad_table_index(grid, perm)];
 
@@ -67,6 +59,9 @@ impl NoiseEvaluator<Vec3<f64>> for OpenSimplexNoise3D {
     }
 
     fn eval<M: MathsCore>(input: Vec3<f64>, perm: &PermTable, wrap: f64) -> f64 {
+        // Pre-squish the input to allow wrapping in extrapolate
+        let input = input + (Self::SQUISH_POINT * input.sum());
+
         let stretch: Vec3<f64> = input + (Self::STRETCH_POINT * input.sum());
         let grid = stretch.map(M::floor);
 

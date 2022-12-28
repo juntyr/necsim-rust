@@ -11,17 +11,6 @@ const SQUISH: f64 = 0.366_025_403_784_439; // (sqrt(2 + 1) - 1) / 2
 
 const NORMALIZING_SCALAR: f64 = 47.0;
 
-// const GRAD_TABLE: [Vec2<f64>; 8] = [
-//     Vec2::new(5.0, 2.0),
-//     Vec2::new(2.0, 5.0),
-//     Vec2::new(-5.0, 2.0),
-//     Vec2::new(-2.0, 5.0),
-//     Vec2::new(5.0, -2.0),
-//     Vec2::new(2.0, -5.0),
-//     Vec2::new(-5.0, -2.0),
-//     Vec2::new(-2.0, -5.0),
-// ];
-
 pub enum OpenSimplexNoise2D {}
 
 impl NoiseEvaluator<Vec2<f64>> for OpenSimplexNoise2D {
@@ -34,23 +23,22 @@ impl NoiseEvaluator<Vec2<f64>> for OpenSimplexNoise2D {
         perm: &PermTable,
         wrap: f64,
     ) -> f64 {
-        let grid_old = grid;
-        let input = (grid + (Self::SQUISH_POINT * grid.sum())).map(|i| {
-            // if i >= wrap {
-            //     i - wrap
-            // } else if i < 0.0 {
-            //     i + wrap
-            // } else {
-            //     i
-            // }
-            i - M::floor(i / wrap) * wrap
-        });
-        let grid = (input + (Self::STRETCH_POINT * input.sum())).map(M::floor);
-
-        panic!("{:?} {:?} {:?}", grid_old, input, grid);
+        // Wrap the grid to put in the range [0; wrap), then snap to grid points
+        let grid = grid.map(|i| i - M::floor(i / wrap) * wrap).map(M::floor);
 
         let idx = Self::get_grad_table_index(grid, perm);
 
+        // Calculate the gradient directly to avoid a GRAD_TABLE lookup
+        // const GRAD_TABLE: [Vec2<f64>; 8] = [
+        //     Vec2::new(5.0, 2.0),
+        //     Vec2::new(2.0, 5.0),
+        //     Vec2::new(-5.0, 2.0),
+        //     Vec2::new(-2.0, 5.0),
+        //     Vec2::new(5.0, -2.0),
+        //     Vec2::new(2.0, -5.0),
+        //     Vec2::new(-5.0, -2.0),
+        //     Vec2::new(-2.0, -5.0),
+        // ];
         let mut point = if (idx & 1) == 0 {
             Vec2::new(5.0, 2.0)
         } else {
@@ -68,6 +56,9 @@ impl NoiseEvaluator<Vec2<f64>> for OpenSimplexNoise2D {
     }
 
     fn eval<M: MathsCore>(input: Vec2<f64>, perm: &PermTable, wrap: f64) -> f64 {
+        // Pre-squish the input to allow wrapping in extrapolate
+        let input = input + (Self::SQUISH_POINT * input.sum());
+
         let stretch: Vec2<f64> = input + (Self::STRETCH_POINT * input.sum());
         let grid = stretch.map(M::floor);
 

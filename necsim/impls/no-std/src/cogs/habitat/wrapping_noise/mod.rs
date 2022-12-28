@@ -14,7 +14,7 @@ use necsim_core::{
 
 use crate::cogs::{
     habitat::almost_infinite::AlmostInfiniteHabitat,
-    lineage_store::coherent::globally::singleton_demes::SingletonDemesHabitat,
+    lineage_store::coherent::globally::singleton_demes::SingletonDemesHabitat, rng::wyhash::WyHash,
 };
 
 #[allow(clippy::module_name_repetitions)]
@@ -53,27 +53,29 @@ impl<M: MathsCore> WrappingNoiseHabitat<M> {
         persistence: PositiveUnitF64,
         octaves: NonZeroUsize,
     ) -> Self {
-        const THRESHOLD_QUALITY_LOG2: u32 = 8;
-
         let noise = Box::new(OpenSimplexNoise::new(Some(seed)));
 
         // Emperically determine a threshold to uniformly sample habitat
         //  from the generated Simplex Noise
         let mut samples = alloc::vec::Vec::new();
 
-        for y in 0..(1 << THRESHOLD_QUALITY_LOG2) {
-            for x in 0..(1 << THRESHOLD_QUALITY_LOG2) {
-                samples.push(sum_noise_octaves::<M>(
-                    &noise,
-                    &Location::new(
-                        x << (32 - THRESHOLD_QUALITY_LOG2),
-                        y << (32 - THRESHOLD_QUALITY_LOG2),
-                    ),
-                    persistence,
-                    scale,
-                    octaves,
-                ));
-            }
+        // Utilise a PRNG to avoid sampling degeneracies for finding the
+        //  threshold which would poison the entire sampler
+        let mut rng: WyHash<M> = WyHash::from_seed(seed.to_le_bytes());
+
+        for _ in 0..(1_usize << 16) {
+            let location = rng.sample_u64();
+
+            samples.push(sum_noise_octaves::<M>(
+                &noise,
+                &Location::new(
+                    (location & 0x0000_0000_FFFF_FFFF) as u32,
+                    ((location >> 32) & 0x0000_0000_FFFF_FFFF) as u32,
+                ),
+                persistence,
+                scale,
+                octaves,
+            ));
         }
 
         samples.sort_unstable_by(f64::total_cmp);
@@ -225,17 +227,22 @@ fn sum_noise_octaves<M: MathsCore>(
 
     let mut max_amplitude = 0.0_f64;
     let mut amplitude = 1.0_f64;
-    let mut frequency = scale.get();
+    // Pre-scale the frequency to avoid pow2 degeneracies
+    let mut frequency = scale.get() * core::f64::consts::FRAC_1_PI * 3.0;
 
     let mut result = 0.0_f64;
 
     for _ in 0..octaves.get() {
+        // Ensure wrapping occurs at an integer boundary
+        let wrap = M::round(F64_2_32 * frequency);
+        let fixed_frequency = wrap / F64_2_32;
+
         let (x, y) = (
-            f64::from(location.x()) * frequency,
-            f64::from(location.y()) * frequency,
+            f64::from(location.x()) * fixed_frequency,
+            f64::from(location.y()) * fixed_frequency,
         );
 
-        result += noise.eval_2d::<M>(x, y, F64_2_32 * frequency) * amplitude;
+        result += noise.eval_2d::<M>(x, y, wrap) * amplitude;
         max_amplitude += amplitude;
         amplitude *= persistence.get();
         frequency *= 2.0_f64;
