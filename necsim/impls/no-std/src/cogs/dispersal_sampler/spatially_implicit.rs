@@ -49,13 +49,11 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, SpatiallyImplicitHabitat<M
     for SpatiallyImplicitDispersalSampler<M, G>
 {
     #[must_use]
-    #[debug_requires(
-        habitat.local().contains(location) || habitat.meta().contains(location),
-        "location is inside either the local or meta habitat extent"
-    )]
-    #[debug_ensures(habitat.meta().contains(&ret) || if old(habitat.local().contains(location)) {
-        habitat.local().contains(&ret)
-    } else { false }, "target is inside the meta habitat extent, \
+    #[debug_ensures(habitat.meta().get_extent().contains(&ret) || (
+        if old(habitat.local().get_extent().contains(location)) {
+            habitat.local().get_extent().contains(&ret)
+        } else { false }
+    ), "target is inside the meta habitat extent, \
         or -- iff the location was local -- in the local habitat extent"
     )]
     fn sample_dispersal_from_location(
@@ -66,7 +64,9 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, SpatiallyImplicitHabitat<M
     ) -> Location {
         use necsim_core::cogs::RngSampler;
 
-        if habitat.local().contains(location) {
+        // By PRE, location must be habitable, i.e. either in the local or the meta
+        //  habitat
+        if habitat.local().get_extent().contains(location) {
             if rng.sample_event(self.local_migration_probability_per_generation.into()) {
                 // Provide a dummpy Location in the meta community to disperse from
                 self.meta.sample_dispersal_from_location(
@@ -93,13 +93,11 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, SpatiallyImplicit
     for SpatiallyImplicitDispersalSampler<M, G>
 {
     #[must_use]
-    #[debug_requires(
-        habitat.local().contains(location) || habitat.meta().contains(location),
-        "location is inside either the local or meta habitat extent"
-    )]
-    #[debug_ensures(habitat.meta().contains(&ret) || if old(habitat.local().contains(location)) {
-        habitat.local().contains(&ret)
-    } else { false }, "target is inside the meta habitat extent, \
+    #[debug_ensures(habitat.meta().get_extent().contains(&ret) || (
+        if old(habitat.local().get_extent().contains(location)) {
+            habitat.local().get_extent().contains(&ret)
+        } else { false }
+    ), "target is inside the meta habitat extent, \
         or -- iff the location was local -- in the local habitat extent"
     )]
     fn sample_non_self_dispersal_from_location(
@@ -110,7 +108,9 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, SpatiallyImplicit
     ) -> Location {
         use necsim_core::cogs::RngSampler;
 
-        if habitat.local().contains(location) {
+        // By PRE, location must be habitable, i.e. either in the local or the meta
+        //  habitat
+        if habitat.local().get_extent().contains(location) {
             if rng.sample_event(self.local_migration_probability_per_generation.into()) {
                 // Provide a dummpy Location in the meta community to disperse from
                 // As the individual is dispersing to a different community,
@@ -134,16 +134,14 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, SpatiallyImplicit
     }
 
     #[must_use]
-    #[debug_requires(
-        habitat.local().contains(location) || habitat.meta().contains(location),
-        "location is inside either the local or meta habitat extent"
-    )]
     fn get_self_dispersal_probability_at_location(
         &self,
         location: &Location,
         habitat: &SpatiallyImplicitHabitat<M>,
     ) -> ClosedUnitF64 {
-        if habitat.local().contains(location) {
+        // By PRE, location must be habitable, i.e. either in the local or the meta
+        //  habitat
+        if habitat.local().get_extent().contains(location) {
             self.local
                 .get_self_dispersal_probability_at_location(location, habitat.local())
                 * ClosedUnitF64::from(self.local_migration_probability_per_generation).one_minus()

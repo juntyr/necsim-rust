@@ -5,7 +5,7 @@ use core::{
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use necsim_core_bond::{NonNegativeF64, NonZeroOneU64, PositiveF64};
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::{
     cogs::{
@@ -17,31 +17,31 @@ use crate::{
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, TypeLayout)]
 #[repr(transparent)]
-pub struct GlobalLineageReference(NonZeroOneU64);
+pub struct GlobalLineageReference(u64);
 
 impl GlobalLineageReference {
     #[doc(hidden)]
     #[must_use]
-    pub unsafe fn into_inner(self) -> NonZeroOneU64 {
+    pub unsafe fn into_inner(self) -> u64 {
         self.0
     }
 
     #[doc(hidden)]
     #[must_use]
-    pub unsafe fn from_inner(inner: NonZeroOneU64) -> Self {
+    pub unsafe fn from_inner(inner: u64) -> Self {
         Self(inner)
     }
 }
 
 impl fmt::Display for GlobalLineageReference {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0.get() - 2)
+        write!(f, "{}", self.0)
     }
 }
 
 impl Serialize for GlobalLineageReference {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        (self.0.get() - 2).serialize(serializer)
+        self.0.serialize(serializer)
     }
 }
 
@@ -49,7 +49,7 @@ impl<'de> Deserialize<'de> for GlobalLineageReference {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let inner = u64::deserialize(deserializer)?;
 
-        Ok(Self(unsafe { NonZeroOneU64::new_unchecked(inner + 2) }))
+        Ok(Self(inner))
     }
 }
 
@@ -62,33 +62,25 @@ impl Backup for GlobalLineageReference {
 
 impl<M: MathsCore, H: Habitat<M>> LineageReference<M, H> for GlobalLineageReference {}
 
-#[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialOrd, Ord, TypeLayout)]
-#[repr(transparent)]
-pub struct LineageInteraction(u64);
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum LineageInteraction {
+    None,
+    Maybe,
+    Coalescence(GlobalLineageReference),
+}
 
 impl LineageInteraction {
-    #[allow(non_upper_case_globals)]
-    pub const Maybe: Self = Self(1_u64);
-    #[allow(non_upper_case_globals)]
-    pub const None: Self = Self(0_u64);
-
-    #[allow(non_snake_case, clippy::needless_pass_by_value)]
-    #[must_use]
-    pub const fn Coalescence(parent: GlobalLineageReference) -> Self {
-        Self(parent.0.get())
-    }
-
     #[must_use]
     pub const fn is_coalescence(&self) -> bool {
-        self.0 > Self::Maybe.0
+        matches!(self, Self::Coalescence(_))
     }
 
     #[must_use]
     pub const fn parent(&self) -> Option<GlobalLineageReference> {
-        match NonZeroOneU64::new(self.0) {
-            Ok(parent) => Some(GlobalLineageReference(parent)),
-            Err(_) => None,
+        match self {
+            Self::Coalescence(parent) => Some(GlobalLineageReference(parent.0)),
+            _ => None,
         }
     }
 }
@@ -99,21 +91,6 @@ impl From<Option<GlobalLineageReference>> for LineageInteraction {
             None => Self::None,
             Some(coalescence) => Self::Coalescence(coalescence),
         }
-    }
-}
-
-// Note: manually implementing PartialEq and Eq disables pattern matching
-impl PartialEq for LineageInteraction {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl Eq for LineageInteraction {}
-
-impl core::hash::Hash for LineageInteraction {
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
     }
 }
 
@@ -130,12 +107,6 @@ pub struct Lineage {
     pub indexed_location: IndexedLocation,
 }
 
-#[allow(dead_code)]
-const EXCESSIVE_OPTION_LINEAGE_ERROR: [(); 1 - {
-    const ASSERT: bool = core::mem::size_of::<Option<Lineage>>() == core::mem::size_of::<Lineage>();
-    ASSERT
-} as usize] = [];
-
 impl Lineage {
     #[must_use]
     #[debug_ensures(
@@ -148,11 +119,9 @@ impl Lineage {
         habitat: &H,
     ) -> Self {
         Self {
-            global_reference: GlobalLineageReference(unsafe {
-                NonZeroOneU64::new_unchecked(
-                    habitat.map_indexed_location_to_u64_injective(&indexed_location) + 2,
-                )
-            }),
+            global_reference: GlobalLineageReference(
+                habitat.map_indexed_location_to_u64_injective(&indexed_location),
+            ),
             last_event_time: NonNegativeF64::zero(),
             indexed_location,
         }

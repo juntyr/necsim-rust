@@ -101,7 +101,7 @@ impl<
         while let Some(lineage) = origin_sampler.next() {
             if !origin_sampler
                 .habitat()
-                .contains(lineage.indexed_location.location())
+                .is_location_habitable(lineage.indexed_location.location())
             {
                 exceptional_lineages.push(ExceptionalLineage::OutOfHabitat(lineage));
                 continue;

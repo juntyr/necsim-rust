@@ -11,7 +11,10 @@ pub trait SpeciationProbability<M: MathsCore, H: Habitat<M>>:
     crate::cogs::Backup + core::fmt::Debug
 {
     #[must_use]
-    #[debug_requires(habitat.contains(location), "location is inside habitat")]
+    #[debug_requires(
+        habitat.is_location_habitable(location),
+        "location is habitable"
+    )]
     fn get_speciation_probability_at_location(
         &self,
         location: &Location,

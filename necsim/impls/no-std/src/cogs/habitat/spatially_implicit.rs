@@ -8,6 +8,9 @@ use necsim_core_bond::{OffByOneU32, OffByOneU64};
 
 use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 
+const SPATIALLY_IMPLICIT_EXTENT: LandscapeExtent =
+    LandscapeExtent::new(0, 0, OffByOneU32::max(), OffByOneU32::max());
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
@@ -17,7 +20,6 @@ pub struct SpatiallyImplicitHabitat<M: MathsCore> {
     local: NonSpatialHabitat<M>,
     #[cfg_attr(feature = "cuda", cuda(embed))]
     meta: NonSpatialHabitat<M>,
-    extent: LandscapeExtent,
 }
 
 impl<M: MathsCore> SpatiallyImplicitHabitat<M> {
@@ -47,11 +49,7 @@ impl<M: MathsCore> SpatiallyImplicitHabitat<M> {
             meta_deme,
         );
 
-        Self {
-            extent: LandscapeExtent::new(0, 0, OffByOneU32::max(), OffByOneU32::max()),
-            local,
-            meta,
-        }
+        Self { local, meta }
     }
 
     #[must_use]
@@ -71,7 +69,6 @@ impl<M: MathsCore> Backup for SpatiallyImplicitHabitat<M> {
         Self {
             local: self.local.backup_unchecked(),
             meta: self.meta.backup_unchecked(),
-            extent: self.extent.clone(),
         }
     }
 }
@@ -87,7 +84,7 @@ impl<M: MathsCore> Habitat<M> for SpatiallyImplicitHabitat<M> {
 
     #[must_use]
     fn get_extent(&self) -> &LandscapeExtent {
-        &self.extent
+        &SPATIALLY_IMPLICIT_EXTENT
     }
 
     #[must_use]

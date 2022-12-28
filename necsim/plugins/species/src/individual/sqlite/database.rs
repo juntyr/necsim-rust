@@ -2,7 +2,7 @@ use necsim_core::{
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
 };
-use necsim_core_bond::{NonZeroOneU64, PositiveF64};
+use necsim_core_bond::PositiveF64;
 
 use rusqlite::{named_params, types::Value};
 
@@ -240,9 +240,7 @@ impl IndividualSpeciesSQLiteReporter {
             let parent: Option<i64> = row.get("parent")?;
             let species: Option<String> = row.get("species")?;
 
-            let id = unsafe {
-                GlobalLineageReference::from_inner(NonZeroOneU64::new_unchecked(from_i64(id) + 2))
-            };
+            let id = unsafe { GlobalLineageReference::from_inner(from_i64(id)) };
 
             // Populate the individual `origins` lookup
             self.origins.insert(
@@ -251,11 +249,7 @@ impl IndividualSpeciesSQLiteReporter {
             );
 
             if let Some(parent) = parent {
-                let parent = unsafe {
-                    GlobalLineageReference::from_inner(NonZeroOneU64::new_unchecked(
-                        from_i64(parent) + 2,
-                    ))
-                };
+                let parent = unsafe { GlobalLineageReference::from_inner(from_i64(parent)) };
 
                 // Populate the individual `parents` lookup
                 self.parents.insert(id.clone(), parent);
@@ -352,14 +346,14 @@ impl IndividualSpeciesSQLiteReporter {
 
             // Positional parameters boost performance
             insertion.execute(rusqlite::params![
-                /* :id */ to_i64(unsafe { lineage.clone().into_inner().get() - 2 }),
+                /* :id */ to_i64(unsafe { lineage.clone().into_inner() }),
                 /* :x */ to_i32(origin.location().x()),
                 /* :y */ to_i32(origin.location().y()),
                 /* :i */ to_i32(origin.index()),
                 /* :parent */
                 self.parents
                     .get(&lineage)
-                    .map(|parent| to_i64(unsafe { parent.clone().into_inner().get() - 2 })),
+                    .map(|parent| to_i64(unsafe { parent.clone().into_inner() })),
                 /* :species */
                 self.species
                     .get(&ancestor)

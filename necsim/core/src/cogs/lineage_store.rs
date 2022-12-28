@@ -32,8 +32,8 @@ pub trait LocallyCoherentLineageStore<M: MathsCore, H: Habitat<M>>:
 {
     #[must_use]
     #[debug_requires(
-        habitat.contains(indexed_location.location()),
-        "indexed location is inside habitat"
+        habitat.is_indexed_location_habitable(indexed_location),
+        "indexed location is habitable"
     )]
     fn get_global_lineage_reference_at_indexed_location(
         &self,
@@ -42,8 +42,8 @@ pub trait LocallyCoherentLineageStore<M: MathsCore, H: Habitat<M>>:
     ) -> Option<&GlobalLineageReference>;
 
     #[debug_requires(
-        habitat.contains(lineage.indexed_location.location()),
-        "indexed location is inside habitat"
+        habitat.is_indexed_location_habitable(&lineage.indexed_location),
+        "indexed location is habitable"
     )]
     #[debug_ensures(self.get_lineage_for_local_reference(
         &ret
@@ -68,9 +68,10 @@ pub trait LocallyCoherentLineageStore<M: MathsCore, H: Habitat<M>>:
     #[debug_requires(self.get_lineage_for_local_reference(
         &reference
     ).is_some(), "lineage is active")]
-    #[debug_ensures(old(habitat).contains(
-        ret.indexed_location.location()
-    ), "prior location is inside habitat")]
+    #[debug_ensures(
+        old(habitat).is_indexed_location_habitable(&ret.indexed_location),
+        "prior indexed location is habitable"
+    )]
     #[debug_ensures(self.get_lineage_for_local_reference(
         &old(unsafe { crate::cogs::Backup::backup_unchecked(&reference) })
     ).is_none(), "lineage was deactivated")]
@@ -104,7 +105,10 @@ pub trait GloballyCoherentLineageStore<M: MathsCore, H: Habitat<M>>:
     fn iter_active_locations(&self, habitat: &H) -> Self::LocationIterator<'_>;
 
     #[must_use]
-    #[debug_requires(habitat.contains(location), "location is inside habitat")]
+    #[debug_requires(
+        habitat.is_location_habitable(location),
+        "location is habitable"
+    )]
     fn get_local_lineage_references_at_location_unordered(
         &self,
         location: &Location,

@@ -16,8 +16,8 @@ pub trait AntiTrespassingDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCor
     Backup + core::fmt::Debug
 {
     #[must_use]
-    #[debug_requires(!habitat.contains(location), "location is outside habitat")]
-    #[debug_ensures(old(habitat).contains(&ret), "target is inside habitat")]
+    #[debug_requires(!habitat.is_location_habitable(location), "location is inhabitable")]
+    #[debug_ensures(old(habitat).is_location_habitable(&ret), "target is habitable")]
     fn sample_anti_trespassing_dispersal_from_location(
         &self,
         location: &Location,
@@ -91,14 +91,15 @@ impl<
     #[must_use]
     #[inline]
     #[allow(clippy::no_effect_underscore_binding)]
-    #[debug_ensures(old(habitat).contains(&ret), "target is inside habitat")]
+    #[debug_ensures(old(habitat).is_location_habitable(&ret), "target is habitable")]
     fn sample_dispersal_from_location(
         &self,
         location: &Location,
         habitat: &H,
         rng: &mut G,
     ) -> Location {
-        // Explicitly circumvent the precondition that `habitat.contains(location)`
+        // Explicitly circumvent the precondition that
+        //  `habitat.is_location_habitable(location)`
         self.__contracts_impl_sample_dispersal_from_location(location, habitat, rng)
     }
 
@@ -110,12 +111,12 @@ impl<
         habitat: &H,
         rng: &mut G,
     ) -> Location {
-        if habitat.contains(location) {
-            // Re-establish the precondition that `habitat.contains(location)`
+        if habitat.is_location_habitable(location) {
+            // Re-establish the precondition that `habitat.is_location_habitable(location)`
             self.legal_dispersal_sampler
                 .sample_dispersal_from_location(location, habitat, rng)
         } else {
-            // Establish the precondition that `!habitat.contains(location)`
+            // Establish the precondition that `!habitat.is_location_habitable(location)`
             self.trespassing_dispersal_sampler
                 .sample_anti_trespassing_dispersal_from_location(location, habitat, rng)
         }
@@ -133,7 +134,7 @@ impl<
     #[must_use]
     #[inline]
     #[allow(clippy::no_effect_underscore_binding)]
-    #[debug_ensures(old(habitat).contains(&ret), "target is inside habitat")]
+    #[debug_ensures(old(habitat).is_location_habitable(&ret), "target is habitable")]
     #[debug_ensures(&ret != location, "disperses to a different location")]
     fn sample_non_self_dispersal_from_location(
         &self,
@@ -141,7 +142,8 @@ impl<
         habitat: &H,
         rng: &mut G,
     ) -> Location {
-        // Explicitly circumvent the precondition that `habitat.contains(location)`
+        // Explicitly circumvent the precondition that
+        //  `habitat.is_location_habitable(location)`
         self.__contracts_impl_sample_non_self_dispersal_from_location(location, habitat, rng)
     }
 
@@ -153,12 +155,15 @@ impl<
         habitat: &H,
         rng: &mut G,
     ) -> Location {
-        if habitat.contains(location) {
-            // Re-establish the precondition that `habitat.contains(location)`
+        if habitat.is_location_habitable(location) {
+            // Re-establish the precondition that `habitat.is_location_habitable(location)`
             self.legal_dispersal_sampler
                 .sample_non_self_dispersal_from_location(location, habitat, rng)
         } else {
-            // Establish the precondition that `!habitat.contains(location)`
+            // Establish the precondition that `!habitat.is_location_habitable(location)`
+            // Since the origin location is inhabitable but the target location is
+            //  habitable, the target location must be different from the origin
+            //  location
             self.trespassing_dispersal_sampler
                 .sample_anti_trespassing_dispersal_from_location(location, habitat, rng)
         }
@@ -171,7 +176,8 @@ impl<
         location: &Location,
         habitat: &H,
     ) -> ClosedUnitF64 {
-        // Explicitly circumvent the precondition that `habitat.contains(location)`
+        // Explicitly circumvent the precondition that
+        //  `habitat.is_location_habitable(location)`
         self.__contracts_impl_get_self_dispersal_probability_at_location(location, habitat)
     }
 
@@ -182,14 +188,14 @@ impl<
         location: &Location,
         habitat: &H,
     ) -> ClosedUnitF64 {
-        if habitat.contains(location) {
-            // Re-establish the precondition that `habitat.contains(location)`
+        if habitat.is_location_habitable(location) {
+            // Re-establish the precondition that `habitat.is_location_habitable(location)`
             self.legal_dispersal_sampler
                 .get_self_dispersal_probability_at_location(location, habitat)
         } else {
-            // The `AntiTrespassingDispersalSampler` always jumps from outside
-            //  the habitat to inside the habitat, i.e. there is never any
-            //  self-dispersal outside the habitat
+            // The `AntiTrespassingDispersalSampler` always jumps from an inhabitable
+            //  location to a habitable location, i.e. there is never any self-dispersal
+            //  when starting at an inhabitable location
             ClosedUnitF64::zero()
         }
     }

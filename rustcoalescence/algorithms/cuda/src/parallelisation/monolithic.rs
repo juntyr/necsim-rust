@@ -314,7 +314,7 @@ pub fn simulate<
                             }
                         }
 
-                        event_buffer.report_events(&mut proxy);
+                        event_buffer.report_events_unordered(&mut proxy);
 
                         proxy.local_partition().get_reporter().report_progress(
                             &((slow_lineages.len() as u64) + (fast_lineages.len() as u64)).into(),

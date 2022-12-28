@@ -1,4 +1,4 @@
-use core::{fmt, marker::PhantomData};
+use core::fmt;
 
 #[cfg(not(target_os = "cuda"))]
 use rust_cuda::rustacuda::{
@@ -7,13 +7,15 @@ use rust_cuda::rustacuda::{
 };
 
 use rust_cuda::utils::{
-    aliasing::{SplitSliceOverCudaThreadsConstStride, SplitSliceOverCudaThreadsDynamicStride},
-    exchange::buffer::CudaExchangeBuffer,
+    aliasing::SplitSliceOverCudaThreadsDynamicStride, exchange::buffer::CudaExchangeBuffer,
 };
 
 use necsim_core::{
-    event::{DispersalEvent, SpeciationEvent},
-    reporter::{boolean::Boolean, Reporter},
+    event::{PackedEvent, SpeciationEvent, TypedEvent},
+    reporter::{
+        boolean::{Boolean, False, True},
+        Reporter,
+    },
 };
 
 #[cfg(target_os = "cuda")]
@@ -21,34 +23,60 @@ use necsim_core::impl_report;
 
 use super::utils::MaybeSome;
 
-#[allow(clippy::module_name_repetitions)]
+#[allow(clippy::module_name_repetitions, clippy::type_complexity)]
 #[derive(rust_cuda::common::LendRustToCuda)]
 #[cuda(free = "ReportSpeciation", free = "ReportDispersal")]
 pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
     #[cuda(embed)]
-    speciation_mask:
-        SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<bool, true, true>, 1_usize>,
+    event_mask: SplitSliceOverCudaThreadsDynamicStride<CudaExchangeBuffer<bool, true, true>>,
     #[cuda(embed)]
-    speciation_buffer: SplitSliceOverCudaThreadsConstStride<
-        CudaExchangeBuffer<MaybeSome<SpeciationEvent>, false, true>,
-        1_usize,
-    >,
-    #[cuda(embed)]
-    dispersal_mask: SplitSliceOverCudaThreadsDynamicStride<CudaExchangeBuffer<bool, true, true>>,
-    #[cuda(embed)]
-    dispersal_buffer: SplitSliceOverCudaThreadsDynamicStride<
-        CudaExchangeBuffer<MaybeSome<DispersalEvent>, false, true>,
+    event_buffer: SplitSliceOverCudaThreadsDynamicStride<
+        CudaExchangeBuffer<
+            MaybeSome<<EventBuffer<ReportSpeciation, ReportDispersal> as EventType>::Event>,
+            false,
+            true,
+        >,
     >,
     max_events: usize,
     event_counter: usize,
-    marker: PhantomData<(ReportSpeciation, ReportDispersal)>,
+}
+
+pub trait EventType {
+    type Event: 'static
+        + ~const rust_cuda::const_type_layout::TypeGraphLayout
+        + rust_cuda::safety::StackOnly
+        + Into<TypedEvent>
+        + Into<PackedEvent>
+        + Clone;
+}
+
+impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> EventType
+    for EventBuffer<ReportSpeciation, ReportDispersal>
+{
+    default type Event = PackedEvent;
+}
+
+impl EventType for EventBuffer<False, False> {
+    type Event = PackedEvent;
+}
+
+impl EventType for EventBuffer<False, True> {
+    type Event = PackedEvent;
+}
+
+impl EventType for EventBuffer<True, False> {
+    type Event = SpeciationEvent;
+}
+
+impl EventType for EventBuffer<True, True> {
+    type Event = PackedEvent;
 }
 
 impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> fmt::Debug
     for EventBuffer<ReportSpeciation, ReportDispersal>
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct(stringify!(EventBuffer))
+        fmt.debug_struct("EventBuffer")
             .field("max_events", &self.max_events)
             .field("event_counter", &self.event_counter)
             .finish()
@@ -69,72 +97,75 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
         let block_size = (block_size.x * block_size.y * block_size.z) as usize;
         let grid_size = (grid_size.x * grid_size.y * grid_size.z) as usize;
 
-        let speciation_capacity = if ReportSpeciation::VALUE {
-            block_size * grid_size
-        } else {
-            0_usize
-        };
-        let dispersal_capacity = if ReportDispersal::VALUE {
-            max_events * block_size * grid_size
+        #[allow(clippy::bool_to_int_with_if)]
+        let max_events = if ReportDispersal::VALUE {
+            max_events
+        } else if ReportSpeciation::VALUE {
+            1_usize
         } else {
             0_usize
         };
 
-        let mut speciation_buffer = alloc::vec::Vec::with_capacity(speciation_capacity);
-        speciation_buffer.resize_with(speciation_capacity, || MaybeSome::None);
+        let event_capacity = max_events * block_size * grid_size;
 
-        let mut dispersal_buffer = alloc::vec::Vec::with_capacity(dispersal_capacity);
-        dispersal_buffer.resize_with(dispersal_capacity, || MaybeSome::None);
+        let mut event_buffer = alloc::vec::Vec::with_capacity(event_capacity);
+        event_buffer.resize_with(event_capacity, || MaybeSome::None);
 
         Ok(Self {
-            speciation_mask: SplitSliceOverCudaThreadsConstStride::new(CudaExchangeBuffer::new(
-                &false,
-                speciation_capacity,
-            )?),
-            speciation_buffer: SplitSliceOverCudaThreadsConstStride::new(
-                CudaExchangeBuffer::from_vec(speciation_buffer)?,
-            ),
-            dispersal_mask: SplitSliceOverCudaThreadsDynamicStride::new(
-                CudaExchangeBuffer::new(&false, dispersal_capacity)?,
+            event_mask: SplitSliceOverCudaThreadsDynamicStride::new(
+                CudaExchangeBuffer::new(&false, event_capacity)?,
                 max_events,
             ),
-            dispersal_buffer: SplitSliceOverCudaThreadsDynamicStride::new(
-                CudaExchangeBuffer::from_vec(dispersal_buffer)?,
+            event_buffer: SplitSliceOverCudaThreadsDynamicStride::new(
+                CudaExchangeBuffer::from_vec(event_buffer)?,
                 max_events,
             ),
             max_events,
             event_counter: 0_usize,
-            marker: PhantomData::<(ReportSpeciation, ReportDispersal)>,
         })
     }
 
-    pub fn report_events<P>(&mut self, reporter: &mut P)
+    #[allow(clippy::missing_panics_doc)] // TODO: remove
+    pub fn report_events_unordered<P>(&mut self, reporter: &mut P)
     where
         P: Reporter<ReportSpeciation = ReportSpeciation, ReportDispersal = ReportDispersal>,
     {
-        for (mask, dispersal) in self
-            .dispersal_mask
-            .iter_mut()
-            .zip(self.dispersal_buffer.iter())
-        {
-            if ReportDispersal::VALUE && *mask.read() {
-                reporter.report_dispersal(unsafe { dispersal.read().assume_some_ref() }.into());
-            }
+        // let mut last_time = 0.0_f64;
+
+        // let mut times = alloc::vec::Vec::new();
+
+        for (mask, event) in self.event_mask.iter_mut().zip(self.event_buffer.iter()) {
+            if *mask.read() {
+                let event: TypedEvent = unsafe { event.read().assume_some_read() }.into();
+                // let new_time: f64 = match &event {
+                //     TypedEvent::Speciation(speciation) => speciation.event_time,
+                //     TypedEvent::Dispersal(dispersal) => dispersal.event_time,
+                // }
+                // .get();
+                // times.push(Some(new_time));
+                // assert!(new_time >= last_time, "{new_time} {last_time}");
+                // last_time = new_time;
+
+                match event {
+                    TypedEvent::Speciation(ref speciation) => {
+                        reporter.report_speciation(speciation.into());
+                    },
+                    TypedEvent::Dispersal(ref dispersal) => {
+                        reporter.report_dispersal(dispersal.into());
+                    },
+                }
+            } /*else {
+                  times.push(None);
+              }*/
 
             mask.write(false);
         }
 
-        for (mask, speciation) in self
-            .speciation_mask
-            .iter_mut()
-            .zip(self.speciation_buffer.iter())
-        {
-            if ReportSpeciation::VALUE && *mask.read() {
-                reporter.report_speciation(unsafe { speciation.read().assume_some_ref() }.into());
-            }
+        // panic!("{:?}", times);
+    }
 
-            mask.write(false);
-        }
+    pub fn max_events_per_individual(&self) -> usize {
+        self.max_events
     }
 }
 
@@ -142,23 +173,72 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
 impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
     for EventBuffer<ReportSpeciation, ReportDispersal>
 {
+    impl_report!([default] speciation(&mut self, _event: Ignored) {});
+
+    impl_report!([default] dispersal(&mut self, _event: Ignored) {});
+
+    impl_report!([default] progress(&mut self, _progress: Ignored) {});
+}
+
+#[cfg(target_os = "cuda")]
+impl Reporter for EventBuffer<False, True> {
     impl_report!(
         #[debug_requires(
-            !self.speciation_mask.get(0).map(
-                rust_cuda::utils::exchange::buffer::CudaExchangeItem::read
-            ).copied().unwrap_or(true),
-            "does not report extraneous speciation event"
+            self.event_counter < self.max_events,
+            "does not report extraneous dispersal events"
+        )]
+        dispersal(&mut self, event: Used) {
+            if let Some(mask) = self.event_mask.get_mut(self.event_counter) {
+                mask.write(true);
+
+                unsafe {
+                    self.event_buffer.get_unchecked_mut(self.event_counter)
+                }.write(MaybeSome::Some(event.clone().into()));
+            }
+
+            self.event_counter += 1;
+        }
+    );
+}
+
+#[cfg(target_os = "cuda")]
+impl Reporter for EventBuffer<True, False> {
+    impl_report!(
+        #[debug_requires(
+            self.event_counter == 0,
+            "does not report extraneous speciation events"
         )]
         speciation(&mut self, event: Used) {
-            if ReportSpeciation::VALUE {
-                if let Some(mask) = self.speciation_mask.get_mut(0) {
-                    mask.write(true);
+            if let Some(mask) = self.event_mask.get_mut(0) {
+                mask.write(true);
 
-                    unsafe {
-                        self.speciation_buffer.get_unchecked_mut(0)
-                    }.write(MaybeSome::Some(event.clone()));
-                }
+                unsafe {
+                    self.event_buffer.get_unchecked_mut(0)
+                }.write(MaybeSome::Some(event.clone()));
             }
+
+            self.event_counter = self.max_events;
+        }
+    );
+}
+
+#[cfg(target_os = "cuda")]
+impl Reporter for EventBuffer<True, True> {
+    impl_report!(
+        #[debug_requires(
+            self.event_counter < self.max_events,
+            "does not report extraneous speciation events"
+        )]
+        speciation(&mut self, event: Used) {
+            if let Some(mask) = self.event_mask.get_mut(self.event_counter) {
+                mask.write(true);
+
+                unsafe {
+                    self.event_buffer.get_unchecked_mut(self.event_counter)
+                }.write(MaybeSome::Some(event.clone().into()));
+            }
+
+            self.event_counter = self.max_events;
         }
     );
 
@@ -168,19 +248,15 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
             "does not report extraneous dispersal events"
         )]
         dispersal(&mut self, event: Used) {
-            if ReportDispersal::VALUE {
-                if let Some(mask) = self.dispersal_mask.get_mut(self.event_counter) {
-                    mask.write(true);
+            if let Some(mask) = self.event_mask.get_mut(self.event_counter) {
+                mask.write(true);
 
-                    unsafe {
-                        self.dispersal_buffer.get_unchecked_mut(self.event_counter)
-                    }.write(MaybeSome::Some(event.clone()));
-                }
-
-                self.event_counter += 1;
+                unsafe {
+                    self.event_buffer.get_unchecked_mut(self.event_counter)
+                }.write(MaybeSome::Some(event.clone().into()));
             }
+
+            self.event_counter += 1;
         }
     );
-
-    impl_report!(progress(&mut self, _progress: Ignored) {});
 }

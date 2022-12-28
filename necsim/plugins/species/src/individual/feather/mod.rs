@@ -12,7 +12,7 @@ use necsim_core::{
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
 };
-use necsim_core_bond::{NonNegativeF64, NonZeroOneU64};
+use necsim_core_bond::NonNegativeF64;
 
 use crate::{LastEventState, SpeciesIdentity};
 
@@ -191,19 +191,13 @@ impl<'de> Deserialize<'de> for IndividualSpeciesFeatherReporter {
                     .zip(parents.values_iter())
                     .zip(species.iter())
                 {
-                    let id = unsafe {
-                        GlobalLineageReference::from_inner(NonZeroOneU64::new_unchecked(*id + 2))
-                    };
+                    let id = unsafe { GlobalLineageReference::from_inner(*id) };
 
                     // Populate the individual `origins` lookup
                     self_origins
                         .insert(id.clone(), IndexedLocation::new(Location::new(*x, *y), *i));
 
-                    let parent = unsafe {
-                        GlobalLineageReference::from_inner(NonZeroOneU64::new_unchecked(
-                            *parent + 2,
-                        ))
-                    };
+                    let parent = unsafe { GlobalLineageReference::from_inner(*parent) };
 
                     // Populate the individual `parents` lookup
                     // parent == id -> individual does NOT have a parent

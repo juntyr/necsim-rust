@@ -7,6 +7,8 @@
 // OpenSimplex noise implementation vendored from
 // https://github.com/Mapet13/opensimplex_noise_rust
 // by Jakub Sordyl, licensed under the Unlicense
+//
+// Adapted to use MathsCore and support wrapping
 
 use necsim_core_maths::MathsCore;
 
@@ -47,19 +49,20 @@ impl OpenSimplexNoise {
 
     #[allow(dead_code)]
     #[must_use]
-    pub fn eval_2d<M: MathsCore>(&self, x: f64, y: f64) -> f64 {
-        OpenSimplexNoise2D::eval::<M>(Vec2::new(x, y), &self.perm)
+    pub fn eval_2d<M: MathsCore>(&self, x: f64, y: f64, wrap: f64) -> f64 {
+        OpenSimplexNoise2D::eval::<M>(Vec2::new(x, y), &self.perm, wrap)
     }
 
     #[allow(dead_code)]
     #[must_use]
-    pub fn eval_3d<M: MathsCore>(&self, x: f64, y: f64, z: f64) -> f64 {
-        OpenSimplexNoise3D::eval::<M>(Vec3::new(x, y, z), &self.perm)
+    pub fn eval_3d<M: MathsCore>(&self, x: f64, y: f64, z: f64, wrap: f64) -> f64 {
+        OpenSimplexNoise3D::eval::<M>(Vec3::new(x, y, z), &self.perm, wrap)
     }
 
+    #[allow(dead_code)]
     #[must_use]
-    pub fn eval_4d<M: MathsCore>(&self, x: f64, y: f64, z: f64, w: f64) -> f64 {
-        OpenSimplexNoise4D::eval::<M>(Vec4::new(x, y, z, w), &self.perm)
+    pub fn eval_4d<M: MathsCore>(&self, x: f64, y: f64, z: f64, w: f64, wrap: f64) -> f64 {
+        OpenSimplexNoise4D::eval::<M>(Vec4::new(x, y, z, w), &self.perm, wrap)
     }
 }
 
@@ -67,8 +70,8 @@ pub trait NoiseEvaluator<T: vector::VecType<f64>> {
     const STRETCH_POINT: T;
     const SQUISH_POINT: T;
 
-    fn eval<M: MathsCore>(point: T, perm: &PermTable) -> f64;
-    fn extrapolate(grid: T, delta: T, perm: &PermTable) -> f64;
+    fn eval<M: MathsCore>(point: T, perm: &PermTable, wrap: f64) -> f64;
+    fn extrapolate<M: MathsCore>(grid: T, delta: T, perm: &PermTable, wrap: f64) -> f64;
 }
 
 fn generate_perm_array(seed: i64) -> PermTable {

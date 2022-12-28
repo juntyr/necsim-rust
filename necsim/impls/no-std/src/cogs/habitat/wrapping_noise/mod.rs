@@ -1,5 +1,5 @@
 use alloc::boxed::Box;
-use core::{f64::consts::PI, fmt, num::NonZeroUsize};
+use core::{fmt, num::NonZeroUsize};
 use necsim_core_bond::{ClosedUnitF64, OffByOneU64, OpenClosedUnitF64 as PositiveUnitF64};
 use r#final::Final;
 
@@ -14,7 +14,7 @@ use necsim_core::{
 
 use crate::cogs::{
     habitat::almost_infinite::AlmostInfiniteHabitat,
-    lineage_store::coherent::globally::singleton_demes::SingletonDemesHabitat,
+    lineage_store::coherent::globally::singleton_demes::SingletonDemesHabitat, rng::wyhash::WyHash,
 };
 
 #[allow(clippy::module_name_repetitions)]
@@ -35,7 +35,6 @@ pub struct WrappingNoiseHabitat<M: MathsCore> {
 impl<M: MathsCore> fmt::Debug for WrappingNoiseHabitat<M> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(WrappingNoiseHabitat))
-            .field("inner", &self.inner)
             .field("coverage", &self.coverage)
             .field("scale", &self.scale)
             .field("persistence", &self.persistence)
@@ -53,27 +52,29 @@ impl<M: MathsCore> WrappingNoiseHabitat<M> {
         persistence: PositiveUnitF64,
         octaves: NonZeroUsize,
     ) -> Self {
-        const THRESHOLD_QUALITY_LOG2: u32 = 8;
-
         let noise = Box::new(OpenSimplexNoise::new(Some(seed)));
 
         // Emperically determine a threshold to uniformly sample habitat
         //  from the generated Simplex Noise
         let mut samples = alloc::vec::Vec::new();
 
-        for y in 0..(1 << THRESHOLD_QUALITY_LOG2) {
-            for x in 0..(1 << THRESHOLD_QUALITY_LOG2) {
-                samples.push(sum_noise_octaves::<M>(
-                    &noise,
-                    &Location::new(
-                        x << (32 - THRESHOLD_QUALITY_LOG2),
-                        y << (32 - THRESHOLD_QUALITY_LOG2),
-                    ),
-                    persistence,
-                    scale,
-                    octaves,
-                ));
-            }
+        // Utilise a PRNG to avoid sampling degeneracies for finding the
+        //  threshold which would poison the entire sampler
+        let mut rng: WyHash<M> = WyHash::from_seed(seed.to_le_bytes());
+
+        for _ in 0..(1_usize << 16) {
+            let location = rng.sample_u64();
+
+            samples.push(sum_noise_octaves::<M>(
+                &noise,
+                &Location::new(
+                    (location & 0x0000_0000_FFFF_FFFF) as u32,
+                    ((location >> 32) & 0x0000_0000_FFFF_FFFF) as u32,
+                ),
+                persistence,
+                scale,
+                octaves,
+            ));
         }
 
         samples.sort_unstable_by(f64::total_cmp);
@@ -211,8 +212,6 @@ impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for WrappingN
 
 impl<M: MathsCore> SingletonDemesHabitat<M> for WrappingNoiseHabitat<M> {}
 
-const U32_MAX_AS_F64: f64 = (u32::MAX as f64) + 1.0_f64;
-
 // Adapted from Christian Maher's article "Working with Simplex Noise"
 // Licensed under CC BY 3.0
 // Published at https://cmaher.github.io/posts/working-with-simplex-noise/
@@ -223,35 +222,30 @@ fn sum_noise_octaves<M: MathsCore>(
     scale: PositiveUnitF64,
     octaves: NonZeroUsize,
 ) -> f64 {
+    const F64_2_32: f64 = (u32::MAX as f64) + 1.0_f64;
+
     let mut max_amplitude = 0.0_f64;
     let mut amplitude = 1.0_f64;
-    let mut frequency = scale.get();
+    // Pre-scale the frequency to avoid pow2 degeneracies
+    let mut frequency = scale.get() * core::f64::consts::FRAC_1_PI * 3.0;
 
     let mut result = 0.0_f64;
 
     for _ in 0..octaves.get() {
-        let (x, y, z, w) = location_to_wrapping_4d::<M>(location, frequency);
-        result += noise.eval_4d::<M>(x, y, z, w) * amplitude;
+        // Ensure wrapping occurs at an integer boundary
+        let wrap = M::round(F64_2_32 * frequency);
+        let fixed_frequency = wrap / F64_2_32;
+
+        let (x, y) = (
+            f64::from(location.x()) * fixed_frequency,
+            f64::from(location.y()) * fixed_frequency,
+        );
+
+        result += noise.eval_2d::<M>(x, y, wrap) * amplitude;
         max_amplitude += amplitude;
         amplitude *= persistence.get();
         frequency *= 2.0_f64;
     }
 
     result / max_amplitude
-}
-
-// Adapted from JTippetts' Seamless Noise article on gamedev.net:
-//  https://www.gamedev.net/blog/33/entry-2138456-seamless-noise/
-fn location_to_wrapping_4d<M: MathsCore>(location: &Location, scale: f64) -> (f64, f64, f64, f64) {
-    let s = f64::from(location.x()) / U32_MAX_AS_F64;
-    let t = f64::from(location.y()) / U32_MAX_AS_F64;
-
-    let scale = scale * U32_MAX_AS_F64;
-
-    let nx = M::cos(s * 2.0_f64 * PI) * scale;
-    let ny = M::cos(t * 2.0_f64 * PI) * scale;
-    let nz = M::sin(s * 2.0_f64 * PI) * scale;
-    let nw = M::sin(t * 2.0_f64 * PI) * scale;
-
-    (nx, ny, nz, nw)
 }

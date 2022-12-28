@@ -34,13 +34,6 @@ pub struct SpeciationSample {
     sample_location: IndexedLocation,
 }
 
-#[allow(dead_code)]
-const EXCESSIVE_OPTION_SPECIATION_SAMPLE_ERROR: [(); 1 - {
-    const ASSERT: bool = core::mem::size_of::<Option<SpeciationSample>>()
-        == core::mem::size_of::<SpeciationSample>();
-    ASSERT
-} as usize] = [];
-
 impl SpeciationSample {
     pub fn update_min(
         min_spec_sample: &mut Option<Self>,
