@@ -22,8 +22,15 @@ pub trait Habitat<M: MathsCore>: crate::cogs::Backup + core::fmt::Debug + Sized 
     fn get_extent(&self) -> &LandscapeExtent;
 
     #[must_use]
-    fn contains(&self, location: &Location) -> bool {
-        self.get_extent().contains(location)
+    fn is_location_habitable(&self, location: &Location) -> bool {
+        self.get_extent().contains(location) && self.get_habitat_at_location(location) > 0_u32
+    }
+
+    #[must_use]
+    fn is_indexed_location_habitable(&self, indexed_location: &IndexedLocation) -> bool {
+        self.get_extent().contains(indexed_location.location())
+            && (indexed_location.index()
+                < self.get_habitat_at_location(indexed_location.location()))
     }
 
     #[must_use]

@@ -84,12 +84,7 @@ impl<'d, M: MathsCore, O: UntrustedOriginSampler<'d, M>, D: Decomposition<M, O::
             if !self
                 .origin_sampler
                 .habitat()
-                .contains(lineage.indexed_location.location())
-                || lineage.indexed_location.index()
-                    >= self
-                        .origin_sampler
-                        .habitat()
-                        .get_habitat_at_location(lineage.indexed_location.location())
+                .is_indexed_location_habitable(&lineage.indexed_location)
             {
                 if self.decomposition.get_subdomain().is_root() {
                     return Some(lineage);

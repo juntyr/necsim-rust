@@ -14,10 +14,7 @@ pub mod radial;
 pub trait Decomposition<M: MathsCore, H: Habitat<M>>: Backup + Sized + core::fmt::Debug {
     fn get_subdomain(&self) -> Partition;
 
-    #[debug_requires(
-        habitat.contains(location),
-        "location is contained inside habitat"
-    )]
+    #[debug_requires(habitat.is_location_habitable(location), "location is habitable")]
     #[debug_ensures(
         ret < self.get_subdomain().size().get(),
         "subdomain rank is in range [0, self.get_subdomain().size())"

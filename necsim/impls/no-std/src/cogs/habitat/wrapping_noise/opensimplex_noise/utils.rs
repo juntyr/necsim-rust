@@ -13,5 +13,8 @@ pub fn contribute<NoiseEvaluatorType: NoiseEvaluator<Vec>, Vec: VecType<f64>>(
         return 0.0;
     }
 
-    attn * attn * attn * attn * NoiseEvaluatorType::extrapolate(grid + delta, shifted, perm)
+    let attn2 = attn * attn;
+    let attn4 = attn2 * attn2;
+
+    attn4 * NoiseEvaluatorType::extrapolate(grid + delta, shifted, perm)
 }

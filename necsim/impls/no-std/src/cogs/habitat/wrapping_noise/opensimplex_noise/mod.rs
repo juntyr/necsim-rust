@@ -57,6 +57,7 @@ impl OpenSimplexNoise {
         OpenSimplexNoise3D::eval::<M>(Vec3::new(x, y, z), &self.perm)
     }
 
+    #[allow(dead_code)]
     #[must_use]
     pub fn eval_4d<M: MathsCore>(&self, x: f64, y: f64, z: f64, w: f64) -> f64 {
         OpenSimplexNoise4D::eval::<M>(Vec4::new(x, y, z, w), &self.perm)

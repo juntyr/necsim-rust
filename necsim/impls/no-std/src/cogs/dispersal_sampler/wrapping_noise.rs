@@ -95,22 +95,20 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, WrappingNoiseHabi
         location: &Location,
         habitat: &WrappingNoiseHabitat<M>,
     ) -> ClosedUnitF64 {
-        if habitat.get_habitat_at_location(location) == 0 {
-            ClosedUnitF64::zero()
-        } else {
-            let p_self_dispersal = self
-                .inner
-                .get_self_dispersal_probability_at_location(location, habitat.get_inner());
-            let p_out_dispersal = p_self_dispersal.one_minus() * habitat.coverage();
+        // By PRE, the location is habitable, i.e. self-dispersal is possible
 
-            // Safety:
-            // - p_self_dispersal and p_out_dispersal are both in [0, 1]
-            // - a / (a + [0, 1]) = [0, 1]
-            unsafe {
-                ClosedUnitF64::new_unchecked(
-                    p_self_dispersal.get() / (p_self_dispersal.get() + p_out_dispersal.get()),
-                )
-            }
+        let p_self_dispersal = self
+            .inner
+            .get_self_dispersal_probability_at_location(location, habitat.get_inner());
+        let p_out_dispersal = p_self_dispersal.one_minus() * habitat.coverage();
+
+        // Safety:
+        // - p_self_dispersal and p_out_dispersal are both in [0, 1]
+        // - a / (a + [0, 1]) = [0, 1]
+        unsafe {
+            ClosedUnitF64::new_unchecked(
+                p_self_dispersal.get() / (p_self_dispersal.get() + p_out_dispersal.get()),
+            )
         }
     }
 }

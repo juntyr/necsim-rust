@@ -1,5 +1,5 @@
 use alloc::boxed::Box;
-use core::{f64::consts::PI, fmt, num::NonZeroUsize};
+use core::{fmt, num::NonZeroUsize};
 use necsim_core_bond::{ClosedUnitF64, OffByOneU64, OpenClosedUnitF64 as PositiveUnitF64};
 use r#final::Final;
 
@@ -211,8 +211,6 @@ impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for WrappingN
 
 impl<M: MathsCore> SingletonDemesHabitat<M> for WrappingNoiseHabitat<M> {}
 
-const U32_MAX_AS_F64: f64 = (u32::MAX as f64) + 1.0_f64;
-
 // Adapted from Christian Maher's article "Working with Simplex Noise"
 // Licensed under CC BY 3.0
 // Published at https://cmaher.github.io/posts/working-with-simplex-noise/
@@ -223,6 +221,8 @@ fn sum_noise_octaves<M: MathsCore>(
     scale: PositiveUnitF64,
     octaves: NonZeroUsize,
 ) -> f64 {
+    const F64_2_31: f64 = (1 << 31) as f64;
+
     let mut max_amplitude = 0.0_f64;
     let mut amplitude = 1.0_f64;
     let mut frequency = scale.get();
@@ -230,28 +230,16 @@ fn sum_noise_octaves<M: MathsCore>(
     let mut result = 0.0_f64;
 
     for _ in 0..octaves.get() {
-        let (x, y, z, w) = location_to_wrapping_4d::<M>(location, frequency);
-        result += noise.eval_4d::<M>(x, y, z, w) * amplitude;
+        let (x, y) = (
+            (f64::from(location.x()) - F64_2_31) * frequency,
+            (f64::from(location.y()) - F64_2_31) * frequency,
+        );
+
+        result += noise.eval_2d::<M>(x, y) * amplitude;
         max_amplitude += amplitude;
         amplitude *= persistence.get();
         frequency *= 2.0_f64;
     }
 
     result / max_amplitude
-}
-
-// Adapted from JTippetts' Seamless Noise article on gamedev.net:
-//  https://www.gamedev.net/blog/33/entry-2138456-seamless-noise/
-fn location_to_wrapping_4d<M: MathsCore>(location: &Location, scale: f64) -> (f64, f64, f64, f64) {
-    let s = f64::from(location.x()) / U32_MAX_AS_F64;
-    let t = f64::from(location.y()) / U32_MAX_AS_F64;
-
-    let scale = scale * U32_MAX_AS_F64;
-
-    let nx = M::cos(s * 2.0_f64 * PI) * scale;
-    let ny = M::cos(t * 2.0_f64 * PI) * scale;
-    let nz = M::sin(s * 2.0_f64 * PI) * scale;
-    let nw = M::sin(t * 2.0_f64 * PI) * scale;
-
-    (nx, ny, nz, nw)
 }
