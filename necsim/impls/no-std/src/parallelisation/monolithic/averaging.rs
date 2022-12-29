@@ -90,6 +90,13 @@ pub fn simulate<
 
         total_steps += new_steps;
 
+        // Note: Immigration consistency
+        //  If a jumps to b at the same time as b jumps to a,
+        //  both are independently enqueued for immigration
+        //  (and taken out of the system until then), which
+        //  happens at the next global safe time,
+        //  i.e. no coalescence occurs
+
         // Send off the possible emigrant and recieve immigrants
         for mut immigrant in local_partition.migrate_individuals(
             simulation.emigration_exit_mut(),
@@ -98,9 +105,7 @@ pub fn simulate<
         ) {
             // Push all immigrations to the next safe point such that they do
             //  not conflict with the independence of the current time slice
-            immigrant.event_time = immigrant
-                .event_time
-                .max(global_safe_time + independent_time_slice);
+            immigrant.event_time = immigrant.event_time.max(next_safe_time);
 
             simulation.immigration_entry_mut().push(immigrant);
         }
@@ -114,16 +119,14 @@ pub fn simulate<
                 // Push all immigrations to the next safe point such that they
                 //  do not conflict with the independence of the current time
                 //  slice
-                immigrant.event_time = immigrant
-                    .event_time
-                    .max(global_safe_time + independent_time_slice);
+                immigrant.event_time = immigrant.event_time.max(next_safe_time);
 
                 simulation.immigration_entry_mut().push(immigrant);
             }
         }
 
         // Globally advance the simulation to the next safe point
-        global_safe_time += independent_time_slice.into();
+        global_safe_time = next_safe_time.into();
     }
 
     local_partition.report_progress_sync(0_u64);

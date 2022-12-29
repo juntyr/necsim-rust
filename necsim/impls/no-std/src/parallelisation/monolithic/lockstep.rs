@@ -89,6 +89,16 @@ pub fn simulate<
         //  (we already know at least one partition has some next event time)
         let next_local_time = next_local_time.unwrap_or_else(PositiveF64::infinity);
 
+        // Note: Immigration consistency
+        //  If a wants to jump to b at the same time as b
+        //  wants to jumps to a, one of the two is selected
+        //  to go first deterministically based on which
+        //  partition they belong to, and coalescence occurs.
+        //  The non-selected individual's wish to jump is
+        //  invalidated as there are now different circum-
+        //  stances and since the next event must occur at
+        //  a monotonically later time
+
         // The partition with the next event gets to simulate just the next step
         if let Ok(next_global_time) = local_partition.reduce_vote_min_time(next_local_time) {
             let (_, new_steps) = simulation.simulate_incremental_early_stop(

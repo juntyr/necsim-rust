@@ -89,8 +89,24 @@ pub fn simulate<
         .local_partition()
         .reduce_vote_continue(!simulation.is_done())
     {
+        let next_safe_time = global_safe_time + independent_time_slice;
+
         loop {
-            let next_safe_time = global_safe_time + independent_time_slice;
+            // Note: Immigration consistency
+            //  If a wants to jump to b at the same time as b
+            //  wants to jumps to a, both will be sent off for
+            //  immigration. Without a total order tie breaker,
+            //  this scenario would deadlock as both immigrations
+            //  would cancel the other and then re-occur. However,
+            //  with a total order tie breaker, one of the two
+            //  must be selected deterministically to have priority
+            //  and execute first, i.e. coalescence occurs. The
+            //  non-selected individual's wish to jump is invali-
+            //  dated as there are now different circumstances and
+            //  since the next event must occur at a monotonically
+            //  later time
+            // e.g. (1->3)|(2->1)|(3->2) => (1->3)|(2->1)
+            // e.g. (1->2)|(2->3)|(3->1) => (1->2)|(3->1)
 
             let (_, new_steps) = simulation.simulate_incremental_early_stop(
                 |_, _, next_event_time| {
@@ -152,7 +168,7 @@ pub fn simulate<
         // Globally advance the simulation to the next safe point
         proxy.report_events();
         simulation_backup = simulation.backup();
-        global_safe_time += independent_time_slice.into();
+        global_safe_time = next_safe_time.into();
     }
 
     proxy.local_partition().report_progress_sync(0_u64);

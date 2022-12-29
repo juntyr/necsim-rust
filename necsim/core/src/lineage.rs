@@ -153,6 +153,13 @@ impl PartialOrd for Lineage {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[repr(i8)]
+pub enum TieBreaker {
+    PreferImmigrant = -1,
+    PreferLocal = 1,
+}
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[repr(C)]
@@ -163,6 +170,7 @@ pub struct MigratingLineage {
     pub coalescence_rng_sample: CoalescenceRngSample,
     pub dispersal_target: Location,
     pub dispersal_origin: IndexedLocation,
+    pub tie_breaker: TieBreaker,
 }
 
 #[contract_trait]
@@ -175,6 +183,7 @@ impl Backup for MigratingLineage {
             prior_time: self.prior_time,
             event_time: self.event_time,
             coalescence_rng_sample: self.coalescence_rng_sample.backup_unchecked(),
+            tie_breaker: self.tie_breaker,
         }
     }
 }
@@ -188,6 +197,7 @@ impl Ord for MigratingLineage {
         //  (4) prior_time              parent + offspring
         //  (5) global_lineage_reference
         //  (6) coalescence_rng_sample
+        // (tie_breaker is ignored as it cannot compare MigratingLineages)
         match self.event_time.cmp(&other.event_time) {
             Ordering::Equal => match (&self.dispersal_origin, &self.dispersal_target)
                 .cmp(&(&other.dispersal_origin, &other.dispersal_target))

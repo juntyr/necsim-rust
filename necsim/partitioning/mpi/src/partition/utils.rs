@@ -118,8 +118,19 @@ unsafe impl Equivalence for MpiMigratingLineage {
 
     #[allow(clippy::cast_possible_wrap)]
     fn equivalent_datatype() -> Self::Out {
+        // Ensure compilation breaks if a new field is added
+        let MigratingLineage {
+            global_reference: _,
+            prior_time: _,
+            event_time: _,
+            coalescence_rng_sample: _,
+            dispersal_target: _,
+            dispersal_origin: _,
+            tie_breaker: _,
+        };
+
         UserDatatype::structured(
-            &[1, 1, 1, 1, 2, 3],
+            &[1, 1, 1, 1, 2, 3, 1],
             &[
                 offset_of!(MigratingLineage, global_reference) as mpi::Address,
                 offset_of!(MigratingLineage, prior_time) as mpi::Address,
@@ -127,6 +138,7 @@ unsafe impl Equivalence for MpiMigratingLineage {
                 offset_of!(MigratingLineage, coalescence_rng_sample) as mpi::Address,
                 offset_of!(MigratingLineage, dispersal_target) as mpi::Address,
                 offset_of!(MigratingLineage, dispersal_origin) as mpi::Address,
+                offset_of!(MigratingLineage, tie_breaker) as mpi::Address,
             ],
             &[
                 u64::equivalent_datatype(),
@@ -135,6 +147,7 @@ unsafe impl Equivalence for MpiMigratingLineage {
                 f64::equivalent_datatype(),
                 u32::equivalent_datatype(),
                 u32::equivalent_datatype(),
+                i8::equivalent_datatype(),
             ],
         )
     }

@@ -56,6 +56,18 @@ pub fn simulate<
     // Ensure that the progress bar starts with the expected target
     local_partition.report_progress_sync(simulation.get_balanced_remaining_work().0);
 
+    // Note: Immigration consistency
+    //  If the underlying ActiveLineageSampler picks
+    //  two individuals a and b s.t. a wants to jump
+    //  to b at the same time as b wants to jump to
+    //  a, it has to make a deterministic choice
+    //  between the two for which one goes first and
+    //  coalesces into the other. The non-selected
+    //  individual's wish to jump is invalidated as
+    //  there are now different circumstances and
+    //  since the next event must occur at a monoton-
+    //  ically later time
+
     let (time, steps) = simulation.simulate_incremental_early_stop(
         |_, _, next_event_time| {
             pause_before.map_or(ControlFlow::CONTINUE, |pause_before| {

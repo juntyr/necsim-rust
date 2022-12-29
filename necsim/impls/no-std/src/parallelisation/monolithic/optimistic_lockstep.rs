@@ -97,6 +97,16 @@ pub fn simulate<
         }
         .unwrap_or_else(PositiveF64::infinity);
 
+        // Note: Immigration consistency
+        //  If a wants to jump to b at the same time as b
+        //  wants to jumps to a, one of the two is selected
+        //  to go first deterministically based on which
+        //  partition they belong to, and coalescence occurs.
+        //  The non-selected individual's wish to jump is
+        //  invalidated as there are now different circum-
+        //  stances and since the next event must occur at
+        //  a monotonically later time
+
         // Roll back the simulation to the latest safe point
         *simulation = simulation_backup.resume();
 

@@ -125,26 +125,13 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
         })
     }
 
-    #[allow(clippy::missing_panics_doc)] // TODO: remove
     pub fn report_events_unordered<P>(&mut self, reporter: &mut P)
     where
         P: Reporter<ReportSpeciation = ReportSpeciation, ReportDispersal = ReportDispersal>,
     {
-        // let mut last_time = 0.0_f64;
-
-        // let mut times = alloc::vec::Vec::new();
-
         for (mask, event) in self.event_mask.iter_mut().zip(self.event_buffer.iter()) {
             if *mask.read() {
                 let event: TypedEvent = unsafe { event.read().assume_some_read() }.into();
-                // let new_time: f64 = match &event {
-                //     TypedEvent::Speciation(speciation) => speciation.event_time,
-                //     TypedEvent::Dispersal(dispersal) => dispersal.event_time,
-                // }
-                // .get();
-                // times.push(Some(new_time));
-                // assert!(new_time >= last_time, "{new_time} {last_time}");
-                // last_time = new_time;
 
                 match event {
                     TypedEvent::Speciation(ref speciation) => {
@@ -154,14 +141,10 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
                         reporter.report_dispersal(dispersal.into());
                     },
                 }
-            } /*else {
-                  times.push(None);
-              }*/
+            }
 
             mask.write(false);
         }
-
-        // panic!("{:?}", times);
     }
 
     pub fn max_events_per_individual(&self) -> usize {

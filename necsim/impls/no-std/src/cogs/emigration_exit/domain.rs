@@ -9,7 +9,7 @@ use necsim_core::{
         LocallyCoherentLineageStore, MathsCore, RngCore,
     },
     landscape::{IndexedLocation, Location},
-    lineage::{GlobalLineageReference, MigratingLineage},
+    lineage::{GlobalLineageReference, MigratingLineage, TieBreaker},
     simulation::partial::emigration_exit::PartialSimulation,
 };
 
@@ -94,6 +94,11 @@ impl<
                 prior_time,
                 event_time,
                 coalescence_rng_sample: CoalescenceRngSample::new(rng),
+                tie_breaker: if self.decomposition.get_subdomain().rank() < target_subdomain {
+                    TieBreaker::PreferImmigrant
+                } else {
+                    TieBreaker::PreferLocal
+                },
             },
         ));
 

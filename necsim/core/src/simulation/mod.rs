@@ -1,4 +1,4 @@
-use core::ops::ControlFlow;
+use core::{cmp::Ordering, ops::ControlFlow};
 
 mod backup;
 mod builder;
@@ -14,6 +14,7 @@ use crate::{
         Habitat, ImmigrationEntry, LineageStore, MathsCore, RngCore, SpeciationProbability,
         TurnoverRate,
     },
+    lineage::TieBreaker,
     reporter::Reporter,
 };
 
@@ -62,10 +63,10 @@ impl<
         loop {
             reporter.report_progress(&self.get_balanced_remaining_work().0.into());
 
-            let next_immigration_time = self
+            let next_immigration_time_tie = self
                 .immigration_entry
                 .peek_next_immigration()
-                .map(|lineage| lineage.event_time);
+                .map(|lineage| (lineage.event_time, lineage.tie_breaker));
 
             let self_ptr = self as *const Self;
 
@@ -80,11 +81,19 @@ impl<
                     return ControlFlow::BREAK;
                 }
 
-                if let Some(next_immigration_time) = next_immigration_time {
-                    return if next_immigration_time <= next_event_time {
-                        ControlFlow::BREAK
-                    } else {
-                        ControlFlow::CONTINUE
+                if let Some((next_immigration_time, next_immigration_tie_breaker)) =
+                    next_immigration_time_tie
+                {
+                    return match (
+                        next_immigration_time.cmp(&next_event_time),
+                        next_immigration_tie_breaker,
+                    ) {
+                        (Ordering::Less, _) | (Ordering::Equal, TieBreaker::PreferImmigrant) => {
+                            ControlFlow::BREAK
+                        },
+                        (Ordering::Greater, _) | (Ordering::Equal, TieBreaker::PreferLocal) => {
+                            ControlFlow::CONTINUE
+                        },
                     };
                 }
 
@@ -97,7 +106,7 @@ impl<
             {
                 if early_stop_flow.is_break() {
                     // Early stop, reset the RNG to before the event time peek to eliminate side
-                    // effects
+                    //  effects
                     break self.rng = old_rng;
                 }
 

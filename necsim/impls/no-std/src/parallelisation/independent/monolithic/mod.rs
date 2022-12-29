@@ -218,6 +218,11 @@ pub fn simulate<
                 }
             }
 
+            // Note: Coalescence consistency
+            //  If a jumps to b at the same time as b jumps to a,
+            //  no coalescence occurs as coalescence would only be
+            //  detected at the next shared duplicate event
+
             previous_next_event_time = None;
 
             let (new_time, new_steps) = simulation.simulate_incremental_early_stop(

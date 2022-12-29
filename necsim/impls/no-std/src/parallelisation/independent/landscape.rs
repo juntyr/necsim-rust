@@ -37,7 +37,7 @@ use crate::{
 
 use super::{reporter::IgnoreProgressReporterProxy, DedupCache};
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_lines)]
 pub fn simulate<
     'p,
     M: MathsCore,
@@ -131,6 +131,11 @@ pub fn simulate<
             }
         }
 
+        // Note: Immigration consistency
+        //  If a jumps to b at the same time as b jumps to a,
+        //  no coalescence occurs as coalescence would only be
+        //  detected at the next shared duplicate event
+
         let (new_time, new_steps) = simulation.simulate_incremental_early_stop(
             |_, steps, _| {
                 if steps >= step_slice.get() {
@@ -175,6 +180,7 @@ pub fn simulate<
                 prior_time,
                 event_time,
                 coalescence_rng_sample,
+                tie_breaker: _,
             } = immigrant;
 
             // Finish sampling the dispersal of the immigrating individual
