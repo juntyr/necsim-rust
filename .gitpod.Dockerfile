@@ -25,6 +25,6 @@ RUN sudo apt-get update -q && \
     sudo apt-get autoremove -y && \
     sudo rm -rf /var/lib/{apt,dpkg,cache,log}/
 
-RUN cargo install ptx-linker --git https://github.com/MomoLangenstein/rust-ptx-linker --force --locked && \
+RUN cargo install ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force --locked && \
     cargo install cargo-mpirun --force --locked && \
-    cargo install cargo-reaper --git https://github.com/MomoLangenstein/grim-reaper --force --locked
+    cargo install cargo-reaper --git https://github.com/juntyr/grim-reaper --force --locked
