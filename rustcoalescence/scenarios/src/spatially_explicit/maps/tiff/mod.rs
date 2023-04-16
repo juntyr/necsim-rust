@@ -64,10 +64,7 @@ pub fn load_map_from_tiff<D: TiffDataType>(path: &Path, strict_load: bool) -> Re
 
         anyhow::ensure!(
             samples_per_pixel == 1_u8,
-            format!(
-                "Image must only have one sample per pixel but has {}.",
-                samples_per_pixel
-            )
+            format!("Image must only have one sample per pixel but has {samples_per_pixel}.")
         );
     }
 
@@ -95,12 +92,11 @@ pub fn load_map_from_tiff<D: TiffDataType>(path: &Path, strict_load: bool) -> Re
         .read_image()
         .context("Could not decode the image.")?;
 
-    let mut image_data = match D::decoding_result_to_data(any_image) {
-        Some(image_data) => image_data,
-        None => anyhow::bail!(
+    let Some(mut image_data) = D::decoding_result_to_data(any_image) else {
+        anyhow::bail!(
             "Failed to decode the image data as {}.",
             std::any::type_name::<D>()
-        ),
+        )
     };
 
     if !strict_load {

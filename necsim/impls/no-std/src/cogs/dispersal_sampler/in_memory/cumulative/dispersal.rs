@@ -40,12 +40,11 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
         // Sampling the cumulative probability table using binary search can return
         // non-habitat locations. We correct for this by storing the index of the
         // last valid habitat (the alias method will make this obsolete).
-        let valid_dispersal_target_index = match self
+        let Some(Some(valid_dispersal_target_index)) = self
             .valid_dispersal_targets
-            .get(location_index * habitat_area + dispersal_target_index)
-        {
-            Some(Some(valid_dispersal_target_index)) => valid_dispersal_target_index,
-            _ => unreachable!("habitat dispersal origin must disperse somewhere"),
+            .get(location_index * habitat_area + dispersal_target_index).copied()
+        else {
+            unreachable!("habitat dispersal origin must disperse somewhere")
         };
 
         #[allow(clippy::cast_possible_truncation)]

@@ -65,9 +65,8 @@ impl Iterator for SortedSortedSegments {
         let next = std::mem::replace(
             &mut self.next,
             loop {
-                let next_segment = match self.segments.last_mut() {
-                    Some(next_segment) => next_segment,
-                    None => break None,
+                let Some(next_segment) = self.segments.last_mut() else {
+                    break None
                 };
 
                 if let Some(next_event) = next_segment.next() {

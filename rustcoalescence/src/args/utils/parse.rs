@@ -42,10 +42,7 @@ fn try_parse_inner<
 ) -> Result<D> {
     let mut de_ron = ron::Deserializer::from_str_with_options(ron_args, ron_options())
         .with_context(|| {
-            format!(
-                "Failed to create the {} subcommand argument parser.",
-                subcommand
-            )
+            format!("Failed to create the {subcommand} subcommand argument parser.")
         })?;
 
     let mut track = serde_path_to_error::Track::new();

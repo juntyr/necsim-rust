@@ -120,58 +120,40 @@ impl<'de> Deserialize<'de> for IndividualSpeciesFeatherReporter {
             for chunk in arrow2::io::ipc::read::FileReader::new(reader, metadata, None, None) {
                 let chunk = chunk.map_err(serde::de::Error::custom)?;
 
-                let (ids, xs, ys, is, parents, species) = match chunk.columns() {
-                    [ids, xs, ys, is, parents, species] => (ids, xs, ys, is, parents, species),
-                    _ => {
-                        return Err(serde::de::Error::custom(
-                            "corrupted species dataframe schema",
-                        ))
-                    },
+                let [ids, xs, ys, is, parents, species] = chunk.columns() else {
+                    return Err(serde::de::Error::custom(
+                        "corrupted species dataframe schema",
+                    ))
                 };
 
-                let ids = match ids.as_any().downcast_ref::<PrimitiveArray<u64>>() {
-                    Some(ids) => ids,
-                    None => {
-                        return Err(serde::de::Error::custom(
-                            "corrupted species dataframe id column",
-                        ))
-                    },
+                let Some(ids) = ids.as_any().downcast_ref::<PrimitiveArray<u64>>() else {
+                    return Err(serde::de::Error::custom(
+                        "corrupted species dataframe id column",
+                    ))
                 };
 
-                let xs = match xs.as_any().downcast_ref::<PrimitiveArray<u32>>() {
-                    Some(xs) => xs,
-                    None => {
-                        return Err(serde::de::Error::custom(
-                            "corrupted species dataframe x column",
-                        ))
-                    },
+                let Some(xs) = xs.as_any().downcast_ref::<PrimitiveArray<u32>>() else {
+                    return Err(serde::de::Error::custom(
+                        "corrupted species dataframe x column",
+                    ))
                 };
 
-                let ys = match ys.as_any().downcast_ref::<PrimitiveArray<u32>>() {
-                    Some(ys) => ys,
-                    None => {
-                        return Err(serde::de::Error::custom(
-                            "corrupted species dataframe y column",
-                        ))
-                    },
+                let Some(ys) = ys.as_any().downcast_ref::<PrimitiveArray<u32>>() else {
+                    return Err(serde::de::Error::custom(
+                        "corrupted species dataframe y column",
+                    ))
                 };
 
-                let is = match is.as_any().downcast_ref::<PrimitiveArray<u32>>() {
-                    Some(is) => is,
-                    None => {
-                        return Err(serde::de::Error::custom(
-                            "corrupted species dataframe i column",
-                        ))
-                    },
+                let Some(is) = is.as_any().downcast_ref::<PrimitiveArray<u32>>() else {
+                    return Err(serde::de::Error::custom(
+                        "corrupted species dataframe i column",
+                    ))
                 };
 
-                let parents = match parents.as_any().downcast_ref::<PrimitiveArray<u64>>() {
-                    Some(parents) => parents,
-                    None => {
-                        return Err(serde::de::Error::custom(
-                            "corrupted species dataframe parent column",
-                        ))
-                    },
+                let Some(parents) = parents.as_any().downcast_ref::<PrimitiveArray<u64>>() else {
+                    return Err(serde::de::Error::custom(
+                        "corrupted species dataframe parent column",
+                    ))
                 };
 
                 let species = match species.as_any().downcast_ref::<FixedSizeBinaryArray>() {
@@ -251,14 +233,9 @@ struct IndividualSpeciesFeatherReporterArgs {
     mode: SpeciesLocationsMode,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 enum SpeciesLocationsMode {
+    #[default]
     Create,
     Resume,
-}
-
-impl Default for SpeciesLocationsMode {
-    fn default() -> Self {
-        SpeciesLocationsMode::Create
-    }
 }

@@ -135,31 +135,22 @@ impl<'de> Deserialize<'de> for LocationSpeciesFeatherReporter {
             for chunk in arrow2::io::ipc::read::FileReader::new(reader, metadata, None, None) {
                 let chunk = chunk.map_err(serde::de::Error::custom)?;
 
-                let (xs, ys, species, counts) = match chunk.columns() {
-                    [xs, ys, species, counts] => (xs, ys, species, counts),
-                    _ => {
-                        return Err(serde::de::Error::custom(
-                            "corrupted species dataframe schema",
-                        ))
-                    },
+                let [xs, ys, species, counts] = chunk.columns() else {
+                    return Err(serde::de::Error::custom(
+                        "corrupted species dataframe schema",
+                    ))
                 };
 
-                let xs = match xs.as_any().downcast_ref::<PrimitiveArray<u32>>() {
-                    Some(xs) => xs,
-                    None => {
-                        return Err(serde::de::Error::custom(
-                            "corrupted species dataframe x column",
-                        ))
-                    },
+                let Some(xs) = xs.as_any().downcast_ref::<PrimitiveArray<u32>>() else {
+                    return Err(serde::de::Error::custom(
+                        "corrupted species dataframe x column",
+                    ))
                 };
 
-                let ys = match ys.as_any().downcast_ref::<PrimitiveArray<u32>>() {
-                    Some(ys) => ys,
-                    None => {
-                        return Err(serde::de::Error::custom(
-                            "corrupted species dataframe y column",
-                        ))
-                    },
+                let Some(ys) = ys.as_any().downcast_ref::<PrimitiveArray<u32>>() else {
+                    return Err(serde::de::Error::custom(
+                        "corrupted species dataframe y column",
+                    ))
                 };
 
                 let species = match species.as_any().downcast_ref::<FixedSizeBinaryArray>() {
@@ -171,13 +162,10 @@ impl<'de> Deserialize<'de> for LocationSpeciesFeatherReporter {
                     },
                 };
 
-                let counts = match counts.as_any().downcast_ref::<PrimitiveArray<u64>>() {
-                    Some(counts) => counts,
-                    None => {
-                        return Err(serde::de::Error::custom(
-                            "corrupted species dataframe count column",
-                        ))
-                    },
+                let Some(counts) = counts.as_any().downcast_ref::<PrimitiveArray<u64>>() else {
+                    return Err(serde::de::Error::custom(
+                        "corrupted species dataframe count column",
+                    ))
                 };
 
                 for (((x, y), species), count) in xs
@@ -256,16 +244,11 @@ struct LocationSpeciesFeatherReporterArgs {
     mode: SpeciesLocationsMode,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 enum SpeciesLocationsMode {
+    #[default]
     Create,
     Resume,
-}
-
-impl Default for SpeciesLocationsMode {
-    fn default() -> Self {
-        SpeciesLocationsMode::Create
-    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

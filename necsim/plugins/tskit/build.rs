@@ -53,15 +53,15 @@ pub fn version_meta() -> VersionMeta {{
         build = version.semver.build,
         commit_hash = version
             .commit_hash
-            .map(|h| format!("Some(\"{}\".to_owned())", h))
+            .map(|h| format!("Some(\"{h}\".to_owned())"))
             .unwrap_or_else(|| "None".to_owned()),
         commit_date = version
             .commit_date
-            .map(|h| format!("Some(\"{}\".to_owned())", h))
+            .map(|h| format!("Some(\"{h}\".to_owned())"))
             .unwrap_or_else(|| "None".to_owned()),
         build_date = version
             .build_date
-            .map(|h| format!("Some(\"{}\".to_owned())", h))
+            .map(|h| format!("Some(\"{h}\".to_owned())"))
             .unwrap_or_else(|| "None".to_owned()),
         channel = match version.channel {
             Channel::Dev => "Dev",

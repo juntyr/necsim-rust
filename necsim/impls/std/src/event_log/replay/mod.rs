@@ -130,9 +130,7 @@ impl FromIterator<SortedSegment> for anyhow::Result<EventLogReplay> {
                 }
             }
 
-            let min_index = if let Some(min_index) = min_index {
-                min_index
-            } else {
+            let Some(min_index) = min_index else {
                 if !current_group.is_empty() {
                     grouped_segments.push(current_group);
                     current_group = Vec::new();

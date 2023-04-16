@@ -44,8 +44,8 @@ impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
                 if partition.size().get() > 1 =>
             {
                 Err(D::Error::custom(format!(
-                    "parallelism_mode {:?} is incompatible with non-monolithic partitioning.",
-                    parallelism_mode
+                    "parallelism_mode {parallelism_mode:?} is incompatible with non-monolithic \
+                     partitioning."
                 )))
             },
             partition_mode => Ok(partition_mode),

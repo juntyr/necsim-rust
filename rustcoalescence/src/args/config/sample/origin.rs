@@ -58,8 +58,7 @@ impl<'de> DeserializeState<'de, &'de Option<Pause>> for SampleOrigin {
                 && !matches!(raw, SampleOriginRaw::List(_))
             {
                 return Err(serde::de::Error::custom(format!(
-                    "`List` pause destiny requires `List` origin sample, found `{}`",
-                    raw
+                    "`List` pause destiny requires `List` origin sample, found `{raw}`"
                 )));
             }
         }

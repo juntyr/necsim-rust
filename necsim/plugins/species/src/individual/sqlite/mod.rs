@@ -115,14 +115,9 @@ fn default_cache_size() -> NonZeroI32 {
     NonZeroI32::new(1_000_000_i32).unwrap()
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 enum SpeciesLocationsMode {
+    #[default]
     Create,
     Resume,
-}
-
-impl Default for SpeciesLocationsMode {
-    fn default() -> Self {
-        SpeciesLocationsMode::Create
-    }
 }

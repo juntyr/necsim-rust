@@ -49,8 +49,7 @@ impl<'de, M: MathsCore, G: RngCore<M>> DeserializeState<'de, Partition> for Rng<
                 if partition.size().get() > 1 {
                     return Err(serde::de::Error::custom(format!(
                         "`Entropy` rng initialisation cannot be used with partitioned \
-                         simulations.\n\nTry using `Sponge({})` instead.",
-                        sponge
+                         simulations.\n\nTry using `Sponge({sponge})` instead."
                     )));
                 }
 
@@ -122,8 +121,7 @@ impl<'de, M: MathsCore, G: RngCore<M>> Deserialize<'de> for Base32RngState<M, G>
         }
 
         Err(serde::de::Error::custom(format!(
-            "invalid RNG state {}",
-            state
+            "invalid RNG state {state}"
         )))
     }
 }
@@ -148,9 +146,8 @@ fn deserialize_rng_sponge<'de, D: Deserializer<'de>>(
 
     if ProtectedState::from_bytes(&sponge).is_some() {
         return Err(serde::de::Error::custom(format!(
-            "invalid RNG sponge but valid RNG state {}\n\nDid you mean to use the `State` or \
-             `StateElseSponge` variants?",
-            sponge
+            "invalid RNG sponge but valid RNG state {sponge}\n\nDid you mean to use the `State` \
+             or `StateElseSponge` variants?"
         )));
     }
 
@@ -167,8 +164,7 @@ fn deserialize_rng_state_else_sponge<'de, D: Deserializer<'de>>(
     }
 
     Err(serde::de::Error::custom(format!(
-        "invalid RNG state or sponge {}",
-        state_else_sponge
+        "invalid RNG state or sponge {state_else_sponge}"
     )))
 }
 

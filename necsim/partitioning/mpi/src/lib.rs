@@ -183,9 +183,8 @@ impl Partitioning for MpiPartitioning {
         event_log: Self::Auxiliary,
         inner: F,
     ) -> anyhow::Result<Q> {
-        let event_log = match event_log {
-            Some(event_log) => event_log,
-            None => anyhow::bail!(MpiLocalPartitionError::MissingEventLog),
+        let Some(event_log) = event_log else {
+            anyhow::bail!(MpiLocalPartitionError::MissingEventLog)
         };
 
         let mut directory = event_log.directory().to_owned();
@@ -280,8 +279,7 @@ fn deserialize_state_mpi_world<'de, D: Deserializer<'de>>(
         None => Ok(None),
         Some(world) if world == *mpi_world => Ok(Some(world)),
         Some(_) => Err(serde::de::Error::custom(format!(
-            "mismatch with MPI world size of {}",
-            mpi_world
+            "mismatch with MPI world size of {mpi_world}"
         ))),
     }
 }

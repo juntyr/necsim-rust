@@ -141,13 +141,11 @@ impl<M: MathsCore> InMemoryHabitat<M> {
         old(habitat.num_rows()) == usize::from(ret.get_extent().height())
     } else { true }, "habitat extent has the dimension of the habitat array")]
     pub fn try_new(habitat: Array2D<u32>) -> Option<Self> {
-        let width = match OffByOneU32::new(habitat.num_columns() as u64) {
-            Ok(width) => width,
-            Err(_) => return None,
+        let Ok(width) = OffByOneU32::new(habitat.num_columns() as u64) else {
+            return None
         };
-        let height = match OffByOneU32::new(habitat.num_rows() as u64) {
-            Ok(height) => height,
-            Err(_) => return None,
+        let Ok(height) = OffByOneU32::new(habitat.num_rows() as u64) else {
+            return None
         };
 
         let habitat = habitat.into_row_major().into_boxed_slice();
