@@ -271,27 +271,32 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
 
         let shared_buffer_len = <Self as EventType>::SharedBuffer::<()>::len();
 
-        let block_dim = rust_cuda::device::utils::block_dim();
+        let thread = rust_cuda::device::thread::Thread::this();
+        let thread_idx = thread.idx();
+        let thread_block = thread.block();
+        let block_dim = thread_block.dim();
+        let block_idx = thread_block.idx();
+        let block_grid = thread_block.grid();
+        let grid_dim = block_grid.dim();
 
         if shared_buffer_len != (block_dim.size() * 2) {
             core::arch::nvptx::trap();
         }
 
-        let block_idx =
-            rust_cuda::device::utils::block_idx().as_id(&rust_cuda::device::utils::grid_dim());
-        let thread_idx = rust_cuda::device::utils::thread_idx().as_id(&block_dim);
+        let block_idx = block_idx.as_id(&grid_dim);
+        let thread_idx = thread_idx.as_id(&block_dim);
 
         let idx = block_idx * shared_buffer_len + thread_idx;
 
-        let shared_mask: rust_cuda::device::ThreadBlockShared<
+        let shared_mask: rust_cuda::utils::shared::r#static::ThreadBlockShared<
             <Self as EventType>::SharedBuffer<bool>,
-        > = rust_cuda::device::ThreadBlockShared::new_uninit();
-        let shared_mask_array: *mut bool = shared_mask.get().as_mut_ptr();
-        let shared_buffer: rust_cuda::device::ThreadBlockShared<
+        > = rust_cuda::utils::shared::r#static::ThreadBlockShared::new_uninit();
+        let shared_mask_array: *mut bool = shared_mask.as_mut_ptr().cast();
+        let shared_buffer: rust_cuda::utils::shared::r#static::ThreadBlockShared<
             <Self as EventType>::SharedBuffer<MaybeSome<<Self as EventType>::Event>>,
-        > = rust_cuda::device::ThreadBlockShared::new_uninit();
+        > = rust_cuda::utils::shared::r#static::ThreadBlockShared::new_uninit();
         let shared_buffer_array: *mut MaybeSome<<Self as EventType>::Event> =
-            shared_buffer.get().as_mut_ptr();
+            shared_buffer.as_mut_ptr().cast();
 
         *shared_mask_array.add(thread_idx) = match self.event_mask.alias_unchecked().get(idx) {
             None => false,
@@ -476,27 +481,32 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
 
         let shared_buffer_len = <Self as EventType>::SharedBuffer::<()>::len();
 
-        let block_dim = rust_cuda::device::utils::block_dim();
+        let thread = rust_cuda::device::thread::Thread::this();
+        let thread_idx = thread.idx();
+        let thread_block = thread.block();
+        let block_dim = thread_block.dim();
+        let block_idx = thread_block.idx();
+        let block_grid = thread_block.grid();
+        let grid_dim = block_grid.dim();
 
         if shared_buffer_len != (block_dim.size() * 2) {
             core::arch::nvptx::trap();
         }
 
-        let block_idx =
-            rust_cuda::device::utils::block_idx().as_id(&rust_cuda::device::utils::grid_dim());
-        let thread_idx = rust_cuda::device::utils::thread_idx().as_id(&block_dim);
+        let block_idx = block_idx.as_id(&grid_dim);
+        let thread_idx = thread_idx.as_id(&block_dim);
 
         let idx = block_idx * shared_buffer_len + thread_idx;
 
-        let shared_mask: rust_cuda::device::ThreadBlockShared<
+        let shared_mask: rust_cuda::utils::shared::r#static::ThreadBlockShared<
             <Self as EventType>::SharedBuffer<bool>,
-        > = rust_cuda::device::ThreadBlockShared::new_uninit();
-        let shared_mask_array: *mut bool = shared_mask.get().cast();
-        let shared_buffer: rust_cuda::device::ThreadBlockShared<
+        > = rust_cuda::utils::shared::r#static::ThreadBlockShared::new_uninit();
+        let shared_mask_array: *mut bool = shared_mask.as_mut_ptr().cast();
+        let shared_buffer: rust_cuda::utils::shared::r#static::ThreadBlockShared<
             <Self as EventType>::SharedBuffer<MaybeSome<<Self as EventType>::Event>>,
-        > = rust_cuda::device::ThreadBlockShared::new_uninit();
+        > = rust_cuda::utils::shared::r#static::ThreadBlockShared::new_uninit();
         let shared_buffer_array: *mut MaybeSome<<Self as EventType>::Event> =
-            shared_buffer.get().cast();
+            shared_buffer.as_mut_ptr().cast();
 
         *shared_mask_array.add(thread_idx) = match self.event_mask.alias_unchecked().get(idx) {
             None => false,
@@ -618,7 +628,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
     pub unsafe fn bitonic_sort_events_step(&mut self, size: usize, stride: usize) {
         use core::cmp::Ordering;
 
-        let idx = rust_cuda::device::utils::index();
+        let idx = rust_cuda::device::thread::Thread::this().index();
 
         let pos = idx & ((self.event_mask.alias_unchecked().len().next_power_of_two() / 2) - 1);
 
@@ -719,7 +729,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
     pub unsafe fn odd_even_sort_events_step(&mut self, size: usize, stride: usize) {
         use core::cmp::Ordering;
 
-        let idx = rust_cuda::device::utils::index();
+        let idx = rust_cuda::device::thread::Thread::this().index();
 
         let pos = 2 * idx - (idx & (stride - 1));
 

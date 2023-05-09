@@ -31,26 +31,28 @@ use necsim_impls_no_std::cogs::{
     event_sampler::tracking::{MinSpeciationTrackingEventSampler, SpeciationSample},
 };
 
-use rust_cuda::common::RustToCuda;
+use rust_cuda::{common::RustToCuda, safety::NoAliasing};
 
 #[rust_cuda::common::kernel(
-    pub use link_kernel! as impl SimulatableKernel<SimulationKernelArgs> for SimulationKernel
+    pub use link_kernel! as impl SimulatableKernel<
+        SimulationKernelArgs, SimulationKernelPtx,
+    > for SimulationKernel
 )]
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
 pub fn simulate<
     M: MathsCore,
-    H: Habitat<M> + RustToCuda,
-    G: Rng<M, Generator: PrimeableRng> + RustToCuda,
-    S: LineageStore<M, H> + RustToCuda,
-    X: EmigrationExit<M, H, G, S> + RustToCuda,
-    D: DispersalSampler<M, H, G> + RustToCuda,
-    C: CoalescenceSampler<M, H, S> + RustToCuda,
-    T: TurnoverRate<M, H> + RustToCuda,
-    N: SpeciationProbability<M, H> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda,
-    I: ImmigrationEntry<M> + RustToCuda,
-    A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda,
+    H: Habitat<M> + RustToCuda + NoAliasing,
+    G: Rng<M, Generator: PrimeableRng> + RustToCuda + NoAliasing,
+    S: LineageStore<M, H> + RustToCuda + NoAliasing,
+    X: EmigrationExit<M, H, G, S> + RustToCuda + NoAliasing,
+    D: DispersalSampler<M, H, G> + RustToCuda + NoAliasing,
+    C: CoalescenceSampler<M, H, S> + RustToCuda + NoAliasing,
+    T: TurnoverRate<M, H> + RustToCuda + NoAliasing,
+    N: SpeciationProbability<M, H> + RustToCuda + NoAliasing,
+    E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda + NoAliasing,
+    I: ImmigrationEntry<M> + RustToCuda + NoAliasing,
+    A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda + NoAliasing,
     ReportSpeciation: Boolean,
     ReportDispersal: Boolean,
 >(
@@ -135,13 +137,17 @@ pub fn simulate<
 }
 
 // #[rust_cuda::common::kernel(
-//     pub use link_sort_kernel! as impl SortableKernel<SortKernelArgs> for
-// SortKernel )]
+//     pub use link_sort_kernel! as impl SortableKernel<
+//         SortKernelArgs, SortKernelPtx,
+//     > for SortKernel
+// )]
 // pub fn sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
-//     #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut
-// ShallowCopy<
-//         necsim_impls_cuda::event_buffer::EventBuffer<ReportSpeciation,
-// ReportDispersal>,     >,
+//     #[kernel(pass = LendRustToCuda, jit)]
+//     event_buffer_reporter: &mut ShallowCopy<
+//         necsim_impls_cuda::event_buffer::EventBuffer<
+//             ReportSpeciation, ReportDispersal,
+//         >,
+//     >,
 //     #[kernel(pass = SafeDeviceCopy)] size: usize,
 //     #[kernel(pass = SafeDeviceCopy)] stride: usize,
 // ) {
@@ -152,7 +158,9 @@ pub fn simulate<
 // }
 
 #[rust_cuda::common::kernel(
-    pub use link_even_odd_sort_kernel! as impl EvenOddSortableKernel<EvenOddSortKernelArgs> for EvenOddSortKernel
+    pub use link_even_odd_sort_kernel! as impl EvenOddSortableKernel<
+        EvenOddSortKernelArgs, EvenOddSortKernelPtx,
+    > for EvenOddSortKernel
 )]
 pub fn even_odd_sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
     #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut ShallowCopy<
@@ -168,7 +176,9 @@ pub fn even_odd_sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boo
 }
 
 #[rust_cuda::common::kernel(
-    pub use link_bitonic_global_sort_step_kernel! as impl BitonicGlobalSortSteppableKernel<BitonicGlobalSortStepKernelArgs> for BitonicGlobalSortStepKernel
+    pub use link_bitonic_global_sort_step_kernel! as impl BitonicGlobalSortSteppableKernel<
+        BitonicGlobalSortStepKernelArgs, BitonicGlobalSortStepKernelPtx,
+    > for BitonicGlobalSortStepKernel
 )]
 pub fn bitonic_global_sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
     #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut ShallowCopy<
@@ -184,7 +194,9 @@ pub fn bitonic_global_sort_events_step<ReportSpeciation: Boolean, ReportDispersa
 }
 
 #[rust_cuda::common::kernel(
-    pub use link_bitonic_shared_sort_step_kernel! as impl BitonicSharedSortSteppableKernel<BitonicSharedSortStepKernelArgs> for BitonicSharedSortStepKernel
+    pub use link_bitonic_shared_sort_step_kernel! as impl BitonicSharedSortSteppableKernel<
+        BitonicSharedSortStepKernelArgs, BitonicSharedSortStepKernelPtx,
+    > for BitonicSharedSortStepKernel
 )]
 pub fn bitonic_shared_sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
     #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut ShallowCopy<
@@ -199,7 +211,9 @@ pub fn bitonic_shared_sort_events_step<ReportSpeciation: Boolean, ReportDispersa
 }
 
 #[rust_cuda::common::kernel(
-    pub use link_bitonic_shared_sort_prep_kernel! as impl BitonicSharedSortPreparableKernel<BitonicSharedSortPrepKernelArgs> for BitonicSharedSortPrepKernel
+    pub use link_bitonic_shared_sort_prep_kernel! as impl BitonicSharedSortPreparableKernel<
+        BitonicSharedSortPrepKernelArgs, BitonicSharedSortPrepKernelPtx,
+    > for BitonicSharedSortPrepKernel
 )]
 pub fn bitonic_shared_sort_events_prep<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
     #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut ShallowCopy<
@@ -215,10 +229,10 @@ pub fn bitonic_shared_sort_events_prep<ReportSpeciation: Boolean, ReportDispersa
 mod cuda_prelude {
     use core::arch::nvptx;
 
-    use rust_cuda::device::utils;
+    use rust_cuda::device::alloc::PTXAllocator;
 
     #[global_allocator]
-    static _GLOBAL_ALLOCATOR: utils::PTXAllocator = utils::PTXAllocator;
+    static _GLOBAL_ALLOCATOR: PTXAllocator = PTXAllocator;
 
     #[cfg(not(debug_assertions))]
     #[panic_handler]
