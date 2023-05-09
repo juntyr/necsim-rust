@@ -31,7 +31,7 @@ use rustcoalescence_algorithms::{
 };
 use rustcoalescence_scenarios::Scenario;
 
-use rust_cuda::common::RustToCuda;
+use rust_cuda::{common::RustToCuda, safety::NoAliasing};
 
 use crate::CudaError;
 
@@ -51,18 +51,22 @@ impl<
             + Samples<M, IndexUsize>
             + Samples<M, Bernoulli>
             + Samples<M, UniformClosedOpenUnit>
-            + RustToCuda,
+            + RustToCuda
+            + NoAliasing,
         O: Scenario<M, G>,
     > CudaLineageStoreSampleInitialiser<M, G, O, ResumeError<CudaError>> for FixUpInitialiser<L>
 where
-    O::Habitat: RustToCuda,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda,
-    O::TurnoverRate: RustToCuda,
-    O::SpeciationProbability: RustToCuda,
+    O::Habitat: RustToCuda + NoAliasing,
+    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>:
+        RustToCuda + NoAliasing,
+    O::TurnoverRate: RustToCuda + NoAliasing,
+    O::SpeciationProbability: RustToCuda + NoAliasing,
 {
     type ActiveLineageSampler<
-        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>> + RustToCuda,
-        J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
+        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>
+            + RustToCuda
+            + NoAliasing,
+        J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda + NoAliasing,
     > = IndependentActiveLineageSampler<
         M,
         O::Habitat,
@@ -84,8 +88,10 @@ where
     fn init<
         'h,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
-        J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
-        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>> + RustToCuda,
+        J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda + NoAliasing,
+        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>
+            + RustToCuda
+            + NoAliasing,
     >(
         self,
         origin_sampler: T,

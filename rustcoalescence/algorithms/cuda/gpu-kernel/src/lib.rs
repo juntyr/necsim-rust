@@ -38,6 +38,10 @@ use rust_cuda::{common::RustToCuda, safety::NoAliasing};
         SimulationKernelArgs, SimulationKernelPtx,
     > for SimulationKernel
 )]
+#[kernel(
+    allow(ptx::double_precision_use),
+    forbid(ptx::local_memory_usage, ptx::register_spills)
+)]
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
 pub fn simulate<
@@ -141,6 +145,10 @@ pub fn simulate<
 //         SortKernelArgs, SortKernelPtx,
 //     > for SortKernel
 // )]
+// #[kernel(
+//     allow(ptx::double_precision_use),
+//     forbid(ptx::local_memory_usage, ptx::register_spills)
+// )]
 // pub fn sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
 //     #[kernel(pass = LendRustToCuda, jit)]
 //     event_buffer_reporter: &mut ShallowCopy<
@@ -162,6 +170,10 @@ pub fn simulate<
         EvenOddSortKernelArgs, EvenOddSortKernelPtx,
     > for EvenOddSortKernel
 )]
+#[kernel(
+    allow(ptx::double_precision_use),
+    forbid(ptx::local_memory_usage, ptx::register_spills)
+)]
 pub fn even_odd_sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
     #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut ShallowCopy<
         necsim_impls_cuda::event_buffer::EventBuffer<ReportSpeciation, ReportDispersal>,
@@ -179,6 +191,10 @@ pub fn even_odd_sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boo
     pub use link_bitonic_global_sort_step_kernel! as impl BitonicGlobalSortSteppableKernel<
         BitonicGlobalSortStepKernelArgs, BitonicGlobalSortStepKernelPtx,
     > for BitonicGlobalSortStepKernel
+)]
+#[kernel(
+    allow(ptx::double_precision_use),
+    forbid(ptx::local_memory_usage, ptx::register_spills)
 )]
 pub fn bitonic_global_sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
     #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut ShallowCopy<
@@ -198,6 +214,10 @@ pub fn bitonic_global_sort_events_step<ReportSpeciation: Boolean, ReportDispersa
         BitonicSharedSortStepKernelArgs, BitonicSharedSortStepKernelPtx,
     > for BitonicSharedSortStepKernel
 )]
+#[kernel(
+    allow(ptx::double_precision_use),
+    forbid(ptx::local_memory_usage, ptx::register_spills)
+)]
 pub fn bitonic_shared_sort_events_step<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
     #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut ShallowCopy<
         necsim_impls_cuda::event_buffer::EventBuffer<ReportSpeciation, ReportDispersal>,
@@ -214,6 +234,10 @@ pub fn bitonic_shared_sort_events_step<ReportSpeciation: Boolean, ReportDispersa
     pub use link_bitonic_shared_sort_prep_kernel! as impl BitonicSharedSortPreparableKernel<
         BitonicSharedSortPrepKernelArgs, BitonicSharedSortPrepKernelPtx,
     > for BitonicSharedSortPrepKernel
+)]
+#[kernel(
+    allow(ptx::double_precision_use),
+    forbid(ptx::local_memory_usage, ptx::register_spills)
 )]
 pub fn bitonic_shared_sort_events_prep<ReportSpeciation: Boolean, ReportDispersal: Boolean>(
     #[kernel(pass = LendRustToCuda, jit)] event_buffer_reporter: &mut ShallowCopy<
