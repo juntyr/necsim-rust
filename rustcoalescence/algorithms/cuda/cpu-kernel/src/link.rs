@@ -1,8 +1,10 @@
 use rustcoalescence_algorithms_cuda_gpu_kernel::{
-    BitonicGlobalSortStepKernelArgs, BitonicGlobalSortSteppableKernel,
-    BitonicSharedSortPrepKernelArgs, BitonicSharedSortPreparableKernel,
-    BitonicSharedSortStepKernelArgs, BitonicSharedSortSteppableKernel, EvenOddSortKernelArgs,
-    EvenOddSortableKernel, SimulatableKernel, SimulationKernelArgs,
+    BitonicGlobalSortStepKernelArgs, BitonicGlobalSortStepKernelPtx,
+    BitonicGlobalSortSteppableKernel, BitonicSharedSortPrepKernelArgs,
+    BitonicSharedSortPrepKernelPtx, BitonicSharedSortPreparableKernel,
+    BitonicSharedSortStepKernelArgs, BitonicSharedSortStepKernelPtx,
+    BitonicSharedSortSteppableKernel, EvenOddSortKernelArgs, EvenOddSortKernelPtx,
+    EvenOddSortableKernel, SimulatableKernel, SimulationKernelArgs, SimulationKernelPtx,
 };
 
 use crate::{
