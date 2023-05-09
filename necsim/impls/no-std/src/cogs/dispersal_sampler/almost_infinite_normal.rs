@@ -1,7 +1,10 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, MathsCore, RngCore, SeparableDispersalSampler},
+    cogs::{
+        distribution::{Normal, Normal2D},
+        Backup, DispersalSampler, Distribution, MathsCore, Rng, Samples, SeparableDispersalSampler,
+    },
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
@@ -12,13 +15,13 @@ use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "G"))]
-pub struct AlmostInfiniteNormalDispersalSampler<M: MathsCore, G: RngCore<M>> {
+pub struct AlmostInfiniteNormalDispersalSampler<M: MathsCore, G: Rng<M> + Samples<M, Normal2D>> {
     sigma: NonNegativeF64,
     self_dispersal: ClosedUnitF64,
     marker: PhantomData<(M, G)>,
 }
 
-impl<M: MathsCore, G: RngCore<M>> AlmostInfiniteNormalDispersalSampler<M, G> {
+impl<M: MathsCore, G: Rng<M> + Samples<M, Normal2D>> AlmostInfiniteNormalDispersalSampler<M, G> {
     #[must_use]
     pub fn new(sigma: NonNegativeF64) -> Self {
         let self_dispersal_1d = if sigma > 0.0_f64 {
@@ -40,7 +43,9 @@ impl<M: MathsCore, G: RngCore<M>> AlmostInfiniteNormalDispersalSampler<M, G> {
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> Backup for AlmostInfiniteNormalDispersalSampler<M, G> {
+impl<M: MathsCore, G: Rng<M> + Samples<M, Normal2D>> Backup
+    for AlmostInfiniteNormalDispersalSampler<M, G>
+{
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             sigma: self.sigma,
@@ -51,7 +56,8 @@ impl<M: MathsCore, G: RngCore<M>> Backup for AlmostInfiniteNormalDispersalSample
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, AlmostInfiniteHabitat<M>, G>
+impl<M: MathsCore, G: Rng<M> + Samples<M, Normal2D>>
+    DispersalSampler<M, AlmostInfiniteHabitat<M>, G>
     for AlmostInfiniteNormalDispersalSampler<M, G>
 {
     #[must_use]
@@ -61,15 +67,20 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, AlmostInfiniteHabitat<M>, 
         _habitat: &AlmostInfiniteHabitat<M>,
         rng: &mut G,
     ) -> Location {
-        use necsim_core::cogs::RngSampler;
-
         const WRAP: i64 = 1 << 32;
 
-        let (dx, dy): (f64, f64) = rng.sample_2d_normal(0.0_f64, self.sigma);
+        let (dx, dy): (f64, f64) = Normal2D::sample_with(
+            rng,
+            Normal {
+                mu: 0.0_f64,
+                sigma: self.sigma,
+            },
+        );
 
         // Discrete dispersal assumes lineage positions are centred on (0.5, 0.5),
-        // i.e. |dispersal| >= 0.5 changes the cell
-        // (dx and dy must be rounded to nearest int away from 0.0)
+        //  i.e. |dispersal| >= 0.5 changes the cell
+        // dx and dy must be rounded to nearest int away from 0.0
+        // Note: rust clamps f64 as i64 to [-2^-63, 2^63 - 1]
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let (dx, dy): (i64, i64) = (M::round(dx) as i64, M::round(dy) as i64);
 
@@ -85,7 +96,8 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, AlmostInfiniteHabitat<M>, 
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, AlmostInfiniteHabitat<M>, G>
+impl<M: MathsCore, G: Rng<M> + Samples<M, Normal2D>>
+    SeparableDispersalSampler<M, AlmostInfiniteHabitat<M>, G>
     for AlmostInfiniteNormalDispersalSampler<M, G>
 {
     #[must_use]

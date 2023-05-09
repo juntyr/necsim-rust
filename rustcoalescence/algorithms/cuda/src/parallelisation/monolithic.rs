@@ -10,7 +10,7 @@ use rust_cuda::{
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LineageStore, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
+        LineageStore, MathsCore, PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     reporter::{boolean::Boolean, Reporter},
@@ -50,7 +50,7 @@ pub fn simulate<
     'p,
     M: MathsCore,
     H: Habitat<M> + RustToCuda,
-    G: PrimeableRng<M> + RustToCuda,
+    G: Rng<M, Generator: PrimeableRng> + RustToCuda,
     S: LineageStore<M, H> + RustToCuda,
     X: EmigrationExit<M, H, G, S> + RustToCuda,
     D: DispersalSampler<M, H, G> + RustToCuda,

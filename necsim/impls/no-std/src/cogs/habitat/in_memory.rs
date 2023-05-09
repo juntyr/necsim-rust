@@ -5,7 +5,10 @@ use alloc::{boxed::Box, vec::Vec};
 use r#final::Final;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
+    cogs::{
+        distribution::{IndexU64, Length},
+        Backup, Distribution, Habitat, MathsCore, Rng, Samples, UniformlySampleableHabitat,
+    },
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 use necsim_core_bond::{OffByOneU32, OffByOneU64};
@@ -106,13 +109,14 @@ impl<M: MathsCore> Habitat<M> for InMemoryHabitat<M> {
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for InMemoryHabitat<M> {
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64>> UniformlySampleableHabitat<M, G>
+    for InMemoryHabitat<M>
+{
     #[must_use]
     #[inline]
     fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
-        use necsim_core::cogs::RngSampler;
-
-        let indexed_location_index = rng.sample_index_u64(self.get_total_habitat().into());
+        let indexed_location_index =
+            IndexU64::sample_with(rng, Length(self.get_total_habitat().into()));
 
         let location_index = match self.u64_injection.binary_search(&indexed_location_index) {
             Ok(index) => index,

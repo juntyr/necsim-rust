@@ -1,15 +1,22 @@
 #![deny(clippy::pedantic)]
 #![feature(never_type)]
+#![feature(associated_type_bounds)]
 
 #[macro_use]
 extern crate serde_derive_state;
 
-use necsim_core::{cogs::MathsCore, lineage::Lineage, reporter::Reporter};
+use necsim_core::{
+    cogs::{MathsCore, Rng},
+    lineage::Lineage,
+    reporter::Reporter,
+};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::cogs::{
-    lineage_store::independent::IndependentLineageStore, maths::intrinsics::IntrinsicsMathsCore,
-    origin_sampler::pre_sampler::OriginPreSampler, rng::wyhash::WyHash,
+    lineage_store::independent::IndependentLineageStore,
+    maths::intrinsics::IntrinsicsMathsCore,
+    origin_sampler::pre_sampler::OriginPreSampler,
+    rng::{simple::SimpleRng, wyhash::WyHash},
 };
 use necsim_partitioning_core::{partition::Partition, LocalPartition};
 
@@ -41,11 +48,16 @@ impl AlgorithmDefaults for IndependentAlgorithm {
     type MathsCore = IntrinsicsMathsCore;
 }
 
-impl<'p, O: Scenario<M, WyHash<M>>, R: Reporter, P: LocalPartition<'p, R>, M: MathsCore>
-    Algorithm<'p, M, O, R, P> for IndependentAlgorithm
+impl<
+        'p,
+        O: Scenario<M, SimpleRng<M, WyHash>>,
+        R: Reporter,
+        P: LocalPartition<'p, R>,
+        M: MathsCore,
+    > Algorithm<'p, M, O, R, P> for IndependentAlgorithm
 {
     type LineageStore = IndependentLineageStore<M, O::Habitat>;
-    type Rng = WyHash<M>;
+    type Rng = SimpleRng<M, WyHash>;
 
     fn get_logical_partition(args: &Self::Arguments, local_partition: &P) -> Partition {
         match &args.parallelism_mode {
@@ -62,12 +74,12 @@ impl<'p, O: Scenario<M, WyHash<M>>, R: Reporter, P: LocalPartition<'p, R>, M: Ma
 
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
-        rng: Self::Rng,
+        rng: <Self::Rng as Rng<M>>::Generator,
         scenario: O,
-        pre_sampler: OriginPreSampler<M, I>,
+        pre_sampler: OriginPreSampler<I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<M, Self::Rng>, Self::Error> {
+    ) -> Result<SimulationOutcome<<Self::Rng as Rng<M>>::Generator>, Self::Error> {
         launch::initialise_and_simulate(
             &args,
             rng,
@@ -85,14 +97,14 @@ impl<'p, O: Scenario<M, WyHash<M>>, R: Reporter, P: LocalPartition<'p, R>, M: Ma
     ///  simulation failed
     fn resume_and_simulate<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
-        rng: Self::Rng,
+        rng: <Self::Rng as Rng<M>>::Generator,
         scenario: O,
-        pre_sampler: OriginPreSampler<M, I>,
+        pre_sampler: OriginPreSampler<I>,
         lineages: L,
         resume_after: Option<NonNegativeF64>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
+    ) -> Result<SimulationOutcome<<Self::Rng as Rng<M>>::Generator>, ResumeError<Self::Error>> {
         launch::initialise_and_simulate(
             &args,
             rng,
@@ -114,14 +126,14 @@ impl<'p, O: Scenario<M, WyHash<M>>, R: Reporter, P: LocalPartition<'p, R>, M: Ma
     #[allow(clippy::too_many_lines)]
     fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
-        rng: Self::Rng,
+        rng: <Self::Rng as Rng<M>>::Generator,
         scenario: O,
-        pre_sampler: OriginPreSampler<M, I>,
+        pre_sampler: OriginPreSampler<I>,
         lineages: L,
         restart_at: PositiveF64,
         fixup_strategy: RestartFixUpStrategy,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
+    ) -> Result<SimulationOutcome<<Self::Rng as Rng<M>>::Generator>, ResumeError<Self::Error>> {
         launch::initialise_and_simulate(
             &args,
             rng,

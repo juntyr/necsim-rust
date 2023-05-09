@@ -1,5 +1,9 @@
 use necsim_core::{
-    cogs::{Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng, RngSampler, TurnoverRate},
+    cogs::{
+        distribution::{Lambda, Poisson, UniformClosedOpenUnit},
+        rng::HabitatPrimeableRng,
+        Distribution, Habitat, MathsCore, PrimeableRng, Rng, Samples, TurnoverRate,
+    },
     landscape::IndexedLocation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -23,9 +27,14 @@ impl PoissonEventTimeSampler {
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: PrimeableRng<M>, T: TurnoverRate<M, H>>
-    EventTimeSampler<M, H, G, T> for PoissonEventTimeSampler
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: Rng<M, Generator: PrimeableRng> + Samples<M, Poisson> + Samples<M, UniformClosedOpenUnit>,
+        T: TurnoverRate<M, H>,
+    > EventTimeSampler<M, H, G, T> for PoissonEventTimeSampler
 {
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
@@ -38,48 +47,26 @@ impl<M: MathsCore, H: Habitat<M>, G: PrimeableRng<M>, T: TurnoverRate<M, H>>
     ) -> NonNegativeF64 {
         let lambda =
             turnover_rate.get_turnover_rate_at_location(indexed_location.location(), habitat);
-        let lambda_per_step = lambda * self.delta_t;
-        let no_event_probability_per_step = M::exp(-lambda_per_step.get());
+        // Safety: lambda is already >= 0, cannot be 0 if an event occurs at this
+        // location
+        let lambda_per_step = unsafe { PositiveF64::new_unchecked(lambda.get()) } * self.delta_t;
 
-        #[allow(clippy::cast_possible_truncation)]
-        #[allow(clippy::cast_sign_loss)]
+        // Note: rust clamps f64 as u64 to [0, 2^64 - 1]
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let mut time_step = M::floor(time.get() / self.delta_t.get()) as u64;
 
         let (event_time, event_index) = loop {
-            rng.prime_with_habitat(habitat, indexed_location, time_step);
+            rng.generator()
+                .prime_with_habitat(habitat, indexed_location, time_step);
 
-            let number_events_at_time_steps = if no_event_probability_per_step > 0.0_f64 {
-                // https://en.wikipedia.org/wiki/Poisson_distribution#cite_ref-Devroye1986_54-0
-                let mut poisson = 0_u32;
-                let mut prod = no_event_probability_per_step;
-                let mut acc = no_event_probability_per_step;
-
-                let u = rng.sample_uniform_closed_open();
-
-                while u > acc && prod > 0.0_f64 {
-                    poisson += 1;
-                    prod *= lambda_per_step.get() / f64::from(poisson);
-                    acc += prod;
-                }
-
-                poisson
-            } else {
-                // Fallback in case no_event_probability_per_step underflows
-                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-                let normal_as_poisson = rng
-                    .sample_2d_normal(lambda_per_step.get(), lambda_per_step.sqrt::<M>())
-                    .0
-                    .max(0.0_f64) as u32;
-
-                normal_as_poisson
-            };
+            let number_events_at_time_steps = Poisson::sample_with(rng, Lambda(lambda_per_step));
 
             let mut next_event = None;
 
             for event_index in 0..number_events_at_time_steps {
                 #[allow(clippy::cast_precision_loss)]
                 let event_time = (NonNegativeF64::from(time_step)
-                    + NonNegativeF64::from(rng.sample_uniform_closed_open()))
+                    + NonNegativeF64::from(UniformClosedOpenUnit::sample(rng)))
                     * self.delta_t;
 
                 if event_time > time {
@@ -99,10 +86,10 @@ impl<M: MathsCore, H: Habitat<M>, G: PrimeableRng<M>, T: TurnoverRate<M, H>>
             }
         };
 
-        rng.prime_with_habitat(
+        rng.generator().prime_with_habitat(
             habitat,
             indexed_location,
-            time_step + INV_PHI.wrapping_mul(u64::from(event_index + 1)),
+            time_step + INV_PHI.wrapping_mul(event_index + 1),
         );
 
         event_time

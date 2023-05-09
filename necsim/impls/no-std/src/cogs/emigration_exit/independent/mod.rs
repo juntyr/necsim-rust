@@ -2,8 +2,8 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample, Backup, EmigrationExit, Habitat, MathsCore,
-        RngCore,
+        coalescence_sampler::CoalescenceRngSample, distribution::UniformClosedOpenUnit, Backup,
+        EmigrationExit, Habitat, MathsCore, Rng, Samples,
     },
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, MigratingLineage, TieBreaker},
@@ -23,18 +23,24 @@ use choice::EmigrationChoice;
 pub struct IndependentEmigrationExit<
     M: MathsCore,
     H: Habitat<M>,
+    G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
     C: Decomposition<M, H>,
     E: EmigrationChoice<M, H>,
 > {
     decomposition: C,
     choice: E,
     emigrant: Option<(u32, MigratingLineage)>,
-    _marker: PhantomData<(M, H)>,
+    _marker: PhantomData<(M, H, G)>,
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, C: Decomposition<M, H>, E: EmigrationChoice<M, H>> Backup
-    for IndependentEmigrationExit<M, H, C, E>
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
+        C: Decomposition<M, H>,
+        E: EmigrationChoice<M, H>,
+    > Backup for IndependentEmigrationExit<M, H, G, C, E>
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
@@ -46,7 +52,7 @@ impl<M: MathsCore, H: Habitat<M>, C: Decomposition<M, H>, E: EmigrationChoice<M,
                 .map(|(partition, migrating_lineage)| {
                     (*partition, migrating_lineage.backup_unchecked())
                 }),
-            _marker: PhantomData::<(M, H)>,
+            _marker: PhantomData::<(M, H, G)>,
         }
     }
 }
@@ -55,11 +61,11 @@ impl<M: MathsCore, H: Habitat<M>, C: Decomposition<M, H>, E: EmigrationChoice<M,
 impl<
         M: MathsCore,
         H: Habitat<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
         C: Decomposition<M, H>,
         E: EmigrationChoice<M, H>,
-        G: RngCore<M>,
     > EmigrationExit<M, H, G, IndependentLineageStore<M, H>>
-    for IndependentEmigrationExit<M, H, C, E>
+    for IndependentEmigrationExit<M, H, G, C, E>
 {
     #[must_use]
     #[inline]
@@ -132,8 +138,13 @@ impl<
     }
 }
 
-impl<M: MathsCore, H: Habitat<M>, C: Decomposition<M, H>, E: EmigrationChoice<M, H>>
-    IndependentEmigrationExit<M, H, C, E>
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
+        C: Decomposition<M, H>,
+        E: EmigrationChoice<M, H>,
+    > IndependentEmigrationExit<M, H, G, C, E>
 {
     #[must_use]
     pub fn new(decomposition: C, choice: E) -> Self {
@@ -141,7 +152,7 @@ impl<M: MathsCore, H: Habitat<M>, C: Decomposition<M, H>, E: EmigrationChoice<M,
             decomposition,
             choice,
             emigrant: None,
-            _marker: PhantomData::<(M, H)>,
+            _marker: PhantomData::<(M, H, G)>,
         }
     }
 

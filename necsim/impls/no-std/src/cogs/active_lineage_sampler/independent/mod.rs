@@ -3,8 +3,8 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        Backup, DispersalSampler, EmigrationExit, Habitat, MathsCore, PrimeableRng,
-        SpeciationProbability, TurnoverRate,
+        distribution::UniformClosedOpenUnit, Backup, DispersalSampler, EmigrationExit, Habitat,
+        MathsCore, PrimeableRng, Rng, Samples, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
 };
@@ -30,7 +30,7 @@ use event_time_sampler::EventTimeSampler;
 pub struct IndependentActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: PrimeableRng<M>,
+    G: Rng<M, Generator: PrimeableRng> + Samples<M, UniformClosedOpenUnit>,
     X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
     D: DispersalSampler<M, H, G>,
     T: TurnoverRate<M, H>,
@@ -52,7 +52,7 @@ pub struct IndependentActiveLineageSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: PrimeableRng<M>,
+        G: Rng<M, Generator: PrimeableRng> + Samples<M, UniformClosedOpenUnit>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,
@@ -138,7 +138,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: PrimeableRng<M>,
+        G: Rng<M, Generator: PrimeableRng> + Samples<M, UniformClosedOpenUnit>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,

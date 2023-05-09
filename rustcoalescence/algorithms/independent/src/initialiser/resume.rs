@@ -1,5 +1,8 @@
 use necsim_core::{
-    cogs::{EmigrationExit, MathsCore, PrimeableRng},
+    cogs::{
+        distribution::{Bernoulli, IndexUsize, UniformClosedOpenUnit},
+        EmigrationExit, MathsCore, PrimeableRng, Rng, Samples,
+    },
     lineage::Lineage,
 };
 use necsim_core_bond::NonNegativeF64;
@@ -25,8 +28,16 @@ pub struct ResumeInitialiser<L: ExactSizeIterator<Item = Lineage>> {
     pub resume_after: Option<NonNegativeF64>,
 }
 
-impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: PrimeableRng<M>, O: Scenario<M, G>>
-    IndependentLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for ResumeInitialiser<L>
+#[allow(clippy::trait_duplication_in_bounds)]
+impl<
+        L: ExactSizeIterator<Item = Lineage>,
+        M: MathsCore,
+        G: Rng<M, Generator: PrimeableRng>
+            + Samples<M, UniformClosedOpenUnit>
+            + Samples<M, IndexUsize>
+            + Samples<M, Bernoulli>,
+        O: Scenario<M, G>,
+    > IndependentLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for ResumeInitialiser<L>
 {
     type ActiveLineageSampler<
         X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>,

@@ -6,7 +6,7 @@
 extern crate log;
 
 use necsim_core::cogs::{
-    DispersalSampler, LineageStore, MathsCore, RngCore, SpeciationProbability, TurnoverRate,
+    DispersalSampler, LineageStore, MathsCore, Rng, SpeciationProbability, TurnoverRate,
     UniformlySampleableHabitat,
 };
 use necsim_core_bond::OpenClosedUnitF64 as PositiveUnitF64;
@@ -31,7 +31,7 @@ pub trait ScenarioParameters {
     type Error;
 }
 
-pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioParameters {
+pub trait Scenario<M: MathsCore, G: Rng<M>>: Sized + ScenarioParameters {
     type Habitat: UniformlySampleableHabitat<M, G>;
     type OriginSampler<'h, I: Iterator<Item = u64>>: TrustedOriginSampler<
         'h,
@@ -78,7 +78,7 @@ pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioParameters {
 
     fn sample_habitat<'h, I: Iterator<Item = u64>>(
         habitat: &'h Self::Habitat,
-        pre_sampler: OriginPreSampler<M, I>,
+        pre_sampler: OriginPreSampler<I>,
         auxiliary: Self::OriginSamplerAuxiliary,
     ) -> Self::OriginSampler<'h, I>
     where

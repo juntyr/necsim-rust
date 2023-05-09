@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, Habitat, MathsCore, RngCore, SeparableDispersalSampler},
+    cogs::{Backup, DispersalSampler, Habitat, MathsCore, Rng, SeparableDispersalSampler},
     landscape::Location,
 };
 use necsim_core_bond::ClosedUnitF64;
@@ -12,7 +12,7 @@ pub mod uniform;
 #[allow(clippy::no_effect_underscore_binding)]
 #[allow(clippy::module_name_repetitions)]
 #[contract_trait]
-pub trait AntiTrespassingDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>>:
+pub trait AntiTrespassingDispersalSampler<M: MathsCore, H: Habitat<M>, G: Rng<M>>:
     Backup + core::fmt::Debug
 {
     #[must_use]
@@ -33,7 +33,7 @@ pub trait AntiTrespassingDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCor
 pub struct TrespassingDispersalSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: RngCore<M>,
+    G: Rng<M>,
     D: DispersalSampler<M, H, G>,
     T: AntiTrespassingDispersalSampler<M, H, G>,
 > {
@@ -47,7 +47,7 @@ pub struct TrespassingDispersalSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         D: DispersalSampler<M, H, G>,
         T: AntiTrespassingDispersalSampler<M, H, G>,
     > TrespassingDispersalSampler<M, H, G, D, T>
@@ -66,7 +66,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         D: DispersalSampler<M, H, G>,
         T: AntiTrespassingDispersalSampler<M, H, G>,
     > Backup for TrespassingDispersalSampler<M, H, G, D, T>
@@ -83,7 +83,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         D: DispersalSampler<M, H, G>,
         T: AntiTrespassingDispersalSampler<M, H, G>,
     > DispersalSampler<M, H, G> for TrespassingDispersalSampler<M, H, G, D, T>
@@ -126,7 +126,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>,
         D: SeparableDispersalSampler<M, H, G>,
         T: AntiTrespassingDispersalSampler<M, H, G>,
     > SeparableDispersalSampler<M, H, G> for TrespassingDispersalSampler<M, H, G, D, T>

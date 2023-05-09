@@ -16,7 +16,7 @@ use necsim_impls_no_std::{
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
         },
-        rng::wyhash::WyHash,
+        rng::{simple::SimpleRng, wyhash::WyHash},
     },
     parallelisation::Status,
 };
@@ -46,35 +46,36 @@ use crate::{
     parallelisation,
 };
 
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_lines, clippy::type_complexity)]
 pub fn initialise_and_simulate<
     'p,
     M: MathsCore,
-    O: Scenario<M, CudaRng<M, WyHash<M>>>,
+    O: Scenario<M, CudaRng<M, SimpleRng<M, WyHash>>>,
     R: Reporter,
     P: LocalPartition<'p, R>,
     I: Iterator<Item = u64>,
-    L: CudaLineageStoreSampleInitialiser<M, CudaRng<M, WyHash<M>>, O, Error>,
+    L: CudaLineageStoreSampleInitialiser<M, CudaRng<M, SimpleRng<M, WyHash>>, O, Error>,
     Error: From<CudaError>,
 >(
     args: &CudaArguments,
-    rng: CudaRng<M, WyHash<M>>,
+    rng: WyHash,
     scenario: O,
-    pre_sampler: OriginPreSampler<M, I>,
+    pre_sampler: OriginPreSampler<I>,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
     lineage_store_sampler_initialiser: L,
-) -> Result<SimulationOutcome<M, CudaRng<M, WyHash<M>>>, Error>
+) -> Result<SimulationOutcome<WyHash>, Error>
 where
     O::Habitat: RustToCuda,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>>:
-        RustToCuda,
+    O::DispersalSampler<
+        InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, SimpleRng<M, WyHash>>>,
+    >: RustToCuda,
     O::TurnoverRate: RustToCuda,
     O::SpeciationProbability: RustToCuda,
     SimulationKernel<
         M,
         O::Habitat,
-        CudaRng<M, WyHash<M>>,
+        CudaRng<M, SimpleRng<M, WyHash>>,
         IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         L::DispersalSampler,
@@ -84,7 +85,7 @@ where
         IndependentEventSampler<
             M,
             O::Habitat,
-            CudaRng<M, WyHash<M>>,
+            CudaRng<M, SimpleRng<M, WyHash>>,
             NeverEmigrationExit,
             L::DispersalSampler,
             O::TurnoverRate,
@@ -97,7 +98,7 @@ where
     >: SimulatableKernel<
         M,
         O::Habitat,
-        CudaRng<M, WyHash<M>>,
+        CudaRng<M, SimpleRng<M, WyHash>>,
         IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         L::DispersalSampler,
@@ -107,7 +108,7 @@ where
         IndependentEventSampler<
             M,
             O::Habitat,
-            CudaRng<M, WyHash<M>>,
+            CudaRng<M, SimpleRng<M, WyHash>>,
             NeverEmigrationExit,
             L::DispersalSampler,
             O::TurnoverRate,
@@ -119,6 +120,8 @@ where
         R::ReportDispersal,
     >,
 {
+    let rng = CudaRng::from(SimpleRng::from(rng));
+
     let (
         habitat,
         dispersal_sampler,
@@ -126,8 +129,11 @@ where
         speciation_probability,
         origin_sampler_auxiliary,
         decomposition_auxiliary,
-    ) = scenario
-        .build::<InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>>();
+    ) = scenario.build::<InMemoryPackedAliasDispersalSampler<
+        M,
+        O::Habitat,
+        CudaRng<M, SimpleRng<M, WyHash>>,
+    >>();
     let coalescence_sampler = IndependentCoalescenceSampler::default();
     let event_sampler = IndependentEventSampler::default();
 
@@ -232,8 +238,7 @@ where
                 .into_iter()
                 .chain(passthrough.into_iter())
                 .collect(),
-            rng: simulation.rng_mut().clone(),
-            marker: PhantomData::<M>,
+            rng: simulation.deconstruct().rng.into_inner().into_inner(),
         }),
     }
 }

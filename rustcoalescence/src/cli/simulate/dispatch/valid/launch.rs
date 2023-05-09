@@ -2,7 +2,10 @@ use anyhow::Context;
 
 use rustcoalescence_algorithms::{result::SimulationOutcome, Algorithm};
 
-use necsim_core::{cogs::MathsCore, reporter::Reporter};
+use necsim_core::{
+    cogs::{MathsCore, Rng},
+    reporter::Reporter,
+};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_impls_no_std::cogs::origin_sampler::pre_sampler::OriginPreSampler;
 use necsim_partitioning_core::LocalPartition;
@@ -20,12 +23,12 @@ pub(super) fn simulate<
     P: LocalPartition<'p, R>,
 >(
     algorithm_args: A::Arguments,
-    rng: A::Rng,
+    rng: <A::Rng as Rng<M>>::Generator,
     scenario: O,
     sample: Sample,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
-) -> anyhow::Result<SimulationOutcome<M, A::Rng>> {
+) -> anyhow::Result<SimulationOutcome<<A::Rng as Rng<M>>::Generator>> {
     let lineages = match sample.origin {
         SampleOrigin::Habitat => {
             return A::initialise_and_simulate(

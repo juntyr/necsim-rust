@@ -1,5 +1,8 @@
 use necsim_core::{
-    cogs::{Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng, RngSampler, TurnoverRate},
+    cogs::{
+        distribution::Bernoulli, rng::HabitatPrimeableRng, Distribution, Habitat, MathsCore,
+        PrimeableRng, Rng, Samples, TurnoverRate,
+    },
     landscape::IndexedLocation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -21,8 +24,12 @@ impl GeometricEventTimeSampler {
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: PrimeableRng<M>, T: TurnoverRate<M, H>>
-    EventTimeSampler<M, H, G, T> for GeometricEventTimeSampler
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: Rng<M, Generator: PrimeableRng> + Samples<M, Bernoulli>,
+        T: TurnoverRate<M, H>,
+    > EventTimeSampler<M, H, G, T> for GeometricEventTimeSampler
 {
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
@@ -39,14 +46,15 @@ impl<M: MathsCore, H: Habitat<M>, G: PrimeableRng<M>, T: TurnoverRate<M, H>>
             .neg_exp::<M>()
             .one_minus();
 
-        #[allow(clippy::cast_possible_truncation)]
-        #[allow(clippy::cast_sign_loss)]
+        // Note: rust clamps f64 as u64 to [0, 2^64 - 1]
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let mut time_step = M::floor(time.get() / self.delta_t.get()) as u64 + 1;
 
         loop {
-            rng.prime_with_habitat(habitat, indexed_location, time_step);
+            rng.generator()
+                .prime_with_habitat(habitat, indexed_location, time_step);
 
-            if rng.sample_event(event_probability_per_step) {
+            if Bernoulli::sample_with(rng, event_probability_per_step) {
                 break;
             }
 

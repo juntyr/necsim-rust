@@ -1,15 +1,13 @@
 use necsim_core_bond::ClosedUnitF64;
 
 use crate::{
-    cogs::{Habitat, MathsCore},
+    cogs::{Backup, Habitat, MathsCore},
     landscape::Location,
 };
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait SpeciationProbability<M: MathsCore, H: Habitat<M>>:
-    crate::cogs::Backup + core::fmt::Debug
-{
+pub trait SpeciationProbability<M: MathsCore, H: Habitat<M>>: Backup + core::fmt::Debug {
     #[must_use]
     #[debug_requires(
         habitat.is_location_habitable(location),

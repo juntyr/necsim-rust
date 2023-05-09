@@ -2,8 +2,8 @@ use std::{hint::unreachable_unchecked, marker::PhantomData};
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, GloballyCoherentLineageStore, MathsCore, SeparableDispersalSampler,
-        SplittableRng,
+        ActiveLineageSampler, GloballyCoherentLineageStore, MathsCore, Rng,
+        SeparableDispersalSampler, SplittableRng,
     },
     reporter::Reporter,
     simulation::SimulationBuilder,
@@ -20,6 +20,7 @@ use necsim_impls_no_std::{
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
         },
+        rng::simple::SimpleRng,
     },
     parallelisation::{self, Status},
 };
@@ -37,28 +38,30 @@ use crate::arguments::{
 pub fn initialise_and_simulate<
     'p,
     M: MathsCore,
-    G: SplittableRng<M>,
-    O: Scenario<M, G>,
+    G: SplittableRng,
+    O: Scenario<M, SimpleRng<M, G>>,
     R: Reporter,
     P: LocalPartition<'p, R>,
     I: Iterator<Item = u64>,
-    L: EventSkippingLineageStoreSampleInitialiser<M, G, O, Error>,
+    L: EventSkippingLineageStoreSampleInitialiser<M, SimpleRng<M, G>, O, Error>,
     Error,
 >(
     args: GillespieArguments,
     rng: G,
     scenario: O,
-    pre_sampler: OriginPreSampler<M, I>,
+    pre_sampler: OriginPreSampler<I>,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
     lineage_store_sampler_initialiser: L,
-) -> Result<SimulationOutcome<M, G>, Error>
+) -> Result<SimulationOutcome<G>, Error>
 where
     O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
         GloballyCoherentLineageStore<M, O::Habitat>,
-    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
-        SeparableDispersalSampler<M, O::Habitat, G>,
+    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, SimpleRng<M, G>>>:
+        SeparableDispersalSampler<M, O::Habitat, SimpleRng<M, G>>,
 {
+    let rng = SimpleRng::from(rng);
+
     match args.parallelism_mode {
         ParallelismMode::Monolithic => {
             let (
@@ -68,7 +71,8 @@ where
                 speciation_probability,
                 origin_sampler_auxiliary,
                 _decomposition_auxiliary,
-            ) = scenario.build::<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>();
+            ) = scenario
+                .build::<InMemorySeparableAliasDispersalSampler<M, O::Habitat, SimpleRng<M, G>>>();
             let coalescence_sampler = ConditionalCoalescenceSampler::default();
 
             let (lineage_store, dispersal_sampler, event_sampler, active_lineage_sampler): (
@@ -123,13 +127,14 @@ where
                         )
                         .cloned()
                         .collect(),
-                    rng: simulation.rng_mut().clone(),
-                    marker: PhantomData::<M>,
+                    rng: simulation.deconstruct().rng.into_inner(),
                 }),
             }
         },
         non_monolithic_parallelism_mode => {
-            let rng = rng.split_to_stream(u64::from(local_partition.get_partition().rank()));
+            let rng = rng.map_generator(|rng| {
+                rng.split_to_stream(u64::from(local_partition.get_partition().rank()))
+            });
 
             let (
                 habitat,
@@ -138,7 +143,8 @@ where
                 speciation_probability,
                 origin_sampler_auxiliary,
                 decomposition_auxiliary,
-            ) = scenario.build::<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>();
+            ) = scenario
+                .build::<InMemorySeparableAliasDispersalSampler<M, O::Habitat, SimpleRng<M, G>>>();
             let coalescence_sampler = ConditionalCoalescenceSampler::default();
 
             let decomposition = O::decompose(

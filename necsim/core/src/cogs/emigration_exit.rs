@@ -1,7 +1,7 @@
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use crate::{
-    cogs::{Habitat, LineageStore, MathsCore, RngCore},
+    cogs::{Backup, Habitat, LineageStore, MathsCore, Rng},
     landscape::{IndexedLocation, Location},
     lineage::GlobalLineageReference,
     simulation::partial::emigration_exit::PartialSimulation,
@@ -14,8 +14,8 @@ use crate::{
 )]
 #[allow(clippy::no_effect_underscore_binding)]
 #[contract_trait]
-pub trait EmigrationExit<M: MathsCore, H: Habitat<M>, G: RngCore<M>, S: LineageStore<M, H>>:
-    crate::cogs::Backup + core::fmt::Debug
+pub trait EmigrationExit<M: MathsCore, H: Habitat<M>, G: Rng<M>, S: LineageStore<M, H>>:
+    Backup + core::fmt::Debug
 {
     #[must_use]
     #[debug_ensures(match &ret {

@@ -2,10 +2,10 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample, event_sampler::EventHandler, Backup,
-        CoalescenceSampler, EmigrationExit, EventSampler, GloballyCoherentLineageStore, Habitat,
-        MathsCore, RngCore, RngSampler, SeparableDispersalSampler, SpeciationProbability,
-        TurnoverRate,
+        coalescence_sampler::CoalescenceRngSample, distribution::UniformClosedOpenUnit,
+        event_sampler::EventHandler, Backup, CoalescenceSampler, Distribution, EmigrationExit,
+        EventSampler, GloballyCoherentLineageStore, Habitat, MathsCore, Rng, Samples,
+        SeparableDispersalSampler, SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
     landscape::Location,
@@ -28,7 +28,7 @@ use probability::ProbabilityAtLocation;
 pub struct ConditionalGillespieEventSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: RngCore<M>,
+    G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
     S: GloballyCoherentLineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: SeparableDispersalSampler<M, H, G>,
@@ -42,7 +42,7 @@ pub struct ConditionalGillespieEventSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: SeparableDispersalSampler<M, H, G>,
@@ -61,7 +61,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: SeparableDispersalSampler<M, H, G>,
@@ -80,7 +80,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: SeparableDispersalSampler<M, H, G>,
@@ -135,7 +135,7 @@ impl<
             false,
         );
 
-        let event_sample = probability_at_location.total() * rng.sample_uniform_closed_open();
+        let event_sample = probability_at_location.total() * UniformClosedOpenUnit::sample(rng);
 
         if event_sample < probability_at_location.speciation() {
             // Speciation Event
@@ -232,7 +232,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: SeparableDispersalSampler<M, H, G>,

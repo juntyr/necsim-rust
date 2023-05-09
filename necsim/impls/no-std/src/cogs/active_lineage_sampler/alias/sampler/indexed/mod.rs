@@ -1,15 +1,19 @@
 use alloc::{vec, vec::Vec};
 use core::{
     cmp::Ordering,
+    convert::TryFrom,
     fmt,
     hash::Hash,
-    num::{NonZeroU128, NonZeroUsize},
+    num::{NonZeroU128, NonZeroU64, NonZeroUsize},
 };
 
 use fnv::FnvBuildHasher;
 use hashbrown::HashMap;
 
-use necsim_core::cogs::{Backup, MathsCore, RngCore, RngSampler};
+use necsim_core::cogs::{
+    distribution::{IndexU128, IndexU64, IndexUsize, Length},
+    Backup, Distribution, MathsCore, Rng, RngCore, Samples,
+};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 #[cfg(test)]
@@ -45,7 +49,7 @@ impl<E: Eq + Hash + Backup> RejectionSamplingGroup<E> {
         self.events.iter()
     }
 
-    unsafe fn sample_pop_inplace<M: MathsCore, G: RngCore<M>>(
+    unsafe fn sample_pop_inplace<M: MathsCore, G: Rng<M> + Samples<M, IndexUsize>>(
         &mut self,
         lookup: &mut HashMap<E, EventLocation, FnvBuildHasher>,
         rng: &mut G,
@@ -59,8 +63,11 @@ impl<E: Eq + Hash + Backup> RejectionSamplingGroup<E> {
 
         loop {
             // Safety: By construction, the group never contains zero elements
-            let index = rng.sample_index(NonZeroUsize::new_unchecked(self.weights.len()));
-            let height = rng.sample_u64() >> 11;
+            let index = IndexUsize::sample_with(
+                rng,
+                Length(NonZeroUsize::new_unchecked(self.weights.len())),
+            );
+            let height = rng.generator().sample_u64() >> 11;
 
             // 53rd bit of weight is always 1, so sampling chance >= 50%
             if height < self.weights[index] {
@@ -84,7 +91,7 @@ impl<E: Eq + Hash + Backup> RejectionSamplingGroup<E> {
     }
 
     #[cfg(test)]
-    fn sample_pop<M: MathsCore, G: RngCore<M>>(
+    fn sample_pop<M: MathsCore, G: Rng<M> + Samples<M, IndexUsize>>(
         mut self,
         lookup: &mut HashMap<E, EventLocation, FnvBuildHasher>,
         rng: &mut G,
@@ -186,12 +193,21 @@ impl<E: Eq + Hash + Backup> DynamicAliasMethodIndexedSampler<E> {
         self.groups.iter().flat_map(RejectionSamplingGroup::iter)
     }
 
-    pub fn sample_pop<M: MathsCore, G: RngCore<M>>(&mut self, rng: &mut G) -> Option<E> {
+    #[allow(clippy::trait_duplication_in_bounds)]
+    pub fn sample_pop<
+        M: MathsCore,
+        G: Rng<M> + Samples<M, IndexUsize> + Samples<M, IndexU64> + Samples<M, IndexU128>,
+    >(
+        &mut self,
+        rng: &mut G,
+    ) -> Option<E> {
         if let Some(total_weight) = NonZeroU128::new(self.total_weight) {
             let cdf_sample = if let [_group] = &self.groups[..] {
                 0_u128
+            } else if let Ok(total_weight) = NonZeroU64::try_from(total_weight) {
+                u128::from(IndexU64::sample_with(rng, Length(total_weight)))
             } else {
-                rng.sample_index_u128(total_weight)
+                IndexU128::sample_with(rng, Length(total_weight))
             };
 
             let mut cdf_acc = 0_u128;

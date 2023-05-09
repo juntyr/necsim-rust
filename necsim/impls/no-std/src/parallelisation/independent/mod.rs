@@ -40,6 +40,7 @@ impl DedupCache {
         DirectMappedCache::with_capacity(match self {
             DedupCache::Absolute(AbsoluteCapacity { capacity }) => capacity.get(),
             DedupCache::Relative(RelativeCapacity { factor }) => {
+                // Note: rust clamps f64 as usize to [0, 2^[32/64] - 1]
                 #[allow(
                     clippy::cast_precision_loss,
                     clippy::cast_sign_loss,
@@ -67,6 +68,7 @@ impl EventSlice {
         match self {
             EventSlice::Absolute(AbsoluteCapacity { capacity }) => capacity,
             EventSlice::Relative(RelativeCapacity { factor }) => {
+                // Note: rust clamps f64 as usize to [0, 2^[32/64] - 1]
                 #[allow(
                     clippy::cast_precision_loss,
                     clippy::cast_sign_loss,

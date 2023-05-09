@@ -2,9 +2,10 @@ use core::ops::ControlFlow;
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler,
-        Habitat, ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, RngCore,
-        SpeciationProbability, TurnoverRate,
+        distribution::{Exponential, IndexU128, IndexU64, IndexUsize, Lambda},
+        ActiveLineageSampler, CoalescenceSampler, DispersalSampler, Distribution, EmigrationExit,
+        EventSampler, Habitat, ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng,
+        Samples, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -14,11 +15,16 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use super::IndividualAliasActiveLineageSampler;
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>
+            + Samples<M, Exponential>
+            + Samples<M, IndexUsize>
+            + Samples<M, IndexU64>
+            + Samples<M, IndexU128>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -60,12 +66,10 @@ impl<
         rng: &mut G,
         early_peek_stop: F,
     ) -> Option<(Lineage, PositiveF64)> {
-        use necsim_core::cogs::RngSampler;
-
         let total_rate = self.alias_sampler.total_weight();
 
         if let Ok(lambda) = PositiveF64::new(total_rate.get()) {
-            let event_time = self.last_event_time + rng.sample_exponential(lambda);
+            let event_time = self.last_event_time + Exponential::sample_with(rng, Lambda(lambda));
 
             let next_event_time = PositiveF64::max_after(self.last_event_time, event_time);
 

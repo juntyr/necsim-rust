@@ -1,21 +1,20 @@
-use core::cmp::{Ord, Ordering};
-
-use necsim_core_bond::ClosedOpenUnitF64;
+use core::{
+    cmp::{Ord, Ordering},
+    num::NonZeroU32,
+};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    cogs::{Backup, MathsCore, RngCore},
+    cogs::{Backup, Habitat, LineageStore, MathsCore, Rng, RngCore},
     landscape::{IndexedLocation, Location},
     lineage::LineageInteraction,
 };
 
-use super::{Habitat, LineageStore};
-
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
 pub trait CoalescenceSampler<M: MathsCore, H: Habitat<M>, S: LineageStore<M, H>>:
-    crate::cogs::Backup + core::fmt::Debug
+    Backup + core::fmt::Debug
 {
     #[must_use]
     #[debug_requires(habitat.get_habitat_at_location(&location) > 0, "location is habitable")]
@@ -31,7 +30,7 @@ pub trait CoalescenceSampler<M: MathsCore, H: Habitat<M>, S: LineageStore<M, H>>
 #[allow(clippy::unsafe_derive_deserialize)]
 #[derive(Debug, PartialEq, Serialize, Deserialize, TypeLayout)]
 #[repr(transparent)]
-pub struct CoalescenceRngSample(ClosedOpenUnitF64);
+pub struct CoalescenceRngSample(u64);
 
 #[contract_trait]
 impl Backup for CoalescenceRngSample {
@@ -57,24 +56,20 @@ impl Eq for CoalescenceRngSample {}
 impl CoalescenceRngSample {
     #[must_use]
     #[inline]
-    pub fn new<M: MathsCore, G: RngCore<M>>(rng: &mut G) -> Self {
-        use crate::cogs::RngSampler;
-
-        Self(rng.sample_uniform_closed_open())
+    pub fn new<M: MathsCore, G: Rng<M>>(rng: &mut G) -> Self {
+        Self(rng.generator().sample_u64())
     }
 
     #[must_use]
     #[inline]
-    #[debug_ensures(ret < length, "samples U(0, length - 1)")]
-    pub fn sample_coalescence_index<M: MathsCore>(self, length: u32) -> u32 {
-        // attributes on expressions are experimental
-        // see https://github.com/rust-lang/rust/issues/15701
-        #[allow(
-            clippy::cast_precision_loss,
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss
-        )]
-        let index = M::floor(self.0.get() * f64::from(length)) as u32;
-        index
+    #[debug_ensures(ret < length.get(), "samples U(0, length - 1)")]
+    pub fn sample_coalescence_index(self, length: NonZeroU32) -> u32 {
+        // Sample U(0, length - 1) using a widening multiplication
+        // Note: Some slight bias is traded for only needing one u64 sample
+        // Note: Should optimise to a single 64 bit (high-only) multiplication
+        #[allow(clippy::cast_possible_truncation)]
+        {
+            (((u128::from(self.0) * u128::from(length.get())) >> 64) & u128::from(!0_u32)) as u32
+        }
     }
 }

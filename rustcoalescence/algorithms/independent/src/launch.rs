@@ -26,6 +26,7 @@ use necsim_impls_no_std::{
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
         },
+        rng::simple::SimpleRng,
     },
     parallelisation::{self, Status},
 };
@@ -46,22 +47,24 @@ use crate::{
 pub fn initialise_and_simulate<
     'p,
     M: MathsCore,
-    G: PrimeableRng<M>,
-    O: Scenario<M, G>,
+    G: PrimeableRng,
+    O: Scenario<M, SimpleRng<M, G>>,
     R: Reporter,
     P: LocalPartition<'p, R>,
     I: Iterator<Item = u64>,
-    L: IndependentLineageStoreSampleInitialiser<M, G, O, Error>,
+    L: IndependentLineageStoreSampleInitialiser<M, SimpleRng<M, G>, O, Error>,
     Error,
 >(
     args: &IndependentArguments,
     rng: G,
     scenario: O,
-    pre_sampler: OriginPreSampler<M, I>,
+    pre_sampler: OriginPreSampler<I>,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
     lineage_store_sampler_initialiser: L,
-) -> Result<SimulationOutcome<M, G>, Error> {
+) -> Result<SimulationOutcome<G>, Error> {
+    let rng = SimpleRng::from(rng);
+
     match args.parallelism_mode {
         ParallelismMode::Monolithic(MonolithicParallelismMode { event_slice })
         | ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { event_slice, .. })
@@ -73,7 +76,7 @@ pub fn initialise_and_simulate<
                 speciation_probability,
                 origin_sampler_auxiliary,
                 decomposition_auxiliary,
-            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, G>>();
+            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, SimpleRng<M, G>>>();
             let coalescence_sampler = IndependentCoalescenceSampler::default();
             let event_sampler = IndependentEventSampler::default();
 
@@ -156,8 +159,7 @@ pub fn initialise_and_simulate<
                         .into_iter()
                         .chain(passthrough.into_iter())
                         .collect(),
-                    rng: simulation.rng_mut().clone(),
-                    marker: PhantomData::<M>,
+                    rng: simulation.deconstruct().rng.into_inner(),
                 }),
             }
         },
@@ -169,7 +171,7 @@ pub fn initialise_and_simulate<
                 speciation_probability,
                 origin_sampler_auxiliary,
                 _decomposition_auxiliary,
-            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, G>>();
+            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, SimpleRng<M, G>>>();
             let coalescence_sampler = IndependentCoalescenceSampler::default();
             let event_sampler = IndependentEventSampler::default();
 
@@ -224,7 +226,7 @@ pub fn initialise_and_simulate<
                 speciation_probability,
                 origin_sampler_auxiliary,
                 decomposition_auxiliary,
-            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, G>>();
+            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, SimpleRng<M, G>>>();
             let coalescence_sampler = IndependentCoalescenceSampler::default();
             let event_sampler = IndependentEventSampler::default();
 
@@ -287,7 +289,7 @@ pub fn initialise_and_simulate<
                 speciation_probability,
                 origin_sampler_auxiliary,
                 decomposition_auxiliary,
-            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, G>>();
+            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, SimpleRng<M, G>>>();
             let coalescence_sampler = IndependentCoalescenceSampler::default();
             let event_sampler = IndependentEventSampler::default();
 

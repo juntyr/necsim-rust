@@ -1,8 +1,11 @@
-use core::cmp::Ordering;
+use core::{cmp::Ordering, num::NonZeroUsize};
 
 use alloc::vec::Vec;
 
-use necsim_core::cogs::{MathsCore, RngCore};
+use necsim_core::cogs::{
+    distribution::{Bernoulli, IndexUsize, Length},
+    Distribution, MathsCore, Rng, Samples,
+};
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
 #[allow(clippy::module_name_repetitions)]
@@ -103,32 +106,28 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
     }
 
     #[allow(clippy::no_effect_underscore_binding)]
+    #[allow(clippy::trait_duplication_in_bounds)]
     #[debug_requires(!alias_samplers.is_empty(), "alias_samplers is non-empty")]
     #[debug_ensures(
         old(alias_samplers).iter().map(|s| s.e).any(|e| e == ret),
         "returns one of the weighted events"
     )]
-    pub fn sample_event<M: MathsCore, G: RngCore<M>>(
+    pub fn sample_event<
+        M: MathsCore,
+        G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>,
+    >(
         alias_samplers: &[AliasMethodSamplerAtom<E>],
         rng: &mut G,
     ) -> E {
-        use necsim_core::cogs::RngSampler;
+        // Safety: alias_samplers is non-empty by the precondition
+        let length = unsafe { NonZeroUsize::new_unchecked(alias_samplers.len()) };
 
-        let x = rng.sample_uniform_closed_open();
-
-        #[allow(
-            clippy::cast_precision_loss,
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss
-        )]
-        let i = M::floor(x.get() * (alias_samplers.len() as f64)) as usize; // index into events
-
-        #[allow(clippy::cast_precision_loss)]
-        let y = x.get() * (alias_samplers.len() as f64) - (i as f64); // U(0,1) to compare against U[i]
+        let i = IndexUsize::sample_with(rng, Length(length)); // index into events
 
         let sample = &alias_samplers[i];
 
-        if y < sample.u.get() {
+        // Select E over K according to its bucket percentage U
+        if Bernoulli::sample_with(rng, sample.u) {
             sample.e
         } else {
             sample.k

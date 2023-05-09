@@ -1,7 +1,8 @@
 use necsim_core::{
     cogs::{
+        distribution::{Bernoulli, IndexUsize},
         ActiveLineageSampler, DispersalSampler, EmigrationExit, ImmigrationEntry,
-        LocallyCoherentLineageStore, MathsCore, RngCore,
+        LocallyCoherentLineageStore, MathsCore, Rng, Samples,
     },
     reporter::Reporter,
 };
@@ -21,9 +22,10 @@ pub mod genesis;
 pub mod resume;
 
 #[allow(clippy::module_name_repetitions)]
+#[allow(clippy::trait_duplication_in_bounds)]
 pub trait ClassicalLineageStoreSampleInitialiser<
     M: MathsCore,
-    G: RngCore<M>,
+    G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>,
     O: Scenario<M, G>,
     Error,
 >

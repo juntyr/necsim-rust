@@ -2,9 +2,10 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample, event_sampler::EventHandler, Backup,
-        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, MathsCore,
-        RngCore, SpeciationProbability, TurnoverRate,
+        coalescence_sampler::CoalescenceRngSample, distribution::UniformClosedOpenUnit,
+        event_sampler::EventHandler, Backup, CoalescenceSampler, DispersalSampler, Distribution,
+        EmigrationExit, EventSampler, Habitat, MathsCore, Rng, Samples, SpeciationProbability,
+        TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
     lineage::Lineage,
@@ -37,7 +38,7 @@ use super::tracking::{MinSpeciationTrackingEventSampler, SpeciationSample};
 pub struct IndependentEventSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: RngCore<M>,
+    G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
     X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
     D: DispersalSampler<M, H, G>,
     T: TurnoverRate<M, H>,
@@ -56,7 +57,7 @@ pub struct IndependentEventSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,
@@ -75,7 +76,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,
@@ -94,7 +95,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,
@@ -147,9 +148,7 @@ impl<
         }: EventHandler<FS, FD, FE>,
         auxiliary: Aux,
     ) -> Q {
-        use necsim_core::cogs::RngSampler;
-
-        let speciation_sample = rng.sample_uniform_closed_open();
+        let speciation_sample = UniformClosedOpenUnit::sample(rng);
 
         SpeciationSample::update_min(
             &mut self.min_spec_sample,
@@ -230,7 +229,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
         X: EmigrationExit<M, H, G, IndependentLineageStore<M, H>>,
         D: DispersalSampler<M, H, G>,
         T: TurnoverRate<M, H>,

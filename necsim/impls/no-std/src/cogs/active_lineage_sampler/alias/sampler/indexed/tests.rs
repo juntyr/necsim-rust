@@ -2,14 +2,17 @@ use alloc::{vec, vec::Vec};
 
 use hashbrown::HashMap;
 
-use necsim_core::cogs::{Backup, RngCore, SeedableRng};
+use necsim_core::cogs::{Backup, SeedableRng};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
-use crate::cogs::{maths::intrinsics::IntrinsicsMathsCore, rng::wyhash::WyHash};
+use crate::cogs::{
+    maths::intrinsics::IntrinsicsMathsCore,
+    rng::{simple::SimpleRng, wyhash::WyHash},
+};
 
 use super::{
-    super::decompose_weight, DynamicAliasMethodIndexedSampler, EventLocation,
-    RejectionSamplingGroup,
+    super::{decompose_weight, tests::DummyRng},
+    DynamicAliasMethodIndexedSampler, EventLocation, RejectionSamplingGroup,
 };
 
 #[test]
@@ -183,7 +186,7 @@ fn sample_single_group() {
 
     let mut tally = [0_u64; 6];
 
-    let mut rng = WyHash::<IntrinsicsMathsCore>::seed_from_u64(24897);
+    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::from(WyHash::seed_from_u64(24897));
 
     for _ in 0..N {
         let (maybe_group, sample) = group.sample_pop(&mut lookup, &mut rng);
@@ -898,7 +901,7 @@ fn add_update_event_full() {
 fn sample_single_group_full() {
     const N: usize = 10_000_000;
 
-    let mut rng = WyHash::<IntrinsicsMathsCore>::seed_from_u64(471_093);
+    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::from(WyHash::seed_from_u64(471_093));
 
     let mut sampler = DynamicAliasMethodIndexedSampler::with_capacity(6);
 
@@ -947,7 +950,7 @@ fn sample_single_group_full() {
 fn sample_three_groups_full() {
     const N: usize = 10_000_000;
 
-    let mut rng = WyHash::<IntrinsicsMathsCore>::seed_from_u64(739_139);
+    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::from(WyHash::seed_from_u64(739_139));
 
     let mut sampler = DynamicAliasMethodIndexedSampler::with_capacity(6);
 
@@ -993,7 +996,7 @@ fn sample_three_groups_full() {
 fn sample_three_groups_full_reverse() {
     const N: usize = 10_000_000;
 
-    let mut rng = WyHash::<IntrinsicsMathsCore>::seed_from_u64(248_971);
+    let mut rng = SimpleRng::<IntrinsicsMathsCore, WyHash>::from(WyHash::seed_from_u64(248_971));
 
     let mut sampler = DynamicAliasMethodIndexedSampler::with_capacity(6);
 
@@ -1069,42 +1072,3 @@ fn debug_display_sampler() {
         "DynamicAliasMethodIndexedSampler { exponents: [2, 1], total_weight: 20.0 }"
     );
 }
-
-// GRCOV_EXCL_START
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-struct DummyRng(Vec<u64>);
-
-impl DummyRng {
-    fn new(mut vec: Vec<f64>) -> Self {
-        vec.reverse();
-
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        Self(
-            vec.into_iter()
-                .map(|u01| ((u01 / f64::from_bits(0x3CA0_0000_0000_0000_u64)) as u64) << 11)
-                .collect(),
-        )
-    }
-}
-
-impl RngCore<IntrinsicsMathsCore> for DummyRng {
-    type Seed = [u8; 0];
-
-    #[must_use]
-    fn from_seed(_seed: Self::Seed) -> Self {
-        Self(Vec::new())
-    }
-
-    #[must_use]
-    fn sample_u64(&mut self) -> u64 {
-        self.0.pop().unwrap()
-    }
-}
-
-#[contract_trait]
-impl Backup for DummyRng {
-    unsafe fn backup_unchecked(&self) -> Self {
-        Self(self.0.clone())
-    }
-}
-// GRCOV_EXCL_STOP

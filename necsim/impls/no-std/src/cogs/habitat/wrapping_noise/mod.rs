@@ -1,14 +1,16 @@
 use alloc::boxed::Box;
 use core::{fmt, num::NonZeroUsize};
-use necsim_core_bond::{ClosedUnitF64, OffByOneU64, OpenClosedUnitF64 as PositiveUnitF64};
+
 use r#final::Final;
+
+use necsim_core_bond::{ClosedUnitF64, OffByOneU64, OpenClosedUnitF64 as PositiveUnitF64};
 
 mod opensimplex_noise;
 
 use opensimplex_noise::OpenSimplexNoise;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
+    cogs::{Backup, Habitat, MathsCore, Rng, RngCore, UniformlySampleableHabitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -60,7 +62,7 @@ impl<M: MathsCore> WrappingNoiseHabitat<M> {
 
         // Utilise a PRNG to avoid sampling degeneracies for finding the
         //  threshold which would poison the entire sampler
-        let mut rng: WyHash<M> = WyHash::from_seed(seed.to_le_bytes());
+        let mut rng = WyHash::from_seed(seed.to_le_bytes());
 
         for _ in 0..(1_usize << 16) {
             let location = rng.sample_u64();
@@ -189,12 +191,12 @@ impl<M: MathsCore> Habitat<M> for WrappingNoiseHabitat<M> {
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for WrappingNoiseHabitat<M> {
+impl<M: MathsCore, G: Rng<M>> UniformlySampleableHabitat<M, G> for WrappingNoiseHabitat<M> {
     #[must_use]
     fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
         // Rejection sample until a habitable location is found
         let location = loop {
-            let index = rng.sample_u64();
+            let index = rng.generator().sample_u64();
 
             let location = Location::new(
                 (index & 0xFFFF_FFFF) as u32,

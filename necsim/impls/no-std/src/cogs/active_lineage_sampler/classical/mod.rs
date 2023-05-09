@@ -2,8 +2,9 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 use necsim_core::cogs::{
+    distribution::{Bernoulli, Exponential, IndexUsize},
     Backup, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-    LocallyCoherentLineageStore, MathsCore, RngCore, SpeciationProbability,
+    LocallyCoherentLineageStore, MathsCore, Rng, Samples, SpeciationProbability,
 };
 use necsim_core_bond::NonNegativeF64;
 
@@ -15,11 +16,12 @@ use crate::cogs::{
 mod sampler;
 
 #[allow(clippy::module_name_repetitions)]
+#[allow(clippy::trait_duplication_in_bounds)]
 #[derive(Debug)]
 pub struct ClassicalActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: RngCore<M>,
+    G: Rng<M> + Samples<M, Exponential> + Samples<M, IndexUsize> + Samples<M, Bernoulli>,
     S: LocallyCoherentLineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
@@ -32,10 +34,11 @@ pub struct ClassicalActiveLineageSampler<
     _marker: PhantomData<(M, H, G, S, X, D, N, I)>,
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M> + Samples<M, Exponential> + Samples<M, IndexUsize> + Samples<M, Bernoulli>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -122,11 +125,12 @@ impl<
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M> + Samples<M, Exponential> + Samples<M, IndexUsize> + Samples<M, Bernoulli>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,

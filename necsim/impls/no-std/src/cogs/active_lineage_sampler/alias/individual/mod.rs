@@ -4,8 +4,9 @@ use core::{fmt, marker::PhantomData};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::cogs::{
+    distribution::{Exponential, IndexU128, IndexU64, IndexUsize},
     Backup, CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat,
-    ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, RngCore, SpeciationProbability,
+    ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng, Samples, SpeciationProbability,
     TurnoverRate,
 };
 
@@ -19,10 +20,15 @@ use super::sampler::stack::DynamicAliasMethodStackSampler;
 mod sampler;
 
 #[allow(clippy::module_name_repetitions)]
+#[allow(clippy::trait_duplication_in_bounds)]
 pub struct IndividualAliasActiveLineageSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: RngCore<M>,
+    G: Rng<M>
+        + Samples<M, Exponential>
+        + Samples<M, IndexUsize>
+        + Samples<M, IndexU64>
+        + Samples<M, IndexU128>,
     S: LocallyCoherentLineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
@@ -39,10 +45,15 @@ pub struct IndividualAliasActiveLineageSampler<
     marker: PhantomData<(M, H, G, S, X, D, C, T, N, E, I)>,
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>
+            + Samples<M, Exponential>
+            + Samples<M, IndexUsize>
+            + Samples<M, IndexU64>
+            + Samples<M, IndexU128>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -146,10 +157,15 @@ impl<
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>
+            + Samples<M, Exponential>
+            + Samples<M, IndexUsize>
+            + Samples<M, IndexU64>
+            + Samples<M, IndexU128>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -168,11 +184,16 @@ impl<
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>
+            + Samples<M, Exponential>
+            + Samples<M, IndexUsize>
+            + Samples<M, IndexU64>
+            + Samples<M, IndexU128>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,

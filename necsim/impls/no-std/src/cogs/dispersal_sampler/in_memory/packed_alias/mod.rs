@@ -1,3 +1,5 @@
+#![allow(clippy::trait_duplication_in_bounds)]
+
 use alloc::{boxed::Box, vec::Vec};
 use core::{marker::PhantomData, ops::Range};
 use necsim_core_bond::NonNegativeF64;
@@ -5,7 +7,10 @@ use necsim_core_bond::NonNegativeF64;
 use r#final::Final;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore},
+    cogs::{
+        distribution::{Bernoulli, IndexUsize},
+        Backup, Habitat, MathsCore, Rng, Samples,
+    },
     landscape::Location,
 };
 
@@ -42,7 +47,11 @@ impl From<AliasSamplerRange> for Range<usize> {
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "H", free = "G"))]
-pub struct InMemoryPackedAliasDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>> {
+pub struct InMemoryPackedAliasDispersalSampler<
+    M: MathsCore,
+    H: Habitat<M>,
+    G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>,
+> {
     #[cfg_attr(feature = "cuda", cuda(embed))]
     alias_dispersal_ranges: Final<Array2D<AliasSamplerRange>>,
     #[cfg_attr(feature = "cuda", cuda(embed))]
@@ -50,9 +59,10 @@ pub struct InMemoryPackedAliasDispersalSampler<M: MathsCore, H: Habitat<M>, G: R
     marker: PhantomData<(M, H, G)>,
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, G>
-    for InMemoryPackedAliasDispersalSampler<M, H, G>
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>>
+    InMemoryDispersalSampler<M, H, G> for InMemoryPackedAliasDispersalSampler<M, H, G>
 {
     /// Creates a new `InMemoryPackedAliasDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
@@ -112,8 +122,9 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
     }
 }
 
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> core::fmt::Debug
-    for InMemoryPackedAliasDispersalSampler<M, H, G>
+#[allow(clippy::trait_duplication_in_bounds)]
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>>
+    core::fmt::Debug for InMemoryPackedAliasDispersalSampler<M, H, G>
 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct(stringify!(InMemoryPackedAliasDispersalSampler))
@@ -130,8 +141,9 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> core::fmt::Debug
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Backup
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>> Backup
     for InMemoryPackedAliasDispersalSampler<M, H, G>
 {
     unsafe fn backup_unchecked(&self) -> Self {
