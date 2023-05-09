@@ -230,9 +230,9 @@ pub fn simulate<
                     previous_next_event_time = Some(next_event_time);
 
                     if steps >= step_slice.get() || next_event_time >= level_time {
-                        ControlFlow::BREAK
+                        ControlFlow::Break(())
                     } else {
-                        ControlFlow::CONTINUE
+                        ControlFlow::Continue(())
                     }
                 },
                 &mut proxy,

@@ -80,7 +80,7 @@ pub fn simulate<
             |_, _, next_event_time| {
                 next_local_time = Some(next_event_time);
 
-                ControlFlow::BREAK
+                ControlFlow::Break(())
             },
             &mut NullReporter,
         );
@@ -104,9 +104,9 @@ pub fn simulate<
             let (_, new_steps) = simulation.simulate_incremental_early_stop(
                 |_, _, next_event_time| {
                     if next_event_time > next_global_time {
-                        ControlFlow::BREAK
+                        ControlFlow::Break(())
                     } else {
-                        ControlFlow::CONTINUE
+                        ControlFlow::Continue(())
                     }
                 },
                 local_partition.get_reporter(),

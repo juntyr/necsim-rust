@@ -80,9 +80,9 @@ pub fn simulate<
             let (_, new_steps) = simulation.simulate_incremental_early_stop(
                 |simulation, _, _| {
                     if simulation.emigration_exit().is_empty() {
-                        ControlFlow::CONTINUE
+                        ControlFlow::Continue(())
                     } else {
-                        ControlFlow::BREAK
+                        ControlFlow::Break(())
                     }
                 },
                 &mut NullReporter,
@@ -117,9 +117,9 @@ pub fn simulate<
                 let (_, new_steps) = simulation.simulate_incremental_early_stop(
                     |_, _, next_event_time| {
                         if next_event_time > next_global_time {
-                            ControlFlow::BREAK
+                            ControlFlow::Break(())
                         } else {
-                            ControlFlow::CONTINUE
+                            ControlFlow::Continue(())
                         }
                     },
                     local_partition.get_reporter(),
@@ -141,9 +141,9 @@ pub fn simulate<
                 let (_, new_steps) = simulation.simulate_incremental_early_stop(
                     |_, _, next_event_time| {
                         if next_event_time >= next_global_time {
-                            ControlFlow::BREAK
+                            ControlFlow::Break(())
                         } else {
-                            ControlFlow::CONTINUE
+                            ControlFlow::Continue(())
                         }
                     },
                     local_partition.get_reporter(),

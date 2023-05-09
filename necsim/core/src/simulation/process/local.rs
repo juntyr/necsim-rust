@@ -96,9 +96,9 @@ impl<
                         );
                     }
 
-                    ControlFlow::CONTINUE
+                    ControlFlow::Continue(())
                 } else {
-                    ControlFlow::BREAK
+                    ControlFlow::Break(())
                 }
             },
         )

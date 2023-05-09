@@ -107,9 +107,9 @@ pub fn simulate<
                 final_next_event_time = Some(next_event_time);
 
                 if steps >= max_steps || next_event_time >= max_next_event_time {
-                    ControlFlow::BREAK
+                    ControlFlow::Break(())
                 } else {
-                    ControlFlow::CONTINUE
+                    ControlFlow::Continue(())
                 }
             },
             event_buffer_reporter,

@@ -127,9 +127,9 @@ pub fn simulate<
         let (new_time, new_steps) = simulation.simulate_incremental_early_stop(
             |_, steps, _| {
                 if steps >= step_slice.get() {
-                    ControlFlow::BREAK
+                    ControlFlow::Break(())
                 } else {
-                    ControlFlow::CONTINUE
+                    ControlFlow::Continue(())
                 }
             },
             &mut proxy,

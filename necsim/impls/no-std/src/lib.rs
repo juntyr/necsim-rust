@@ -9,6 +9,7 @@
 #![feature(const_refs_to_cell)]
 #![feature(control_flow_enum)]
 #![feature(negative_impls)]
+#![feature(impl_trait_in_assoc_type)]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 
