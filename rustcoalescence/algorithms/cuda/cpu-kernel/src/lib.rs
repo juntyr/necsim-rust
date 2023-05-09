@@ -27,11 +27,14 @@ use rust_cuda::{
         error::{CudaError, CudaResult},
         function::{BlockSize, Function, GridSize},
     },
+    safety::NoAliasing,
 };
 
 use rustcoalescence_algorithms_cuda_gpu_kernel::{
-    BitonicGlobalSortSteppableKernel, BitonicSharedSortPreparableKernel,
-    BitonicSharedSortSteppableKernel, EvenOddSortableKernel, SimulatableKernel,
+    BitonicGlobalSortStepKernelPtx, BitonicGlobalSortSteppableKernel,
+    BitonicSharedSortPrepKernelPtx, BitonicSharedSortPreparableKernel,
+    BitonicSharedSortStepKernelPtx, BitonicSharedSortSteppableKernel, EvenOddSortKernelPtx,
+    EvenOddSortableKernel, SimulatableKernel, SimulationKernelPtx,
 };
 
 mod link;
@@ -83,17 +86,17 @@ pub struct SimulationKernel<
 
 impl<
         M: MathsCore,
-        H: Habitat<M> + RustToCuda,
-        G: Rng<M, Generator: PrimeableRng> + RustToCuda,
-        S: LineageStore<M, H> + RustToCuda,
-        X: EmigrationExit<M, H, G, S> + RustToCuda,
-        D: DispersalSampler<M, H, G> + RustToCuda,
-        C: CoalescenceSampler<M, H, S> + RustToCuda,
-        T: TurnoverRate<M, H> + RustToCuda,
-        N: SpeciationProbability<M, H> + RustToCuda,
-        E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda,
-        I: ImmigrationEntry<M> + RustToCuda,
-        A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda,
+        H: Habitat<M> + RustToCuda + NoAliasing,
+        G: Rng<M, Generator: PrimeableRng> + RustToCuda + NoAliasing,
+        S: LineageStore<M, H> + RustToCuda + NoAliasing,
+        X: EmigrationExit<M, H, G, S> + RustToCuda + NoAliasing,
+        D: DispersalSampler<M, H, G> + RustToCuda + NoAliasing,
+        C: CoalescenceSampler<M, H, S> + RustToCuda + NoAliasing,
+        T: TurnoverRate<M, H> + RustToCuda + NoAliasing,
+        N: SpeciationProbability<M, H> + RustToCuda + NoAliasing,
+        E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda + NoAliasing,
+        I: ImmigrationEntry<M> + RustToCuda + NoAliasing,
+        A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda + NoAliasing,
         ReportSpeciation: Boolean,
         ReportDispersal: Boolean,
     > SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>

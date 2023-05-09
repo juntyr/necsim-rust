@@ -38,6 +38,7 @@ use rust_cuda::{
         function::{BlockSize, GridSize},
         prelude::{Stream, StreamFlags},
     },
+    safety::NoAliasing,
 };
 
 use crate::{
@@ -70,12 +71,12 @@ pub fn initialise_and_simulate<
     lineage_store_sampler_initialiser: L,
 ) -> Result<SimulationOutcome<WyHash>, Error>
 where
-    O::Habitat: RustToCuda,
+    O::Habitat: RustToCuda + NoAliasing,
     O::DispersalSampler<
         InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, SimpleRng<M, WyHash>>>,
-    >: RustToCuda,
-    O::TurnoverRate: RustToCuda,
-    O::SpeciationProbability: RustToCuda,
+    >: RustToCuda + NoAliasing,
+    O::TurnoverRate: RustToCuda + NoAliasing,
+    O::SpeciationProbability: RustToCuda + NoAliasing,
     SimulationKernel<
         M,
         O::Habitat,

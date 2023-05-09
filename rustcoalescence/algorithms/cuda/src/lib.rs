@@ -45,7 +45,7 @@ use rustcoalescence_scenarios::Scenario;
 use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernel;
 use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
 
-use rust_cuda::common::RustToCuda;
+use rust_cuda::{common::RustToCuda, safety::NoAliasing};
 
 mod arguments;
 mod cuda;
@@ -84,12 +84,12 @@ impl<
         P: LocalPartition<'p, R>,
     > Algorithm<'p, M, O, R, P> for CudaAlgorithm
 where
-    O::Habitat: RustToCuda,
+    O::Habitat: RustToCuda + NoAliasing,
     O::DispersalSampler<
         InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, SimpleRng<M, WyHash>>>,
-    >: RustToCuda,
-    O::TurnoverRate: RustToCuda,
-    O::SpeciationProbability: RustToCuda,
+    >: RustToCuda + NoAliasing,
+    O::TurnoverRate: RustToCuda + NoAliasing,
+    O::SpeciationProbability: RustToCuda + NoAliasing,
     SimulationKernel<
         M,
         O::Habitat,
