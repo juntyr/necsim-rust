@@ -309,6 +309,7 @@ impl PartialEq for SpeciationEvent {
 }
 
 impl Ord for SpeciationEvent {
+    #[cfg_attr(target_os = "cuda", inline)]
     fn cmp(&self, other: &Self) -> Ordering {
         // Order `Event`s in lexicographical order:
         //  (1) event_time                different events
@@ -385,6 +386,7 @@ mod tests {
 }
 
 impl Ord for DispersalEvent {
+    #[cfg_attr(target_os = "cuda", inline)]
     fn cmp(&self, other: &Self) -> Ordering {
         // Order `Event`s in lexicographical order:
         //  (1) event_time                       /=\
