@@ -55,6 +55,7 @@ impl NoiseEvaluator<Vec2<f64>> for OpenSimplexNoise2D {
         point.x * delta.x + point.y * delta.y
     }
 
+    #[cfg_attr(target_os = "cuda", inline)]
     fn eval<M: MathsCore>(input: Vec2<f64>, perm: &PermTable, wrap: f64) -> f64 {
         // Pre-squish the input to allow wrapping in extrapolate
         let input = input + (Self::SQUISH_POINT * input.sum());
