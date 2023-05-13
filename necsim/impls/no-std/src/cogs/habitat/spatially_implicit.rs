@@ -1,7 +1,10 @@
 use core::num::NonZeroU32;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
+    cogs::{
+        distribution::IndexU64, Backup, Habitat, MathsCore, Rng, Samples,
+        UniformlySampleableHabitat,
+    },
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 use necsim_core_bond::{OffByOneU32, OffByOneU64};
@@ -128,7 +131,9 @@ impl<M: MathsCore> Habitat<M> for SpatiallyImplicitHabitat<M> {
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for SpatiallyImplicitHabitat<M> {
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64>> UniformlySampleableHabitat<M, G>
+    for SpatiallyImplicitHabitat<M>
+{
     #[must_use]
     #[inline]
     fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {

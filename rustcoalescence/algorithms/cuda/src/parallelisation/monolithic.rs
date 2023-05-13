@@ -1,16 +1,26 @@
-use std::{collections::VecDeque, convert::TryInto, num::NonZeroU64, sync::atomic::AtomicU64};
+use std::{
+    collections::VecDeque,
+    convert::{TryFrom, TryInto},
+    num::NonZeroU64,
+    ops::ControlFlow,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 use rust_cuda::{
     common::RustToCuda,
     host::{HostAndDeviceMutRef, LendToCuda},
-    rustacuda::function::{BlockSize, GridSize},
+    rustacuda::{
+        function::{BlockSize, GridSize},
+        stream::Stream,
+    },
+    safety::NoAliasing,
     utils::exchange::wrapper::ExchangeWrapperOnHost,
 };
 
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
-        LineageStore, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
+        LineageStore, MathsCore, PrimeableRng, Rng, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     reporter::{boolean::Boolean, Reporter},
@@ -35,32 +45,46 @@ use necsim_impls_no_std::{
 };
 use necsim_partitioning_core::LocalPartition;
 
-use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
+use necsim_impls_cuda::{
+    event_buffer::{Array, EventBuffer, EventType},
+    value_buffer::ValueBuffer,
+};
 
-use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernel;
-use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
+use rustcoalescence_algorithms_cuda_cpu_kernel::{
+    BitonicGlobalSortStepKernel, BitonicSharedSortPrepKernel, BitonicSharedSortStepKernel,
+    EvenOddSortKernel, SimulationKernel,
+};
+use rustcoalescence_algorithms_cuda_gpu_kernel::{
+    BitonicGlobalSortSteppableKernel, BitonicSharedSortPreparableKernel,
+    BitonicSharedSortSteppableKernel, EvenOddSortableKernel, SimulatableKernel,
+};
 
-use crate::error::CudaError;
+use crate::{arguments::SortMode, error::CudaError};
 
 type Result<T, E = CudaError> = std::result::Result<T, E>;
 
-#[allow(clippy::type_complexity, clippy::too_many_lines)]
+#[allow(
+    clippy::type_complexity,
+    clippy::too_many_lines,
+    clippy::too_many_arguments
+)]
 pub fn simulate<
     'l,
     'p,
+    'stream,
     M: MathsCore,
-    H: Habitat<M> + RustToCuda,
-    G: PrimeableRng<M> + RustToCuda,
-    S: LineageStore<M, H> + RustToCuda,
-    X: EmigrationExit<M, H, G, S> + RustToCuda,
-    D: DispersalSampler<M, H, G> + RustToCuda,
-    C: CoalescenceSampler<M, H, S> + RustToCuda,
-    T: TurnoverRate<M, H> + RustToCuda,
-    N: SpeciationProbability<M, H> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda,
-    I: ImmigrationEntry<M> + RustToCuda,
+    H: Habitat<M> + RustToCuda + NoAliasing,
+    G: Rng<M, Generator: PrimeableRng> + RustToCuda + NoAliasing,
+    S: LineageStore<M, H> + RustToCuda + NoAliasing,
+    X: EmigrationExit<M, H, G, S> + RustToCuda + NoAliasing,
+    D: DispersalSampler<M, H, G> + RustToCuda + NoAliasing,
+    C: CoalescenceSampler<M, H, S> + RustToCuda + NoAliasing,
+    T: TurnoverRate<M, H> + RustToCuda + NoAliasing,
+    N: SpeciationProbability<M, H> + RustToCuda + NoAliasing,
+    E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda + NoAliasing,
+    I: ImmigrationEntry<M> + RustToCuda + NoAliasing,
     A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
-        + RustToCuda,
+        + RustToCuda + NoAliasing,
     P: Reporter,
     L: LocalPartition<'p, P>,
     LI: IntoIterator<Item = Lineage>,
@@ -82,7 +106,26 @@ pub fn simulate<
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
     >,
-    config: (GridSize, BlockSize, DedupCache, NonZeroU64),
+    (mut even_odd_sort_kernel, mut bitonic_shared_sort_prep_kernel, mut bitonic_shared_sort_step_kernel, mut bitonic_global_sort_step_kernel): (
+        EvenOddSortKernel<
+            <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
+            <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
+        >,
+        BitonicSharedSortPrepKernel<
+            <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
+            <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
+        >,
+        BitonicSharedSortStepKernel<
+            <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
+            <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
+        >,
+        BitonicGlobalSortStepKernel<
+            <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
+            <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
+        >,
+    ),
+    config: (GridSize, BlockSize, DedupCache, NonZeroU64, usize, SortMode, usize),
+    stream: &'stream Stream,
     lineages: LI,
     event_slice: EventSlice,
     pause_before: Option<NonNegativeF64>,
@@ -137,13 +180,23 @@ pub fn simulate<
 
     let event_slice = event_slice.capacity(slow_lineages.len());
 
+    let (
+        grid_size,
+        block_size,
+        dedup_cache,
+        step_slice,
+        sort_block_size,
+        sort_mode,
+        sort_batch_size,
+    ) = config;
+
     let mut proxy = <WaterLevelReporterStrategy as WaterLevelReporterConstructor<
         L::IsLive,
         P,
         L,
-    >>::WaterLevelReporter::new(event_slice.get(), local_partition);
-
-    let (grid_size, block_size, dedup_cache, step_slice) = config;
+    >>::WaterLevelReporter::new(
+        event_slice.get(), local_partition, sort_batch_size
+    );
 
     #[allow(clippy::or_fun_call)]
     let intial_max_time = slow_lineages
@@ -180,6 +233,8 @@ pub fn simulate<
     let mut next_event_time_buffer =
         ExchangeWrapperOnHost::new(ValueBuffer::new(&block_size, &grid_size)?)?;
 
+    let max_events_per_individual = event_buffer.max_events_per_individual();
+
     let mut min_spec_samples = dedup_cache.construct(slow_lineages.len());
 
     #[allow(clippy::or_fun_call)]
@@ -193,10 +248,19 @@ pub fn simulate<
     let cpu_turnover_rate = simulation.turnover_rate().backup();
     let cpu_speciation_probability = simulation.speciation_probability().backup();
 
+    let cuda_kernel_cycle = AtomicU64::new(0);
+    let mut host_kernel_cycle = 0_u64;
+
     HostAndDeviceMutRef::with_new(&mut total_time_max, |total_time_max| -> Result<()> {
         HostAndDeviceMutRef::with_new(&mut total_steps_sum, |total_steps_sum| -> Result<()> {
-            // TODO: Pipeline async launches and callbacks of simulation/event analysis
             simulation.lend_to_cuda_mut(|mut simulation_cuda_repr| -> Result<()> {
+                // Move the event buffer and min speciation sample buffer to CUDA
+                let mut event_buffer_cuda = event_buffer.move_to_device_async(stream)?;
+                let mut min_spec_sample_buffer_cuda =
+                    min_spec_sample_buffer.move_to_device_async(stream)?;
+                let mut next_event_time_buffer_cuda =
+                    next_event_time_buffer.move_to_device_async(stream)?;
+
                 while !slow_lineages.is_empty()
                     && pause_before.map_or(true, |pause_before| level_time < pause_before)
                 {
@@ -242,8 +306,10 @@ pub fn simulate<
                     proxy.advance_water_level(level_time);
 
                     // Simulate all slow lineages until they have finished or exceeded the
-                    // new water  level
+                    //  new water level
                     while !slow_lineages.is_empty() {
+                        let mut num_tasks = 0_usize;
+
                         // Upload the new tasks from the front of the task queue
                         for mut task in task_list.iter_mut() {
                             let next_slow_lineage = loop {
@@ -259,33 +325,179 @@ pub fn simulate<
                             };
 
                             task.replace(next_slow_lineage);
+                            num_tasks += 1;
                         }
 
                         // Move the task list, event buffer and min speciation sample buffer
-                        // to CUDA
-                        let mut event_buffer_cuda = event_buffer.move_to_device()?;
-                        let mut min_spec_sample_buffer_cuda =
-                            min_spec_sample_buffer.move_to_device()?;
-                        let mut next_event_time_buffer_cuda =
-                            next_event_time_buffer.move_to_device()?;
-                        let mut task_list_cuda = task_list.move_to_device()?;
+                        //  to CUDA
+                        let mut task_list_cuda = task_list.move_to_device_async(stream)?;
 
-                        kernel.simulate_raw(
-                            simulation_cuda_repr.as_mut(),
-                            task_list_cuda.as_mut(),
-                            event_buffer_cuda.as_mut(),
-                            min_spec_sample_buffer_cuda.as_mut(),
-                            next_event_time_buffer_cuda.as_mut(),
-                            total_time_max.as_ref(),
-                            total_steps_sum.as_ref(),
+                        // TODO: Investigate distributing over several streams
+                        kernel.simulate_async(
+                            stream,
+                            simulation_cuda_repr.as_mut().as_async(),
+                            task_list_cuda.as_mut_async(),
+                            event_buffer_cuda.as_mut_async(),
+                            min_spec_sample_buffer_cuda.as_mut_async(),
+                            next_event_time_buffer_cuda.as_mut_async(),
+                            total_time_max.as_ref().as_async(),
+                            total_steps_sum.as_ref().as_async(),
                             step_slice.get().into(),
                             level_time.into(),
                         )?;
 
-                        min_spec_sample_buffer = min_spec_sample_buffer_cuda.move_to_host()?;
-                        next_event_time_buffer = next_event_time_buffer_cuda.move_to_host()?;
-                        task_list = task_list_cuda.move_to_host()?;
-                        event_buffer = event_buffer_cuda.move_to_host()?;
+                        let min_spec_sample_buffer_host =
+                            min_spec_sample_buffer_cuda.move_to_host_async(stream)?;
+                        let next_event_time_buffer_host =
+                            next_event_time_buffer_cuda.move_to_host_async(stream)?;
+                        let task_list_host = task_list_cuda.move_to_host_async(stream)?;
+
+                        let sort_grid = u32::try_from(
+                            (num_tasks * max_events_per_individual + sort_block_size - 1)
+                                / sort_block_size,
+                        )
+                        .map_err(|_| {
+                            rust_cuda::rustacuda::error::CudaError::LaunchOutOfResources
+                        })?;
+
+                        if max_events_per_individual > 0 && match sort_mode {
+                            SortMode::None | SortMode::CpuOnly => false,
+                            SortMode::EvenOddGpu => true,
+                            SortMode::BitonicGpu => (num_tasks * max_events_per_individual)
+                                >= <EventBuffer<
+                                    <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<
+                                        L::IsLive,
+                                        P,
+                                        L,
+                                    >>::WaterLevelReporter as Reporter>::ReportSpeciation,
+                                    <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<
+                                        L::IsLive,
+                                        P,
+                                        L,
+                                    >>::WaterLevelReporter as Reporter>::ReportDispersal,
+                                > as EventType>::SharedBuffer::<()>::len(
+                                ),
+                        }
+                        /* && sort_grid > 1 */
+                        {
+                            if let SortMode::EvenOddGpu = sort_mode {
+                                // Each individual generates its events in sorted order
+                                // If the number of events per individual is aligned to some
+                                //  power of two, these first sorting steps can be skipped
+                                let mut size =
+                                    2.max(0x1 << max_events_per_individual.trailing_zeros());
+
+                                loop {
+                                    let mut stride = size >> 1;
+
+                                    while stride > 0 {
+                                        even_odd_sort_kernel
+                                            .with_grid(sort_grid.into())
+                                            .even_odd_sort_events_step_async(
+                                                stream,
+                                                event_buffer_cuda.as_mut_async(),
+                                                size.into(),
+                                                stride.into(),
+                                            )?;
+
+                                        stride >>= 1;
+                                    }
+
+                                    if size >= (num_tasks * max_events_per_individual) {
+                                        break;
+                                    }
+
+                                    size <<= 1;
+                                }
+                            } else {
+                                let shared_buffer_len = <EventBuffer<
+                                    <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<
+                                        L::IsLive,
+                                        P,
+                                        L,
+                                    >>::WaterLevelReporter as Reporter>::ReportSpeciation,
+                                    <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<
+                                        L::IsLive,
+                                        P,
+                                        L,
+                                    >>::WaterLevelReporter as Reporter>::ReportDispersal,
+                                > as EventType>::SharedBuffer::<()>::len(
+                                );
+
+                                let pre_sort_grid = u32::try_from(
+                                    (num_tasks * max_events_per_individual + shared_buffer_len - 1)
+                                        / shared_buffer_len,
+                                )
+                                .map_err(|_| {
+                                    rust_cuda::rustacuda::error::CudaError::LaunchOutOfResources
+                                })?;
+
+                                bitonic_shared_sort_prep_kernel
+                                    .with_grid(pre_sort_grid.into())
+                                    .bitonic_shared_sort_events_prep_async(
+                                        stream,
+                                        event_buffer_cuda.as_mut_async(),
+                                    )?;
+
+                                let mut size = 2 * shared_buffer_len;
+
+                                loop {
+                                    let mut stride = size >> 1;
+
+                                    while stride > 0 {
+                                        if stride > shared_buffer_len {
+                                            bitonic_global_sort_step_kernel
+                                                .with_grid(sort_grid.into())
+                                                .bitonic_global_sort_events_step_async(
+                                                    stream,
+                                                    event_buffer_cuda.as_mut_async(),
+                                                    size.into(),
+                                                    stride.into(),
+                                                )?;
+                                        } else {
+                                            bitonic_shared_sort_step_kernel
+                                                .with_grid(sort_grid.into())
+                                                .bitonic_shared_sort_events_step_async(
+                                                    stream,
+                                                    event_buffer_cuda.as_mut_async(),
+                                                    size.into(),
+                                                )?;
+                                            break;
+                                        }
+
+                                        stride >>= 1;
+                                    }
+
+                                    if size >= (num_tasks * max_events_per_individual) {
+                                        break;
+                                    }
+
+                                    size <<= 1;
+                                }
+                            }
+                        }
+
+                        let event_buffer_host = event_buffer_cuda.move_to_host_async(stream)?;
+
+                        host_kernel_cycle = host_kernel_cycle.wrapping_add(1);
+
+                        // Note: The stream ensures that the stores from subsequent
+                        //       cycles are ordered, so no compare_exchange is needed.
+                        stream.add_callback(Box::new(|_| {
+                            cuda_kernel_cycle.store(host_kernel_cycle, Ordering::SeqCst);
+                        }))?;
+
+                        // While CUDA runs the simulation kernel, do some incremental
+                        //  sorting of the events that have already been produced
+                        while let ControlFlow::Continue(()) = proxy.partial_sort_step() {
+                            if cuda_kernel_cycle.load(Ordering::SeqCst) == host_kernel_cycle {
+                                break;
+                            }
+                        }
+
+                        min_spec_sample_buffer = min_spec_sample_buffer_host.sync_to_host()?;
+                        next_event_time_buffer = next_event_time_buffer_host.sync_to_host()?;
+                        task_list = task_list_host.sync_to_host()?;
 
                         // Fetch the completion of the tasks
                         for ((mut spec_sample, mut next_event_time), mut task) in
@@ -302,9 +514,8 @@ pub fn simulate<
                                 (task.take(), next_event_time.take())
                             {
                                 if !duplicate_individual {
-                                    // Reclassify lineages as either slow (still below
-                                    // water) or
-                                    // fast
+                                    // Reclassify lineages as either slow
+                                    // (still below water) or fast
                                     if next_event_time < level_time {
                                         slow_lineages.push_back((task, next_event_time.into()));
                                     } else {
@@ -314,7 +525,37 @@ pub fn simulate<
                             }
                         }
 
+                        min_spec_sample_buffer_cuda =
+                            min_spec_sample_buffer.move_to_device_async(stream)?;
+                        next_event_time_buffer_cuda =
+                            next_event_time_buffer.move_to_device_async(stream)?;
+
+                        event_buffer = event_buffer_host.sync_to_host()?;
+
+                        if match sort_mode {
+                            SortMode::None | SortMode::EvenOddGpu => false,
+                            SortMode::CpuOnly => true,
+                            // SortMode::EvenOddGpu => sort_grid <= 1,
+                            SortMode::BitonicGpu => (num_tasks * max_events_per_individual)
+                                < <EventBuffer<
+                                    <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<
+                                        L::IsLive,
+                                        P,
+                                        L,
+                                    >>::WaterLevelReporter as Reporter>::ReportSpeciation,
+                                    <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<
+                                        L::IsLive,
+                                        P,
+                                        L,
+                                    >>::WaterLevelReporter as Reporter>::ReportDispersal,
+                                > as EventType>::SharedBuffer::<()>::len(
+                                ), // || sort_grid <= 1,
+                        } {
+                            event_buffer.sort_events();
+                        }
+
                         event_buffer.report_events_unordered(&mut proxy);
+                        event_buffer_cuda = event_buffer.move_to_device_async(stream)?;
 
                         proxy.local_partition().get_reporter().report_progress(
                             &((slow_lineages.len() as u64) + (fast_lineages.len() as u64)).into(),

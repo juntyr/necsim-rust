@@ -16,7 +16,7 @@ use necsim_impls_no_std::{
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
         },
-        rng::wyhash::WyHash,
+        rng::{simple::SimpleRng, wyhash::WyHash},
     },
     parallelisation::Status,
 };
@@ -25,15 +25,20 @@ use necsim_partitioning_core::LocalPartition;
 use rustcoalescence_algorithms::result::SimulationOutcome;
 use rustcoalescence_scenarios::Scenario;
 
-use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernel;
+use rustcoalescence_algorithms_cuda_cpu_kernel::{
+    BitonicGlobalSortStepKernel, BitonicSharedSortPrepKernel, BitonicSharedSortStepKernel,
+    EvenOddSortKernel, SimulationKernel,
+};
 use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
 
 use rust_cuda::{
     common::RustToCuda,
+    host::CudaDropWrapper,
     rustacuda::{
         function::{BlockSize, GridSize},
         prelude::{Stream, StreamFlags},
     },
+    safety::NoAliasing,
 };
 
 use crate::{
@@ -46,35 +51,36 @@ use crate::{
     parallelisation,
 };
 
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_lines, clippy::type_complexity)]
 pub fn initialise_and_simulate<
     'p,
     M: MathsCore,
-    O: Scenario<M, CudaRng<M, WyHash<M>>>,
+    O: Scenario<M, CudaRng<M, SimpleRng<M, WyHash>>>,
     R: Reporter,
     P: LocalPartition<'p, R>,
     I: Iterator<Item = u64>,
-    L: CudaLineageStoreSampleInitialiser<M, CudaRng<M, WyHash<M>>, O, Error>,
+    L: CudaLineageStoreSampleInitialiser<M, CudaRng<M, SimpleRng<M, WyHash>>, O, Error>,
     Error: From<CudaError>,
 >(
     args: &CudaArguments,
-    rng: CudaRng<M, WyHash<M>>,
+    rng: WyHash,
     scenario: O,
-    pre_sampler: OriginPreSampler<M, I>,
+    pre_sampler: OriginPreSampler<I>,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
     lineage_store_sampler_initialiser: L,
-) -> Result<SimulationOutcome<M, CudaRng<M, WyHash<M>>>, Error>
+) -> Result<SimulationOutcome<WyHash>, Error>
 where
-    O::Habitat: RustToCuda,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>>:
-        RustToCuda,
-    O::TurnoverRate: RustToCuda,
-    O::SpeciationProbability: RustToCuda,
+    O::Habitat: RustToCuda + NoAliasing,
+    O::DispersalSampler<
+        InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, SimpleRng<M, WyHash>>>,
+    >: RustToCuda + NoAliasing,
+    O::TurnoverRate: RustToCuda + NoAliasing,
+    O::SpeciationProbability: RustToCuda + NoAliasing,
     SimulationKernel<
         M,
         O::Habitat,
-        CudaRng<M, WyHash<M>>,
+        CudaRng<M, SimpleRng<M, WyHash>>,
         IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         L::DispersalSampler,
@@ -84,7 +90,7 @@ where
         IndependentEventSampler<
             M,
             O::Habitat,
-            CudaRng<M, WyHash<M>>,
+            CudaRng<M, SimpleRng<M, WyHash>>,
             NeverEmigrationExit,
             L::DispersalSampler,
             O::TurnoverRate,
@@ -97,7 +103,7 @@ where
     >: SimulatableKernel<
         M,
         O::Habitat,
-        CudaRng<M, WyHash<M>>,
+        CudaRng<M, SimpleRng<M, WyHash>>,
         IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         L::DispersalSampler,
@@ -107,7 +113,7 @@ where
         IndependentEventSampler<
             M,
             O::Habitat,
-            CudaRng<M, WyHash<M>>,
+            CudaRng<M, SimpleRng<M, WyHash>>,
             NeverEmigrationExit,
             L::DispersalSampler,
             O::TurnoverRate,
@@ -119,6 +125,8 @@ where
         R::ReportDispersal,
     >,
 {
+    let rng = CudaRng::from(SimpleRng::from(rng));
+
     let (
         habitat,
         dispersal_sampler,
@@ -126,8 +134,11 @@ where
         speciation_probability,
         origin_sampler_auxiliary,
         decomposition_auxiliary,
-    ) = scenario
-        .build::<InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>>();
+    ) = scenario.build::<InMemoryPackedAliasDispersalSampler<
+        M,
+        O::Habitat,
+        CudaRng<M, SimpleRng<M, WyHash>>,
+    >>();
     let coalescence_sampler = IndependentCoalescenceSampler::default();
     let event_sampler = IndependentEventSampler::default();
 
@@ -184,8 +195,8 @@ where
     .build();
 
     // Note: It seems to be more performant to spawn smaller blocks
-    let block_size = BlockSize::x(args.block_size);
-    let grid_size = GridSize::x(args.grid_size);
+    let block_size = BlockSize::x(args.block_size.get());
+    let grid_size = GridSize::x(args.grid_size.get());
 
     let event_slice = match args.parallelism_mode {
         ParallelismMode::Monolithic(MonolithicParallelismMode { event_slice })
@@ -196,13 +207,64 @@ where
     };
 
     let (mut status, time, steps, lineages) = with_initialised_cuda(args.device, || {
+        let stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
+
         let kernel = SimulationKernel::try_new(
-            Stream::new(StreamFlags::NON_BLOCKING, None)?,
             grid_size.clone(),
             block_size.clone(),
             args.ptx_jit,
             Box::new(|kernel| {
-                crate::info::print_kernel_function_attributes(kernel);
+                crate::info::print_kernel_function_attributes("Simulation", kernel);
+                Ok(())
+            }),
+        )?;
+
+        let even_odd_sort_kernel = EvenOddSortKernel::try_new(
+            GridSize::x(0),
+            BlockSize::x(args.sort_block_size.get()),
+            args.ptx_jit,
+            Box::new(|kernel| {
+                crate::info::print_kernel_function_attributes(
+                    "Even Odd Sorting Global Step",
+                    kernel,
+                );
+                Ok(())
+            }),
+        )?;
+
+        let bitonic_sort_shared_prep_kernel = BitonicSharedSortPrepKernel::try_new(
+            GridSize::x(0),
+            args.ptx_jit,
+            Box::new(|kernel| {
+                crate::info::print_kernel_function_attributes(
+                    "Bitonic Sorting Shared Prep",
+                    kernel,
+                );
+                Ok(())
+            }),
+        )?;
+
+        let bitonic_sort_shared_step_kernel = BitonicSharedSortStepKernel::try_new(
+            GridSize::x(0),
+            args.ptx_jit,
+            Box::new(|kernel| {
+                crate::info::print_kernel_function_attributes(
+                    "Bitonic Sorting Shared Step",
+                    kernel,
+                );
+                Ok(())
+            }),
+        )?;
+
+        let bitonic_sort_global_step_kernel = BitonicGlobalSortStepKernel::try_new(
+            GridSize::x(0),
+            BlockSize::x(args.sort_block_size.get()),
+            args.ptx_jit,
+            Box::new(|kernel| {
+                crate::info::print_kernel_function_attributes(
+                    "Bitonic Sorting Global Step",
+                    kernel,
+                );
                 Ok(())
             }),
         )?;
@@ -210,7 +272,22 @@ where
         parallelisation::monolithic::simulate(
             &mut simulation,
             kernel,
-            (grid_size, block_size, args.dedup_cache, args.step_slice),
+            (
+                even_odd_sort_kernel,
+                bitonic_sort_shared_prep_kernel,
+                bitonic_sort_shared_step_kernel,
+                bitonic_sort_global_step_kernel,
+            ),
+            (
+                grid_size,
+                block_size,
+                args.dedup_cache,
+                args.step_slice,
+                args.sort_block_size.get() as usize,
+                args.sort_mode,
+                args.sort_batch_size.get(),
+            ),
+            &stream,
             lineages,
             event_slice,
             pause_before,
@@ -232,8 +309,7 @@ where
                 .into_iter()
                 .chain(passthrough.into_iter())
                 .collect(),
-            rng: simulation.rng_mut().clone(),
-            marker: PhantomData::<M>,
+            rng: simulation.deconstruct().rng.into_inner().into_inner(),
         }),
     }
 }

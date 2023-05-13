@@ -1,5 +1,8 @@
 use necsim_core::{
-    cogs::{EmigrationExit, ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, RngCore},
+    cogs::{
+        distribution::{Bernoulli, Exponential, IndexUsize},
+        EmigrationExit, ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng, Samples,
+    },
     event::DispersalEvent,
     lineage::{Lineage, LineageInteraction},
     reporter::Reporter,
@@ -43,8 +46,13 @@ pub struct FixUpInitialiser<L: ExactSizeIterator<Item = Lineage>> {
     pub fixup_strategy: RestartFixUpStrategy,
 }
 
-impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
-    ClassicalLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for FixUpInitialiser<L>
+#[allow(clippy::trait_duplication_in_bounds)]
+impl<
+        L: ExactSizeIterator<Item = Lineage>,
+        M: MathsCore,
+        G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli> + Samples<M, Exponential>,
+        O: Scenario<M, G>,
+    > ClassicalLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for FixUpInitialiser<L>
 {
     type ActiveLineageSampler<
         S: LocallyCoherentLineageStore<M, O::Habitat>,
@@ -143,7 +151,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
                 );
             },
             CoalescenceStrategy::Coalescence => {
-                coalescence.sort();
+                coalescence.sort_unstable();
 
                 for (coalescing_lineage, parent) in coalescence {
                     local_partition.get_reporter().report_dispersal(
@@ -188,7 +196,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
             return Err(ResumeError::Sample(exceptional_lineages));
         }
 
-        fixable_lineages.sort();
+        fixable_lineages.sort_unstable();
 
         let dispersal_sampler = TrespassingDispersalSampler::new(
             dispersal_sampler,

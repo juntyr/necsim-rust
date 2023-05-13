@@ -1,4 +1,4 @@
-use core::marker::PhantomData;
+use core::{marker::PhantomData, num::NonZeroU32};
 
 use necsim_core::{
     cogs::{
@@ -45,10 +45,12 @@ impl<M: MathsCore, H: Habitat<M>> CoalescenceSampler<M, H, IndependentLineageSto
         _lineage_store: &IndependentLineageStore<M, H>,
         coalescence_rng_sample: CoalescenceRngSample,
     ) -> (IndexedLocation, LineageInteraction) {
-        let population = habitat.get_habitat_at_location(&location);
+        // Safety: individuals can only occupy habitable locations
+        let habitat_at_location =
+            unsafe { NonZeroU32::new_unchecked(habitat.get_habitat_at_location(&location)) };
 
         let chosen_coalescence_index =
-            coalescence_rng_sample.sample_coalescence_index::<M>(population);
+            coalescence_rng_sample.sample_coalescence_index(habitat_at_location);
 
         let indexed_location = IndexedLocation::new(location, chosen_coalescence_index);
 

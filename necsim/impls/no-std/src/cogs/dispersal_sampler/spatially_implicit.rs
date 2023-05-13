@@ -1,5 +1,11 @@
+#![allow(clippy::trait_duplication_in_bounds)]
+
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, Habitat, MathsCore, RngCore, SeparableDispersalSampler},
+    cogs::{
+        distribution::{Bernoulli, IndexU64},
+        Backup, DispersalSampler, Distribution, Habitat, MathsCore, Rng, Samples,
+        SeparableDispersalSampler,
+    },
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, OpenClosedUnitF64 as PositiveUnitF64};
@@ -13,7 +19,10 @@ use crate::cogs::{
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
-pub struct SpatiallyImplicitDispersalSampler<M: MathsCore, G: RngCore<M>> {
+pub struct SpatiallyImplicitDispersalSampler<
+    M: MathsCore,
+    G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>,
+> {
     #[cfg_attr(feature = "cuda", cuda(embed))]
     local: NonSpatialDispersalSampler<M, G>,
     #[cfg_attr(feature = "cuda", cuda(embed))]
@@ -21,7 +30,10 @@ pub struct SpatiallyImplicitDispersalSampler<M: MathsCore, G: RngCore<M>> {
     local_migration_probability_per_generation: PositiveUnitF64,
 }
 
-impl<M: MathsCore, G: RngCore<M>> SpatiallyImplicitDispersalSampler<M, G> {
+#[allow(clippy::trait_duplication_in_bounds)]
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>>
+    SpatiallyImplicitDispersalSampler<M, G>
+{
     #[must_use]
     pub fn new(local_migration_probability_per_generation: PositiveUnitF64) -> Self {
         Self {
@@ -32,8 +44,11 @@ impl<M: MathsCore, G: RngCore<M>> SpatiallyImplicitDispersalSampler<M, G> {
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> Backup for SpatiallyImplicitDispersalSampler<M, G> {
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>> Backup
+    for SpatiallyImplicitDispersalSampler<M, G>
+{
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             local: self.local.backup_unchecked(),
@@ -44,8 +59,10 @@ impl<M: MathsCore, G: RngCore<M>> Backup for SpatiallyImplicitDispersalSampler<M
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, SpatiallyImplicitHabitat<M>, G>
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>>
+    DispersalSampler<M, SpatiallyImplicitHabitat<M>, G>
     for SpatiallyImplicitDispersalSampler<M, G>
 {
     #[must_use]
@@ -62,12 +79,10 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, SpatiallyImplicitHabitat<M
         habitat: &SpatiallyImplicitHabitat<M>,
         rng: &mut G,
     ) -> Location {
-        use necsim_core::cogs::RngSampler;
-
         // By PRE, location must be habitable, i.e. either in the local or the meta
         //  habitat
         if habitat.local().get_extent().contains(location) {
-            if rng.sample_event(self.local_migration_probability_per_generation.into()) {
+            if Bernoulli::sample_with(rng, self.local_migration_probability_per_generation.into()) {
                 // Provide a dummpy Location in the meta community to disperse from
                 self.meta.sample_dispersal_from_location(
                     &Location::new(
@@ -88,8 +103,10 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, SpatiallyImplicitHabitat<M
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, SpatiallyImplicitHabitat<M>, G>
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>>
+    SeparableDispersalSampler<M, SpatiallyImplicitHabitat<M>, G>
     for SpatiallyImplicitDispersalSampler<M, G>
 {
     #[must_use]
@@ -106,12 +123,10 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, SpatiallyImplicit
         habitat: &SpatiallyImplicitHabitat<M>,
         rng: &mut G,
     ) -> Location {
-        use necsim_core::cogs::RngSampler;
-
         // By PRE, location must be habitable, i.e. either in the local or the meta
         //  habitat
         if habitat.local().get_extent().contains(location) {
-            if rng.sample_event(self.local_migration_probability_per_generation.into()) {
+            if Bernoulli::sample_with(rng, self.local_migration_probability_per_generation.into()) {
                 // Provide a dummpy Location in the meta community to disperse from
                 // As the individual is dispersing to a different community,
                 //  we can use standard dispersal in the meta community

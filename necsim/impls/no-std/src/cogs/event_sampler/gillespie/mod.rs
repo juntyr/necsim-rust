@@ -1,7 +1,7 @@
 use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat, LineageStore,
-        MathsCore, RngCore, SpeciationProbability, TurnoverRate,
+        MathsCore, Rng, SpeciationProbability, TurnoverRate,
     },
     landscape::Location,
 };
@@ -16,7 +16,7 @@ pub mod unconditional;
 pub trait GillespieEventSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: RngCore<M>,
+    G: Rng<M>,
     S: LineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,

@@ -1,5 +1,9 @@
 use necsim_core::{
-    cogs::{Habitat, HabitatPrimeableRng, MathsCore, PrimeableRng, RngSampler, TurnoverRate},
+    cogs::{
+        distribution::{Exponential, Lambda},
+        rng::HabitatPrimeableRng,
+        Distribution, Habitat, MathsCore, PrimeableRng, Rng, Samples, TurnoverRate,
+    },
     landscape::IndexedLocation,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -24,8 +28,12 @@ impl ExpEventTimeSampler {
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: PrimeableRng<M>, T: TurnoverRate<M, H>>
-    EventTimeSampler<M, H, G, T> for ExpEventTimeSampler
+impl<
+        M: MathsCore,
+        H: Habitat<M>,
+        G: Rng<M, Generator: PrimeableRng> + Samples<M, Exponential>,
+        T: TurnoverRate<M, H>,
+    > EventTimeSampler<M, H, G, T> for ExpEventTimeSampler
 {
     #[inline]
     fn next_event_time_at_indexed_location_weakly_after(
@@ -48,19 +56,20 @@ impl<M: MathsCore, H: Habitat<M>, G: PrimeableRng<M>, T: TurnoverRate<M, H>>
             )
         };
 
+        // Note: rust clamps f64 as u64 to [0, 2^64 - 1]
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let mut time_step = M::floor(time.get() / self.delta_t.get()) as u64;
 
         let mut event_time = NonNegativeF64::from(time_step) * self.delta_t;
         let mut time_slice_end = NonNegativeF64::from(time_step + 1) * self.delta_t;
 
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        rng.prime_with_habitat(habitat, indexed_location, time_step);
+        rng.generator()
+            .prime_with_habitat(habitat, indexed_location, time_step);
 
         let mut sub_index: u64 = 0;
 
         loop {
-            event_time += rng.sample_exponential(lambda);
+            event_time += Exponential::sample_with(rng, Lambda(lambda));
 
             sub_index = sub_index.wrapping_add(INV_PHI);
 
@@ -72,13 +81,18 @@ impl<M: MathsCore, H: Habitat<M>, G: PrimeableRng<M>, T: TurnoverRate<M, H>>
                 event_time = time_slice_end;
                 time_slice_end = NonNegativeF64::from(time_step + 1) * self.delta_t;
 
-                rng.prime_with_habitat(habitat, indexed_location, time_step);
+                rng.generator()
+                    .prime_with_habitat(habitat, indexed_location, time_step);
             } else if event_time > time {
                 break;
             }
         }
 
-        rng.prime_with_habitat(habitat, indexed_location, time_step.wrapping_add(sub_index));
+        rng.generator().prime_with_habitat(
+            habitat,
+            indexed_location,
+            time_step.wrapping_add(sub_index),
+        );
 
         event_time
     }

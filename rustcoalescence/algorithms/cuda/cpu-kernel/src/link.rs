@@ -1,6 +1,16 @@
-use rustcoalescence_algorithms_cuda_gpu_kernel::{SimulatableKernel, SimulationKernelArgs};
+use rustcoalescence_algorithms_cuda_gpu_kernel::{
+    BitonicGlobalSortStepKernelArgs, BitonicGlobalSortStepKernelPtx,
+    BitonicGlobalSortSteppableKernel, BitonicSharedSortPrepKernelArgs,
+    BitonicSharedSortPrepKernelPtx, BitonicSharedSortPreparableKernel,
+    BitonicSharedSortStepKernelArgs, BitonicSharedSortStepKernelPtx,
+    BitonicSharedSortSteppableKernel, EvenOddSortKernelArgs, EvenOddSortKernelPtx,
+    EvenOddSortableKernel, SimulatableKernel, SimulationKernelArgs, SimulationKernelPtx,
+};
 
-use crate::SimulationKernel;
+use crate::{
+    BitonicGlobalSortStepKernel, BitonicSharedSortPrepKernel, BitonicSharedSortStepKernel,
+    EvenOddSortKernel, SimulationKernel,
+};
 
 macro_rules! link_kernel {
     ($habitat:ty, $dispersal:ty, $turnover:ty, $speciation:ty) => {
@@ -34,8 +44,9 @@ macro_rules! link_kernel {
             $habitat,
             necsim_impls_cuda::cogs::rng::CudaRng<
                 necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-                necsim_impls_no_std::cogs::rng::wyhash::WyHash<
-                    necsim_impls_cuda::cogs::maths::NvptxMathsCore
+                necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                    necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                    necsim_impls_no_std::cogs::rng::wyhash::WyHash,
                 >,
             >,
             necsim_impls_no_std::cogs::lineage_store::independent::IndependentLineageStore<
@@ -55,9 +66,10 @@ macro_rules! link_kernel {
                 $habitat,
                 necsim_impls_cuda::cogs::rng::CudaRng<
                     necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-                    necsim_impls_no_std::cogs::rng::wyhash::WyHash<
-                        necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-                    >,
+                    necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                    necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                    necsim_impls_no_std::cogs::rng::wyhash::WyHash,
+                >,
                 >,
                 necsim_impls_no_std::cogs::emigration_exit::never::NeverEmigrationExit,
                 $dispersal,
@@ -70,8 +82,9 @@ macro_rules! link_kernel {
                 $habitat,
                 necsim_impls_cuda::cogs::rng::CudaRng<
                     necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-                    necsim_impls_no_std::cogs::rng::wyhash::WyHash<
+                    necsim_impls_no_std::cogs::rng::simple::SimpleRng<
                         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                        necsim_impls_no_std::cogs::rng::wyhash::WyHash,
                     >,
                 >,
                 necsim_impls_no_std::cogs::emigration_exit::never::NeverEmigrationExit,
@@ -89,8 +102,9 @@ macro_rules! link_kernel {
             $habitat,
             necsim_impls_cuda::cogs::rng::CudaRng<
                 necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-                necsim_impls_no_std::cogs::rng::wyhash::WyHash<
-                    necsim_impls_cuda::cogs::maths::NvptxMathsCore
+                necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                    necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                    necsim_impls_no_std::cogs::rng::wyhash::WyHash,
                 >,
             >,
             necsim_impls_no_std::cogs::lineage_store::independent::IndependentLineageStore<
@@ -103,8 +117,9 @@ macro_rules! link_kernel {
                 $habitat,
                 necsim_impls_cuda::cogs::rng::CudaRng<
                     necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-                    necsim_impls_no_std::cogs::rng::wyhash::WyHash<
-                        necsim_impls_cuda::cogs::maths::NvptxMathsCore
+                    necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                        necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                        necsim_impls_no_std::cogs::rng::wyhash::WyHash,
                     >,
                 >,
                 $dispersal,
@@ -113,8 +128,9 @@ macro_rules! link_kernel {
                     $habitat,
                     necsim_impls_cuda::cogs::rng::CudaRng<
                         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-                        necsim_impls_no_std::cogs::rng::wyhash::WyHash<
-                            necsim_impls_cuda::cogs::maths::NvptxMathsCore
+                        necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                            necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                            necsim_impls_no_std::cogs::rng::wyhash::WyHash,
                         >,
                     >,
                 >,
@@ -130,8 +146,9 @@ macro_rules! link_kernel {
                 $habitat,
                 necsim_impls_cuda::cogs::rng::CudaRng<
                     necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-                    necsim_impls_no_std::cogs::rng::wyhash::WyHash<
+                    necsim_impls_no_std::cogs::rng::simple::SimpleRng<
                         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                        necsim_impls_no_std::cogs::rng::wyhash::WyHash,
                     >,
                 >,
                 necsim_impls_no_std::cogs::emigration_exit::never::NeverEmigrationExit,
@@ -140,8 +157,9 @@ macro_rules! link_kernel {
                     $habitat,
                     necsim_impls_cuda::cogs::rng::CudaRng<
                         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-                        necsim_impls_no_std::cogs::rng::wyhash::WyHash<
-                            necsim_impls_cuda::cogs::maths::NvptxMathsCore
+                        necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                            necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                            necsim_impls_no_std::cogs::rng::wyhash::WyHash,
                         >,
                     >,
                     $dispersal,
@@ -150,8 +168,9 @@ macro_rules! link_kernel {
                         $habitat,
                         necsim_impls_cuda::cogs::rng::CudaRng<
                             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-                            necsim_impls_no_std::cogs::rng::wyhash::WyHash<
-                                necsim_impls_cuda::cogs::maths::NvptxMathsCore
+                            necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                                necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                                necsim_impls_no_std::cogs::rng::wyhash::WyHash,
                             >,
                         >,
                     >,
@@ -165,8 +184,9 @@ macro_rules! link_kernel {
                 $habitat,
                 necsim_impls_cuda::cogs::rng::CudaRng<
                     necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-                    necsim_impls_no_std::cogs::rng::wyhash::WyHash<
+                    necsim_impls_no_std::cogs::rng::simple::SimpleRng<
                         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                        necsim_impls_no_std::cogs::rng::wyhash::WyHash,
                     >,
                 >,
                 necsim_impls_no_std::cogs::emigration_exit::never::NeverEmigrationExit,
@@ -175,8 +195,9 @@ macro_rules! link_kernel {
                     $habitat,
                     necsim_impls_cuda::cogs::rng::CudaRng<
                         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-                        necsim_impls_no_std::cogs::rng::wyhash::WyHash<
-                            necsim_impls_cuda::cogs::maths::NvptxMathsCore
+                        necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                            necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                            necsim_impls_no_std::cogs::rng::wyhash::WyHash,
                         >,
                     >,
                     $dispersal,
@@ -185,8 +206,9 @@ macro_rules! link_kernel {
                         $habitat,
                         necsim_impls_cuda::cogs::rng::CudaRng<
                             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-                            necsim_impls_no_std::cogs::rng::wyhash::WyHash<
-                                necsim_impls_cuda::cogs::maths::NvptxMathsCore
+                            necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                                necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                                necsim_impls_no_std::cogs::rng::wyhash::WyHash,
                             >,
                         >,
                     >,
@@ -209,8 +231,9 @@ link_kernel!(
         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
         necsim_impls_cuda::cogs::rng::CudaRng<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-            necsim_impls_no_std::cogs::rng::wyhash::WyHash<
-                necsim_impls_cuda::cogs::maths::NvptxMathsCore
+            necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                necsim_impls_no_std::cogs::rng::wyhash::WyHash,
             >,
         >,
     >,
@@ -226,8 +249,9 @@ link_kernel!(
         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
         necsim_impls_cuda::cogs::rng::CudaRng<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-            necsim_impls_no_std::cogs::rng::wyhash::WyHash<
-                necsim_impls_cuda::cogs::maths::NvptxMathsCore
+            necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                necsim_impls_no_std::cogs::rng::wyhash::WyHash,
             >,
         >,
     >,
@@ -243,8 +267,9 @@ link_kernel!(
         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
         necsim_impls_cuda::cogs::rng::CudaRng<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-            necsim_impls_no_std::cogs::rng::wyhash::WyHash<
-                necsim_impls_cuda::cogs::maths::NvptxMathsCore
+            necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                necsim_impls_no_std::cogs::rng::wyhash::WyHash,
             >,
         >,
     >,
@@ -263,8 +288,9 @@ link_kernel!(
         >,
         necsim_impls_cuda::cogs::rng::CudaRng<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-            necsim_impls_no_std::cogs::rng::wyhash::WyHash<
-                necsim_impls_cuda::cogs::maths::NvptxMathsCore
+            necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                necsim_impls_no_std::cogs::rng::wyhash::WyHash,
             >,
         >,
     >,
@@ -283,8 +309,9 @@ link_kernel!(
         >,
         necsim_impls_cuda::cogs::rng::CudaRng<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-            necsim_impls_no_std::cogs::rng::wyhash::WyHash<
-                necsim_impls_cuda::cogs::maths::NvptxMathsCore
+            necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                necsim_impls_no_std::cogs::rng::wyhash::WyHash,
             >,
         >,
     >,
@@ -300,11 +327,80 @@ link_kernel!(
         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
         necsim_impls_cuda::cogs::rng::CudaRng<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
-            necsim_impls_no_std::cogs::rng::wyhash::WyHash<
-                necsim_impls_cuda::cogs::maths::NvptxMathsCore
+            necsim_impls_no_std::cogs::rng::simple::SimpleRng<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                necsim_impls_no_std::cogs::rng::wyhash::WyHash,
             >,
         >,
     >,
     necsim_impls_no_std::cogs::turnover_rate::uniform::UniformTurnoverRate,
     necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
+);
+
+rustcoalescence_algorithms_cuda_gpu_kernel::link_even_odd_sort_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_even_odd_sort_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::True,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_even_odd_sort_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_even_odd_sort_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::True,
+);
+
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_global_sort_step_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_global_sort_step_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::True,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_global_sort_step_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_global_sort_step_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::True,
+);
+
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_prep_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_prep_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::True,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_prep_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_prep_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::True,
+);
+
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_step_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_step_kernel!(
+    necsim_core::reporter::boolean::False,
+    necsim_core::reporter::boolean::True,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_step_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::False,
+);
+rustcoalescence_algorithms_cuda_gpu_kernel::link_bitonic_shared_sort_step_kernel!(
+    necsim_core::reporter::boolean::True,
+    necsim_core::reporter::boolean::True,
 );

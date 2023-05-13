@@ -13,6 +13,7 @@ use crate::{array2d::Array2D, cogs::habitat::in_memory::InMemoryHabitat};
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", cuda(async = false))]
 pub struct InMemoryTurnoverRate {
     #[cfg_attr(feature = "cuda", cuda(embed))]
     turnover_rate: Final<Box<[NonNegativeF64]>>,

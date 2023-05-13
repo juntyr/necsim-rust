@@ -2,9 +2,10 @@ use core::{num::NonZeroUsize, ops::ControlFlow};
 
 use necsim_core::{
     cogs::{
-        ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler, EmigrationExit,
-        GloballyCoherentLineageStore, Habitat, ImmigrationEntry, MathsCore, RngCore,
-        SpeciationProbability, TurnoverRate,
+        distribution::{Exponential, IndexU128, IndexU64, IndexUsize, Lambda, Length},
+        ActiveLineageSampler, Backup, CoalescenceSampler, DispersalSampler, Distribution,
+        EmigrationExit, GloballyCoherentLineageStore, Habitat, ImmigrationEntry, MathsCore, Rng,
+        Samples, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     simulation::partial::active_lineage_sampler::PartialSimulation,
@@ -16,11 +17,16 @@ use crate::cogs::event_sampler::gillespie::GillespieEventSampler;
 
 use super::LocationAliasActiveLineageSampler;
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M>
+            + Samples<M, Exponential>
+            + Samples<M, IndexUsize>
+            + Samples<M, IndexU64>
+            + Samples<M, IndexU128>,
         S: GloballyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -67,12 +73,10 @@ impl<
         rng: &mut G,
         early_peek_stop: F,
     ) -> Option<(Lineage, PositiveF64)> {
-        use necsim_core::cogs::RngSampler;
-
         let total_rate = self.alias_sampler.total_weight();
 
         if let Ok(lambda) = PositiveF64::new(total_rate.get()) {
-            let event_time = self.last_event_time + rng.sample_exponential(lambda);
+            let event_time = self.last_event_time + Exponential::sample_with(rng, Lambda(lambda));
 
             let next_event_time = PositiveF64::max_after(self.last_event_time, event_time);
 
@@ -95,10 +99,12 @@ impl<
 
             // Safety: `lineages_at_location` must be >0 since
             //         `chosen_active_location` can only be selected in that case
-            let chosen_lineage_index_at_location = rng
-                .sample_index(unsafe { NonZeroUsize::new_unchecked(lineages_at_location.len()) });
+            let chosen_lineage_index_at_location = IndexUsize::sample_with(
+                rng,
+                Length(unsafe { NonZeroUsize::new_unchecked(lineages_at_location.len()) }),
+            );
             // Safety: reference clone is only used to then remove the lineage, which is
-            // owned
+            //  owned
             let chosen_lineage_reference = unsafe {
                 lineages_at_location[chosen_lineage_index_at_location].backup_unchecked()
             };

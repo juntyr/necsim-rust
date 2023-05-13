@@ -1,6 +1,9 @@
 use necsim_core::{
     cogs::{
-        EmigrationExit, GloballyCoherentLineageStore, ImmigrationEntry, MathsCore, RngCore,
+        distribution::{
+            Bernoulli, Exponential, IndexU128, IndexU64, IndexUsize, UniformClosedOpenUnit,
+        },
+        EmigrationExit, GloballyCoherentLineageStore, ImmigrationEntry, MathsCore, Rng, Samples,
         SeparableDispersalSampler,
     },
     event::DispersalEvent,
@@ -45,8 +48,19 @@ pub struct FixUpInitialiser<L: ExactSizeIterator<Item = Lineage>> {
     pub fixup_strategy: RestartFixUpStrategy,
 }
 
-impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
-    EventSkippingLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for FixUpInitialiser<L>
+#[allow(clippy::trait_duplication_in_bounds)]
+impl<
+        L: ExactSizeIterator<Item = Lineage>,
+        M: MathsCore,
+        G: Rng<M>
+            + Samples<M, IndexUsize>
+            + Samples<M, Bernoulli>
+            + Samples<M, UniformClosedOpenUnit>
+            + Samples<M, Exponential>
+            + Samples<M, IndexU64>
+            + Samples<M, IndexU128>,
+        O: Scenario<M, G>,
+    > EventSkippingLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for FixUpInitialiser<L>
 where
     O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
         SeparableDispersalSampler<M, O::Habitat, G>,
@@ -185,7 +199,7 @@ where
                 );
             },
             CoalescenceStrategy::Coalescence => {
-                coalescence.sort();
+                coalescence.sort_unstable();
 
                 for (coalescing_lineage, parent) in coalescence {
                     local_partition.get_reporter().report_dispersal(
@@ -230,7 +244,7 @@ where
             return Err(ResumeError::Sample(exceptional_lineages));
         }
 
-        fixable_lineages.sort();
+        fixable_lineages.sort_unstable();
 
         let active_lineage_sampler = RestartFixUpActiveLineageSampler::new(
             active_lineage_sampler,

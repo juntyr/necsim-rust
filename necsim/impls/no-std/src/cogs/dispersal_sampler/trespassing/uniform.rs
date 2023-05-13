@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, MathsCore, RngCore, UniformlySampleableHabitat},
+    cogs::{Backup, MathsCore, Rng, UniformlySampleableHabitat},
     landscape::Location,
 };
 
@@ -14,12 +14,12 @@ use super::AntiTrespassingDispersalSampler;
 pub struct UniformAntiTrespassingDispersalSampler<
     M: MathsCore,
     H: UniformlySampleableHabitat<M, G>,
-    G: RngCore<M>,
+    G: Rng<M>,
 > {
     marker: PhantomData<(M, H, G)>,
 }
 
-impl<M: MathsCore, H: UniformlySampleableHabitat<M, G>, G: RngCore<M>> Default
+impl<M: MathsCore, H: UniformlySampleableHabitat<M, G>, G: Rng<M>> Default
     for UniformAntiTrespassingDispersalSampler<M, H, G>
 {
     #[must_use]
@@ -31,7 +31,7 @@ impl<M: MathsCore, H: UniformlySampleableHabitat<M, G>, G: RngCore<M>> Default
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: UniformlySampleableHabitat<M, G>, G: RngCore<M>> Backup
+impl<M: MathsCore, H: UniformlySampleableHabitat<M, G>, G: Rng<M>> Backup
     for UniformAntiTrespassingDispersalSampler<M, H, G>
 {
     unsafe fn backup_unchecked(&self) -> Self {
@@ -42,7 +42,7 @@ impl<M: MathsCore, H: UniformlySampleableHabitat<M, G>, G: RngCore<M>> Backup
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: UniformlySampleableHabitat<M, G>, G: RngCore<M>>
+impl<M: MathsCore, H: UniformlySampleableHabitat<M, G>, G: Rng<M>>
     AntiTrespassingDispersalSampler<M, H, G> for UniformAntiTrespassingDispersalSampler<M, H, G>
 {
     #[must_use]

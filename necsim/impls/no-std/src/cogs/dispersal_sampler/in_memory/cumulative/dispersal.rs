@@ -1,13 +1,16 @@
 use necsim_core::{
-    cogs::{DispersalSampler, Habitat, MathsCore, RngCore},
+    cogs::{
+        distribution::UniformClosedOpenUnit, DispersalSampler, Distribution, Habitat, MathsCore,
+        Rng, Samples,
+    },
     landscape::Location,
 };
 
 use super::InMemoryCumulativeDispersalSampler;
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
-    for InMemoryCumulativeDispersalSampler
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, UniformClosedOpenUnit>>
+    DispersalSampler<M, H, G> for InMemoryCumulativeDispersalSampler<M, H, G>
 {
     #[must_use]
     fn sample_dispersal_from_location(
@@ -16,8 +19,6 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
         habitat: &H,
         rng: &mut G,
     ) -> Location {
-        use necsim_core::cogs::RngSampler;
-
         let location_index = (location.y().wrapping_sub(habitat.get_extent().y()) as usize)
             * usize::from(habitat.get_extent().width())
             + (location.x().wrapping_sub(habitat.get_extent().x()) as usize);
@@ -28,7 +29,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
         let cumulative_dispersals_at_location = &self.cumulative_dispersal
             [location_index * habitat_area..(location_index + 1) * habitat_area];
 
-        let cumulative_percentage_sample = rng.sample_uniform_closed_open().into();
+        let cumulative_percentage_sample = UniformClosedOpenUnit::sample(rng).into();
 
         let dispersal_target_index = usize::min(
             match cumulative_dispersals_at_location.binary_search(&cumulative_percentage_sample) {

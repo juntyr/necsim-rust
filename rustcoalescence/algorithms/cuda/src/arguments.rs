@@ -1,4 +1,4 @@
-use std::num::NonZeroU64;
+use std::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
 
 use serde::{Deserialize, Serialize};
 use serde_state::DeserializeState;
@@ -53,14 +53,25 @@ impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SortMode {
+    None,
+    CpuOnly,
+    EvenOddGpu,
+    BitonicGpu,
+}
+
 #[derive(Debug, Serialize)]
 #[allow(clippy::module_name_repetitions)]
 pub struct CudaArguments {
     pub device: u32,
     pub ptx_jit: bool,
     pub delta_t: PositiveF64,
-    pub block_size: u32,
-    pub grid_size: u32,
+    pub block_size: NonZeroU32,
+    pub grid_size: NonZeroU32,
+    pub sort_block_size: NonZeroU32,
+    pub sort_batch_size: NonZeroUsize,
+    pub sort_mode: SortMode,
     pub step_slice: NonZeroU64,
     pub dedup_cache: DedupCache,
     pub parallelism_mode: ParallelismMode,
@@ -93,6 +104,9 @@ impl<'de> DeserializeState<'de, Partition> for CudaArguments {
             delta_t: raw.delta_t,
             block_size: raw.block_size,
             grid_size: raw.grid_size,
+            sort_block_size: raw.sort_block_size,
+            sort_batch_size: raw.sort_batch_size,
+            sort_mode: raw.sort_mode,
             step_slice: raw.step_slice,
             dedup_cache: raw.dedup_cache,
             parallelism_mode,
@@ -107,8 +121,11 @@ pub struct CudaArgumentsRaw {
     pub device: u32,
     pub ptx_jit: bool,
     pub delta_t: PositiveF64,
-    pub block_size: u32,
-    pub grid_size: u32,
+    pub block_size: NonZeroU32,
+    pub grid_size: NonZeroU32,
+    pub sort_block_size: NonZeroU32,
+    pub sort_batch_size: NonZeroUsize,
+    pub sort_mode: SortMode,
     pub step_slice: NonZeroU64,
     pub dedup_cache: DedupCache,
     #[serde(deserialize_state)]
@@ -121,8 +138,11 @@ impl Default for CudaArgumentsRaw {
             device: 0_u32,
             ptx_jit: true,
             delta_t: PositiveF64::new(3.0_f64).unwrap(),
-            block_size: 64_u32,
-            grid_size: 64_u32,
+            block_size: NonZeroU32::new(64_u32).unwrap(),
+            grid_size: NonZeroU32::new(64_u32).unwrap(),
+            sort_block_size: NonZeroU32::new(512_u32).unwrap(),
+            sort_batch_size: NonZeroUsize::new(100_000_usize).unwrap(),
+            sort_mode: SortMode::None,
             step_slice: NonZeroU64::new(150_u64).unwrap(),
             dedup_cache: DedupCache::Relative(RelativeCapacity {
                 factor: PositiveF64::new(0.1_f64).unwrap(),

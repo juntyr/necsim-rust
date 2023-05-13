@@ -1,6 +1,9 @@
 use necsim_core::{
     cogs::{
-        EmigrationExit, GloballyCoherentLineageStore, ImmigrationEntry, MathsCore, RngCore,
+        distribution::{
+            Bernoulli, Exponential, IndexU128, IndexU64, IndexUsize, UniformClosedOpenUnit,
+        },
+        EmigrationExit, GloballyCoherentLineageStore, ImmigrationEntry, MathsCore, Rng, Samples,
         SeparableDispersalSampler,
     },
     reporter::Reporter,
@@ -22,8 +25,18 @@ use super::EventSkippingLineageStoreSampleInitialiser;
 #[allow(clippy::module_name_repetitions)]
 pub struct GenesisInitialiser;
 
-impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
-    EventSkippingLineageStoreSampleInitialiser<M, G, O, !> for GenesisInitialiser
+#[allow(clippy::trait_duplication_in_bounds)]
+impl<
+        M: MathsCore,
+        G: Rng<M>
+            + Samples<M, IndexUsize>
+            + Samples<M, Bernoulli>
+            + Samples<M, UniformClosedOpenUnit>
+            + Samples<M, Exponential>
+            + Samples<M, IndexU64>
+            + Samples<M, IndexU128>,
+        O: Scenario<M, G>,
+    > EventSkippingLineageStoreSampleInitialiser<M, G, O, !> for GenesisInitialiser
 where
     O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
         SeparableDispersalSampler<M, O::Habitat, G>,

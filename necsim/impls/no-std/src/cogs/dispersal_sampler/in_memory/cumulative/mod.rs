@@ -1,7 +1,9 @@
+use core::marker::PhantomData;
+
 use alloc::{boxed::Box, vec};
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore},
+    cogs::{distribution::UniformClosedOpenUnit, Backup, Habitat, MathsCore, Rng, Samples},
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
@@ -13,14 +15,19 @@ mod dispersal;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct InMemoryCumulativeDispersalSampler {
+pub struct InMemoryCumulativeDispersalSampler<
+    M: MathsCore,
+    H: Habitat<M>,
+    G: Rng<M> + Samples<M, UniformClosedOpenUnit>,
+> {
     cumulative_dispersal: Box<[ClosedUnitF64]>,
     valid_dispersal_targets: Box<[Option<usize>]>,
+    marker: PhantomData<(M, H, G)>,
 }
 
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, G>
-    for InMemoryCumulativeDispersalSampler
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, UniformClosedOpenUnit>>
+    InMemoryDispersalSampler<M, H, G> for InMemoryCumulativeDispersalSampler<M, H, G>
 {
     /// Creates a new `InMemoryCumulativeDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
@@ -96,16 +103,20 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
         InMemoryCumulativeDispersalSampler {
             cumulative_dispersal,
             valid_dispersal_targets,
+            marker: PhantomData::<(M, H, G)>,
         }
     }
 }
 
 #[contract_trait]
-impl Backup for InMemoryCumulativeDispersalSampler {
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, UniformClosedOpenUnit>> Backup
+    for InMemoryCumulativeDispersalSampler<M, H, G>
+{
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             cumulative_dispersal: self.cumulative_dispersal.clone(),
             valid_dispersal_targets: self.valid_dispersal_targets.clone(),
+            marker: PhantomData::<(M, H, G)>,
         }
     }
 }

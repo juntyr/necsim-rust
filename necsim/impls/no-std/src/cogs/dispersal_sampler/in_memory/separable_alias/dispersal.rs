@@ -1,14 +1,19 @@
 use necsim_core::{
-    cogs::{DispersalSampler, Habitat, MathsCore, RngCore, SeparableDispersalSampler},
+    cogs::{
+        distribution::{Bernoulli, IndexUsize},
+        DispersalSampler, Distribution, Habitat, MathsCore, Rng, Samples,
+        SeparableDispersalSampler,
+    },
     landscape::Location,
 };
 use necsim_core_bond::ClosedUnitF64;
 
 use super::InMemorySeparableAliasDispersalSampler;
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
-    for InMemorySeparableAliasDispersalSampler<M, H, G>
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>>
+    DispersalSampler<M, H, G> for InMemorySeparableAliasDispersalSampler<M, H, G>
 {
     #[must_use]
     fn sample_dispersal_from_location(
@@ -17,8 +22,6 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
         habitat: &H,
         rng: &mut G,
     ) -> Location {
-        use necsim_core::cogs::RngSampler;
-
         let self_dispersal_at_location =
             self.get_self_dispersal_probability_at_location(location, habitat);
 
@@ -26,7 +29,9 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
             return location.clone();
         }
 
-        if self_dispersal_at_location > 0.0_f64 && rng.sample_event(self_dispersal_at_location) {
+        if self_dispersal_at_location > 0.0_f64
+            && Bernoulli::sample_with(rng, self_dispersal_at_location)
+        {
             return location.clone();
         }
 
@@ -34,9 +39,10 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
     }
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> SeparableDispersalSampler<M, H, G>
-    for InMemorySeparableAliasDispersalSampler<M, H, G>
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>>
+    SeparableDispersalSampler<M, H, G> for InMemorySeparableAliasDispersalSampler<M, H, G>
 {
     #[must_use]
     fn sample_non_self_dispersal_from_location(

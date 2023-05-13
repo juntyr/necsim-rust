@@ -1,4 +1,4 @@
-use core::{fmt, iter::ExactSizeIterator};
+use core::{fmt, iter::ExactSizeIterator, marker::PhantomData};
 
 use necsim_core::{
     cogs::{Habitat, MathsCore},
@@ -9,6 +9,8 @@ use crate::cogs::origin_sampler::{pre_sampler::OriginPreSampler, TrustedOriginSa
 
 use super::UntrustedOriginSampler;
 
+// Note: The MathsCore should not be utilised in the origin sampler
+//       to improve compatibility
 #[allow(clippy::module_name_repetitions)]
 pub struct ResumingOriginSampler<
     'h,
@@ -18,9 +20,10 @@ pub struct ResumingOriginSampler<
     I: Iterator<Item = u64>,
 > {
     lineage_iterator: L,
-    pre_sampler: OriginPreSampler<M, I>,
+    pre_sampler: OriginPreSampler<I>,
     last_index: u64,
     habitat: &'h H,
+    marker: PhantomData<M>,
 }
 
 impl<
@@ -49,12 +52,13 @@ impl<
     > ResumingOriginSampler<'h, M, H, L, I>
 {
     #[must_use]
-    pub fn new(habitat: &'h H, pre_sampler: OriginPreSampler<M, I>, lineage_iterator: L) -> Self {
+    pub fn new(habitat: &'h H, pre_sampler: OriginPreSampler<I>, lineage_iterator: L) -> Self {
         Self {
             lineage_iterator,
             pre_sampler,
             last_index: 0_u64,
             habitat,
+            marker: PhantomData::<M>,
         }
     }
 }
@@ -75,7 +79,7 @@ impl<
         self.habitat
     }
 
-    fn into_pre_sampler(self) -> OriginPreSampler<M, Self::PreSampler> {
+    fn into_pre_sampler(self) -> OriginPreSampler<Self::PreSampler> {
         self.pre_sampler
     }
 
@@ -85,9 +89,9 @@ impl<
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let upper_bound_size_hint = M::ceil(
-            (self.lineage_iterator.len() as f64) * self.pre_sampler.get_sample_proportion().get(),
-        ) as u64;
+        let upper_bound_size_hint = ((self.lineage_iterator.len() as f64)
+            * self.pre_sampler.get_sample_proportion().get())
+            as u64;
 
         upper_bound_size_hint
     }

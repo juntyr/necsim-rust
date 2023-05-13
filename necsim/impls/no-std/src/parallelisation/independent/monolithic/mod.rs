@@ -8,7 +8,8 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_core::{
     cogs::{
-        DispersalSampler, Habitat, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
+        distribution::UniformClosedOpenUnit, DispersalSampler, Habitat, MathsCore, PrimeableRng,
+        Rng, Samples, SpeciationProbability, TurnoverRate,
     },
     lineage::Lineage,
     reporter::{boolean::Boolean, Reporter},
@@ -44,7 +45,7 @@ pub fn simulate<
     'p,
     M: MathsCore,
     H: Habitat<M>,
-    G: PrimeableRng<M>,
+    G: Rng<M, Generator: PrimeableRng> + Samples<M, UniformClosedOpenUnit>,
     D: DispersalSampler<M, H, G>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
@@ -114,7 +115,7 @@ pub fn simulate<
         P::IsLive,
         R,
         P,
-    >>::WaterLevelReporter::new(event_slice.get(), local_partition);
+    >>::WaterLevelReporter::new(event_slice.get(), local_partition, 100_000); // TODO: configure here as well
     let mut min_spec_samples = dedup_cache.construct(slow_lineages.len());
 
     let mut total_steps = 0_u64;

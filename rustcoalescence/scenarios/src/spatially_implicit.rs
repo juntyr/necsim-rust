@@ -2,7 +2,10 @@ use std::num::NonZeroU32;
 
 use serde::{Deserialize, Serialize};
 
-use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
+use necsim_core::cogs::{
+    distribution::{Bernoulli, IndexU64},
+    DispersalSampler, LineageStore, MathsCore, Rng, Samples,
+};
 use necsim_core_bond::{OffByOneU32, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::partition::Partition;
 
@@ -22,7 +25,11 @@ use necsim_impls_no_std::{
 use crate::{Scenario, ScenarioParameters};
 
 #[allow(clippy::module_name_repetitions)]
-pub struct SpatiallyImplicitScenario<M: MathsCore, G: RngCore<M>> {
+#[allow(clippy::trait_duplication_in_bounds)]
+pub struct SpatiallyImplicitScenario<
+    M: MathsCore,
+    G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>,
+> {
     habitat: SpatiallyImplicitHabitat<M>,
     dispersal_sampler: SpatiallyImplicitDispersalSampler<M, G>,
     turnover_rate: UniformTurnoverRate,
@@ -41,12 +48,18 @@ pub struct SpatiallyImplicitArguments {
     pub migration_probability_per_generation: PositiveUnitF64,
 }
 
-impl<M: MathsCore, G: RngCore<M>> ScenarioParameters for SpatiallyImplicitScenario<M, G> {
+#[allow(clippy::trait_duplication_in_bounds)]
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>> ScenarioParameters
+    for SpatiallyImplicitScenario<M, G>
+{
     type Arguments = SpatiallyImplicitArguments;
     type Error = !;
 }
 
-impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyImplicitScenario<M, G> {
+#[allow(clippy::trait_duplication_in_bounds)]
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64> + Samples<M, Bernoulli>> Scenario<M, G>
+    for SpatiallyImplicitScenario<M, G>
+{
     type Decomposition = ModuloDecomposition;
     type DecompositionAuxiliary = ();
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
@@ -104,7 +117,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyImplicitScenario<M
 
     fn sample_habitat<'h, I: Iterator<Item = u64>>(
         habitat: &'h Self::Habitat,
-        pre_sampler: OriginPreSampler<M, I>,
+        pre_sampler: OriginPreSampler<I>,
         _auxiliary: Self::OriginSamplerAuxiliary,
     ) -> Self::OriginSampler<'h, I>
     where

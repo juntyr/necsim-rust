@@ -1,6 +1,6 @@
 use core::ops::Index;
 
-use super::{Habitat, LineageReference, MathsCore};
+use super::{Backup, Habitat, LineageReference, MathsCore};
 use crate::{
     landscape::{IndexedLocation, Location},
     lineage::{GlobalLineageReference, Lineage},
@@ -8,9 +8,7 @@ use crate::{
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
-pub trait LineageStore<M: MathsCore, H: Habitat<M>>:
-    crate::cogs::Backup + Sized + core::fmt::Debug
-{
+pub trait LineageStore<M: MathsCore, H: Habitat<M>>: Backup + Sized + core::fmt::Debug {
     type LocalLineageReference: LineageReference<M, H>;
 
     #[must_use]

@@ -16,9 +16,11 @@ use crate::cogs::{
 
 use super::{TrustedOriginSampler, UntrustedOriginSampler};
 
+// Note: The MathsCore should not be utilised in the origin sampler
+//       to improve compatibility
 #[allow(clippy::module_name_repetitions)]
 pub struct NonSpatialOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
-    pre_sampler: OriginPreSampler<M, I>,
+    pre_sampler: OriginPreSampler<I>,
     last_index: u64,
     location_iterator: Peekable<LocationIterator>,
     next_location_index: u32,
@@ -39,7 +41,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug for NonSpatialOriginS
 
 impl<'h, M: MathsCore, I: Iterator<Item = u64>> NonSpatialOriginSampler<'h, M, I> {
     #[must_use]
-    pub fn new(pre_sampler: OriginPreSampler<M, I>, habitat: &'h NonSpatialHabitat<M>) -> Self {
+    pub fn new(pre_sampler: OriginPreSampler<I>, habitat: &'h NonSpatialHabitat<M>) -> Self {
         Self {
             pre_sampler,
             last_index: 0_u64,
@@ -61,7 +63,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
         self.habitat
     }
 
-    fn into_pre_sampler(self) -> OriginPreSampler<M, Self::PreSampler> {
+    fn into_pre_sampler(self) -> OriginPreSampler<Self::PreSampler> {
         self.pre_sampler
     }
 

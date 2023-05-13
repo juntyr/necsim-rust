@@ -4,7 +4,10 @@ use core::{
 };
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
+    cogs::{
+        distribution::{IndexU64, Length},
+        Backup, Distribution, Habitat, MathsCore, Rng, Samples, UniformlySampleableHabitat,
+    },
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 use necsim_core_bond::{OffByOneU32, OffByOneU64};
@@ -116,18 +119,20 @@ impl<M: MathsCore> Habitat<M> for NonSpatialHabitat<M> {
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for NonSpatialHabitat<M> {
+impl<M: MathsCore, G: Rng<M> + Samples<M, IndexU64>> UniformlySampleableHabitat<M, G>
+    for NonSpatialHabitat<M>
+{
     #[must_use]
     #[inline]
     fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
-        use necsim_core::cogs::RngSampler;
-
         let habitat_index_max =
             self.extent.width().get() * self.extent.height().get() * u64::from(self.deme.get());
 
         // Safety: habitat width, height, and deme are all > 0
-        let mut dispersal_target_index =
-            rng.sample_index_u64(unsafe { NonZeroU64::new_unchecked(habitat_index_max) });
+        let mut dispersal_target_index = IndexU64::sample_with(
+            rng,
+            Length(unsafe { NonZeroU64::new_unchecked(habitat_index_max) }),
+        );
         #[allow(clippy::cast_possible_truncation)]
         let index = (dispersal_target_index % u64::from(self.deme.get())) as u32;
         dispersal_target_index /= u64::from(self.deme.get());

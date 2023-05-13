@@ -8,7 +8,7 @@ use core::{
 use necsim_core_maths::MathsCore;
 use serde::{Deserialize, Serialize};
 
-use crate::NonPositiveF64;
+use crate::{ClosedUnitF64, NonPositiveF64};
 
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
@@ -43,6 +43,14 @@ impl TryFrom<f64> for OpenClosedUnitF64 {
 impl From<OpenClosedUnitF64> for f64 {
     fn from(val: OpenClosedUnitF64) -> Self {
         val.get()
+    }
+}
+
+impl TryFrom<ClosedUnitF64> for OpenClosedUnitF64 {
+    type Error = OpenClosedUnitF64Error;
+
+    fn try_from(value: ClosedUnitF64) -> Result<Self, Self::Error> {
+        Self::new(value.get())
     }
 }
 

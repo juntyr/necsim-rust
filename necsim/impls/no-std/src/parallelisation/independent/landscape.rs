@@ -1,7 +1,7 @@
 use alloc::{collections::VecDeque, vec::Vec};
 use core::{
     iter::FromIterator,
-    num::{NonZeroU64, Wrapping},
+    num::{NonZeroU32, NonZeroU64, Wrapping},
     ops::ControlFlow,
 };
 
@@ -9,7 +9,8 @@ use necsim_core_bond::NonNegativeF64;
 
 use necsim_core::{
     cogs::{
-        DispersalSampler, Habitat, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
+        distribution::UniformClosedOpenUnit, DispersalSampler, Habitat, MathsCore, PrimeableRng,
+        Rng, Samples, SpeciationProbability, TurnoverRate,
     },
     event::DispersalEvent,
     landscape::IndexedLocation,
@@ -44,7 +45,7 @@ pub fn simulate<
     H: Habitat<M>,
     C: Decomposition<M, H>,
     E: EmigrationChoice<M, H>,
-    G: PrimeableRng<M>,
+    G: Rng<M, Generator: PrimeableRng> + Samples<M, UniformClosedOpenUnit>,
     D: DispersalSampler<M, H, G>,
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
@@ -53,12 +54,12 @@ pub fn simulate<
         H,
         G,
         IndependentLineageStore<M, H>,
-        IndependentEmigrationExit<M, H, C, E>,
+        IndependentEmigrationExit<M, H, G, C, E>,
         D,
         IndependentCoalescenceSampler<M, H>,
         T,
         N,
-        IndependentEventSampler<M, H, G, IndependentEmigrationExit<M, H, C, E>, D, T, N>,
+        IndependentEventSampler<M, H, G, IndependentEmigrationExit<M, H, G, C, E>, D, T, N>,
         NeverImmigrationEntry,
     >,
     R: Reporter,
@@ -70,12 +71,12 @@ pub fn simulate<
         H,
         G,
         IndependentLineageStore<M, H>,
-        IndependentEmigrationExit<M, H, C, E>,
+        IndependentEmigrationExit<M, H, G, C, E>,
         D,
         IndependentCoalescenceSampler<M, H>,
         T,
         N,
-        IndependentEventSampler<M, H, G, IndependentEmigrationExit<M, H, C, E>, D, T, N>,
+        IndependentEventSampler<M, H, G, IndependentEmigrationExit<M, H, G, C, E>, D, T, N>,
         NeverImmigrationEntry,
         A,
     >,
@@ -183,12 +184,17 @@ pub fn simulate<
                 tie_breaker: _,
             } = immigrant;
 
+            // Safety: immigrant can only migrate to habitable target
+            let habitat_at_location = unsafe {
+                NonZeroU32::new_unchecked(
+                    simulation
+                        .habitat()
+                        .get_habitat_at_location(&dispersal_target),
+                )
+            };
+
             // Finish sampling the dispersal of the immigrating individual
-            let target_index = coalescence_rng_sample.sample_coalescence_index::<M>(
-                simulation
-                    .habitat()
-                    .get_habitat_at_location(&dispersal_target),
-            );
+            let target_index = coalescence_rng_sample.sample_coalescence_index(habitat_at_location);
             let dispersal_target = IndexedLocation::new(dispersal_target, target_index);
 
             // Cache the immigration event

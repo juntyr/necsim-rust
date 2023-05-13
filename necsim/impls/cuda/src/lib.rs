@@ -5,9 +5,10 @@
 #![feature(const_type_name)]
 #![feature(const_mut_refs)]
 #![feature(const_refs_to_cell)]
+#![feature(generic_const_exprs)]
+#![feature(arbitrary_self_types)]
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
-#![cfg_attr(target_os = "cuda", feature(asm_const))]
-#![cfg_attr(target_os = "cuda", feature(const_float_bits_conv))]
+#![cfg_attr(target_os = "cuda", feature(stdsimd))]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 
@@ -16,7 +17,7 @@ extern crate alloc;
 #[macro_use]
 extern crate const_type_layout;
 
-#[cfg_attr(target_os = "cuda", macro_use)]
+#[macro_use]
 extern crate contracts;
 
 pub mod cogs;

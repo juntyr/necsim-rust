@@ -3,7 +3,10 @@ use std::num::NonZeroUsize;
 use serde::{Deserialize, Serialize};
 
 use necsim_core::{
-    cogs::{DispersalSampler, LineageStore, MathsCore, RngCore},
+    cogs::{
+        distribution::{Bernoulli, Normal2D},
+        DispersalSampler, DistributionSampler, LineageStore, MathsCore, Rng,
+    },
     landscape::LandscapeExtent,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
@@ -26,7 +29,11 @@ use necsim_impls_no_std::{
 use crate::{Scenario, ScenarioParameters};
 
 #[allow(clippy::module_name_repetitions)]
-pub struct WrappingNoiseScenario<M: MathsCore, G: RngCore<M>> {
+pub struct WrappingNoiseScenario<M: MathsCore, G: Rng<M>>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
+{
     sample: LandscapeExtent,
 
     habitat: WrappingNoiseHabitat<M>,
@@ -48,12 +55,20 @@ pub struct WrappingNoiseArguments {
     pub sigma: NonNegativeF64,
 }
 
-impl<M: MathsCore, G: RngCore<M>> ScenarioParameters for WrappingNoiseScenario<M, G> {
+impl<M: MathsCore, G: Rng<M>> ScenarioParameters for WrappingNoiseScenario<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
+{
     type Arguments = WrappingNoiseArguments;
     type Error = !;
 }
 
-impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for WrappingNoiseScenario<M, G> {
+impl<M: MathsCore, G: Rng<M>> Scenario<M, G> for WrappingNoiseScenario<M, G>
+where
+    G::Sampler: DistributionSampler<M, G::Generator, G::Sampler, Normal2D>
+        + DistributionSampler<M, G::Generator, G::Sampler, Bernoulli>,
+{
     type Decomposition = RadialDecomposition;
     type DecompositionAuxiliary = ();
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
@@ -115,7 +130,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for WrappingNoiseScenario<M, G>
 
     fn sample_habitat<'h, I: Iterator<Item = u64>>(
         habitat: &'h Self::Habitat,
-        pre_sampler: OriginPreSampler<M, I>,
+        pre_sampler: OriginPreSampler<I>,
         (sample,): Self::OriginSamplerAuxiliary,
     ) -> Self::OriginSampler<'_, I>
     where

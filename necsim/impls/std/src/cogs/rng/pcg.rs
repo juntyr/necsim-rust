@@ -1,29 +1,16 @@
-use std::{fmt, marker::PhantomData};
+use std::fmt;
 
 use pcg_rand::{seeds::PcgSeeder, PCGStateInfo, Pcg64};
 use rand_core::{RngCore as _, SeedableRng};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use necsim_core::cogs::{MathsCore, RngCore, SplittableRng};
+use necsim_core::cogs::{Backup, RngCore, SplittableRng};
 
-#[allow(clippy::module_name_repetitions)]
-#[derive(Serialize, Deserialize)]
-#[serde(from = "PcgState", into = "PcgState")]
-pub struct Pcg<M: MathsCore> {
+pub struct Pcg {
     inner: Pcg64,
-    marker: PhantomData<M>,
 }
 
-impl<M: MathsCore> Clone for Pcg<M> {
-    fn clone(&self) -> Self {
-        Self {
-            inner: Pcg64::restore_state_with_no_verification(self.inner.get_state()),
-            marker: PhantomData::<M>,
-        }
-    }
-}
-
-impl<M: MathsCore> fmt::Debug for Pcg<M> {
+impl fmt::Debug for Pcg {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let state = self.inner.get_state();
 
@@ -34,7 +21,53 @@ impl<M: MathsCore> fmt::Debug for Pcg<M> {
     }
 }
 
-impl<M: MathsCore> RngCore<M> for Pcg<M> {
+impl Serialize for Pcg {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let state_info = self.inner.get_state();
+
+        let state = PcgState {
+            state: state_info.state,
+            increment: state_info.increment,
+        };
+
+        state.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Pcg {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        use pcg_rand::{
+            multiplier::{DefaultMultiplier, Multiplier},
+            outputmix::{DXsMMixin, OutputMixin},
+        };
+
+        let state = PcgState::deserialize(deserializer)?;
+
+        let state_info = PCGStateInfo {
+            state: state.state,
+            increment: state.increment,
+            multiplier: DefaultMultiplier::multiplier(),
+            internal_width: u128::BITS as usize,
+            output_width: u64::BITS as usize,
+            output_mixin: <DXsMMixin as OutputMixin<u128, u64>>::SERIALIZER_ID.into(),
+        };
+
+        Ok(Self {
+            inner: Pcg64::restore_state_with_no_verification(state_info),
+        })
+    }
+}
+
+#[contract_trait]
+impl Backup for Pcg {
+    unsafe fn backup_unchecked(&self) -> Self {
+        Self {
+            inner: Pcg64::restore_state_with_no_verification(self.inner.get_state()),
+        }
+    }
+}
+
+impl RngCore for Pcg {
     type Seed = [u8; 16];
 
     #[must_use]
@@ -45,7 +78,6 @@ impl<M: MathsCore> RngCore<M> for Pcg<M> {
                 u128::from_le_bytes(seed),
                 0_u128,
             )),
-            marker: PhantomData::<M>,
         }
     }
 
@@ -56,7 +88,7 @@ impl<M: MathsCore> RngCore<M> for Pcg<M> {
     }
 }
 
-impl<M: MathsCore> SplittableRng<M> for Pcg<M> {
+impl SplittableRng for Pcg {
     #[allow(clippy::identity_op)]
     fn split(self) -> (Self, Self) {
         let mut left_state = self.inner.get_state();
@@ -67,11 +99,9 @@ impl<M: MathsCore> SplittableRng<M> for Pcg<M> {
 
         let left = Self {
             inner: Pcg64::restore_state_with_no_verification(left_state),
-            marker: PhantomData::<M>,
         };
         let right = Self {
             inner: Pcg64::restore_state_with_no_verification(right_state),
-            marker: PhantomData::<M>,
         };
 
         (left, right)
@@ -83,7 +113,6 @@ impl<M: MathsCore> SplittableRng<M> for Pcg<M> {
 
         Self {
             inner: Pcg64::restore_state_with_no_verification(state),
-            marker: PhantomData::<M>,
         }
     }
 }
@@ -94,38 +123,4 @@ impl<M: MathsCore> SplittableRng<M> for Pcg<M> {
 struct PcgState {
     state: u128,
     increment: u128,
-}
-
-impl<M: MathsCore> From<Pcg<M>> for PcgState {
-    fn from(rng: Pcg<M>) -> Self {
-        let state_info = rng.inner.get_state();
-
-        Self {
-            state: state_info.state,
-            increment: state_info.increment,
-        }
-    }
-}
-
-impl<M: MathsCore> From<PcgState> for Pcg<M> {
-    fn from(state: PcgState) -> Self {
-        use pcg_rand::{
-            multiplier::{DefaultMultiplier, Multiplier},
-            outputmix::{DXsMMixin, OutputMixin},
-        };
-
-        let state_info = PCGStateInfo {
-            state: state.state,
-            increment: state.increment,
-            multiplier: DefaultMultiplier::multiplier(),
-            internal_width: u128::BITS as usize,
-            output_width: u64::BITS as usize,
-            output_mixin: <DXsMMixin as OutputMixin<u128, u64>>::SERIALIZER_ID.into(),
-        };
-
-        Self {
-            inner: Pcg64::restore_state_with_no_verification(state_info),
-            marker: PhantomData::<M>,
-        }
-    }
 }

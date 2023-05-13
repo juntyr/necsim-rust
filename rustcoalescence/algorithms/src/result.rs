@@ -1,14 +1,11 @@
-use std::{error::Error as StdError, fmt, marker::PhantomData};
+use std::{error::Error as StdError, fmt};
 
-use necsim_core::{
-    cogs::{MathsCore, RngCore},
-    lineage::Lineage,
-};
+use necsim_core::{cogs::RngCore, lineage::Lineage};
 use necsim_core_bond::NonNegativeF64;
 
 use necsim_impls_no_std::cogs::active_lineage_sampler::resuming::lineage::ExceptionalLineage;
 
-pub enum SimulationOutcome<M: MathsCore, G: RngCore<M>> {
+pub enum SimulationOutcome<G: RngCore> {
     Done {
         time: NonNegativeF64,
         steps: u64,
@@ -18,7 +15,6 @@ pub enum SimulationOutcome<M: MathsCore, G: RngCore<M>> {
         steps: u64,
         lineages: Vec<Lineage>,
         rng: G,
-        marker: PhantomData<M>,
     },
 }
 

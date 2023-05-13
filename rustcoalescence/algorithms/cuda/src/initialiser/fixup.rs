@@ -1,5 +1,8 @@
 use necsim_core::{
-    cogs::{EmigrationExit, MathsCore, PrimeableRng},
+    cogs::{
+        distribution::{Bernoulli, IndexUsize, UniformClosedOpenUnit},
+        EmigrationExit, MathsCore, PrimeableRng, Rng, Samples,
+    },
     lineage::Lineage,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -28,7 +31,7 @@ use rustcoalescence_algorithms::{
 };
 use rustcoalescence_scenarios::Scenario;
 
-use rust_cuda::common::RustToCuda;
+use rust_cuda::{common::RustToCuda, safety::NoAliasing};
 
 use crate::CudaError;
 
@@ -40,21 +43,30 @@ pub struct FixUpInitialiser<L: ExactSizeIterator<Item = Lineage>> {
     pub fixup_strategy: RestartFixUpStrategy,
 }
 
+#[allow(clippy::trait_duplication_in_bounds)]
 impl<
         L: ExactSizeIterator<Item = Lineage>,
         M: MathsCore,
-        G: PrimeableRng<M> + RustToCuda,
+        G: Rng<M, Generator: PrimeableRng>
+            + Samples<M, IndexUsize>
+            + Samples<M, Bernoulli>
+            + Samples<M, UniformClosedOpenUnit>
+            + RustToCuda
+            + NoAliasing,
         O: Scenario<M, G>,
     > CudaLineageStoreSampleInitialiser<M, G, O, ResumeError<CudaError>> for FixUpInitialiser<L>
 where
-    O::Habitat: RustToCuda,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda,
-    O::TurnoverRate: RustToCuda,
-    O::SpeciationProbability: RustToCuda,
+    O::Habitat: RustToCuda + NoAliasing,
+    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>:
+        RustToCuda + NoAliasing,
+    O::TurnoverRate: RustToCuda + NoAliasing,
+    O::SpeciationProbability: RustToCuda + NoAliasing,
 {
     type ActiveLineageSampler<
-        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>> + RustToCuda,
-        J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
+        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>
+            + RustToCuda
+            + NoAliasing,
+        J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda + NoAliasing,
     > = IndependentActiveLineageSampler<
         M,
         O::Habitat,
@@ -76,8 +88,10 @@ where
     fn init<
         'h,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
-        J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
-        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>> + RustToCuda,
+        J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda + NoAliasing,
+        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>
+            + RustToCuda
+            + NoAliasing,
     >(
         self,
         origin_sampler: T,

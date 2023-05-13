@@ -1,13 +1,17 @@
 use necsim_core::{
-    cogs::{DispersalSampler, Habitat, MathsCore, RngCore},
+    cogs::{
+        distribution::{Bernoulli, IndexUsize},
+        DispersalSampler, Habitat, MathsCore, Rng, Samples,
+    },
     landscape::Location,
 };
 
 use super::InMemoryAliasDispersalSampler;
 
+#[allow(clippy::trait_duplication_in_bounds)]
 #[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
-    for InMemoryAliasDispersalSampler<M, H, G>
+impl<M: MathsCore, H: Habitat<M>, G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli>>
+    DispersalSampler<M, H, G> for InMemoryAliasDispersalSampler<M, H, G>
 {
     #[must_use]
     fn sample_dispersal_from_location(

@@ -1,6 +1,9 @@
 use necsim_core::{
     cogs::{
-        EmigrationExit, GloballyCoherentLineageStore, ImmigrationEntry, MathsCore, RngCore,
+        distribution::{
+            Bernoulli, Exponential, IndexU128, IndexU64, IndexUsize, UniformClosedOpenUnit,
+        },
+        EmigrationExit, GloballyCoherentLineageStore, ImmigrationEntry, MathsCore, Rng, Samples,
         SeparableDispersalSampler,
     },
     lineage::Lineage,
@@ -28,8 +31,20 @@ pub struct ResumeInitialiser<L: ExactSizeIterator<Item = Lineage>> {
     pub resume_after: Option<NonNegativeF64>,
 }
 
-impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
-    EventSkippingLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for ResumeInitialiser<L>
+#[allow(clippy::type_complexity)]
+#[allow(clippy::trait_duplication_in_bounds)]
+impl<
+        L: ExactSizeIterator<Item = Lineage>,
+        M: MathsCore,
+        G: Rng<M>
+            + Samples<M, IndexUsize>
+            + Samples<M, Bernoulli>
+            + Samples<M, UniformClosedOpenUnit>
+            + Samples<M, Exponential>
+            + Samples<M, IndexU64>
+            + Samples<M, IndexU128>,
+        O: Scenario<M, G>,
+    > EventSkippingLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for ResumeInitialiser<L>
 where
     O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
         SeparableDispersalSampler<M, O::Habitat, G>,

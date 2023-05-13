@@ -10,6 +10,11 @@
 #![feature(control_flow_enum)]
 #![feature(negative_impls)]
 #![feature(impl_trait_in_assoc_type)]
+#![feature(associated_type_bounds)]
+#![feature(const_float_bits_conv)]
+#![feature(core_intrinsics)]
+#![feature(ptr_sub_ptr)]
+#![feature(is_sorted)]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 

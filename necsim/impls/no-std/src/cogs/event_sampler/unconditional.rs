@@ -2,9 +2,10 @@ use core::marker::PhantomData;
 
 use necsim_core::{
     cogs::{
-        coalescence_sampler::CoalescenceRngSample, event_sampler::EventHandler, Backup,
-        CoalescenceSampler, DispersalSampler, EmigrationExit, EventSampler, Habitat,
-        LocallyCoherentLineageStore, MathsCore, RngCore, SpeciationProbability, TurnoverRate,
+        coalescence_sampler::CoalescenceRngSample, distribution::Bernoulli,
+        event_sampler::EventHandler, Backup, CoalescenceSampler, DispersalSampler, Distribution,
+        EmigrationExit, EventSampler, Habitat, LocallyCoherentLineageStore, MathsCore, Rng,
+        Samples, SpeciationProbability, TurnoverRate,
     },
     event::{DispersalEvent, SpeciationEvent},
     lineage::Lineage,
@@ -17,7 +18,7 @@ use necsim_core_bond::PositiveF64;
 pub struct UnconditionalEventSampler<
     M: MathsCore,
     H: Habitat<M>,
-    G: RngCore<M>,
+    G: Rng<M> + Samples<M, Bernoulli>,
     S: LocallyCoherentLineageStore<M, H>,
     X: EmigrationExit<M, H, G, S>,
     D: DispersalSampler<M, H, G>,
@@ -32,7 +33,7 @@ pub struct UnconditionalEventSampler<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M> + Samples<M, Bernoulli>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -52,7 +53,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M> + Samples<M, Bernoulli>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -72,7 +73,7 @@ impl<
 impl<
         M: MathsCore,
         H: Habitat<M>,
-        G: RngCore<M>,
+        G: Rng<M> + Samples<M, Bernoulli>,
         S: LocallyCoherentLineageStore<M, H>,
         X: EmigrationExit<M, H, G, S>,
         D: DispersalSampler<M, H, G>,
@@ -106,9 +107,8 @@ impl<
         }: EventHandler<FS, FD, FE>,
         auxiliary: Aux,
     ) -> Q {
-        use necsim_core::cogs::RngSampler;
-
-        if rng.sample_event(
+        if Bernoulli::sample_with(
+            rng,
             simulation
                 .speciation_probability
                 .get_speciation_probability_at_location(

@@ -3,7 +3,7 @@ use tiny_keccak::{Hasher, Keccak};
 use rustcoalescence_algorithms::{result::SimulationOutcome as AlgorithmOutcome, Algorithm};
 
 use necsim_core::{
-    cogs::{MathsCore, RngCore, SeedableRng},
+    cogs::{MathsCore, Rng, RngCore, SeedableRng},
     reporter::Reporter,
 };
 use necsim_core_bond::NonNegativeF64;
@@ -13,7 +13,7 @@ use rustcoalescence_scenarios::Scenario;
 
 use crate::{
     args::config::{
-        rng::{Base32RngState, Rng as RngArgs},
+        rng::{Base32RngState, RngConfig},
         sample::Sample,
     },
     cli::simulate::parse,
@@ -43,17 +43,17 @@ pub(super) fn dispatch<
     normalised_args: &mut BufferingSimulateArgsBuilder,
 ) -> anyhow::Result<SimulationOutcome>
 where
-    Result<AlgorithmOutcome<M, A::Rng>, A::Error>:
-        anyhow::Context<AlgorithmOutcome<M, A::Rng>, A::Error>,
+    Result<AlgorithmOutcome<<A::Rng as Rng<M>>::Generator>, A::Error>:
+        anyhow::Context<AlgorithmOutcome<<A::Rng as Rng<M>>::Generator>, A::Error>,
 {
-    let rng: A::Rng = match parse::rng::parse_and_normalise(
+    let rng: <A::Rng as Rng<M>>::Generator = match parse::rng::parse_and_normalise(
         ron_args,
         normalised_args,
         &mut A::get_logical_partition(&algorithm_args, &local_partition),
     )? {
-        RngArgs::Seed(seed) => SeedableRng::seed_from_u64(seed),
-        RngArgs::Sponge(bytes) => {
-            let mut seed = <A::Rng as RngCore<M>>::Seed::default();
+        RngConfig::Seed(seed) => SeedableRng::seed_from_u64(seed),
+        RngConfig::Sponge(bytes) => {
+            let mut seed = <<A::Rng as Rng<M>>::Generator as RngCore>::Seed::default();
 
             let mut sponge = Keccak::v256();
             sponge.update(&bytes);
@@ -61,7 +61,7 @@ where
 
             RngCore::from_seed(seed)
         },
-        RngArgs::State(state) => state.into(),
+        RngConfig::State(state) => state.into(),
     };
 
     let result = info::dispatch::<M, A, O, R, P>(
@@ -81,9 +81,8 @@ where
             steps,
             lineages,
             rng: paused_rng,
-            ..
         } => {
-            normalised_args.rng(&RngArgs::State(Base32RngState::from(paused_rng)));
+            normalised_args.rng(&RngConfig::State(Base32RngState::from(paused_rng)));
 
             Ok(SimulationOutcome::Paused {
                 time,

@@ -68,12 +68,15 @@ impl<M: MathsCore, H: Habitat<M>> Decomposition<M, H> for EqualDecomposition<M, 
 
 impl<M: MathsCore, H: Habitat<M>> EqualDecomposition<M, H> {
     fn next_log2(coord: OffByOneU32) -> u8 {
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        if coord.get() > 1 {
-            M::ceil(M::ln(f64::from(coord)) / core::f64::consts::LN_2) as u8
-        } else {
-            0
-        }
+        // OffByOneU32 holds [1, 2^32]
+        //  with leading zeros [63, 31]
+        //  with next log2 [0, 32]
+
+        #[allow(clippy::cast_possible_truncation)]
+        let log2_floor = (u64::BITS - coord.get().leading_zeros() - 1) as u8;
+        let round_up = (coord.get() & (coord.get() - 1)) != 0;
+
+        log2_floor + u8::from(round_up)
     }
 
     fn map_x_y_to_morton(mut morton_x: u8, mut morton_y: u8, mut dx: u32, mut dy: u32) -> u64 {

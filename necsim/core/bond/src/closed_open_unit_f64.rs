@@ -45,6 +45,14 @@ impl From<ClosedOpenUnitF64> for f64 {
     }
 }
 
+impl TryFrom<ClosedUnitF64> for ClosedOpenUnitF64 {
+    type Error = ClosedOpenUnitF64Error;
+
+    fn try_from(value: ClosedUnitF64) -> Result<Self, Self::Error> {
+        Self::new(value.get())
+    }
+}
+
 impl fmt::Debug for ClosedOpenUnitF64 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         struct ClosedOpenUnitF64Range(f64);

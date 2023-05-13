@@ -1,5 +1,8 @@
 use necsim_core::{
-    cogs::{EmigrationExit, ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, RngCore},
+    cogs::{
+        distribution::{Bernoulli, Exponential, IndexUsize},
+        EmigrationExit, ImmigrationEntry, LocallyCoherentLineageStore, MathsCore, Rng, Samples,
+    },
     reporter::Reporter,
 };
 
@@ -17,8 +20,12 @@ use super::ClassicalLineageStoreSampleInitialiser;
 #[allow(clippy::module_name_repetitions)]
 pub struct GenesisInitialiser;
 
-impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
-    ClassicalLineageStoreSampleInitialiser<M, G, O, !> for GenesisInitialiser
+#[allow(clippy::trait_duplication_in_bounds)]
+impl<
+        M: MathsCore,
+        G: Rng<M> + Samples<M, IndexUsize> + Samples<M, Bernoulli> + Samples<M, Exponential>,
+        O: Scenario<M, G>,
+    > ClassicalLineageStoreSampleInitialiser<M, G, O, !> for GenesisInitialiser
 {
     type ActiveLineageSampler<
         S: LocallyCoherentLineageStore<M, O::Habitat>,
