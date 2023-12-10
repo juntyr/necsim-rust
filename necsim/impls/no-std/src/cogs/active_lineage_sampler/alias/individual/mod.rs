@@ -164,7 +164,7 @@ impl<
         f.debug_struct("IndividualAliasActiveLineageSampler")
             .field("alias_sampler", &self.alias_sampler)
             .field("number_active_lineages", &self.number_active_lineages)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

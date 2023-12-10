@@ -39,7 +39,7 @@ impl<M: MathsCore> fmt::Debug for WrappingNoiseHabitat<M> {
             .field("scale", &self.scale)
             .field("persistence", &self.persistence)
             .field("octaves", &self.octaves)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

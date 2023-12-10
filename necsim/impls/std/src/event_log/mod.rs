@@ -24,7 +24,7 @@ impl fmt::Debug for EventLogHeader {
             .field("min_time", &self.min_time)
             .field("max_time", &self.max_time)
             .field("length", &self.length)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

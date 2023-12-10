@@ -15,7 +15,7 @@ use core::ops::{Index, IndexMut};
     feature = "cuda",
     cuda(
         free = "T",
-        bound = "T: rust_cuda::safety::StackOnly + ~const const_type_layout::TypeGraphLayout"
+        bound = "T: rust_cuda::safety::StackOnly + const_type_layout::TypeGraphLayout"
     )
 )]
 pub struct Array2D<T> {
@@ -77,7 +77,7 @@ impl<T> Array2D<T> {
     where
         T: Clone,
     {
-        let row_len = elements.get(0).map_or(0, Vec::len);
+        let row_len = elements.first().map_or(0, Vec::len);
         if !elements.iter().all(|row| row.len() == row_len) {
             return Err(Error::DimensionMismatch);
         }
@@ -317,6 +317,7 @@ impl<T> Array2D<T> {
         Ok(self.array[start..end].iter())
     }
 
+    #[allow(clippy::missing_panics_doc)]
     /// Returns an [`Iterator`] over all rows. Each [`Item`] is itself another
     /// [`Iterator`] over references to the elements in that row.
     ///

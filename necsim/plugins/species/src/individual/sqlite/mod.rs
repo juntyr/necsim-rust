@@ -44,7 +44,7 @@ impl fmt::Debug for IndividualSpeciesSQLiteReporter {
             .field("table", &self.table)
             .field("mode", &self.mode)
             .field("cache", &self.cache)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

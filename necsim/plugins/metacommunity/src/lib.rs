@@ -31,7 +31,7 @@ impl fmt::Debug for MetacommunityMigrationReporter {
             .field("metacommunity", &self.metacommunity)
             .field("seed", &self.seed)
             .field("migrations", &self.migrations)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

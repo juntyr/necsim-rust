@@ -64,6 +64,15 @@ impl LandscapeExtent {
     }
 }
 
+impl IntoIterator for &LandscapeExtent {
+    type IntoIter = LocationIterator;
+    type Item = Location;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct LocationIterator {
     x: u32,

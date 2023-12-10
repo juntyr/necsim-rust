@@ -289,7 +289,7 @@ impl Serialize for AnyReporterPluginVec {
 
         let mut plugin_libraries = Vec::new();
 
-        for reporter_plugin in plugins.iter() {
+        for reporter_plugin in plugins {
             if let Some(previous_library) = previous_library {
                 if previous_library != reporter_plugin.library.path {
                     plugin_libraries.push(Plugin {

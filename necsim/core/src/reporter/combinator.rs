@@ -61,6 +61,8 @@ where
     });
 
     fn initialise(&mut self) -> Result<(), alloc::string::String> {
-        self.front.initialise().and_then(|_| self.tail.initialise())
+        self.front
+            .initialise()
+            .and_then(|()| self.tail.initialise())
     }
 }

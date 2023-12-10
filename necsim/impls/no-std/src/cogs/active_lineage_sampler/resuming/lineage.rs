@@ -47,7 +47,7 @@ impl ExceptionalLineage {
         exceptional_lineages: &mut Vec<ExceptionalLineage>,
     ) -> impl Iterator<Item = Lineage> + '_ {
         exceptional_lineages
-            .drain_filter(|exceptional_lineage| {
+            .extract_if(|exceptional_lineage| {
                 matches!(exceptional_lineage, ExceptionalLineage::Coalescence { .. })
             })
             .map(|exceptional_lineage| match exceptional_lineage {

@@ -31,7 +31,7 @@ impl fmt::Debug for LineageFileSaver {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(LineageFileSaver))
             .field("path", &self.path)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

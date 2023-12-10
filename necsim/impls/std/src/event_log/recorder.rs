@@ -225,7 +225,7 @@ impl fmt::Debug for EventLogRecorder {
             .field("directory", &self.directory)
             .field("segment_index", &self.segment_index)
             .field("buffer", &EventBufferLen(self.buffer.len()))
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

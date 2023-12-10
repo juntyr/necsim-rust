@@ -38,7 +38,7 @@ impl fmt::Debug for EventCounterReporter {
                 &(self.late_dispersal_coalescence - self.late_coalescence),
             )
             .field("late_coalescence", &self.late_coalescence)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

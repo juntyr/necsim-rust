@@ -28,7 +28,7 @@ impl fmt::Debug for SortedSegment {
         fmt.debug_struct(stringify!(SortedSegment))
             .field("path", &self.path)
             .field("header", &self.header)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

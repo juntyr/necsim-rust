@@ -131,7 +131,7 @@ impl Eq for PositiveF64 {}
 
 impl PartialOrd for PositiveF64 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.0.partial_cmp(&other.0)
+        Some(self.cmp(other))
     }
 }
 

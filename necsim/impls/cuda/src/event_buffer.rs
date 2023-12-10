@@ -43,7 +43,7 @@ pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
 
 pub trait EventType {
     type Event: 'static
-        + ~const rust_cuda::const_type_layout::TypeGraphLayout
+        + rust_cuda::const_type_layout::TypeGraphLayout
         + rust_cuda::safety::StackOnly
         + Into<TypedEvent>
         + Into<PackedEvent>
@@ -79,7 +79,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> fmt::Debug
         fmt.debug_struct("EventBuffer")
             .field("max_events", &self.max_events)
             .field("event_counter", &self.event_counter)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

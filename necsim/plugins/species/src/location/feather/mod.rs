@@ -63,7 +63,7 @@ impl fmt::Debug for LocationSpeciesFeatherReporter {
                 &SpeciesDeduplicationMode::from(self.deduplication_probability),
             )
             .field("mode", &self.mode)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -118,7 +118,7 @@ impl<'de> Deserialize<'de> for LocationSpeciesFeatherReporter {
             }
 
             let last_event = match metadata.schema.metadata.get("last-event") {
-                Some(last_event) => LastEventState::from_string(last_event).map_err(|_| {
+                Some(last_event) => LastEventState::from_string(last_event).map_err(|()| {
                     serde::de::Error::custom("invalid resume metadata in species dataframe")
                 })?,
                 None => {
@@ -138,19 +138,19 @@ impl<'de> Deserialize<'de> for LocationSpeciesFeatherReporter {
                 let [xs, ys, species, counts] = chunk.columns() else {
                     return Err(serde::de::Error::custom(
                         "corrupted species dataframe schema",
-                    ))
+                    ));
                 };
 
                 let Some(xs) = xs.as_any().downcast_ref::<PrimitiveArray<u32>>() else {
                     return Err(serde::de::Error::custom(
                         "corrupted species dataframe x column",
-                    ))
+                    ));
                 };
 
                 let Some(ys) = ys.as_any().downcast_ref::<PrimitiveArray<u32>>() else {
                     return Err(serde::de::Error::custom(
                         "corrupted species dataframe y column",
-                    ))
+                    ));
                 };
 
                 let species = match species.as_any().downcast_ref::<FixedSizeBinaryArray>() {
@@ -165,7 +165,7 @@ impl<'de> Deserialize<'de> for LocationSpeciesFeatherReporter {
                 let Some(counts) = counts.as_any().downcast_ref::<PrimitiveArray<u64>>() else {
                     return Err(serde::de::Error::custom(
                         "corrupted species dataframe count column",
-                    ))
+                    ));
                 };
 
                 for (((x, y), species), count) in xs

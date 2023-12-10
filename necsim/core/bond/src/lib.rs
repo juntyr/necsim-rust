@@ -3,10 +3,8 @@
 #![feature(const_fn_floating_point_arithmetic)]
 #![feature(const_float_bits_conv)]
 #![feature(const_float_classify)]
-#![feature(const_trait_impl)]
 #![feature(const_type_name)]
-#![feature(const_mut_refs)]
-#![feature(const_num_from_num)]
+#![feature(offset_of)]
 
 #[macro_use]
 extern crate const_type_layout;

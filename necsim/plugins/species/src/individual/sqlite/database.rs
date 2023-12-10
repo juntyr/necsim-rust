@@ -71,9 +71,8 @@ impl IndividualSpeciesSQLiteReporter {
 
         // Create the species locations table in `Create` mode
         if let SpeciesLocationsMode::Create = self.mode {
-            self.connection
-                .execute_batch(&format!(
-                    "CREATE TABLE {} (
+            self.connection.execute_batch(&format!(
+                "CREATE TABLE {} (
                             id      INTEGER PRIMARY KEY NOT NULL,
                             x       INTEGER NOT NULL,
                             y       INTEGER NOT NULL,
@@ -85,9 +84,8 @@ impl IndividualSpeciesSQLiteReporter {
                             key     TEXT PRIMARY KEY NOT NULL,
                             value   TEXT NOT NULL
                         );",
-                    self.table,
-                ))
-                .map(|_| ())?;
+                self.table,
+            ))?;
         }
 
         let mut schema: Vec<Vec<Value>> = Vec::new();
@@ -297,7 +295,7 @@ impl IndividualSpeciesSQLiteReporter {
             last_parent_prior_time,
             last_speciation_event,
             last_dispersal_event,
-        } = LastEventState::from_string(&last_event).map_err(|_| {
+        } = LastEventState::from_string(&last_event).map_err(|()| {
             rusqlite::Error::SqliteFailure(
                 rusqlite::ffi::Error {
                     code: rusqlite::ffi::ErrorCode::TypeMismatch,
@@ -369,7 +367,7 @@ impl IndividualSpeciesSQLiteReporter {
             last_dispersal_event: self.last_dispersal_event,
         }
         .into_string()
-        .map_err(|_| {
+        .map_err(|()| {
             rusqlite::Error::SqliteFailure(
                 rusqlite::ffi::Error {
                     code: rusqlite::ffi::ErrorCode::TypeMismatch,

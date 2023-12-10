@@ -35,9 +35,14 @@ impl OffByOneU64 {
     ///
     /// Returns `OffByOneU64Error` if not `1 <= value <= 2^64`
     pub const fn new(value: u128) -> Result<Self, OffByOneU64Error> {
-        match u64::try_from(value.wrapping_sub(1)) {
-            Ok(value) => Ok(Self(value)),
-            Err(_) => Err(OffByOneU64Error(value)),
+        // match u64::try_from(value.wrapping_sub(1)) {
+        //     Ok(value) => Ok(Self(value)),
+        //     Err(_) => Err(OffByOneU64Error(value)),
+        // }
+        match value.wrapping_sub(1) {
+            #[allow(clippy::cast_possible_truncation)]
+            value if value < (u64::MAX as u128) => Ok(Self(value as u64)),
+            _ => Err(OffByOneU64Error(value)),
         }
     }
 
@@ -54,7 +59,8 @@ impl OffByOneU64 {
 
     #[must_use]
     pub const fn get(self) -> u128 {
-        u128::from(self)
+        // u128::from(self)
+        (self.0 as u128) + 1_u128
     }
 
     #[must_use]
@@ -91,39 +97,39 @@ impl TryFrom<u128> for OffByOneU64 {
     }
 }
 
-impl const From<NonZeroU32> for OffByOneU64 {
+impl From<NonZeroU32> for OffByOneU64 {
     fn from(val: NonZeroU32) -> Self {
         Self(u64::from(val.get()) - 1)
     }
 }
 
-impl const From<OffByOneU32> for OffByOneU64 {
+impl From<OffByOneU32> for OffByOneU64 {
     fn from(val: OffByOneU32) -> Self {
         Self(val.get() - 1)
     }
 }
 
-impl const From<NonZeroU64> for OffByOneU64 {
+impl From<NonZeroU64> for OffByOneU64 {
     fn from(val: NonZeroU64) -> Self {
         Self(val.get() - 1)
     }
 }
 
-impl const From<OffByOneU64> for NonZeroU64 {
+impl From<OffByOneU64> for NonZeroU64 {
     fn from(val: OffByOneU64) -> Self {
         // Safety: always at least 1, max case undefined behaviour
         unsafe { NonZeroU64::new_unchecked(val.0 + 1) }
     }
 }
 
-impl const From<OffByOneU64> for f64 {
+impl From<OffByOneU64> for f64 {
     #[allow(clippy::cast_precision_loss)]
     fn from(val: OffByOneU64) -> Self {
         (val.0 as f64) + 1.0_f64
     }
 }
 
-impl const From<OffByOneU64> for u128 {
+impl From<OffByOneU64> for u128 {
     fn from(val: OffByOneU64) -> Self {
         u128::from(val.0) + 1_u128
     }

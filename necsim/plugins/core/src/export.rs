@@ -13,16 +13,20 @@ pub struct ReporterPluginDeclaration {
     pub rustc_version: &'static str,
     pub core_version: &'static str,
 
+    #[allow(improper_ctypes_definitions)]
     pub init: unsafe extern "C" fn(&'static dyn log::Log, log::LevelFilter),
 
+    #[allow(improper_ctypes_definitions)]
     pub deserialise:
         unsafe extern "C" fn(
             &mut dyn erased_serde::Deserializer,
         )
             -> Result<ManuallyDrop<UnsafeReporterPlugin>, erased_serde::Error>,
 
+    #[allow(improper_ctypes_definitions)]
     pub library_path: unsafe extern "C" fn() -> Option<::std::path::PathBuf>,
 
+    #[allow(improper_ctypes_definitions)]
     pub drop: unsafe extern "C" fn(ManuallyDrop<UnsafeReporterPlugin>),
 }
 

@@ -26,7 +26,7 @@ impl fmt::Debug for ExecutionTimeReporter {
                     .as_ref()
                     .map(|time| time.duration_since(self.init_time)),
             )
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

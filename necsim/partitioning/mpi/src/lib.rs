@@ -71,7 +71,7 @@ impl fmt::Debug for MpiPartitioning {
                 "progress_interval",
                 &FormattedDuration(self.progress_interval),
             )
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

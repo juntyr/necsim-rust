@@ -92,7 +92,7 @@ impl IndividualSpeciesFeatherReporter {
                 last_dispersal_event: self.last_dispersal_event.clone(),
             }
             .into_string()
-            .map_err(|_| {
+            .map_err(|()| {
                 std::io::Error::new(
                     std::io::ErrorKind::Other,
                     "failed to write metadata to species dataframe",

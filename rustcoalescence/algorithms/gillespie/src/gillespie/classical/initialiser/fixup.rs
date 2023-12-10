@@ -167,7 +167,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
                     .extend(out_of_deme.into_iter().map(ExceptionalLineage::OutOfDeme));
             },
             OutOfDemeStrategy::Dispersal => {
-                fixable_lineages.extend(out_of_deme.into_iter());
+                fixable_lineages.extend(out_of_deme);
             },
         }
 
@@ -180,7 +180,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
                 );
             },
             OutOfHabitatStrategy::UniformDispersal => {
-                fixable_lineages.extend(out_of_habitat.into_iter());
+                fixable_lineages.extend(out_of_habitat);
             },
         }
 

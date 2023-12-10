@@ -32,7 +32,7 @@ impl<E: Eq + Hash + Backup> fmt::Debug for DynamicAliasMethodStackSampler<E> {
         fmt.debug_struct("DynamicAliasMethodStackSampler")
             .field("exponents", &self.exponents)
             .field("total_weight", &self.total_weight().get())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

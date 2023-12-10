@@ -97,7 +97,7 @@ impl Eq for ClosedOpenUnitF64 {}
 
 impl PartialOrd for ClosedOpenUnitF64 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.0.partial_cmp(&other.0)
+        Some(self.cmp(other))
     }
 }
 

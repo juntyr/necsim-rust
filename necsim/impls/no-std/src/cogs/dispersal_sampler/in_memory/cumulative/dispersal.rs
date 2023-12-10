@@ -42,7 +42,8 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
         // last valid habitat (the alias method will make this obsolete).
         let Some(Some(valid_dispersal_target_index)) = self
             .valid_dispersal_targets
-            .get(location_index * habitat_area + dispersal_target_index).copied()
+            .get(location_index * habitat_area + dispersal_target_index)
+            .copied()
         else {
             unreachable!("habitat dispersal origin must disperse somewhere")
         };

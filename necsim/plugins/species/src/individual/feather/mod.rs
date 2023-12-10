@@ -50,7 +50,7 @@ impl fmt::Debug for IndividualSpeciesFeatherReporter {
         fmt.debug_struct(stringify!(IndividualSpeciesFeatherReporter))
             .field("output", &self.output)
             .field("mode", &self.mode)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -103,7 +103,7 @@ impl<'de> Deserialize<'de> for IndividualSpeciesFeatherReporter {
             }
 
             let last_event = match metadata.schema.metadata.get("last-event") {
-                Some(last_event) => LastEventState::from_string(last_event).map_err(|_| {
+                Some(last_event) => LastEventState::from_string(last_event).map_err(|()| {
                     serde::de::Error::custom("invalid resume metadata in species dataframe")
                 })?,
                 None => {
@@ -123,37 +123,37 @@ impl<'de> Deserialize<'de> for IndividualSpeciesFeatherReporter {
                 let [ids, xs, ys, is, parents, species] = chunk.columns() else {
                     return Err(serde::de::Error::custom(
                         "corrupted species dataframe schema",
-                    ))
+                    ));
                 };
 
                 let Some(ids) = ids.as_any().downcast_ref::<PrimitiveArray<u64>>() else {
                     return Err(serde::de::Error::custom(
                         "corrupted species dataframe id column",
-                    ))
+                    ));
                 };
 
                 let Some(xs) = xs.as_any().downcast_ref::<PrimitiveArray<u32>>() else {
                     return Err(serde::de::Error::custom(
                         "corrupted species dataframe x column",
-                    ))
+                    ));
                 };
 
                 let Some(ys) = ys.as_any().downcast_ref::<PrimitiveArray<u32>>() else {
                     return Err(serde::de::Error::custom(
                         "corrupted species dataframe y column",
-                    ))
+                    ));
                 };
 
                 let Some(is) = is.as_any().downcast_ref::<PrimitiveArray<u32>>() else {
                     return Err(serde::de::Error::custom(
                         "corrupted species dataframe i column",
-                    ))
+                    ));
                 };
 
                 let Some(parents) = parents.as_any().downcast_ref::<PrimitiveArray<u64>>() else {
                     return Err(serde::de::Error::custom(
                         "corrupted species dataframe parent column",
-                    ))
+                    ));
                 };
 
                 let species = match species.as_any().downcast_ref::<FixedSizeBinaryArray>() {

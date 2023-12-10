@@ -58,7 +58,7 @@ impl fmt::Debug for TskitTreeReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("TskitTreeReporter")
             .field("output", &self.output)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

@@ -24,7 +24,7 @@ impl fmt::Debug for GlobalCoverageReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(GlobalCoverageReporter))
             .field("output", &self.output)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

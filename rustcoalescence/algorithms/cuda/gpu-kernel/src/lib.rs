@@ -1,7 +1,5 @@
 #![deny(clippy::pedantic)]
 #![no_std]
-#![feature(const_eval_limit)]
-#![const_eval_limit = "1000000000000"]
 #![cfg_attr(target_os = "cuda", feature(abi_ptx))]
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
 #![cfg_attr(target_os = "cuda", feature(panic_info_message))]

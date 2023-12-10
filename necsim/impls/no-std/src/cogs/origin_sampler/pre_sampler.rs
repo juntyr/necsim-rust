@@ -42,7 +42,7 @@ impl<M: MathsCore, I: Iterator<Item = u64>> fmt::Debug for OriginPreSampler<M, I
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(OriginPreSampler))
             .field("proportion", &self.proportion)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -78,7 +78,7 @@ impl<M: MathsCore, I: Iterator<Item = u64>> OriginPreSampler<M, I> {
 
         OriginPreSampler {
             proportion: self.proportion * percentage,
-            inner: core::iter::repeat(()).scan(0.5_f64, move |quasi_random, _| {
+            inner: core::iter::repeat(()).scan(0.5_f64, move |quasi_random, ()| {
                 if percentage <= 0.0_f64 {
                     return None;
                 }

@@ -1,6 +1,4 @@
 #![deny(clippy::pedantic)]
-#![feature(const_eval_limit)]
-#![const_eval_limit = "1000000000000"]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 

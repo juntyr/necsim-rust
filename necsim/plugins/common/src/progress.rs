@@ -39,7 +39,7 @@ impl fmt::Debug for ProgressReporter {
 
         fmt.debug_struct(stringify!(ProgressReporter))
             .field("progress", &Progress(total - remaining, total))
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -94,7 +94,7 @@ impl Reporter for ProgressReporter {
                 thread::sleep(Duration::from_millis(100));
 
                 match receiver.try_recv() {
-                    Ok(_) | Err(TryRecvError::Disconnected) => break,
+                    Ok(()) | Err(TryRecvError::Disconnected) => break,
                     Err(TryRecvError::Empty) => {},
                 }
 

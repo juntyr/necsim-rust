@@ -76,7 +76,7 @@ impl<'de> Deserialize<'de> for ReplayArgs {
         };
 
         match (valid, mode) {
-            (Ok(_), _) => Ok(Self {
+            (Ok(()), _) => Ok(Self {
                 event_log,
                 mode,
                 reporters,

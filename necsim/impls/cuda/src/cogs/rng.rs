@@ -12,13 +12,13 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 #[cuda(free = "M", free = "R")]
 pub struct CudaRng<M: MathsCore, R>
 where
-    R: RngCore<M> + StackOnly + ~const TypeGraphLayout,
+    R: RngCore<M> + StackOnly + TypeGraphLayout,
 {
     inner: R,
     marker: PhantomData<M>,
 }
 
-impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> Clone for CudaRng<M, R> {
+impl<M: MathsCore, R: RngCore<M> + StackOnly + TypeGraphLayout> Clone for CudaRng<M, R> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
@@ -27,7 +27,7 @@ impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> Clone for
     }
 }
 
-impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> From<R> for CudaRng<M, R> {
+impl<M: MathsCore, R: RngCore<M> + StackOnly + TypeGraphLayout> From<R> for CudaRng<M, R> {
     #[must_use]
     #[inline]
     fn from(rng: R) -> Self {
@@ -38,9 +38,7 @@ impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> From<R> f
     }
 }
 
-impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> RngCore<M>
-    for CudaRng<M, R>
-{
+impl<M: MathsCore, R: RngCore<M> + StackOnly + TypeGraphLayout> RngCore<M> for CudaRng<M, R> {
     type Seed = <R as RngCore<M>>::Seed;
 
     #[must_use]
@@ -59,7 +57,7 @@ impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> RngCore<M
     }
 }
 
-impl<M: MathsCore, R: PrimeableRng<M> + StackOnly + ~const TypeGraphLayout> PrimeableRng<M>
+impl<M: MathsCore, R: PrimeableRng<M> + StackOnly + TypeGraphLayout> PrimeableRng<M>
     for CudaRng<M, R>
 {
     #[inline]
@@ -68,13 +66,13 @@ impl<M: MathsCore, R: PrimeableRng<M> + StackOnly + ~const TypeGraphLayout> Prim
     }
 }
 
-impl<M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> Serialize for CudaRng<M, R> {
+impl<M: MathsCore, R: RngCore<M> + StackOnly + TypeGraphLayout> Serialize for CudaRng<M, R> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.inner.serialize(serializer)
     }
 }
 
-impl<'de, M: MathsCore, R: RngCore<M> + StackOnly + ~const TypeGraphLayout> Deserialize<'de>
+impl<'de, M: MathsCore, R: RngCore<M> + StackOnly + TypeGraphLayout> Deserialize<'de>
     for CudaRng<M, R>
 {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {

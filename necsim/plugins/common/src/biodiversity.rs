@@ -13,7 +13,7 @@ impl fmt::Debug for BiodiversityReporter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(BiodiversityReporter))
             .field("biodiversity", &self.biodiversity)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

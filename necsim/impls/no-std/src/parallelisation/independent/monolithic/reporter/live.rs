@@ -110,7 +110,7 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> WaterLevelReporterProxy<'l, 
         // Move fast events below the new water level into slow events
         self.slow_events.extend(
             self.fast_events
-                .drain_filter(|event| event.event_time() < water_level),
+                .extract_if(|event| event.event_time() < water_level),
         );
     }
 

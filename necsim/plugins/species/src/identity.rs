@@ -76,7 +76,7 @@ impl SpeciesIdentity {
         let origin = IndexedLocation::new(Location::new(x, y), i);
 
         let Ok(time) = PositiveF64::new(f64::from_bits(time)) else {
-            return Err(self)
+            return Err(self);
         };
 
         Ok((origin, time))

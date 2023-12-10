@@ -31,7 +31,9 @@ impl fmt::Debug for SortedSortedSegments {
             debug.field("max_time", &last.header().max_time());
         }
 
-        debug.field("length", &self.length()).finish()
+        debug
+            .field("length", &self.length())
+            .finish_non_exhaustive()
     }
 }
 
@@ -66,7 +68,7 @@ impl Iterator for SortedSortedSegments {
             &mut self.next,
             loop {
                 let Some(next_segment) = self.segments.last_mut() else {
-                    break None
+                    break None;
                 };
 
                 if let Some(next_event) = next_segment.next() {

@@ -1,9 +1,7 @@
 #![deny(clippy::pedantic)]
 #![no_std]
-#![feature(const_trait_impl)]
 #![feature(const_type_name)]
-#![feature(const_mut_refs)]
-#![feature(const_refs_to_cell)]
+#![feature(offset_of)]
 #![feature(control_flow_enum)]
 #![feature(min_specialization)]
 

@@ -1,5 +1,5 @@
 use alloc::{boxed::Box, vec::Vec};
-use core::hash::{BuildHasher, Hash, Hasher};
+use core::hash::{BuildHasher, Hash};
 
 use fnv::FnvBuildHasher;
 
@@ -41,9 +41,7 @@ impl<T: Hash + PartialEq, B: BuildHasher> DirectMappedCache<T, B> {
             return true;
         }
 
-        let mut hasher = self.build_hasher.build_hasher();
-        value.hash(&mut hasher);
-        let hash = hasher.finish();
+        let hash = self.build_hasher.hash_one(&value);
 
         #[allow(clippy::cast_possible_truncation)]
         let index = (hash % (self.capacity() as u64)) as usize;
