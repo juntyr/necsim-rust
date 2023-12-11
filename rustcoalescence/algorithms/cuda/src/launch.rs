@@ -230,7 +230,7 @@ where
             steps,
             lineages: lineages
                 .into_iter()
-                .chain(passthrough.into_iter())
+                .chain(passthrough)
                 .collect(),
             rng: simulation.rng_mut().clone(),
             marker: PhantomData::<M>,

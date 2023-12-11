@@ -1,6 +1,7 @@
 #![deny(clippy::pedantic)]
 #![allow(incomplete_features)]
 #![feature(specialization)]
+#![recursion_limit = "1024"]
 
 use necsim_core::{
     cogs::{

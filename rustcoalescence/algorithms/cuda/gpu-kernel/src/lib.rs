@@ -7,6 +7,8 @@
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![cfg_attr(target_os = "cuda", feature(stdsimd))]
 #![cfg_attr(target_os = "cuda", feature(control_flow_enum))]
+#![allow(long_running_const_eval)]
+#![recursion_limit = "1024"]
 
 extern crate alloc;
 
