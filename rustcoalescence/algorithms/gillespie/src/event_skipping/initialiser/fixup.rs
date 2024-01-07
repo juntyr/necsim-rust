@@ -185,7 +185,7 @@ where
                 );
             },
             CoalescenceStrategy::Coalescence => {
-                coalescence.sort();
+                coalescence.sort_unstable();
 
                 for (coalescing_lineage, parent) in coalescence {
                     local_partition.get_reporter().report_dispersal(
@@ -230,7 +230,7 @@ where
             return Err(ResumeError::Sample(exceptional_lineages));
         }
 
-        fixable_lineages.sort();
+        fixable_lineages.sort_unstable();
 
         let active_lineage_sampler = RestartFixUpActiveLineageSampler::new(
             active_lineage_sampler,

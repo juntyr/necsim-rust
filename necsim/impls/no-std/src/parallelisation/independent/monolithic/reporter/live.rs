@@ -87,7 +87,7 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> WaterLevelReporterProxy<'l, 
 
     fn advance_water_level(&mut self, water_level: NonNegativeF64) {
         // Report all events below the water level in sorted order
-        self.slow_events.sort();
+        self.slow_events.sort_unstable();
 
         for event in self.slow_events.drain(..) {
             match event.into() {
@@ -124,7 +124,7 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> Drop
 {
     fn drop(&mut self) {
         // Report all events below the water level in sorted order
-        self.slow_events.sort();
+        self.slow_events.sort_unstable();
 
         for event in self.slow_events.drain(..) {
             match event.into() {
@@ -142,7 +142,7 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> Drop
         }
 
         // Report all events above the water level in sorted order
-        self.fast_events.sort();
+        self.fast_events.sort_unstable();
 
         for event in self.fast_events.drain(..) {
             match event.into() {

@@ -43,7 +43,7 @@ impl Serialize for EventLogReplay {
             }
         }
 
-        segments.sort();
+        segments.sort_unstable();
 
         EventLog { segments, capacity }.serialize(serializer)
     }

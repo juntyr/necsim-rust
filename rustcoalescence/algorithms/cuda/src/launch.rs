@@ -184,8 +184,8 @@ where
     .build();
 
     // Note: It seems to be more performant to spawn smaller blocks
-    let block_size = BlockSize::x(args.block_size);
-    let grid_size = GridSize::x(args.grid_size);
+    let block_size = BlockSize::x(args.block_size.get());
+    let grid_size = GridSize::x(args.grid_size.get());
 
     let event_slice = match args.parallelism_mode {
         ParallelismMode::Monolithic(MonolithicParallelismMode { event_slice })
@@ -202,7 +202,7 @@ where
             block_size.clone(),
             args.ptx_jit,
             Box::new(|kernel| {
-                crate::info::print_kernel_function_attributes(kernel);
+                crate::info::print_kernel_function_attributes("simulate", kernel);
                 Ok(())
             }),
         )?;
@@ -228,10 +228,7 @@ where
         Status::Paused => Ok(SimulationOutcome::Paused {
             time,
             steps,
-            lineages: lineages
-                .into_iter()
-                .chain(passthrough)
-                .collect(),
+            lineages: lineages.into_iter().chain(passthrough).collect(),
             rng: simulation.rng_mut().clone(),
             marker: PhantomData::<M>,
         }),

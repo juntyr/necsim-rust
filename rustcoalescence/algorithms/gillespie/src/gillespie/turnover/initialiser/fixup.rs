@@ -162,7 +162,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
                 );
             },
             CoalescenceStrategy::Coalescence => {
-                coalescence.sort();
+                coalescence.sort_unstable();
 
                 for (coalescing_lineage, parent) in coalescence {
                     local_partition.get_reporter().report_dispersal(
@@ -207,7 +207,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
             return Err(ResumeError::Sample(exceptional_lineages));
         }
 
-        fixable_lineages.sort();
+        fixable_lineages.sort_unstable();
 
         let dispersal_sampler = TrespassingDispersalSampler::new(
             dispersal_sampler,

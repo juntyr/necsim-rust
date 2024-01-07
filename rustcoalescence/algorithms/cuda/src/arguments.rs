@@ -1,4 +1,4 @@
-use std::num::NonZeroU64;
+use std::num::{NonZeroU32, NonZeroU64};
 
 use serde::{Deserialize, Serialize};
 use serde_state::DeserializeState;
@@ -59,8 +59,8 @@ pub struct CudaArguments {
     pub device: u32,
     pub ptx_jit: bool,
     pub delta_t: PositiveF64,
-    pub block_size: u32,
-    pub grid_size: u32,
+    pub block_size: NonZeroU32,
+    pub grid_size: NonZeroU32,
     pub step_slice: NonZeroU64,
     pub dedup_cache: DedupCache,
     pub parallelism_mode: ParallelismMode,
@@ -107,8 +107,8 @@ pub struct CudaArgumentsRaw {
     pub device: u32,
     pub ptx_jit: bool,
     pub delta_t: PositiveF64,
-    pub block_size: u32,
-    pub grid_size: u32,
+    pub block_size: NonZeroU32,
+    pub grid_size: NonZeroU32,
     pub step_slice: NonZeroU64,
     pub dedup_cache: DedupCache,
     #[serde(deserialize_state)]
@@ -121,8 +121,8 @@ impl Default for CudaArgumentsRaw {
             device: 0_u32,
             ptx_jit: true,
             delta_t: PositiveF64::new(3.0_f64).unwrap(),
-            block_size: 64_u32,
-            grid_size: 64_u32,
+            block_size: NonZeroU32::new(64_u32).unwrap(),
+            grid_size: NonZeroU32::new(64_u32).unwrap(),
             step_slice: NonZeroU64::new(150_u64).unwrap(),
             dedup_cache: DedupCache::Relative(RelativeCapacity {
                 factor: PositiveF64::new(0.1_f64).unwrap(),
