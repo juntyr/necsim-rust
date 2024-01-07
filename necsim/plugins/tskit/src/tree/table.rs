@@ -17,7 +17,7 @@ impl TskitTreeReporter {
         reference: &GlobalLineageReference,
         location: &IndexedLocation,
     ) {
-        self.origins.insert(reference.clone(), location.clone());
+        self.origins.insert(reference.clone(), *location);
     }
 
     pub(super) fn store_individual_speciation(

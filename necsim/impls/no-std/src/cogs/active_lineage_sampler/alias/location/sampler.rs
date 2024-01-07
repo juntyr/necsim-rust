@@ -153,7 +153,7 @@ impl<
     ) {
         self.last_event_time = lineage.last_event_time;
 
-        let location = lineage.indexed_location.location().clone();
+        let location = *lineage.indexed_location.location();
 
         let _lineage_reference = simulation
             .lineage_store

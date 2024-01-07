@@ -49,12 +49,12 @@ pub trait LocallyCoherentLineageStore<M: MathsCore, H: Habitat<M>>:
         &ret
     ).is_some(), "lineage was activated")]
     #[debug_ensures(
-        self[&ret].indexed_location == old(lineage.indexed_location.clone()),
+        self[&ret].indexed_location == old(lineage.indexed_location),
         "lineage was added to indexed_location"
     )]
     #[debug_ensures(
         self.get_global_lineage_reference_at_indexed_location(
-            &old(lineage.indexed_location.clone()), old(habitat)
+            &old(lineage.indexed_location), old(habitat)
         ) == Some(&self[&ret].global_reference),
         "lineage is now indexed at indexed_location"
     )]
@@ -117,7 +117,7 @@ pub trait GloballyCoherentLineageStore<M: MathsCore, H: Habitat<M>>:
 
     #[debug_ensures(
         self.get_local_lineage_references_at_location_unordered(
-            &old(lineage.indexed_location.location().clone()), old(habitat)
+            &old(*lineage.indexed_location.location()), old(habitat)
         ).last() == Some(&ret),
         "lineage is now indexed unordered at indexed_location.location()"
     )]
@@ -125,7 +125,7 @@ pub trait GloballyCoherentLineageStore<M: MathsCore, H: Habitat<M>>:
         old(self.get_local_lineage_references_at_location_unordered(
             lineage.indexed_location.location(), old(habitat)
         ).len() + 1) == self.get_local_lineage_references_at_location_unordered(
-            &old(lineage.indexed_location.location().clone()), old(habitat)
+            &old(*lineage.indexed_location.location()), old(habitat)
         ).len(),
         "unordered active lineage index at given location has grown by 1"
     )]

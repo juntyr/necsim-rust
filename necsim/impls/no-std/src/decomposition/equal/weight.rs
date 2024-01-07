@@ -12,7 +12,7 @@ impl<M: MathsCore, H: Habitat<M>> EqualDecomposition<M, H> {
     /// Returns `Ok(Self)` iff the `habitat` can be partitioned into
     ///  `subdomain.size()` by weight, otherwise returns `Err(Self)`.
     pub fn weight(habitat: &H, subdomain: Partition) -> Result<Self, Self> {
-        let extent = habitat.get_extent().clone();
+        let extent = *habitat.get_extent();
 
         let mut total_habitat = 0;
         let mut indices = Vec::with_capacity(subdomain.size().get() as usize);

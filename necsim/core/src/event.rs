@@ -108,7 +108,7 @@ impl From<SpeciationEvent> for PackedEvent {
             global_lineage_reference: event.global_lineage_reference.clone(),
             prior_time: event.prior_time.get().make_negative(),
             event_time: event.event_time.get(),
-            origin: event.origin.clone(),
+            origin: event.origin,
             target: event.origin,
             coalescence: event.global_lineage_reference,
         }

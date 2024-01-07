@@ -21,7 +21,7 @@ use super::tracking::{MinSpeciationTrackingEventSampler, SpeciationSample};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(
     feature = "cuda",
     cuda(
@@ -46,7 +46,7 @@ pub struct IndependentEventSampler<
     #[cfg_attr(
         feature = "cuda",
         cuda(
-            embed = "Option<rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<SpeciationSample>>"
+            embed = "Option<rust_cuda::utils::adapter::RustToCudaWithPortableBitCopySemantics<SpeciationSample>>"
         )
     )]
     min_spec_sample: Option<SpeciationSample>,
@@ -84,7 +84,7 @@ impl<
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
-            min_spec_sample: self.min_spec_sample.clone(),
+            min_spec_sample: self.min_spec_sample,
             marker: PhantomData::<(M, H, G, X, D, T, N)>,
         }
     }
@@ -254,7 +254,7 @@ impl<
     ) -> Option<SpeciationSample> {
         // `core::mem::replace()` would be semantically better
         //  - but `clone()` does not spill to local memory
-        let old_value = self.min_spec_sample.clone();
+        let old_value = self.min_spec_sample;
 
         self.min_spec_sample = new;
 

@@ -18,7 +18,7 @@ use crate::cogs::{
 };
 
 #[allow(clippy::module_name_repetitions)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct WrappingNoiseHabitat<M: MathsCore> {
     #[cfg_attr(feature = "cuda", cuda(embed))]
@@ -67,7 +67,7 @@ impl<M: MathsCore> WrappingNoiseHabitat<M> {
 
             samples.push(sum_noise_octaves::<M>(
                 &noise,
-                &Location::new(
+                Location::new(
                     (location & 0x0000_0000_FFFF_FFFF) as u32,
                     ((location >> 32) & 0x0000_0000_FFFF_FFFF) as u32,
                 ),
@@ -165,7 +165,7 @@ impl<M: MathsCore> Habitat<M> for WrappingNoiseHabitat<M> {
 
         let noise = sum_noise_octaves::<M>(
             &self.noise,
-            location,
+            *location,
             self.persistence,
             self.scale,
             self.octaves,
@@ -217,7 +217,7 @@ impl<M: MathsCore> SingletonDemesHabitat<M> for WrappingNoiseHabitat<M> {}
 // Published at https://cmaher.github.io/posts/working-with-simplex-noise/
 fn sum_noise_octaves<M: MathsCore>(
     noise: &OpenSimplexNoise,
-    location: &Location,
+    location: Location,
     persistence: PositiveUnitF64,
     scale: PositiveUnitF64,
     octaves: NonZeroUsize,

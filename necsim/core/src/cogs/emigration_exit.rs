@@ -27,8 +27,8 @@ pub trait EmigrationExit<M: MathsCore, H: Habitat<M>, G: RngCore<M>, S: LineageS
             ret_event_time,
         )) => {
             ret_lineage_reference == &old(global_reference.clone()) &&
-            ret_dispersal_origin == &old(dispersal_origin.clone()) &&
-            ret_dispersal_target == &old(dispersal_target.clone()) &&
+            ret_dispersal_origin == &old(dispersal_origin) &&
+            ret_dispersal_target == &old(dispersal_target) &&
             ret_prior_time == &old(prior_time) &&
             ret_event_time == &old(event_time)
         },

@@ -26,7 +26,7 @@ pub trait MinSpeciationTrackingEventSampler<
         -> Option<SpeciationSample>;
 }
 
-#[derive(Clone, Debug, TypeLayout)]
+#[derive(Clone, Copy, Debug, TypeLayout)]
 #[repr(C)]
 pub struct SpeciationSample {
     speciation_sample: ClosedOpenUnitF64,
@@ -47,7 +47,7 @@ impl SpeciationSample {
                 *min_spec_sample = Some(Self {
                     speciation_sample,
                     sample_time,
-                    sample_location: sample_location.clone(),
+                    sample_location: *sample_location,
                 });
             },
         };

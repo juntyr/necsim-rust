@@ -26,9 +26,9 @@ impl LocationSpeciesFeatherReporter {
     pub(super) fn store_individual_origin(
         &mut self,
         lineage: &GlobalLineageReference,
-        origin: &Location,
+        origin: Location,
     ) {
-        self.origins.insert(lineage.clone(), origin.clone());
+        self.origins.insert(lineage.clone(), origin);
     }
 
     pub(super) fn store_individual_speciation(
@@ -126,7 +126,7 @@ impl LocationSpeciesFeatherReporter {
             HashMap::default();
 
         for (origin, identity, count) in std::mem::take(&mut self.speciated) {
-            species_index.insert((origin.clone(), identity.clone()), counts.len());
+            species_index.insert((origin, identity.clone()), counts.len());
 
             xs.push(origin.x());
             ys.push(origin.y());
@@ -158,7 +158,7 @@ impl LocationSpeciesFeatherReporter {
             let count = self.counts.get(&lineage).copied().unwrap_or(1_u64);
 
             if let Some(identity) = self.species.get(&ancestor) {
-                match species_index.entry((origin.clone(), identity.clone())) {
+                match species_index.entry((origin, identity.clone())) {
                     // Update the existing per-location-species record
                     Entry::Occupied(occupied) => counts[*occupied.get()] += count,
                     // Create a new per-location-species record
@@ -219,7 +219,7 @@ impl LocationSpeciesFeatherReporter {
 
             // No-longer activate lineages and the anchor may share
             //  location-species records with each other
-            match species_index.entry((origin.clone(), anchor_identity.clone())) {
+            match species_index.entry((origin, anchor_identity.clone())) {
                 // Update the existing per-location-species record
                 Entry::Occupied(occupied) => counts[*occupied.get()] += count,
                 // Create a new per-location-species record

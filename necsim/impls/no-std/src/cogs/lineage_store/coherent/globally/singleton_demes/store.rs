@@ -64,7 +64,7 @@ impl<M: MathsCore, H: SingletonDemesHabitat<M>> LocallyCoherentLineageStore<M, H
         lineage: Lineage,
         _habitat: &H,
     ) -> InMemoryLineageReference {
-        let location = lineage.indexed_location.location().clone();
+        let location = *lineage.indexed_location.location();
 
         // Safety: a new unique reference is issued here, no cloning occurs
         let local_lineage_reference =
@@ -109,7 +109,7 @@ impl<M: MathsCore, H: SingletonDemesHabitat<M>> GloballyCoherentLineageStore<M, 
         self.lineages_store
             .iter()
             .map(|(_, lineage)| lineage.indexed_location.location())
-            .cloned()
+            .copied()
     }
 
     #[must_use]

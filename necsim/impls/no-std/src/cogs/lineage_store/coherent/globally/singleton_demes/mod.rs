@@ -58,7 +58,7 @@ impl<M: MathsCore, H: SingletonDemesHabitat<M>> Backup for SingletonDemesLineage
             location_to_lineage_reference: self
                 .location_to_lineage_reference
                 .iter()
-                .map(|(k, v)| (k.clone(), v.backup_unchecked()))
+                .map(|(k, v)| (*k, v.backup_unchecked()))
                 .collect(),
             _marker: PhantomData::<(M, H)>,
         }

@@ -1,7 +1,7 @@
 use core::fmt;
 
 #[cfg(not(target_os = "cuda"))]
-use rust_cuda::rustacuda::{
+use rust_cuda::deps::rustacuda::{
     error::CudaResult,
     function::{BlockSize, GridSize},
 };
@@ -24,7 +24,7 @@ use necsim_core::impl_report;
 use super::utils::MaybeSome;
 
 #[allow(clippy::module_name_repetitions, clippy::type_complexity)]
-#[derive(rust_cuda::common::LendRustToCuda)]
+#[derive(rust_cuda::lend::LendRustToCuda)]
 #[cuda(free = "ReportSpeciation", free = "ReportDispersal")]
 pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
     #[cuda(embed)]
@@ -43,8 +43,10 @@ pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
 
 pub trait EventType {
     type Event: 'static
-        + rust_cuda::const_type_layout::TypeGraphLayout
+        + Sync
+        + rust_cuda::deps::const_type_layout::TypeGraphLayout
         + rust_cuda::safety::StackOnly
+        + rust_cuda::safety::PortableBitSemantics
         + Into<TypedEvent>
         + Into<PackedEvent>
         + Clone;

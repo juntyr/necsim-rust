@@ -16,6 +16,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, TypeLayout)]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[repr(transparent)]
 pub struct GlobalLineageReference(u64);
 
@@ -94,23 +95,30 @@ impl From<Option<GlobalLineageReference>> for LineageInteraction {
     }
 }
 
-#[allow(clippy::unsafe_derive_deserialize)]
+#[allow(clippy::unsafe_derive_deserialize, clippy::module_name_repetitions)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, TypeLayout)]
-#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[repr(C)]
+#[cuda(ignore)]
+#[serde(deny_unknown_fields)]
 pub struct Lineage {
+    #[cuda(embed)]
+    #[cuda(ignore)]
     #[serde(alias = "id", alias = "ref")]
     pub global_reference: GlobalLineageReference,
+    #[cuda(ignore)]
     #[serde(alias = "time")]
     pub last_event_time: NonNegativeF64,
+    #[cuda(ignore)]
     #[serde(alias = "loc")]
     pub indexed_location: IndexedLocation,
 }
 
 impl Lineage {
     #[must_use]
+    #[allow(clippy::no_effect_underscore_binding)]
     #[debug_ensures(
-        ret.indexed_location == old(indexed_location.clone()),
+        ret.indexed_location == old(indexed_location),
         "stores the indexed_location"
     )]
     #[debug_ensures(ret.last_event_time == 0.0_f64, "starts at t_0 = 0.0")]
@@ -178,8 +186,8 @@ impl Backup for MigratingLineage {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             global_reference: self.global_reference.backup_unchecked(),
-            dispersal_origin: self.dispersal_origin.clone(),
-            dispersal_target: self.dispersal_target.clone(),
+            dispersal_origin: self.dispersal_origin,
+            dispersal_target: self.dispersal_target,
             prior_time: self.prior_time,
             event_time: self.event_time,
             coalescence_rng_sample: self.coalescence_rng_sample.backup_unchecked(),

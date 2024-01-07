@@ -14,7 +14,7 @@ use crate::array2d::Array2D;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct InMemoryHabitat<M: MathsCore> {
     #[cfg_attr(feature = "cuda", cuda(embed))]
@@ -31,7 +31,7 @@ impl<M: MathsCore> Backup for InMemoryHabitat<M> {
         Self {
             habitat: Final::new(self.habitat.clone()),
             u64_injection: Final::new(self.u64_injection.clone()),
-            extent: self.extent.clone(),
+            extent: self.extent,
             marker: PhantomData::<M>,
         }
     }

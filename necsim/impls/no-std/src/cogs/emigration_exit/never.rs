@@ -8,7 +8,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Default)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 pub struct NeverEmigrationExit([u8; 0]);
 
 #[contract_trait]

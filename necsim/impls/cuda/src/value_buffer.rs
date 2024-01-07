@@ -3,7 +3,7 @@ use core::iter::Iterator;
 
 use const_type_layout::TypeGraphLayout;
 use rust_cuda::{
-    safety::StackOnly,
+    safety::{PortableBitSemantics, StackOnly},
     utils::{
         aliasing::SplitSliceOverCudaThreadsConstStride,
         exchange::buffer::{CudaExchangeBuffer, CudaExchangeItem},
@@ -11,19 +11,19 @@ use rust_cuda::{
 };
 
 #[cfg(not(target_os = "cuda"))]
-use rust_cuda::rustacuda::{
+use rust_cuda::deps::rustacuda::{
     error::CudaResult,
     function::{BlockSize, GridSize},
 };
 
 use super::utils::MaybeSome;
 
-#[derive(rust_cuda::common::LendRustToCuda)]
+#[derive(rust_cuda::lend::LendRustToCuda)]
 #[cuda(free = "T")]
 #[allow(clippy::module_name_repetitions)]
 pub struct ValueBuffer<T, const M2D: bool, const M2H: bool>
 where
-    T: StackOnly + TypeGraphLayout,
+    T: StackOnly + PortableBitSemantics + TypeGraphLayout,
 {
     #[cuda(embed)]
     mask: SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<bool, true, true>, 1_usize>,
@@ -33,7 +33,9 @@ where
 }
 
 #[cfg(not(target_os = "cuda"))]
-impl<T: StackOnly + TypeGraphLayout, const M2D: bool, const M2H: bool> ValueBuffer<T, M2D, M2H> {
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
+    ValueBuffer<T, M2D, M2H>
+{
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     pub fn new(block_size: &BlockSize, grid_size: &GridSize) -> CudaResult<Self> {
@@ -67,7 +69,9 @@ impl<T: StackOnly + TypeGraphLayout, const M2D: bool, const M2H: bool> ValueBuff
 }
 
 #[cfg(not(target_os = "cuda"))]
-impl<T: StackOnly + TypeGraphLayout, const M2D: bool> ValueBuffer<T, M2D, true> {
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool>
+    ValueBuffer<T, M2D, true>
+{
     pub fn iter(&self) -> impl Iterator<Item = Option<&T>> {
         self.mask
             .iter()
@@ -90,7 +94,7 @@ impl<T: StackOnly + TypeGraphLayout, const M2D: bool> ValueBuffer<T, M2D, true> 
 }
 
 #[cfg(target_os = "cuda")]
-impl<T: StackOnly + TypeGraphLayout> ValueBuffer<T, true, true> {
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout> ValueBuffer<T, true, true> {
     pub fn with_value_for_core<F: FnOnce(Option<T>) -> Option<T>>(&mut self, inner: F) {
         let value = if self
             .mask
@@ -117,7 +121,9 @@ impl<T: StackOnly + TypeGraphLayout> ValueBuffer<T, true, true> {
 }
 
 #[cfg(target_os = "cuda")]
-impl<T: StackOnly + TypeGraphLayout, const M2H: bool> ValueBuffer<T, true, M2H> {
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2H: bool>
+    ValueBuffer<T, true, M2H>
+{
     pub fn take_value_for_core(&mut self) -> Option<T> {
         #[allow(clippy::option_if_let_else)]
         if let Some(mask) = self.mask.get_mut(0) {
@@ -135,7 +141,9 @@ impl<T: StackOnly + TypeGraphLayout, const M2H: bool> ValueBuffer<T, true, M2H> 
 }
 
 #[cfg(target_os = "cuda")]
-impl<T: StackOnly + TypeGraphLayout, const M2D: bool> ValueBuffer<T, M2D, true> {
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool>
+    ValueBuffer<T, M2D, true>
+{
     pub fn put_value_for_core(&mut self, value: Option<T>) {
         if let Some(mask) = self.mask.get_mut(0) {
             mask.write(value.is_some());
@@ -148,13 +156,15 @@ impl<T: StackOnly + TypeGraphLayout, const M2D: bool> ValueBuffer<T, M2D, true> 
 }
 
 #[cfg(not(target_os = "cuda"))]
-pub struct ValueRefMut<'v, T: StackOnly, const M2D: bool> {
+pub struct ValueRefMut<'v, T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool> {
     mask: &'v mut CudaExchangeItem<bool, true, true>,
     value: &'v mut CudaExchangeItem<MaybeSome<T>, M2D, true>,
 }
 
 #[cfg(not(target_os = "cuda"))]
-impl<'v, T: StackOnly, const M2D: bool> ValueRefMut<'v, T, M2D> {
+impl<'v, T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool>
+    ValueRefMut<'v, T, M2D>
+{
     pub fn take(&mut self) -> Option<T> {
         if *self.mask.read() {
             self.mask.write(false);
@@ -176,7 +186,7 @@ impl<'v, T: StackOnly, const M2D: bool> ValueRefMut<'v, T, M2D> {
 }
 
 #[cfg(not(target_os = "cuda"))]
-impl<'v, T: StackOnly> ValueRefMut<'v, T, true> {
+impl<'v, T: StackOnly + PortableBitSemantics + TypeGraphLayout> ValueRefMut<'v, T, true> {
     #[must_use]
     pub fn as_mut(&mut self) -> Option<&mut T> {
         if *self.mask.read() {

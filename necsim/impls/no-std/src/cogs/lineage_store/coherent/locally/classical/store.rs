@@ -58,7 +58,7 @@ impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H>
         lineage: Lineage,
         _habitat: &H,
     ) -> InMemoryLineageReference {
-        let indexed_location = lineage.indexed_location.clone();
+        let indexed_location = lineage.indexed_location;
 
         // Safety: a new unique reference is issued here, no cloning occurs
         let local_lineage_reference =

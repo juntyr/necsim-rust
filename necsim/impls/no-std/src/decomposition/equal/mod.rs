@@ -34,7 +34,7 @@ impl<M: MathsCore, H: Habitat<M>> Backup for EqualDecomposition<M, H> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             subdomain: self.subdomain,
-            extent: self.extent.clone(),
+            extent: self.extent,
             morton: self.morton,
             indices: self.indices.clone(),
             _marker: PhantomData::<(M, H)>,

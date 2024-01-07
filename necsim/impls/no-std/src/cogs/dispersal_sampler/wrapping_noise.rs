@@ -14,7 +14,7 @@ use crate::cogs::{
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct WrappingNoiseApproximateNormalDispersalSampler<M: MathsCore, G: RngCore<M>> {
     #[cfg_attr(feature = "cuda", cuda(embed))]
@@ -57,7 +57,7 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, WrappingNoiseHabitat<M>, G
         // If seperable dispersal is not required, this can be implemented as a
         //  direct rejection sampling loop instead.
         if rng.sample_event(self.get_self_dispersal_probability_at_location(location, habitat)) {
-            location.clone()
+            *location
         } else {
             self.sample_non_self_dispersal_from_location(location, habitat, rng)
         }

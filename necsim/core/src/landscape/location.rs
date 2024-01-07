@@ -1,23 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-use crate::cogs::Backup;
-
 #[allow(clippy::unsafe_derive_deserialize)]
 #[derive(
-    Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize, TypeLayout,
+    Eq, PartialEq, PartialOrd, Ord, Clone, Copy, Hash, Debug, Serialize, Deserialize, TypeLayout,
 )]
 #[serde(deny_unknown_fields)]
 #[repr(C)]
 pub struct Location {
     x: u32,
     y: u32,
-}
-
-#[contract_trait]
-impl Backup for Location {
-    unsafe fn backup_unchecked(&self) -> Self {
-        self.clone()
-    }
 }
 
 impl Location {
@@ -44,7 +35,7 @@ impl From<IndexedLocation> for Location {
 }
 
 #[derive(
-    Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize, TypeLayout,
+    Eq, PartialEq, PartialOrd, Ord, Clone, Copy, Hash, Debug, Serialize, Deserialize, TypeLayout,
 )]
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
 #[serde(from = "IndexedLocationRaw", into = "IndexedLocationRaw")]
