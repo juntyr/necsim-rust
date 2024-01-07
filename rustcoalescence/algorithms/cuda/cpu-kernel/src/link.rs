@@ -11,34 +11,26 @@ use necsim_impls_no_std::cogs::{
     event_sampler::tracking::MinSpeciationTrackingEventSampler,
 };
 
-use rust_cuda::{
-    common::RustToCuda,
-    host::{LaunchConfig, LaunchPackage, Launcher},
-    rustacuda::{error::CudaResult, function::Function},
-};
+use rust_cuda::lend::RustToCuda;
 
-#[allow(unused_imports)]
-use rustcoalescence_algorithms_cuda_gpu_kernel::{SimulatableKernel, SimulationKernelArgs};
-
-#[repr(transparent)]
-pub struct SimulationKernel<
-    M: MathsCore,
-    H: Habitat<M> + RustToCuda,
-    G: PrimeableRng<M> + RustToCuda,
-    S: LineageStore<M, H> + RustToCuda,
-    X: EmigrationExit<M, H, G, S> + RustToCuda,
-    D: DispersalSampler<M, H, G> + RustToCuda,
-    C: CoalescenceSampler<M, H, S> + RustToCuda,
-    T: TurnoverRate<M, H> + RustToCuda,
-    N: SpeciationProbability<M, H> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda,
-    I: ImmigrationEntry<M> + RustToCuda,
-    A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda,
+#[allow(clippy::type_complexity)]
+pub struct SimulationKernelPtx<
+    M: MathsCore + Sync,
+    H: Habitat<M> + RustToCuda + Sync,
+    G: PrimeableRng<M> + RustToCuda + Sync,
+    S: LineageStore<M, H> + RustToCuda + Sync,
+    X: EmigrationExit<M, H, G, S> + RustToCuda + Sync,
+    D: DispersalSampler<M, H, G> + RustToCuda + Sync,
+    C: CoalescenceSampler<M, H, S> + RustToCuda + Sync,
+    T: TurnoverRate<M, H> + RustToCuda + Sync,
+    N: SpeciationProbability<M, H> + RustToCuda + Sync,
+    E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda + Sync,
+    I: ImmigrationEntry<M> + RustToCuda + Sync,
+    A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda + Sync,
     ReportSpeciation: Boolean,
     ReportDispersal: Boolean,
 >(
-    #[allow(clippy::type_complexity)]
-    pub(crate)  crate::SimulationKernel<
+    std::marker::PhantomData<(
         M,
         H,
         G,
@@ -53,7 +45,7 @@ pub struct SimulationKernel<
         A,
         ReportSpeciation,
         ReportDispersal,
-    >,
+    )>,
 );
 
 impl<
@@ -141,7 +133,7 @@ macro_rules! link_kernel {
         $habitat:ty, $dispersal:ty, $turnover:ty, $speciation:ty,
         $report_speciation:ty, $report_dispersal:ty
     ) => {
-        rustcoalescence_algorithms_cuda_gpu_kernel::link_kernel!(
+        rustcoalescence_algorithms_cuda_gpu_kernel::link! { impl simulate<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
             $habitat,
             necsim_impls_cuda::cogs::rng::CudaRng<
@@ -194,9 +186,9 @@ macro_rules! link_kernel {
             >,
             $report_speciation,
             $report_dispersal,
-        );
+        > for SimulationKernelPtx }
 
-        rustcoalescence_algorithms_cuda_gpu_kernel::link_kernel!(
+        rustcoalescence_algorithms_cuda_gpu_kernel::link! { impl simulate<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
             $habitat,
             necsim_impls_cuda::cogs::rng::CudaRng<
@@ -309,7 +301,7 @@ macro_rules! link_kernel {
             >,
             $report_speciation,
             $report_dispersal,
-        );
+        > for SimulationKernelPtx }
     };
 }
 

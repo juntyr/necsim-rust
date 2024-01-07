@@ -28,7 +28,6 @@ pub trait CoalescenceSampler<M: MathsCore, H: Habitat<M>, S: LineageStore<M, H>>
     ) -> (IndexedLocation, LineageInteraction);
 }
 
-#[allow(clippy::unsafe_derive_deserialize)]
 #[derive(Debug, PartialEq, Serialize, Deserialize, TypeLayout)]
 #[repr(transparent)]
 pub struct CoalescenceRngSample(ClosedOpenUnitF64);

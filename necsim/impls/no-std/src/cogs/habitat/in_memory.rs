@@ -14,13 +14,14 @@ use crate::array2d::Array2D;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct InMemoryHabitat<M: MathsCore> {
     #[cfg_attr(feature = "cuda", cuda(embed))]
     habitat: Final<Box<[u32]>>,
     #[cfg_attr(feature = "cuda", cuda(embed))]
     u64_injection: Final<Box<[u64]>>,
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     extent: LandscapeExtent,
     marker: PhantomData<M>,
 }

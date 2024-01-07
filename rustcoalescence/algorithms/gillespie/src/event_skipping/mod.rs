@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{GloballyCoherentLineageStore, MathsCore, SeparableDispersalSampler},
+    cogs::{GloballyCoherentLineageStore, MathsCore, SeparableDispersalSampler, SplittableRng},
     lineage::Lineage,
     reporter::Reporter,
 };
@@ -39,18 +39,24 @@ impl AlgorithmParamters for EventSkippingAlgorithm {
 
 impl AlgorithmDefaults for EventSkippingAlgorithm {
     type MathsCore = IntrinsicsMathsCore;
+    type Rng<M: MathsCore> = Pcg<M>;
 }
 
-impl<'p, O: Scenario<M, Pcg<M>>, R: Reporter, P: LocalPartition<'p, R>, M: MathsCore>
-    Algorithm<'p, M, O, R, P> for EventSkippingAlgorithm
+impl<
+        'p,
+        O: Scenario<M, G>,
+        R: Reporter,
+        P: LocalPartition<'p, R>,
+        M: MathsCore,
+        G: SplittableRng<M>,
+    > Algorithm<'p, M, G, O, R, P> for EventSkippingAlgorithm
 where
     O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
         GloballyCoherentLineageStore<M, O::Habitat>,
-    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, Pcg<M>>>:
-        SeparableDispersalSampler<M, O::Habitat, Pcg<M>>,
+    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
+        SeparableDispersalSampler<M, O::Habitat, G>,
 {
     type LineageStore = O::LineageStore<GillespieLineageStore<M, O::Habitat>>;
-    type Rng = Pcg<M>;
 
     fn get_logical_partition(args: &Self::Arguments, local_partition: &P) -> Partition {
         get_gillespie_logical_partition(args, local_partition)
@@ -58,12 +64,12 @@ where
 
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
-        rng: Self::Rng,
+        rng: G,
         scenario: O,
         pre_sampler: OriginPreSampler<M, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<M, Self::Rng>, Self::Error> {
+    ) -> Result<SimulationOutcome<M, G>, Self::Error> {
         launch::initialise_and_simulate(
             args,
             rng,
@@ -81,14 +87,14 @@ where
     ///  simulation failed
     fn resume_and_simulate<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
-        rng: Self::Rng,
+        rng: G,
         scenario: O,
         pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         resume_after: Option<NonNegativeF64>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
+    ) -> Result<SimulationOutcome<M, G>, ResumeError<Self::Error>> {
         launch::initialise_and_simulate(
             args,
             rng,
@@ -109,14 +115,14 @@ where
     ///  simulation (incl. running the algorithm) failed
     fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
-        rng: Self::Rng,
+        rng: G,
         scenario: O,
         pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         restart_at: PositiveF64,
         fixup_strategy: RestartFixUpStrategy,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
+    ) -> Result<SimulationOutcome<M, G>, ResumeError<Self::Error>> {
         launch::initialise_and_simulate(
             args,
             rng,
