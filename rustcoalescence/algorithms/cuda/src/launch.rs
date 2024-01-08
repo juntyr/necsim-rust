@@ -25,15 +25,15 @@ use necsim_partitioning_core::LocalPartition;
 use rustcoalescence_algorithms::result::SimulationOutcome;
 use rustcoalescence_scenarios::Scenario;
 
-use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernel;
-use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
+use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernelPtx;
+use rustcoalescence_algorithms_cuda_gpu_kernel::simulate;
 
 use rust_cuda::{
-    common::RustToCuda,
-    rustacuda::{
+    lend::RustToCuda,
+    deps::rustacuda::{
         function::{BlockSize, GridSize},
         prelude::{Stream, StreamFlags},
-    },
+    }, kernel::{CompiledKernelPtx, TypedPtxKernel, LaunchConfig, Launcher}, host::CudaDropWrapper,
 };
 
 use crate::{
@@ -71,7 +71,7 @@ where
         RustToCuda,
     O::TurnoverRate: RustToCuda,
     O::SpeciationProbability: RustToCuda,
-    SimulationKernel<
+    SimulationKernelPtx<
         M,
         O::Habitat,
         CudaRng<M, WyHash<M>>,
@@ -94,7 +94,7 @@ where
         L::ActiveLineageSampler<NeverEmigrationExit, ExpEventTimeSampler>,
         R::ReportSpeciation,
         R::ReportDispersal,
-    >: SimulatableKernel<
+    >: CompiledKernelPtx<simulate<
         M,
         O::Habitat,
         CudaRng<M, WyHash<M>>,
@@ -117,7 +117,7 @@ where
         L::ActiveLineageSampler<NeverEmigrationExit, ExpEventTimeSampler>,
         R::ReportSpeciation,
         R::ReportDispersal,
-    >,
+    >>,
 {
     let (
         habitat,
@@ -196,21 +196,29 @@ where
     };
 
     let (mut status, time, steps, lineages) = with_initialised_cuda(args.device, || {
-        let kernel = SimulationKernel::try_new(
-            Stream::new(StreamFlags::NON_BLOCKING, None)?,
-            grid_size.clone(),
-            block_size.clone(),
-            args.ptx_jit,
-            Box::new(|kernel| {
-                crate::info::print_kernel_function_attributes("simulate", kernel);
-                Ok(())
-            }),
-        )?;
+        let stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
+        
+        let mut kernel = TypedPtxKernel::new(Some(Box::new(|kernel| {
+            crate::info::print_kernel_function_attributes("simulate", kernel);
+            Ok(())
+        })));
+
+        let config = LaunchConfig {
+            grid: grid_size,
+            block: block_size,
+            ptx_jit: args.ptx_jit,
+        };
+
+        let launcher = Launcher {
+            stream: &stream,
+            kernel: &mut kernel,
+            config,
+        };
 
         parallelisation::monolithic::simulate(
             &mut simulation,
-            kernel,
-            (grid_size, block_size, args.dedup_cache, args.step_slice),
+            launcher,
+            (args.dedup_cache, args.step_slice),
             lineages,
             event_slice,
             pause_before,

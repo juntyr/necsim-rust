@@ -17,7 +17,7 @@ use necsim_impls_no_std::cogs::{
 use rustcoalescence_algorithms::result::ResumeError;
 use rustcoalescence_scenarios::Scenario;
 
-use rust_cuda::common::RustToCuda;
+use rust_cuda::lend::RustToCuda;
 
 use crate::CudaError;
 

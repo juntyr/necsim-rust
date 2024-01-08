@@ -2,6 +2,7 @@
 #![no_std]
 #![feature(type_alias_impl_trait)]
 #![feature(decl_macro)]
+#![feature(c_str_literals)]
 #![cfg_attr(target_os = "cuda", feature(abi_ptx))]
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
 // #![cfg_attr(target_os = "cuda", feature(panic_info_message))]
@@ -17,7 +18,7 @@ extern crate alloc;
 #[cfg(target_os = "cuda")]
 use core::ops::ControlFlow;
 
-use necsim_core::{
+pub use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
         LineageStore, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
@@ -25,15 +26,17 @@ use necsim_core::{
     reporter::boolean::Boolean,
 };
 
-use necsim_impls_no_std::cogs::{
+pub use necsim_impls_no_std::cogs::{
     active_lineage_sampler::singular::SingularActiveLineageSampler,
     event_sampler::tracking::{MinSpeciationTrackingEventSampler, SpeciationSample},
 };
 
-use rust_cuda::lend::RustToCuda;
+pub use rust_cuda::lend::RustToCuda;
 
-#[rust_cuda::kernel::kernel(
-    pub use link_kernel! for impl
+#[rust_cuda::kernel::kernel(pub use link! for impl)]
+#[kernel(
+    allow(ptx::double_precision_use),
+    forbid(ptx::local_memory_usage, ptx::register_spills)
 )]
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
@@ -98,46 +101,46 @@ pub fn simulate<
         necsim_core_bond::NonNegativeF64,
     >,
 ) {
-    task_list.with_value_for_core(|task| {
-        // Discard the prior task (the simulation is just a temporary local copy)
-        core::mem::drop(
-            simulation
-                .active_lineage_sampler_mut()
-                .replace_active_lineage(task),
-        );
+    // task_list.with_value_for_core(|task| {
+    //     // Discard the prior task (the simulation is just a temporary local copy)
+    //     core::mem::drop(
+    //         simulation
+    //             .active_lineage_sampler_mut()
+    //             .replace_active_lineage(task),
+    //     );
 
-        // Discard the prior sample (the simulation is just a temporary local copy)
-        simulation.event_sampler_mut().replace_min_speciation(None);
+    //     // Discard the prior sample (the simulation is just a temporary local copy)
+    //     simulation.event_sampler_mut().replace_min_speciation(None);
 
-        let mut final_next_event_time = None;
+    //     let mut final_next_event_time = None;
 
-        let (time, steps) = simulation.simulate_incremental_early_stop(
-            |_, steps, next_event_time| {
-                final_next_event_time = Some(next_event_time);
+    //     let (time, steps) = simulation.simulate_incremental_early_stop(
+    //         |_, steps, next_event_time| {
+    //             final_next_event_time = Some(next_event_time);
 
-                if steps >= max_steps || next_event_time >= max_next_event_time {
-                    ControlFlow::Break(())
-                } else {
-                    ControlFlow::Continue(())
-                }
-            },
-            event_buffer_reporter,
-        );
+    //             if steps >= max_steps || next_event_time >= max_next_event_time {
+    //                 ControlFlow::Break(())
+    //             } else {
+    //                 ControlFlow::Continue(())
+    //             }
+    //         },
+    //         event_buffer_reporter,
+    //     );
 
-        next_event_time_buffer.put_value_for_core(final_next_event_time);
+    //     next_event_time_buffer.put_value_for_core(final_next_event_time);
 
-        if steps > 0 {
-            total_time_max.fetch_max(time.get().to_bits(), core::sync::atomic::Ordering::Relaxed);
-            total_steps_sum.fetch_add(steps, core::sync::atomic::Ordering::Relaxed);
-        }
+    //     if steps > 0 {
+    //         total_time_max.fetch_max(time.get().to_bits(), core::sync::atomic::Ordering::Relaxed);
+    //         total_steps_sum.fetch_add(steps, core::sync::atomic::Ordering::Relaxed);
+    //     }
 
-        min_spec_sample_buffer
-            .put_value_for_core(simulation.event_sampler_mut().replace_min_speciation(None));
+    //     min_spec_sample_buffer
+    //         .put_value_for_core(simulation.event_sampler_mut().replace_min_speciation(None));
 
-        simulation
-            .active_lineage_sampler_mut()
-            .replace_active_lineage(None)
-    });
+    //     simulation
+    //         .active_lineage_sampler_mut()
+    //         .replace_active_lineage(None)
+    // });
 }
 
 #[cfg(target_os = "cuda")]

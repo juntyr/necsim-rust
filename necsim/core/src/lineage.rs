@@ -99,17 +99,17 @@ impl From<Option<GlobalLineageReference>> for LineageInteraction {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, TypeLayout)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[repr(C)]
-#[cuda(ignore)]
+#[cfg_attr(feature = "cuda", cuda(ignore))]
 #[serde(deny_unknown_fields)]
 pub struct Lineage {
-    #[cuda(embed)]
-    #[cuda(ignore)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
+    #[cfg_attr(feature = "cuda", cuda(ignore))]
     #[serde(alias = "id", alias = "ref")]
     pub global_reference: GlobalLineageReference,
-    #[cuda(ignore)]
+    #[cfg_attr(feature = "cuda", cuda(ignore))]
     #[serde(alias = "time")]
     pub last_event_time: NonNegativeF64,
-    #[cuda(ignore)]
+    #[cfg_attr(feature = "cuda", cuda(ignore))]
     #[serde(alias = "loc")]
     pub indexed_location: IndexedLocation,
 }

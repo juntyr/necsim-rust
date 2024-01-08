@@ -1,10 +1,10 @@
 use std::{collections::VecDeque, convert::TryInto, num::NonZeroU64, sync::atomic::AtomicU64};
 
 use rust_cuda::{
-    common::RustToCuda,
-    host::{HostAndDeviceMutRef, LendToCuda},
-    rustacuda::function::{BlockSize, GridSize},
-    utils::exchange::wrapper::ExchangeWrapperOnHost,
+    lend::{RustToCuda, LendToCuda},
+    host::HostAndDeviceMutRef,
+    deps::rustacuda::function::{BlockSize, GridSize},
+    utils::exchange::wrapper::ExchangeWrapperOnHost, kernel::Launcher,
 };
 
 use necsim_core::{
@@ -37,8 +37,8 @@ use necsim_partitioning_core::LocalPartition;
 
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
-use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernel;
-use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
+use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernelPtx;
+use rustcoalescence_algorithms_cuda_gpu_kernel::simulate;
 
 use crate::error::CudaError;
 
@@ -66,7 +66,7 @@ pub fn simulate<
     LI: IntoIterator<Item = Lineage>,
 >(
     simulation: &mut Simulation<M, H, G, S, X, D, C, T, N, E, I, A>,
-    mut kernel: SimulationKernel<
+    mut launcher: Launcher<simulate<
         M,
         H,
         G,
@@ -81,8 +81,8 @@ pub fn simulate<
         A,
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
-    >,
-    config: (GridSize, BlockSize, DedupCache, NonZeroU64),
+    >>,
+    config: (DedupCache, NonZeroU64),
     lineages: LI,
     event_slice: EventSlice,
     pause_before: Option<NonNegativeF64>,

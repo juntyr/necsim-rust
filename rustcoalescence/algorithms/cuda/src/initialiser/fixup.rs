@@ -28,7 +28,7 @@ use rustcoalescence_algorithms::{
 };
 use rustcoalescence_scenarios::Scenario;
 
-use rust_cuda::common::RustToCuda;
+use rust_cuda::lend::RustToCuda;
 
 use crate::CudaError;
 

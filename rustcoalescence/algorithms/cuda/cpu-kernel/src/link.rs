@@ -1,6 +1,4 @@
-use rustcoalescence_algorithms_cuda_gpu_kernel::{SimulatableKernel, SimulationKernelArgs};
-
-use crate::SimulationKernel;
+use crate::SimulationKernelPtx;
 
 macro_rules! link_kernel {
     ($habitat:ty, $dispersal:ty, $turnover:ty, $speciation:ty) => {
@@ -29,7 +27,7 @@ macro_rules! link_kernel {
         $habitat:ty, $dispersal:ty, $turnover:ty, $speciation:ty,
         $report_speciation:ty, $report_dispersal:ty
     ) => {
-        rustcoalescence_algorithms_cuda_gpu_kernel::link_kernel!(
+        rustcoalescence_algorithms_cuda_gpu_kernel::link! { impl simulate<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
             $habitat,
             necsim_impls_cuda::cogs::rng::CudaRng<
@@ -82,9 +80,9 @@ macro_rules! link_kernel {
             >,
             $report_speciation,
             $report_dispersal,
-        );
+        > for SimulationKernelPtx }
 
-        rustcoalescence_algorithms_cuda_gpu_kernel::link_kernel!(
+        rustcoalescence_algorithms_cuda_gpu_kernel::link! { impl simulate<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
             $habitat,
             necsim_impls_cuda::cogs::rng::CudaRng<
@@ -197,7 +195,7 @@ macro_rules! link_kernel {
             >,
             $report_speciation,
             $report_dispersal,
-        );
+        > for SimulationKernelPtx }
     };
 }
 

@@ -37,10 +37,10 @@ use rustcoalescence_algorithms::{
 };
 use rustcoalescence_scenarios::Scenario;
 
-use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernel;
-use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
+use rustcoalescence_algorithms_cuda_gpu_kernel::simulate;
+use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernelPtx;
 
-use rust_cuda::common::RustToCuda;
+use rust_cuda::{lend::RustToCuda, kernel::CompiledKernelPtx};
 
 mod arguments;
 mod cuda;
@@ -84,7 +84,7 @@ where
         RustToCuda,
     O::TurnoverRate: RustToCuda,
     O::SpeciationProbability: RustToCuda,
-    SimulationKernel<
+    SimulationKernelPtx<
         M,
         O::Habitat,
         CudaRng<M, WyHash<M>>,
@@ -122,7 +122,7 @@ where
         >,
         R::ReportSpeciation,
         R::ReportDispersal,
-    >: SimulatableKernel<
+    >: CompiledKernelPtx<simulate<
         M,
         O::Habitat,
         CudaRng<M, WyHash<M>>,
@@ -160,8 +160,8 @@ where
         >,
         R::ReportSpeciation,
         R::ReportDispersal,
-    >,
-    SimulationKernel<
+    >>,
+    SimulationKernelPtx<
         M,
         O::Habitat,
         CudaRng<M, WyHash<M>>,
@@ -217,7 +217,7 @@ where
         >,
         R::ReportSpeciation,
         R::ReportDispersal,
-    >: SimulatableKernel<
+    >: CompiledKernelPtx<simulate<
         M,
         O::Habitat,
         CudaRng<M, WyHash<M>>,
@@ -273,7 +273,7 @@ where
         >,
         R::ReportSpeciation,
         R::ReportDispersal,
-    >,
+    >>,
 {
     type LineageStore = IndependentLineageStore<M, O::Habitat>;
     type Rng = CudaRng<M, WyHash<M>>;
