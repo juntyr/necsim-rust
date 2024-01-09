@@ -12,7 +12,7 @@ use necsim_impls_no_std::cogs::{
     event_sampler::tracking::MinSpeciationTrackingEventSampler,
 };
 
-use rust_cuda::{lend::RustToCuda, kernel::CompiledKernelPtx};
+use rust_cuda::{kernel::CompiledKernelPtx, lend::RustToCuda};
 
 use rustcoalescence_algorithms_cuda_gpu_kernel::simulate;
 
@@ -43,8 +43,10 @@ unsafe impl<
         A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda + Sync,
         ReportSpeciation: Boolean,
         ReportDispersal: Boolean,
-    > CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>>
-    for SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
+    >
+    CompiledKernelPtx<
+        simulate<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>,
+    > for SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
 where
     SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, False, False>:
         CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, False, False>>,

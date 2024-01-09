@@ -23,17 +23,19 @@ use super::CudaLineageStoreSampleInitialiser;
 #[allow(clippy::module_name_repetitions)]
 pub struct GenesisInitialiser;
 
-impl<M: MathsCore, G: PrimeableRng<M> + RustToCuda, O: Scenario<M, G>>
+impl<M: MathsCore + Sync, G: PrimeableRng<M> + RustToCuda + Sync, O: Scenario<M, G>>
     CudaLineageStoreSampleInitialiser<M, G, O, CudaError> for GenesisInitialiser
 where
-    O::Habitat: RustToCuda,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda,
-    O::TurnoverRate: RustToCuda,
-    O::SpeciationProbability: RustToCuda,
+    O::Habitat: RustToCuda + Sync,
+    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda + Sync,
+    O::TurnoverRate: RustToCuda + Sync,
+    O::SpeciationProbability: RustToCuda + Sync,
 {
     type ActiveLineageSampler<
-        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>> + RustToCuda,
-        J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
+        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>
+            + RustToCuda
+            + Sync,
+        J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda + Sync,
     > = IndependentActiveLineageSampler<
         M,
         O::Habitat,
@@ -50,8 +52,10 @@ where
     fn init<
         'h,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
-        J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda,
-        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>> + RustToCuda,
+        J: EventTimeSampler<M, O::Habitat, G, O::TurnoverRate> + RustToCuda + Sync,
+        X: EmigrationExit<M, O::Habitat, G, IndependentLineageStore<M, O::Habitat>>
+            + RustToCuda
+            + Sync,
     >(
         self,
         origin_sampler: T,

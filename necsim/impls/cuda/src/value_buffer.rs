@@ -3,7 +3,7 @@ use core::iter::Iterator;
 
 use const_type_layout::TypeGraphLayout;
 use rust_cuda::{
-    safety::{PortableBitSemantics, StackOnly},
+    safety::{PortableBitSemantics, SafeMutableAliasing, StackOnly},
     utils::{
         aliasing::SplitSliceOverCudaThreadsConstStride,
         exchange::buffer::{CudaExchangeBuffer, CudaExchangeItem},
@@ -30,6 +30,21 @@ where
     #[cuda(embed)]
     buffer:
         SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<MaybeSome<T>, M2D, M2H>, 1_usize>,
+}
+
+// Safety:
+// - no mutable aliasing occurs since all parts implement SafeMutableAliasing
+// - dropping does not trigger (de)alloc since ValueBuffer doesn't impl Drop and
+//   all parts implement SafeMutableAliasing
+// - ValueBuffer has no shallow mutable state
+unsafe impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
+    SafeMutableAliasing for ValueBuffer<T, M2D, M2H>
+where
+    SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<bool, true, true>, 1_usize>:
+        SafeMutableAliasing,
+    SplitSliceOverCudaThreadsConstStride<CudaExchangeBuffer<MaybeSome<T>, M2D, M2H>, 1_usize>:
+        SafeMutableAliasing,
+{
 }
 
 #[cfg(not(target_os = "cuda"))]

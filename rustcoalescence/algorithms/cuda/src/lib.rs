@@ -5,6 +5,7 @@
 #[macro_use]
 extern crate serde_derive_state;
 
+use initialiser::CudaLineageStoreSampleInitialiser;
 use necsim_core::{cogs::MathsCore, lineage::Lineage, reporter::Reporter};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
@@ -37,10 +38,10 @@ use rustcoalescence_algorithms::{
 };
 use rustcoalescence_scenarios::Scenario;
 
-use rustcoalescence_algorithms_cuda_gpu_kernel::simulate;
 use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernelPtx;
+use rustcoalescence_algorithms_cuda_gpu_kernel::simulate;
 
-use rust_cuda::{lend::RustToCuda, kernel::CompiledKernelPtx};
+use rust_cuda::{kernel::CompiledKernelPtx, lend::RustToCuda};
 
 mod arguments;
 mod cuda;
@@ -73,17 +74,17 @@ impl AlgorithmDefaults for CudaAlgorithm {
 #[allow(clippy::trait_duplication_in_bounds)]
 impl<
         'p,
-        M: MathsCore,
+        M: MathsCore + Sync,
         O: Scenario<M, CudaRng<M, WyHash<M>>>,
         R: Reporter,
         P: LocalPartition<'p, R>,
     > Algorithm<'p, M, O, R, P> for CudaAlgorithm
 where
-    O::Habitat: RustToCuda,
+    O::Habitat: RustToCuda + Sync,
     O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>>:
-        RustToCuda,
-    O::TurnoverRate: RustToCuda,
-    O::SpeciationProbability: RustToCuda,
+        RustToCuda + Sync,
+    O::TurnoverRate: RustToCuda + Sync,
+    O::SpeciationProbability: RustToCuda + Sync,
     SimulationKernelPtx<
         M,
         O::Habitat,
@@ -122,45 +123,47 @@ where
         >,
         R::ReportSpeciation,
         R::ReportDispersal,
-    >: CompiledKernelPtx<simulate<
-        M,
-        O::Habitat,
-        CudaRng<M, WyHash<M>>,
-        IndependentLineageStore<M, O::Habitat>,
-        NeverEmigrationExit,
-        O::DispersalSampler<
-            InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
-        >,
-        IndependentCoalescenceSampler<M, O::Habitat>,
-        O::TurnoverRate,
-        O::SpeciationProbability,
-        IndependentEventSampler<
+    >: CompiledKernelPtx<
+        simulate<
             M,
             O::Habitat,
             CudaRng<M, WyHash<M>>,
+            IndependentLineageStore<M, O::Habitat>,
             NeverEmigrationExit,
             O::DispersalSampler<
                 InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
             >,
+            IndependentCoalescenceSampler<M, O::Habitat>,
             O::TurnoverRate,
             O::SpeciationProbability,
-        >,
-        NeverImmigrationEntry,
-        IndependentActiveLineageSampler<
-            M,
-            O::Habitat,
-            CudaRng<M, WyHash<M>>,
-            NeverEmigrationExit,
-            O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
+            IndependentEventSampler<
+                M,
+                O::Habitat,
+                CudaRng<M, WyHash<M>>,
+                NeverEmigrationExit,
+                O::DispersalSampler<
+                    InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
+                >,
+                O::TurnoverRate,
+                O::SpeciationProbability,
             >,
-            O::TurnoverRate,
-            O::SpeciationProbability,
-            ExpEventTimeSampler,
+            NeverImmigrationEntry,
+            IndependentActiveLineageSampler<
+                M,
+                O::Habitat,
+                CudaRng<M, WyHash<M>>,
+                NeverEmigrationExit,
+                O::DispersalSampler<
+                    InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
+                >,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+                ExpEventTimeSampler,
+            >,
+            R::ReportSpeciation,
+            R::ReportDispersal,
         >,
-        R::ReportSpeciation,
-        R::ReportDispersal,
-    >>,
+    >,
     SimulationKernelPtx<
         M,
         O::Habitat,
@@ -217,28 +220,12 @@ where
         >,
         R::ReportSpeciation,
         R::ReportDispersal,
-    >: CompiledKernelPtx<simulate<
-        M,
-        O::Habitat,
-        CudaRng<M, WyHash<M>>,
-        IndependentLineageStore<M, O::Habitat>,
-        NeverEmigrationExit,
-        TrespassingDispersalSampler<
+    >: CompiledKernelPtx<
+        simulate<
             M,
             O::Habitat,
             CudaRng<M, WyHash<M>>,
-            O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
-            >,
-            UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
-        >,
-        IndependentCoalescenceSampler<M, O::Habitat>,
-        O::TurnoverRate,
-        O::SpeciationProbability,
-        IndependentEventSampler<
-            M,
-            O::Habitat,
-            CudaRng<M, WyHash<M>>,
+            IndependentLineageStore<M, O::Habitat>,
             NeverEmigrationExit,
             TrespassingDispersalSampler<
                 M,
@@ -249,31 +236,49 @@ where
                 >,
                 UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
             >,
+            IndependentCoalescenceSampler<M, O::Habitat>,
             O::TurnoverRate,
             O::SpeciationProbability,
-        >,
-        NeverImmigrationEntry,
-        IndependentActiveLineageSampler<
-            M,
-            O::Habitat,
-            CudaRng<M, WyHash<M>>,
-            NeverEmigrationExit,
-            TrespassingDispersalSampler<
+            IndependentEventSampler<
                 M,
                 O::Habitat,
                 CudaRng<M, WyHash<M>>,
-                O::DispersalSampler<
-                    InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
+                NeverEmigrationExit,
+                TrespassingDispersalSampler<
+                    M,
+                    O::Habitat,
+                    CudaRng<M, WyHash<M>>,
+                    O::DispersalSampler<
+                        InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
+                    >,
+                    UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
                 >,
-                UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
+                O::TurnoverRate,
+                O::SpeciationProbability,
             >,
-            O::TurnoverRate,
-            O::SpeciationProbability,
-            ConstEventTimeSampler,
+            NeverImmigrationEntry,
+            IndependentActiveLineageSampler<
+                M,
+                O::Habitat,
+                CudaRng<M, WyHash<M>>,
+                NeverEmigrationExit,
+                TrespassingDispersalSampler<
+                    M,
+                    O::Habitat,
+                    CudaRng<M, WyHash<M>>,
+                    O::DispersalSampler<
+                        InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
+                    >,
+                    UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
+                >,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+                ConstEventTimeSampler,
+            >,
+            R::ReportSpeciation,
+            R::ReportDispersal,
         >,
-        R::ReportSpeciation,
-        R::ReportDispersal,
-    >>,
+    >,
 {
     type LineageStore = IndependentLineageStore<M, O::Habitat>;
     type Rng = CudaRng<M, WyHash<M>>;
@@ -296,7 +301,22 @@ where
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
     ) -> Result<SimulationOutcome<M, Self::Rng>, Self::Error> {
-        launch::initialise_and_simulate(
+        launch::initialise_and_simulate::<_, _, _, _, _, _, _, SimulationKernelPtx<
+            _,
+            _,
+            _,
+            _,
+            _,
+            <GenesisInitialiser as CudaLineageStoreSampleInitialiser<_, _, O, _>>::DispersalSampler,
+            _,
+            _,
+            _,
+            _,
+            _,
+            <GenesisInitialiser as CudaLineageStoreSampleInitialiser<_, _, O, _>>::ActiveLineageSampler<_, _>,
+            _,
+            _,
+        >>(
             &args,
             rng,
             scenario,
@@ -322,7 +342,22 @@ where
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
     ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
-        launch::initialise_and_simulate(
+        launch::initialise_and_simulate::<_, _, _, _, _, _, _, SimulationKernelPtx<
+            _,
+            _,
+            _,
+            _,
+            _,
+            <ResumeInitialiser<L> as CudaLineageStoreSampleInitialiser<_, _, O, _>>::DispersalSampler,
+            _,
+            _,
+            _,
+            _,
+            _,
+            <ResumeInitialiser<L> as CudaLineageStoreSampleInitialiser<_, _, O, _>>::ActiveLineageSampler<_, _>,
+            _,
+            _,
+        >>(
             &args,
             rng,
             scenario,
@@ -351,13 +386,28 @@ where
         fixup_strategy: RestartFixUpStrategy,
         local_partition: &mut P,
     ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
-        launch::initialise_and_simulate(
+        launch::initialise_and_simulate::<_, _, _, _, _, _, _, SimulationKernelPtx<
+            _,
+            _,
+            _,
+            _,
+            _,
+            <FixUpInitialiser<L> as CudaLineageStoreSampleInitialiser<_, _, O, _>>::DispersalSampler,
+            _,
+            _,
+            _,
+            _,
+            _,
+            <FixUpInitialiser<L> as CudaLineageStoreSampleInitialiser<_, _, O, _>>::ActiveLineageSampler<_, ExpEventTimeSampler>,
+            _,
+            _,
+        >>(
             &args,
             rng,
             scenario,
             pre_sampler,
-            Some(PositiveF64::max_after(restart_at.into(), restart_at.into()).into()),
-            local_partition,
+            Some(PositiveF64::max_after(restart_at.into(),
+        restart_at.into()).into()),     local_partition,
             FixUpInitialiser {
                 lineages,
                 restart_at,

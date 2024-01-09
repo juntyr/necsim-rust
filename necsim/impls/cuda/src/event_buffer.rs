@@ -1,13 +1,19 @@
 use core::fmt;
 
+use const_type_layout::TypeGraphLayout;
 #[cfg(not(target_os = "cuda"))]
 use rust_cuda::deps::rustacuda::{
     error::CudaResult,
     function::{BlockSize, GridSize},
 };
 
-use rust_cuda::utils::{
-    aliasing::SplitSliceOverCudaThreadsDynamicStride, exchange::buffer::CudaExchangeBuffer,
+use rust_cuda::{
+    lend::RustToCudaProxy,
+    safety::{PortableBitSemantics, SafeMutableAliasing, StackOnly},
+    utils::{
+        aliasing::SplitSliceOverCudaThreadsDynamicStride,
+        exchange::buffer::{CudaExchangeBuffer, CudaExchangeItem},
+    },
 };
 
 use necsim_core::{
@@ -27,8 +33,13 @@ use super::utils::MaybeSome;
 #[derive(rust_cuda::lend::LendRustToCuda)]
 #[cuda(free = "ReportSpeciation", free = "ReportDispersal")]
 pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
+    #[cfg(not(target_os = "cuda"))]
     #[cuda(embed)]
     event_mask: SplitSliceOverCudaThreadsDynamicStride<CudaExchangeBuffer<bool, true, true>>,
+    #[cfg(target_os = "cuda")]
+    #[cuda(embed = "SplitSliceOverCudaThreadsDynamicStride<CudaExchangeBuffer<bool, true, true>>")]
+    event_mask: CudaExchangeSlice<CudaExchangeItem<bool, true, true>>,
+    #[cfg(not(target_os = "cuda"))]
     #[cuda(embed)]
     event_buffer: SplitSliceOverCudaThreadsDynamicStride<
         CudaExchangeBuffer<
@@ -37,8 +48,41 @@ pub struct EventBuffer<ReportSpeciation: Boolean, ReportDispersal: Boolean> {
             true,
         >,
     >,
-    max_events: usize,
-    event_counter: usize,
+    #[cfg(target_os = "cuda")]
+    #[cuda(embed = "SplitSliceOverCudaThreadsDynamicStride<
+    CudaExchangeBuffer<
+        MaybeSome<<EventBuffer<ReportSpeciation, ReportDispersal> as EventType>::Event>,
+        false,
+        true,
+    >,
+>")]
+    event_buffer: CudaExchangeSlice<
+        CudaExchangeItem<
+            MaybeSome<<EventBuffer<ReportSpeciation, ReportDispersal> as EventType>::Event>,
+            false,
+            true,
+        >,
+    >,
+}
+
+// Safety:
+// - no mutable aliasing occurs since all parts implement SafeMutableAliasing
+// - dropping does not trigger (de)alloc since EventBuffer doesn't impl Drop and
+//   all parts implement SafeMutableAliasing
+// - EventBuffer has no shallow mutable state
+unsafe impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> SafeMutableAliasing
+    for EventBuffer<ReportSpeciation, ReportDispersal>
+where
+    SplitSliceOverCudaThreadsDynamicStride<CudaExchangeBuffer<bool, true, true>>:
+        SafeMutableAliasing,
+    SplitSliceOverCudaThreadsDynamicStride<
+        CudaExchangeBuffer<
+            MaybeSome<<EventBuffer<ReportSpeciation, ReportDispersal> as EventType>::Event>,
+            false,
+            true,
+        >,
+    >: SafeMutableAliasing,
+{
 }
 
 pub trait EventType {
@@ -78,10 +122,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> fmt::Debug
     for EventBuffer<ReportSpeciation, ReportDispersal>
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("EventBuffer")
-            .field("max_events", &self.max_events)
-            .field("event_counter", &self.event_counter)
-            .finish_non_exhaustive()
+        fmt.debug_struct("EventBuffer").finish_non_exhaustive()
     }
 }
 
@@ -122,8 +163,6 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
                 CudaExchangeBuffer::from_vec(event_buffer)?,
                 max_events,
             ),
-            max_events,
-            event_counter: 0_usize,
         })
     }
 
@@ -148,9 +187,26 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
             mask.write(false);
         }
     }
+}
 
-    pub fn max_events_per_individual(&self) -> usize {
-        self.max_events
+#[cfg(target_os = "cuda")]
+impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
+    EventBuffer<ReportSpeciation, ReportDispersal>
+{
+    fn report_event(
+        &mut self,
+        event: impl Into<<EventBuffer<ReportSpeciation, ReportDispersal> as EventType>::Event>,
+    ) {
+        if let ([mask, mask_rest @ ..], [buffer, buffer_rest @ ..]) = (
+            core::mem::take(&mut self.event_mask.0),
+            core::mem::take(&mut self.event_buffer.0),
+        ) {
+            mask.write(true);
+            buffer.write(MaybeSome::Some(event.into()));
+
+            self.event_mask.0 = mask_rest;
+            self.event_buffer.0 = buffer_rest;
+        }
     }
 }
 
@@ -169,19 +225,11 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
 impl Reporter for EventBuffer<False, True> {
     impl_report!(
         #[debug_requires(
-            self.event_counter < self.max_events,
+            !self.event_buffer.0.is_empty(),
             "does not report extraneous dispersal events"
         )]
         dispersal(&mut self, event: Used) {
-            if let Some(mask) = self.event_mask.get_mut(self.event_counter) {
-                mask.write(true);
-
-                unsafe {
-                    self.event_buffer.get_unchecked_mut(self.event_counter)
-                }.write(MaybeSome::Some(event.clone().into()));
-            }
-
-            self.event_counter += 1;
+            self.report_event(event.clone());
         }
     );
 }
@@ -190,19 +238,14 @@ impl Reporter for EventBuffer<False, True> {
 impl Reporter for EventBuffer<True, False> {
     impl_report!(
         #[debug_requires(
-            self.event_counter == 0,
+            !self.event_buffer.0.is_empty(),
             "does not report extraneous speciation events"
         )]
         speciation(&mut self, event: Used) {
-            if let Some(mask) = self.event_mask.get_mut(0) {
-                mask.write(true);
+            self.report_event(event.clone());
 
-                unsafe {
-                    self.event_buffer.get_unchecked_mut(0)
-                }.write(MaybeSome::Some(event.clone()));
-            }
-
-            self.event_counter = self.max_events;
+            self.event_mask.0 = &mut [];
+            self.event_buffer.0 = &mut [];
         }
     );
 }
@@ -211,37 +254,57 @@ impl Reporter for EventBuffer<True, False> {
 impl Reporter for EventBuffer<True, True> {
     impl_report!(
         #[debug_requires(
-            self.event_counter < self.max_events,
+            !self.event_buffer.0.is_empty(),
             "does not report extraneous speciation events"
         )]
         speciation(&mut self, event: Used) {
-            if let Some(mask) = self.event_mask.get_mut(self.event_counter) {
-                mask.write(true);
+            self.report_event(event.clone());
 
-                unsafe {
-                    self.event_buffer.get_unchecked_mut(self.event_counter)
-                }.write(MaybeSome::Some(event.clone().into()));
-            }
-
-            self.event_counter = self.max_events;
+            self.event_mask.0 = &mut [];
+            self.event_buffer.0 = &mut [];
         }
     );
 
     impl_report!(
         #[debug_requires(
-            self.event_counter < self.max_events,
+            !self.event_buffer.0.is_empty(),
             "does not report extraneous dispersal events"
         )]
         dispersal(&mut self, event: Used) {
-            if let Some(mask) = self.event_mask.get_mut(self.event_counter) {
-                mask.write(true);
-
-                unsafe {
-                    self.event_buffer.get_unchecked_mut(self.event_counter)
-                }.write(MaybeSome::Some(event.clone().into()));
-            }
-
-            self.event_counter += 1;
+            self.report_event(event.clone());
         }
     );
+}
+
+// FIXME: find a less hacky hack
+struct CudaExchangeSlice<T: 'static + StackOnly + PortableBitSemantics + TypeGraphLayout>(
+    &'static mut [T],
+);
+
+impl<
+        T: 'static + StackOnly + PortableBitSemantics + TypeGraphLayout,
+        const M2D: bool,
+        const M2H: bool,
+    > RustToCudaProxy<CudaExchangeSlice<CudaExchangeItem<T, M2D, M2H>>>
+    for SplitSliceOverCudaThreadsDynamicStride<CudaExchangeBuffer<T, M2D, M2H>>
+{
+    fn from_ref(_val: &CudaExchangeSlice<CudaExchangeItem<T, M2D, M2H>>) -> &Self {
+        unsafe { unreachable_cuda_event_buffer_hack() }
+    }
+
+    fn from_mut(_val: &mut CudaExchangeSlice<CudaExchangeItem<T, M2D, M2H>>) -> &mut Self {
+        unsafe { unreachable_cuda_event_buffer_hack() }
+    }
+
+    fn into(mut self) -> CudaExchangeSlice<CudaExchangeItem<T, M2D, M2H>> {
+        let slice: &mut [CudaExchangeItem<T, M2D, M2H>] = &mut self;
+
+        let slice = unsafe { core::slice::from_raw_parts_mut(slice.as_mut_ptr(), slice.len()) };
+
+        CudaExchangeSlice(slice)
+    }
+}
+
+extern "C" {
+    fn unreachable_cuda_event_buffer_hack() -> !;
 }

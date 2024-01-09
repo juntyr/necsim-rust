@@ -37,4 +37,21 @@ pub struct SimulationKernelPtx<
     A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda + Sync,
     ReportSpeciation: Boolean,
     ReportDispersal: Boolean,
->(std::marker::PhantomData<(M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal)>);
+>(
+    std::marker::PhantomData<(
+        M,
+        H,
+        G,
+        S,
+        X,
+        D,
+        C,
+        T,
+        N,
+        E,
+        I,
+        A,
+        ReportSpeciation,
+        ReportDispersal,
+    )>,
+);
