@@ -5,7 +5,7 @@ use necsim_core::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
         LineageStore, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
     },
-    reporter::boolean::{Boolean, False, True},
+    reporter::boolean::Boolean, // reporter::boolean::{Boolean, False, True},
 };
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::singular::SingularActiveLineageSampler,
@@ -46,16 +46,17 @@ unsafe impl<
     >
     CompiledKernelPtx<
         simulate<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>,
-    > for SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
-where
-    // SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, False, False>:
-    //     CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, False, False>>,
-    // SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, False, True>:
-    //     CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, False, True>>,
-    // SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, True, False>:
-    //     CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, True, False>>,
-    // SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, True, True>:
-    //     CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, True, True>>,
+    >
+    for SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
+//where
+// SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, False, False>:
+//     CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, False, False>>,
+// SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, False, True>:
+//     CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, False, True>>,
+// SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, True, False>:
+//     CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, True, False>>,
+// SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, True, True>:
+//     CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, True, True>>,
 {
     default fn get_ptx() -> &'static CStr {
         unsafe { unreachable_cuda_simulation_linking_reporter() }

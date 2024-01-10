@@ -123,6 +123,7 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
         AlgorithmArgs::Gillespie(algorithm_args) => {
             rng::dispatch::<
                 <GillespieAlgorithm as AlgorithmDefaults>::MathsCore,
+                <GillespieAlgorithm as AlgorithmDefaults>::Rng<_>,
                 GillespieAlgorithm, _, R, P,
             >(
                 local_partition, sample, algorithm_args, scenario,
@@ -133,6 +134,7 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
         AlgorithmArgs::EventSkipping(algorithm_args) => {
             rng::dispatch::<
                 <EventSkippingAlgorithm as AlgorithmDefaults>::MathsCore,
+                <EventSkippingAlgorithm as AlgorithmDefaults>::Rng<_>,
                 EventSkippingAlgorithm, _, R, P,
             >(
                 local_partition, sample, algorithm_args, scenario,
@@ -143,6 +145,7 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
         AlgorithmArgs::Independent(algorithm_args) => {
             rng::dispatch::<
                 <IndependentAlgorithm as AlgorithmDefaults>::MathsCore,
+                <IndependentAlgorithm as AlgorithmDefaults>::Rng<_>,
                 IndependentAlgorithm, _, R, P,
             >(
                 local_partition, sample, algorithm_args, scenario,
@@ -154,9 +157,8 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
             fn coerce_cuda_dispatch<
                 'p,
                 M: necsim_core::cogs::MathsCore + Sync,
-                O: Scenario<M, necsim_impls_cuda::cogs::rng::CudaRng<
-                    M, necsim_impls_no_std::cogs::rng::wyhash::WyHash<M>,
-                >>,
+                G: necsim_core::cogs::PrimeableRng<M> + rust_cuda::lend::RustToCuda + Sync,
+                O: Scenario<M, G>,
                 R: Reporter,
                 P: LocalPartition<'p, R>,
             >(
@@ -173,9 +175,7 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
                 O::Habitat: rust_cuda::lend::RustToCuda + Sync,
                 O::DispersalSampler<
                     necsim_impls_no_std::cogs::dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler<
-                        M, O::Habitat, necsim_impls_cuda::cogs::rng::CudaRng<
-                            M, necsim_impls_no_std::cogs::rng::wyhash::WyHash<M>,
-                        >
+                        M, O::Habitat, G,
                     >
                 >: rust_cuda::lend::RustToCuda + Sync,
                 O::TurnoverRate: rust_cuda::lend::RustToCuda + Sync,
@@ -183,6 +183,7 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
             {
                 rng::dispatch::<
                     M,
+                    G,
                     CudaAlgorithm, _, R, P,
                 >(
                     local_partition, sample, algorithm_args, scenario,
@@ -191,7 +192,9 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
             }
 
             coerce_cuda_dispatch::<
-                <CudaAlgorithm as AlgorithmDefaults>::MathsCore, _, R, P,
+                <CudaAlgorithm as AlgorithmDefaults>::MathsCore,
+                <CudaAlgorithm as AlgorithmDefaults>::Rng<_>,
+                _, R, P,
             >(
                 local_partition, sample, algorithm_args, scenario,
                 pause_before, ron_args, normalised_args,

@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 use rustcoalescence_algorithms::{result::SimulationOutcome, Algorithm};
 
 use necsim_core::{
-    cogs::MathsCore,
+    cogs::{MathsCore, RngCore},
     reporter::{boolean::Boolean, Reporter},
 };
 use necsim_core_bond::NonNegativeF64;
@@ -25,23 +25,23 @@ use super::{super::super::BufferingSimulateArgsBuilder, launch};
 pub(super) fn dispatch<
     'p,
     M: MathsCore,
-    A: Algorithm<'p, M, O, R, P>,
-    O: Scenario<M, A::Rng>,
+    G: RngCore<M>,
+    A: Algorithm<'p, M, G, O, R, P>,
+    O: Scenario<M, G>,
     R: Reporter,
     P: LocalPartition<'p, R>,
 >(
     algorithm_args: A::Arguments,
-    rng: A::Rng,
+    rng: G,
     scenario: O,
     sample: Sample,
     pause_before: Option<NonNegativeF64>,
     mut local_partition: P,
 
     normalised_args: &BufferingSimulateArgsBuilder,
-) -> anyhow::Result<SimulationOutcome<M, A::Rng>>
+) -> anyhow::Result<SimulationOutcome<M, G>>
 where
-    Result<SimulationOutcome<M, A::Rng>, A::Error>:
-        anyhow::Context<SimulationOutcome<M, A::Rng>, A::Error>,
+    Result<SimulationOutcome<M, G>, A::Error>: anyhow::Context<SimulationOutcome<M, G>, A::Error>,
 {
     let config_str = normalised_args
         .build()
@@ -118,7 +118,7 @@ where
         warn!("The simulation will report no events.");
     }
 
-    let result = launch::simulate::<M, A, O, R, P>(
+    let result = launch::simulate::<M, G, A, O, R, P>(
         algorithm_args,
         rng,
         scenario,

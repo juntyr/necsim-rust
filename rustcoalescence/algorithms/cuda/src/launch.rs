@@ -3,7 +3,6 @@ use std::marker::PhantomData;
 use necsim_core::{cogs::MathsCore, reporter::Reporter, simulation::SimulationBuilder};
 use necsim_core_bond::NonNegativeF64;
 
-use necsim_impls_cuda::cogs::rng::CudaRng;
 use necsim_impls_no_std::{
     cogs::{
         active_lineage_sampler::independent::event_time_sampler::exp::ExpEventTimeSampler,
@@ -16,7 +15,6 @@ use necsim_impls_no_std::{
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
         },
-        rng::wyhash::WyHash,
     },
     parallelisation::Status,
 };
@@ -25,7 +23,7 @@ use necsim_partitioning_core::LocalPartition;
 use rustcoalescence_algorithms::result::SimulationOutcome;
 use rustcoalescence_scenarios::Scenario;
 
-use rustcoalescence_algorithms_cuda_gpu_kernel::simulate;
+use rustcoalescence_algorithms_cuda_gpu_kernel::{simulate, PrimeableRng};
 
 use rust_cuda::{
     deps::rustacuda::{
@@ -51,17 +49,18 @@ use crate::{
 pub fn initialise_and_simulate<
     'p,
     M: MathsCore + Sync,
-    O: Scenario<M, CudaRng<M, WyHash<M>>>,
+    G: PrimeableRng<M> + RustToCuda + Sync,
+    O: Scenario<M, G>,
     R: Reporter,
     P: LocalPartition<'p, R>,
     I: Iterator<Item = u64>,
-    L: CudaLineageStoreSampleInitialiser<M, CudaRng<M, WyHash<M>>, O, Error>,
+    L: CudaLineageStoreSampleInitialiser<M, G, O, Error>,
     Error: From<CudaError>,
     Ptx: CompiledKernelPtx<
         simulate<
             M,
             O::Habitat,
-            CudaRng<M, WyHash<M>>,
+            G,
             IndependentLineageStore<M, O::Habitat>,
             NeverEmigrationExit,
             L::DispersalSampler,
@@ -71,7 +70,7 @@ pub fn initialise_and_simulate<
             IndependentEventSampler<
                 M,
                 O::Habitat,
-                CudaRng<M, WyHash<M>>,
+                G,
                 NeverEmigrationExit,
                 L::DispersalSampler,
                 O::TurnoverRate,
@@ -85,17 +84,16 @@ pub fn initialise_and_simulate<
     >,
 >(
     args: &CudaArguments,
-    rng: CudaRng<M, WyHash<M>>,
+    rng: G,
     scenario: O,
     pre_sampler: OriginPreSampler<M, I>,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
     lineage_store_sampler_initialiser: L,
-) -> Result<SimulationOutcome<M, CudaRng<M, WyHash<M>>>, Error>
+) -> Result<SimulationOutcome<M, G>, Error>
 where
     O::Habitat: RustToCuda + Sync,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>>:
-        RustToCuda + Sync,
+    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda + Sync,
     O::TurnoverRate: RustToCuda + Sync,
     O::SpeciationProbability: RustToCuda + Sync,
 {
@@ -106,8 +104,7 @@ where
         speciation_probability,
         origin_sampler_auxiliary,
         decomposition_auxiliary,
-    ) = scenario
-        .build::<InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>>();
+    ) = scenario.build::<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>();
     let coalescence_sampler = IndependentCoalescenceSampler::default();
     let event_sampler = IndependentEventSampler::default();
 

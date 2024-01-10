@@ -39,7 +39,7 @@ use rustcoalescence_algorithms::{
 use rustcoalescence_scenarios::Scenario;
 
 use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernelPtx;
-use rustcoalescence_algorithms_cuda_gpu_kernel::simulate;
+use rustcoalescence_algorithms_cuda_gpu_kernel::{simulate, PrimeableRng};
 
 use rust_cuda::{kernel::CompiledKernelPtx, lend::RustToCuda};
 
@@ -69,42 +69,39 @@ impl AlgorithmParamters for CudaAlgorithm {
 
 impl AlgorithmDefaults for CudaAlgorithm {
     type MathsCore = NvptxMathsCore;
+    type Rng<M: MathsCore> = CudaRng<M, WyHash<M>>;
 }
 
 #[allow(clippy::trait_duplication_in_bounds)]
 impl<
         'p,
         M: MathsCore + Sync,
-        O: Scenario<M, CudaRng<M, WyHash<M>>>,
+        G: PrimeableRng<M> + RustToCuda + Sync,
+        O: Scenario<M, G>,
         R: Reporter,
         P: LocalPartition<'p, R>,
-    > Algorithm<'p, M, O, R, P> for CudaAlgorithm
+    > Algorithm<'p, M, G, O, R, P> for CudaAlgorithm
 where
     O::Habitat: RustToCuda + Sync,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>>:
-        RustToCuda + Sync,
+    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda + Sync,
     O::TurnoverRate: RustToCuda + Sync,
     O::SpeciationProbability: RustToCuda + Sync,
     SimulationKernelPtx<
         M,
         O::Habitat,
-        CudaRng<M, WyHash<M>>,
+        G,
         IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
-        O::DispersalSampler<
-            InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
-        >,
+        O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
         IndependentCoalescenceSampler<M, O::Habitat>,
         O::TurnoverRate,
         O::SpeciationProbability,
         IndependentEventSampler<
             M,
             O::Habitat,
-            CudaRng<M, WyHash<M>>,
+            G,
             NeverEmigrationExit,
-            O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
-            >,
+            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
             O::TurnoverRate,
             O::SpeciationProbability,
         >,
@@ -112,11 +109,9 @@ where
         IndependentActiveLineageSampler<
             M,
             O::Habitat,
-            CudaRng<M, WyHash<M>>,
+            G,
             NeverEmigrationExit,
-            O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
-            >,
+            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
             O::TurnoverRate,
             O::SpeciationProbability,
             ExpEventTimeSampler,
@@ -127,23 +122,19 @@ where
         simulate<
             M,
             O::Habitat,
-            CudaRng<M, WyHash<M>>,
+            G,
             IndependentLineageStore<M, O::Habitat>,
             NeverEmigrationExit,
-            O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
-            >,
+            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
             IndependentCoalescenceSampler<M, O::Habitat>,
             O::TurnoverRate,
             O::SpeciationProbability,
             IndependentEventSampler<
                 M,
                 O::Habitat,
-                CudaRng<M, WyHash<M>>,
+                G,
                 NeverEmigrationExit,
-                O::DispersalSampler<
-                    InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
-                >,
+                O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
                 O::TurnoverRate,
                 O::SpeciationProbability,
             >,
@@ -151,11 +142,9 @@ where
             IndependentActiveLineageSampler<
                 M,
                 O::Habitat,
-                CudaRng<M, WyHash<M>>,
+                G,
                 NeverEmigrationExit,
-                O::DispersalSampler<
-                    InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
-                >,
+                O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
                 O::TurnoverRate,
                 O::SpeciationProbability,
                 ExpEventTimeSampler,
@@ -167,17 +156,15 @@ where
     SimulationKernelPtx<
         M,
         O::Habitat,
-        CudaRng<M, WyHash<M>>,
+        G,
         IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
         TrespassingDispersalSampler<
             M,
             O::Habitat,
-            CudaRng<M, WyHash<M>>,
-            O::DispersalSampler<
-                InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
-            >,
-            UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
+            G,
+            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+            UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
         >,
         IndependentCoalescenceSampler<M, O::Habitat>,
         O::TurnoverRate,
@@ -185,16 +172,14 @@ where
         IndependentEventSampler<
             M,
             O::Habitat,
-            CudaRng<M, WyHash<M>>,
+            G,
             NeverEmigrationExit,
             TrespassingDispersalSampler<
                 M,
                 O::Habitat,
-                CudaRng<M, WyHash<M>>,
-                O::DispersalSampler<
-                    InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
-                >,
-                UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
+                G,
+                O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+                UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
             >,
             O::TurnoverRate,
             O::SpeciationProbability,
@@ -203,16 +188,14 @@ where
         IndependentActiveLineageSampler<
             M,
             O::Habitat,
-            CudaRng<M, WyHash<M>>,
+            G,
             NeverEmigrationExit,
             TrespassingDispersalSampler<
                 M,
                 O::Habitat,
-                CudaRng<M, WyHash<M>>,
-                O::DispersalSampler<
-                    InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
-                >,
-                UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
+                G,
+                O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+                UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
             >,
             O::TurnoverRate,
             O::SpeciationProbability,
@@ -224,17 +207,15 @@ where
         simulate<
             M,
             O::Habitat,
-            CudaRng<M, WyHash<M>>,
+            G,
             IndependentLineageStore<M, O::Habitat>,
             NeverEmigrationExit,
             TrespassingDispersalSampler<
                 M,
                 O::Habitat,
-                CudaRng<M, WyHash<M>>,
-                O::DispersalSampler<
-                    InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
-                >,
-                UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
+                G,
+                O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+                UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
             >,
             IndependentCoalescenceSampler<M, O::Habitat>,
             O::TurnoverRate,
@@ -242,16 +223,14 @@ where
             IndependentEventSampler<
                 M,
                 O::Habitat,
-                CudaRng<M, WyHash<M>>,
+                G,
                 NeverEmigrationExit,
                 TrespassingDispersalSampler<
                     M,
                     O::Habitat,
-                    CudaRng<M, WyHash<M>>,
-                    O::DispersalSampler<
-                        InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
-                    >,
-                    UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
+                    G,
+                    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+                    UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
                 >,
                 O::TurnoverRate,
                 O::SpeciationProbability,
@@ -260,16 +239,14 @@ where
             IndependentActiveLineageSampler<
                 M,
                 O::Habitat,
-                CudaRng<M, WyHash<M>>,
+                G,
                 NeverEmigrationExit,
                 TrespassingDispersalSampler<
                     M,
                     O::Habitat,
-                    CudaRng<M, WyHash<M>>,
-                    O::DispersalSampler<
-                        InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
-                    >,
-                    UniformAntiTrespassingDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>,
+                    G,
+                    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+                    UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
                 >,
                 O::TurnoverRate,
                 O::SpeciationProbability,
@@ -281,7 +258,6 @@ where
     >,
 {
     type LineageStore = IndependentLineageStore<M, O::Habitat>;
-    type Rng = CudaRng<M, WyHash<M>>;
 
     fn get_logical_partition(args: &Self::Arguments, _local_partition: &P) -> Partition {
         match &args.parallelism_mode {
@@ -295,13 +271,13 @@ where
 
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
-        rng: Self::Rng,
+        rng: G,
         scenario: O,
         pre_sampler: OriginPreSampler<M, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<M, Self::Rng>, Self::Error> {
-        launch::initialise_and_simulate::<_, _, _, _, _, _, _, SimulationKernelPtx<
+    ) -> Result<SimulationOutcome<M, G>, Self::Error> {
+        launch::initialise_and_simulate::<_, _, _, _, _, _, _, _, SimulationKernelPtx<
             _,
             _,
             _,
@@ -334,15 +310,15 @@ where
     #[allow(clippy::too_many_lines)]
     fn resume_and_simulate<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
-        rng: Self::Rng,
+        rng: G,
         scenario: O,
         pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         resume_after: Option<NonNegativeF64>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
-        launch::initialise_and_simulate::<_, _, _, _, _, _, _, SimulationKernelPtx<
+    ) -> Result<SimulationOutcome<M, G>, ResumeError<Self::Error>> {
+        launch::initialise_and_simulate::<_, _, _, _, _, _, _, _, SimulationKernelPtx<
             _,
             _,
             _,
@@ -378,15 +354,15 @@ where
     #[allow(clippy::too_many_lines)]
     fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
-        rng: Self::Rng,
+        rng: G,
         scenario: O,
         pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         restart_at: PositiveF64,
         fixup_strategy: RestartFixUpStrategy,
         local_partition: &mut P,
-    ) -> Result<SimulationOutcome<M, Self::Rng>, ResumeError<Self::Error>> {
-        launch::initialise_and_simulate::<_, _, _, _, _, _, _, SimulationKernelPtx<
+    ) -> Result<SimulationOutcome<M, G>, ResumeError<Self::Error>> {
+        launch::initialise_and_simulate::<_, _, _, _, _, _, _, _, SimulationKernelPtx<
             _,
             _,
             _,
