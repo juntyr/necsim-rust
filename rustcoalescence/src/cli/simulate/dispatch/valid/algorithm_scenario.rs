@@ -103,6 +103,7 @@ macro_rules! match_scenario_algorithm {
 }
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_lines)] // FIXME
 pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
     local_partition: P,
 
@@ -150,9 +151,47 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
         },
         #[cfg(feature = "rustcoalescence-algorithms-cuda")]
         AlgorithmArgs::Cuda(algorithm_args) => {
-            rng::dispatch::<
-                <CudaAlgorithm as AlgorithmDefaults>::MathsCore,
-                CudaAlgorithm, _, R, P,
+            fn coerce_cuda_dispatch<
+                'p,
+                M: necsim_core::cogs::MathsCore + Sync,
+                O: Scenario<M, necsim_impls_cuda::cogs::rng::CudaRng<
+                    M, necsim_impls_no_std::cogs::rng::wyhash::WyHash<M>,
+                >>,
+                R: Reporter,
+                P: LocalPartition<'p, R>,
+            >(
+                local_partition: P,
+
+                sample: crate::args::config::sample::Sample,
+                algorithm_args: <CudaAlgorithm as rustcoalescence_algorithms::AlgorithmParamters>::Arguments,
+                scenario: O,
+                pause_before: Option<NonNegativeF64>,
+
+                ron_args: &str,
+                normalised_args: &mut BufferingSimulateArgsBuilder,
+            ) -> anyhow::Result<SimulationOutcome> where
+                O::Habitat: rust_cuda::lend::RustToCuda + Sync,
+                O::DispersalSampler<
+                    necsim_impls_no_std::cogs::dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler<
+                        M, O::Habitat, necsim_impls_cuda::cogs::rng::CudaRng<
+                            M, necsim_impls_no_std::cogs::rng::wyhash::WyHash<M>,
+                        >
+                    >
+                >: rust_cuda::lend::RustToCuda + Sync,
+                O::TurnoverRate: rust_cuda::lend::RustToCuda + Sync,
+                O::SpeciationProbability: rust_cuda::lend::RustToCuda + Sync,
+            {
+                rng::dispatch::<
+                    M,
+                    CudaAlgorithm, _, R, P,
+                >(
+                    local_partition, sample, algorithm_args, scenario,
+                    pause_before, ron_args, normalised_args,
+                )
+            }
+
+            coerce_cuda_dispatch::<
+                <CudaAlgorithm as AlgorithmDefaults>::MathsCore, _, R, P,
             >(
                 local_partition, sample, algorithm_args, scenario,
                 pause_before, ron_args, normalised_args,

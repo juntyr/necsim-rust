@@ -48,14 +48,14 @@ unsafe impl<
         simulate<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>,
     > for SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
 where
-    SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, False, False>:
-        CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, False, False>>,
-    SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, False, True>:
-        CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, False, True>>,
-    SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, True, False>:
-        CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, True, False>>,
-    SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, True, True>:
-        CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, True, True>>,
+    // SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, False, False>:
+    //     CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, False, False>>,
+    // SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, False, True>:
+    //     CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, False, True>>,
+    // SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, True, False>:
+    //     CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, True, False>>,
+    // SimulationKernelPtx<M, H, G, S, X, D, C, T, N, E, I, A, True, True>:
+    //     CompiledKernelPtx<simulate<M, H, G, S, X, D, C, T, N, E, I, A, True, True>>,
 {
     default fn get_ptx() -> &'static CStr {
         unsafe { unreachable_cuda_simulation_linking_reporter() }

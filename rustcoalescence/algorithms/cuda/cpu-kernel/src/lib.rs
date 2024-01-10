@@ -1,6 +1,7 @@
 #![deny(clippy::pedantic)]
 #![feature(c_str_literals)]
 #![feature(min_specialization)]
+#![allow(long_running_const_eval)]
 #![recursion_limit = "1024"]
 
 use necsim_core::{

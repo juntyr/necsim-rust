@@ -398,7 +398,7 @@ where
             _,
             _,
             _,
-            <FixUpInitialiser<L> as CudaLineageStoreSampleInitialiser<_, _, O, _>>::ActiveLineageSampler<_, ExpEventTimeSampler>,
+            <FixUpInitialiser<L> as CudaLineageStoreSampleInitialiser<_, _, O, _>>::ActiveLineageSampler<_, ConstEventTimeSampler>,
             _,
             _,
         >>(
