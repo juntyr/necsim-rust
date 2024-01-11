@@ -14,6 +14,7 @@ use necsim_core_bond::{OffByOneU32, OffByOneU64};
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct NonSpatialHabitat<M: MathsCore> {
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     extent: LandscapeExtent,
     deme: NonZeroU32,
     marker: PhantomData<M>,
@@ -58,7 +59,7 @@ impl<M: MathsCore> NonSpatialHabitat<M> {
 impl<M: MathsCore> Backup for NonSpatialHabitat<M> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
-            extent: self.extent,
+            extent: self.extent.clone(),
             deme: self.deme,
             marker: PhantomData::<M>,
         }

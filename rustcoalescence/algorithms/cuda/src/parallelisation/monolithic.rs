@@ -172,7 +172,6 @@ pub fn simulate<
 
     HostAndDeviceMutRef::with_new(&mut total_time_max, |total_time_max| -> Result<()> {
         HostAndDeviceMutRef::with_new(&mut total_steps_sum, |total_steps_sum| -> Result<()> {
-            // TODO: Pipeline async launches and callbacks of simulation/event analysis
             simulation.lend_to_cuda(|simulation_cuda_repr| -> Result<()> {
                 while !slow_lineages.is_empty()
                     && pause_before.map_or(true, |pause_before| level_time < pause_before)
@@ -304,6 +303,7 @@ pub fn simulate<
                         }
 
                         event_buffer = event_buffer_host_async.synchronize()?;
+                        // TODO: explore partial sorting on the GPU
                         event_buffer.report_events_unordered(&mut proxy);
 
                         proxy.local_partition().get_reporter().report_progress(

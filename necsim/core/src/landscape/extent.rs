@@ -3,10 +3,12 @@ use necsim_core_bond::OffByOneU32;
 use super::Location;
 
 #[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
-#[derive(PartialEq, Eq, Copy, Clone, Debug, serde::Deserialize, serde::Serialize, TypeLayout)]
+#[derive(PartialEq, Eq, Clone, Debug, serde::Deserialize, serde::Serialize, TypeLayout)]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
+#[repr(C)]
+#[cfg_attr(feature = "cuda", cuda(ignore))]
 #[serde(rename = "Extent")]
 #[serde(deny_unknown_fields)]
-#[repr(C)]
 pub struct LandscapeExtent {
     x: u32,
     y: u32,
@@ -58,7 +60,7 @@ impl LandscapeExtent {
         LocationIterator {
             x: self.x,
             y: self.y,
-            extent: *self,
+            extent: self.clone(),
             first_y: true,
         }
     }
@@ -186,7 +188,7 @@ mod tests {
             LocationIterator {
                 x: 0,
                 y: 0,
-                extent,
+                extent: extent.clone(),
                 first_y: true,
             }
         );
@@ -200,7 +202,7 @@ mod tests {
             LocationIterator {
                 x: 0,
                 y: 0,
-                extent,
+                extent: extent.clone(),
                 first_y: false,
             }
         );
@@ -230,7 +232,7 @@ mod tests {
             LocationIterator {
                 x: 1386,
                 y: 6812,
-                extent,
+                extent: extent.clone(),
                 first_y: true,
             }
         );
@@ -242,7 +244,7 @@ mod tests {
             LocationIterator {
                 x: 0,
                 y: 6812,
-                extent,
+                extent: extent.clone(),
                 first_y: true,
             }
         );
@@ -255,7 +257,7 @@ mod tests {
             LocationIterator {
                 x: 1386,
                 y: 6813,
-                extent,
+                extent: extent.clone(),
                 first_y: false,
             }
         );
@@ -269,7 +271,7 @@ mod tests {
             LocationIterator {
                 x: 1386,
                 y: 0,
-                extent,
+                extent: extent.clone(),
                 first_y: false,
             }
         );
@@ -283,7 +285,7 @@ mod tests {
             LocationIterator {
                 x: 1386,
                 y: 6812,
-                extent,
+                extent: extent.clone(),
                 first_y: false,
             }
         );

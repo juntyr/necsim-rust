@@ -23,8 +23,6 @@ pub struct WyHash<M: MathsCore> {
     marker: PhantomData<M>,
 }
 
-impl<M: MathsCore> Copy for WyHash<M> {}
-
 impl<M: MathsCore> RngCore<M> for WyHash<M> {
     type Seed = [u8; 8];
 

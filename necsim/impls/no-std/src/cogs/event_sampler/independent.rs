@@ -43,12 +43,7 @@ pub struct IndependentEventSampler<
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
 > {
-    #[cfg_attr(
-        feature = "cuda",
-        cuda(
-            embed = "Option<rust_cuda::utils::adapter::RustToCudaWithPortableBitCopySemantics<SpeciationSample>>"
-        )
-    )]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     min_spec_sample: Option<SpeciationSample>,
     marker: PhantomData<(M, H, G, X, D, T, N)>,
 }
@@ -84,7 +79,7 @@ impl<
 {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
-            min_spec_sample: self.min_spec_sample,
+            min_spec_sample: self.min_spec_sample.clone(),
             marker: PhantomData::<(M, H, G, X, D, T, N)>,
         }
     }
@@ -254,7 +249,7 @@ impl<
     ) -> Option<SpeciationSample> {
         // `core::mem::replace()` would be semantically better
         //  - but `clone()` does not spill to local memory
-        let old_value = self.min_spec_sample;
+        let old_value = self.min_spec_sample.clone();
 
         self.min_spec_sample = new;
 

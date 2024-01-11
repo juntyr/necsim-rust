@@ -105,7 +105,6 @@ macro_rules! match_scenario_algorithm {
 }
 
 #[allow(clippy::too_many_arguments)]
-#[allow(clippy::too_many_lines)] // FIXME
 pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
     local_partition: P,
 

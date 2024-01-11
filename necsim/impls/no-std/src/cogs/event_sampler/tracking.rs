@@ -26,7 +26,8 @@ pub trait MinSpeciationTrackingEventSampler<
         -> Option<SpeciationSample>;
 }
 
-#[derive(Clone, Copy, Debug, TypeLayout)]
+#[derive(Clone, Debug, TypeLayout)]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[repr(C)]
 pub struct SpeciationSample {
     speciation_sample: ClosedOpenUnitF64,

@@ -3,7 +3,10 @@ use core::marker::PhantomData;
 use necsim_core::cogs::{MathsCore, PrimeableRng, RngCore};
 
 use const_type_layout::TypeGraphLayout;
-use rust_cuda::safety::{PortableBitSemantics, StackOnly};
+use rust_cuda::{
+    safety::{PortableBitSemantics, StackOnly},
+    utils::adapter::RustToCudaWithPortableBitCloneSemantics,
+};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -12,38 +15,45 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 #[cuda(free = "M", free = "R")]
 pub struct CudaRng<M: MathsCore, R>
 where
-    R: RngCore<M> + Copy + StackOnly + PortableBitSemantics + TypeGraphLayout,
+    R: RngCore<M> + StackOnly + PortableBitSemantics + TypeGraphLayout,
 {
-    inner: R,
+    #[cuda(embed)]
+    inner: RustToCudaWithPortableBitCloneSemantics<R>,
     marker: PhantomData<M>,
 }
 
-impl<M: MathsCore, R: RngCore<M> + Copy + StackOnly + PortableBitSemantics + TypeGraphLayout> Clone
+impl<M: MathsCore, R: RngCore<M> + StackOnly + PortableBitSemantics + TypeGraphLayout + Copy> Copy
+    for CudaRng<M, R>
+{
+}
+
+#[allow(clippy::expl_impl_clone_on_copy)]
+impl<M: MathsCore, R: RngCore<M> + StackOnly + PortableBitSemantics + TypeGraphLayout> Clone
     for CudaRng<M, R>
 {
     fn clone(&self) -> Self {
         Self {
-            inner: self.inner,
+            inner: self.inner.clone(),
             marker: PhantomData::<M>,
         }
     }
 }
 
-impl<M: MathsCore, R: RngCore<M> + Copy + StackOnly + PortableBitSemantics + TypeGraphLayout>
-    From<R> for CudaRng<M, R>
+impl<M: MathsCore, R: RngCore<M> + StackOnly + PortableBitSemantics + TypeGraphLayout> From<R>
+    for CudaRng<M, R>
 {
     #[must_use]
     #[inline]
     fn from(rng: R) -> Self {
         Self {
-            inner: rng,
+            inner: rng.into(),
             marker: PhantomData::<M>,
         }
     }
 }
 
-impl<M: MathsCore, R: RngCore<M> + Copy + StackOnly + PortableBitSemantics + TypeGraphLayout>
-    RngCore<M> for CudaRng<M, R>
+impl<M: MathsCore, R: RngCore<M> + StackOnly + PortableBitSemantics + TypeGraphLayout> RngCore<M>
+    for CudaRng<M, R>
 {
     type Seed = <R as RngCore<M>>::Seed;
 
@@ -51,7 +61,7 @@ impl<M: MathsCore, R: RngCore<M> + Copy + StackOnly + PortableBitSemantics + Typ
     #[inline]
     fn from_seed(seed: Self::Seed) -> Self {
         Self {
-            inner: R::from_seed(seed),
+            inner: R::from_seed(seed).into(),
             marker: PhantomData::<M>,
         }
     }
@@ -63,10 +73,8 @@ impl<M: MathsCore, R: RngCore<M> + Copy + StackOnly + PortableBitSemantics + Typ
     }
 }
 
-impl<
-        M: MathsCore,
-        R: PrimeableRng<M> + Copy + StackOnly + PortableBitSemantics + TypeGraphLayout,
-    > PrimeableRng<M> for CudaRng<M, R>
+impl<M: MathsCore, R: PrimeableRng<M> + StackOnly + PortableBitSemantics + TypeGraphLayout>
+    PrimeableRng<M> for CudaRng<M, R>
 {
     #[inline]
     fn prime_with(&mut self, location_index: u64, time_index: u64) {
@@ -74,22 +82,19 @@ impl<
     }
 }
 
-impl<M: MathsCore, R: RngCore<M> + Copy + StackOnly + PortableBitSemantics + TypeGraphLayout>
-    Serialize for CudaRng<M, R>
+impl<M: MathsCore, R: RngCore<M> + StackOnly + PortableBitSemantics + TypeGraphLayout> Serialize
+    for CudaRng<M, R>
 {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.inner.serialize(serializer)
     }
 }
 
-impl<
-        'de,
-        M: MathsCore,
-        R: RngCore<M> + Copy + StackOnly + PortableBitSemantics + TypeGraphLayout,
-    > Deserialize<'de> for CudaRng<M, R>
+impl<'de, M: MathsCore, R: RngCore<M> + StackOnly + PortableBitSemantics + TypeGraphLayout>
+    Deserialize<'de> for CudaRng<M, R>
 {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let inner = R::deserialize(deserializer)?;
+        let inner = R::deserialize(deserializer)?.into();
 
         Ok(Self {
             inner,

@@ -17,8 +17,6 @@ pub struct SeaHash<M: MathsCore> {
     marker: PhantomData<M>,
 }
 
-impl<M: MathsCore> Copy for SeaHash<M> {}
-
 impl<M: MathsCore> RngCore<M> for SeaHash<M> {
     type Seed = [u8; 8];
 

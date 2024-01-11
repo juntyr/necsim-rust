@@ -21,6 +21,7 @@ pub struct InMemoryHabitat<M: MathsCore> {
     habitat: Final<Box<[u32]>>,
     #[cfg_attr(feature = "cuda", cuda(embed))]
     u64_injection: Final<Box<[u64]>>,
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     extent: LandscapeExtent,
     marker: PhantomData<M>,
 }
@@ -31,7 +32,7 @@ impl<M: MathsCore> Backup for InMemoryHabitat<M> {
         Self {
             habitat: Final::new(self.habitat.clone()),
             u64_injection: Final::new(self.u64_injection.clone()),
-            extent: self.extent,
+            extent: self.extent.clone(),
             marker: PhantomData::<M>,
         }
     }
