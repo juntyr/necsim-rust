@@ -36,41 +36,42 @@ use super::{super::super::BufferingSimulateArgsBuilder, rng};
 
 macro_rules! match_scenario_algorithm {
     (
-        ($algorithm:expr, $scenario:expr => $algscen:ident) {
+        ($algorithm:expr, $scenario:expr => $algscen:ident : $algscenty:ident) {
             $($(#[$meta:meta])* $algpat:pat => $algcode:block),*
             <=>
-            $($scenpat:pat => $scencode:block),*
+            $($scenpat:pat => $scencode:block => $scenty:ident),*
         }
     ) => {
         match_scenario_algorithm! {
-            impl ($algorithm, $scenario => $algscen) {
+            impl ($algorithm, $scenario => $algscen : $algscenty) {
                 $($(#[$meta])* $algpat => $algcode),*
                 <=>
-                $($scenpat => $scencode),*
+                $($scenpat => $scencode => $scenty),*
                 <=>
             }
         }
     };
     (
-        impl ($algorithm:expr, $scenario:expr => $algscen:ident) {
+        impl ($algorithm:expr, $scenario:expr => $algscen:ident : $algscenty:ident) {
             $(#[$meta:meta])* $algpat:pat => $algcode:block,
             $($(#[$metarem:meta])* $algpatrem:pat => $algcoderem:block),+
             <=>
-            $($scenpat:pat => $scencode:block),*
+            $($scenpat:pat => $scencode:block => $scenty:ident),*
             <=>
             $($tail:tt)*
         }
     ) => {
         match_scenario_algorithm! {
-            impl ($algorithm, $scenario => $algscen) {
+            impl ($algorithm, $scenario => $algscen : $algscenty) {
                 $($(#[$metarem])* $algpatrem => $algcoderem),+
                 <=>
-                $($scenpat => $scencode),*
+                $($scenpat => $scencode => $scenty),*
                 <=>
                 $($tail)*
                 $(#[$meta])* $algpat => {
                     match $scenario {
                         $($scenpat => {
+                            type $algscenty<M, G> = $scenty<M, G>;
                             let $algscen = $scencode;
                             $algcode
                         }),*
@@ -80,10 +81,10 @@ macro_rules! match_scenario_algorithm {
         }
     };
     (
-        impl ($algorithm:expr, $scenario:expr => $algscen:ident) {
+        impl ($algorithm:expr, $scenario:expr => $algscen:ident : $algscenty:ident) {
             $(#[$meta:meta])* $algpat:pat => $algcode:block
             <=>
-            $($scenpat:pat => $scencode:block),*
+            $($scenpat:pat => $scencode:block => $scenty:ident),*
             <=>
             $($tail:tt)*
         }
@@ -93,6 +94,7 @@ macro_rules! match_scenario_algorithm {
             $(#[$meta])* $algpat => {
                 match $scenario {
                     $($scenpat => {
+                        type $algscenty<M, G> = $scenty<M, G>;
                         let $algscen = $scencode;
                         $algcode
                     }),*
@@ -117,14 +119,14 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
     normalised_args: &mut BufferingSimulateArgsBuilder,
 ) -> anyhow::Result<SimulationOutcome> {
     match_scenario_algorithm!(
-        (algorithm, scenario => scenario)
+        (algorithm, scenario => scenario: ScenarioTy)
     {
         #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
         AlgorithmArgs::Gillespie(algorithm_args) => {
             rng::dispatch::<
                 <GillespieAlgorithm as AlgorithmDefaults>::MathsCore,
                 <GillespieAlgorithm as AlgorithmDefaults>::Rng<_>,
-                GillespieAlgorithm, _, R, P,
+                GillespieAlgorithm, ScenarioTy<_, _>, R, P,
             >(
                 local_partition, sample, algorithm_args, scenario,
                 pause_before, ron_args, normalised_args,
@@ -135,7 +137,7 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
             rng::dispatch::<
                 <EventSkippingAlgorithm as AlgorithmDefaults>::MathsCore,
                 <EventSkippingAlgorithm as AlgorithmDefaults>::Rng<_>,
-                EventSkippingAlgorithm, _, R, P,
+                EventSkippingAlgorithm, ScenarioTy<_, _>, R, P,
             >(
                 local_partition, sample, algorithm_args, scenario,
                 pause_before, ron_args, normalised_args,
@@ -146,7 +148,7 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
             rng::dispatch::<
                 <IndependentAlgorithm as AlgorithmDefaults>::MathsCore,
                 <IndependentAlgorithm as AlgorithmDefaults>::Rng<_>,
-                IndependentAlgorithm, _, R, P,
+                IndependentAlgorithm, ScenarioTy<_, _>, R, P,
             >(
                 local_partition, sample, algorithm_args, scenario,
                 pause_before, ron_args, normalised_args,
@@ -154,47 +156,10 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
         },
         #[cfg(feature = "rustcoalescence-algorithms-cuda")]
         AlgorithmArgs::Cuda(algorithm_args) => {
-            fn coerce_cuda_dispatch<
-                'p,
-                M: necsim_core::cogs::MathsCore + Sync,
-                G: necsim_core::cogs::PrimeableRng<M> + rust_cuda::lend::RustToCuda + Sync,
-                O: Scenario<M, G>,
-                R: Reporter,
-                P: LocalPartition<'p, R>,
-            >(
-                local_partition: P,
-
-                sample: crate::args::config::sample::Sample,
-                algorithm_args: <CudaAlgorithm as rustcoalescence_algorithms::AlgorithmParamters>::Arguments,
-                scenario: O,
-                pause_before: Option<NonNegativeF64>,
-
-                ron_args: &str,
-                normalised_args: &mut BufferingSimulateArgsBuilder,
-            ) -> anyhow::Result<SimulationOutcome> where
-                O::Habitat: rust_cuda::lend::RustToCuda + Sync,
-                O::DispersalSampler<
-                    necsim_impls_no_std::cogs::dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler<
-                        M, O::Habitat, G,
-                    >
-                >: rust_cuda::lend::RustToCuda + Sync,
-                O::TurnoverRate: rust_cuda::lend::RustToCuda + Sync,
-                O::SpeciationProbability: rust_cuda::lend::RustToCuda + Sync,
-            {
-                rng::dispatch::<
-                    M,
-                    G,
-                    CudaAlgorithm, _, R, P,
-                >(
-                    local_partition, sample, algorithm_args, scenario,
-                    pause_before, ron_args, normalised_args,
-                )
-            }
-
-            coerce_cuda_dispatch::<
+            rng::dispatch::<
                 <CudaAlgorithm as AlgorithmDefaults>::MathsCore,
                 <CudaAlgorithm as AlgorithmDefaults>::Rng<_>,
-                _, R, P,
+                CudaAlgorithm, ScenarioTy<_, _>, R, P,
             >(
                 local_partition, sample, algorithm_args, scenario,
                 pause_before, ron_args, normalised_args,
@@ -206,40 +171,40 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
                 scenario_args,
                 speciation_probability_per_generation,
             )?
-        },
+        } => SpatiallyExplicitUniformTurnoverScenario,
         ScenarioArgs::SpatiallyExplicitTurnoverMap(scenario_args) => {
             SpatiallyExplicitTurnoverMapScenario::initialise(
                 scenario_args,
                 speciation_probability_per_generation,
             )?
-        },
+        } => SpatiallyExplicitTurnoverMapScenario,
         ScenarioArgs::NonSpatial(scenario_args) => {
             NonSpatialScenario::initialise(
                 scenario_args,
                 speciation_probability_per_generation,
             )
             .into_ok()
-        },
+        } => NonSpatialScenario,
         ScenarioArgs::AlmostInfinite(scenario_args) => {
             AlmostInfiniteScenario::initialise(
                 scenario_args,
                 speciation_probability_per_generation,
             )
             .into_ok()
-        },
+        } => AlmostInfiniteScenario,
         ScenarioArgs::SpatiallyImplicit(scenario_args) => {
             SpatiallyImplicitScenario::initialise(
                 scenario_args,
                 speciation_probability_per_generation,
             )
             .into_ok()
-        },
+        } => SpatiallyImplicitScenario,
         ScenarioArgs::WrappingNoise(scenario_args) => {
             WrappingNoiseScenario::initialise(
                 scenario_args,
                 speciation_probability_per_generation,
             )
             .into_ok()
-        }
+        } => WrappingNoiseScenario
     })
 }
