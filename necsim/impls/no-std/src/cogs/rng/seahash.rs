@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{MathsCore, PrimeableRng, RngCore};
+use necsim_core::cogs::{Backup, MathsCore, PrimeableRng, RngCore};
 
 use serde::{Deserialize, Serialize};
 
@@ -15,6 +15,13 @@ pub struct SeaHash<M: MathsCore> {
     offset: u64,
     #[serde(skip)]
     marker: PhantomData<M>,
+}
+
+#[contract_trait]
+impl<M: MathsCore> Backup for SeaHash<M> {
+    unsafe fn backup_unchecked(&self) -> Self {
+        self.clone()
+    }
 }
 
 impl<M: MathsCore> RngCore<M> for SeaHash<M> {
