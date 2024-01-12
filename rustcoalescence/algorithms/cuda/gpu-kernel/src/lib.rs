@@ -13,24 +13,29 @@ extern crate alloc;
 
 #[cfg(target_os = "cuda")]
 use core::ops::ControlFlow;
+use core::sync::atomic::AtomicU64;
 
-// FIXME: why pub use?
-pub use necsim_core::{
+use necsim_core::{
     cogs::{
         CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
         LineageStore, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
     },
+    lineage::Lineage,
     reporter::boolean::Boolean,
+    simulation::Simulation,
 };
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
-// FIXME: why pub use?
-pub use necsim_impls_no_std::cogs::{
+use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
+use necsim_impls_no_std::cogs::{
     active_lineage_sampler::singular::SingularActiveLineageSampler,
     event_sampler::tracking::{MinSpeciationTrackingEventSampler, SpeciationSample},
 };
 
-// FIXME: why pub use?
-pub use rust_cuda::lend::RustToCuda;
+use rust_cuda::{
+    kernel::param::{DeepPerThreadBorrow, PerThreadShallowCopy, PtxJit, ShallowInteriorMutable},
+    lend::RustToCuda,
+};
 
 #[rust_cuda::kernel::kernel(pub use link! for impl)]
 #[kernel(
@@ -55,45 +60,19 @@ pub fn simulate<
     ReportSpeciation: Boolean,
     ReportDispersal: Boolean,
 >(
-    simulation: &rust_cuda::kernel::param::PtxJit<
-        rust_cuda::kernel::param::DeepPerThreadBorrow<
-            necsim_core::simulation::Simulation<M, H, G, S, X, D, C, T, N, E, I, A>,
-        >,
+    simulation: &PtxJit<DeepPerThreadBorrow<Simulation<M, H, G, S, X, D, C, T, N, E, I, A>>>,
+    task_list: &mut PtxJit<DeepPerThreadBorrow<ValueBuffer<Lineage, true, true>>>,
+    event_buffer_reporter: &mut PtxJit<
+        DeepPerThreadBorrow<EventBuffer<ReportSpeciation, ReportDispersal>>,
     >,
-    task_list: &mut rust_cuda::kernel::param::PtxJit<
-        rust_cuda::kernel::param::DeepPerThreadBorrow<
-            necsim_impls_cuda::value_buffer::ValueBuffer<necsim_core::lineage::Lineage, true, true>,
-        >,
+    min_spec_sample_buffer: &mut PtxJit<
+        DeepPerThreadBorrow<ValueBuffer<SpeciationSample, false, true>>,
     >,
-    event_buffer_reporter: &mut rust_cuda::kernel::param::PtxJit<
-        rust_cuda::kernel::param::DeepPerThreadBorrow<
-            necsim_impls_cuda::event_buffer::EventBuffer<ReportSpeciation, ReportDispersal>,
-        >,
-    >,
-    min_spec_sample_buffer: &mut rust_cuda::kernel::param::PtxJit<
-        rust_cuda::kernel::param::DeepPerThreadBorrow<
-            necsim_impls_cuda::value_buffer::ValueBuffer<SpeciationSample, false, true>,
-        >,
-    >,
-    next_event_time_buffer: &mut rust_cuda::kernel::param::PtxJit<
-        rust_cuda::kernel::param::DeepPerThreadBorrow<
-            necsim_impls_cuda::value_buffer::ValueBuffer<
-                necsim_core_bond::PositiveF64,
-                false,
-                true,
-            >,
-        >,
-    >,
-    total_time_max: &rust_cuda::kernel::param::ShallowInteriorMutable<
-        core::sync::atomic::AtomicU64,
-    >,
-    total_steps_sum: &rust_cuda::kernel::param::ShallowInteriorMutable<
-        core::sync::atomic::AtomicU64,
-    >,
-    max_steps: rust_cuda::kernel::param::PerThreadShallowCopy<u64>,
-    max_next_event_time: rust_cuda::kernel::param::PerThreadShallowCopy<
-        necsim_core_bond::NonNegativeF64,
-    >,
+    next_event_time_buffer: &mut PtxJit<DeepPerThreadBorrow<ValueBuffer<PositiveF64, false, true>>>,
+    total_time_max: &ShallowInteriorMutable<AtomicU64>,
+    total_steps_sum: &ShallowInteriorMutable<AtomicU64>,
+    max_steps: PerThreadShallowCopy<u64>,
+    max_next_event_time: PerThreadShallowCopy<NonNegativeF64>,
 ) {
     // TODO: use simulation with non-allocating clone
     let mut simulation = unsafe { core::mem::ManuallyDrop::new(core::ptr::read(simulation)) };

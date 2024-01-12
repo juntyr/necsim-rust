@@ -6,7 +6,11 @@
 extern crate serde_derive_state;
 
 use initialiser::CudaLineageStoreSampleInitialiser;
-use necsim_core::{cogs::MathsCore, lineage::Lineage, reporter::Reporter};
+use necsim_core::{
+    cogs::{MathsCore, PrimeableRng},
+    lineage::Lineage,
+    reporter::Reporter,
+};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_cuda::cogs::{maths::NvptxMathsCore, rng::CudaRng};
@@ -39,7 +43,7 @@ use rustcoalescence_algorithms::{
 use rustcoalescence_scenarios::Scenario;
 
 use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernelPtx;
-use rustcoalescence_algorithms_cuda_gpu_kernel::{simulate, PrimeableRng};
+use rustcoalescence_algorithms_cuda_gpu_kernel::simulate;
 
 use rust_cuda::{kernel::CompiledKernelPtx, lend::RustToCuda};
 

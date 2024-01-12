@@ -1,6 +1,10 @@
 use std::marker::PhantomData;
 
-use necsim_core::{cogs::MathsCore, reporter::Reporter, simulation::SimulationBuilder};
+use necsim_core::{
+    cogs::{MathsCore, PrimeableRng},
+    reporter::Reporter,
+    simulation::SimulationBuilder,
+};
 use necsim_core_bond::NonNegativeF64;
 
 use necsim_impls_no_std::{
@@ -23,7 +27,7 @@ use necsim_partitioning_core::LocalPartition;
 use rustcoalescence_algorithms::result::SimulationOutcome;
 use rustcoalescence_scenarios::Scenario;
 
-use rustcoalescence_algorithms_cuda_gpu_kernel::{simulate, PrimeableRng};
+use rustcoalescence_algorithms_cuda_gpu_kernel::simulate;
 
 use rust_cuda::{
     deps::rustacuda::{
