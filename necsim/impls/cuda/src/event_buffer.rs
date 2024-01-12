@@ -1,4 +1,7 @@
-use core::fmt;
+use core::{
+    fmt,
+    ops::{Deref, DerefMut},
+};
 
 use const_type_layout::TypeGraphLayout;
 #[cfg(not(target_os = "cuda"))]
@@ -198,14 +201,14 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
         event: impl Into<<EventBuffer<ReportSpeciation, ReportDispersal> as EventType>::Event>,
     ) {
         if let ([mask, mask_rest @ ..], [buffer, buffer_rest @ ..]) = (
-            core::mem::take(&mut self.event_mask.0),
-            core::mem::take(&mut self.event_buffer.0),
+            core::mem::take(&mut *self.event_mask),
+            core::mem::take(&mut *self.event_buffer),
         ) {
             mask.write(true);
             buffer.write(MaybeSome::Some(event.into()));
 
-            self.event_mask.0 = mask_rest;
-            self.event_buffer.0 = buffer_rest;
+            *self.event_mask = mask_rest;
+            *self.event_buffer = buffer_rest;
         }
     }
 }
@@ -225,7 +228,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
 impl Reporter for EventBuffer<False, True> {
     impl_report!(
         #[debug_requires(
-            !self.event_buffer.0.is_empty(),
+            !self.event_buffer.is_empty(),
             "does not report extraneous dispersal events"
         )]
         dispersal(&mut self, event: Used) {
@@ -238,14 +241,14 @@ impl Reporter for EventBuffer<False, True> {
 impl Reporter for EventBuffer<True, False> {
     impl_report!(
         #[debug_requires(
-            !self.event_buffer.0.is_empty(),
+            !self.event_buffer.is_empty(),
             "does not report extraneous speciation events"
         )]
         speciation(&mut self, event: Used) {
             self.report_event(event.clone());
 
-            self.event_mask.0 = &mut [];
-            self.event_buffer.0 = &mut [];
+            *self.event_mask = &mut [];
+            *self.event_buffer = &mut [];
         }
     );
 }
@@ -254,20 +257,20 @@ impl Reporter for EventBuffer<True, False> {
 impl Reporter for EventBuffer<True, True> {
     impl_report!(
         #[debug_requires(
-            !self.event_buffer.0.is_empty(),
+            !self.event_buffer.is_empty(),
             "does not report extraneous speciation events"
         )]
         speciation(&mut self, event: Used) {
             self.report_event(event.clone());
 
-            self.event_mask.0 = &mut [];
-            self.event_buffer.0 = &mut [];
+            *self.event_mask = &mut [];
+            *self.event_buffer = &mut [];
         }
     );
 
     impl_report!(
         #[debug_requires(
-            !self.event_buffer.0.is_empty(),
+            !self.event_buffer.is_empty(),
             "does not report extraneous dispersal events"
         )]
         dispersal(&mut self, event: Used) {
@@ -280,6 +283,24 @@ impl Reporter for EventBuffer<True, True> {
 struct CudaExchangeSlice<T: 'static + StackOnly + PortableBitSemantics + TypeGraphLayout>(
     &'static mut [T],
 );
+
+impl<T: 'static + StackOnly + PortableBitSemantics + TypeGraphLayout> Deref
+    for CudaExchangeSlice<T>
+{
+    type Target = &'static mut [T];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T: 'static + StackOnly + PortableBitSemantics + TypeGraphLayout> DerefMut
+    for CudaExchangeSlice<T>
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 impl<
         T: 'static + StackOnly + PortableBitSemantics + TypeGraphLayout,
