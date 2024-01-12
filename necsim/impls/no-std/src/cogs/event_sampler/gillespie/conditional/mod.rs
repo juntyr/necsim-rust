@@ -207,7 +207,7 @@ impl<
             let (dispersal_target, coalescence) = simulation
                 .coalescence_sampler
                 .sample_coalescence_at_location(
-                    *dispersal_origin.location(),
+                    dispersal_origin.location().clone(),
                     &simulation.habitat,
                     &simulation.lineage_store,
                     CoalescenceRngSample::new(rng),

@@ -7,7 +7,7 @@ impl Reporter for LocationSpeciesFeatherReporter {
         self.init = true;
 
         if speciation.prior_time == 0.0_f64 {
-            self.store_individual_origin(&speciation.global_lineage_reference, *speciation.origin.location());
+            self.store_individual_origin(&speciation.global_lineage_reference, speciation.origin.location().clone());
         }
 
         if Some(speciation) == self.last_speciation_event.as_ref() {
@@ -31,7 +31,7 @@ impl Reporter for LocationSpeciesFeatherReporter {
         self.init = true;
 
         if dispersal.prior_time == 0.0_f64 {
-            self.store_individual_origin(&dispersal.global_lineage_reference, *dispersal.origin.location());
+            self.store_individual_origin(&dispersal.global_lineage_reference, dispersal.origin.location().clone());
         }
 
         // Only update the active frontier with `deduplication_probability`

@@ -64,11 +64,11 @@ impl<M: MathsCore, H: Habitat<M>> LocallyCoherentLineageStore<M, H>
     ) -> InMemoryLineageReference {
         let lineages_at_location = self
             .location_to_lineage_references
-            .entry(*lineage.indexed_location.location())
+            .entry(lineage.indexed_location.location().clone())
             .or_default();
 
         self.indexed_location_to_lineage_reference.insert(
-            lineage.indexed_location,
+            lineage.indexed_location.clone(),
             (lineage.global_reference.clone(), lineages_at_location.len()),
         );
 
@@ -136,7 +136,7 @@ impl<M: MathsCore, H: Habitat<M>> GloballyCoherentLineageStore<M, H>
                 if references.is_empty() {
                     None
                 } else {
-                    Some(*location)
+                    Some(location.clone())
                 }
             })
     }

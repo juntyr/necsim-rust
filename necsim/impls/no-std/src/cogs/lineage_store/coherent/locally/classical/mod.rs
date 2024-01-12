@@ -46,7 +46,7 @@ impl<M: MathsCore, H: Habitat<M>> Backup for ClassicalLineageStore<M, H> {
             indexed_location_to_lineage_reference: self
                 .indexed_location_to_lineage_reference
                 .iter()
-                .map(|(k, v)| (*k, v.backup_unchecked()))
+                .map(|(k, v)| (k.clone(), v.backup_unchecked()))
                 .collect(),
             _marker: PhantomData::<(M, H)>,
         }

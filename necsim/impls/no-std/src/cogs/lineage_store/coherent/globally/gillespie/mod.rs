@@ -50,7 +50,7 @@ impl<M: MathsCore, H: Habitat<M>> Backup for GillespieLineageStore<M, H> {
             location_to_lineage_references: self
                 .location_to_lineage_references
                 .iter()
-                .map(|(k, v)| (*k, v.iter().map(|x| x.backup_unchecked()).collect()))
+                .map(|(k, v)| (k.clone(), v.iter().map(|x| x.backup_unchecked()).collect()))
                 .collect(),
             indexed_location_to_lineage_reference: self
                 .indexed_location_to_lineage_reference

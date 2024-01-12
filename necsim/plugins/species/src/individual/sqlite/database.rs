@@ -18,7 +18,7 @@ impl IndividualSpeciesSQLiteReporter {
         lineage: &GlobalLineageReference,
         origin: &IndexedLocation,
     ) {
-        self.origins.insert(lineage.clone(), *origin);
+        self.origins.insert(lineage.clone(), origin.clone());
     }
 
     pub(super) fn store_individual_speciation(

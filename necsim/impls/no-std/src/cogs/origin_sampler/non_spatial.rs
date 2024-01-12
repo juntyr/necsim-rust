@@ -106,7 +106,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator for NonSpatialOriginSam
         self.next_location_index += u32::try_from(index_difference).unwrap();
 
         Some(Lineage::new(
-            IndexedLocation::new(*next_location, self.next_location_index),
+            IndexedLocation::new(next_location.clone(), self.next_location_index),
             self.habitat,
         ))
     }

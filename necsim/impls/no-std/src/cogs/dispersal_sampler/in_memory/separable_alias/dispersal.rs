@@ -23,11 +23,11 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
             self.get_self_dispersal_probability_at_location(location, habitat);
 
         if self_dispersal_at_location >= 1.0_f64 {
-            return *location;
+            return location.clone();
         }
 
         if self_dispersal_at_location > 0.0_f64 && rng.sample_event(self_dispersal_at_location) {
-            return *location;
+            return location.clone();
         }
 
         self.sample_non_self_dispersal_from_location(location, habitat, rng)

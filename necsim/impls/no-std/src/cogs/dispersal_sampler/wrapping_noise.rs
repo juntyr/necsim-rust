@@ -57,7 +57,7 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, WrappingNoiseHabitat<M>, G
         // If seperable dispersal is not required, this can be implemented as a
         //  direct rejection sampling loop instead.
         if rng.sample_event(self.get_self_dispersal_probability_at_location(location, habitat)) {
-            *location
+            location.clone()
         } else {
             self.sample_non_self_dispersal_from_location(location, habitat, rng)
         }

@@ -193,7 +193,7 @@ where
                             global_lineage_reference: coalescing_lineage.global_reference,
                             prior_time: coalescing_lineage.last_event_time,
                             event_time: self.restart_at,
-                            origin: coalescing_lineage.indexed_location,
+                            origin: coalescing_lineage.indexed_location.clone(),
                             target: coalescing_lineage.indexed_location,
                             interaction: LineageInteraction::Coalescence(parent),
                         })

@@ -68,7 +68,7 @@ impl<
                     active_lineage_sampler.push_active_lineage(
                         Lineage {
                             global_reference: migrating_lineage.global_reference.clone(),
-                            indexed_location: dispersal_target,
+                            indexed_location: dispersal_target.clone(),
                             last_event_time: migrating_lineage.event_time.into(),
                         },
                         simulation,

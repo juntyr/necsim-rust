@@ -32,6 +32,7 @@ pub trait MinSpeciationTrackingEventSampler<
 pub struct SpeciationSample {
     speciation_sample: ClosedOpenUnitF64,
     sample_time: PositiveF64,
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     sample_location: IndexedLocation,
 }
 
@@ -48,7 +49,7 @@ impl SpeciationSample {
                 *min_spec_sample = Some(Self {
                     speciation_sample,
                     sample_time,
-                    sample_location: *sample_location,
+                    sample_location: sample_location.clone(),
                 });
             },
         };

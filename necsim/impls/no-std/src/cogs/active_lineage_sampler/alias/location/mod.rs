@@ -145,7 +145,7 @@ impl<
 
                 match ordered_active_locations.last() {
                     Some(location) if location == lineage.indexed_location.location() => (),
-                    _ => ordered_active_locations.push(*lineage.indexed_location.location()),
+                    _ => ordered_active_locations.push(lineage.indexed_location.location().clone()),
                 };
 
                 let _local_reference = lineage_store

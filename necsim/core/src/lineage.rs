@@ -109,6 +109,7 @@ pub struct Lineage {
     #[cfg_attr(feature = "cuda", cuda(ignore))]
     #[serde(alias = "time")]
     pub last_event_time: NonNegativeF64,
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     #[cfg_attr(feature = "cuda", cuda(ignore))]
     #[serde(alias = "loc")]
     pub indexed_location: IndexedLocation,
@@ -118,7 +119,7 @@ impl Lineage {
     #[must_use]
     #[allow(clippy::no_effect_underscore_binding)]
     #[debug_ensures(
-        ret.indexed_location == old(indexed_location),
+        ret.indexed_location == old(indexed_location.clone()),
         "stores the indexed_location"
     )]
     #[debug_ensures(ret.last_event_time == 0.0_f64, "starts at t_0 = 0.0")]
@@ -186,8 +187,8 @@ impl Backup for MigratingLineage {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             global_reference: self.global_reference.backup_unchecked(),
-            dispersal_origin: self.dispersal_origin,
-            dispersal_target: self.dispersal_target,
+            dispersal_origin: self.dispersal_origin.clone(),
+            dispersal_target: self.dispersal_target.clone(),
             prior_time: self.prior_time,
             event_time: self.event_time,
             coalescence_rng_sample: self.coalescence_rng_sample.backup_unchecked(),

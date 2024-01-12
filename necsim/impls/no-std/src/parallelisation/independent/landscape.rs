@@ -197,7 +197,7 @@ pub fn simulate<
                 prior_time,
                 event_time,
                 global_lineage_reference: global_reference.clone(),
-                target: dispersal_target,
+                target: dispersal_target.clone(),
                 interaction: LineageInteraction::Maybe,
             });
 
