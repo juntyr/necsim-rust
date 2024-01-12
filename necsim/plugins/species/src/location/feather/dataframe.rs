@@ -26,9 +26,9 @@ impl LocationSpeciesFeatherReporter {
     pub(super) fn store_individual_origin(
         &mut self,
         lineage: &GlobalLineageReference,
-        origin: Location,
+        origin: &Location,
     ) {
-        self.origins.insert(lineage.clone(), origin);
+        self.origins.insert(lineage.clone(), origin.clone());
     }
 
     pub(super) fn store_individual_speciation(
