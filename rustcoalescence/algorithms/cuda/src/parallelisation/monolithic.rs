@@ -249,14 +249,14 @@ pub fn simulate<
                         let mut task_list_cuda_async =
                             task_list.move_to_device_async(launcher.stream)?;
 
-                        launcher.launch9_async(
-                            simulation_cuda_repr.as_async(launcher.stream).as_ref(),
-                            task_list_cuda_async.as_mut_async().proj_mut(),
-                            event_buffer_cuda_async.as_mut_async().proj_mut(),
-                            min_spec_sample_buffer_cuda_async.as_mut_async().proj_mut(),
-                            next_event_time_buffer_cuda_async.as_mut_async().proj_mut(),
-                            total_time_max.as_ref().as_async(launcher.stream).as_ref(),
-                            total_steps_sum.as_ref().as_async(launcher.stream).as_ref(),
+                        let launch = launcher.launch9_async(
+                            simulation_cuda_repr.as_async(launcher.stream).extract_ref(),
+                            task_list_cuda_async.as_mut_async(),
+                            event_buffer_cuda_async.as_mut_async(),
+                            min_spec_sample_buffer_cuda_async.as_mut_async(),
+                            next_event_time_buffer_cuda_async.as_mut_async(),
+                            total_time_max.as_ref().as_async(launcher.stream).extract_ref(),
+                            total_steps_sum.as_ref().as_async(launcher.stream).extract_ref(),
                             step_slice.get(),
                             level_time,
                         )?;
@@ -275,6 +275,8 @@ pub fn simulate<
                         task_list = task_list_host_async.synchronize()?;
                         next_event_time_buffer = next_event_time_buffer_host_async.synchronize()?;
                         min_spec_sample_buffer = min_spec_sample_buffer_host_async.synchronize()?;
+
+                        launch.synchronize()?;
 
                         // Fetch the completion of the tasks
                         for ((mut spec_sample, mut next_event_time), mut task) in

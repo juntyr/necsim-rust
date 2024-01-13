@@ -177,7 +177,7 @@ where
     };
 
     let (mut status, time, steps, lineages) = with_initialised_cuda(args.device, || {
-        let stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
+        let mut stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
 
         let mut kernel = TypedPtxKernel::new::<Ptx>(Some(Box::new(|kernel| {
             crate::info::print_kernel_function_attributes("simulate", kernel);
@@ -190,21 +190,23 @@ where
             ptx_jit: args.ptx_jit,
         };
 
-        let launcher = Launcher {
-            stream: &stream,
-            kernel: &mut kernel,
-            config,
-        };
+        rust_cuda::host::Stream::with(&mut stream, |stream| {
+            let launcher = Launcher {
+                stream,
+                kernel: &mut kernel,
+                config,
+            };
 
-        parallelisation::monolithic::simulate(
-            &mut simulation,
-            launcher,
-            (args.dedup_cache, args.step_slice),
-            lineages,
-            event_slice,
-            pause_before,
-            local_partition,
-        )
+            parallelisation::monolithic::simulate(
+                &mut simulation,
+                launcher,
+                (args.dedup_cache, args.step_slice),
+                lineages,
+                event_slice,
+                pause_before,
+                local_partition,
+            )
+        })
     })
     .map_err(CudaError::from)?;
 
