@@ -255,8 +255,14 @@ pub fn simulate<
                             event_buffer_cuda_async.as_mut_async(),
                             min_spec_sample_buffer_cuda_async.as_mut_async(),
                             next_event_time_buffer_cuda_async.as_mut_async(),
-                            total_time_max.as_ref().as_async(launcher.stream).extract_ref(),
-                            total_steps_sum.as_ref().as_async(launcher.stream).extract_ref(),
+                            total_time_max
+                                .as_ref()
+                                .as_async(launcher.stream)
+                                .extract_ref(),
+                            total_steps_sum
+                                .as_ref()
+                                .as_async(launcher.stream)
+                                .extract_ref(),
                             step_slice.get(),
                             level_time,
                         )?;
