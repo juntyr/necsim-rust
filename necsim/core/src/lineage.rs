@@ -95,7 +95,7 @@ impl From<Option<GlobalLineageReference>> for LineageInteraction {
     }
 }
 
-#[allow(clippy::unsafe_derive_deserialize, clippy::module_name_repetitions)]
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, TypeLayout)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[repr(C)]

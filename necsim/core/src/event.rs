@@ -55,7 +55,6 @@ pub struct Dispersal {
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[allow(clippy::unsafe_derive_deserialize)]
 #[derive(Debug, Clone, Serialize, Deserialize, TypeLayout)]
 #[repr(C)]
 pub struct SpeciationEvent {

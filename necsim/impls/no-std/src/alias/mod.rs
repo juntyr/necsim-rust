@@ -1,3 +1,5 @@
+use core::cmp::Ordering;
+
 use alloc::vec::Vec;
 
 use necsim_core::cogs::{MathsCore, RngCore};
@@ -62,11 +64,10 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
             };
             Ks[underfull_index] = Es[overfull_index];
 
-            #[allow(clippy::comparison_chain)]
-            if Us[overfull_index] < 1.0_f64 {
-                underfull_indices.push(overfull_index);
-            } else if Us[overfull_index] > 1.0_f64 {
-                overfull_indices.push(overfull_index);
+            match Us[overfull_index].cmp(&NonNegativeF64::one()) {
+                Ordering::Less => underfull_indices.push(overfull_index),
+                Ordering::Equal => (),
+                Ordering::Greater => overfull_indices.push(overfull_index),
             }
         }
 

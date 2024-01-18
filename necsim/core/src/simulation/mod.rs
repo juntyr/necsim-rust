@@ -18,7 +18,7 @@ use crate::{
     reporter::Reporter,
 };
 
-#[allow(clippy::useless_attribute, clippy::module_name_repetitions)]
+#[allow(clippy::module_name_repetitions)]
 pub use builder::{Simulation, SimulationBuilder};
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 

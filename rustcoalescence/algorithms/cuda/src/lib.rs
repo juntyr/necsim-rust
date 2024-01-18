@@ -76,7 +76,6 @@ impl AlgorithmDefaults for CudaAlgorithm {
     type Rng<M: MathsCore> = CudaRng<M, WyHash<M>>;
 }
 
-#[allow(clippy::trait_duplication_in_bounds)]
 impl<
         'p,
         M: MathsCore + Sync,
@@ -311,7 +310,6 @@ where
     ///
     /// Returns a `ContinueError::Sample` if initialising the resuming
     ///  simulation failed
-    #[allow(clippy::too_many_lines)]
     fn resume_and_simulate<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: G,
@@ -355,7 +353,6 @@ where
     ///
     /// Returns a `ContinueError<Self::Error>` if fixing up the restarting
     ///  simulation (incl. running the algorithm) failed
-    #[allow(clippy::too_many_lines)]
     fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: G,

@@ -121,7 +121,6 @@ impl<
     ///
     /// Returns a `ContinueError<Self::Error>` if fixing up the restarting
     ///  simulation (incl. running the algorithm) failed
-    #[allow(clippy::too_many_lines)]
     fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: G,

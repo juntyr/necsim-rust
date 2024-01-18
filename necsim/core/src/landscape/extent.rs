@@ -2,7 +2,7 @@ use necsim_core_bond::OffByOneU32;
 
 use super::Location;
 
-#[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
+#[allow(clippy::module_name_repetitions)]
 #[derive(PartialEq, Eq, Clone, Debug, serde::Deserialize, serde::Serialize, TypeLayout)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(ignore))]

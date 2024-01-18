@@ -48,7 +48,6 @@ where
         get_gillespie_logical_partition(args, local_partition)
     }
 
-    #[allow(clippy::shadow_unrelated, clippy::too_many_lines)]
     default fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         rng: G,
@@ -72,7 +71,6 @@ where
     ///
     /// Returns a `ContinueError::Sample` if initialising the resuming
     ///  simulation failed
-    #[allow(clippy::too_many_lines)]
     default fn resume_and_simulate<
         I: Iterator<Item = u64>,
         L: ExactSizeIterator<Item = Lineage>,
@@ -104,7 +102,6 @@ where
     ///
     /// Returns a `ContinueError<Self::Error>` if fixing up the restarting
     ///  simulation (incl. running the algorithm) failed
-    #[allow(clippy::too_many_lines)]
     default fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: G,

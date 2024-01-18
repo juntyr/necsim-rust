@@ -40,7 +40,6 @@ where
     O::LineageStore<ClassicalLineageStore<M, O::Habitat>>:
         LocallyCoherentLineageStore<M, O::Habitat>,
 {
-    #[allow(clippy::too_many_lines)]
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         rng: G,
@@ -92,7 +91,6 @@ where
     ///
     /// Returns a `ContinueError<Self::Error>` if fixing up the restarting
     ///  simulation (incl. running the algorithm) failed
-    #[allow(clippy::too_many_lines)]
     fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: G,

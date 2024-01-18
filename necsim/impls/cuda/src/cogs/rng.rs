@@ -11,7 +11,7 @@ use rust_cuda::{
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug, rust_cuda::lend::LendRustToCuda)]
+#[derive(Debug, Clone, rust_cuda::lend::LendRustToCuda)]
 #[cuda(free = "M", free = "R")]
 pub struct CudaRng<M: MathsCore, R>
 where
@@ -20,23 +20,6 @@ where
     #[cuda(embed)]
     inner: RustToCudaWithPortableBitCloneSemantics<R>,
     marker: PhantomData<M>,
-}
-
-impl<M: MathsCore, R: RngCore<M> + StackOnly + PortableBitSemantics + TypeGraphLayout + Copy> Copy
-    for CudaRng<M, R>
-{
-}
-
-#[allow(clippy::expl_impl_clone_on_copy)]
-impl<M: MathsCore, R: RngCore<M> + StackOnly + PortableBitSemantics + TypeGraphLayout> Clone
-    for CudaRng<M, R>
-{
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-            marker: PhantomData::<M>,
-        }
-    }
 }
 
 impl<M: MathsCore, R: RngCore<M> + StackOnly + PortableBitSemantics + TypeGraphLayout> From<R>

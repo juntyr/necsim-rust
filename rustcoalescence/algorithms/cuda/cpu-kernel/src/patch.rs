@@ -23,7 +23,6 @@ use crate::SimulationKernelPtx;
 //  `Boolean`s. However, Rust does not recognise that `Boolean` is closed over
 //  {`False`, `True`}. This explicit impl provides the necessary coersion.
 
-#[allow(clippy::trait_duplication_in_bounds)]
 unsafe impl<
         M: MathsCore + Sync,
         H: Habitat<M> + RustToCuda + Sync,

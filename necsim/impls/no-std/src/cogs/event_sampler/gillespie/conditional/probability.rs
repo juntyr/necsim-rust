@@ -17,7 +17,6 @@ pub struct ProbabilityAtLocation {
 }
 
 impl ProbabilityAtLocation {
-    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn new<
         M: MathsCore,
         H: Habitat<M>,
