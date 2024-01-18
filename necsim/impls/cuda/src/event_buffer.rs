@@ -196,6 +196,11 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
 impl<ReportSpeciation: Boolean, ReportDispersal: Boolean>
     EventBuffer<ReportSpeciation, ReportDispersal>
 {
+    #[must_use]
+    pub fn can_buffer_next_event(&self) -> bool {
+        !self.event_buffer.is_empty()
+    }
+
     fn report_event(
         &mut self,
         event: impl Into<<EventBuffer<ReportSpeciation, ReportDispersal> as EventType>::Event>,
@@ -228,7 +233,7 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean> Reporter
 impl Reporter for EventBuffer<False, True> {
     impl_report!(
         #[debug_requires(
-            !self.event_buffer.is_empty(),
+            self.can_buffer_next_event(),
             "does not report extraneous dispersal events"
         )]
         dispersal(&mut self, event: Used) {
@@ -241,7 +246,7 @@ impl Reporter for EventBuffer<False, True> {
 impl Reporter for EventBuffer<True, False> {
     impl_report!(
         #[debug_requires(
-            !self.event_buffer.is_empty(),
+            self.can_buffer_next_event(),
             "does not report extraneous speciation events"
         )]
         speciation(&mut self, event: Used) {
@@ -257,7 +262,7 @@ impl Reporter for EventBuffer<True, False> {
 impl Reporter for EventBuffer<True, True> {
     impl_report!(
         #[debug_requires(
-            !self.event_buffer.is_empty(),
+            self.can_buffer_next_event(),
             "does not report extraneous speciation events"
         )]
         speciation(&mut self, event: Used) {
@@ -270,7 +275,7 @@ impl Reporter for EventBuffer<True, True> {
 
     impl_report!(
         #[debug_requires(
-            !self.event_buffer.is_empty(),
+            self.can_buffer_next_event(),
             "does not report extraneous dispersal events"
         )]
         dispersal(&mut self, event: Used) {
@@ -279,7 +284,7 @@ impl Reporter for EventBuffer<True, True> {
     );
 }
 
-// FIXME: find a less hacky hack
+// TODO: find a prettier workaround
 struct CudaExchangeSlice<T: 'static + StackOnly + PortableBitSemantics + TypeGraphLayout>(
     &'static mut [T],
 );

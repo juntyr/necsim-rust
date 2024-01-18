@@ -51,7 +51,7 @@ impl<
 
     #[inline]
     pub fn simulate_incremental_early_stop<
-        F: FnMut(&Self, u64, PositiveF64) -> ControlFlow<(), ()>,
+        F: FnMut(&Self, u64, PositiveF64, &P) -> ControlFlow<(), ()>,
         P: Reporter,
     >(
         &mut self,
@@ -69,13 +69,17 @@ impl<
                 .map(|lineage| (lineage.event_time, lineage.tie_breaker));
 
             let self_ptr = self as *const Self;
+            let reporter_ptr = reporter as *const P;
 
             let old_rng = unsafe { self.rng.backup_unchecked() };
             let mut early_stop_flow = ControlFlow::Continue(());
 
             let early_peek_stop = |next_event_time| {
                 // Safety: We are only passing in an immutable reference
-                early_stop_flow = early_stop(unsafe { &*self_ptr }, steps, next_event_time);
+                early_stop_flow =
+                    early_stop(unsafe { &*self_ptr }, steps, next_event_time, unsafe {
+                        &*reporter_ptr
+                    });
 
                 if early_stop_flow.is_break() {
                     return ControlFlow::Break(());
@@ -131,6 +135,6 @@ impl<
 
     #[inline]
     pub fn simulate<P: Reporter>(mut self, reporter: &mut P) -> (NonNegativeF64, u64) {
-        self.simulate_incremental_early_stop(|_, _, _| ControlFlow::Continue(()), reporter)
+        self.simulate_incremental_early_stop(|_, _, _, _| ControlFlow::Continue(()), reporter)
     }
 }

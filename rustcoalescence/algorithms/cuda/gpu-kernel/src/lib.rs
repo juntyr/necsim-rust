@@ -91,13 +91,16 @@ pub fn simulate<
         let mut final_next_event_time = None;
 
         let (time, steps) = simulation.simulate_incremental_early_stop(
-            |_, steps, next_event_time| {
+            |_, steps, next_event_time, reporter| {
                 final_next_event_time = Some(next_event_time);
 
-                if steps >= max_steps || next_event_time >= max_next_event_time {
-                    ControlFlow::Break(())
-                } else {
+                if steps < max_steps
+                    && next_event_time < max_next_event_time
+                    && reporter.can_buffer_next_event()
+                {
                     ControlFlow::Continue(())
+                } else {
+                    ControlFlow::Break(())
                 }
             },
             event_buffer_reporter,
