@@ -2,7 +2,6 @@
 #![no_std]
 #![feature(type_alias_impl_trait)]
 #![feature(decl_macro)]
-#![feature(c_str_literals)]
 #![cfg_attr(target_os = "cuda", feature(abi_ptx))]
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
@@ -40,7 +39,7 @@ use rust_cuda::{
 #[rust_cuda::kernel::kernel(pub use link! for impl)]
 #[kernel(
     allow(ptx::double_precision_use),
-    forbid(ptx::local_memory_usage, ptx::register_spills)
+    forbid(ptx::local_memory_use, ptx::register_spills)
 )]
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
@@ -132,24 +131,26 @@ mod cuda_prelude {
     #[cfg(not(debug_assertions))]
     #[panic_handler]
     fn panic(_panic_info: &::core::panic::PanicInfo) -> ! {
-        rust_cuda::device::utils::exit()
+        rust_cuda::device::utils::abort()
     }
 
     #[cfg(debug_assertions)]
     #[panic_handler]
     fn panic(info: &::core::panic::PanicInfo) -> ! {
-        rust_cuda::device::utils::pretty_panic_handler(info, true, true)
+        rust_cuda::device::utils::pretty_print_panic_info(info, true, true);
+        rust_cuda::device::utils::abort()
     }
 
     #[cfg(not(debug_assertions))]
     #[alloc_error_handler]
     fn alloc_error_handler(_: core::alloc::Layout) -> ! {
-        rust_cuda::device::utils::exit()
+        rust_cuda::device::utils::abort()
     }
 
     #[cfg(debug_assertions)]
     #[alloc_error_handler]
     fn alloc_error_handler(layout: core::alloc::Layout) -> ! {
-        rust_cuda::device::utils::pretty_alloc_error_handler(layout)
+        rust_cuda::device::utils::pretty_print_alloc_error(layout);
+        rust_cuda::device::utils::abort()
     }
 }

@@ -1,5 +1,4 @@
 #![deny(clippy::pedantic)]
-#![feature(c_str_literals)]
 #![allow(long_running_const_eval)]
 #![recursion_limit = "1024"]
 

@@ -122,6 +122,7 @@ impl From<ClosedOpenUnitF64> for ClosedUnitF64 {
 }
 
 impl PartialEq for ClosedUnitF64 {
+    #[allow(clippy::unconditional_recursion)]
     fn eq(&self, other: &Self) -> bool {
         self.0.eq(&other.0)
     }
