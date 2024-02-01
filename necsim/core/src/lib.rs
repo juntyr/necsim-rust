@@ -1,7 +1,6 @@
 #![deny(clippy::pedantic)]
 #![no_std]
 #![feature(const_type_name)]
-#![feature(offset_of)]
 #![feature(min_specialization)]
 
 #[doc(hidden)]
