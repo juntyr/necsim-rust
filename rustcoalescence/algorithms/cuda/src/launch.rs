@@ -1,9 +1,12 @@
 use std::marker::PhantomData;
 
-use necsim_core::{cogs::MathsCore, reporter::Reporter, simulation::SimulationBuilder};
+use necsim_core::{
+    cogs::{MathsCore, PrimeableRng},
+    reporter::Reporter,
+    simulation::SimulationBuilder,
+};
 use necsim_core_bond::NonNegativeF64;
 
-use necsim_impls_cuda::cogs::rng::CudaRng;
 use necsim_impls_no_std::{
     cogs::{
         active_lineage_sampler::independent::event_time_sampler::exp::ExpEventTimeSampler,
@@ -16,7 +19,6 @@ use necsim_impls_no_std::{
         origin_sampler::{
             decomposition::DecompositionOriginSampler, pre_sampler::OriginPreSampler,
         },
-        rng::wyhash::WyHash,
     },
     parallelisation::Status,
 };
@@ -25,15 +27,16 @@ use necsim_partitioning_core::LocalPartition;
 use rustcoalescence_algorithms::result::SimulationOutcome;
 use rustcoalescence_scenarios::Scenario;
 
-use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernel;
-use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
+use rustcoalescence_algorithms_cuda_gpu_kernel::simulate;
 
 use rust_cuda::{
-    common::RustToCuda,
-    rustacuda::{
+    deps::rustacuda::{
         function::{BlockSize, GridSize},
         prelude::{Stream, StreamFlags},
     },
+    host::CudaDropWrapper,
+    kernel::{CompiledKernelPtx, LaunchConfig, Launcher, TypedPtxKernel},
+    lend::RustToCuda,
 };
 
 use crate::{
@@ -49,75 +52,54 @@ use crate::{
 #[allow(clippy::too_many_lines)]
 pub fn initialise_and_simulate<
     'p,
-    M: MathsCore,
-    O: Scenario<M, CudaRng<M, WyHash<M>>>,
+    M: MathsCore + Sync,
+    G: PrimeableRng<M> + RustToCuda + Sync,
+    O: Scenario<M, G>,
     R: Reporter,
     P: LocalPartition<'p, R>,
     I: Iterator<Item = u64>,
-    L: CudaLineageStoreSampleInitialiser<M, CudaRng<M, WyHash<M>>, O, Error>,
+    L: CudaLineageStoreSampleInitialiser<M, G, O, Error>,
     Error: From<CudaError>,
+    Ptx: CompiledKernelPtx<
+        simulate<
+            M,
+            O::Habitat,
+            G,
+            IndependentLineageStore<M, O::Habitat>,
+            NeverEmigrationExit,
+            L::DispersalSampler,
+            IndependentCoalescenceSampler<M, O::Habitat>,
+            O::TurnoverRate,
+            O::SpeciationProbability,
+            IndependentEventSampler<
+                M,
+                O::Habitat,
+                G,
+                NeverEmigrationExit,
+                L::DispersalSampler,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+            >,
+            NeverImmigrationEntry,
+            L::ActiveLineageSampler<NeverEmigrationExit, ExpEventTimeSampler>,
+            R::ReportSpeciation,
+            R::ReportDispersal,
+        >,
+    >,
 >(
     args: &CudaArguments,
-    rng: CudaRng<M, WyHash<M>>,
+    rng: G,
     scenario: O,
     pre_sampler: OriginPreSampler<M, I>,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
     lineage_store_sampler_initialiser: L,
-) -> Result<SimulationOutcome<M, CudaRng<M, WyHash<M>>>, Error>
+) -> Result<SimulationOutcome<M, G>, Error>
 where
-    O::Habitat: RustToCuda,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>>:
-        RustToCuda,
-    O::TurnoverRate: RustToCuda,
-    O::SpeciationProbability: RustToCuda,
-    SimulationKernel<
-        M,
-        O::Habitat,
-        CudaRng<M, WyHash<M>>,
-        IndependentLineageStore<M, O::Habitat>,
-        NeverEmigrationExit,
-        L::DispersalSampler,
-        IndependentCoalescenceSampler<M, O::Habitat>,
-        O::TurnoverRate,
-        O::SpeciationProbability,
-        IndependentEventSampler<
-            M,
-            O::Habitat,
-            CudaRng<M, WyHash<M>>,
-            NeverEmigrationExit,
-            L::DispersalSampler,
-            O::TurnoverRate,
-            O::SpeciationProbability,
-        >,
-        NeverImmigrationEntry,
-        L::ActiveLineageSampler<NeverEmigrationExit, ExpEventTimeSampler>,
-        R::ReportSpeciation,
-        R::ReportDispersal,
-    >: SimulatableKernel<
-        M,
-        O::Habitat,
-        CudaRng<M, WyHash<M>>,
-        IndependentLineageStore<M, O::Habitat>,
-        NeverEmigrationExit,
-        L::DispersalSampler,
-        IndependentCoalescenceSampler<M, O::Habitat>,
-        O::TurnoverRate,
-        O::SpeciationProbability,
-        IndependentEventSampler<
-            M,
-            O::Habitat,
-            CudaRng<M, WyHash<M>>,
-            NeverEmigrationExit,
-            L::DispersalSampler,
-            O::TurnoverRate,
-            O::SpeciationProbability,
-        >,
-        NeverImmigrationEntry,
-        L::ActiveLineageSampler<NeverEmigrationExit, ExpEventTimeSampler>,
-        R::ReportSpeciation,
-        R::ReportDispersal,
-    >,
+    O::Habitat: RustToCuda + Sync,
+    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda + Sync,
+    O::TurnoverRate: RustToCuda + Sync,
+    O::SpeciationProbability: RustToCuda + Sync,
 {
     let (
         habitat,
@@ -126,8 +108,7 @@ where
         speciation_probability,
         origin_sampler_auxiliary,
         decomposition_auxiliary,
-    ) = scenario
-        .build::<InMemoryPackedAliasDispersalSampler<M, O::Habitat, CudaRng<M, WyHash<M>>>>();
+    ) = scenario.build::<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>();
     let coalescence_sampler = IndependentCoalescenceSampler::default();
     let event_sampler = IndependentEventSampler::default();
 
@@ -196,26 +177,36 @@ where
     };
 
     let (mut status, time, steps, lineages) = with_initialised_cuda(args.device, || {
-        let kernel = SimulationKernel::try_new(
-            Stream::new(StreamFlags::NON_BLOCKING, None)?,
-            grid_size.clone(),
-            block_size.clone(),
-            args.ptx_jit,
-            Box::new(|kernel| {
-                crate::info::print_kernel_function_attributes("simulate", kernel);
-                Ok(())
-            }),
-        )?;
+        let mut stream = CudaDropWrapper::from(Stream::new(StreamFlags::NON_BLOCKING, None)?);
 
-        parallelisation::monolithic::simulate(
-            &mut simulation,
-            kernel,
-            (grid_size, block_size, args.dedup_cache, args.step_slice),
-            lineages,
-            event_slice,
-            pause_before,
-            local_partition,
-        )
+        let mut kernel = TypedPtxKernel::new::<Ptx>(Some(Box::new(|kernel| {
+            crate::info::print_kernel_function_attributes("simulate", kernel);
+            Ok(())
+        })));
+
+        let config = LaunchConfig {
+            grid: grid_size,
+            block: block_size,
+            ptx_jit: args.ptx_jit,
+        };
+
+        rust_cuda::host::Stream::with(&mut stream, |stream| {
+            let launcher = Launcher {
+                stream,
+                kernel: &mut kernel,
+                config,
+            };
+
+            parallelisation::monolithic::simulate(
+                &mut simulation,
+                launcher,
+                (args.dedup_cache, args.step_slice),
+                lineages,
+                event_slice,
+                pause_before,
+                local_partition,
+            )
+        })
     })
     .map_err(CudaError::from)?;
 

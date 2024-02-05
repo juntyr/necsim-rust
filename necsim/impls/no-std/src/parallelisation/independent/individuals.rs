@@ -125,7 +125,7 @@ pub fn simulate<
         //  detected at the next shared duplicate event
 
         let (new_time, new_steps) = simulation.simulate_incremental_early_stop(
-            |_, steps, _| {
+            |_, steps, _, _| {
                 if steps >= step_slice.get() {
                     ControlFlow::Break(())
                 } else {

@@ -1,4 +1,4 @@
-use rust_cuda::rustacuda::error::CudaError as RustaCudaError;
+use rust_cuda::deps::rustacuda::error::CudaError as RustaCudaError;
 use serde::{Deserialize, Serialize};
 
 #[derive(thiserror::Error, Debug, Clone, Serialize, Deserialize)]

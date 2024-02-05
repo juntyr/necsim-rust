@@ -10,12 +10,12 @@ use core::ops::{Index, IndexMut};
 
 /// A fixed sized two-dimensional array.
 #[derive(Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(
     feature = "cuda",
     cuda(
         free = "T",
-        bound = "T: rust_cuda::safety::StackOnly + const_type_layout::TypeGraphLayout"
+        bound = "T: rust_cuda::safety::PortableBitSemantics + const_type_layout::TypeGraphLayout"
     )
 )]
 pub struct Array2D<T> {

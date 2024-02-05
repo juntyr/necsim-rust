@@ -3,7 +3,7 @@ use core::mem::MaybeUninit;
 use rust_cuda::safety::StackOnly;
 
 #[derive(TypeLayout)]
-#[repr(C)]
+#[repr(transparent)]
 #[doc(hidden)]
 pub struct MaybeSome<T: StackOnly>(MaybeUninit<T>);
 

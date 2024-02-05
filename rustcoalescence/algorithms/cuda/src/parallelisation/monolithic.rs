@@ -1,9 +1,9 @@
 use std::{collections::VecDeque, convert::TryInto, num::NonZeroU64, sync::atomic::AtomicU64};
 
 use rust_cuda::{
-    common::RustToCuda,
-    host::{HostAndDeviceMutRef, LendToCuda},
-    rustacuda::function::{BlockSize, GridSize},
+    host::HostAndDeviceMutRef,
+    kernel::Launcher,
+    lend::{LendToCuda, RustToCuda},
     utils::exchange::wrapper::ExchangeWrapperOnHost,
 };
 
@@ -37,8 +37,7 @@ use necsim_partitioning_core::LocalPartition;
 
 use necsim_impls_cuda::{event_buffer::EventBuffer, value_buffer::ValueBuffer};
 
-use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernel;
-use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
+use rustcoalescence_algorithms_cuda_gpu_kernel::simulate;
 
 use crate::error::CudaError;
 
@@ -48,25 +47,24 @@ type Result<T, E = CudaError> = std::result::Result<T, E>;
 pub fn simulate<
     'l,
     'p,
-    M: MathsCore,
-    H: Habitat<M> + RustToCuda,
-    G: PrimeableRng<M> + RustToCuda,
-    S: LineageStore<M, H> + RustToCuda,
-    X: EmigrationExit<M, H, G, S> + RustToCuda,
-    D: DispersalSampler<M, H, G> + RustToCuda,
-    C: CoalescenceSampler<M, H, S> + RustToCuda,
-    T: TurnoverRate<M, H> + RustToCuda,
-    N: SpeciationProbability<M, H> + RustToCuda,
-    E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda,
-    I: ImmigrationEntry<M> + RustToCuda,
-    A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I>
-        + RustToCuda,
+    M: MathsCore + Sync,
+    H: Habitat<M> + RustToCuda + Sync,
+    G: PrimeableRng<M> + RustToCuda + Sync,
+    S: LineageStore<M, H> + RustToCuda + Sync,
+    X: EmigrationExit<M, H, G, S> + RustToCuda + Sync,
+    D: DispersalSampler<M, H, G> + RustToCuda + Sync,
+    C: CoalescenceSampler<M, H, S> + RustToCuda + Sync,
+    T: TurnoverRate<M, H> + RustToCuda + Sync,
+    N: SpeciationProbability<M, H> + RustToCuda + Sync,
+    E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda + Sync,
+    I: ImmigrationEntry<M> + RustToCuda + Sync,
+    A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda + Sync,
     P: Reporter,
     L: LocalPartition<'p, P>,
     LI: IntoIterator<Item = Lineage>,
 >(
     simulation: &mut Simulation<M, H, G, S, X, D, C, T, N, E, I, A>,
-    mut kernel: SimulationKernel<
+    mut launcher: Launcher<simulate<
         M,
         H,
         G,
@@ -81,45 +79,18 @@ pub fn simulate<
         A,
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
         <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
-    >,
-    config: (GridSize, BlockSize, DedupCache, NonZeroU64),
+    >>,
+    config: (DedupCache, NonZeroU64),
     lineages: LI,
     event_slice: EventSlice,
     pause_before: Option<NonNegativeF64>,
     local_partition: &'l mut L,
-) -> Result<(Status, NonNegativeF64, u64, impl IntoIterator<Item = Lineage>)>
-    where SimulationKernel<
-        M,
-        H,
-        G,
-        S,
-        X,
-        D,
-        C,
-        T,
-        N,
-        E,
-        I,
-        A,
-        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, 'p, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
-        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, 'p, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
-    >: SimulatableKernel<
-        M,
-        H,
-        G,
-        S,
-        X,
-        D,
-        C,
-        T,
-        N,
-        E,
-        I,
-        A,
-        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, 'p, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportSpeciation,
-        <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<'l, 'p, L::IsLive, P, L>>::WaterLevelReporter as Reporter>::ReportDispersal,
-    >,
-{
+) -> Result<(
+    Status,
+    NonNegativeF64,
+    u64,
+    impl IntoIterator<Item = Lineage>,
+)> {
     let mut slow_lineages = lineages
         .into_iter()
         .map(|lineage| {
@@ -143,7 +114,7 @@ pub fn simulate<
         L,
     >>::WaterLevelReporter::new(event_slice.get(), local_partition);
 
-    let (grid_size, block_size, dedup_cache, step_slice) = config;
+    let (dedup_cache, step_slice) = config;
 
     #[allow(clippy::or_fun_call)]
     let intial_max_time = slow_lineages
@@ -153,10 +124,13 @@ pub fn simulate<
         .unwrap_or(NonNegativeF64::zero());
 
     // Initialise the total_time_max and total_steps_sum atomics
-    let mut total_time_max = AtomicU64::new(intial_max_time.get().to_bits()).into();
-    let mut total_steps_sum = AtomicU64::new(0_u64).into();
+    let mut total_time_max = AtomicU64::new(intial_max_time.get().to_bits());
+    let mut total_steps_sum = AtomicU64::new(0_u64);
 
-    let mut task_list = ExchangeWrapperOnHost::new(ValueBuffer::new(&block_size, &grid_size)?)?;
+    let mut task_list = ExchangeWrapperOnHost::new(ValueBuffer::new(
+        &launcher.config.block,
+        &launcher.config.grid,
+    )?)?;
     let mut event_buffer: ExchangeWrapperOnHost<
         EventBuffer<
             <<WaterLevelReporterStrategy as WaterLevelReporterConstructor<
@@ -171,14 +145,17 @@ pub fn simulate<
             >>::WaterLevelReporter as Reporter>::ReportDispersal,
         >,
     > = ExchangeWrapperOnHost::new(EventBuffer::new(
-        &block_size,
-        &grid_size,
+        &launcher.config.block, &launcher.config.grid,
         step_slice.get().try_into().unwrap_or(usize::MAX),
     )?)?;
-    let mut min_spec_sample_buffer =
-        ExchangeWrapperOnHost::new(ValueBuffer::new(&block_size, &grid_size)?)?;
-    let mut next_event_time_buffer =
-        ExchangeWrapperOnHost::new(ValueBuffer::new(&block_size, &grid_size)?)?;
+    let mut min_spec_sample_buffer = ExchangeWrapperOnHost::new(ValueBuffer::new(
+        &launcher.config.block,
+        &launcher.config.grid,
+    )?)?;
+    let mut next_event_time_buffer = ExchangeWrapperOnHost::new(ValueBuffer::new(
+        &launcher.config.block,
+        &launcher.config.grid,
+    )?)?;
 
     let mut min_spec_samples = dedup_cache.construct(slow_lineages.len());
 
@@ -195,8 +172,7 @@ pub fn simulate<
 
     HostAndDeviceMutRef::with_new(&mut total_time_max, |total_time_max| -> Result<()> {
         HostAndDeviceMutRef::with_new(&mut total_steps_sum, |total_steps_sum| -> Result<()> {
-            // TODO: Pipeline async launches and callbacks of simulation/event analysis
-            simulation.lend_to_cuda_mut(|mut simulation_cuda_repr| -> Result<()> {
+            simulation.lend_to_cuda(|simulation_cuda_repr| -> Result<()> {
                 while !slow_lineages.is_empty()
                     && pause_before.map_or(true, |pause_before| level_time < pause_before)
                 {
@@ -242,8 +218,16 @@ pub fn simulate<
                     proxy.advance_water_level(level_time);
 
                     // Simulate all slow lineages until they have finished or exceeded the
-                    // new water  level
+                    //  new water  level
                     while !slow_lineages.is_empty() {
+                        // Move the event buffer and min speciation sample buffer to CUDA
+                        let mut event_buffer_cuda_async =
+                            event_buffer.move_to_device_async(launcher.stream)?;
+                        let mut min_spec_sample_buffer_cuda_async =
+                            min_spec_sample_buffer.move_to_device_async(launcher.stream)?;
+                        let mut next_event_time_buffer_cuda_async =
+                            next_event_time_buffer.move_to_device_async(launcher.stream)?;
+
                         // Upload the new tasks from the front of the task queue
                         for mut task in task_list.iter_mut() {
                             let next_slow_lineage = loop {
@@ -261,31 +245,44 @@ pub fn simulate<
                             task.replace(next_slow_lineage);
                         }
 
-                        // Move the task list, event buffer and min speciation sample buffer
-                        // to CUDA
-                        let mut event_buffer_cuda = event_buffer.move_to_device()?;
-                        let mut min_spec_sample_buffer_cuda =
-                            min_spec_sample_buffer.move_to_device()?;
-                        let mut next_event_time_buffer_cuda =
-                            next_event_time_buffer.move_to_device()?;
-                        let mut task_list_cuda = task_list.move_to_device()?;
+                        // Move the task list to CUDA
+                        let mut task_list_cuda_async =
+                            task_list.move_to_device_async(launcher.stream)?;
 
-                        kernel.simulate_raw(
-                            simulation_cuda_repr.as_mut(),
-                            task_list_cuda.as_mut(),
-                            event_buffer_cuda.as_mut(),
-                            min_spec_sample_buffer_cuda.as_mut(),
-                            next_event_time_buffer_cuda.as_mut(),
-                            total_time_max.as_ref(),
-                            total_steps_sum.as_ref(),
-                            step_slice.get().into(),
-                            level_time.into(),
+                        let launch = launcher.launch9_async(
+                            simulation_cuda_repr.as_async(launcher.stream).extract_ref(),
+                            task_list_cuda_async.as_mut_async(),
+                            event_buffer_cuda_async.as_mut_async(),
+                            min_spec_sample_buffer_cuda_async.as_mut_async(),
+                            next_event_time_buffer_cuda_async.as_mut_async(),
+                            total_time_max
+                                .as_ref()
+                                .as_async(launcher.stream)
+                                .extract_ref(),
+                            total_steps_sum
+                                .as_ref()
+                                .as_async(launcher.stream)
+                                .extract_ref(),
+                            step_slice.get(),
+                            level_time,
                         )?;
 
-                        min_spec_sample_buffer = min_spec_sample_buffer_cuda.move_to_host()?;
-                        next_event_time_buffer = next_event_time_buffer_cuda.move_to_host()?;
-                        task_list = task_list_cuda.move_to_host()?;
-                        event_buffer = event_buffer_cuda.move_to_host()?;
+                        let min_spec_sample_buffer_host_async =
+                            min_spec_sample_buffer_cuda_async
+                                .move_to_host_async(launcher.stream)?;
+                        let next_event_time_buffer_host_async =
+                            next_event_time_buffer_cuda_async
+                                .move_to_host_async(launcher.stream)?;
+                        let task_list_host_async =
+                            task_list_cuda_async.move_to_host_async(launcher.stream)?;
+                        let event_buffer_host_async =
+                            event_buffer_cuda_async.move_to_host_async(launcher.stream)?;
+
+                        task_list = task_list_host_async.synchronize()?;
+                        next_event_time_buffer = next_event_time_buffer_host_async.synchronize()?;
+                        min_spec_sample_buffer = min_spec_sample_buffer_host_async.synchronize()?;
+
+                        launch.synchronize()?;
 
                         // Fetch the completion of the tasks
                         for ((mut spec_sample, mut next_event_time), mut task) in
@@ -303,8 +300,7 @@ pub fn simulate<
                             {
                                 if !duplicate_individual {
                                     // Reclassify lineages as either slow (still below
-                                    // water) or
-                                    // fast
+                                    //  the metaphorical water level) or fast
                                     if next_event_time < level_time {
                                         slow_lineages.push_back((task, next_event_time.into()));
                                     } else {
@@ -314,6 +310,8 @@ pub fn simulate<
                             }
                         }
 
+                        event_buffer = event_buffer_host_async.synchronize()?;
+                        // TODO: explore partial sorting on the GPU
                         event_buffer.report_events_unordered(&mut proxy);
 
                         proxy.local_partition().get_reporter().report_progress(
@@ -336,10 +334,9 @@ pub fn simulate<
     })?;
 
     // Safety: Max of NonNegativeF64 values from the GPU
-    let total_time_max = unsafe {
-        NonNegativeF64::new_unchecked(f64::from_bits(total_time_max.into_inner().into_inner()))
-    };
-    let total_steps_sum = total_steps_sum.into_inner().into_inner();
+    let total_time_max =
+        unsafe { NonNegativeF64::new_unchecked(f64::from_bits(total_time_max.into_inner())) };
+    let total_steps_sum = total_steps_sum.into_inner();
 
     local_partition.report_progress_sync(slow_lineages.len() as u64);
 
@@ -347,6 +344,10 @@ pub fn simulate<
     let (global_time, global_steps) =
         local_partition.reduce_global_time_steps(total_time_max, total_steps_sum);
     let lineages = slow_lineages.into_iter().map(|(lineage, _)| lineage);
+
+    // Note: The simulation requires no mutation, since all components are
+    //       either immutable or have singular swap states, and the list
+    //       of all lineages (which does change) is returned separately
 
     Ok((status, global_time, global_steps, lineages))
 }

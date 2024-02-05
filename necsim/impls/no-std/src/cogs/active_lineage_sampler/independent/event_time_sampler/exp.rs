@@ -11,7 +11,7 @@ const INV_PHI: u64 = 0x9e37_79b9_7f4a_7c15_u64;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 pub struct ExpEventTimeSampler {
     delta_t: PositiveF64,
 }

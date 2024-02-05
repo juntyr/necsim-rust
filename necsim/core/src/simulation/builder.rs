@@ -86,7 +86,7 @@ impl<
 }
 
 #[derive(Debug, TypeLayout)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 #[repr(C)]
 pub struct Simulation<

@@ -1,5 +1,6 @@
 #![deny(clippy::pedantic)]
 #![no_std]
+#![allow(internal_features)]
 #![feature(core_intrinsics)]
 
 pub trait MathsCore: 'static + Clone + core::fmt::Debug {

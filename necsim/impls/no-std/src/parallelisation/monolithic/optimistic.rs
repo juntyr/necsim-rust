@@ -109,7 +109,7 @@ pub fn simulate<
             // e.g. (1->2)|(2->3)|(3->1) => (1->2)|(3->1)
 
             let (_, new_steps) = simulation.simulate_incremental_early_stop(
-                |_, _, next_event_time| {
+                |_, _, next_event_time, _| {
                     if next_event_time >= next_safe_time {
                         ControlFlow::Break(())
                     } else {

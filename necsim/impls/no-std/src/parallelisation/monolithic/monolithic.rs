@@ -69,7 +69,7 @@ pub fn simulate<
     //  ically later time
 
     let (time, steps) = simulation.simulate_incremental_early_stop(
-        |_, _, next_event_time| {
+        |_, _, next_event_time, _| {
             pause_before.map_or(ControlFlow::Continue(()), |pause_before| {
                 if next_event_time >= pause_before {
                     ControlFlow::Break(())

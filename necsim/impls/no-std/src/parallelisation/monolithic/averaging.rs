@@ -78,7 +78,7 @@ pub fn simulate<
         let next_safe_time = global_safe_time + independent_time_slice;
 
         let (_, new_steps) = simulation.simulate_incremental_early_stop(
-            |_, _, next_event_time| {
+            |_, _, next_event_time, _| {
                 if next_event_time >= next_safe_time {
                     ControlFlow::Break(())
                 } else {

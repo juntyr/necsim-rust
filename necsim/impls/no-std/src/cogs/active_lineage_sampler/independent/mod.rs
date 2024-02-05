@@ -25,7 +25,7 @@ use event_time_sampler::EventTimeSampler;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct IndependentActiveLineageSampler<
     M: MathsCore,
@@ -37,10 +37,7 @@ pub struct IndependentActiveLineageSampler<
     N: SpeciationProbability<M, H>,
     J: EventTimeSampler<M, H, G, T>,
 > {
-    #[cfg_attr(
-        feature = "cuda",
-        cuda(embed = "Option<rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<Lineage>>")
-    )]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     active_lineage: Option<Lineage>,
     min_event_time: NonNegativeF64,
     last_event_time: NonNegativeF64,

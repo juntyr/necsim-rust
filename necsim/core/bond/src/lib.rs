@@ -4,7 +4,6 @@
 #![feature(const_float_bits_conv)]
 #![feature(const_float_classify)]
 #![feature(const_type_name)]
-#![feature(offset_of)]
 
 #[macro_use]
 extern crate const_type_layout;

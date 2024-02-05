@@ -11,9 +11,10 @@ use necsim_core_bond::{OffByOneU32, OffByOneU64};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct NonSpatialHabitat<M: MathsCore> {
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     extent: LandscapeExtent,
     deme: NonZeroU32,
     marker: PhantomData<M>,

@@ -3,7 +3,6 @@ use std::{
     iter::{FromIterator, IntoIterator},
     marker::PhantomData,
     path::Path,
-    rc::Rc,
 };
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -68,7 +67,8 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
         let libraries = self
             .plugins
             .iter()
-            .map(|plugin| Rc::clone(&plugin.library))
+            .map(|plugin| &plugin.library)
+            .cloned()
             .collect::<Vec<_>>();
 
         let result = inner(self);

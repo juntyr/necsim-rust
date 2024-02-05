@@ -21,7 +21,7 @@ use super::tracking::{MinSpeciationTrackingEventSampler, SpeciationSample};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-#[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(
     feature = "cuda",
     cuda(
@@ -43,12 +43,7 @@ pub struct IndependentEventSampler<
     T: TurnoverRate<M, H>,
     N: SpeciationProbability<M, H>,
 > {
-    #[cfg_attr(
-        feature = "cuda",
-        cuda(
-            embed = "Option<rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<SpeciationSample>>"
-        )
-    )]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     min_spec_sample: Option<SpeciationSample>,
     marker: PhantomData<(M, H, G, X, D, T, N)>,
 }

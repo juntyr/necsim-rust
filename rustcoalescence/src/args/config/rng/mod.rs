@@ -188,11 +188,7 @@ impl<'a> ProtectedState<'a> {
     }
 
     fn from_bytes(bytes: &'a [u8]) -> Option<Self> {
-        if bytes.len() < 4 {
-            return None;
-        }
-
-        let (state, checksum) = bytes.rsplit_array_ref();
+        let (state, checksum) = bytes.split_last_chunk()?;
         let checksum = u32::from_le_bytes(*checksum);
 
         if adler::adler32_slice(state) != checksum {

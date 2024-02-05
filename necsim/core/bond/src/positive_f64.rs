@@ -122,6 +122,7 @@ impl From<NonZeroU64> for PositiveF64 {
 }
 
 impl PartialEq for PositiveF64 {
+    #[allow(clippy::unconditional_recursion)]
     fn eq(&self, other: &Self) -> bool {
         self.0.eq(&other.0)
     }

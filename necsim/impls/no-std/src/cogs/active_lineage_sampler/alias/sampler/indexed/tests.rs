@@ -1037,7 +1037,7 @@ fn debug_display_sampler() {
 
     assert_eq!(
         &alloc::format!("{sampler:?}"),
-        "DynamicAliasMethodIndexedSampler { exponents: [], total_weight: 0.0 }"
+        "DynamicAliasMethodIndexedSampler { exponents: [], total_weight: 0.0, .. }"
     );
 
     for i in (1..=6_u8).rev() {
@@ -1046,7 +1046,7 @@ fn debug_display_sampler() {
 
     assert_eq!(
         &alloc::format!("{sampler:?}"),
-        "DynamicAliasMethodIndexedSampler { exponents: [2, 1, 0], total_weight: 21.0 }"
+        "DynamicAliasMethodIndexedSampler { exponents: [2, 1, 0], total_weight: 21.0, .. }"
     );
 
     let mut sampler_clone = unsafe { sampler.backup_unchecked() };
@@ -1062,11 +1062,11 @@ fn debug_display_sampler() {
 
     assert_eq!(
         &alloc::format!("{sampler:?}"),
-        "DynamicAliasMethodIndexedSampler { exponents: [2, 1, 0], total_weight: 18.0 }"
+        "DynamicAliasMethodIndexedSampler { exponents: [2, 1, 0], total_weight: 18.0, .. }"
     );
     assert_eq!(
         &alloc::format!("{sampler_clone:?}"),
-        "DynamicAliasMethodIndexedSampler { exponents: [2, 1], total_weight: 20.0 }"
+        "DynamicAliasMethodIndexedSampler { exponents: [2, 1], total_weight: 20.0, .. }"
     );
 }
 

@@ -1,4 +1,4 @@
-use rust_cuda::rustacuda::{
+use rust_cuda::deps::rustacuda::{
     context::{Context, CurrentContext, ResourceLimit},
     prelude::*,
 };
@@ -13,7 +13,7 @@ pub fn with_initialised_cuda<O, E: Into<CudaError>, F: FnOnce() -> Result<O, E>>
     inner: F,
 ) -> Result<O, CudaError> {
     // Initialize the CUDA API
-    rust_cuda::rustacuda::init(CudaFlags::empty())?;
+    rust_cuda::deps::rustacuda::init(CudaFlags::empty())?;
 
     // Get the first device
     let device = Device::get_device(device)?;

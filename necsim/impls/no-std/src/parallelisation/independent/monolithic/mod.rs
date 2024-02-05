@@ -226,7 +226,7 @@ pub fn simulate<
             previous_next_event_time = None;
 
             let (new_time, new_steps) = simulation.simulate_incremental_early_stop(
-                |_, steps, next_event_time| {
+                |_, steps, next_event_time, _| {
                     previous_next_event_time = Some(next_event_time);
 
                     if steps >= step_slice.get() || next_event_time >= level_time {

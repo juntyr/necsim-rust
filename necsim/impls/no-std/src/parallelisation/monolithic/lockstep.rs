@@ -77,7 +77,7 @@ pub fn simulate<
         // Simulate for zero-steps (immediate early stop) without side effects
         //  to peek the next local event time
         simulation.simulate_incremental_early_stop(
-            |_, _, next_event_time| {
+            |_, _, next_event_time, _| {
                 next_local_time = Some(next_event_time);
 
                 ControlFlow::Break(())
@@ -102,7 +102,7 @@ pub fn simulate<
         // The partition with the next event gets to simulate just the next step
         if let Ok(next_global_time) = local_partition.reduce_vote_min_time(next_local_time) {
             let (_, new_steps) = simulation.simulate_incremental_early_stop(
-                |_, _, next_event_time| {
+                |_, _, next_event_time, _| {
                     if next_event_time > next_global_time {
                         ControlFlow::Break(())
                     } else {
