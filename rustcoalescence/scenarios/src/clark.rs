@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use necsim_core::{cogs::{DispersalSampler, LineageStore, MathsCore, RngCore}, landscape::LandscapeExtent};
+use necsim_core::{
+    cogs::{DispersalSampler, LineageStore, MathsCore, RngCore},
+    landscape::LandscapeExtent,
+};
 use necsim_core_bond::{OpenClosedUnitF64 as PositiveUnitF64, PositiveF64};
 use necsim_partitioning_core::partition::Partition;
 
@@ -9,9 +12,7 @@ use necsim_impls_no_std::{
         dispersal_sampler::almost_infinite_clark::AlmostInfiniteClarkDispersalSampler,
         habitat::almost_infinite::AlmostInfiniteHabitat,
         lineage_store::coherent::globally::singleton_demes::SingletonDemesLineageStore,
-        origin_sampler::{
-            clark::ClarkOriginSampler, pre_sampler::OriginPreSampler,
-        },
+        origin_sampler::{clark::ClarkOriginSampler, pre_sampler::OriginPreSampler},
         speciation_probability::uniform::UniformSpeciationProbability,
         turnover_rate::uniform::UniformTurnoverRate,
     },

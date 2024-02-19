@@ -23,9 +23,7 @@ pub struct ClarkOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
     sample: LandscapeExtent,
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
-    for ClarkOriginSampler<'h, M, I>
-{
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug for ClarkOriginSampler<'h, M, I> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(ClarkOriginSampler))
             .field("pre_sampler", &self.pre_sampler)
