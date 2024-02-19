@@ -1,7 +1,10 @@
+#[allow(unused_imports)]
 use rustcoalescence_algorithms_cuda_gpu_kernel::{SimulatableKernel, SimulationKernelArgs};
 
+#[allow(unused_imports)]
 use crate::SimulationKernel;
 
+#[allow(unused_macros)]
 macro_rules! link_kernel {
     ($habitat:ty, $dispersal:ty, $turnover:ty, $speciation:ty) => {
         link_kernel! {
@@ -201,6 +204,7 @@ macro_rules! link_kernel {
     };
 }
 
+#[cfg(feature = "non-spatial-scenario")]
 link_kernel!(
     necsim_impls_no_std::cogs::habitat::non_spatial::NonSpatialHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore
@@ -218,6 +222,7 @@ link_kernel!(
     necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
 );
 
+#[cfg(feature = "spatially-implicit-scenario")]
 link_kernel!(
     necsim_impls_no_std::cogs::habitat::spatially_implicit::SpatiallyImplicitHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore
@@ -235,6 +240,7 @@ link_kernel!(
     necsim_impls_no_std::cogs::speciation_probability::spatially_implicit::SpatiallyImplicitSpeciationProbability
 );
 
+#[cfg(feature = "almost-infinite-scenario")]
 link_kernel!(
     necsim_impls_no_std::cogs::habitat::almost_infinite::AlmostInfiniteHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore
@@ -252,6 +258,7 @@ link_kernel!(
     necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
 );
 
+#[cfg(feature = "spatially-explicit-uniform-turnover-scenario")]
 link_kernel!(
     necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore
@@ -272,6 +279,7 @@ link_kernel!(
     necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
 );
 
+#[cfg(feature = "spatially-explicit-turnover-map-scenario")]
 link_kernel!(
     necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore
@@ -292,6 +300,7 @@ link_kernel!(
     necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
 );
 
+#[cfg(feature = "wrapping-noise-scenario")]
 link_kernel!(
     necsim_impls_no_std::cogs::habitat::wrapping_noise::WrappingNoiseHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore

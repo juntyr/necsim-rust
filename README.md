@@ -48,17 +48,17 @@ If you also want to use the CUDA-based algorithm, it is **required** that you al
 
 ## Installation
 
-To install `rustcoalescence`, you need to decide which algorithms you want to compile with it. You can enable the provided algorithms by enabling their corresponding features. For instance, to compile all CPU-based algorithms, you can use
+To install `rustcoalescence`, you need to decide which algorithms you want to compile with it. You can enable the provided algorithms by enabling their corresponding features. For instance, to compile all CPU-based algorithms with all scenarios, you can use
 ```shell
-> cargo install --path rustcoalescence --locked --features rustcoalescence-algorithms-gillespie --features rustcoalescence-algorithms-independent
+> cargo install --path rustcoalescence --locked --features gillespie-algorithms --features independent-algorithm --features all-scenarios
 ```
-To install with CUDA support, you first need to ensure that the dynamic CUDA libraries are in the `LD_LIBRARY_PATH` and enable the `rustcoalescence-algorithms-cuda` feature:
+To install with CUDA support, you first need to ensure that the dynamic CUDA libraries are in the `LD_LIBRARY_PATH` and enable the `cuda-algorithm` feature:
 ```shell
-> LIBRARY_PATH="$LD_LIBRARY_PATH" cargo install --path rustcoalescence --locked [...] --features rustcoalescence-algorithms-cuda
+> LIBRARY_PATH="$LD_LIBRARY_PATH" cargo install --path rustcoalescence --locked [...] --features cuda-algorithm
 ```
-To compile with MPI support, you need to enable the `necsim-partitioning-mpi` feature:
+To compile with MPI support, you need to enable the `mpi-partitioning` feature:
 ```shell
-> cargo install --path rustcoalescence --locked [...] --features necsim-partitioning-mpi
+> cargo install --path rustcoalescence --locked [...] --features mpi-partitioning
 ```
 After compilation, you can then run `rustcoalescence` using:
 ```shell

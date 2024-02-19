@@ -20,10 +20,15 @@ use necsim_impls_no_std::{
     decomposition::Decomposition,
 };
 
+#[cfg(feature = "almost-infinite")]
 pub mod almost_infinite;
+#[cfg(feature = "non-spatial")]
 pub mod non_spatial;
+#[cfg(any(feature = "spatially-explicit-uniform-turnover", feature = "spatially-explicit-turnover-map"))]
 pub mod spatially_explicit;
+#[cfg(feature = "spatially-implicit")]
 pub mod spatially_implicit;
+#[cfg(feature = "wrapping-noise")]
 pub mod wrapping_noise;
 
 pub trait ScenarioParameters {

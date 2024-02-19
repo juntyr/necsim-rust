@@ -1,27 +1,27 @@
 #[cfg(any(
-    feature = "rustcoalescence-algorithms-gillespie",
-    feature = "rustcoalescence-algorithms-independent",
-    feature = "rustcoalescence-algorithms-cuda"
+    feature = "gillespie-algorithms",
+    feature = "independent-algorithm",
+    feature = "cuda-algorithm"
 ))]
 mod valid;
 
 #[cfg(not(any(
-    feature = "rustcoalescence-algorithms-gillespie",
-    feature = "rustcoalescence-algorithms-independent",
-    feature = "rustcoalescence-algorithms-cuda"
+    feature = "gillespie-algorithms",
+    feature = "independent-algorithm",
+    feature = "cuda-algorithm"
 )))]
 mod fallback;
 
 #[cfg(any(
-    feature = "rustcoalescence-algorithms-gillespie",
-    feature = "rustcoalescence-algorithms-independent",
-    feature = "rustcoalescence-algorithms-cuda"
+    feature = "gillespie-algorithms",
+    feature = "independent-algorithm",
+    feature = "cuda-algorithm"
 ))]
 pub(super) use valid::dispatch;
 
 #[cfg(not(any(
-    feature = "rustcoalescence-algorithms-gillespie",
-    feature = "rustcoalescence-algorithms-independent",
-    feature = "rustcoalescence-algorithms-cuda"
+    feature = "gillespie-algorithms",
+    feature = "independent-algorithm",
+    feature = "cuda-algorithm"
 )))]
 pub(super) use fallback::dispatch;

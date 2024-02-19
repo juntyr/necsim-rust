@@ -4,25 +4,28 @@ use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_algorithms::AlgorithmDefaults;
 
-#[cfg(feature = "rustcoalescence-algorithms-cuda")]
+#[cfg(feature = "cuda-algorithm")]
 use rustcoalescence_algorithms_cuda::CudaAlgorithm;
-#[cfg(feature = "rustcoalescence-algorithms-gillespie")]
+#[cfg(feature = "gillespie-algorithms")]
 use rustcoalescence_algorithms_gillespie::{
     event_skipping::EventSkippingAlgorithm, gillespie::GillespieAlgorithm,
 };
-#[cfg(feature = "rustcoalescence-algorithms-independent")]
+#[cfg(feature = "independent-algorithm")]
 use rustcoalescence_algorithms_independent::IndependentAlgorithm;
 
-use rustcoalescence_scenarios::{
-    almost_infinite::AlmostInfiniteScenario,
-    non_spatial::NonSpatialScenario,
-    spatially_explicit::{
-        SpatiallyExplicitTurnoverMapScenario, SpatiallyExplicitUniformTurnoverScenario,
-    },
-    spatially_implicit::SpatiallyImplicitScenario,
-    wrapping_noise::WrappingNoiseScenario,
-    Scenario,
-};
+#[cfg(feature = "almost-infinite-scenario")]
+use rustcoalescence_scenarios::almost_infinite::AlmostInfiniteScenario;
+#[cfg(feature = "non-spatial-scenario")]
+use rustcoalescence_scenarios::non_spatial::NonSpatialScenario;
+#[cfg(feature = "spatially-explicit-turnover-map-scenario")]
+use rustcoalescence_scenarios::spatially_explicit::SpatiallyExplicitTurnoverMapScenario;
+#[cfg(feature = "spatially-explicit-uniform-turnover-scenario")]
+use rustcoalescence_scenarios::spatially_explicit::SpatiallyExplicitUniformTurnoverScenario;
+#[cfg(feature = "spatially-implicit-scenario")]
+use rustcoalescence_scenarios::spatially_implicit::SpatiallyImplicitScenario;
+#[cfg(feature = "wrapping-noise-scenario")]
+use rustcoalescence_scenarios::wrapping_noise::WrappingNoiseScenario;
+use rustcoalescence_scenarios::Scenario;
 
 use crate::{
     args::config::{
@@ -37,40 +40,40 @@ use super::{super::super::BufferingSimulateArgsBuilder, rng};
 macro_rules! match_scenario_algorithm {
     (
         ($algorithm:expr, $scenario:expr => $algscen:ident) {
-            $($(#[$meta:meta])* $algpat:pat => $algcode:block),*
+            $($(#[$algmeta:meta])* $algpat:pat => $algcode:block),*
             <=>
-            $($scenpat:pat => $scencode:block),*
+            $($(#[$scenmeta:meta])* $scenpat:pat => $scencode:block),*
         }
     ) => {
         match_scenario_algorithm! {
             impl ($algorithm, $scenario => $algscen) {
-                $($(#[$meta])* $algpat => $algcode),*
+                $($(#[$algmeta])* $algpat => $algcode),*
                 <=>
-                $($scenpat => $scencode),*
+                $($(#[$scenmeta])* $scenpat => $scencode),*
                 <=>
             }
         }
     };
     (
         impl ($algorithm:expr, $scenario:expr => $algscen:ident) {
-            $(#[$meta:meta])* $algpat:pat => $algcode:block,
-            $($(#[$metarem:meta])* $algpatrem:pat => $algcoderem:block),+
+            $(#[$algmeta:meta])* $algpat:pat => $algcode:block,
+            $($(#[$algmetarem:meta])* $algpatrem:pat => $algcoderem:block),+
             <=>
-            $($scenpat:pat => $scencode:block),*
+            $($(#[$scenmeta:meta])* $scenpat:pat => $scencode:block),*
             <=>
             $($tail:tt)*
         }
     ) => {
         match_scenario_algorithm! {
             impl ($algorithm, $scenario => $algscen) {
-                $($(#[$metarem])* $algpatrem => $algcoderem),+
+                $($(#[$algmetarem])* $algpatrem => $algcoderem),+
                 <=>
-                $($scenpat => $scencode),*
+                $($(#[$scenmeta])* $scenpat => $scencode),*
                 <=>
                 $($tail)*
-                $(#[$meta])* $algpat => {
+                $(#[$algmeta])* $algpat => {
                     match $scenario {
-                        $($scenpat => {
+                        $($(#[$scenmeta])* $scenpat => {
                             let $algscen = $scencode;
                             $algcode
                         }),*
@@ -81,18 +84,18 @@ macro_rules! match_scenario_algorithm {
     };
     (
         impl ($algorithm:expr, $scenario:expr => $algscen:ident) {
-            $(#[$meta:meta])* $algpat:pat => $algcode:block
+            $(#[$algmeta:meta])* $algpat:pat => $algcode:block
             <=>
-            $($scenpat:pat => $scencode:block),*
+            $($(#[$scenmeta:meta])* $scenpat:pat => $scencode:block),*
             <=>
             $($tail:tt)*
         }
     ) => {
         match $algorithm {
             $($tail)*
-            $(#[$meta])* $algpat => {
+            $(#[$algmeta])* $algpat => {
                 match $scenario {
-                    $($scenpat => {
+                    $($(#[$scenmeta])* $scenpat => {
                         let $algscen = $scencode;
                         $algcode
                     }),*
@@ -118,7 +121,7 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
     match_scenario_algorithm!(
         (algorithm, scenario => scenario)
     {
-        #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
+        #[cfg(feature = "gillespie-algorithms")]
         AlgorithmArgs::Gillespie(algorithm_args) => {
             rng::dispatch::<
                 <GillespieAlgorithm as AlgorithmDefaults>::MathsCore,
@@ -128,7 +131,7 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
                 pause_before, ron_args, normalised_args,
             )
         },
-        #[cfg(feature = "rustcoalescence-algorithms-gillespie")]
+        #[cfg(feature = "gillespie-algorithms")]
         AlgorithmArgs::EventSkipping(algorithm_args) => {
             rng::dispatch::<
                 <EventSkippingAlgorithm as AlgorithmDefaults>::MathsCore,
@@ -138,7 +141,7 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
                 pause_before, ron_args, normalised_args,
             )
         },
-        #[cfg(feature = "rustcoalescence-algorithms-independent")]
+        #[cfg(feature = "independent-algorithm")]
         AlgorithmArgs::Independent(algorithm_args) => {
             rng::dispatch::<
                 <IndependentAlgorithm as AlgorithmDefaults>::MathsCore,
@@ -148,7 +151,7 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
                 pause_before, ron_args, normalised_args,
             )
         },
-        #[cfg(feature = "rustcoalescence-algorithms-cuda")]
+        #[cfg(feature = "cuda-algorithm")]
         AlgorithmArgs::Cuda(algorithm_args) => {
             rng::dispatch::<
                 <CudaAlgorithm as AlgorithmDefaults>::MathsCore,
@@ -159,18 +162,21 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
             )
         }
         <=>
+        #[cfg(feature = "spatially-explicit-uniform-turnover-scenario")]
         ScenarioArgs::SpatiallyExplicitUniformTurnover(scenario_args) => {
             SpatiallyExplicitUniformTurnoverScenario::initialise(
                 scenario_args,
                 speciation_probability_per_generation,
             )?
         },
+        #[cfg(feature = "spatially-explicit-turnover-map-scenario")]
         ScenarioArgs::SpatiallyExplicitTurnoverMap(scenario_args) => {
             SpatiallyExplicitTurnoverMapScenario::initialise(
                 scenario_args,
                 speciation_probability_per_generation,
             )?
         },
+        #[cfg(feature = "non-spatial-scenario")]
         ScenarioArgs::NonSpatial(scenario_args) => {
             NonSpatialScenario::initialise(
                 scenario_args,
@@ -178,6 +184,7 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
             )
             .into_ok()
         },
+        #[cfg(feature = "almost-infinite-scenario")]
         ScenarioArgs::AlmostInfinite(scenario_args) => {
             AlmostInfiniteScenario::initialise(
                 scenario_args,
@@ -185,6 +192,7 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
             )
             .into_ok()
         },
+        #[cfg(feature = "spatially-implicit-scenario")]
         ScenarioArgs::SpatiallyImplicit(scenario_args) => {
             SpatiallyImplicitScenario::initialise(
                 scenario_args,
@@ -192,6 +200,7 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
             )
             .into_ok()
         },
+        #[cfg(feature = "wrapping-noise-scenario")]
         ScenarioArgs::WrappingNoise(scenario_args) => {
             WrappingNoiseScenario::initialise(
                 scenario_args,
