@@ -24,7 +24,10 @@ use necsim_impls_no_std::{
 pub mod almost_infinite;
 #[cfg(feature = "non-spatial")]
 pub mod non_spatial;
-#[cfg(any(feature = "spatially-explicit-uniform-turnover", feature = "spatially-explicit-turnover-map"))]
+#[cfg(any(
+    feature = "spatially-explicit-uniform-turnover",
+    feature = "spatially-explicit-turnover-map"
+))]
 pub mod spatially_explicit;
 #[cfg(feature = "spatially-implicit")]
 pub mod spatially_implicit;
