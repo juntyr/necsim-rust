@@ -249,6 +249,25 @@
             /* sigma for the Gaussian dispersal kernel N(0, sigma^2) */
             sigma: (0.0 <= f64),
         )
+        /* (almost) infinite spatially-explicit scenario with Clark 2Dt distributed dispersal
+         * the entire infinite landscape is habitat but, without loss of generality, has deme 1
+         * the landscape is on a (wrapping) torus with 0 <= x < 2^32 and 0 <= y < 2^32 */
+      | Clark(
+            /* rectangular sample area, individuals living in here are simulated
+             * the sample area can wrap around the torus */
+            sample: Extent(
+                /* lower-left origin x of the sample area */
+                x: (u32),
+                /* lower-left origin y of the sample area */
+                y: (u32),
+                /* width of the sample area */
+                width: (1 <= u64 <= 2^32),
+                /* height of the sample area */
+                height: (1 <= u64 <= 2^32),
+            ),
+            /* shape (u) for the Clark 2Dt dispersal kernel */
+            shape: (0.0 < f64),
+        )
         /* (almost) infinite spatially-explicit scenario with (approximate) Gaussian distributed dispersal
            each location (x, y) in the landscape has either habitat for exactly one individual,
             or is inhabitable, depending on a sample from an OpenSimplexNoise

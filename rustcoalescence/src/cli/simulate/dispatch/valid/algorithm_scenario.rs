@@ -15,6 +15,8 @@ use rustcoalescence_algorithms_independent::IndependentAlgorithm;
 
 #[cfg(feature = "almost-infinite-scenario")]
 use rustcoalescence_scenarios::almost_infinite::AlmostInfiniteScenario;
+#[cfg(feature = "clark-scenario")]
+use rustcoalescence_scenarios::clark::ClarkScenario;
 #[cfg(feature = "non-spatial-scenario")]
 use rustcoalescence_scenarios::non_spatial::NonSpatialScenario;
 #[cfg(feature = "spatially-explicit-turnover-map-scenario")]
@@ -187,6 +189,14 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
         #[cfg(feature = "almost-infinite-scenario")]
         ScenarioArgs::AlmostInfinite(scenario_args) => {
             AlmostInfiniteScenario::initialise(
+                scenario_args,
+                speciation_probability_per_generation,
+            )
+            .into_ok()
+        },
+        #[cfg(feature = "clark-scenario")]
+        ScenarioArgs::Clark(scenario_args) => {
+            ClarkScenario::initialise(
                 scenario_args,
                 speciation_probability_per_generation,
             )

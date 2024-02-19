@@ -258,6 +258,24 @@ link_kernel!(
     necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
 );
 
+#[cfg(feature = "clark-scenario")]
+link_kernel!(
+    necsim_impls_no_std::cogs::habitat::almost_infinite::AlmostInfiniteHabitat<
+        necsim_impls_cuda::cogs::maths::NvptxMathsCore
+    >,
+    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite_clark::AlmostInfiniteClarkDispersalSampler<
+        necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+        necsim_impls_cuda::cogs::rng::CudaRng<
+            necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+            necsim_impls_no_std::cogs::rng::wyhash::WyHash<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore
+            >,
+        >,
+    >,
+    necsim_impls_no_std::cogs::turnover_rate::uniform::UniformTurnoverRate,
+    necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
+);
+
 #[cfg(feature = "spatially-explicit-uniform-turnover-scenario")]
 link_kernel!(
     necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat<

@@ -2,6 +2,7 @@
 #![feature(associated_type_bounds)]
 #![feature(never_type)]
 
+#[allow(unused_imports)]
 #[macro_use]
 extern crate log;
 
@@ -22,6 +23,8 @@ use necsim_impls_no_std::{
 
 #[cfg(feature = "almost-infinite")]
 pub mod almost_infinite;
+#[cfg(feature = "clark")]
+pub mod clark;
 #[cfg(feature = "non-spatial")]
 pub mod non_spatial;
 #[cfg(any(

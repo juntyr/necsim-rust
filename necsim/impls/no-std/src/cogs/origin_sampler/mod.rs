@@ -4,6 +4,7 @@ use necsim_core::{
 };
 
 pub mod almost_infinite;
+pub mod clark;
 pub mod decomposition;
 pub mod in_memory;
 pub mod non_spatial;

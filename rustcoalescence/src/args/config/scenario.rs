@@ -17,6 +17,8 @@ pub enum Scenario {
     SpatiallyImplicit(rustcoalescence_scenarios::spatially_implicit::SpatiallyImplicitArguments),
     #[cfg(feature = "almost-infinite-scenario")]
     AlmostInfinite(rustcoalescence_scenarios::almost_infinite::AlmostInfiniteArguments),
+    #[cfg(feature = "clark-scenario")]
+    Clark(rustcoalescence_scenarios::clark::ClarkArguments),
     #[cfg(feature = "wrapping-noise-scenario")]
     WrappingNoise(rustcoalescence_scenarios::wrapping_noise::WrappingNoiseArguments),
 }
