@@ -95,3 +95,25 @@ impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for AlmostInf
 }
 
 impl<M: MathsCore> SingletonDemesHabitat<M> for AlmostInfiniteHabitat<M> {}
+
+impl<M: MathsCore> AlmostInfiniteHabitat<M> {
+    #[must_use]
+    pub fn clamp_round_dispersal(location: &Location, dx: f64, dy: f64) -> Location {
+        const WRAP: i64 = 1 << 32;
+
+        // Discrete dispersal assumes lineage positions are centred on (0.5, 0.5),
+        // i.e. |dispersal| >= 0.5 changes the cell
+        // (dx and dy must be rounded to nearest int away from 0.0)
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let (dx, dy): (i64, i64) = (M::round(dx) as i64, M::round(dy) as i64);
+
+        let new_x = (i64::from(location.x()) + dx) % WRAP;
+        let new_y = (i64::from(location.y()) + dy) % WRAP;
+
+        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+        Location::new(
+            ((new_x + WRAP) % WRAP) as u32,
+            ((new_y + WRAP) % WRAP) as u32,
+        )
+    }
+}
