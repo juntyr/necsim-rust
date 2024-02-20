@@ -36,7 +36,8 @@ pub struct ClarkScenario<M: MathsCore, G: RngCore<M>> {
 #[serde(rename = "Clark")]
 pub struct ClarkArguments {
     pub sample: LandscapeExtent,
-    pub shape: PositiveF64,
+    #[serde(alias = "u")]
+    pub shape_u: PositiveF64,
 }
 
 impl<M: MathsCore, G: RngCore<M>> ScenarioParameters for ClarkScenario<M, G> {
@@ -62,7 +63,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for ClarkScenario<M, G> {
         speciation_probability_per_generation: PositiveUnitF64,
     ) -> Result<Self, Self::Error> {
         let habitat = AlmostInfiniteHabitat::default();
-        let dispersal_sampler = AlmostInfiniteClarkDispersalSampler::new(args.shape);
+        let dispersal_sampler = AlmostInfiniteClarkDispersalSampler::new(args.shape_u);
         let turnover_rate = UniformTurnoverRate::default();
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation.into());

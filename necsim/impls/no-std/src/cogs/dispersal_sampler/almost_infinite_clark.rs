@@ -4,7 +4,7 @@ use necsim_core::{
     cogs::{Backup, DispersalSampler, MathsCore, RngCore, RngSampler, SeparableDispersalSampler},
     landscape::Location,
 };
-use necsim_core_bond::{ClosedUnitF64, OpenClosedUnitF64, PositiveF64};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, OpenClosedUnitF64, PositiveF64};
 
 use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 
@@ -14,14 +14,45 @@ use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "G"))]
 pub struct AlmostInfiniteClarkDispersalSampler<M: MathsCore, G: RngCore<M>> {
     shape_u: PositiveF64,
+    self_dispersal: ClosedUnitF64,
     marker: PhantomData<(M, G)>,
 }
 
 impl<M: MathsCore, G: RngCore<M>> AlmostInfiniteClarkDispersalSampler<M, G> {
     #[must_use]
     pub fn new(shape_u: PositiveF64) -> Self {
+        const N: i32 = 1 << 22;
+
+        // For now, we numerically integrate the self-dispersal probability
+        //  using polar coordinates
+        #[allow(clippy::useless_conversion)] // prepare for new range iterators
+        let self_dispersal = (0..N)
+            .into_iter()
+            .map(|i| {
+                // phi in [0, pi/4]
+                core::f64::consts::PI * 0.25 * f64::from(i) / f64::from(N)
+            })
+            .map(|phi| {
+                // self-dispersal jump radius: dx <= 0.5 && dy <= 0.5
+                let jump_r = 0.5 / M::cos(phi);
+                // Safety: cos([0, pi/4]) in [sqrt(2)/2, 1], and its inverse is non-negative
+                unsafe { NonNegativeF64::new_unchecked(jump_r) }
+            })
+            .map(|jump_r| {
+                // probability of dispersal to a jump distance <= jump_r
+                clark2dt_cdf_p1(jump_r, shape_u).get()
+            })
+            .sum::<f64>()
+            / f64::from(N); // take the average
+
+        // Safety: the average of the cdfs, which are all ClosedUnitF64, is also in [0,
+        // 1] Note: we still clamp to account for rounding errors
+        let self_dispersal =
+            unsafe { ClosedUnitF64::new_unchecked(self_dispersal.clamp(0.0, 1.0)) };
+
         Self {
             shape_u,
+            self_dispersal,
             marker: PhantomData::<(M, G)>,
         }
     }
@@ -32,6 +63,7 @@ impl<M: MathsCore, G: RngCore<M>> Backup for AlmostInfiniteClarkDispersalSampler
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             shape_u: self.shape_u,
+            self_dispersal: self.self_dispersal,
             marker: PhantomData::<(M, G)>,
         }
     }
@@ -85,7 +117,7 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, AlmostInfiniteHab
         _location: &Location,
         _habitat: &AlmostInfiniteHabitat<M>,
     ) -> ClosedUnitF64 {
-        todo!()
+        self.self_dispersal
     }
 }
 
@@ -105,4 +137,11 @@ fn clark2dt_cdf_inverse_p1<M: MathsCore>(u01: OpenClosedUnitF64, shape_u: Positi
 
     // assume p (tail width) = 1
     M::sqrt(shape_u.get() * ((1.0 / u01.get()) - 1.0))
+}
+
+fn clark2dt_cdf_p1(jump_r: NonNegativeF64, shape_u: PositiveF64) -> ClosedUnitF64 {
+    // assume p (tail width) = 1
+    let u01 = 1.0 - (1.0 / (1.0 + jump_r.get() * jump_r.get() / shape_u.get()));
+
+    unsafe { ClosedUnitF64::new_unchecked(u01) }
 }
