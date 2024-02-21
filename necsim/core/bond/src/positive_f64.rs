@@ -84,6 +84,11 @@ impl PositiveF64 {
     }
 
     #[must_use]
+    pub const fn one() -> Self {
+        Self(1.0)
+    }
+
+    #[must_use]
     pub const fn infinity() -> Self {
         Self(f64::INFINITY)
     }

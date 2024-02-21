@@ -38,6 +38,7 @@ pub struct ClarkArguments {
     pub sample: LandscapeExtent,
     #[serde(alias = "u")]
     pub shape_u: PositiveF64,
+    #[serde(default = "PositiveF64::one")]
     #[serde(alias = "p")]
     pub tail_p: PositiveF64,
 }
