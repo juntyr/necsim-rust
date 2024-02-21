@@ -4,7 +4,7 @@ use necsim_core::{
     cogs::{Backup, DispersalSampler, MathsCore, RngCore, RngSampler, SeparableDispersalSampler},
     landscape::Location,
 };
-use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, OpenClosedUnitF64, PositiveF64};
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveF64};
 
 use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 
@@ -14,13 +14,14 @@ use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "G"))]
 pub struct AlmostInfiniteClarkDispersalSampler<M: MathsCore, G: RngCore<M>> {
     shape_u: PositiveF64,
+    tail_p: PositiveF64,
     self_dispersal: ClosedUnitF64,
     marker: PhantomData<(M, G)>,
 }
 
 impl<M: MathsCore, G: RngCore<M>> AlmostInfiniteClarkDispersalSampler<M, G> {
     #[must_use]
-    pub fn new(shape_u: PositiveF64) -> Self {
+    pub fn new(shape_u: PositiveF64, tail_p: PositiveF64) -> Self {
         const N: i32 = 1 << 22;
 
         // For now, we numerically integrate the self-dispersal probability
@@ -40,7 +41,7 @@ impl<M: MathsCore, G: RngCore<M>> AlmostInfiniteClarkDispersalSampler<M, G> {
             })
             .map(|jump_r| {
                 // probability of dispersal to a jump distance <= jump_r
-                clark2dt_cdf_p1(jump_r, shape_u).get()
+                clark2dt::cdf::<M>(jump_r, shape_u, tail_p).get()
             })
             .sum::<f64>()
             / f64::from(N); // take the average
@@ -52,6 +53,7 @@ impl<M: MathsCore, G: RngCore<M>> AlmostInfiniteClarkDispersalSampler<M, G> {
 
         Self {
             shape_u,
+            tail_p,
             self_dispersal,
             marker: PhantomData::<(M, G)>,
         }
@@ -63,6 +65,7 @@ impl<M: MathsCore, G: RngCore<M>> Backup for AlmostInfiniteClarkDispersalSampler
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             shape_u: self.shape_u,
+            tail_p: self.tail_p,
             self_dispersal: self.self_dispersal,
             marker: PhantomData::<(M, G)>,
         }
@@ -80,7 +83,8 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, AlmostInfiniteHabitat<M>, 
         _habitat: &AlmostInfiniteHabitat<M>,
         rng: &mut G,
     ) -> Location {
-        let jump = clark2dt_cdf_inverse_p1::<M>(rng.sample_uniform_open_closed(), self.shape_u);
+        let jump =
+            clark2dt::cdf_inverse::<M>(rng.sample_uniform_closed_open(), self.shape_u, self.tail_p);
         let theta = rng.sample_uniform_open_closed().get() * 2.0 * core::f64::consts::PI;
 
         let dx = M::cos(theta) * jump;
@@ -121,27 +125,652 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, AlmostInfiniteHab
     }
 }
 
-fn clark2dt_cdf_inverse_p1<M: MathsCore>(u01: OpenClosedUnitF64, shape_u: PositiveF64) -> f64 {
-    // pdf(r) = (2 * pi * r) * p / (pi * u * (1 + r*r / u)) ** (p + 1)
-    // pdf(r, p=1) = (2 * pi * r) / (pi * u * (1 + r*r / u)) ** 2
+#[allow(clippy::doc_markdown)]
+/// Clark2Dt dispersal:
+///
+/// Clark, J.S., Silman, M., Kern, R., Macklin, E. and HilleRisLambers, J.
+/// (1999). Seed dispersal near and far: Patterns across temperate and tropical
+/// forests. Ecology, 80: 1475-1494. Available from:
+/// doi:10.1890/0012-9658(1999)080[1475:SDNAFP]2.0.CO;2
+///
+/// r: dispersal jump distance (radius of a circle)
+/// u: distribution shape, E[X] = pi/2 * sqrt(ln(u))
+/// p: distribution tail width
+///
+/// pdf(r) = (2 * pi * r) * p / (pi * u * (1 + r*r / u)) ** (p + 1)
+/// cdf(r) = 1 - (1 / (1 + r*r / u) ** p)
+/// r = cdf_inv(u01) = sqrt(u * (((1 / (1 - u01)) ** (1/p)) - 1))
+///
+/// See <https://gist.github.com/juntyr/c04f231ba8063a336744f1e1359f40d8>
+mod clark2dt {
+    use necsim_core::cogs::MathsCore;
+    use necsim_core_bond::{ClosedOpenUnitF64, ClosedUnitF64, NonNegativeF64, PositiveF64};
 
-    // cdf(r) = 1 - (1 / (1 + r*r / u) ** p)
-    // cdf(r, p=1) = 1 - (1 / (1 + r*r / u))
+    pub fn cdf<M: MathsCore>(
+        jump_r: NonNegativeF64,
+        shape_u: PositiveF64,
+        tail_p: PositiveF64,
+    ) -> ClosedUnitF64 {
+        let u01 = 1.0
+            - (1.0
+                / pow_fast_one::<M>(
+                    1.0 + (jump_r.get() * jump_r.get() / shape_u.get()),
+                    tail_p.get(),
+                ));
 
-    // r = cdf_inv(u01) = sqrt(u * (((1 / (1 - u01)) ** (1/p)) - 1))
-    // r = cdf_inv(u01, p=1) = sqrt(u * ((1 / (1 - u01)) - 1))
+        unsafe { ClosedUnitF64::new_unchecked(u01) }
+    }
 
-    // Note that 1-u01 ~ u01
+    pub fn cdf_inverse<M: MathsCore>(
+        u01: ClosedOpenUnitF64,
+        shape_u: PositiveF64,
+        tail_p: PositiveF64,
+    ) -> f64 {
+        M::sqrt(
+            shape_u.get() * (pow_fast_one::<M>(1.0 / (1.0 - u01.get()), 1.0 / tail_p.get()) - 1.0),
+        )
+    }
 
-    // See https://gist.github.com/juntyr/c04f231ba8063a336744f1e1359f40d8
+    fn pow_fast_one<M: MathsCore>(x: f64, exp: f64) -> f64 {
+        #[allow(clippy::float_cmp)]
+        if exp == 1.0 {
+            return x;
+        }
 
-    // assume p (tail width) = 1
-    M::sqrt(shape_u.get() * ((1.0 / u01.get()) - 1.0))
+        M::pow(x, exp)
+    }
 }
 
-fn clark2dt_cdf_p1(jump_r: NonNegativeF64, shape_u: PositiveF64) -> ClosedUnitF64 {
-    // assume p (tail width) = 1
-    let u01 = 1.0 - (1.0 / (1.0 + jump_r.get() * jump_r.get() / shape_u.get()));
+#[cfg(test)]
+mod tests {
+    use necsim_core::{
+        cogs::{DispersalSampler, SeedableRng},
+        landscape::Location,
+    };
+    use necsim_core_bond::{ClosedOpenUnitF64, NonNegativeF64, PositiveF64};
 
-    unsafe { ClosedUnitF64::new_unchecked(u01) }
+    use crate::cogs::{
+        habitat::almost_infinite::AlmostInfiniteHabitat,
+        maths::reproducible::ReproducibleMathsCore, rng::wyhash::WyHash,
+    };
+
+    use super::{
+        clark2dt::{cdf, cdf_inverse},
+        AlmostInfiniteClarkDispersalSampler,
+    };
+
+    #[test]
+    fn test_self_dispersal() {
+        const N: i32 = 1 << 22;
+
+        let habitat = AlmostInfiniteHabitat::<ReproducibleMathsCore>::default();
+        let origin = Location::new(0, 0);
+
+        for shape_u in [
+            PositiveF64::new(0.1).unwrap(),
+            PositiveF64::new(1.0).unwrap(),
+            PositiveF64::new(10.0).unwrap(),
+        ] {
+            for tail_p in [
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+            ] {
+                let dispersal = AlmostInfiniteClarkDispersalSampler::new(shape_u, tail_p);
+                let self_dispersal = dispersal.self_dispersal;
+
+                let mut rng = WyHash::<ReproducibleMathsCore>::seed_from_u64(42);
+                let mut counter = 0_i32;
+
+                for _ in 0..N {
+                    let target =
+                        dispersal.sample_dispersal_from_location(&origin, &habitat, &mut rng);
+
+                    if target == origin {
+                        counter += 1;
+                    }
+                }
+
+                let self_dispersal_emperical = f64::from(counter) / f64::from(N);
+
+                assert!(
+                    (self_dispersal.get() - self_dispersal_emperical).abs() < 1e-3,
+                    "{} !~ {self_dispersal_emperical} for u={}, p={}",
+                    self_dispersal.get(),
+                    shape_u.get(),
+                    tail_p.get()
+                );
+            }
+        }
+    }
+
+    macro_rules! assert_eq_bits {
+        ($x:expr, $y:literal) => {
+            assert!(
+                f64::from($x).to_bits() == f64::to_bits($y),
+                "{} != {}",
+                f64::from($x),
+                $y
+            )
+        };
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn test_cdf() {
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::zero(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::zero(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::zero(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::zero(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::zero(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::zero(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::zero(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::zero(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::zero(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.0
+        );
+
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(0.1).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            0.009_485_741_785_478_23
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(0.1).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            0.000_994_538_204_051_043
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(0.1).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            0.000_099_945_038_470_106_16
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(0.1).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.090_909_090_909_090_94
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(0.1).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.009_900_990_099_009_91
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(0.1).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.000_999_000_999_000_854_2
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(0.1).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.614_456_710_570_468_6
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(0.1).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.094_713_045_307_016_74
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(0.1).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.009_945_219_286_995_988
+        );
+
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(1.0).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            0.213_206_557_803_227_73
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(1.0).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            0.066_967_008_463_192_59
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(1.0).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            0.009_485_741_785_478_23
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(1.0).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.909_090_909_090_909_1
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(1.0).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.5
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(1.0).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.090_909_090_909_090_94
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(1.0).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.999_999_999_961_445_6
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(1.0).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.999_023_437_5
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(1.0).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.614_456_710_570_468_6
+        );
+
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(10.0).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            0.498_862_857_550_073_4
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(10.0).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            0.369_670_166_704_018_87
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(10.0).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            0.213_206_557_803_227_73
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(10.0).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.999_000_999_000_999
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(10.0).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.990_099_009_900_990_1
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(10.0).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.909_090_909_090_909_1
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(10.0).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            1.0
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(10.0).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            1.0
+        );
+        assert_eq_bits!(
+            cdf::<ReproducibleMathsCore>(
+                NonNegativeF64::new(10.0).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.999_999_999_961_445_6
+        );
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn test_cdf_inverse() {
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.0).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.0).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.0).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.0).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.0).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.0).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.0).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.0).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.0
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.0).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.0
+        );
+
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.25).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            1.294_516_382_044_375_2
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.25).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            4.093_620_235_660_922
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.25).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            12.945_163_820_443_751
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.25).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.182_574_185_835_055_36
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.25).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            0.577_350_269_189_625_7
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.25).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            1.825_741_858_350_553_6
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.25).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.054_024_077_007_164_73
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.25).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.170_839_131_830_973_2
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.25).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.540_240_770_071_647_3
+        );
+
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.95).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            1_011_928.851_253_827_5
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.95).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            3_199_999.999_999_829_6
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.95).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(0.1).unwrap()
+            ),
+            10_119_288.512_538_275
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.95).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            1.378_404_875_209_021_7
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.95).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            4.358_898_943_540_671
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.95).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(1.0).unwrap()
+            ),
+            13.784_048_752_090_216
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.95).unwrap(),
+                PositiveF64::new(0.1).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.186_891_104_034_826_45
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.95).unwrap(),
+                PositiveF64::new(1.0).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            0.591_001_563_173_536_1
+        );
+        assert_eq_bits!(
+            cdf_inverse::<ReproducibleMathsCore>(
+                ClosedOpenUnitF64::new(0.95).unwrap(),
+                PositiveF64::new(10.0).unwrap(),
+                PositiveF64::new(10.0).unwrap()
+            ),
+            1.868_911_040_348_264_5
+        );
+    }
 }

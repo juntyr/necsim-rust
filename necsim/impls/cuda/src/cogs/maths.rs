@@ -75,6 +75,41 @@ impl MathsCore for NvptxMathsCore {
     }
 
     #[inline]
+    fn pow(x: f64, exp: f64) -> f64 {
+        // Guard against usage on the CPU as results will NOT match
+
+        #[cfg(target_os = "cuda")]
+        unsafe {
+            // Compute x ^ exp = 2 ^ (exp * log2(x))
+            // https://stackoverflow.com/a/54273307
+            // by https://stackoverflow.com/users/2341466/andars
+            // Licensed under CC BY-SA 4.0
+            #[allow(clippy::cast_possible_truncation)]
+            let x: f32 = x as f32;
+            #[allow(clippy::cast_possible_truncation)]
+            let exp: f32 = exp as f32;
+
+            let log2_x: f32;
+            core::arch::asm!("lg2.approx.f32 {}, {};", out(reg32) log2_x, in(reg32) x, options(pure, nomem, nostack));
+
+            let exp_log2_x = log2_x * exp;
+
+            let f: f32;
+            core::arch::asm!("ex2.approx.f32 {}, {};", out(reg32) f, in(reg32) exp_log2_x, options(pure, nomem, nostack));
+
+            f64::from(f)
+        }
+        #[cfg(not(target_os = "cuda"))]
+        {
+            extern "C" {
+                fn nvptx_maths_core_pow_on_cpu(_x: f64, _exp: f64) -> !;
+            }
+
+            unsafe { nvptx_maths_core_pow_on_cpu(x, exp) }
+        }
+    }
+
+    #[inline]
     fn sin(x: f64) -> f64 {
         // Guard against usage on the CPU as results will NOT match
 

@@ -31,6 +31,11 @@ impl MathsCore for ReproducibleMathsCore {
     }
 
     #[inline]
+    fn pow(x: f64, exp: f64) -> f64 {
+        libm::pow(x, exp)
+    }
+
+    #[inline]
     fn sin(x: f64) -> f64 {
         libm::sin(x)
     }
