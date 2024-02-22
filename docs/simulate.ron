@@ -174,41 +174,25 @@
 
     /* selection of the scenario which will be simulated */
     scenario: (
-        /* spatially explicit scenario using habitat and dispersal maps */
-      | SpatiallyExplicitUniformTurnover(
+        /* spatially explicit scenario using habitat (optionally turnover) and dispersal maps */
+      | SpatiallyExplicit(
             /* file path to a (WxH) TIFF file storing grayscale u32 habitat values */
             habitat: (PathBuf),
             /* file path to a (WxH x WxH) TIFF file storing grayscale f64 dispersal weights
              * the ith row of the image stores dispersal from the habitat cell (i % W, i / W) */
             dispersal: (PathBuf),
-            /* uniform positive turnover rate */
-            /* optional, default = 0.5 */
-            turnover: (0.0 < f64),
-            /* selection of the map loading mode
-             * optional, default = OffByOne */
-            mode: (
-                /* Fixes GDAL no-data value, habitat 0/1 rounding error and dispersal
-                 *  from/to non-habitat */
-              | FixMe
-                /* Fixes GDAL no-data value and habitat 0/1 rounding errors */
-              | OffByOne
-                /* Does not fix any habitat-dispersal discrepancies */
-              | Strict
+            /* selection of the turnover rate source
+             * optional, default = Uniform(0.5) */
+            turnover: (
+                /* uniform positive turnover rate */
+              | Uniform(0.0 < f64)
+                /* file path to (WxH) TIFF file storing grayscale f64 turnover rates */
+              | Map(PathBuf)
             ),
-        )
-          /* spatially explicit scenario using habitat, turnover and dispersal maps */
-      | SpatiallyExplicitTurnoverMap(
-            /* file path to a (WxH) TIFF file storing grayscale u32 habitat values */
-            habitat: (PathBuf),
-            /* file path to a (WxH x WxH) TIFF file storing grayscale f64 dispersal weights
-             * the ith row of the image stores dispersal from the habitat cell (i % W, i / W) */
-            dispersal: (PathBuf),
-            /* file path to (WxH) TIFF file storing grayscale f64 turnover rates */
-            turnover: (PathBuf),
             /* selection of the map loading mode
              * optional, default = OffByOne */
             mode: (
-                /* Fixes GDAL no-data value, habitat 0/1 rounding errors, zero turnover habitat
+                /* Fixes GDAL no-data value, habitat 0/1 rounding errors, zero turnover habitat,
                  *  and dispersal from/to non-habitat */
               | FixMe
                 /* Fixes GDAL no-data value and habitat 0/1 rounding errors */

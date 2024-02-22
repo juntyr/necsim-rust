@@ -30,7 +30,7 @@ pub struct AlmostInfiniteScenario<M: MathsCore, G: RngCore<M>> {
     speciation_probability: UniformSpeciationProbability,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
 #[serde(rename = "AlmostInfinite")]
 pub struct AlmostInfiniteArguments {

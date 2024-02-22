@@ -29,7 +29,7 @@ pub struct SpatiallyImplicitScenario<M: MathsCore, G: RngCore<M>> {
     speciation_probability: SpatiallyImplicitSpeciationProbability,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
 pub struct SpatiallyImplicitArguments {
     pub local_area: (OffByOneU32, OffByOneU32),
