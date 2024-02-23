@@ -9,13 +9,7 @@ mod turnover;
 pub use turnover::SpatiallyExplicitArguments;
 
 #[cfg(feature = "spatially-explicit-turnover-map")]
-#[allow(clippy::module_name_repetitions)]
-pub use turnover::map::{
-    SpatiallyExplicitTurnoverMapArguments, SpatiallyExplicitTurnoverMapScenario,
-};
+pub use turnover::map;
 
 #[cfg(feature = "spatially-explicit-uniform-turnover")]
-#[allow(clippy::module_name_repetitions)]
-pub use turnover::uniform::{
-    SpatiallyExplicitUniformTurnoverArguments, SpatiallyExplicitUniformTurnoverScenario,
-};
+pub use turnover::uniform;

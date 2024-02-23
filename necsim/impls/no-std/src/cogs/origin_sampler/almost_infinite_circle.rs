@@ -16,7 +16,7 @@ use super::{TrustedOriginSampler, UntrustedOriginSampler};
 const HABITAT_CENTRE: u32 = u32::MAX / 2;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct AlmostInfiniteOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
+pub struct AlmostInfiniteCircleOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
     pre_sampler: OriginPreSampler<M, I>,
     last_index: u64,
     location_iterator: LocationIterator,
@@ -26,10 +26,10 @@ pub struct AlmostInfiniteOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>
 }
 
 impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
-    for AlmostInfiniteOriginSampler<'h, M, I>
+    for AlmostInfiniteCircleOriginSampler<'h, M, I>
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct(stringify!(AlmostInfiniteOriginSampler))
+        fmt.debug_struct(stringify!(AlmostInfiniteCircleOriginSampler))
             .field("pre_sampler", &self.pre_sampler)
             .field("last_index", &self.last_index)
             .field("location_iterator", &self.location_iterator)
@@ -40,7 +40,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
     }
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteOriginSampler<'h, M, I> {
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteCircleOriginSampler<'h, M, I> {
     #[must_use]
     pub fn new(
         pre_sampler: OriginPreSampler<M, I>,
@@ -49,7 +49,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteOriginSampler<'h, 
     ) -> Self {
         // Safety: safe since lower and upper bound are both safe
         //  a) radius = 0 --> 0*2 + 1 = 1 --> ok
-        //  b) radius = u16::MAX --> u16::MAX*2 + 1 = u32::MAX --> ok
+        //  b) radius = u16::MAX --> u16::MAX*2 + 1 <= u32::MAX --> ok
         let diameter = unsafe { OffByOneU32::new_unchecked(u64::from(radius) * 2 + 1) };
 
         let sample_extent = LandscapeExtent::new(
@@ -80,7 +80,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteOriginSampler<'h, 
 
 #[contract_trait]
 impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
-    for AlmostInfiniteOriginSampler<'h, M, I>
+    for AlmostInfiniteCircleOriginSampler<'h, M, I>
 {
     type Habitat = AlmostInfiniteHabitat<M>;
     type PreSampler = I;
@@ -99,11 +99,13 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
 }
 
 unsafe impl<'h, M: MathsCore, I: Iterator<Item = u64>> TrustedOriginSampler<'h, M>
-    for AlmostInfiniteOriginSampler<'h, M, I>
+    for AlmostInfiniteCircleOriginSampler<'h, M, I>
 {
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator for AlmostInfiniteOriginSampler<'h, M, I> {
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator
+    for AlmostInfiniteCircleOriginSampler<'h, M, I>
+{
     type Item = Lineage;
 
     fn next(&mut self) -> Option<Self::Item> {

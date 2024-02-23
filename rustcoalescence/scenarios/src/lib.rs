@@ -21,10 +21,11 @@ use necsim_impls_no_std::{
     decomposition::Decomposition,
 };
 
-#[cfg(feature = "almost-infinite")]
+#[cfg(any(
+    feature = "almost-infinite-normal-dispersal",
+    feature = "almost-infinite-clark2dt-dispersal",
+))]
 pub mod almost_infinite;
-#[cfg(feature = "clark")]
-pub mod clark;
 #[cfg(feature = "non-spatial")]
 pub mod non_spatial;
 #[cfg(any(

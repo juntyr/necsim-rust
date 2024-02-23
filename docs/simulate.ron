@@ -184,9 +184,11 @@
             /* selection of the turnover rate source
              * optional, default = Uniform(0.5) */
             turnover: (
-                /* uniform positive turnover rate */
+                /* uniform positive turnover rate
+                 * requires the `spatially-explicit-uniform-turnover-scenario` feature */
               | Uniform(0.0 < f64)
-                /* file path to (WxH) TIFF file storing grayscale f64 turnover rates */
+                /* file path to (WxH) TIFF file storing grayscale f64 turnover rates
+                 * requires the `spatially-explicit-turnover-map-scenario` feature */
               | Map(PathBuf)
             ),
             /* selection of the map loading mode
@@ -202,7 +204,8 @@
             ),
         )
         /* non-spatial scenario with homogeneous dispersal and a community size of
-         *  (area.0 * area.1 * deme) */
+         *  (area.0 * area.1 * deme) 
+         * requires the `non-spatial-scenario` feature */
       | NonSpatial(
             /* width and height of the non-spatial landscape */
             area: (1 <= u64 <= 2^32, 1 <= u64 <= 2^32),
@@ -210,7 +213,8 @@
             deme: (0 < u32),
         )
         /* spatially-implicit scenario with a non-spatial local and a non-spatial meta community
-         *  and dynamic migration from the meta to the local community */
+         *  and dynamic migration from the meta to the local community
+         * requires the `spatially-implicit-scenario` feature */
       | SpatiallyImplicit(
             /* width and height of the non-spatial local landscape */
             local_area: (1 <= u64 <= 2^32, 1 <= u64 <= 2^32),
@@ -224,43 +228,62 @@
              *  in the local community migrated from the meta community */
             migration: (0.0 < f64 <= 1.0),
         )
-        /* (almost) infinite spatially-explicit scenario with Gaussian distributed dispersal
+        /* (almost) infinite spatially-explicit scenario
          * the entire infinite landscape is habitat but, without loss of generality, has deme 1
          * the landscape is on a (wrapping) torus with 0 <= x < 2^32 and 0 <= y < 2^32 */
       | AlmostInfinite(
-            /* radius of a circle from which individuals are sampled */
-            radius: (u16),
-            /* sigma for the Gaussian dispersal kernel N(0, sigma^2) */
-            sigma: (0.0 <= f64),
-        )
-        /* (almost) infinite spatially-explicit scenario with Clark 2Dt distributed dispersal
-         * the entire infinite landscape is habitat but, without loss of generality, has deme 1
-         * the landscape is on a (wrapping) torus with 0 <= x < 2^32 and 0 <= y < 2^32 */
-      | Clark(
-            /* rectangular sample area, individuals living in here are simulated
+            /* selection of the sample area, individuals living in here are simulated
              * the sample area can wrap around the torus */
-            sample: Extent(
-                /* lower-left origin x of the sample area */
-                x: (u32),
-                /* lower-left origin y of the sample area */
-                y: (u32),
-                /* width of the sample area */
-                width: (1 <= u64 <= 2^32),
-                /* height of the sample area */
-                height: (1 <= u64 <= 2^32),
+            sample: (
+                /* circular sample area */
+              | Circle(
+                  /* center x of the circle
+                   * optional, default = 2147483647 (2^31 - 1) */
+                  x: (u32),
+                  /* center y of the circle
+                   * optional, default = 2147483647 (2^31 - 1) */
+                  y: (u32),
+                  /* radius of the circle */
+                  radius: (u16),
+                )
+                /* rectangular sample area */
+              | Rectangle(
+                  /* lower-left origin x of the sample area */
+                  x: (u32),
+                  /* lower-left origin y of the sample area */
+                  y: (u32),
+                  /* width of the sample area */
+                  width: (1 <= u64 <= 2^32),
+                  /* height of the sample area */
+                  height: (1 <= u64 <= 2^32),
+                )
             ),
-            /* shape (u) for the Clark 2Dt dispersal kernel */
-            shape_u: (0.0 < f64),
-            /* tail (p) for the Clark 2Dt dispersal kernel
-             * - Clark 2Dt dispersal tends to Gaussian as p becomes large
-             * - Clark 2Dt dispersal tends to Cauchy as p goes to zero
-             * optional, default = 1.0 */
-            tail_p: (0.0 < f64),
+            /* selection of the dispersal kernel */
+            dispersal: (
+                /* Gaussian Normal dispersal kernel N(0, sigma^2)
+                 * requires the `almost-infinite-normal-dispersal-scenario` feature */
+              | Normal(
+                  /* sigma for the Gaussian dispersal kernel */
+                  sigma: (0.0 <= f64),
+                )
+                /* Clark2Dt dispersal kernel
+                 * requires the `almost-infinite-clark2dt-dispersal-scenario` feature */
+              | Clark2Dt(
+                  /* shape (u) for the Clark 2Dt dispersal kernel */
+                  shape_u: (0.0 < f64),
+                  /* tail (p) for the Clark 2Dt dispersal kernel
+                  * - Clark 2Dt dispersal tends to Gaussian as p becomes large
+                  * - Clark 2Dt dispersal tends to Cauchy as p goes to zero
+                  * optional, default = 1.0 */
+                  tail_p: (0.0 < f64),
+                )
+            ),
         )
         /* (almost) infinite spatially-explicit scenario with (approximate) Gaussian distributed dispersal
-           each location (x, y) in the landscape has either habitat for exactly one individual,
-            or is inhabitable, depending on a sample from an OpenSimplexNoise
-           the landscape is on a (wrapping) torus with 0 <= x < 2^32 and 0 <= y < 2^32 */
+         * each location (x, y) in the landscape has either habitat for exactly one individual,
+         *  or is inhabitable, depending on a sample from an OpenSimplexNoise
+         * the landscape is on a (wrapping) torus with 0 <= x < 2^32 and 0 <= y < 2^32
+         * requires the `wrapping-noise-scenario` feature */
       | WrappingNoise(
             /* random seed for the noise */
             seed: (i64),
@@ -279,7 +302,7 @@
             octaves: (0 < usize),
             /* rectangular sample area, individuals living in here are simulated
              * the sample area can wrap around the torus */
-            sample: Extent(
+            sample: Rectangle(
                 /* lower-left origin x of the sample area */
                 x: (u32),
                 /* lower-left origin y of the sample area */
@@ -296,7 +319,8 @@
 
     /* selection of the coalescence algorithm which is used */
     algorithm: (
-        /* monolithic; optimised for low self-dispersal (i.e. small demes); CPU-based */
+        /* monolithic; optimised for low self-dispersal (i.e. small demes); CPU-based
+         * requires the `gillespie-algorithms` feature */
       | Gillespie(
             /* selection of how the algorithm should be parallelised across partitions */
             /* optional, dynamic default = Monolithic / Lockstep */
@@ -342,7 +366,8 @@
             )
         )
         /* monolithic; skips no-coalescence self-dispersal events -> optimised for high
-         *  self-dispersal (i.e. large demes); CPU-based */
+         *  self-dispersal (i.e. large demes); CPU-based
+         * requires the `gillespie-algorithms` feature */
       | EventSkipping(
             /* selection of how the algorithm should be parallelised across partitions */
             /* optional, dynamic default = Monolithic / Lockstep */
@@ -387,7 +412,8 @@
                 )
             )
         )
-        /* independent; simulates each individual without knowledge of others; CPU-based */
+        /* independent; simulates each individual without knowledge of others; CPU-based
+         * requires the `independent-algorithm` feature */
       | Independent(
             /* simulation time between random number generator repriming
              *  -> lower deltas require fewer draws to pick the time of the next event
@@ -509,7 +535,8 @@
                 )
             )
         )
-        /* independent; simulates each individual without knowledge of others; CUDA GPU-based */
+        /* independent; simulates each individual without knowledge of others; CUDA GPU-based
+         * requires the `cuda-algorithm` feature */
       | CUDA(
             /* index of the CUDA GPU device on which the simulation will be run
              * optional, default = 0 */
@@ -633,7 +660,8 @@
          * single-threaded, single-process */
       | Monolithic()
         /* the simulation is divided up inside an MPI universe
-         * single-threaded, multi-process */
+         * single-threaded, multi-process
+         * requires the `mpi-partitioning` feature */
       | MPI(
             /* explicit size of the MPI universe, must match the MPI universe */
             /* optional, dynamic default = MPI's world size */
@@ -678,7 +706,7 @@
             /* selection of the reporters defined by this plugin */
             reporters: [
                 /* initialisation of a single reporter named 'ReporterName'
-                 *  with arguments arg.. */
+                 *  with arguments args.. */
                 ReporterName(args..)
             ]
         )

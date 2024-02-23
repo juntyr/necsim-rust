@@ -29,6 +29,8 @@ pub struct NonSpatialScenario<M: MathsCore, G: RngCore<M>> {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
+#[serde(deny_unknown_fields)]
+#[serde(rename = "NonSpatial")]
 pub struct NonSpatialArguments {
     pub area: (OffByOneU32, OffByOneU32),
     pub deme: NonZeroU32,

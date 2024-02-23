@@ -12,14 +12,14 @@ use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "G"))]
-pub struct AlmostInfiniteClarkDispersalSampler<M: MathsCore, G: RngCore<M>> {
+pub struct AlmostInfiniteClark2DtDispersalSampler<M: MathsCore, G: RngCore<M>> {
     shape_u: PositiveF64,
     tail_p: PositiveF64,
     self_dispersal: ClosedUnitF64,
     marker: PhantomData<(M, G)>,
 }
 
-impl<M: MathsCore, G: RngCore<M>> AlmostInfiniteClarkDispersalSampler<M, G> {
+impl<M: MathsCore, G: RngCore<M>> AlmostInfiniteClark2DtDispersalSampler<M, G> {
     #[must_use]
     pub fn new(shape_u: PositiveF64, tail_p: PositiveF64) -> Self {
         const N: i32 = 1 << 22;
@@ -61,7 +61,7 @@ impl<M: MathsCore, G: RngCore<M>> AlmostInfiniteClarkDispersalSampler<M, G> {
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> Backup for AlmostInfiniteClarkDispersalSampler<M, G> {
+impl<M: MathsCore, G: RngCore<M>> Backup for AlmostInfiniteClark2DtDispersalSampler<M, G> {
     unsafe fn backup_unchecked(&self) -> Self {
         Self {
             shape_u: self.shape_u,
@@ -74,7 +74,7 @@ impl<M: MathsCore, G: RngCore<M>> Backup for AlmostInfiniteClarkDispersalSampler
 
 #[contract_trait]
 impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, AlmostInfiniteHabitat<M>, G>
-    for AlmostInfiniteClarkDispersalSampler<M, G>
+    for AlmostInfiniteClark2DtDispersalSampler<M, G>
 {
     #[must_use]
     fn sample_dispersal_from_location(
@@ -96,7 +96,7 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, AlmostInfiniteHabitat<M>, 
 
 #[contract_trait]
 impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, AlmostInfiniteHabitat<M>, G>
-    for AlmostInfiniteClarkDispersalSampler<M, G>
+    for AlmostInfiniteClark2DtDispersalSampler<M, G>
 {
     #[must_use]
     fn sample_non_self_dispersal_from_location(
@@ -196,7 +196,7 @@ mod tests {
 
     use super::{
         clark2dt::{cdf, cdf_inverse},
-        AlmostInfiniteClarkDispersalSampler,
+        AlmostInfiniteClark2DtDispersalSampler,
     };
 
     #[test]
@@ -216,7 +216,7 @@ mod tests {
                 PositiveF64::new(1.0).unwrap(),
                 PositiveF64::new(10.0).unwrap(),
             ] {
-                let dispersal = AlmostInfiniteClarkDispersalSampler::new(shape_u, tail_p);
+                let dispersal = AlmostInfiniteClark2DtDispersalSampler::new(shape_u, tail_p);
                 let self_dispersal = dispersal.self_dispersal;
 
                 let mut rng = WyHash::<ReproducibleMathsCore>::seed_from_u64(42);

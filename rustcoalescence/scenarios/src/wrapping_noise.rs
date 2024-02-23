@@ -37,6 +37,7 @@ pub struct WrappingNoiseScenario<M: MathsCore, G: RngCore<M>> {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
+#[serde(deny_unknown_fields)]
 #[serde(rename = "WrappingNoise")]
 pub struct WrappingNoiseArguments {
     pub seed: i64,
@@ -44,8 +45,15 @@ pub struct WrappingNoiseArguments {
     pub scale: PositiveUnitF64,
     pub persistence: PositiveUnitF64,
     pub octaves: NonZeroUsize,
-    pub sample: LandscapeExtent,
+    pub sample: Sample,
     pub sigma: NonNegativeF64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub enum Sample {
+    #[serde(alias = "Extent")]
+    Rectangle(LandscapeExtent),
 }
 
 impl<M: MathsCore, G: RngCore<M>> ScenarioParameters for WrappingNoiseScenario<M, G> {
@@ -83,7 +91,9 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for WrappingNoiseScenario<M, G>
             UniformSpeciationProbability::new(speciation_probability_per_generation.into());
 
         Ok(Self {
-            sample: args.sample,
+            sample: match args.sample {
+                Sample::Rectangle(extent) => extent,
+            },
 
             habitat,
             dispersal_sampler,

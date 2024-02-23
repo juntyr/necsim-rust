@@ -245,7 +245,7 @@ impl TryFrom<SpatiallyExplicitUniformTurnoverArgumentsRaw>
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
 #[serde(deny_unknown_fields)]
-#[serde(rename = "SpatiallyExplicitUniformTurnoverArguments")]
+#[serde(rename = "SpatiallyExplicitUniformTurnover")]
 struct SpatiallyExplicitUniformTurnoverArgumentsRaw {
     #[serde(rename = "habitat", alias = "habitat_map")]
     habitat_map: PathBuf,

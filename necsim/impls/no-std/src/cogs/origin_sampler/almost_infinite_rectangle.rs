@@ -15,7 +15,7 @@ use crate::cogs::{
 };
 
 #[allow(clippy::module_name_repetitions)]
-pub struct ClarkOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
+pub struct AlmostInfiniteRectangleOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
     pre_sampler: OriginPreSampler<M, I>,
     last_index: u64,
     location_iterator: Peekable<LocationIterator>,
@@ -23,9 +23,11 @@ pub struct ClarkOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
     sample: LandscapeExtent,
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug for ClarkOriginSampler<'h, M, I> {
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
+    for AlmostInfiniteRectangleOriginSampler<'h, M, I>
+{
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct(stringify!(ClarkOriginSampler))
+        fmt.debug_struct(stringify!(AlmostInfiniteRectangleOriginSampler))
             .field("pre_sampler", &self.pre_sampler)
             .field("last_index", &self.last_index)
             .field("location_iterator", &self.location_iterator)
@@ -35,7 +37,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug for ClarkOriginSample
     }
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> ClarkOriginSampler<'h, M, I> {
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteRectangleOriginSampler<'h, M, I> {
     #[must_use]
     pub fn new(
         pre_sampler: OriginPreSampler<M, I>,
@@ -54,7 +56,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> ClarkOriginSampler<'h, M, I> {
 
 #[contract_trait]
 impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
-    for ClarkOriginSampler<'h, M, I>
+    for AlmostInfiniteRectangleOriginSampler<'h, M, I>
 {
     type Habitat = AlmostInfiniteHabitat<M>;
     type PreSampler = I;
@@ -73,11 +75,13 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
 }
 
 unsafe impl<'h, M: MathsCore, I: Iterator<Item = u64>> TrustedOriginSampler<'h, M>
-    for ClarkOriginSampler<'h, M, I>
+    for AlmostInfiniteRectangleOriginSampler<'h, M, I>
 {
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator for ClarkOriginSampler<'h, M, I> {
+impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator
+    for AlmostInfiniteRectangleOriginSampler<'h, M, I>
+{
     type Item = Lineage;
 
     fn next(&mut self) -> Option<Self::Item> {

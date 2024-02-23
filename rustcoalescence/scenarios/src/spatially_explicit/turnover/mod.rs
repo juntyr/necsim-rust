@@ -11,7 +11,7 @@ pub mod uniform;
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
 #[serde(deny_unknown_fields)]
-#[serde(rename = "SpatiallyExplicitArguments")]
+#[serde(rename = "SpatiallyExplicit")]
 pub struct SpatiallyExplicitArguments {
     #[serde(rename = "habitat", alias = "habitat_map")]
     habitat_map: PathBuf,

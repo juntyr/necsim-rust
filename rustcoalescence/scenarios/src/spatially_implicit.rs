@@ -31,6 +31,8 @@ pub struct SpatiallyImplicitScenario<M: MathsCore, G: RngCore<M>> {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
+#[serde(deny_unknown_fields)]
+#[serde(rename = "SpatiallyImplicit")]
 pub struct SpatiallyImplicitArguments {
     pub local_area: (OffByOneU32, OffByOneU32),
     pub local_deme: NonZeroU32,

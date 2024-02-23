@@ -1,18 +1,18 @@
 use serde::{Deserialize, Serialize};
 
-use necsim_core::{
-    cogs::{DispersalSampler, LineageStore, MathsCore, RngCore},
-    landscape::LandscapeExtent,
-};
-use necsim_core_bond::{OpenClosedUnitF64 as PositiveUnitF64, PositiveF64};
+use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
+use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::partition::Partition;
 
 use necsim_impls_no_std::{
     cogs::{
-        dispersal_sampler::almost_infinite_clark::AlmostInfiniteClarkDispersalSampler,
+        dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
         habitat::almost_infinite::AlmostInfiniteHabitat,
         lineage_store::coherent::globally::singleton_demes::SingletonDemesLineageStore,
-        origin_sampler::{clark::ClarkOriginSampler, pre_sampler::OriginPreSampler},
+        origin_sampler::{
+            almost_infinite_circle::AlmostInfiniteCircleOriginSampler,
+            pre_sampler::OriginPreSampler,
+        },
         speciation_probability::uniform::UniformSpeciationProbability,
         turnover_rate::uniform::UniformTurnoverRate,
     },
@@ -22,42 +22,40 @@ use necsim_impls_no_std::{
 use crate::{Scenario, ScenarioParameters};
 
 #[allow(clippy::module_name_repetitions)]
-pub struct ClarkScenario<M: MathsCore, G: RngCore<M>> {
-    sample: LandscapeExtent,
+pub struct AlmostInfiniteNormalDispersalScenario<M: MathsCore, G: RngCore<M>> {
+    radius: u16,
 
     habitat: AlmostInfiniteHabitat<M>,
-    dispersal_sampler: AlmostInfiniteClarkDispersalSampler<M, G>,
+    dispersal_sampler: AlmostInfiniteNormalDispersalSampler<M, G>,
     turnover_rate: UniformTurnoverRate,
     speciation_probability: UniformSpeciationProbability,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
-#[serde(rename = "Clark")]
-pub struct ClarkArguments {
-    pub sample: LandscapeExtent,
-    #[serde(alias = "u")]
-    pub shape_u: PositiveF64,
-    #[serde(default = "PositiveF64::one")]
-    #[serde(alias = "p")]
-    pub tail_p: PositiveF64,
+#[serde(rename = "AlmostInfiniteNormalDispersal")]
+pub struct AlmostInfiniteNormalDispersalArguments {
+    pub radius: u16,
+    pub sigma: NonNegativeF64,
 }
 
-impl<M: MathsCore, G: RngCore<M>> ScenarioParameters for ClarkScenario<M, G> {
-    type Arguments = ClarkArguments;
+impl<M: MathsCore, G: RngCore<M>> ScenarioParameters
+    for AlmostInfiniteNormalDispersalScenario<M, G>
+{
+    type Arguments = AlmostInfiniteNormalDispersalArguments;
     type Error = !;
 }
 
-impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for ClarkScenario<M, G> {
+impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteNormalDispersalScenario<M, G> {
     type Decomposition = RadialDecomposition;
     type DecompositionAuxiliary = ();
     type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
-        AlmostInfiniteClarkDispersalSampler<M, G>;
+        AlmostInfiniteNormalDispersalSampler<M, G>;
     type Habitat = AlmostInfiniteHabitat<M>;
     type LineageStore<L: LineageStore<M, Self::Habitat>> =
         SingletonDemesLineageStore<M, Self::Habitat>;
-    type OriginSampler<'h, I: Iterator<Item = u64>> = ClarkOriginSampler<'h, M, I> where G: 'h;
-    type OriginSamplerAuxiliary = (LandscapeExtent,);
+    type OriginSampler<'h, I: Iterator<Item = u64>> = AlmostInfiniteCircleOriginSampler<'h, M, I> where G: 'h;
+    type OriginSamplerAuxiliary = (u16,);
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
 
@@ -66,13 +64,13 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for ClarkScenario<M, G> {
         speciation_probability_per_generation: PositiveUnitF64,
     ) -> Result<Self, Self::Error> {
         let habitat = AlmostInfiniteHabitat::default();
-        let dispersal_sampler = AlmostInfiniteClarkDispersalSampler::new(args.shape_u, args.tail_p);
+        let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(args.sigma);
         let turnover_rate = UniformTurnoverRate::default();
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation.into());
 
         Ok(Self {
-            sample: args.sample,
+            radius: args.radius,
 
             habitat,
             dispersal_sampler,
@@ -96,7 +94,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for ClarkScenario<M, G> {
             self.dispersal_sampler,
             self.turnover_rate,
             self.speciation_probability,
-            (self.sample,),
+            (self.radius,),
             (),
         )
     }
@@ -104,12 +102,12 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for ClarkScenario<M, G> {
     fn sample_habitat<'h, I: Iterator<Item = u64>>(
         habitat: &'h Self::Habitat,
         pre_sampler: OriginPreSampler<M, I>,
-        (sample,): Self::OriginSamplerAuxiliary,
+        (radius,): Self::OriginSamplerAuxiliary,
     ) -> Self::OriginSampler<'h, I>
     where
         G: 'h,
     {
-        ClarkOriginSampler::new(pre_sampler, habitat, sample)
+        AlmostInfiniteCircleOriginSampler::new(pre_sampler, habitat, radius)
     }
 
     fn decompose(
