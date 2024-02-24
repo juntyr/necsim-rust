@@ -1,7 +1,7 @@
 use either::Either;
 use serde::{Deserialize, Serialize};
 
-use necsim_core::landscape::LandscapeExtent;
+use necsim_core::landscape::{LandscapeExtent, Location};
 #[cfg(feature = "almost-infinite-normal-dispersal")]
 use necsim_core_bond::NonNegativeF64;
 #[cfg(feature = "almost-infinite-clark2dt-dispersal")]
@@ -39,10 +39,14 @@ impl AlmostInfiniteArguments {
         match self {
             #[cfg(feature = "almost-infinite-normal-dispersal")]
             Self {
-                sample: Sample::Circle { x, y, radius },
+                sample: Sample::Circle { centre, radius },
                 dispersal: Dispersal::Normal { sigma },
-            } if x == default_circle_origin() && y == default_circle_origin() => Ok(Either::Left(
-                normal::AlmostInfiniteNormalDispersalArguments { radius, sigma },
+            } => Ok(Either::Left(
+                normal::AlmostInfiniteNormalDispersalArguments {
+                    centre,
+                    radius,
+                    sigma,
+                },
             )),
             #[cfg(feature = "almost-infinite-normal-dispersal")]
             Self {
@@ -77,8 +81,7 @@ impl AlmostInfiniteArguments {
     pub fn from_normal(args: &normal::AlmostInfiniteNormalDispersalArguments) -> Self {
         Self {
             sample: Sample::Circle {
-                x: default_circle_origin(),
-                y: default_circle_origin(),
+                centre: args.centre.clone(),
                 radius: args.radius,
             },
             dispersal: Dispersal::Normal { sigma: args.sigma },
@@ -102,24 +105,25 @@ impl AlmostInfiniteArguments {
 #[serde(deny_unknown_fields)]
 enum Sample {
     Circle {
-        #[serde(default = "default_circle_origin")]
-        x: u32,
-        #[serde(default = "default_circle_origin")]
-        y: u32,
+        #[serde(default = "default_circle_sample_centre")]
+        centre: Location,
         radius: u16,
     },
     Rectangle(LandscapeExtent),
 }
 
-const fn default_circle_origin() -> u32 {
+#[must_use]
+pub const fn default_circle_sample_centre() -> Location {
     const HABITAT_CENTRE: u32 = u32::MAX / 2;
-    HABITAT_CENTRE
+
+    Location::new(HABITAT_CENTRE, HABITAT_CENTRE)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 enum Dispersal {
     #[cfg(feature = "almost-infinite-normal-dispersal")]
+    #[serde(alias = "Gaussian")]
     Normal { sigma: NonNegativeF64 },
     #[cfg(feature = "almost-infinite-clark2dt-dispersal")]
     Clark2Dt {

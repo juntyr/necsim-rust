@@ -2,7 +2,7 @@ use core::{fmt, iter::Iterator};
 
 use necsim_core::{
     cogs::MathsCore,
-    landscape::{IndexedLocation, LandscapeExtent, LocationIterator},
+    landscape::{IndexedLocation, LandscapeExtent, Location, LocationIterator},
     lineage::Lineage,
 };
 use necsim_core_bond::OffByOneU32;
@@ -13,13 +13,12 @@ use crate::cogs::{
 
 use super::{TrustedOriginSampler, UntrustedOriginSampler};
 
-const HABITAT_CENTRE: u32 = u32::MAX / 2;
-
 #[allow(clippy::module_name_repetitions)]
 pub struct AlmostInfiniteCircleOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
     pre_sampler: OriginPreSampler<M, I>,
     last_index: u64,
     location_iterator: LocationIterator,
+    centre: Location,
     radius_squared: u64,
     upper_bound_size_hint: u64,
     habitat: &'h AlmostInfiniteHabitat<M>,
@@ -33,6 +32,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
             .field("pre_sampler", &self.pre_sampler)
             .field("last_index", &self.last_index)
             .field("location_iterator", &self.location_iterator)
+            .field("centre", &self.centre)
             .field("radius_squared", &self.radius_squared)
             .field("upper_bound_size_hint", &self.upper_bound_size_hint)
             .field("habitat", &self.habitat)
@@ -45,6 +45,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteCircleOriginSample
     pub fn new(
         pre_sampler: OriginPreSampler<M, I>,
         habitat: &'h AlmostInfiniteHabitat<M>,
+        centre: Location,
         radius: u16,
     ) -> Self {
         // Safety: safe since lower and upper bound are both safe
@@ -53,8 +54,8 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteCircleOriginSample
         let diameter = unsafe { OffByOneU32::new_unchecked(u64::from(radius) * 2 + 1) };
 
         let sample_extent = LandscapeExtent::new(
-            HABITAT_CENTRE - u32::from(radius),
-            HABITAT_CENTRE - u32::from(radius),
+            centre.x().wrapping_sub(u32::from(radius)),
+            centre.y().wrapping_sub(u32::from(radius)),
             diameter,
             diameter,
         );
@@ -71,6 +72,7 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteCircleOriginSample
             pre_sampler,
             last_index: 0_u64,
             location_iterator: sample_extent.iter(),
+            centre,
             radius_squared: u64::from(radius) * u64::from(radius),
             upper_bound_size_hint,
             habitat,
@@ -114,11 +116,17 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator
         self.last_index = next_index + 1;
 
         for next_location in &mut self.location_iterator {
-            let dx = i64::from(next_location.x()) - i64::from(HABITAT_CENTRE);
-            let dy = i64::from(next_location.y()) - i64::from(HABITAT_CENTRE);
+            let dx = u32::min(
+                next_location.x().wrapping_sub(self.centre.x()),
+                self.centre.x().wrapping_sub(next_location.x()),
+            );
+            let dy = u32::min(
+                next_location.y().wrapping_sub(self.centre.y()),
+                self.centre.y().wrapping_sub(next_location.y()),
+            );
 
-            #[allow(clippy::cast_sign_loss)]
-            let distance_squared = (dx * dx) as u64 + (dy * dy) as u64;
+            let (dx, dy) = (u64::from(dx), u64::from(dy));
+            let distance_squared = (dx * dx) + (dy * dy);
 
             if distance_squared <= self.radius_squared {
                 if index_difference == 0 {
