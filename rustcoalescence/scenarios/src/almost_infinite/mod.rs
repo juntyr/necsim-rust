@@ -1,7 +1,20 @@
 use either::Either;
+use necsim_impls_no_std::cogs::{
+    habitat::almost_infinite::AlmostInfiniteHabitat,
+    origin_sampler::{
+        almost_infinite::{
+            circle::AlmostInfiniteCircleOriginSampler,
+            rectangle::AlmostInfiniteRectangleOriginSampler, AlmostInfiniteOriginSampler,
+        },
+        pre_sampler::OriginPreSampler,
+    },
+};
 use serde::{Deserialize, Serialize};
 
-use necsim_core::landscape::{LandscapeExtent, Location};
+use necsim_core::{
+    cogs::MathsCore,
+    landscape::{LandscapeExtent, Location},
+};
 #[cfg(feature = "almost-infinite-normal-dispersal")]
 use necsim_core_bond::NonNegativeF64;
 #[cfg(feature = "almost-infinite-clark2dt-dispersal")]
@@ -32,47 +45,23 @@ type Clark2DtDispersalArguments = clark2dt::AlmostInfiniteClark2DtDispersalArgum
 type Clark2DtDispersalArguments = !;
 
 impl AlmostInfiniteArguments {
-    #[allow(clippy::missing_errors_doc)]
-    pub fn try_load(
-        self,
-    ) -> Result<Either<NormalDispersalArguments, Clark2DtDispersalArguments>, String> {
+    #[must_use]
+    pub fn load(self) -> Either<NormalDispersalArguments, Clark2DtDispersalArguments> {
         match self {
             #[cfg(feature = "almost-infinite-normal-dispersal")]
             Self {
-                sample: Sample::Circle { centre, radius },
+                sample,
                 dispersal: Dispersal::Normal { sigma },
-            } => Ok(Either::Left(
-                normal::AlmostInfiniteNormalDispersalArguments {
-                    centre,
-                    radius,
-                    sigma,
-                },
-            )),
-            #[cfg(feature = "almost-infinite-normal-dispersal")]
-            Self {
-                sample,
-                dispersal: Dispersal::Normal { .. },
-            } => Err(format!(
-                "Normal dispersal does not yet support {sample:?} sampling"
-            )),
+            } => Either::Left(normal::AlmostInfiniteNormalDispersalArguments { sample, sigma }),
             #[cfg(feature = "almost-infinite-clark2dt-dispersal")]
             Self {
-                sample: Sample::Rectangle(sample),
+                sample,
                 dispersal: Dispersal::Clark2Dt { shape_u, tail_p },
-            } => Ok(Either::Right(
-                clark2dt::AlmostInfiniteClark2DtDispersalArguments {
-                    sample,
-                    shape_u,
-                    tail_p,
-                },
-            )),
-            #[cfg(feature = "almost-infinite-clark2dt-dispersal")]
-            Self {
+            } => Either::Right(clark2dt::AlmostInfiniteClark2DtDispersalArguments {
                 sample,
-                dispersal: Dispersal::Clark2Dt { .. },
-            } => Err(format!(
-                "Clark2Dt dispersal does not yet support {sample:?} sampling"
-            )),
+                shape_u,
+                tail_p,
+            }),
         }
     }
 
@@ -80,10 +69,7 @@ impl AlmostInfiniteArguments {
     #[must_use]
     pub fn from_normal(args: &normal::AlmostInfiniteNormalDispersalArguments) -> Self {
         Self {
-            sample: Sample::Circle {
-                centre: args.centre.clone(),
-                radius: args.radius,
-            },
+            sample: args.sample.clone(),
             dispersal: Dispersal::Normal { sigma: args.sigma },
         }
     }
@@ -92,7 +78,7 @@ impl AlmostInfiniteArguments {
     #[must_use]
     pub fn from_clark2dt(args: &clark2dt::AlmostInfiniteClark2DtDispersalArguments) -> Self {
         Self {
-            sample: Sample::Rectangle(args.sample.clone()),
+            sample: args.sample.clone(),
             dispersal: Dispersal::Clark2Dt {
                 shape_u: args.shape_u,
                 tail_p: args.tail_p,
@@ -101,22 +87,39 @@ impl AlmostInfiniteArguments {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-enum Sample {
+pub enum Sample {
     Circle {
-        #[serde(default = "default_circle_sample_centre")]
+        #[serde(default = "Sample::default_circle_sample_centre")]
         centre: Location,
         radius: u16,
     },
     Rectangle(LandscapeExtent),
 }
 
-#[must_use]
-pub const fn default_circle_sample_centre() -> Location {
-    const HABITAT_CENTRE: u32 = u32::MAX / 2;
+impl Sample {
+    #[must_use]
+    pub const fn default_circle_sample_centre() -> Location {
+        const HABITAT_CENTRE: u32 = u32::MAX / 2;
 
-    Location::new(HABITAT_CENTRE, HABITAT_CENTRE)
+        Location::new(HABITAT_CENTRE, HABITAT_CENTRE)
+    }
+
+    pub fn into_origin_sampler<M: MathsCore, I: Iterator<Item = u64>>(
+        self,
+        habitat: &AlmostInfiniteHabitat<M>,
+        pre_sampler: OriginPreSampler<M, I>,
+    ) -> AlmostInfiniteOriginSampler<M, I> {
+        match self {
+            Self::Circle { centre, radius } => AlmostInfiniteOriginSampler::Circle(
+                AlmostInfiniteCircleOriginSampler::new(pre_sampler, habitat, centre, radius),
+            ),
+            Self::Rectangle(sample) => AlmostInfiniteOriginSampler::Rectangle(
+                AlmostInfiniteRectangleOriginSampler::new(pre_sampler, habitat, sample),
+            ),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

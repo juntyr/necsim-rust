@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use necsim_core::{
-    cogs::{DispersalSampler, LineageStore, MathsCore, RngCore},
-    landscape::Location,
-};
+use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
 use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::partition::Partition;
 
@@ -13,8 +10,7 @@ use necsim_impls_no_std::{
         habitat::almost_infinite::AlmostInfiniteHabitat,
         lineage_store::coherent::globally::singleton_demes::SingletonDemesLineageStore,
         origin_sampler::{
-            almost_infinite_circle::AlmostInfiniteCircleOriginSampler,
-            pre_sampler::OriginPreSampler,
+            almost_infinite::AlmostInfiniteOriginSampler, pre_sampler::OriginPreSampler,
         },
         speciation_probability::uniform::UniformSpeciationProbability,
         turnover_rate::uniform::UniformTurnoverRate,
@@ -24,10 +20,11 @@ use necsim_impls_no_std::{
 
 use crate::{Scenario, ScenarioParameters};
 
+use super::Sample;
+
 #[allow(clippy::module_name_repetitions)]
 pub struct AlmostInfiniteNormalDispersalScenario<M: MathsCore, G: RngCore<M>> {
-    centre: Location,
-    radius: u16,
+    sample: Sample,
 
     habitat: AlmostInfiniteHabitat<M>,
     dispersal_sampler: AlmostInfiniteNormalDispersalSampler<M, G>,
@@ -35,13 +32,11 @@ pub struct AlmostInfiniteNormalDispersalScenario<M: MathsCore, G: RngCore<M>> {
     speciation_probability: UniformSpeciationProbability,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
 #[serde(rename = "AlmostInfiniteNormalDispersal")]
 pub struct AlmostInfiniteNormalDispersalArguments {
-    #[serde(default = "super::default_circle_sample_centre")]
-    pub centre: Location,
-    pub radius: u16,
+    pub sample: Sample,
     pub sigma: NonNegativeF64,
 }
 
@@ -60,8 +55,8 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteNormalDispers
     type Habitat = AlmostInfiniteHabitat<M>;
     type LineageStore<L: LineageStore<M, Self::Habitat>> =
         SingletonDemesLineageStore<M, Self::Habitat>;
-    type OriginSampler<'h, I: Iterator<Item = u64>> = AlmostInfiniteCircleOriginSampler<'h, M, I> where G: 'h;
-    type OriginSamplerAuxiliary = (Location, u16);
+    type OriginSampler<'h, I: Iterator<Item = u64>> = AlmostInfiniteOriginSampler<'h, M, I> where G: 'h;
+    type OriginSamplerAuxiliary = (Sample,);
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
 
@@ -76,8 +71,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteNormalDispers
             UniformSpeciationProbability::new(speciation_probability_per_generation.into());
 
         Ok(Self {
-            centre: args.centre,
-            radius: args.radius,
+            sample: args.sample,
 
             habitat,
             dispersal_sampler,
@@ -101,7 +95,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteNormalDispers
             self.dispersal_sampler,
             self.turnover_rate,
             self.speciation_probability,
-            (self.centre, self.radius),
+            (self.sample,),
             (),
         )
     }
@@ -109,12 +103,12 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteNormalDispers
     fn sample_habitat<'h, I: Iterator<Item = u64>>(
         habitat: &'h Self::Habitat,
         pre_sampler: OriginPreSampler<M, I>,
-        (centre, radius): Self::OriginSamplerAuxiliary,
+        (sample,): Self::OriginSamplerAuxiliary,
     ) -> Self::OriginSampler<'h, I>
     where
         G: 'h,
     {
-        AlmostInfiniteCircleOriginSampler::new(pre_sampler, habitat, centre, radius)
+        sample.into_origin_sampler(habitat, pre_sampler)
     }
 
     fn decompose(

@@ -84,19 +84,17 @@ impl<'de> Deserialize<'de> for Scenario {
                 feature = "almost-infinite-normal-dispersal-scenario",
                 feature = "almost-infinite-clark2dt-dispersal-scenario",
             ))]
-            ScenarioRaw::AlmostInfinite(args) => {
-                match args.try_load().map_err(serde::de::Error::custom)? {
-                    #[allow(clippy::match_single_binding)]
-                    either::Either::Left(args) => match args {
-                        #[cfg(feature = "almost-infinite-normal-dispersal-scenario")]
-                        args => Ok(Self::AlmostInfiniteNormalDispersal(args)),
-                    },
-                    #[allow(clippy::match_single_binding)]
-                    either::Either::Right(args) => match args {
-                        #[cfg(feature = "almost-infinite-clark2dt-dispersal-scenario")]
-                        args => Ok(Self::AlmostInfiniteClark2DtDispersal(args)),
-                    },
-                }
+            ScenarioRaw::AlmostInfinite(args) => match args.load() {
+                #[allow(clippy::match_single_binding)]
+                either::Either::Left(args) => match args {
+                    #[cfg(feature = "almost-infinite-normal-dispersal-scenario")]
+                    args => Ok(Self::AlmostInfiniteNormalDispersal(args)),
+                },
+                #[allow(clippy::match_single_binding)]
+                either::Either::Right(args) => match args {
+                    #[cfg(feature = "almost-infinite-clark2dt-dispersal-scenario")]
+                    args => Ok(Self::AlmostInfiniteClark2DtDispersal(args)),
+                },
             },
             #[cfg(feature = "wrapping-noise-scenario")]
             ScenarioRaw::WrappingNoise(args) => Ok(Self::WrappingNoise(args)),

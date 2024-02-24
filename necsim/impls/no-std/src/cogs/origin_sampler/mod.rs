@@ -3,8 +3,7 @@ use necsim_core::{
     lineage::Lineage,
 };
 
-pub mod almost_infinite_circle;
-pub mod almost_infinite_rectangle;
+pub mod almost_infinite;
 pub mod decomposition;
 pub mod in_memory;
 pub mod non_spatial;
