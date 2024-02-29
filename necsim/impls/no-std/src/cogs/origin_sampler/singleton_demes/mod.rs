@@ -3,7 +3,8 @@ use core::{fmt, iter::Iterator};
 use necsim_core::{cogs::MathsCore, lineage::Lineage};
 
 use crate::cogs::{
-    habitat::almost_infinite::AlmostInfiniteHabitat, origin_sampler::pre_sampler::OriginPreSampler,
+    lineage_store::coherent::globally::singleton_demes::SingletonDemesHabitat,
+    origin_sampler::pre_sampler::OriginPreSampler,
 };
 
 use super::{TrustedOriginSampler, UntrustedOriginSampler};
@@ -12,13 +13,18 @@ pub mod circle;
 pub mod rectangle;
 
 #[allow(clippy::module_name_repetitions)]
-pub enum AlmostInfiniteOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
-    Circle(circle::AlmostInfiniteCircleOriginSampler<'h, M, I>),
-    Rectangle(rectangle::AlmostInfiniteRectangleOriginSampler<'h, M, I>),
+pub enum SingletonDemesOriginSampler<
+    'h,
+    M: MathsCore,
+    H: SingletonDemesHabitat<M>,
+    I: Iterator<Item = u64>,
+> {
+    Circle(circle::SingletonDemesCircleOriginSampler<'h, M, H, I>),
+    Rectangle(rectangle::SingletonDemesRectangleOriginSampler<'h, M, H, I>),
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
-    for AlmostInfiniteOriginSampler<'h, M, I>
+impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>> fmt::Debug
+    for SingletonDemesOriginSampler<'h, M, H, I>
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -29,10 +35,10 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
 }
 
 #[contract_trait]
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
-    for AlmostInfiniteOriginSampler<'h, M, I>
+impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>>
+    UntrustedOriginSampler<'h, M> for SingletonDemesOriginSampler<'h, M, H, I>
 {
-    type Habitat = AlmostInfiniteHabitat<M>;
+    type Habitat = H;
     type PreSampler = I;
 
     fn habitat(&self) -> &'h Self::Habitat {
@@ -57,12 +63,14 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
     }
 }
 
-unsafe impl<'h, M: MathsCore, I: Iterator<Item = u64>> TrustedOriginSampler<'h, M>
-    for AlmostInfiniteOriginSampler<'h, M, I>
+unsafe impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>>
+    TrustedOriginSampler<'h, M> for SingletonDemesOriginSampler<'h, M, H, I>
 {
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator for AlmostInfiniteOriginSampler<'h, M, I> {
+impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>> Iterator
+    for SingletonDemesOriginSampler<'h, M, H, I>
+{
     type Item = Lineage;
 
     fn next(&mut self) -> Option<Self::Item> {

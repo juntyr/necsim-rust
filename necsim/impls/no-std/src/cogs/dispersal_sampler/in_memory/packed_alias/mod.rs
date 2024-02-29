@@ -70,14 +70,15 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
 
                 for (col_index, dispersal_probability) in row.enumerate() {
                     #[allow(clippy::cast_possible_truncation)]
-                    let location = Location::new(
-                        habitat_extent
-                            .x()
-                            .wrapping_add((col_index % usize::from(habitat_extent.width())) as u32),
-                        habitat_extent
-                            .y()
-                            .wrapping_add((col_index / usize::from(habitat_extent.width())) as u32),
-                    );
+                    let location =
+                        Location::new(
+                            habitat_extent.origin().x().wrapping_add(
+                                (col_index % usize::from(habitat_extent.width())) as u32,
+                            ),
+                            habitat_extent.origin().y().wrapping_add(
+                                (col_index / usize::from(habitat_extent.width())) as u32,
+                            ),
+                        );
 
                     // Multiply all dispersal probabilities by the habitat of their target
                     let weight = *dispersal_probability

@@ -59,10 +59,12 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, NonSpatialHabitat<M>, G>
         Location::new(
             habitat
                 .get_extent()
+                .origin()
                 .x()
                 .wrapping_add((dispersal_target_index % habitat.get_extent().width().get()) as u32),
             habitat
                 .get_extent()
+                .origin()
                 .y()
                 .wrapping_add((dispersal_target_index / habitat.get_extent().width().get()) as u32),
         )
@@ -106,10 +108,12 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, NonSpatialHabitat
         Location::new(
             habitat
                 .get_extent()
+                .origin()
                 .x()
                 .wrapping_add((dispersal_target_index % habitat.get_extent().width().get()) as u32),
             habitat
                 .get_extent()
+                .origin()
                 .y()
                 .wrapping_add((dispersal_target_index / habitat.get_extent().width().get()) as u32),
         )

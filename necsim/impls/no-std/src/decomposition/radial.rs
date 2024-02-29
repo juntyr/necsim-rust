@@ -39,8 +39,8 @@ impl<M: MathsCore, H: Habitat<M>> Decomposition<M, H> for RadialDecomposition {
     fn map_location_to_subdomain_rank(&self, location: &Location, habitat: &H) -> u32 {
         let extent = habitat.get_extent();
 
-        let neutral_x = location.x().wrapping_sub(extent.x());
-        let neutral_y = location.y().wrapping_sub(extent.y());
+        let neutral_x = location.x().wrapping_sub(extent.origin().x());
+        let neutral_y = location.y().wrapping_sub(extent.origin().y());
 
         #[allow(clippy::cast_precision_loss)]
         let fraction = (atan2(

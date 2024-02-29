@@ -15,7 +15,8 @@ use necsim_impls_no_std::{
         habitat::wrapping_noise::WrappingNoiseHabitat,
         lineage_store::coherent::globally::singleton_demes::SingletonDemesLineageStore,
         origin_sampler::{
-            pre_sampler::OriginPreSampler, wrapping_noise::WrappingNoiseOriginSampler,
+            pre_sampler::OriginPreSampler,
+            singleton_demes::rectangle::SingletonDemesRectangleOriginSampler,
         },
         speciation_probability::uniform::UniformSpeciationProbability,
         turnover_rate::uniform::UniformTurnoverRate,
@@ -69,7 +70,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for WrappingNoiseScenario<M, G>
     type Habitat = WrappingNoiseHabitat<M>;
     type LineageStore<L: LineageStore<M, Self::Habitat>> =
         SingletonDemesLineageStore<M, Self::Habitat>;
-    type OriginSampler<'h, I: Iterator<Item = u64>> = WrappingNoiseOriginSampler<'h, M, I> where G: 'h;
+    type OriginSampler<'h, I: Iterator<Item = u64>> = SingletonDemesRectangleOriginSampler<'h, M, Self::Habitat, I> where G: 'h;
     type OriginSamplerAuxiliary = (LandscapeExtent,);
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
@@ -131,7 +132,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for WrappingNoiseScenario<M, G>
     where
         G: 'h,
     {
-        WrappingNoiseOriginSampler::new(pre_sampler, habitat, sample)
+        SingletonDemesRectangleOriginSampler::new(pre_sampler, habitat, sample)
     }
 
     fn decompose(

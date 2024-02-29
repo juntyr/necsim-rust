@@ -9,7 +9,7 @@ use necsim_core_bond::{OffByOneU32, OffByOneU64};
 use crate::cogs::lineage_store::coherent::globally::singleton_demes::SingletonDemesHabitat;
 
 const ALMOST_INFINITE_EXTENT: LandscapeExtent =
-    LandscapeExtent::new(0, 0, OffByOneU32::max(), OffByOneU32::max());
+    LandscapeExtent::new(Location::new(0, 0), OffByOneU32::max(), OffByOneU32::max());
 
 #[allow(clippy::module_name_repetitions)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::common::LendRustToCuda))]

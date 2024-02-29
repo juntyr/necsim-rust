@@ -174,7 +174,7 @@
 
     /* selection of the scenario which will be simulated */
     scenario: (
-        /* spatially explicit scenario using habitat (optionally turnover) and dispersal maps */
+        /* spatially explicit scenario using habitat (and optionally turnover) and dispersal maps */
       | SpatiallyExplicit(
             /* file path to a (WxH) TIFF file storing grayscale u32 habitat values */
             habitat: (PathBuf),
@@ -237,26 +237,27 @@
             sample: (
                 /* circular sample area */
               | Circle(
-                  /* centre (x, y) of the circle
-                   * optional, default = (x: 2147483647, y: 2147483647)
-                   *  note that 2147483647 = 2^31 - 1 */
-                  centre: (
-                      x: (u32),
-                      y: (u32),
-                  ),
-                  /* radius of the circle */
-                  radius: (u16),
+                    /* centre (x, y) of the circle
+                    * optional, default = (x: 2147483647, y: 2147483647)
+                    *  note that 2147483647 = 2^31 - 1 */
+                    centre: (
+                        x: (u32),
+                        y: (u32),
+                    ),
+                    /* radius of the circle */
+                    radius: (u16),
                 )
                 /* rectangular sample area */
               | Rectangle(
-                  /* lower-left origin x of the sample area */
-                  x: (u32),
-                  /* lower-left origin y of the sample area */
-                  y: (u32),
-                  /* width of the sample area */
-                  width: (1 <= u64 <= 2^32),
-                  /* height of the sample area */
-                  height: (1 <= u64 <= 2^32),
+                    /* lower-left origin of the sample area */
+                    origin: (
+                        x: (u32),
+                        y: (u32),
+                    ),
+                    /* width of the sample area */
+                    width: (1 <= u64 <= 2^32),
+                    /* height of the sample area */
+                    height: (1 <= u64 <= 2^32),
                 )
             ),
             /* selection of the dispersal kernel */
@@ -264,19 +265,19 @@
                 /* Gaussian Normal dispersal kernel N(0, sigma^2)
                  * requires the `almost-infinite-normal-dispersal-scenario` feature */
               | Normal(
-                  /* sigma for the Gaussian dispersal kernel */
-                  sigma: (0.0 <= f64),
+                    /* sigma for the Gaussian dispersal kernel */
+                    sigma: (0.0 <= f64),
                 )
                 /* Clark2Dt dispersal kernel
                  * requires the `almost-infinite-clark2dt-dispersal-scenario` feature */
               | Clark2Dt(
-                  /* shape (u) for the Clark 2Dt dispersal kernel */
-                  shape_u: (0.0 < f64),
-                  /* tail (p) for the Clark 2Dt dispersal kernel
-                  * - Clark 2Dt dispersal tends to Gaussian as p becomes large
-                  * - Clark 2Dt dispersal tends to Cauchy as p goes to zero
-                  * optional, default = 1.0 */
-                  tail_p: (0.0 < f64),
+                    /* shape (u) for the Clark 2Dt dispersal kernel */
+                    shape_u: (0.0 < f64),
+                    /* tail (p) for the Clark 2Dt dispersal kernel
+                    *  - Clark 2Dt dispersal tends to Gaussian as p becomes large
+                    *  - Clark 2Dt dispersal tends to Cauchy as p goes to zero
+                    * optional, default = 1.0 */
+                    tail_p: (0.0 < f64),
                 )
             ),
         )
@@ -304,10 +305,11 @@
             /* rectangular sample area, individuals living in here are simulated
              * the sample area can wrap around the torus */
             sample: Rectangle(
-                /* lower-left origin x of the sample area */
-                x: (u32),
-                /* lower-left origin y of the sample area */
-                y: (u32),
+                /* lower-left origin of the sample area */
+                origin: (
+                    x: (u32),
+                    y: (u32),
+                ),
                 /* width of the sample area */
                 width: (1 <= u64 <= 2^32),
                 /* height of the sample area */

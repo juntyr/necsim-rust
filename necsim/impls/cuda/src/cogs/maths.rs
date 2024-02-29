@@ -92,7 +92,7 @@ impl MathsCore for NvptxMathsCore {
             let log2_x: f32;
             core::arch::asm!("lg2.approx.f32 {}, {};", out(reg32) log2_x, in(reg32) x, options(pure, nomem, nostack));
 
-            let exp_log2_x = log2_x * exp;
+            let exp_log2_x = exp * log2_x;
 
             let f: f32;
             core::arch::asm!("ex2.approx.f32 {}, {};", out(reg32) f, in(reg32) exp_log2_x, options(pure, nomem, nostack));

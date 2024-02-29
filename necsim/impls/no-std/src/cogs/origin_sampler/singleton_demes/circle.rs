@@ -8,27 +8,33 @@ use necsim_core::{
 use necsim_core_bond::OffByOneU32;
 
 use crate::cogs::{
-    habitat::almost_infinite::AlmostInfiniteHabitat, origin_sampler::pre_sampler::OriginPreSampler,
+    lineage_store::coherent::globally::singleton_demes::SingletonDemesHabitat,
+    origin_sampler::pre_sampler::OriginPreSampler,
 };
 
 use super::{TrustedOriginSampler, UntrustedOriginSampler};
 
 #[allow(clippy::module_name_repetitions)]
-pub struct AlmostInfiniteCircleOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
+pub struct SingletonDemesCircleOriginSampler<
+    'h,
+    M: MathsCore,
+    H: SingletonDemesHabitat<M>,
+    I: Iterator<Item = u64>,
+> {
     pre_sampler: OriginPreSampler<M, I>,
     last_index: u64,
     location_iterator: LocationIterator,
     centre: Location,
     radius_squared: u64,
     upper_bound_size_hint: u64,
-    habitat: &'h AlmostInfiniteHabitat<M>,
+    habitat: &'h H,
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
-    for AlmostInfiniteCircleOriginSampler<'h, M, I>
+impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>> fmt::Debug
+    for SingletonDemesCircleOriginSampler<'h, M, H, I>
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct(stringify!(AlmostInfiniteCircleOriginSampler))
+        fmt.debug_struct(stringify!(SingletonDemesCircleOriginSampler))
             .field("pre_sampler", &self.pre_sampler)
             .field("last_index", &self.last_index)
             .field("location_iterator", &self.location_iterator)
@@ -40,11 +46,13 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
     }
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteCircleOriginSampler<'h, M, I> {
+impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>>
+    SingletonDemesCircleOriginSampler<'h, M, H, I>
+{
     #[must_use]
     pub fn new(
         pre_sampler: OriginPreSampler<M, I>,
-        habitat: &'h AlmostInfiniteHabitat<M>,
+        habitat: &'h H,
         centre: Location,
         radius: u16,
     ) -> Self {
@@ -54,8 +62,10 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteCircleOriginSample
         let diameter = unsafe { OffByOneU32::new_unchecked(u64::from(radius) * 2 + 1) };
 
         let sample_extent = LandscapeExtent::new(
-            centre.x().wrapping_sub(u32::from(radius)),
-            centre.y().wrapping_sub(u32::from(radius)),
+            Location::new(
+                centre.x().wrapping_sub(u32::from(radius)),
+                centre.y().wrapping_sub(u32::from(radius)),
+            ),
             diameter,
             diameter,
         );
@@ -81,10 +91,10 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteCircleOriginSample
 }
 
 #[contract_trait]
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
-    for AlmostInfiniteCircleOriginSampler<'h, M, I>
+impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>>
+    UntrustedOriginSampler<'h, M> for SingletonDemesCircleOriginSampler<'h, M, H, I>
 {
-    type Habitat = AlmostInfiniteHabitat<M>;
+    type Habitat = H;
     type PreSampler = I;
 
     fn habitat(&self) -> &'h Self::Habitat {
@@ -100,13 +110,13 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
     }
 }
 
-unsafe impl<'h, M: MathsCore, I: Iterator<Item = u64>> TrustedOriginSampler<'h, M>
-    for AlmostInfiniteCircleOriginSampler<'h, M, I>
+unsafe impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>>
+    TrustedOriginSampler<'h, M> for SingletonDemesCircleOriginSampler<'h, M, H, I>
 {
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator
-    for AlmostInfiniteCircleOriginSampler<'h, M, I>
+impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>> Iterator
+    for SingletonDemesCircleOriginSampler<'h, M, H, I>
 {
     type Item = Lineage;
 
@@ -128,7 +138,9 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator
             let (dx, dy) = (u64::from(dx), u64::from(dy));
             let distance_squared = (dx * dx) + (dy * dy);
 
-            if distance_squared <= self.radius_squared {
+            if distance_squared <= self.radius_squared
+                && self.habitat.get_habitat_at_location(&next_location) > 0_u32
+            {
                 if index_difference == 0 {
                     return Some(Lineage::new(
                         IndexedLocation::new(next_location, 0),

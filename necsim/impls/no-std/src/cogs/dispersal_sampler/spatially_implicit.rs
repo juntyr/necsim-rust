@@ -70,10 +70,7 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, SpatiallyImplicitHabitat<M
             if rng.sample_event(self.local_migration_probability_per_generation.into()) {
                 // Provide a dummpy Location in the meta community to disperse from
                 self.meta.sample_dispersal_from_location(
-                    &Location::new(
-                        habitat.meta().get_extent().x(),
-                        habitat.meta().get_extent().y(),
-                    ),
+                    habitat.meta().get_extent().origin(),
                     habitat.meta(),
                     rng,
                 )
@@ -116,10 +113,7 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, SpatiallyImplicit
                 // As the individual is dispersing to a different community,
                 //  we can use standard dispersal in the meta community
                 self.meta.sample_dispersal_from_location(
-                    &Location::new(
-                        habitat.meta().get_extent().x(),
-                        habitat.meta().get_extent().y(),
-                    ),
+                    habitat.meta().get_extent().origin(),
                     habitat.meta(),
                     rng,
                 )

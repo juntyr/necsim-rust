@@ -2,11 +2,11 @@ use either::Either;
 use necsim_impls_no_std::cogs::{
     habitat::almost_infinite::AlmostInfiniteHabitat,
     origin_sampler::{
-        almost_infinite::{
-            circle::AlmostInfiniteCircleOriginSampler,
-            rectangle::AlmostInfiniteRectangleOriginSampler, AlmostInfiniteOriginSampler,
-        },
         pre_sampler::OriginPreSampler,
+        singleton_demes::{
+            circle::SingletonDemesCircleOriginSampler,
+            rectangle::SingletonDemesRectangleOriginSampler, SingletonDemesOriginSampler,
+        },
     },
 };
 use serde::{Deserialize, Serialize};
@@ -110,13 +110,13 @@ impl Sample {
         self,
         habitat: &AlmostInfiniteHabitat<M>,
         pre_sampler: OriginPreSampler<M, I>,
-    ) -> AlmostInfiniteOriginSampler<M, I> {
+    ) -> SingletonDemesOriginSampler<M, AlmostInfiniteHabitat<M>, I> {
         match self {
-            Self::Circle { centre, radius } => AlmostInfiniteOriginSampler::Circle(
-                AlmostInfiniteCircleOriginSampler::new(pre_sampler, habitat, centre, radius),
+            Self::Circle { centre, radius } => SingletonDemesOriginSampler::Circle(
+                SingletonDemesCircleOriginSampler::new(pre_sampler, habitat, centre, radius),
             ),
-            Self::Rectangle(sample) => AlmostInfiniteOriginSampler::Rectangle(
-                AlmostInfiniteRectangleOriginSampler::new(pre_sampler, habitat, sample),
+            Self::Rectangle(sample) => SingletonDemesOriginSampler::Rectangle(
+                SingletonDemesRectangleOriginSampler::new(pre_sampler, habitat, sample),
             ),
         }
     }

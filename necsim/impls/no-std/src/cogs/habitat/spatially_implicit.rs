@@ -9,7 +9,7 @@ use necsim_core_bond::{OffByOneU32, OffByOneU64};
 use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 
 const SPATIALLY_IMPLICIT_EXTENT: LandscapeExtent =
-    LandscapeExtent::new(0, 0, OffByOneU32::max(), OffByOneU32::max());
+    LandscapeExtent::new(Location::new(0, 0), OffByOneU32::max(), OffByOneU32::max());
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
@@ -43,8 +43,7 @@ impl<M: MathsCore> SpatiallyImplicitHabitat<M> {
     ) -> Self {
         let local = NonSpatialHabitat::new(local_area, local_deme);
         let meta = NonSpatialHabitat::new_with_offset(
-            meta_area.0.inv(),
-            meta_area.1.inv(),
+            Location::new(meta_area.0.inv(), meta_area.1.inv()),
             meta_area,
             meta_deme,
         );

@@ -3,14 +3,13 @@ use necsim_core::{
     lineage::Lineage,
 };
 
-pub mod almost_infinite;
 pub mod decomposition;
 pub mod in_memory;
 pub mod non_spatial;
 pub mod pre_sampler;
 pub mod resuming;
+pub mod singleton_demes;
 pub mod spatially_implicit;
-pub mod wrapping_noise;
 
 use pre_sampler::OriginPreSampler;
 

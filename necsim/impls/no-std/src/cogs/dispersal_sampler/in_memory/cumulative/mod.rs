@@ -37,24 +37,24 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
         let mut valid_dispersal_targets = vec![None; dispersal.num_elements()].into_boxed_slice();
 
         for (row_index, row) in dispersal.rows_iter().enumerate() {
-            let sum: NonNegativeF64 = row
-                .enumerate()
-                .map(|(col_index, dispersal_probability)| {
-                    #[allow(clippy::cast_possible_truncation)]
-                    let location = Location::new(
-                        habitat_extent
-                            .x()
-                            .wrapping_add((col_index % usize::from(habitat_extent.width())) as u32),
-                        habitat_extent
-                            .y()
-                            .wrapping_add((col_index / usize::from(habitat_extent.width())) as u32),
-                    );
+            let sum: NonNegativeF64 =
+                row.enumerate()
+                    .map(|(col_index, dispersal_probability)| {
+                        #[allow(clippy::cast_possible_truncation)]
+                        let location = Location::new(
+                            habitat_extent.origin().x().wrapping_add(
+                                (col_index % usize::from(habitat_extent.width())) as u32,
+                            ),
+                            habitat_extent.origin().y().wrapping_add(
+                                (col_index / usize::from(habitat_extent.width())) as u32,
+                            ),
+                        );
 
-                    // Multiply all dispersal probabilities by the habitat of their target
-                    *dispersal_probability
-                        * NonNegativeF64::from(habitat.get_habitat_at_location(&location))
-                })
-                .sum();
+                        // Multiply all dispersal probabilities by the habitat of their target
+                        *dispersal_probability
+                            * NonNegativeF64::from(habitat.get_habitat_at_location(&location))
+                    })
+                    .sum();
 
             if sum > 0.0_f64 {
                 let mut acc = NonNegativeF64::zero();
@@ -62,14 +62,15 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
 
                 for col_index in 0..dispersal.num_columns() {
                     #[allow(clippy::cast_possible_truncation)]
-                    let location = Location::new(
-                        habitat_extent
-                            .x()
-                            .wrapping_add((col_index % usize::from(habitat_extent.width())) as u32),
-                        habitat_extent
-                            .y()
-                            .wrapping_add((col_index / usize::from(habitat_extent.width())) as u32),
-                    );
+                    let location =
+                        Location::new(
+                            habitat_extent.origin().x().wrapping_add(
+                                (col_index % usize::from(habitat_extent.width())) as u32,
+                            ),
+                            habitat_extent.origin().y().wrapping_add(
+                                (col_index / usize::from(habitat_extent.width())) as u32,
+                            ),
+                        );
 
                     // Multiply all dispersal probabilities by the habitat of their target
                     let dispersal_probability = dispersal[(row_index, col_index)]

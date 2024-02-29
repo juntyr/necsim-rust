@@ -10,24 +10,29 @@ use necsim_core::{
 };
 
 use crate::cogs::{
-    habitat::almost_infinite::AlmostInfiniteHabitat,
+    lineage_store::coherent::globally::singleton_demes::SingletonDemesHabitat,
     origin_sampler::{pre_sampler::OriginPreSampler, TrustedOriginSampler, UntrustedOriginSampler},
 };
 
 #[allow(clippy::module_name_repetitions)]
-pub struct AlmostInfiniteRectangleOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
+pub struct SingletonDemesRectangleOriginSampler<
+    'h,
+    M: MathsCore,
+    H: SingletonDemesHabitat<M>,
+    I: Iterator<Item = u64>,
+> {
     pre_sampler: OriginPreSampler<M, I>,
     last_index: u64,
     location_iterator: Peekable<LocationIterator>,
-    habitat: &'h AlmostInfiniteHabitat<M>,
+    habitat: &'h H,
     sample: LandscapeExtent,
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
-    for AlmostInfiniteRectangleOriginSampler<'h, M, I>
+impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>> fmt::Debug
+    for SingletonDemesRectangleOriginSampler<'h, M, H, I>
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct(stringify!(AlmostInfiniteRectangleOriginSampler))
+        fmt.debug_struct(stringify!(SingletonDemesRectangleOriginSampler))
             .field("pre_sampler", &self.pre_sampler)
             .field("last_index", &self.last_index)
             .field("location_iterator", &self.location_iterator)
@@ -37,11 +42,13 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
     }
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteRectangleOriginSampler<'h, M, I> {
+impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>>
+    SingletonDemesRectangleOriginSampler<'h, M, H, I>
+{
     #[must_use]
     pub fn new(
         pre_sampler: OriginPreSampler<M, I>,
-        habitat: &'h AlmostInfiniteHabitat<M>,
+        habitat: &'h H,
         sample: LandscapeExtent,
     ) -> Self {
         Self {
@@ -55,10 +62,10 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> AlmostInfiniteRectangleOriginSam
 }
 
 #[contract_trait]
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
-    for AlmostInfiniteRectangleOriginSampler<'h, M, I>
+impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>>
+    UntrustedOriginSampler<'h, M> for SingletonDemesRectangleOriginSampler<'h, M, H, I>
 {
-    type Habitat = AlmostInfiniteHabitat<M>;
+    type Habitat = H;
     type PreSampler = I;
 
     fn habitat(&self) -> &'h Self::Habitat {
@@ -70,17 +77,22 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
     }
 
     fn full_upper_bound_size_hint(&self) -> u64 {
-        self.sample.width().get() * self.sample.height().get()
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        {
+            (f64::from(self.sample.width())
+                * f64::from(self.sample.height())
+                * self.pre_sampler.get_sample_proportion().get()) as u64
+        }
     }
 }
 
-unsafe impl<'h, M: MathsCore, I: Iterator<Item = u64>> TrustedOriginSampler<'h, M>
-    for AlmostInfiniteRectangleOriginSampler<'h, M, I>
+unsafe impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>>
+    TrustedOriginSampler<'h, M> for SingletonDemesRectangleOriginSampler<'h, M, H, I>
 {
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator
-    for AlmostInfiniteRectangleOriginSampler<'h, M, I>
+impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>> Iterator
+    for SingletonDemesRectangleOriginSampler<'h, M, H, I>
 {
     type Item = Lineage;
 
@@ -90,14 +102,16 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator
         self.last_index = next_index + 1;
 
         for next_location in &mut self.location_iterator {
-            if index_difference == 0 {
-                return Some(Lineage::new(
-                    IndexedLocation::new(next_location, 0),
-                    self.habitat,
-                ));
-            }
+            if self.habitat.get_habitat_at_location(&next_location) > 0_u32 {
+                if index_difference == 0 {
+                    return Some(Lineage::new(
+                        IndexedLocation::new(next_location, 0),
+                        self.habitat,
+                    ));
+                }
 
-            index_difference -= 1;
+                index_difference -= 1;
+            }
         }
 
         None

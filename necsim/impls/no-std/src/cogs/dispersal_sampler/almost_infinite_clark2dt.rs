@@ -35,6 +35,13 @@ impl<M: MathsCore, G: RngCore<M>> AlmostInfiniteClark2DtDispersalSampler<M, G> {
             })
             .map(|phi| {
                 // self-dispersal jump radius: dx <= 0.5 && dy <= 0.5
+                // use polar coordinates to compute the angle-dependent radius of a square:
+                //  1. unit circle has radius 1
+                //  2. radius (hypothenuse) scales proportionally with adjacent (cos) and
+                //     opposite (sin)
+                //  3. we're tracing 1/8th of a square in [0, pi/4] where k*sin(x)=? and
+                //     k*cos(x)=1 and r=k, so k = 1/cos(x) = r
+                //  4. unit square has side length 1, so we scale the radius to 0.5
                 let jump_r = 0.5 / M::cos(phi);
                 // Safety: cos([0, pi/4]) in [sqrt(2)/2, 1], and its inverse is non-negative
                 unsafe { NonNegativeF64::new_unchecked(jump_r) }
@@ -46,8 +53,9 @@ impl<M: MathsCore, G: RngCore<M>> AlmostInfiniteClark2DtDispersalSampler<M, G> {
             .sum::<f64>()
             / f64::from(N); // take the average
 
-        // Safety: the average of the cdfs, which are all ClosedUnitF64, is also in [0,
-        // 1] Note: we still clamp to account for rounding errors
+        // Safety: the average of the cdfs, which are all ClosedUnitF64,
+        //         is also in [0, 1]
+        // Note: we still clamp to account for rounding errors
         let self_dispersal =
             unsafe { ClosedUnitF64::new_unchecked(self_dispersal.clamp(0.0, 1.0)) };
 

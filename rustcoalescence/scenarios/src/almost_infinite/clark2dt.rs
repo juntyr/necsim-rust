@@ -10,7 +10,7 @@ use necsim_impls_no_std::{
         habitat::almost_infinite::AlmostInfiniteHabitat,
         lineage_store::coherent::globally::singleton_demes::SingletonDemesLineageStore,
         origin_sampler::{
-            almost_infinite::AlmostInfiniteOriginSampler, pre_sampler::OriginPreSampler,
+            pre_sampler::OriginPreSampler, singleton_demes::SingletonDemesOriginSampler,
         },
         speciation_probability::uniform::UniformSpeciationProbability,
         turnover_rate::uniform::UniformTurnoverRate,
@@ -59,7 +59,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteClark2DtDispe
     type Habitat = AlmostInfiniteHabitat<M>;
     type LineageStore<L: LineageStore<M, Self::Habitat>> =
         SingletonDemesLineageStore<M, Self::Habitat>;
-    type OriginSampler<'h, I: Iterator<Item = u64>> = AlmostInfiniteOriginSampler<'h, M, I> where G: 'h;
+    type OriginSampler<'h, I: Iterator<Item = u64>> = SingletonDemesOriginSampler<'h, M, Self::Habitat, I> where G: 'h;
     type OriginSamplerAuxiliary = (Sample,);
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
