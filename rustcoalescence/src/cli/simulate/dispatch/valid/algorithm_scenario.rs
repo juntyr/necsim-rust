@@ -13,14 +13,16 @@ use rustcoalescence_algorithms_gillespie::{
 #[cfg(feature = "independent-algorithm")]
 use rustcoalescence_algorithms_independent::IndependentAlgorithm;
 
-#[cfg(feature = "almost-infinite-scenario")]
-use rustcoalescence_scenarios::almost_infinite::AlmostInfiniteScenario;
+#[cfg(feature = "almost-infinite-clark2dt-dispersal-scenario")]
+use rustcoalescence_scenarios::almost_infinite::clark2dt::AlmostInfiniteClark2DtDispersalScenario;
+#[cfg(feature = "almost-infinite-normal-dispersal-scenario")]
+use rustcoalescence_scenarios::almost_infinite::normal::AlmostInfiniteNormalDispersalScenario;
 #[cfg(feature = "non-spatial-scenario")]
 use rustcoalescence_scenarios::non_spatial::NonSpatialScenario;
 #[cfg(feature = "spatially-explicit-turnover-map-scenario")]
-use rustcoalescence_scenarios::spatially_explicit::SpatiallyExplicitTurnoverMapScenario;
+use rustcoalescence_scenarios::spatially_explicit::map::SpatiallyExplicitTurnoverMapScenario;
 #[cfg(feature = "spatially-explicit-uniform-turnover-scenario")]
-use rustcoalescence_scenarios::spatially_explicit::SpatiallyExplicitUniformTurnoverScenario;
+use rustcoalescence_scenarios::spatially_explicit::uniform::SpatiallyExplicitUniformTurnoverScenario;
 #[cfg(feature = "spatially-implicit-scenario")]
 use rustcoalescence_scenarios::spatially_implicit::SpatiallyImplicitScenario;
 #[cfg(feature = "wrapping-noise-scenario")]
@@ -184,9 +186,17 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
             )
             .into_ok()
         },
-        #[cfg(feature = "almost-infinite-scenario")]
-        ScenarioArgs::AlmostInfinite(scenario_args) => {
-            AlmostInfiniteScenario::initialise(
+        #[cfg(feature = "almost-infinite-normal-dispersal-scenario")]
+        ScenarioArgs::AlmostInfiniteNormalDispersal(scenario_args) => {
+            AlmostInfiniteNormalDispersalScenario::initialise(
+                scenario_args,
+                speciation_probability_per_generation,
+            )
+            .into_ok()
+        },
+        #[cfg(feature = "almost-infinite-clark2dt-dispersal-scenario")]
+        ScenarioArgs::AlmostInfiniteClark2DtDispersal(scenario_args) => {
+            AlmostInfiniteClark2DtDispersalScenario::initialise(
                 scenario_args,
                 speciation_probability_per_generation,
             )

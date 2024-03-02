@@ -8,31 +8,24 @@ use super::Location;
 #[serde(deny_unknown_fields)]
 #[repr(C)]
 pub struct LandscapeExtent {
-    x: u32,
-    y: u32,
+    origin: Location,
     width: OffByOneU32,
     height: OffByOneU32,
 }
 
 impl LandscapeExtent {
     #[must_use]
-    pub const fn new(x: u32, y: u32, width: OffByOneU32, height: OffByOneU32) -> Self {
+    pub const fn new(origin: Location, width: OffByOneU32, height: OffByOneU32) -> Self {
         Self {
-            x,
-            y,
+            origin,
             width,
             height,
         }
     }
 
     #[must_use]
-    pub const fn x(&self) -> u32 {
-        self.x
-    }
-
-    #[must_use]
-    pub const fn y(&self) -> u32 {
-        self.y
+    pub const fn origin(&self) -> &Location {
+        &self.origin
     }
 
     #[must_use]
@@ -47,17 +40,16 @@ impl LandscapeExtent {
 
     #[must_use]
     pub const fn contains(&self, location: &Location) -> bool {
-        location.x() >= self.x
-            && location.x() <= self.width.add_incl(self.x)
-            && location.y() >= self.y
-            && location.y() <= self.height.add_incl(self.y)
+        location.x() >= self.origin.x()
+            && location.x() <= self.width.add_incl(self.origin.x())
+            && location.y() >= self.origin.y()
+            && location.y() <= self.height.add_incl(self.origin.y())
     }
 
     #[must_use]
     pub fn iter(&self) -> LocationIterator {
         LocationIterator {
-            x: self.x,
-            y: self.y,
+            location: self.origin.clone(),
             extent: self.clone(),
             first_y: true,
         }
@@ -75,8 +67,7 @@ impl IntoIterator for &LandscapeExtent {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct LocationIterator {
-    x: u32,
-    y: u32,
+    location: Location,
     extent: LandscapeExtent,
     first_y: bool,
 }
@@ -85,18 +76,21 @@ impl Iterator for LocationIterator {
     type Item = Location;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.y != self.extent.height().add_excl(self.extent.y()) || self.first_y {
-            let next = Some(Location::new(self.x, self.y));
+        if self.location.y() != self.extent.height().add_excl(self.extent.origin().y())
+            || self.first_y
+        {
+            let after =
+                if self.location.x() == self.extent.width().add_incl(self.extent.origin().x()) {
+                    self.first_y = false;
+                    Location::new(self.extent.origin().x(), self.location.y().wrapping_add(1))
+                } else {
+                    Location::new(self.location.x().wrapping_add(1), self.location.y())
+                };
 
-            self.x = if self.x == self.extent.width().add_incl(self.extent.x()) {
-                self.y = self.y.wrapping_add(1);
-                self.first_y = false;
-                self.extent.x()
-            } else {
-                self.x.wrapping_add(1)
-            };
+            let next = self.location.clone();
+            self.location = after;
 
-            next
+            Some(next)
         } else {
             None
         }
@@ -115,8 +109,7 @@ mod tests {
     #[test]
     fn test_single_location() {
         let extent = LandscapeExtent::new(
-            0,
-            0,
+            Location::new(0, 0),
             OffByOneU32::new(1).unwrap(),
             OffByOneU32::new(1).unwrap(),
         );
@@ -127,8 +120,7 @@ mod tests {
     #[test]
     fn test_simple_extent() {
         let extent = LandscapeExtent::new(
-            42,
-            24,
+            Location::new(42, 24),
             OffByOneU32::new(4).unwrap(),
             OffByOneU32::new(2).unwrap(),
         );
@@ -151,8 +143,7 @@ mod tests {
     #[test]
     fn test_wrapping_extent() {
         let extent = LandscapeExtent::new(
-            M2,
-            M1,
+            Location::new(M2, M1),
             OffByOneU32::new(4).unwrap(),
             OffByOneU32::new(2).unwrap(),
         );
@@ -175,8 +166,7 @@ mod tests {
     #[test]
     fn test_full_extent() {
         let extent = LandscapeExtent::new(
-            0,
-            0,
+            Location::new(0, 0),
             OffByOneU32::new(1 << 32).unwrap(),
             OffByOneU32::new(1 << 32).unwrap(),
         );
@@ -184,22 +174,19 @@ mod tests {
         assert_eq!(
             iter,
             LocationIterator {
-                x: 0,
-                y: 0,
+                location: Location::new(0, 0),
                 extent: extent.clone(),
                 first_y: true,
             }
         );
         assert_eq!(iter.next(), Some(Location::new(0, 0)));
 
-        iter.x = M1;
-        iter.y = M1;
+        iter.location = Location::new(M1, M1);
         assert_eq!(iter.next(), Some(Location::new(M1, M1)));
         assert_eq!(
             iter,
             LocationIterator {
-                x: 0,
-                y: 0,
+                location: Location::new(0, 0),
                 extent: extent.clone(),
                 first_y: false,
             }
@@ -208,8 +195,7 @@ mod tests {
         assert_eq!(
             iter,
             LocationIterator {
-                x: 0,
-                y: 0,
+                location: Location::new(0, 0),
                 extent,
                 first_y: false,
             }
@@ -219,8 +205,7 @@ mod tests {
     #[test]
     fn test_full_wrapping_extent() {
         let extent = LandscapeExtent::new(
-            1386,
-            6812,
+            Location::new(1386, 6812),
             OffByOneU32::new(1 << 32).unwrap(),
             OffByOneU32::new(1 << 32).unwrap(),
         );
@@ -228,61 +213,54 @@ mod tests {
         assert_eq!(
             iter,
             LocationIterator {
-                x: 1386,
-                y: 6812,
+                location: Location::new(1386, 6812),
                 extent: extent.clone(),
                 first_y: true,
             }
         );
 
-        iter.x = M1;
+        iter.location = Location::new(M1, iter.location.y());
         assert_eq!(iter.next(), Some(Location::new(M1, 6812)));
         assert_eq!(
             iter,
             LocationIterator {
-                x: 0,
-                y: 6812,
+                location: Location::new(0, 6812),
                 extent: extent.clone(),
                 first_y: true,
             }
         );
         assert_eq!(iter.next(), Some(Location::new(0, 6812)));
 
-        iter.x = 1385;
+        iter.location = Location::new(1385, iter.location.y());
         assert_eq!(iter.next(), Some(Location::new(1385, 6812)));
         assert_eq!(
             iter,
             LocationIterator {
-                x: 1386,
-                y: 6813,
+                location: Location::new(1386, 6813),
                 extent: extent.clone(),
                 first_y: false,
             }
         );
         assert_eq!(iter.next(), Some(Location::new(1386, 6813)));
 
-        iter.x = 1385;
-        iter.y = M1;
+        iter.location = Location::new(1385, M1);
         assert_eq!(iter.next(), Some(Location::new(1385, M1)));
         assert_eq!(
             iter,
             LocationIterator {
-                x: 1386,
-                y: 0,
+                location: Location::new(1386, 0),
                 extent: extent.clone(),
                 first_y: false,
             }
         );
         assert_eq!(iter.next(), Some(Location::new(1386, 0)));
 
-        iter.x = 1385;
-        iter.y = 6811;
+        iter.location = Location::new(1385, 6811);
         assert_eq!(iter.next(), Some(Location::new(1385, 6811)));
         assert_eq!(
             iter,
             LocationIterator {
-                x: 1386,
-                y: 6812,
+                location: Location::new(1386, 6812),
                 extent: extent.clone(),
                 first_y: false,
             }
@@ -291,8 +269,7 @@ mod tests {
         assert_eq!(
             iter,
             LocationIterator {
-                x: 1386,
-                y: 6812,
+                location: Location::new(1386, 6812),
                 extent,
                 first_y: false,
             }

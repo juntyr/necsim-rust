@@ -170,6 +170,70 @@ pub struct SpatiallyExplicitTurnoverMapArguments {
     pub loading_mode: MapLoadingMode,
 }
 
+impl SpatiallyExplicitTurnoverMapArguments {
+    #[allow(clippy::missing_errors_doc)]
+    pub fn try_load(
+        habitat_path: PathBuf,
+        dispersal_path: PathBuf,
+        turnover_path: PathBuf,
+        loading_mode: MapLoadingMode,
+    ) -> Result<Self, String> {
+        info!(
+            "Starting to load the dispersal map {:?} ...",
+            dispersal_path
+        );
+
+        let mut dispersal_map = maps::load_dispersal_map(&dispersal_path, loading_mode)
+            .map_err(|err| format!("{err:?}"))?;
+
+        info!(
+            "Successfully loaded the dispersal map {:?} with dimensions {}x{} [cols x rows].",
+            &dispersal_path,
+            dispersal_map.num_columns(),
+            dispersal_map.num_rows()
+        );
+
+        info!("Starting to load the turnover map {:?} ...", &turnover_path);
+
+        let turnover_map = maps::load_turnover_map(&turnover_path, loading_mode)
+            .map_err(|err| format!("{err:?}"))?;
+
+        info!(
+            "Successfully loaded the turnover map {:?} with dimensions {}x{} [cols x rows].",
+            &turnover_path,
+            turnover_map.num_columns(),
+            turnover_map.num_rows()
+        );
+
+        info!("Starting to load the habitat map {:?} ...", &habitat_path);
+
+        let habitat_map = maps::load_habitat_map(
+            &habitat_path,
+            Some(&turnover_map),
+            &mut dispersal_map,
+            loading_mode,
+        )
+        .map_err(|err| format!("{err:?}"))?;
+
+        info!(
+            "Successfully loaded the habitat map {:?} with dimensions {}x{} [cols x rows].",
+            &habitat_path,
+            habitat_map.num_columns(),
+            habitat_map.num_rows()
+        );
+
+        Ok(SpatiallyExplicitTurnoverMapArguments {
+            habitat_path,
+            habitat_map,
+            dispersal_path,
+            dispersal_map,
+            turnover_path,
+            turnover_map,
+            loading_mode,
+        })
+    }
+}
+
 impl Serialize for SpatiallyExplicitTurnoverMapArguments {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         SpatiallyExplicitTurnoverMapArgumentsRaw {
@@ -186,72 +250,19 @@ impl TryFrom<SpatiallyExplicitTurnoverMapArgumentsRaw> for SpatiallyExplicitTurn
     type Error = String;
 
     fn try_from(raw: SpatiallyExplicitTurnoverMapArgumentsRaw) -> Result<Self, Self::Error> {
-        info!(
-            "Starting to load the dispersal map {:?} ...",
-            &raw.dispersal_map
-        );
-
-        let mut dispersal_map = maps::load_dispersal_map(&raw.dispersal_map, raw.loading_mode)
-            .map_err(|err| format!("{err:?}"))?;
-
-        info!(
-            "Successfully loaded the dispersal map {:?} with dimensions {}x{} [cols x rows].",
-            &raw.dispersal_map,
-            dispersal_map.num_columns(),
-            dispersal_map.num_rows()
-        );
-
-        info!(
-            "Starting to load the turnover map {:?} ...",
-            &raw.turnover_map
-        );
-
-        let turnover_map = maps::load_turnover_map(&raw.turnover_map, raw.loading_mode)
-            .map_err(|err| format!("{err:?}"))?;
-
-        info!(
-            "Successfully loaded the turnover map {:?} with dimensions {}x{} [cols x rows].",
-            &raw.turnover_map,
-            turnover_map.num_columns(),
-            turnover_map.num_rows()
-        );
-
-        info!(
-            "Starting to load the habitat map {:?} ...",
-            &raw.habitat_map
-        );
-
-        let habitat_map = maps::load_habitat_map(
-            &raw.habitat_map,
-            Some(&turnover_map),
-            &mut dispersal_map,
+        Self::try_load(
+            raw.habitat_map,
+            raw.dispersal_map,
+            raw.turnover_map,
             raw.loading_mode,
         )
-        .map_err(|err| format!("{err:?}"))?;
-
-        info!(
-            "Successfully loaded the habitat map {:?} with dimensions {}x{} [cols x rows].",
-            &raw.habitat_map,
-            habitat_map.num_columns(),
-            habitat_map.num_rows()
-        );
-
-        Ok(SpatiallyExplicitTurnoverMapArguments {
-            habitat_path: raw.habitat_map,
-            habitat_map,
-            dispersal_path: raw.dispersal_map,
-            dispersal_map,
-            turnover_path: raw.turnover_map,
-            turnover_map,
-            loading_mode: raw.loading_mode,
-        })
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
 #[serde(deny_unknown_fields)]
-#[serde(rename = "SpatiallyExplicitTurnoverMapArguments")]
+#[serde(rename = "SpatiallyExplicitTurnoverMap")]
 struct SpatiallyExplicitTurnoverMapArgumentsRaw {
     #[serde(rename = "habitat", alias = "habitat_map")]
     habitat_map: PathBuf,

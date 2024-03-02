@@ -29,20 +29,19 @@ impl<M: MathsCore> NonSpatialHabitat<M> {
     )]
     pub fn new(area: (OffByOneU32, OffByOneU32), deme: NonZeroU32) -> Self {
         Self {
-            extent: LandscapeExtent::new(0, 0, area.0, area.1),
+            extent: LandscapeExtent::new(Location::new(0, 0), area.0, area.1),
             deme,
             marker: PhantomData::<M>,
         }
     }
 
     pub(super) fn new_with_offset(
-        x: u32,
-        y: u32,
+        offset: Location,
         area: (OffByOneU32, OffByOneU32),
         deme: NonZeroU32,
     ) -> Self {
         Self {
-            extent: LandscapeExtent::new(x, y, area.0, area.1),
+            extent: LandscapeExtent::new(offset, area.0, area.1),
             deme,
             marker: PhantomData::<M>,
         }
@@ -97,13 +96,13 @@ impl<M: MathsCore> Habitat<M> for NonSpatialHabitat<M> {
             indexed_location
                 .location()
                 .y()
-                .wrapping_sub(self.extent.y()),
+                .wrapping_sub(self.extent.origin().y()),
         ) * u64::from(self.extent.width())
             + u64::from(
                 indexed_location
                     .location()
                     .x()
-                    .wrapping_sub(self.extent.x()),
+                    .wrapping_sub(self.extent.origin().x()),
             ))
             * u64::from(self.deme.get())
             + u64::from(indexed_location.index())
@@ -136,9 +135,11 @@ impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for NonSpatia
         IndexedLocation::new(
             Location::new(
                 self.extent
+                    .origin()
                     .x()
                     .wrapping_add((dispersal_target_index % self.extent.width().get()) as u32),
                 self.extent
+                    .origin()
                     .y()
                     .wrapping_add((dispersal_target_index / self.extent.width().get()) as u32),
             ),

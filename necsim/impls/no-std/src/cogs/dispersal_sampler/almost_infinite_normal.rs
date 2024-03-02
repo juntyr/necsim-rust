@@ -63,24 +63,9 @@ impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, AlmostInfiniteHabitat<M>, 
     ) -> Location {
         use necsim_core::cogs::RngSampler;
 
-        const WRAP: i64 = 1 << 32;
-
         let (dx, dy): (f64, f64) = rng.sample_2d_normal(0.0_f64, self.sigma);
 
-        // Discrete dispersal assumes lineage positions are centred on (0.5, 0.5),
-        // i.e. |dispersal| >= 0.5 changes the cell
-        // (dx and dy must be rounded to nearest int away from 0.0)
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let (dx, dy): (i64, i64) = (M::round(dx) as i64, M::round(dy) as i64);
-
-        let new_x = (i64::from(location.x()) + dx) % WRAP;
-        let new_y = (i64::from(location.y()) + dy) % WRAP;
-
-        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-        Location::new(
-            ((new_x + WRAP) % WRAP) as u32,
-            ((new_y + WRAP) % WRAP) as u32,
-        )
+        AlmostInfiniteHabitat::<M>::clamp_round_dispersal(location, dx, dy)
     }
 }
 

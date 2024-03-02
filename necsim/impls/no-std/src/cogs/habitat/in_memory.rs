@@ -91,10 +91,10 @@ impl<M: MathsCore> Habitat<M> for InMemoryHabitat<M> {
                 if *habitat > 0 {
                     #[allow(clippy::cast_possible_truncation)]
                     Some(Location::new(
-                        self.extent.x().wrapping_add(
+                        self.extent.origin().x().wrapping_add(
                             (location_index % usize::from(self.extent.width())) as u32,
                         ),
-                        self.extent.y().wrapping_add(
+                        self.extent.origin().y().wrapping_add(
                             (location_index / usize::from(self.extent.width())) as u32,
                         ),
                     ))
@@ -123,9 +123,11 @@ impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for InMemoryH
         IndexedLocation::new(
             Location::new(
                 self.extent
+                    .origin()
                     .x()
                     .wrapping_add((location_index % usize::from(self.extent.width())) as u32),
                 self.extent
+                    .origin()
                     .y()
                     .wrapping_add((location_index / usize::from(self.extent.width())) as u32),
             ),
@@ -168,7 +170,7 @@ impl<M: MathsCore> InMemoryHabitat<M> {
         }
 
         #[allow(clippy::cast_possible_truncation)]
-        let extent = LandscapeExtent::new(0, 0, width, height);
+        let extent = LandscapeExtent::new(Location::new(0, 0), width, height);
 
         Some(Self {
             habitat: Final::new(habitat),

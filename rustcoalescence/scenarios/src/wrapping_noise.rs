@@ -15,7 +15,8 @@ use necsim_impls_no_std::{
         habitat::wrapping_noise::WrappingNoiseHabitat,
         lineage_store::coherent::globally::singleton_demes::SingletonDemesLineageStore,
         origin_sampler::{
-            pre_sampler::OriginPreSampler, wrapping_noise::WrappingNoiseOriginSampler,
+            pre_sampler::OriginPreSampler,
+            singleton_demes::rectangle::SingletonDemesRectangleOriginSampler,
         },
         speciation_probability::uniform::UniformSpeciationProbability,
         turnover_rate::uniform::UniformTurnoverRate,
@@ -35,8 +36,9 @@ pub struct WrappingNoiseScenario<M: MathsCore, G: RngCore<M>> {
     speciation_probability: UniformSpeciationProbability,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
+#[serde(deny_unknown_fields)]
 #[serde(rename = "WrappingNoise")]
 pub struct WrappingNoiseArguments {
     pub seed: i64,
@@ -44,8 +46,15 @@ pub struct WrappingNoiseArguments {
     pub scale: PositiveUnitF64,
     pub persistence: PositiveUnitF64,
     pub octaves: NonZeroUsize,
-    pub sample: LandscapeExtent,
+    pub sample: Sample,
     pub sigma: NonNegativeF64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub enum Sample {
+    #[serde(alias = "Extent")]
+    Rectangle(LandscapeExtent),
 }
 
 impl<M: MathsCore, G: RngCore<M>> ScenarioParameters for WrappingNoiseScenario<M, G> {
@@ -61,7 +70,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for WrappingNoiseScenario<M, G>
     type Habitat = WrappingNoiseHabitat<M>;
     type LineageStore<L: LineageStore<M, Self::Habitat>> =
         SingletonDemesLineageStore<M, Self::Habitat>;
-    type OriginSampler<'h, I: Iterator<Item = u64>> = WrappingNoiseOriginSampler<'h, M, I> where G: 'h;
+    type OriginSampler<'h, I: Iterator<Item = u64>> = SingletonDemesRectangleOriginSampler<'h, M, Self::Habitat, I> where G: 'h;
     type OriginSamplerAuxiliary = (LandscapeExtent,);
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
@@ -83,7 +92,9 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for WrappingNoiseScenario<M, G>
             UniformSpeciationProbability::new(speciation_probability_per_generation.into());
 
         Ok(Self {
-            sample: args.sample,
+            sample: match args.sample {
+                Sample::Rectangle(extent) => extent,
+            },
 
             habitat,
             dispersal_sampler,
@@ -121,7 +132,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for WrappingNoiseScenario<M, G>
     where
         G: 'h,
     {
-        WrappingNoiseOriginSampler::new(pre_sampler, habitat, sample)
+        SingletonDemesRectangleOriginSampler::new(pre_sampler, habitat, sample)
     }
 
     fn decompose(

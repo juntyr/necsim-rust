@@ -23,8 +23,8 @@ impl<M: MathsCore, H: Habitat<M>> EqualDecomposition<M, H> {
             indices.push(Self::map_x_y_to_morton(
                 morton_x,
                 morton_y,
-                location.x() - extent.x(),
-                location.y() - extent.y(),
+                location.x() - extent.origin().x(),
+                location.y() - extent.origin().y(),
             ));
         }
 

@@ -14,6 +14,8 @@ pub trait MathsCore: 'static + Clone + core::fmt::Debug {
     #[must_use]
     fn sqrt(x: f64) -> f64;
     #[must_use]
+    fn pow(x: f64, exp: f64) -> f64;
+    #[must_use]
     fn sin(x: f64) -> f64;
     #[must_use]
     fn cos(x: f64) -> f64;
@@ -48,6 +50,11 @@ impl MathsCore for IntrinsicsMathsCore {
     #[inline]
     fn sqrt(x: f64) -> f64 {
         unsafe { core::intrinsics::sqrtf64(x) }
+    }
+
+    #[inline]
+    fn pow(x: f64, exp: f64) -> f64 {
+        unsafe { core::intrinsics::powf64(x, exp) }
     }
 
     #[inline]

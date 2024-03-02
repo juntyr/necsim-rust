@@ -46,8 +46,8 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> SeparableDispersalSampler<M, H,
         rng: &mut G,
     ) -> Location {
         let alias_dispersal_at_location = self.alias_dispersal[(
-            location.y().wrapping_sub(habitat.get_extent().y()) as usize,
-            location.x().wrapping_sub(habitat.get_extent().x()) as usize,
+            location.y().wrapping_sub(habitat.get_extent().origin().y()) as usize,
+            location.x().wrapping_sub(habitat.get_extent().origin().x()) as usize,
         )]
             .as_ref()
             .expect("habitat dispersal origin must disperse somewhere");
@@ -56,10 +56,10 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> SeparableDispersalSampler<M, H,
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
-            habitat.get_extent().x().wrapping_add(
+            habitat.get_extent().origin().x().wrapping_add(
                 (dispersal_target_index % usize::from(habitat.get_extent().width())) as u32,
             ),
-            habitat.get_extent().y().wrapping_add(
+            habitat.get_extent().origin().y().wrapping_add(
                 (dispersal_target_index / usize::from(habitat.get_extent().width())) as u32,
             ),
         )
@@ -73,8 +73,8 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> SeparableDispersalSampler<M, H,
         habitat: &H,
     ) -> ClosedUnitF64 {
         self.self_dispersal[(
-            location.y().wrapping_sub(habitat.get_extent().y()) as usize,
-            location.x().wrapping_sub(habitat.get_extent().x()) as usize,
+            location.y().wrapping_sub(habitat.get_extent().origin().y()) as usize,
+            location.x().wrapping_sub(habitat.get_extent().origin().x()) as usize,
         )]
     }
 }

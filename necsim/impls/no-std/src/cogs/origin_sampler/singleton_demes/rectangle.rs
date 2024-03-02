@@ -4,30 +4,35 @@ use core::{
 };
 
 use necsim_core::{
-    cogs::{Habitat, MathsCore},
+    cogs::MathsCore,
     landscape::{IndexedLocation, LandscapeExtent, LocationIterator},
     lineage::Lineage,
 };
 
 use crate::cogs::{
-    habitat::wrapping_noise::WrappingNoiseHabitat,
+    lineage_store::coherent::globally::singleton_demes::SingletonDemesHabitat,
     origin_sampler::{pre_sampler::OriginPreSampler, TrustedOriginSampler, UntrustedOriginSampler},
 };
 
 #[allow(clippy::module_name_repetitions)]
-pub struct WrappingNoiseOriginSampler<'h, M: MathsCore, I: Iterator<Item = u64>> {
+pub struct SingletonDemesRectangleOriginSampler<
+    'h,
+    M: MathsCore,
+    H: SingletonDemesHabitat<M>,
+    I: Iterator<Item = u64>,
+> {
     pre_sampler: OriginPreSampler<M, I>,
     last_index: u64,
     location_iterator: Peekable<LocationIterator>,
-    habitat: &'h WrappingNoiseHabitat<M>,
+    habitat: &'h H,
     sample: LandscapeExtent,
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
-    for WrappingNoiseOriginSampler<'h, M, I>
+impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>> fmt::Debug
+    for SingletonDemesRectangleOriginSampler<'h, M, H, I>
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct(stringify!(WrappingNoiseOriginSampler))
+        fmt.debug_struct(stringify!(SingletonDemesRectangleOriginSampler))
             .field("pre_sampler", &self.pre_sampler)
             .field("last_index", &self.last_index)
             .field("location_iterator", &self.location_iterator)
@@ -37,11 +42,13 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> fmt::Debug
     }
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> WrappingNoiseOriginSampler<'h, M, I> {
+impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>>
+    SingletonDemesRectangleOriginSampler<'h, M, H, I>
+{
     #[must_use]
     pub fn new(
         pre_sampler: OriginPreSampler<M, I>,
-        habitat: &'h WrappingNoiseHabitat<M>,
+        habitat: &'h H,
         sample: LandscapeExtent,
     ) -> Self {
         Self {
@@ -55,10 +62,10 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> WrappingNoiseOriginSampler<'h, M
 }
 
 #[contract_trait]
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
-    for WrappingNoiseOriginSampler<'h, M, I>
+impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>>
+    UntrustedOriginSampler<'h, M> for SingletonDemesRectangleOriginSampler<'h, M, H, I>
 {
-    type Habitat = WrappingNoiseHabitat<M>;
+    type Habitat = H;
     type PreSampler = I;
 
     fn habitat(&self) -> &'h Self::Habitat {
@@ -79,12 +86,14 @@ impl<'h, M: MathsCore, I: Iterator<Item = u64>> UntrustedOriginSampler<'h, M>
     }
 }
 
-unsafe impl<'h, M: MathsCore, I: Iterator<Item = u64>> TrustedOriginSampler<'h, M>
-    for WrappingNoiseOriginSampler<'h, M, I>
+unsafe impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>>
+    TrustedOriginSampler<'h, M> for SingletonDemesRectangleOriginSampler<'h, M, H, I>
 {
 }
 
-impl<'h, M: MathsCore, I: Iterator<Item = u64>> Iterator for WrappingNoiseOriginSampler<'h, M, I> {
+impl<'h, M: MathsCore, H: SingletonDemesHabitat<M>, I: Iterator<Item = u64>> Iterator
+    for SingletonDemesRectangleOriginSampler<'h, M, H, I>
+{
     type Item = Lineage;
 
     fn next(&mut self) -> Option<Self::Item> {

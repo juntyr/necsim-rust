@@ -40,8 +40,9 @@ impl<M: MathsCore> TurnoverRate<M, InMemoryHabitat<M>> for InMemoryTurnoverRate 
 
         self.turnover_rate
             .get(
-                (location.y().wrapping_sub(extent.y()) as usize) * usize::from(extent.width())
-                    + (location.x().wrapping_sub(extent.x()) as usize),
+                (location.y().wrapping_sub(extent.origin().y()) as usize)
+                    * usize::from(extent.width())
+                    + (location.x().wrapping_sub(extent.origin().x()) as usize),
             )
             .copied()
             .unwrap_or_else(NonNegativeF64::zero)

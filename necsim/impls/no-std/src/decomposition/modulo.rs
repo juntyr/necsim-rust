@@ -37,8 +37,9 @@ impl<M: MathsCore, H: Habitat<M>> Decomposition<M, H> for ModuloDecomposition {
     fn map_location_to_subdomain_rank(&self, location: &Location, habitat: &H) -> u32 {
         let extent = habitat.get_extent();
 
-        let location_index = u64::from(location.y() - extent.y()) * u64::from(extent.width())
-            + u64::from(location.x() - extent.x());
+        let location_index = u64::from(location.y() - extent.origin().y())
+            * u64::from(extent.width())
+            + u64::from(location.x() - extent.origin().x());
 
         #[allow(clippy::cast_possible_truncation)]
         {

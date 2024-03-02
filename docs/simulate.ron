@@ -2,14 +2,14 @@
     /* per-individual per-generation probability that an individual speciates
      *  i.e. is the creator of a new unique species */
     speciation: (0.0 < f64 <= 1.0),
-    /* selection of the sample of individuals that are simulatd */
-    /* optional, default = Sample(percentage: 1.0, origin: Habitat, mode: Genesis) */
+    /* selection of the sample of individuals that are simulatd
+     * optional, default = Sample(percentage: 1.0, origin: Habitat, mode: Genesis) */
     sample: Sample(
-        /* percentage of individuals from the sample that are simulated */
-        /* optional, default = 1.0 */
+        /* percentage of individuals from the sample that are simulated
+         * optional, default = 1.0 */
         percentage: (0.0 <= f64 <= 1.0),
-        /* selection of the base sample of individuals */
-        /* optional, default = Habitat */
+        /* selection of the base sample of individuals
+         * optional, default = Habitat */
         origin: (
             /* all individuals living inside the habitat are sampled
              * only compatible with mode = Genesis */
@@ -36,8 +36,8 @@
                 file: (PathBuf)
             )
         ),
-        /* selection of the simulation initialisation mode */
-        /* optional, default = Genesis */
+        /* selection of the simulation initialisation mode
+         * optional, default = Genesis */
         mode: (
             /* the simulation starts from the beginning with all individuals
              * only compatible with origin = Habitat */
@@ -59,8 +59,8 @@
              * requires an immediate pause at the same time as the original pause */
           | FixUp(
                 /* selection of how to handle individuals at a valid location that is
-                  *  already occupied by too many other individuals, i.e. the deme is full
-                  * optional, default = Abort */
+                 *  already occupied by too many other individuals, i.e. the deme is full
+                 * optional, default = Abort */
                 out_of_deme: (
                     /* Abort the simulation during configuration before it runs */
                   | Abort
@@ -69,7 +69,7 @@
                   | Dispersal
                 ),
                 /* selection of how to handle individuals at an inhabitable location
-                  * optional, default = Abort */
+                 * optional, default = Abort */
                 out_of_habitat: (
                     /* Abort the simulation during configuration before it runs */
                   | Abort
@@ -100,8 +100,8 @@
             )
         ),
     ),
-    /* selection of whether the simulation should pause before completing */
-    /* optional, default = None */
+    /* selection of whether the simulation should pause before completing
+     * optional, default = None */
     pause: (
         /* the simulation will run until completion */
       | None
@@ -125,13 +125,13 @@
                  * only compatible with sample.origin = List */
               | Bincode(
                     /* file path to where the new binary file listing the remaining
-                    *  individuals will be written */
+                     *  individuals will be written */
                     file: (PathBuf),
                 )
             ),
             /* selection of the pause mode, which affects how the simulation is
-             *  resumed afterwards */
-            /* optional, default = Resume */
+             *  resumed afterwards
+             * optional, default = Resume */
             mode: (
                 /* the simulation can be resumed with continuity after the pause
                  * no changes in configuration should be made */
@@ -148,67 +148,53 @@
     ),
     /* selection of the initialisation of the random number generator */
     rng: (
-        /* seeds from OS-provided randomness */
-        /* forbidden for partitioned simulations */
-        /* infallible for monolithic simulations (unless the OS malfunctions) */
+        /* seeds from OS-provided randomness
+         * forbidden for partitioned simulations
+         * infallible for monolithic simulations (unless the OS malfunctions) */
       | Entropy
-        /* seeds based on the given 64bit seed */
-        /* infallible */
+        /* seeds based on the given 64bit seed
+         * infallible */
       | Seed(u64)
         /* seeds based on the given base32-string, which goes through a
-         *  sponge function to fit the RNG's seed size */
-        /* fails if the base32-string is actually an RNG state
+         *  sponge function to fit the RNG's seed size
+         * fails if the base32-string is actually an RNG state
          *  (safeguards confusing State and Sponge, unlikely by accident) */
       | Sponge(Base32)
-        /* tries to set the RNG's state from the given base32-string */
-        /* fails if the the base32-string is not a valid RNG state
+        /* tries to set the RNG's state from the given base32-string
+         * fails if the the base32-string is not a valid RNG state
          *  (use only for resuming a paused + unchanged simulation)
          *  (must come from the same RNG that the simulation was paused with) */
       | State(Base32)
         /* combination of the State and Sponge initialisation methods
          *  (a) try the State initialisation
-         *  (b) on failure, use the Sponge initialisation */
-        /* fails if the base32-string could not have come from a paused RNG */
+         *  (b) on failure, use the Sponge initialisation
+         * fails if the base32-string could not have come from a paused RNG */
       | StateElseSponge(Base32)
     ),
 
     /* selection of the scenario which will be simulated */
     scenario: (
-        /* spatially explicit scenario using habitat and dispersal maps */
-      | SpatiallyExplicitUniformTurnover(
+        /* spatially explicit scenario using habitat (and optionally turnover) and dispersal maps */
+      | SpatiallyExplicit(
             /* file path to a (WxH) TIFF file storing grayscale u32 habitat values */
             habitat: (PathBuf),
             /* file path to a (WxH x WxH) TIFF file storing grayscale f64 dispersal weights
              * the ith row of the image stores dispersal from the habitat cell (i % W, i / W) */
             dispersal: (PathBuf),
-            /* uniform positive turnover rate */
-            /* optional, default = 0.5 */
-            turnover: (0.0 < f64),
-            /* selection of the map loading mode
-             * optional, default = OffByOne */
-            mode: (
-                /* Fixes GDAL no-data value, habitat 0/1 rounding error and dispersal
-                 *  from/to non-habitat */
-              | FixMe
-                /* Fixes GDAL no-data value and habitat 0/1 rounding errors */
-              | OffByOne
-                /* Does not fix any habitat-dispersal discrepancies */
-              | Strict
+            /* selection of the turnover rate source
+             * optional, default = Uniform(0.5) */
+            turnover: (
+                /* uniform positive turnover rate
+                 * requires the `spatially-explicit-uniform-turnover-scenario` feature */
+              | Uniform(0.0 < f64)
+                /* file path to (WxH) TIFF file storing grayscale f64 turnover rates
+                 * requires the `spatially-explicit-turnover-map-scenario` feature */
+              | Map(PathBuf)
             ),
-        )
-          /* spatially explicit scenario using habitat, turnover and dispersal maps */
-      | SpatiallyExplicitTurnoverMap(
-            /* file path to a (WxH) TIFF file storing grayscale u32 habitat values */
-            habitat: (PathBuf),
-            /* file path to a (WxH x WxH) TIFF file storing grayscale f64 dispersal weights
-             * the ith row of the image stores dispersal from the habitat cell (i % W, i / W) */
-            dispersal: (PathBuf),
-            /* file path to (WxH) TIFF file storing grayscale f64 turnover rates */
-            turnover: (PathBuf),
             /* selection of the map loading mode
              * optional, default = OffByOne */
             mode: (
-                /* Fixes GDAL no-data value, habitat 0/1 rounding errors, zero turnover habitat
+                /* Fixes GDAL no-data value, habitat 0/1 rounding errors, zero turnover habitat,
                  *  and dispersal from/to non-habitat */
               | FixMe
                 /* Fixes GDAL no-data value and habitat 0/1 rounding errors */
@@ -218,7 +204,8 @@
             ),
         )
         /* non-spatial scenario with homogeneous dispersal and a community size of
-         *  (area.0 * area.1 * deme) */
+         *  (area.0 * area.1 * deme) 
+         * requires the `non-spatial-scenario` feature */
       | NonSpatial(
             /* width and height of the non-spatial landscape */
             area: (1 <= u64 <= 2^32, 1 <= u64 <= 2^32),
@@ -226,7 +213,8 @@
             deme: (0 < u32),
         )
         /* spatially-implicit scenario with a non-spatial local and a non-spatial meta community
-         *  and dynamic migration from the meta to the local community */
+         *  and dynamic migration from the meta to the local community
+         * requires the `spatially-implicit-scenario` feature */
       | SpatiallyImplicit(
             /* width and height of the non-spatial local landscape */
             local_area: (1 <= u64 <= 2^32, 1 <= u64 <= 2^32),
@@ -240,19 +228,64 @@
              *  in the local community migrated from the meta community */
             migration: (0.0 < f64 <= 1.0),
         )
-        /* (almost) infinite spatially-explicit scenario with Gaussian distributed dispersal
+        /* (almost) infinite spatially-explicit scenario
          * the entire infinite landscape is habitat but, without loss of generality, has deme 1
          * the landscape is on a (wrapping) torus with 0 <= x < 2^32 and 0 <= y < 2^32 */
       | AlmostInfinite(
-            /* radius of a circle from which individuals are sampled */
-            radius: (u16),
-            /* sigma for the Gaussian dispersal kernel N(0, sigma^2) */
-            sigma: (0.0 <= f64),
+            /* selection of the sample area, individuals living in here are simulated
+             * the sample area can wrap around the torus */
+            sample: (
+                /* circular sample area */
+              | Circle(
+                    /* centre (x, y) of the circle
+                     * optional, default = (x: 2147483647, y: 2147483647)
+                     *  note that 2147483647 = 2^31 - 1 */
+                    centre: (
+                        x: (u32),
+                        y: (u32),
+                    ),
+                    /* radius of the circle */
+                    radius: (u16),
+                )
+                /* rectangular sample area */
+              | Rectangle(
+                    /* lower-left origin of the sample area */
+                    origin: (
+                        x: (u32),
+                        y: (u32),
+                    ),
+                    /* width of the sample area */
+                    width: (1 <= u64 <= 2^32),
+                    /* height of the sample area */
+                    height: (1 <= u64 <= 2^32),
+                )
+            ),
+            /* selection of the dispersal kernel */
+            dispersal: (
+                /* Gaussian Normal dispersal kernel N(0, sigma^2)
+                 * requires the `almost-infinite-normal-dispersal-scenario` feature */
+              | Normal(
+                    /* sigma for the Gaussian dispersal kernel */
+                    sigma: (0.0 <= f64),
+                )
+                /* Clark2Dt dispersal kernel
+                 * requires the `almost-infinite-clark2dt-dispersal-scenario` feature */
+              | Clark2Dt(
+                    /* shape (u) for the Clark 2Dt dispersal kernel */
+                    shape_u: (0.0 < f64),
+                    /* tail (p) for the Clark 2Dt dispersal kernel
+                     *  - Clark 2Dt dispersal tends to Gaussian as p becomes large
+                     *  - Clark 2Dt dispersal tends to Cauchy as p goes to zero
+                     * optional, default = 1.0 */
+                    tail_p: (0.0 < f64),
+                )
+            ),
         )
         /* (almost) infinite spatially-explicit scenario with (approximate) Gaussian distributed dispersal
-           each location (x, y) in the landscape has either habitat for exactly one individual,
-            or is inhabitable, depending on a sample from an OpenSimplexNoise
-           the landscape is on a (wrapping) torus with 0 <= x < 2^32 and 0 <= y < 2^32 */
+         * each location (x, y) in the landscape has either habitat for exactly one individual,
+         *  or is inhabitable, depending on a sample from an OpenSimplexNoise
+         * the landscape is on a (wrapping) torus with 0 <= x < 2^32 and 0 <= y < 2^32
+         * requires the `wrapping-noise-scenario` feature */
       | WrappingNoise(
             /* random seed for the noise */
             seed: (i64),
@@ -266,16 +299,17 @@
             persistence: (0.0 < f64 <= 1.0),
             /* number of noise octaves that are accumulated for each sample
              * a larger number of octaves provides finer-grained habitat boundaries
-                but is less efficient to simulate
+             *  but is less efficient to simulate
              * choose 1 for only one noise sample per location and maximum efficiency */
             octaves: (0 < usize),
             /* rectangular sample area, individuals living in here are simulated
              * the sample area can wrap around the torus */
-            sample: Extent(
-                /* lower-left origin x of the sample area */
-                x: (u32),
-                /* lower-left origin y of the sample area */
-                y: (u32),
+            sample: Rectangle(
+                /* lower-left origin of the sample area */
+                origin: (
+                    x: (u32),
+                    y: (u32),
+                ),
                 /* width of the sample area */
                 width: (1 <= u64 <= 2^32),
                 /* height of the sample area */
@@ -288,10 +322,11 @@
 
     /* selection of the coalescence algorithm which is used */
     algorithm: (
-        /* monolithic; optimised for low self-dispersal (i.e. small demes); CPU-based */
+        /* monolithic; optimised for low self-dispersal (i.e. small demes); CPU-based
+         * requires the `gillespie-algorithms` feature */
       | Gillespie(
-            /* selection of how the algorithm should be parallelised across partitions */
-            /* optional, dynamic default = Monolithic / Lockstep */
+            /* selection of how the algorithm should be parallelised across partitions
+             * optional, dynamic default = Monolithic / Lockstep */
             parallelism_mode: (
                 /* no parallelisation, the algorithm runs on a single partition only
                  * invalid when the simulation is internally parallelised */
@@ -334,10 +369,11 @@
             )
         )
         /* monolithic; skips no-coalescence self-dispersal events -> optimised for high
-         *  self-dispersal (i.e. large demes); CPU-based */
+         *  self-dispersal (i.e. large demes); CPU-based
+         * requires the `gillespie-algorithms` feature */
       | EventSkipping(
-            /* selection of how the algorithm should be parallelised across partitions */
-            /* optional, dynamic default = Monolithic / Lockstep */
+            /* selection of how the algorithm should be parallelised across partitions
+             * optional, dynamic default = Monolithic / Lockstep */
             parallelism_mode: (
                 /* no parallelisation, the algorithm runs on a single partition only
                  * invalid when the simulation is internally parallelised */
@@ -379,7 +415,8 @@
                 )
             )
         )
-        /* independent; simulates each individual without knowledge of others; CPU-based */
+        /* independent; simulates each individual without knowledge of others; CPU-based
+         * requires the `independent-algorithm` feature */
       | Independent(
             /* simulation time between random number generator repriming
              *  -> lower deltas require fewer draws to pick the time of the next event
@@ -409,7 +446,7 @@
             ),
             /* selection of the mode in which the simulation is parallelised
              * optional, dynamic default = Monolithic(event_slice: Relative(factor: 2.0))
-                                         / Probabilistic(communication: 0.25) */
+             *                           / Probabilistic(communication: 0.25) */
             parallelism_mode: (
                 /* no partitioning occurs
                  * invalid when the simulation is internally parallelised */
@@ -501,7 +538,8 @@
                 )
             )
         )
-        /* independent; simulates each individual without knowledge of others; CUDA GPU-based */
+        /* independent; simulates each individual without knowledge of others; CUDA GPU-based
+         * requires the `cuda-algorithm` feature */
       | CUDA(
             /* index of the CUDA GPU device on which the simulation will be run
              * optional, default = 0 */
@@ -625,16 +663,17 @@
          * single-threaded, single-process */
       | Monolithic()
         /* the simulation is divided up inside an MPI universe
-         * single-threaded, multi-process */
+         * single-threaded, multi-process
+         * requires the `mpi-partitioning` feature */
       | MPI(
-            /* explicit size of the MPI universe, must match the MPI universe */
-            /* optional, dynamic default = MPI's world size */
+            /* explicit size of the MPI universe, must match the MPI universe
+             * optional, dynamic default = MPI's world size */
             world: (1 < u32),
-            /* minimum time interval between migration messages */
-            /* optional, default = "100ms" */
+            /* minimum time interval between migration messages
+             * optional, default = "100ms" */
             migration: (DurationString),
-            /* minimum time interval between progress messages */
-            /* optional, default = "100ms" */
+            /* minimum time interval between progress messages
+             * optional, default = "100ms" */
             progress: (DurationString),
         )
     ),
@@ -652,8 +691,8 @@
       | EventLog(
             /* file path to a directory in which a log of all events will be saved */
             directory: (PathBuf),
-            /* event capacity of each log segment */
-            /* optional, default = 1000000 */
+            /* event capacity of each log segment
+             * optional, default = 1000000 */
             capacity: (0 < usize),
         )
     ),
@@ -670,7 +709,7 @@
             /* selection of the reporters defined by this plugin */
             reporters: [
                 /* initialisation of a single reporter named 'ReporterName'
-                 *  with arguments arg.. */
+                 *  with arguments args.. */
                 ReporterName(args..)
             ]
         )

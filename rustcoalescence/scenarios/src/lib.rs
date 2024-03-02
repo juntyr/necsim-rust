@@ -2,6 +2,7 @@
 #![feature(associated_type_bounds)]
 #![feature(never_type)]
 
+#[allow(unused_imports)]
 #[macro_use]
 extern crate log;
 
@@ -20,7 +21,10 @@ use necsim_impls_no_std::{
     decomposition::Decomposition,
 };
 
-#[cfg(feature = "almost-infinite")]
+#[cfg(any(
+    feature = "almost-infinite-normal-dispersal",
+    feature = "almost-infinite-clark2dt-dispersal",
+))]
 pub mod almost_infinite;
 #[cfg(feature = "non-spatial")]
 pub mod non_spatial;
