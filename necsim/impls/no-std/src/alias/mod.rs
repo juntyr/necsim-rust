@@ -83,7 +83,7 @@ impl<E: Copy + PartialEq> AliasMethodSampler<E> {
 
         // Safety: The bucket weights are now probabilities in [0.0; 1.0]
         #[allow(non_snake_case)]
-        let Us = unsafe { core::mem::transmute(Us) };
+        let Us = unsafe { core::mem::transmute::<Vec<NonNegativeF64>, Vec<ClosedUnitF64>>(Us) };
 
         Self { Us, Es, Ks }
     }

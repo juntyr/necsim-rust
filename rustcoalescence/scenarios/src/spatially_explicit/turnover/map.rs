@@ -1,3 +1,5 @@
+#![allow(non_local_definitions)] // FIXME: displaydoc
+
 use std::{convert::TryFrom, marker::PhantomData, path::PathBuf};
 
 use serde::{Deserialize, Serialize, Serializer};

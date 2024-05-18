@@ -9,7 +9,7 @@ use anyhow::Context;
 use humantime_serde::re::humantime::format_duration;
 use mpi::{
     environment::Universe,
-    topology::{Communicator, Rank, SystemCommunicator},
+    topology::{Communicator, Rank, SimpleCommunicator},
     Tag,
 };
 use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
@@ -46,7 +46,7 @@ pub enum MpiLocalPartitionError {
 
 pub struct MpiPartitioning {
     universe: ManuallyDrop<Universe>,
-    world: SystemCommunicator,
+    world: SimpleCommunicator,
     migration_interval: Duration,
     progress_interval: Duration,
 }

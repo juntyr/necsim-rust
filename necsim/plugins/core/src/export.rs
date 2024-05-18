@@ -72,7 +72,24 @@ impl<R: SerializeableReporter> From<R> for UnsafeReporterPlugin {
         > = Box::new(reporter);
 
         Self {
-            reporter: unsafe { std::mem::transmute(boxed_reporter) },
+            reporter: unsafe {
+                std::mem::transmute::<
+                    Box<
+                        dyn SerializeableReporter<
+                            ReportDispersal = R::ReportDispersal,
+                            ReportProgress = R::ReportProgress,
+                            ReportSpeciation = R::ReportSpeciation,
+                        >,
+                    >,
+                    Box<
+                        dyn SerializeableReporter<
+                            ReportDispersal = True,
+                            ReportProgress = True,
+                            ReportSpeciation = True,
+                        >,
+                    >,
+                >(boxed_reporter)
+            },
             filter: ReporterPluginFilter::from_reporter::<R>(),
         }
     }

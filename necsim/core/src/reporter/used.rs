@@ -14,7 +14,7 @@ pub type Ignored<T> = MaybeUsed<T, False>;
 
 impl<'a, T, B: Boolean> From<&'a T> for &'a MaybeUsed<T, B> {
     fn from(inner: &'a T) -> Self {
-        unsafe { &*(inner as *const T).cast() }
+        unsafe { &*core::ptr::from_ref(inner).cast() }
     }
 }
 

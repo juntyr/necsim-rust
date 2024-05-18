@@ -53,7 +53,7 @@ impl<
         // This is only safe as PartialSimulation's type and layout is a prefix
         //  subsequence of Self's type and layout
         let partial_simulation = unsafe {
-            &mut *(self as *mut Self)
+            &mut *core::ptr::from_mut(self)
                 .cast::<super::emigration_exit::PartialSimulation<M, H, G, S>>()
         };
 

@@ -1,8 +1,117 @@
+use necsim_core::{
+    cogs::{
+        CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+        LineageStore, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
+    },
+    reporter::boolean::Boolean,
+};
+
+use necsim_impls_no_std::cogs::{
+    active_lineage_sampler::singular::SingularActiveLineageSampler,
+    event_sampler::tracking::MinSpeciationTrackingEventSampler,
+};
+
+use rust_cuda::{
+    common::RustToCuda,
+    host::{LaunchConfig, LaunchPackage, Launcher},
+    rustacuda::{error::CudaResult, function::Function},
+};
+
 #[allow(unused_imports)]
 use rustcoalescence_algorithms_cuda_gpu_kernel::{SimulatableKernel, SimulationKernelArgs};
 
-#[allow(unused_imports)]
-use crate::SimulationKernel;
+#[repr(transparent)]
+pub struct SimulationKernel<
+    M: MathsCore,
+    H: Habitat<M> + RustToCuda,
+    G: PrimeableRng<M> + RustToCuda,
+    S: LineageStore<M, H> + RustToCuda,
+    X: EmigrationExit<M, H, G, S> + RustToCuda,
+    D: DispersalSampler<M, H, G> + RustToCuda,
+    C: CoalescenceSampler<M, H, S> + RustToCuda,
+    T: TurnoverRate<M, H> + RustToCuda,
+    N: SpeciationProbability<M, H> + RustToCuda,
+    E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda,
+    I: ImmigrationEntry<M> + RustToCuda,
+    A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda,
+    ReportSpeciation: Boolean,
+    ReportDispersal: Boolean,
+>(
+    #[allow(clippy::type_complexity)]
+    pub(crate)  crate::SimulationKernel<
+        M,
+        H,
+        G,
+        S,
+        X,
+        D,
+        C,
+        T,
+        N,
+        E,
+        I,
+        A,
+        ReportSpeciation,
+        ReportDispersal,
+    >,
+);
+
+impl<
+        M: MathsCore,
+        H: Habitat<M> + RustToCuda,
+        G: PrimeableRng<M> + RustToCuda,
+        S: LineageStore<M, H> + RustToCuda,
+        X: EmigrationExit<M, H, G, S> + RustToCuda,
+        D: DispersalSampler<M, H, G> + RustToCuda,
+        C: CoalescenceSampler<M, H, S> + RustToCuda,
+        T: TurnoverRate<M, H> + RustToCuda,
+        N: SpeciationProbability<M, H> + RustToCuda,
+        E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda,
+        I: ImmigrationEntry<M> + RustToCuda,
+        A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda,
+        ReportSpeciation: Boolean,
+        ReportDispersal: Boolean,
+    > Launcher
+    for SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
+{
+    type CompilationWatcher = Box<crate::KernelCompilationCallback>;
+    type KernelTraitObject = dyn SimulatableKernel<
+        M,
+        H,
+        G,
+        S,
+        X,
+        D,
+        C,
+        T,
+        N,
+        E,
+        I,
+        A,
+        ReportSpeciation,
+        ReportDispersal,
+    >;
+
+    fn get_launch_package(&mut self) -> LaunchPackage<Self> {
+        LaunchPackage {
+            config: LaunchConfig {
+                grid: self.0.grid.clone(),
+                block: self.0.block.clone(),
+                shared_memory_size: 0_u32,
+                ptx_jit: self.0.ptx_jit,
+            },
+
+            kernel: &mut self.0.kernel,
+            stream: &mut self.0.stream,
+
+            watcher: &mut self.0.watcher,
+        }
+    }
+
+    fn on_compile(kernel: &Function, watcher: &mut Self::CompilationWatcher) -> CudaResult<()> {
+        (watcher)(kernel)
+    }
+}
 
 #[allow(unused_macros)]
 macro_rules! link_kernel {

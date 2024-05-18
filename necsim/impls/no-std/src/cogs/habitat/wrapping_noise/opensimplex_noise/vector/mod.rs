@@ -28,12 +28,3 @@ impl<
     > VecType<T> for X
 {
 }
-
-trait VecArgumentType:
-    Sub<Self, Output = Self> + Add<Self, Output = Self> + Mul<Self, Output = Self> + Copy
-{
-}
-impl<T: Sub<Self, Output = Self> + Add<Self, Output = Self> + Mul<Self, Output = Self> + Copy>
-    VecArgumentType for T
-{
-}

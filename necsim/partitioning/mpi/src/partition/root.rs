@@ -11,7 +11,7 @@ use mpi::{
     datatype::Equivalence,
     environment::Universe,
     point_to_point::{Destination, Source},
-    topology::{Communicator, SystemCommunicator},
+    topology::{Communicator, SimpleCommunicator},
 };
 
 use necsim_core::{
@@ -37,7 +37,7 @@ use crate::{
 
 pub struct MpiRootPartition<'p, R: Reporter> {
     _universe: Universe,
-    world: SystemCommunicator,
+    world: SimpleCommunicator,
     mpi_local_global_wait: DataOrRequest<'p, (bool, bool), bool>,
     mpi_migration_buffers: Box<[DataOrRequest<'p, Vec<MigratingLineage>, [MpiMigratingLineage]>]>,
     migration_buffers: Box<[Vec<MigratingLineage>]>,
@@ -279,7 +279,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
         let local_partition_rank = self.get_partition().rank();
 
         let (global_min_time, global_min_rank) =
-            reduce_lexicographic_min_time_rank(self.world, local_time, local_partition_rank);
+            reduce_lexicographic_min_time_rank(&self.world, local_time, local_partition_rank);
 
         if global_min_rank == local_partition_rank {
             Ok(local_time)

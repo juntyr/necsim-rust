@@ -173,7 +173,7 @@ impl<
         // This is only safe as PartialSimulation's type and layout is a prefix
         //  subsequence of Self's type and layout
         let partial_simulation = unsafe {
-            &mut *(self as *mut Self)
+            &mut *core::ptr::from_mut(self)
                 .cast::<super::partial::active_lineage_sampler::PartialSimulation<
                     M,
                     H,
@@ -213,7 +213,7 @@ impl<
         // This is only safe as PartialSimulation's type and layout is a prefix
         //  subsequence of Self's type and layout
         let partial_simulation = unsafe {
-            &mut *(self as *mut Self).cast::<super::partial::event_sampler::PartialSimulation<
+            &mut *core::ptr::from_mut(self).cast::<super::partial::event_sampler::PartialSimulation<
                 M,
                 H,
                 G,

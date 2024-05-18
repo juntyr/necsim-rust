@@ -5,7 +5,7 @@
 #![cfg_attr(target_os = "cuda", feature(panic_info_message))]
 #![cfg_attr(target_os = "cuda", feature(atomic_from_mut))]
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
-#![cfg_attr(target_os = "cuda", feature(stdsimd))]
+#![cfg_attr(target_os = "cuda", feature(stdarch_nvptx))]
 #![cfg_attr(target_os = "cuda", feature(control_flow_enum))]
 #![allow(long_running_const_eval)]
 #![recursion_limit = "1024"]

@@ -27,16 +27,7 @@ use rustcoalescence_algorithms_cuda_gpu_kernel::SimulatableKernel;
 
 use crate::SimulationKernel;
 
-// If `Kernel` is implemented for `ReportSpeciation` x `ReportDispersal`, i.e.
-//  for {`False`, `True`} x {`False`, `True`} then it is implemented for all
-//  `Boolean`s. However, Rust does not recognise that `Boolean` is closed over
-//  {`False`, `True`}. These default impls provide the necessary coersion.
-
-extern "C" {
-    fn unreachable_cuda_simulation_linking_reporter() -> !;
-}
-
-#[allow(clippy::trait_duplication_in_bounds)]
+#[allow(clippy::missing_transmute_annotations, clippy::too_many_lines)]
 unsafe impl<
         M: MathsCore,
         H: Habitat<M> + RustToCuda,
@@ -55,20 +46,85 @@ unsafe impl<
     > SimulatableKernel<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
     for SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, ReportSpeciation, ReportDispersal>
 where
-    SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, False, False>:
+    crate::link::SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, False, False>:
         SimulatableKernel<M, H, G, S, X, D, C, T, N, E, I, A, False, False>,
-    SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, False, True>:
+    crate::link::SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, False, True>:
         SimulatableKernel<M, H, G, S, X, D, C, T, N, E, I, A, False, True>,
-    SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, True, False>:
+    crate::link::SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, True, False>:
         SimulatableKernel<M, H, G, S, X, D, C, T, N, E, I, A, True, False>,
-    SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, True, True>:
+    crate::link::SimulationKernel<M, H, G, S, X, D, C, T, N, E, I, A, True, True>:
         SimulatableKernel<M, H, G, S, X, D, C, T, N, E, I, A, True, True>,
 {
-    default fn get_ptx_str() -> &'static str {
-        unsafe { unreachable_cuda_simulation_linking_reporter() }
+    fn get_ptx_str() -> &'static str {
+        match (ReportSpeciation::VALUE, ReportDispersal::VALUE) {
+            (false, false) => crate::link::SimulationKernel::<
+                M,
+                H,
+                G,
+                S,
+                X,
+                D,
+                C,
+                T,
+                N,
+                E,
+                I,
+                A,
+                False,
+                False,
+            >::get_ptx_str(),
+            (false, true) => crate::link::SimulationKernel::<
+                M,
+                H,
+                G,
+                S,
+                X,
+                D,
+                C,
+                T,
+                N,
+                E,
+                I,
+                A,
+                False,
+                True,
+            >::get_ptx_str(),
+            (true, false) => crate::link::SimulationKernel::<
+                M,
+                H,
+                G,
+                S,
+                X,
+                D,
+                C,
+                T,
+                N,
+                E,
+                I,
+                A,
+                True,
+                False,
+            >::get_ptx_str(),
+            (true, true) => crate::link::SimulationKernel::<
+                M,
+                H,
+                G,
+                S,
+                X,
+                D,
+                C,
+                T,
+                N,
+                E,
+                I,
+                A,
+                True,
+                True,
+            >::get_ptx_str(),
+        }
     }
 
-    default fn new_kernel() -> CudaResult<
+    fn new_kernel() -> CudaResult<
         TypedKernel<
             dyn SimulatableKernel<
                 M,
@@ -88,54 +144,345 @@ where
             >,
         >,
     > {
-        unsafe { unreachable_cuda_simulation_linking_reporter() }
+        match (ReportSpeciation::VALUE, ReportDispersal::VALUE) {
+            (false, false) => unsafe {
+                std::mem::transmute(crate::link::SimulationKernel::<
+                    M,
+                    H,
+                    G,
+                    S,
+                    X,
+                    D,
+                    C,
+                    T,
+                    N,
+                    E,
+                    I,
+                    A,
+                    False,
+                    False,
+                >::new_kernel())
+            },
+            (false, true) => unsafe {
+                std::mem::transmute(crate::link::SimulationKernel::<
+                    M,
+                    H,
+                    G,
+                    S,
+                    X,
+                    D,
+                    C,
+                    T,
+                    N,
+                    E,
+                    I,
+                    A,
+                    False,
+                    True,
+                >::new_kernel())
+            },
+            (true, false) => unsafe {
+                std::mem::transmute(crate::link::SimulationKernel::<
+                    M,
+                    H,
+                    G,
+                    S,
+                    X,
+                    D,
+                    C,
+                    T,
+                    N,
+                    E,
+                    I,
+                    A,
+                    True,
+                    False,
+                >::new_kernel())
+            },
+            (true, true) => unsafe {
+                std::mem::transmute(crate::link::SimulationKernel::<
+                    M,
+                    H,
+                    G,
+                    S,
+                    X,
+                    D,
+                    C,
+                    T,
+                    N,
+                    E,
+                    I,
+                    A,
+                    True,
+                    True,
+                >::new_kernel())
+            },
+        }
     }
 
-    default fn simulate(
+    fn simulate(
         &mut self,
-        _simulation: &mut Simulation<M, H, G, S, X, D, C, T, N, E, I, A>,
-        _task_list: &mut ValueBuffer<Lineage, true, true>,
-        _event_buffer_reporter: &mut EventBuffer<ReportSpeciation, ReportDispersal>,
-        _min_spec_sample_buffer: &mut ValueBuffer<SpeciationSample, false, true>,
-        _next_event_time_buffer: &mut ValueBuffer<PositiveF64, false, true>,
-        _total_time_max: &AtomicU64,
-        _total_steps_sum: &AtomicU64,
-        _max_steps: u64,
-        _max_next_event_time: NonNegativeF64,
+        simulation: &mut Simulation<M, H, G, S, X, D, C, T, N, E, I, A>,
+        task_list: &mut ValueBuffer<Lineage, true, true>,
+        event_buffer_reporter: &mut EventBuffer<ReportSpeciation, ReportDispersal>,
+        min_spec_sample_buffer: &mut ValueBuffer<SpeciationSample, false, true>,
+        next_event_time_buffer: &mut ValueBuffer<PositiveF64, false, true>,
+        total_time_max: &AtomicU64,
+        total_steps_sum: &AtomicU64,
+        max_steps: u64,
+        max_next_event_time: NonNegativeF64,
     ) -> CudaResult<()> {
-        unsafe { unreachable_cuda_simulation_linking_reporter() }
+        match (ReportSpeciation::VALUE, ReportDispersal::VALUE) {
+            (false, false) => crate::link::SimulationKernel::<
+                M,
+                H,
+                G,
+                S,
+                X,
+                D,
+                C,
+                T,
+                N,
+                E,
+                I,
+                A,
+                False,
+                False,
+            >::simulate(
+                unsafe { &mut *std::ptr::from_mut(self).cast() },
+                simulation,
+                task_list,
+                unsafe { &mut *std::ptr::from_mut(event_buffer_reporter).cast() },
+                min_spec_sample_buffer,
+                next_event_time_buffer,
+                total_time_max,
+                total_steps_sum,
+                max_steps,
+                max_next_event_time,
+            ),
+            (false, true) => crate::link::SimulationKernel::<
+                M,
+                H,
+                G,
+                S,
+                X,
+                D,
+                C,
+                T,
+                N,
+                E,
+                I,
+                A,
+                False,
+                True,
+            >::simulate(
+                unsafe { &mut *std::ptr::from_mut(self).cast() },
+                simulation,
+                task_list,
+                unsafe { &mut *std::ptr::from_mut(event_buffer_reporter).cast() },
+                min_spec_sample_buffer,
+                next_event_time_buffer,
+                total_time_max,
+                total_steps_sum,
+                max_steps,
+                max_next_event_time,
+            ),
+            (true, false) => crate::link::SimulationKernel::<
+                M,
+                H,
+                G,
+                S,
+                X,
+                D,
+                C,
+                T,
+                N,
+                E,
+                I,
+                A,
+                True,
+                False,
+            >::simulate(
+                unsafe { &mut *std::ptr::from_mut(self).cast() },
+                simulation,
+                task_list,
+                unsafe { &mut *std::ptr::from_mut(event_buffer_reporter).cast() },
+                min_spec_sample_buffer,
+                next_event_time_buffer,
+                total_time_max,
+                total_steps_sum,
+                max_steps,
+                max_next_event_time,
+            ),
+            (true, true) => crate::link::SimulationKernel::<
+                M,
+                H,
+                G,
+                S,
+                X,
+                D,
+                C,
+                T,
+                N,
+                E,
+                I,
+                A,
+                True,
+                True,
+            >::simulate(
+                unsafe { &mut *std::ptr::from_mut(self).cast() },
+                simulation,
+                task_list,
+                unsafe { &mut *std::ptr::from_mut(event_buffer_reporter).cast() },
+                min_spec_sample_buffer,
+                next_event_time_buffer,
+                total_time_max,
+                total_steps_sum,
+                max_steps,
+                max_next_event_time,
+            ),
+        }
     }
 
-    default fn simulate_raw(
+    fn simulate_raw(
         &mut self,
-        _simulation: HostAndDeviceMutRef<
+        simulation: HostAndDeviceMutRef<
             DeviceAccessible<
                 <Simulation<M, H, G, S, X, D, C, T, N, E, I, A> as RustToCuda>::CudaRepresentation,
             >,
         >,
-        _task_list: HostAndDeviceMutRef<
+        task_list: HostAndDeviceMutRef<
             DeviceAccessible<<ValueBuffer<Lineage, true, true> as RustToCuda>::CudaRepresentation>,
         >,
-        _event_buffer_reporter: HostAndDeviceMutRef<
+        event_buffer_reporter: HostAndDeviceMutRef<
             DeviceAccessible<
                 <EventBuffer<ReportSpeciation, ReportDispersal> as RustToCuda>::CudaRepresentation,
             >,
         >,
-        _min_spec_sample_buffer: HostAndDeviceMutRef<
+        min_spec_sample_buffer: HostAndDeviceMutRef<
             DeviceAccessible<
                 <ValueBuffer<SpeciationSample, false, true> as RustToCuda>::CudaRepresentation,
             >,
         >,
-        _next_event_time_buffer: HostAndDeviceMutRef<
+        next_event_time_buffer: HostAndDeviceMutRef<
             DeviceAccessible<
                 <ValueBuffer<PositiveF64, false, true> as RustToCuda>::CudaRepresentation,
             >,
         >,
-        _total_time_max: HostAndDeviceConstRef<SafeDeviceCopyWrapper<AtomicU64>>,
-        _total_steps_sum: HostAndDeviceConstRef<SafeDeviceCopyWrapper<AtomicU64>>,
-        _max_steps: SafeDeviceCopyWrapper<u64>,
-        _max_next_event_time: SafeDeviceCopyWrapper<NonNegativeF64>,
+        total_time_max: HostAndDeviceConstRef<SafeDeviceCopyWrapper<AtomicU64>>,
+        total_steps_sum: HostAndDeviceConstRef<SafeDeviceCopyWrapper<AtomicU64>>,
+        max_steps: SafeDeviceCopyWrapper<u64>,
+        max_next_event_time: SafeDeviceCopyWrapper<NonNegativeF64>,
     ) -> CudaResult<()> {
-        unsafe { unreachable_cuda_simulation_linking_reporter() }
+        match (ReportSpeciation::VALUE, ReportDispersal::VALUE) {
+            (false, false) => crate::link::SimulationKernel::<
+                M,
+                H,
+                G,
+                S,
+                X,
+                D,
+                C,
+                T,
+                N,
+                E,
+                I,
+                A,
+                False,
+                False,
+            >::simulate_raw(
+                unsafe { &mut *std::ptr::from_mut(self).cast() },
+                simulation,
+                task_list,
+                unsafe { std::mem::transmute(event_buffer_reporter) },
+                min_spec_sample_buffer,
+                next_event_time_buffer,
+                total_time_max,
+                total_steps_sum,
+                max_steps,
+                max_next_event_time,
+            ),
+            (false, true) => crate::link::SimulationKernel::<
+                M,
+                H,
+                G,
+                S,
+                X,
+                D,
+                C,
+                T,
+                N,
+                E,
+                I,
+                A,
+                False,
+                True,
+            >::simulate_raw(
+                unsafe { &mut *std::ptr::from_mut(self).cast() },
+                simulation,
+                task_list,
+                unsafe { std::mem::transmute(event_buffer_reporter) },
+                min_spec_sample_buffer,
+                next_event_time_buffer,
+                total_time_max,
+                total_steps_sum,
+                max_steps,
+                max_next_event_time,
+            ),
+            (true, false) => crate::link::SimulationKernel::<
+                M,
+                H,
+                G,
+                S,
+                X,
+                D,
+                C,
+                T,
+                N,
+                E,
+                I,
+                A,
+                True,
+                False,
+            >::simulate_raw(
+                unsafe { &mut *std::ptr::from_mut(self).cast() },
+                simulation,
+                task_list,
+                unsafe { std::mem::transmute(event_buffer_reporter) },
+                min_spec_sample_buffer,
+                next_event_time_buffer,
+                total_time_max,
+                total_steps_sum,
+                max_steps,
+                max_next_event_time,
+            ),
+            (true, true) => crate::link::SimulationKernel::<
+                M,
+                H,
+                G,
+                S,
+                X,
+                D,
+                C,
+                T,
+                N,
+                E,
+                I,
+                A,
+                True,
+                True,
+            >::simulate_raw(
+                unsafe { &mut *std::ptr::from_mut(self).cast() },
+                simulation,
+                task_list,
+                unsafe { std::mem::transmute(event_buffer_reporter) },
+                min_spec_sample_buffer,
+                next_event_time_buffer,
+                total_time_max,
+                total_steps_sum,
+                max_steps,
+                max_next_event_time,
+            ),
+        }
     }
 }

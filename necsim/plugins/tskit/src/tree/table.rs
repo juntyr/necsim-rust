@@ -1,15 +1,16 @@
 use std::collections::VecDeque;
 
 use necsim_core_bond::NonNegativeF64;
-use tskit::{IndividualId, NodeId, TableOutputOptions, TableSortOptions, TreeSequenceFlags};
+use tskit::{
+    IndividualFlags, IndividualId, NodeFlags, NodeId, TableOutputOptions, TableSortOptions,
+    TreeSequenceFlags,
+};
 
 use necsim_core::{landscape::IndexedLocation, lineage::GlobalLineageReference};
 
 use super::{
     metadata::GlobalLineageMetadata, TskitTreeReporter, TSK_SEQUENCE_MAX, TSK_SEQUENCE_MIN,
 };
-
-const TSK_FLAGS_EMPTY: tskit::tsk_flags_t = 0_u32;
 
 impl TskitTreeReporter {
     pub(super) fn store_individual_origin(
@@ -124,14 +125,14 @@ impl TskitTreeReporter {
         // Insert the lineage as an individual
         let individual_id = self
             .table
-            .add_individual_with_metadata(TSK_FLAGS_EMPTY, location, parents, metadata)
+            .add_individual_with_metadata(IndividualFlags::empty(), location, parents, metadata)
             .unwrap();
 
         // Create corresponding node
         let node_id = self
             .table
             .add_node_with_metadata(
-                tskit::TSK_NODE_IS_SAMPLE,
+                NodeFlags::new_sample(),
                 time.get(),
                 tskit::PopulationId::NULL,
                 individual_id,

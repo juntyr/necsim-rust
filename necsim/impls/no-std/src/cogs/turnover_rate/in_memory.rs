@@ -1,3 +1,5 @@
+#![allow(non_local_definitions)] // FIXME: displaydoc
+
 use alloc::boxed::Box;
 
 use r#final::Final;
