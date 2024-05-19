@@ -9,6 +9,7 @@ use super::Location;
 #[serde(rename = "Extent")]
 #[serde(deny_unknown_fields)]
 pub struct LandscapeExtent {
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     origin: Location,
     width: OffByOneU32,
     height: OffByOneU32,

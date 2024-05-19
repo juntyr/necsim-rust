@@ -8,8 +8,6 @@
 #![feature(core_intrinsics)]
 #![allow(incomplete_features)]
 #![feature(specialization)]
-#![allow(internal_features)]
-#![feature(core_intrinsics)]
 
 extern crate alloc;
 
