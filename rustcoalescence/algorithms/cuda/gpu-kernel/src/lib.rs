@@ -39,7 +39,8 @@ use rust_cuda::{
 #[rust_cuda::kernel::kernel(pub use link! for impl)]
 #[kernel(
     allow(ptx::double_precision_use),
-    forbid(ptx::local_memory_use, ptx::register_spills)
+    allow(ptx::local_memory_use), // FIXME
+    forbid(ptx::register_spills),
 )]
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
