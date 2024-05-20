@@ -34,13 +34,11 @@ jobs:
       - name: Generate the coverage data
         run: |
           cargo clean
-          cargo test \
-            --workspace \
-            --all-targets \
-            --exclude rustcoalescence-algorithms-cuda-gpu-kernel
+          cargo \
+            --config "target.'cfg(all())'.rustflags=['-Cinstrument-coverage']" \
+            test --workspace --all-targets
         env:
           CARGO_INCREMENTAL: 0
-          RUSTFLAGS: -Cinstrument-coverage
           RUSTDOCFLAGS: -Cinstrument-coverage
           LLVM_PROFILE_FILE: coverage/coverage-%p-%m.profraw
       
