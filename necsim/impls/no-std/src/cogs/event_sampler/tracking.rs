@@ -27,10 +27,12 @@ pub trait MinSpeciationTrackingEventSampler<
 }
 
 #[derive(Clone, Debug, TypeLayout)]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[repr(C)]
 pub struct SpeciationSample {
     speciation_sample: ClosedOpenUnitF64,
     sample_time: PositiveF64,
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     sample_location: IndexedLocation,
 }
 

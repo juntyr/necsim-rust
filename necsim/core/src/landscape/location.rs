@@ -2,12 +2,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::cogs::Backup;
 
-#[allow(clippy::unsafe_derive_deserialize)]
+#[allow(clippy::module_name_repetitions)]
 #[derive(
     Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize, TypeLayout,
 )]
-#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[repr(C)]
+#[cfg_attr(feature = "cuda", cuda(ignore))]
+#[serde(deny_unknown_fields)]
 pub struct Location {
     x: u32,
     y: u32,
@@ -46,10 +48,13 @@ impl From<IndexedLocation> for Location {
 #[derive(
     Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize, TypeLayout,
 )]
-#[allow(clippy::module_name_repetitions, clippy::unsafe_derive_deserialize)]
-#[serde(from = "IndexedLocationRaw", into = "IndexedLocationRaw")]
+#[allow(clippy::module_name_repetitions)]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[repr(C)]
+#[cfg_attr(feature = "cuda", cuda(ignore))]
+#[serde(from = "IndexedLocationRaw", into = "IndexedLocationRaw")]
 pub struct IndexedLocation {
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     location: Location,
     index: u32,
 }
@@ -74,7 +79,6 @@ impl IndexedLocation {
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[serde(rename = "IndexedLocation")]
-#[repr(C)]
 struct IndexedLocationRaw {
     x: u32,
     y: u32,

@@ -101,6 +101,7 @@ impl PartialOrd for SortedSortedSegments {
 }
 
 impl PartialEq for SortedSortedSegments {
+    #[allow(clippy::unconditional_recursion)]
     fn eq(&self, other: &Self) -> bool {
         self.next.eq(&other.next)
     }

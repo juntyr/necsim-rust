@@ -31,26 +31,26 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install libopenmpi-dev -y --no-install-recommends
 
-      - name: Install the Rust toolchain
+      - name: Generate the coverage data
         run: |
-          cargo install grcov --force --locked
-          rustup component add llvm-tools-preview
-
-      - name: Install the rust-ptx-linker
+          cargo clean
+          cargo \
+            --config "target.'cfg(all())'.rustflags=['-Cinstrument-coverage']" \
+            test --workspace --all-targets
+        env:
+          CARGO_INCREMENTAL: 0
+          RUSTDOCFLAGS: -Cinstrument-coverage
+          LLVM_PROFILE_FILE: coverage/coverage-%p-%m.profraw
+      
+      - name: Download grcov
         run: |
-          wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh
-          sudo ./llvm.sh $(rustc --version -v | grep -oP "LLVM version: \K\d+")
-          rm llvm.sh
-          cargo install rust-ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force
-
-      - name: Generate the code coverage
+          curl -sL https://github.com/mozilla/grcov/releases/download/v0.8.18/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf -
+          chmod +x ./grcov
+      
+      - name: Generate the coverage reports
         run: |
-          RUSTFLAGS="-Cinstrument-coverage" \
-          LLVM_PROFILE_FILE="codecov-%p-%m.profraw" \
-          cargo test --workspace
-
-          grcov . -s . --binary-path ./target/debug/ \
-            -t cobertura -o cobertura.xml --branch \
+          ./grcov . -s . --binary-path ./target/debug/deps \
+            -t lcov -o coverage.lcov --branch \
             --keep-only "necsim/*" \
             --keep-only "rustcoalescence/*" \
             --ignore-not-existing \
@@ -62,4 +62,5 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.lcov
           fail_ci_if_error: true

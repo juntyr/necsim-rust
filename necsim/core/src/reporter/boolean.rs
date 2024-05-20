@@ -5,7 +5,7 @@ mod private {
     impl Sealed for super::False {}
 }
 
-pub trait Boolean: private::Sealed {
+pub trait Boolean: 'static + private::Sealed {
     const VALUE: bool;
 }
 
