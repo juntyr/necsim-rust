@@ -41,11 +41,6 @@ First, you need to clone the necsim-rust GitHub repository:
 ```
 necsim-rust is written in the [Rust language](https://www.rust-lang.org/tools/install), which must be installed in your `PATH` first. necsim-rust includes a `rust-toolchain` file that configures Rust to use a working nightly toolchain version and install all components required for compilation. If you want to use necsim-rust on a target different than `x86_64-unknown-linux-gnu`, please update the [rust-toolchain](rust-toolchain) config file accordingly.
 
-If you also want to use the CUDA-based algorithm, it is **required** that you also install the following:
-```shell
-> cargo install ptx-linker --force --locked
-```
-
 ## Installation
 
 To install `rustcoalescence`, you need to decide which algorithms you want to compile with it. You can enable the provided algorithms by enabling their corresponding features. For instance, to compile all CPU-based algorithms with all scenarios, you can use
