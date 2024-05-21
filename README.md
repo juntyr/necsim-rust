@@ -34,6 +34,7 @@ necsim-rust is built in a modular way to reduce code duplication and allow the u
 - spatially-explicit simulation with habitat and dispersal maps
 
 ## Prerequisites
+
 First, you need to clone the necsim-rust GitHub repository:
 ```shell
 git clone https://github.com/juntyr/necsim-rust.git
