@@ -37,27 +37,32 @@ necsim-rust is built in a modular way to reduce code duplication and allow the u
 
 First, you need to clone the necsim-rust GitHub repository:
 ```shell
-> git clone https://github.com/juntyr/necsim-rust.git
+git clone https://github.com/juntyr/necsim-rust.git
 ```
 necsim-rust is written in the [Rust language](https://www.rust-lang.org/tools/install), which must be installed in your `PATH` first. necsim-rust includes a `rust-toolchain` file that configures Rust to use a working nightly toolchain version and install all components required for compilation. If you want to use necsim-rust on a target different than `x86_64-unknown-linux-gnu`, please update the [rust-toolchain](rust-toolchain) config file accordingly.
+
+The `necsim-plugins-species` reporter depends on `libsqlite3-dev`, and the `necsim-plugins-tskit` reporter and the `necsim-partitioning-mpi` parallelisation backend (enabled with the `mpi-partitioning` feature) depend on `libclang-dev`. You can install these optional packages using
+```shell
+sudo apt-get install libclang-dev libsqlite3-dev
+```
 
 ## Installation
 
 To install `rustcoalescence`, you need to decide which algorithms you want to compile with it. You can enable the provided algorithms by enabling their corresponding features. For instance, to compile all CPU-based algorithms with all scenarios, you can use
 ```shell
-> cargo install --path rustcoalescence --locked --features gillespie-algorithms --features independent-algorithm --features all-scenarios
+cargo install --path rustcoalescence --locked --features gillespie-algorithms --features independent-algorithm --features all-scenarios
 ```
 To install with CUDA support, you first need to ensure that the dynamic CUDA libraries are in the `LD_LIBRARY_PATH` and enable the `cuda-algorithm` feature:
 ```shell
-> LIBRARY_PATH="$LD_LIBRARY_PATH" cargo install --path rustcoalescence --locked [...] --features cuda-algorithm
+LIBRARY_PATH="$LD_LIBRARY_PATH" cargo install --path rustcoalescence --locked [...] --features cuda-algorithm
 ```
 To compile with MPI support, you need to enable the `mpi-partitioning` feature:
 ```shell
-> cargo install --path rustcoalescence --locked [...] --features mpi-partitioning
+cargo install --path rustcoalescence --locked [...] --features mpi-partitioning
 ```
 After compilation, you can then run `rustcoalescence` using:
 ```shell
-> rustcoalescence [...]
+rustcoalescence [...]
 ```
 If you want to use any of the provided reporter analysis plugins, you have to compile them manually. For instance, to compile the `common` plugin which includes the `Biodiversity()`, `Counter()`, `Execution()`, `Progress()` and `Verbose()` reporters, you can run:
 ```shell
@@ -68,22 +73,22 @@ If you want to use any of the provided reporter analysis plugins, you have to co
 
 If you want to compile the library for development, you can use any of the above installation commands, but replace
 ```shell
-> cargo install --path rustcoalescence --locked [...]
+cargo install --path rustcoalescence --locked [...]
 ```
 with
 ```shell
-> cargo build --release [...]
+cargo build --release [...]
 ```
 
 ## Running rustcoalescence
 
 `rustcoalescence` has two subcommands: `simulate` and `replay` and accepts command-line arguments in the following format:
 ```shell
-> rustcoalescence <SUBCOMMAND> args..
+rustcoalescence <SUBCOMMAND> args..
 ```
 Here, `args..` is a configuration string in [RON](https://github.com/ron-rs/ron) format, which can also directly be read from a configuration file:
 ```shell
-> rustcoalescence <SUBCOMMAND> "$(<config.ron)"
+rustcoalescence <SUBCOMMAND> "$(<config.ron)"
 ```
 Please refer to [docs/simulate.ron](docs/simulate.ron) and [docs/replay.ron](docs/replay.ron) for a detailed description of all configuration options. [./simulate.ron](simulate.ron) and [./replay.ron](replay.ron) also provide example configurations.
 
@@ -121,9 +126,9 @@ necsim-rust consists of the following crates:
 
 pycoalescence and necsim both used GDAL to load habitat, dispersal and turnover maps. As rustcoalescence is more strict about type checking the TIFF files, you can use the following commands to convert and compress your GeoTIFF files:
 ```shell
-> gdalwarp -ot Uint32 -co "COMPRESS=LZW" -dstnodata 0 -to "SRC_METHOD=NO_GEOTRANSFORM" -to "DST_METHOD=NO_GEOTRANSFORM" input_habitat.tif output_habitat.tif
-> gdalwarp -ot Float64 -co "COMPRESS=LZW" -dstnodata 0 -to "SRC_METHOD=NO_GEOTRANSFORM" -to "DST_METHOD=NO_GEOTRANSFORM" input_dispersal.tif output_dispersal.tif
-> gdalwarp -ot Float64 -co "COMPRESS=LZW" -dstnodata 0 -to "SRC_METHOD=NO_GEOTRANSFORM" -to "DST_METHOD=NO_GEOTRANSFORM" input_turnover.tif output_turnover.tif
+gdalwarp -ot Uint32 -co "COMPRESS=LZW" -dstnodata 0 -to "SRC_METHOD=NO_GEOTRANSFORM" -to "DST_METHOD=NO_GEOTRANSFORM" input_habitat.tif output_habitat.tif
+gdalwarp -ot Float64 -co "COMPRESS=LZW" -dstnodata 0 -to "SRC_METHOD=NO_GEOTRANSFORM" -to "DST_METHOD=NO_GEOTRANSFORM" input_dispersal.tif output_dispersal.tif
+gdalwarp -ot Float64 -co "COMPRESS=LZW" -dstnodata 0 -to "SRC_METHOD=NO_GEOTRANSFORM" -to "DST_METHOD=NO_GEOTRANSFORM" input_turnover.tif output_turnover.tif
 ```
 
 ## License
