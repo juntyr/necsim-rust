@@ -16,6 +16,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, TypeLayout)]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[repr(transparent)]
 pub struct GlobalLineageReference(u64);
 
@@ -94,21 +95,29 @@ impl From<Option<GlobalLineageReference>> for LineageInteraction {
     }
 }
 
-#[allow(clippy::unsafe_derive_deserialize)]
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, TypeLayout)]
-#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[repr(C)]
+#[cfg_attr(feature = "cuda", cuda(ignore))]
+#[serde(deny_unknown_fields)]
 pub struct Lineage {
+    #[cfg_attr(feature = "cuda", cuda(embed))]
+    #[cfg_attr(feature = "cuda", cuda(ignore))]
     #[serde(alias = "id", alias = "ref")]
     pub global_reference: GlobalLineageReference,
+    #[cfg_attr(feature = "cuda", cuda(ignore))]
     #[serde(alias = "time")]
     pub last_event_time: NonNegativeF64,
+    #[cfg_attr(feature = "cuda", cuda(embed))]
+    #[cfg_attr(feature = "cuda", cuda(ignore))]
     #[serde(alias = "loc")]
     pub indexed_location: IndexedLocation,
 }
 
 impl Lineage {
     #[must_use]
+    #[allow(clippy::no_effect_underscore_binding)]
     #[debug_ensures(
         ret.indexed_location == old(indexed_location.clone()),
         "stores the indexed_location"

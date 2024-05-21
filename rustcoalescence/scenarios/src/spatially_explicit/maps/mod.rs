@@ -25,7 +25,7 @@ pub fn load_dispersal_map(
             anyhow::bail!("Dispersal weights are not all non-negative")
         }
 
-        Ok(unsafe { std::mem::transmute(map) })
+        Ok(unsafe { std::mem::transmute::<Array2D<f64>, Array2D<NonNegativeF64>>(map) })
     })()
     .with_context(|| format!("Failed to load the dispersal map from {path:?}."))
 }
@@ -47,7 +47,7 @@ pub fn load_turnover_map(
             anyhow::bail!("Turnover rates are not all non-negative")
         }
 
-        Ok(unsafe { std::mem::transmute(map) })
+        Ok(unsafe { std::mem::transmute::<Array2D<f64>, Array2D<NonNegativeF64>>(map) })
     })()
     .with_context(|| format!("Failed to load the turnover map from {path:?}."))
 }

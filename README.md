@@ -40,16 +40,10 @@ git clone https://github.com/juntyr/necsim-rust.git
 ```
 necsim-rust is written in the [Rust language](https://www.rust-lang.org/tools/install), which must be installed in your `PATH` first. necsim-rust includes a `rust-toolchain` file that configures Rust to use a working nightly toolchain version and install all components required for compilation. If you want to use necsim-rust on a target different than `x86_64-unknown-linux-gnu`, please update the [rust-toolchain](rust-toolchain) config file accordingly.
 
-If you also want to use the CUDA-based algorithm, it is **required** that you also install the following:
-```shell
-cargo install ptx-linker --force --locked
-```
-
-Finally, the `necsim-plugins-species` reporter depends on `libsqlite3-dev`, and the `necsim-plugins-tskit` reporter and the `necsim-partitioning-mpi` parallelisation backend (enabled with the `mpi-partitioning` feature) depend on `libclang-dev`. You can install these optional packages using
+The `necsim-plugins-species` reporter depends on `libsqlite3-dev`, and the `necsim-plugins-tskit` reporter and the `necsim-partitioning-mpi` parallelisation backend (enabled with the `mpi-partitioning` feature) depend on `libclang-dev`. You can install these optional packages using
 ```shell
 sudo apt-get install libclang-dev libsqlite3-dev
 ```
-
 
 ## Installation
 

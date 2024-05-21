@@ -1,4 +1,6 @@
+use necsim_core::cogs::MathsCore;
 use necsim_impls_no_std::cogs::maths::intrinsics::IntrinsicsMathsCore;
+use necsim_impls_std::cogs::rng::pcg::Pcg;
 
 use rustcoalescence_algorithms::{AlgorithmDefaults, AlgorithmParamters};
 
@@ -17,4 +19,5 @@ impl AlgorithmParamters for GillespieAlgorithm {
 
 impl AlgorithmDefaults for GillespieAlgorithm {
     type MathsCore = IntrinsicsMathsCore;
+    type Rng<M: MathsCore> = Pcg<M>;
 }

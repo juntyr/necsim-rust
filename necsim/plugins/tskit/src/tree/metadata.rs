@@ -39,6 +39,6 @@ impl NodeMetadata for GlobalLineageMetadata {}
 
 impl GlobalLineageMetadata {
     pub fn new(reference: &GlobalLineageReference) -> &Self {
-        unsafe { &*(reference as *const GlobalLineageReference).cast() }
+        unsafe { &*std::ptr::from_ref(reference).cast() }
     }
 }

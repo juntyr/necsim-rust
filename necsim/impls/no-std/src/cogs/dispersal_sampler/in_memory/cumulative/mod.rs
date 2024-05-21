@@ -92,7 +92,11 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
         }
 
         // Safety: The dispersal weights are now probabilities in [0.0; 1.0]
-        let cumulative_dispersal = unsafe { core::mem::transmute(cumulative_dispersal) };
+        let cumulative_dispersal = unsafe {
+            core::mem::transmute::<Box<[NonNegativeF64]>, Box<[ClosedUnitF64]>>(
+                cumulative_dispersal,
+            )
+        };
 
         InMemoryCumulativeDispersalSampler {
             cumulative_dispersal,

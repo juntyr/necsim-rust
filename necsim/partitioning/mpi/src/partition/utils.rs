@@ -1,14 +1,13 @@
 use std::{
-    mem::MaybeUninit,
+    mem::{offset_of, MaybeUninit},
     os::raw::{c_int, c_void},
 };
 
-use memoffset::offset_of;
 use mpi::{
     collective::UnsafeUserOperation,
     datatype::{Equivalence, UserDatatype},
     ffi::MPI_Datatype,
-    topology::SystemCommunicator,
+    topology::SimpleCommunicator,
     traits::CommunicatorCollectives,
 };
 
@@ -23,7 +22,7 @@ struct TimeRank {
 }
 
 pub fn reduce_lexicographic_min_time_rank(
-    world: SystemCommunicator,
+    world: &SimpleCommunicator,
     time: PositiveF64,
     rank: u32,
 ) -> (PositiveF64, u32) {

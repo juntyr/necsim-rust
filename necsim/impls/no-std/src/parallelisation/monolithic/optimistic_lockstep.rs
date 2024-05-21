@@ -78,7 +78,7 @@ pub fn simulate<
         //  (we already know at least one partition has some next event time)
         let next_local_emigration_time = {
             let (_, new_steps) = simulation.simulate_incremental_early_stop(
-                |simulation, _, _| {
+                |simulation, _, _, _| {
                     if simulation.emigration_exit().is_empty() {
                         ControlFlow::Continue(())
                     } else {
@@ -115,7 +115,7 @@ pub fn simulate<
             //  that event
             Ok(next_global_time) => {
                 let (_, new_steps) = simulation.simulate_incremental_early_stop(
-                    |_, _, next_event_time| {
+                    |_, _, next_event_time, _| {
                         if next_event_time > next_global_time {
                             ControlFlow::Break(())
                         } else {
@@ -139,7 +139,7 @@ pub fn simulate<
             // All other partitions get to simulate until just before this next migration event
             Err(next_global_time) => {
                 let (_, new_steps) = simulation.simulate_incremental_early_stop(
-                    |_, _, next_event_time| {
+                    |_, _, next_event_time, _| {
                         if next_event_time >= next_global_time {
                             ControlFlow::Break(())
                         } else {

@@ -1,8 +1,52 @@
-#[allow(unused_imports)]
-use rustcoalescence_algorithms_cuda_gpu_kernel::{SimulatableKernel, SimulationKernelArgs};
+use necsim_core::{
+    cogs::{
+        CoalescenceSampler, DispersalSampler, EmigrationExit, Habitat, ImmigrationEntry,
+        LineageStore, MathsCore, PrimeableRng, SpeciationProbability, TurnoverRate,
+    },
+    reporter::boolean::Boolean,
+};
 
-#[allow(unused_imports)]
-use crate::SimulationKernel;
+use necsim_impls_no_std::cogs::{
+    active_lineage_sampler::singular::SingularActiveLineageSampler,
+    event_sampler::tracking::MinSpeciationTrackingEventSampler,
+};
+
+use rust_cuda::lend::RustToCuda;
+
+#[allow(clippy::type_complexity)]
+pub struct SimulationKernelPtx<
+    M: MathsCore + Sync,
+    H: Habitat<M> + RustToCuda + Sync,
+    G: PrimeableRng<M> + RustToCuda + Sync,
+    S: LineageStore<M, H> + RustToCuda + Sync,
+    X: EmigrationExit<M, H, G, S> + RustToCuda + Sync,
+    D: DispersalSampler<M, H, G> + RustToCuda + Sync,
+    C: CoalescenceSampler<M, H, S> + RustToCuda + Sync,
+    T: TurnoverRate<M, H> + RustToCuda + Sync,
+    N: SpeciationProbability<M, H> + RustToCuda + Sync,
+    E: MinSpeciationTrackingEventSampler<M, H, G, S, X, D, C, T, N> + RustToCuda + Sync,
+    I: ImmigrationEntry<M> + RustToCuda + Sync,
+    A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda + Sync,
+    ReportSpeciation: Boolean,
+    ReportDispersal: Boolean,
+>(
+    std::marker::PhantomData<(
+        M,
+        H,
+        G,
+        S,
+        X,
+        D,
+        C,
+        T,
+        N,
+        E,
+        I,
+        A,
+        ReportSpeciation,
+        ReportDispersal,
+    )>,
+);
 
 #[allow(unused_macros)]
 macro_rules! link_kernel {
@@ -32,7 +76,7 @@ macro_rules! link_kernel {
         $habitat:ty, $dispersal:ty, $turnover:ty, $speciation:ty,
         $report_speciation:ty, $report_dispersal:ty
     ) => {
-        rustcoalescence_algorithms_cuda_gpu_kernel::link_kernel!(
+        rustcoalescence_algorithms_cuda_gpu_kernel::link! { impl simulate<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
             $habitat,
             necsim_impls_cuda::cogs::rng::CudaRng<
@@ -85,9 +129,9 @@ macro_rules! link_kernel {
             >,
             $report_speciation,
             $report_dispersal,
-        );
+        > for SimulationKernelPtx }
 
-        rustcoalescence_algorithms_cuda_gpu_kernel::link_kernel!(
+        rustcoalescence_algorithms_cuda_gpu_kernel::link! { impl simulate<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
             $habitat,
             necsim_impls_cuda::cogs::rng::CudaRng<
@@ -200,7 +244,7 @@ macro_rules! link_kernel {
             >,
             $report_speciation,
             $report_dispersal,
-        );
+        > for SimulationKernelPtx }
     };
 }
 

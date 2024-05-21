@@ -1,11 +1,11 @@
 #![deny(clippy::pedantic)]
 #![no_std]
-#![feature(core_intrinsics)]
 #![feature(const_type_name)]
-#![feature(offset_of)]
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![cfg_attr(target_os = "cuda", feature(asm_const))]
 #![cfg_attr(target_os = "cuda", feature(const_float_bits_conv))]
+#![allow(internal_features)]
+#![feature(core_intrinsics)]
 #![allow(incomplete_features)]
 #![feature(specialization)]
 

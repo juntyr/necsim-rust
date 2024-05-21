@@ -1,5 +1,3 @@
-use core::u64;
-
 use crate::{impl_report, reporter::Reporter};
 
 #[allow(clippy::module_name_repetitions)]

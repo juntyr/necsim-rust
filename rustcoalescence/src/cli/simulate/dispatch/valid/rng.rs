@@ -27,8 +27,9 @@ use super::{
 pub(super) fn dispatch<
     'p,
     M: MathsCore,
-    A: Algorithm<'p, M, O, R, P>,
-    O: Scenario<M, A::Rng>,
+    G: RngCore<M>,
+    A: Algorithm<'p, M, G, O, R, P>,
+    O: Scenario<M, G>,
     R: Reporter,
     P: LocalPartition<'p, R>,
 >(
@@ -43,17 +44,16 @@ pub(super) fn dispatch<
     normalised_args: &mut BufferingSimulateArgsBuilder,
 ) -> anyhow::Result<SimulationOutcome>
 where
-    Result<AlgorithmOutcome<M, A::Rng>, A::Error>:
-        anyhow::Context<AlgorithmOutcome<M, A::Rng>, A::Error>,
+    Result<AlgorithmOutcome<M, G>, A::Error>: anyhow::Context<AlgorithmOutcome<M, G>, A::Error>,
 {
-    let rng: A::Rng = match parse::rng::parse_and_normalise(
+    let rng: G = match parse::rng::parse_and_normalise(
         ron_args,
         normalised_args,
         &mut A::get_logical_partition(&algorithm_args, &local_partition),
     )? {
         RngArgs::Seed(seed) => SeedableRng::seed_from_u64(seed),
         RngArgs::Sponge(bytes) => {
-            let mut seed = <A::Rng as RngCore<M>>::Seed::default();
+            let mut seed = G::Seed::default();
 
             let mut sponge = Keccak::v256();
             sponge.update(&bytes);
@@ -64,7 +64,7 @@ where
         RngArgs::State(state) => state.into(),
     };
 
-    let result = info::dispatch::<M, A, O, R, P>(
+    let result = info::dispatch::<M, G, A, O, R, P>(
         algorithm_args,
         rng,
         scenario,

@@ -3,7 +3,6 @@
 #![feature(iter_advance_by)]
 #![feature(extract_if)]
 #![feature(const_type_name)]
-#![feature(offset_of)]
 #![feature(negative_impls)]
 #![feature(impl_trait_in_assoc_type)]
 #![allow(incomplete_features)]

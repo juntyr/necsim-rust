@@ -36,11 +36,14 @@ impl MathsCore for NvptxMathsCore {
         }
         #[cfg(not(target_os = "cuda"))]
         {
-            extern "C" {
-                fn nvptx_maths_core_ln_on_cpu(_x: f64) -> !;
-            }
+            // extern "C" {
+            //     fn nvptx_maths_core_ln_on_cpu(_x: f64) -> !;
+            // }
 
-            unsafe { nvptx_maths_core_ln_on_cpu(x) }
+            // unsafe { nvptx_maths_core_ln_on_cpu(x) }
+
+            // TODO: disallow using NvptxMathsCore::ln on CPU
+            unsafe { core::intrinsics::logf64(x) }
         }
     }
 

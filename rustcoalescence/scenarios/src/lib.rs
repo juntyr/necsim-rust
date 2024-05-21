@@ -1,5 +1,4 @@
 #![deny(clippy::pedantic)]
-#![feature(associated_type_bounds)]
 #![feature(never_type)]
 
 #[allow(unused_imports)]

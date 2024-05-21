@@ -19,14 +19,6 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> fmt::Debug
     for RecordedWaterLevelReporterProxy<'l, 'p, R, P>
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        struct EventBufferLen(usize);
-
-        impl fmt::Debug for EventBufferLen {
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                write!(f, "Vec<PackedEvent; {}>", self.0)
-            }
-        }
-
         fmt.debug_struct(stringify!(RecordedWaterLevelReporterProxy))
             .field("water_level", &self.water_level)
             .finish()

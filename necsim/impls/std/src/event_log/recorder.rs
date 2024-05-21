@@ -124,7 +124,7 @@ impl EventLogRecorder {
             return Err(anyhow::anyhow!("{:?} is a read-only directory.", path));
         }
 
-        self.directory = path.to_owned();
+        path.clone_into(&mut self.directory);
 
         Ok(self)
     }

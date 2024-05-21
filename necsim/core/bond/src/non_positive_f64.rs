@@ -94,6 +94,7 @@ impl NonPositiveF64 {
 }
 
 impl PartialEq for NonPositiveF64 {
+    #[allow(clippy::unconditional_recursion)]
     fn eq(&self, other: &Self) -> bool {
         self.0.eq(&other.0)
     }
