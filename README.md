@@ -45,7 +45,7 @@ If you also want to use the CUDA-based algorithm, it is **required** that you al
 cargo install ptx-linker --force --locked
 ```
 
-Finally `rustcoalescence` depends on `libclang-dev` as well as `libsqlite3-dev` to install these packages please run:
+Finally, the `necsim-plugins-species` reporter depends on `libsqlite3-dev`, and the `necsim-plugins-tskit` reporter and the `necsim-partitioning-mpi` parallelisation backend (enabled with the `mpi-partitioning` feature) depend on `libclang-dev`. You can install these optional packages using
 ```shell
 sudo apt-get install libclang-dev libsqlite3-dev
 ```
