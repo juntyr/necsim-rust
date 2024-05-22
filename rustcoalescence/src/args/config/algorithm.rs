@@ -1,6 +1,6 @@
 use serde::{Serialize, Serializer};
 
-use necsim_partitioning_core::partition::Partition;
+use necsim_partitioning_core::partition::PartitionSize;
 
 #[cfg(any(
     feature = "gillespie-algorithms",
@@ -10,7 +10,7 @@ use necsim_partitioning_core::partition::Partition;
 use rustcoalescence_algorithms::AlgorithmParamters;
 
 #[derive(Debug, DeserializeState)]
-#[serde(deserialize_state = "Partition")]
+#[serde(deserialize_state = "PartitionSize")]
 pub enum Algorithm {
     #[cfg(feature = "gillespie-algorithms")]
     #[serde(alias = "Classical")]

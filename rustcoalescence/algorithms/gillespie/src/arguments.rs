@@ -3,7 +3,10 @@ use serde_state::DeserializeState;
 
 use necsim_core::reporter::Reporter;
 use necsim_core_bond::PositiveF64;
-use necsim_partitioning_core::{partition::Partition, LocalPartition};
+use necsim_partitioning_core::{
+    partition::{Partition, PartitionSize},
+    LocalPartition,
+};
 
 #[derive(Serialize, Debug)]
 #[allow(clippy::module_name_repetitions)]
@@ -11,20 +14,23 @@ pub struct GillespieArguments {
     pub parallelism_mode: ParallelismMode,
 }
 
-impl<'de> DeserializeState<'de, Partition> for GillespieArguments {
-    fn deserialize_state<D>(partition: &mut Partition, deserializer: D) -> Result<Self, D::Error>
+impl<'de> DeserializeState<'de, PartitionSize> for GillespieArguments {
+    fn deserialize_state<D>(
+        partition_size: &mut PartitionSize,
+        deserializer: D,
+    ) -> Result<Self, D::Error>
     where
         D: serde::de::Deserializer<'de>,
     {
-        let raw = GillespieArgumentsRaw::deserialize_state(partition, deserializer)?;
+        let raw = GillespieArgumentsRaw::deserialize_state(partition_size, deserializer)?;
 
         let parallelism_mode = match raw.parallelism_mode {
             Some(parallelism_mode) => parallelism_mode,
             None => {
-                if partition.size().get() > 1 {
-                    ParallelismMode::Lockstep
-                } else {
+                if partition_size.is_monolithic() {
                     ParallelismMode::Monolithic
+                } else {
+                    ParallelismMode::Lockstep
                 }
             },
         };
@@ -36,7 +42,7 @@ impl<'de> DeserializeState<'de, Partition> for GillespieArguments {
 #[derive(Default, Debug, DeserializeState)]
 #[serde(default, deny_unknown_fields)]
 #[serde(rename = "GillespieArguments")]
-#[serde(deserialize_state = "Partition")]
+#[serde(deserialize_state = "PartitionSize")]
 struct GillespieArgumentsRaw {
     #[serde(deserialize_state)]
     parallelism_mode: Option<ParallelismMode>,
@@ -61,8 +67,11 @@ pub enum ParallelismMode {
     Averaging(AveragingParallelismMode),
 }
 
-impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
-    fn deserialize_state<D>(partition: &mut Partition, deserializer: D) -> Result<Self, D::Error>
+impl<'de> DeserializeState<'de, PartitionSize> for ParallelismMode {
+    fn deserialize_state<D>(
+        partition_size: &mut PartitionSize,
+        deserializer: D,
+    ) -> Result<Self, D::Error>
     where
         D: serde::de::Deserializer<'de>,
     {
@@ -71,7 +80,7 @@ impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
         let parallelism_mode = ParallelismMode::deserialize(deserializer)?;
 
         match parallelism_mode {
-            ParallelismMode::Monolithic if partition.size().get() > 1 => {
+            ParallelismMode::Monolithic if !partition_size.is_monolithic() => {
                 Err(D::Error::custom(format!(
                     "parallelism_mode {parallelism_mode:?} is incompatible with non-monolithic \
                      partitioning."
@@ -81,7 +90,7 @@ impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
             | ParallelismMode::Lockstep
             | ParallelismMode::OptimisticLockstep
             | ParallelismMode::Averaging(..)
-                if partition.size().get() == 1 =>
+                if partition_size.is_monolithic() =>
             {
                 Err(D::Error::custom(format!(
                     "parallelism_mode {parallelism_mode:?} is incompatible with monolithic \

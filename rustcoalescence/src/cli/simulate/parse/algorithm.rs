@@ -1,4 +1,4 @@
-use necsim_partitioning_core::partition::Partition;
+use necsim_partitioning_core::partition::PartitionSize;
 
 use crate::args::{
     config::{algorithm::Algorithm, partitioning::Partitioning},
@@ -13,7 +13,7 @@ pub(in super::super) fn parse_and_normalise(
     partitioning: &Partitioning,
 ) -> anyhow::Result<Algorithm> {
     let SimulateArgsAlgorithmOnly { algorithm } =
-        try_parse_state("simulate", ron_args, &mut partitioning.get_partition())?;
+        try_parse_state("simulate", ron_args, &mut partitioning.get_size())?;
 
     normalised_args.algorithm(&algorithm);
 
@@ -21,7 +21,7 @@ pub(in super::super) fn parse_and_normalise(
 }
 
 #[derive(DeserializeState)]
-#[serde(deserialize_state = "Partition")]
+#[serde(deserialize_state = "PartitionSize")]
 #[serde(rename = "Simulate")]
 struct SimulateArgsAlgorithmOnly {
     #[serde(deserialize_state)]

@@ -107,7 +107,7 @@ impl<M: MathsCore, I: Iterator<Item = u64>> OriginPreSampler<M, I> {
         let _ = self.advance_by(partition.rank() as usize);
 
         OriginPreSampler {
-            proportion: self.proportion / partition.size(),
+            proportion: self.proportion / partition.size().0,
             inner: self.inner.step_by(partition.size().get() as usize),
             _marker: PhantomData::<M>,
         }

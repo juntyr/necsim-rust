@@ -20,7 +20,7 @@ use thiserror::Error;
 use necsim_core::{lineage::MigratingLineage, reporter::Reporter};
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
-use necsim_partitioning_core::{context::ReporterContext, partition::Partition, Partitioning};
+use necsim_partitioning_core::{context::ReporterContext, partition::PartitionSize, Partitioning};
 
 mod partition;
 mod request;
@@ -62,7 +62,7 @@ impl fmt::Debug for MpiPartitioning {
         }
 
         fmt.debug_struct(stringify!(MpiPartitioning))
-            .field("world", &self.get_partition().size().get())
+            .field("world", &self.get_size().get())
             .field(
                 "migration_interval",
                 &FormattedDuration(self.migration_interval),
@@ -78,7 +78,7 @@ impl fmt::Debug for MpiPartitioning {
 impl Serialize for MpiPartitioning {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut args = serializer.serialize_struct(stringify!(MpiPartitioning), 3)?;
-        args.serialize_field("world", &self.get_partition().size())?;
+        args.serialize_field("world", &self.get_size())?;
         args.serialize_field(
             "migration",
             &format_duration(self.migration_interval).to_string(),
@@ -95,10 +95,8 @@ impl<'de> Deserialize<'de> for MpiPartitioning {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let mut partitioning = Self::initialise().map_err(serde::de::Error::custom)?;
 
-        let raw = MpiPartitioningRaw::deserialize_state(
-            &mut partitioning.get_partition().size(),
-            deserializer,
-        )?;
+        let raw =
+            MpiPartitioningRaw::deserialize_state(&mut partitioning.get_size(), deserializer)?;
 
         partitioning.set_migration_interval(raw.migration_interval);
         partitioning.set_progress_interval(raw.progress_interval);
@@ -143,6 +141,15 @@ impl MpiPartitioning {
     pub fn set_progress_interval(&mut self, progress_interval: Duration) {
         self.progress_interval = progress_interval;
     }
+
+    #[debug_ensures(
+        self.get_size().is_monolithic() -> ret,
+        "monolithic partition is always root"
+    )]
+    #[must_use]
+    pub fn peek_is_root(&self) -> bool {
+        self.world.rank() == MpiPartitioning::ROOT_RANK
+    }
 }
 
 #[contract_trait]
@@ -150,21 +157,11 @@ impl Partitioning for MpiPartitioning {
     type Auxiliary = Option<EventLogRecorder>;
     type LocalPartition<'p, R: Reporter> = MpiLocalPartition<'p, R>;
 
-    fn is_monolithic(&self) -> bool {
-        self.world.size() <= 1
-    }
-
-    fn is_root(&self) -> bool {
-        self.world.rank() == MpiPartitioning::ROOT_RANK
-    }
-
-    fn get_partition(&self) -> Partition {
-        #[allow(clippy::cast_sign_loss)]
-        let rank = self.world.rank() as u32;
+    fn get_size(&self) -> PartitionSize {
         #[allow(clippy::cast_sign_loss)]
         let size = unsafe { NonZeroU32::new_unchecked(self.world.size() as u32) };
 
-        unsafe { Partition::new_unchecked(rank, size) }
+        PartitionSize(size)
     }
 
     /// # Errors
@@ -245,12 +242,12 @@ impl Partitioning for MpiPartitioning {
 #[derive(DeserializeState)]
 #[serde(rename = "MpiPartitioning")]
 #[serde(deny_unknown_fields)]
-#[serde(deserialize_state = "NonZeroU32")]
+#[serde(deserialize_state = "PartitionSize")]
 #[serde(default)]
 #[allow(dead_code)]
 struct MpiPartitioningRaw {
     #[serde(deserialize_state_with = "deserialize_state_mpi_world")]
-    world: Option<NonZeroU32>,
+    world: Option<PartitionSize>,
     #[serde(alias = "migration")]
     #[serde(with = "humantime_serde")]
     migration_interval: Duration,
@@ -270,10 +267,10 @@ impl Default for MpiPartitioningRaw {
 }
 
 fn deserialize_state_mpi_world<'de, D: Deserializer<'de>>(
-    mpi_world: &mut NonZeroU32,
+    mpi_world: &mut PartitionSize,
     deserializer: D,
-) -> Result<Option<NonZeroU32>, D::Error> {
-    let maybe_world = Option::<NonZeroU32>::deserialize(deserializer)?;
+) -> Result<Option<PartitionSize>, D::Error> {
+    let maybe_world = Option::<PartitionSize>::deserialize(deserializer)?;
 
     match maybe_world {
         None => Ok(None),

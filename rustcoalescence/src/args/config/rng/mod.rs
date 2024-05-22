@@ -4,7 +4,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_state::DeserializeState;
 
 use necsim_core::cogs::{MathsCore, RngCore};
-use necsim_partitioning_core::partition::Partition;
+use necsim_partitioning_core::partition::PartitionSize;
 
 mod base32;
 
@@ -24,9 +24,9 @@ pub struct Base32RngState<M: MathsCore, G: RngCore<M>> {
     marker: PhantomData<M>,
 }
 
-impl<'de, M: MathsCore, G: RngCore<M>> DeserializeState<'de, Partition> for Rng<M, G> {
+impl<'de, M: MathsCore, G: RngCore<M>> DeserializeState<'de, PartitionSize> for Rng<M, G> {
     fn deserialize_state<D: Deserializer<'de>>(
-        partition: &mut Partition,
+        partition_size: &mut PartitionSize,
         deserializer: D,
     ) -> Result<Self, D::Error> {
         let raw = RngRaw::<M, G>::deserialize(deserializer)?;
@@ -46,7 +46,7 @@ impl<'de, M: MathsCore, G: RngCore<M>> DeserializeState<'de, Partition> for Rng<
 
                 let sponge = Base32String::new(entropy.as_mut());
 
-                if partition.size().get() > 1 {
+                if !partition_size.is_monolithic() {
                     return Err(serde::de::Error::custom(format!(
                         "`Entropy` rng initialisation cannot be used with partitioned \
                          simulations.\n\nTry using `Sponge({sponge})` instead."

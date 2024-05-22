@@ -21,7 +21,7 @@ impl fmt::Display for PartitionRankOutOfBounds {
 #[serde(try_from = "PartitionRaw")]
 pub struct Partition {
     rank: u32,
-    size: NonZeroU32,
+    size: PartitionSize,
 }
 
 impl Partition {
@@ -30,7 +30,7 @@ impl Partition {
     /// # Errors
     ///
     /// Returns `PartitionRankOutOfBounds` if `rank >= size`.
-    pub const fn try_new(rank: u32, size: NonZeroU32) -> Result<Self, PartitionRankOutOfBounds> {
+    pub const fn try_new(rank: u32, size: PartitionSize) -> Result<Self, PartitionRankOutOfBounds> {
         if rank < size.get() {
             Ok(Self { rank, size })
         } else {
@@ -44,7 +44,7 @@ impl Partition {
     ///
     /// The number of partitions must be strictly greater than `rank`.
     #[must_use]
-    pub const unsafe fn new_unchecked(rank: u32, size: NonZeroU32) -> Self {
+    pub const unsafe fn new_unchecked(rank: u32, size: PartitionSize) -> Self {
         Self { rank, size }
     }
 
@@ -52,7 +52,7 @@ impl Partition {
     pub const fn monolithic() -> Self {
         Self {
             rank: 0,
-            size: unsafe { NonZeroU32::new_unchecked(1) },
+            size: PartitionSize::MONOLITHIC,
         }
     }
 
@@ -62,7 +62,7 @@ impl Partition {
     }
 
     #[must_use]
-    pub const fn size(self) -> NonZeroU32 {
+    pub const fn size(self) -> PartitionSize {
         self.size
     }
 
@@ -85,5 +85,30 @@ impl TryFrom<PartitionRaw> for Partition {
 #[serde(rename = "Partition")]
 struct PartitionRaw {
     rank: u32,
-    size: NonZeroU32,
+    size: PartitionSize,
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct PartitionSize(pub NonZeroU32);
+
+impl PartitionSize {
+    pub const MONOLITHIC: Self = Self(NonZeroU32::MIN);
+
+    #[must_use]
+    pub const fn get(self) -> u32 {
+        self.0.get()
+    }
+
+    #[must_use]
+    pub const fn is_monolithic(self) -> bool {
+        self.0.get() == 1
+    }
+}
+
+impl fmt::Display for PartitionSize {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.write_fmt(format_args!("{}", self.0))
+    }
 }

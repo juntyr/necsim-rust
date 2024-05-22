@@ -17,7 +17,7 @@ pub mod iterator;
 pub mod partition;
 
 use context::ReporterContext;
-use partition::Partition;
+use partition::{Partition, PartitionSize};
 
 #[allow(clippy::inline_always, clippy::inline_fn_without_body)]
 #[contract_trait]
@@ -25,15 +25,7 @@ pub trait Partitioning: Sized {
     type LocalPartition<'p, R: Reporter>: LocalPartition<'p, R>;
     type Auxiliary;
 
-    fn is_monolithic(&self) -> bool;
-
-    #[debug_ensures(
-        self.is_monolithic() -> ret,
-        "monolithic partition is always root"
-    )]
-    fn is_root(&self) -> bool;
-
-    fn get_partition(&self) -> Partition;
+    fn get_size(&self) -> PartitionSize;
 
     fn with_local_partition<
         R: Reporter,

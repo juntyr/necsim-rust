@@ -1,4 +1,4 @@
-use necsim_partitioning_core::partition::Partition;
+use necsim_partitioning_core::partition::PartitionSize;
 
 use crate::args::{
     config::{partitioning::Partitioning, pause::Pause},
@@ -13,7 +13,7 @@ pub(in super::super) fn parse_and_normalise(
     partitioning: &Partitioning,
 ) -> anyhow::Result<Option<Pause>> {
     let SimulateArgsPauseOnly { pause } =
-        try_parse_state("simulate", ron_args, &mut partitioning.get_partition())?;
+        try_parse_state("simulate", ron_args, &mut partitioning.get_size())?;
 
     normalised_args.pause(&pause);
 
@@ -21,7 +21,7 @@ pub(in super::super) fn parse_and_normalise(
 }
 
 #[derive(DeserializeState)]
-#[serde(deserialize_state = "Partition")]
+#[serde(deserialize_state = "PartitionSize")]
 #[serde(rename = "Simulate")]
 struct SimulateArgsPauseOnly {
     #[serde(default)]

@@ -25,6 +25,7 @@ static MINIMAL_LOGGER: MinimalLogger = MinimalLogger;
 fn main() -> Result<()> {
     // Set up the minimal logger to stdout/stderr
     log::set_logger(&MINIMAL_LOGGER)?;
+    log::set_max_level(log::LevelFilter::Info);
 
     // Parse and validate all command line arguments
     let args = RustcoalescenceArgs::parse();

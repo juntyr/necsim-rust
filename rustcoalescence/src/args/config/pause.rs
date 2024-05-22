@@ -10,7 +10,7 @@ use serde_state::DeserializeState;
 
 use necsim_core_bond::NonNegativeF64;
 use necsim_impls_std::lineage_file::saver::LineageFileSaver;
-use necsim_partitioning_core::partition::Partition;
+use necsim_partitioning_core::partition::PartitionSize;
 
 #[derive(Debug, Serialize)]
 pub struct Pause {
@@ -57,14 +57,14 @@ pub struct FuturePause {
     pub mode: PauseMode,
 }
 
-impl<'de> DeserializeState<'de, Partition> for Pause {
+impl<'de> DeserializeState<'de, PartitionSize> for Pause {
     fn deserialize_state<D: Deserializer<'de>>(
-        partition: &mut Partition,
+        partition_size: &mut PartitionSize,
         deserializer: D,
     ) -> Result<Self, D::Error> {
         let raw = PauseRaw::deserialize(deserializer)?;
 
-        if partition.size().get() > 1 {
+        if !partition_size.is_monolithic() {
             return Err(serde::de::Error::custom(
                 "Parallel pausing is not yet supported.",
             ));

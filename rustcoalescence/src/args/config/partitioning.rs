@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use necsim_partitioning_core::partition::Partition;
+use necsim_partitioning_core::partition::PartitionSize;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Partitioning {
@@ -11,23 +11,23 @@ pub enum Partitioning {
 }
 
 impl Partitioning {
-    pub fn is_root(&self) -> bool {
+    // pub fn is_root(&self) -> bool {
+    //     use necsim_partitioning_core::Partitioning;
+
+    //     match self {
+    //         Self::Monolithic(partitioning) => partitioning.is_root(),
+    //         #[cfg(feature = "necsim-partitioning-mpi")]
+    //         Self::Mpi(partitioning) => partitioning.is_root(),
+    //     }
+    // }
+
+    pub fn get_size(&self) -> PartitionSize {
         use necsim_partitioning_core::Partitioning;
 
         match self {
-            Self::Monolithic(partitioning) => partitioning.is_root(),
+            Self::Monolithic(partitioning) => partitioning.get_size(),
             #[cfg(feature = "necsim-partitioning-mpi")]
-            Self::Mpi(partitioning) => partitioning.is_root(),
-        }
-    }
-
-    pub fn get_partition(&self) -> Partition {
-        use necsim_partitioning_core::Partitioning;
-
-        match self {
-            Self::Monolithic(partitioning) => partitioning.get_partition(),
-            #[cfg(feature = "necsim-partitioning-mpi")]
-            Self::Mpi(partitioning) => partitioning.get_partition(),
+            Self::Mpi(partitioning) => partitioning.get_size(),
         }
     }
 

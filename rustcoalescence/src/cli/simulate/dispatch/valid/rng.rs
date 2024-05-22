@@ -49,7 +49,7 @@ where
     let rng: G = match parse::rng::parse_and_normalise(
         ron_args,
         normalised_args,
-        &mut A::get_logical_partition(&algorithm_args, &local_partition),
+        A::get_logical_partition(&algorithm_args, &local_partition),
     )? {
         RngArgs::Seed(seed) => SeedableRng::seed_from_u64(seed),
         RngArgs::Sponge(bytes) => {

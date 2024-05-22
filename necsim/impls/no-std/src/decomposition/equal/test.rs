@@ -4,7 +4,7 @@ use hashbrown::HashMap;
 
 use necsim_core::cogs::{Backup, Habitat};
 use necsim_core_bond::OffByOneU32;
-use necsim_partitioning_core::partition::Partition;
+use necsim_partitioning_core::partition::{Partition, PartitionSize};
 
 use crate::{
     cogs::{
@@ -33,7 +33,8 @@ fn test_equal_area_decomposition() {
             for partition in 1..=(width * height + 1) {
                 let (successful, decomposition) = match EqualDecomposition::area(
                     &habitat,
-                    Partition::try_new(0, NonZeroU32::new(partition).unwrap()).unwrap(),
+                    Partition::try_new(0, PartitionSize(NonZeroU32::new(partition).unwrap()))
+                        .unwrap(),
                 ) {
                     Ok(decomposition) => (true, decomposition),
                     Err(decomposition) => (false, decomposition),
@@ -112,7 +113,8 @@ fn test_equal_weight_decomposition() {
             for partition in 1..=(local * 8 + meta * 8 + 1) {
                 let (successful, decomposition) = match EqualDecomposition::weight(
                     &habitat,
-                    Partition::try_new(0, NonZeroU32::new(partition).unwrap()).unwrap(),
+                    Partition::try_new(0, PartitionSize(NonZeroU32::new(partition).unwrap()))
+                        .unwrap(),
                 ) {
                     Ok(decomposition) => (true, decomposition),
                     Err(decomposition) => (false, decomposition),
@@ -188,7 +190,7 @@ fn equal_area_stores_subdomain() {
 
     let equal_area_decomposition = EqualDecomposition::area(
         &habitat,
-        Partition::try_new(42, NonZeroU32::new(100).unwrap()).unwrap(),
+        Partition::try_new(42, PartitionSize(NonZeroU32::new(100).unwrap())).unwrap(),
     )
     .unwrap()
     .backup();
@@ -209,7 +211,7 @@ fn equal_weight_stores_subdomain() {
 
     let equal_area_decomposition = EqualDecomposition::area(
         &habitat,
-        Partition::try_new(24, NonZeroU32::new(1000).unwrap()).unwrap(),
+        Partition::try_new(24, PartitionSize(NonZeroU32::new(1000).unwrap())).unwrap(),
     )
     .unwrap()
     .backup();

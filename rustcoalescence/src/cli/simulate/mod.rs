@@ -36,12 +36,13 @@ pub fn simulate_with_logger(simulate_args: CommandArgs) -> anyhow::Result<()> {
 
     let partitioning = parse::partitioning::parse_and_normalise(&ron_args, &mut normalised_args)?;
 
-    // Only log to stdout/stderr if the partition is the root partition
-    log::set_max_level(if partitioning.is_root() {
-        log::LevelFilter::Info
-    } else {
-        log::LevelFilter::Off
-    });
+    #[cfg(feature = "necsim-partitioning-mpi")]
+    if let crate::args::config::partitioning::Partitioning::Mpi(partitioning) = &partitioning {
+        // Only log to stdout/stderr in the MPI root partition
+        if !partitioning.peek_is_root() {
+            log::set_max_level(log::LevelFilter::Off);
+        }
+    }
 
     let pause = parse::pause::parse_and_normalise(&ron_args, &mut normalised_args, &partitioning)?;
     let sample = parse::sample::parse_and_normalise(&ron_args, &mut normalised_args, &pause)?;

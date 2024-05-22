@@ -26,7 +26,9 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_partitioning_core::{
-    iterator::ImmigrantPopIterator, partition::Partition, LocalPartition, MigrationMode,
+    iterator::ImmigrantPopIterator,
+    partition::{Partition, PartitionSize},
+    LocalPartition, MigrationMode,
 };
 
 use crate::{
@@ -141,7 +143,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
         #[allow(clippy::cast_sign_loss)]
         let size = unsafe { NonZeroU32::new_unchecked(self.world.size() as u32) };
 
-        unsafe { Partition::new_unchecked(rank, size) }
+        unsafe { Partition::new_unchecked(rank, PartitionSize(size)) }
     }
 
     fn migrate_individuals<'a, E: Iterator<Item = (u32, MigratingLineage)>>(

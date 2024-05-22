@@ -16,8 +16,10 @@ use necsim_core::{
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_partitioning_core::{
-    context::ReporterContext, iterator::ImmigrantPopIterator, partition::Partition, LocalPartition,
-    MigrationMode, Partitioning,
+    context::ReporterContext,
+    iterator::ImmigrantPopIterator,
+    partition::{Partition, PartitionSize},
+    LocalPartition, MigrationMode, Partitioning,
 };
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
@@ -53,16 +55,8 @@ impl Partitioning for MonolithicPartitioning {
     type Auxiliary = Option<EventLogRecorder>;
     type LocalPartition<'p, R: Reporter> = MonolithicLocalPartition<R>;
 
-    fn is_monolithic(&self) -> bool {
-        true
-    }
-
-    fn is_root(&self) -> bool {
-        true
-    }
-
-    fn get_partition(&self) -> Partition {
-        Partition::monolithic()
+    fn get_size(&self) -> PartitionSize {
+        PartitionSize::MONOLITHIC
     }
 
     /// # Errors

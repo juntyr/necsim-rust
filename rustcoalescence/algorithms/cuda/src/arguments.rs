@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_state::DeserializeState;
 
 use necsim_core_bond::PositiveF64;
-use necsim_partitioning_core::partition::Partition;
+use necsim_partitioning_core::partition::{Partition, PartitionSize};
 
 use necsim_impls_no_std::parallelisation::independent::{DedupCache, EventSlice, RelativeCapacity};
 
@@ -28,8 +28,11 @@ pub enum ParallelismMode {
     IsolatedLandscape(IsolatedParallelismMode),
 }
 
-impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
-    fn deserialize_state<D>(partition: &mut Partition, deserializer: D) -> Result<Self, D::Error>
+impl<'de> DeserializeState<'de, PartitionSize> for ParallelismMode {
+    fn deserialize_state<D>(
+        partition_size: &mut PartitionSize,
+        deserializer: D,
+    ) -> Result<Self, D::Error>
     where
         D: serde::de::Deserializer<'de>,
     {
@@ -41,7 +44,7 @@ impl<'de> DeserializeState<'de, Partition> for ParallelismMode {
             ParallelismMode::Monolithic(..)
             | ParallelismMode::IsolatedIndividuals(..)
             | ParallelismMode::IsolatedLandscape(..)
-                if partition.size().get() > 1 =>
+                if !partition_size.is_monolithic() =>
             {
                 Err(D::Error::custom(format!(
                     "parallelism_mode {parallelism_mode:?} is incompatible with non-monolithic \
@@ -66,18 +69,21 @@ pub struct CudaArguments {
     pub parallelism_mode: ParallelismMode,
 }
 
-impl<'de> DeserializeState<'de, Partition> for CudaArguments {
-    fn deserialize_state<D>(partition: &mut Partition, deserializer: D) -> Result<Self, D::Error>
+impl<'de> DeserializeState<'de, PartitionSize> for CudaArguments {
+    fn deserialize_state<D>(
+        partition_size: &mut PartitionSize,
+        deserializer: D,
+    ) -> Result<Self, D::Error>
     where
         D: serde::de::Deserializer<'de>,
     {
-        let raw = CudaArgumentsRaw::deserialize_state(partition, deserializer)?;
+        let raw = CudaArgumentsRaw::deserialize_state(partition_size, deserializer)?;
 
         let parallelism_mode = if let Some(parallelism_mode) = raw.parallelism_mode {
             parallelism_mode
-        } else if partition.size().get() > 1 {
+        } else if !partition_size.is_monolithic() {
             return Err(serde::de::Error::custom(
-                "The CUDA algorithm is (currently) incompatible with MPI partitioning.",
+                "The CUDA algorithm is (currently) incompatible with non-monolithic partitioning.",
             ));
         } else {
             ParallelismMode::Monolithic(MonolithicParallelismMode {
@@ -102,7 +108,7 @@ impl<'de> DeserializeState<'de, Partition> for CudaArguments {
 
 #[derive(Debug, DeserializeState)]
 #[serde(default, deny_unknown_fields)]
-#[serde(deserialize_state = "Partition")]
+#[serde(deserialize_state = "PartitionSize")]
 pub struct CudaArgumentsRaw {
     pub device: u32,
     pub ptx_jit: bool,
