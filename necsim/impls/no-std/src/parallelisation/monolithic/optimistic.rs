@@ -87,7 +87,7 @@ pub fn simulate<
 
     while proxy
         .local_partition()
-        .reduce_vote_continue(!simulation.is_done())
+        .reduce_vote_any(!simulation.is_done())
     {
         let next_safe_time = global_safe_time + independent_time_slice;
 
@@ -127,7 +127,7 @@ pub fn simulate<
                 MigrationMode::Default,
             ));
 
-            while proxy.local_partition().wait_for_termination() {
+            while proxy.local_partition().wait_for_termination().is_continue() {
                 immigrants.extend(proxy.local_partition().migrate_individuals(
                     &mut core::iter::empty(),
                     MigrationMode::Force,
@@ -141,7 +141,7 @@ pub fn simulate<
             // immigration
             if proxy
                 .local_partition()
-                .reduce_vote_continue(immigrants != last_immigrants)
+                .reduce_vote_any(immigrants != last_immigrants)
             {
                 // Roll back the simulation to the last backup, clear out all generated events
                 *simulation = simulation_backup.resume();

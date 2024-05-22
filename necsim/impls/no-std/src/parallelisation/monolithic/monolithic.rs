@@ -85,7 +85,7 @@ pub fn simulate<
 
     let status = Status::paused(
         local_partition
-            .reduce_vote_continue(simulation.active_lineage_sampler().number_active_lineages() > 0),
+            .reduce_vote_any(simulation.active_lineage_sampler().number_active_lineages() > 0),
     );
     let (global_time, global_steps) = local_partition.reduce_global_time_steps(time, steps);
 

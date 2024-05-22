@@ -2,6 +2,7 @@ use std::{
     fmt,
     marker::PhantomData,
     num::NonZeroU32,
+    ops::ControlFlow,
     time::{Duration, Instant},
 };
 
@@ -247,16 +248,13 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
         ImmigrantPopIterator::new(&mut self.migration_buffers[self.get_partition().rank() as usize])
     }
 
-    fn reduce_vote_continue(&self, local_continue: bool) -> bool {
-        let mut global_continue = local_continue;
+    fn reduce_vote_any(&self, vote: bool) -> bool {
+        let mut global_vote = vote;
 
-        self.world.all_reduce_into(
-            &local_continue,
-            &mut global_continue,
-            SystemOperation::logical_or(),
-        );
+        self.world
+            .all_reduce_into(&vote, &mut global_vote, SystemOperation::logical_or());
 
-        global_continue
+        global_vote
     }
 
     fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64> {
@@ -272,11 +270,11 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
         }
     }
 
-    fn wait_for_termination(&mut self) -> bool {
+    fn wait_for_termination(&mut self) -> ControlFlow<(), ()> {
         // This partition can only terminate once all migrations have been processed
         for buffer in self.migration_buffers.iter() {
             if !buffer.is_empty() {
-                return true;
+                return ControlFlow::Continue(());
             }
         }
 
@@ -284,7 +282,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
         //  sent and acknowledged (request finished + empty buffers)
         for buffer in self.mpi_migration_buffers.iter() {
             if !buffer.get_data().map_or(false, Vec::is_empty) {
-                return true;
+                return ControlFlow::Continue(());
             }
         }
 
@@ -309,12 +307,22 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
         self.communicated_since_last_barrier = communicated_since_last_barrier;
 
         // Wait if voting is ongoing or at least one partition voted to wait
-        let should_wait = match self.mpi_local_global_wait.test_for_data_mut() {
-            Some((_local_wait, global_wait)) => *global_wait,
-            None => true,
+        let should_wait = if let Some((_local_wait, global_wait)) =
+            self.mpi_local_global_wait.test_for_data_mut()
+        {
+            *global_wait
+        } else {
+            // Block until any new message has been received
+            self.world.any_process().probe();
+
+            true
         };
 
-        should_wait
+        if should_wait {
+            ControlFlow::Continue(())
+        } else {
+            ControlFlow::Break(())
+        }
     }
 
     fn reduce_global_time_steps(

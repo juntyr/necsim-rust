@@ -71,7 +71,7 @@ pub fn simulate<
 
     let mut total_steps = 0_u64;
 
-    while local_partition.reduce_vote_continue(!simulation.is_done()) {
+    while local_partition.reduce_vote_any(!simulation.is_done()) {
         let mut next_local_time = None;
 
         // Simulate for zero-steps (immediate early stop) without side effects
@@ -125,7 +125,7 @@ pub fn simulate<
         }
 
         // Synchronise after performing any inter-partition migration
-        while local_partition.wait_for_termination() {
+        while local_partition.wait_for_termination().is_continue() {
             for immigrant in local_partition.migrate_individuals(
                 &mut core::iter::empty(),
                 MigrationMode::Force,

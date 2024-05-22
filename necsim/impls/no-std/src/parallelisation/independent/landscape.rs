@@ -108,7 +108,7 @@ pub fn simulate<
     while !lineages.is_empty()
         || simulation.active_lineage_sampler().number_active_lineages() > 0
         || !simulation.emigration_exit().is_empty()
-        || proxy.local_partition().wait_for_termination()
+        || proxy.local_partition().wait_for_termination().is_continue()
     {
         proxy.report_total_progress(
             (Wrapping(lineages.len() as u64) + simulation.get_balanced_remaining_work()

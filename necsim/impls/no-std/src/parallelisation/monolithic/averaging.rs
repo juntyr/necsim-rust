@@ -74,7 +74,7 @@ pub fn simulate<
 
     let mut total_steps = 0_u64;
 
-    while local_partition.reduce_vote_continue(!simulation.is_done()) {
+    while local_partition.reduce_vote_any(!simulation.is_done()) {
         let next_safe_time = global_safe_time + independent_time_slice;
 
         let (_, new_steps) = simulation.simulate_incremental_early_stop(
@@ -110,7 +110,7 @@ pub fn simulate<
             simulation.immigration_entry_mut().push(immigrant);
         }
 
-        while local_partition.wait_for_termination() {
+        while local_partition.wait_for_termination().is_continue() {
             for mut immigrant in local_partition.migrate_individuals(
                 &mut core::iter::empty(),
                 MigrationMode::Force,

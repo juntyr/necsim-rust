@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, ops::ControlFlow};
 
 use anyhow::Result;
 
@@ -78,16 +78,20 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for RecordedMonolithicLocalPartition
         ImmigrantPopIterator::new(&mut self.loopback)
     }
 
-    fn reduce_vote_continue(&self, local_continue: bool) -> bool {
-        local_continue
+    fn reduce_vote_any(&self, vote: bool) -> bool {
+        vote
     }
 
     fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64> {
         Ok(local_time)
     }
 
-    fn wait_for_termination(&mut self) -> bool {
-        !self.loopback.is_empty()
+    fn wait_for_termination(&mut self) -> ControlFlow<(), ()> {
+        if self.loopback.is_empty() {
+            ControlFlow::Break(())
+        } else {
+            ControlFlow::Continue(())
+        }
     }
 
     fn reduce_global_time_steps(

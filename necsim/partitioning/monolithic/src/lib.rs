@@ -3,7 +3,7 @@
 #[macro_use]
 extern crate contracts;
 
-use std::fmt;
+use std::{fmt, ops::ControlFlow};
 
 use anyhow::Context;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -143,10 +143,10 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MonolithicLocalPartition<R> {
         }
     }
 
-    fn reduce_vote_continue(&self, local_continue: bool) -> bool {
+    fn reduce_vote_any(&self, vote: bool) -> bool {
         match self {
-            Self::Live(partition) => partition.reduce_vote_continue(local_continue),
-            Self::Recorded(partition) => partition.reduce_vote_continue(local_continue),
+            Self::Live(partition) => partition.reduce_vote_any(vote),
+            Self::Recorded(partition) => partition.reduce_vote_any(vote),
         }
     }
 
@@ -157,7 +157,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MonolithicLocalPartition<R> {
         }
     }
 
-    fn wait_for_termination(&mut self) -> bool {
+    fn wait_for_termination(&mut self) -> ControlFlow<(), ()> {
         match self {
             Self::Live(partition) => partition.wait_for_termination(),
             Self::Recorded(partition) => partition.wait_for_termination(),

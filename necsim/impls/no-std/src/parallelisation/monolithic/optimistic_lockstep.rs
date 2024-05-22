@@ -73,7 +73,7 @@ pub fn simulate<
 
     let mut total_steps = 0_u64;
 
-    while local_partition.reduce_vote_continue(!simulation.is_done()) {
+    while local_partition.reduce_vote_any(!simulation.is_done()) {
         // Get the next local emigration event time or +inf
         //  (we already know at least one partition has some next event time)
         let next_local_emigration_time = {
@@ -154,7 +154,7 @@ pub fn simulate<
         }
 
         // Synchronise after performing any inter-partition migration
-        while local_partition.wait_for_termination() {
+        while local_partition.wait_for_termination().is_continue() {
             for immigrant in local_partition.migrate_individuals(
                 &mut core::iter::empty(),
                 MigrationMode::Force,

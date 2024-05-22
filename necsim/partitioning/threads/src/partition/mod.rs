@@ -13,22 +13,21 @@ use necsim_partitioning_core::{
 
 mod parallel;
 mod root;
-mod utils;
 
 #[allow(clippy::module_name_repetitions)]
-pub use parallel::MpiParallelPartition;
+pub use parallel::ThreadsParallelPartition;
 #[allow(clippy::module_name_repetitions)]
-pub use root::MpiRootPartition;
+pub use root::ThreadsRootPartition;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub enum MpiLocalPartition<'p, R: Reporter> {
-    Root(Box<MpiRootPartition<'p, R>>),
-    Parallel(Box<MpiParallelPartition<'p, R>>),
+pub enum ThreadsLocalPartition<'p, R: Reporter> {
+    Root(Box<ThreadsRootPartition<'p, R>>),
+    Parallel(Box<ThreadsParallelPartition<'p, R>>),
 }
 
 #[contract_trait]
-impl<'p, R: Reporter> LocalPartition<'p, R> for MpiLocalPartition<'p, R> {
+impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsLocalPartition<'p, R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
     type IsLive = False;
     type Reporter = Self;
@@ -119,7 +118,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiLocalPartition<'p, R> {
     }
 }
 
-impl<'p, R: Reporter> Reporter for MpiLocalPartition<'p, R> {
+impl<'p, R: Reporter> Reporter for ThreadsLocalPartition<'p, R> {
     impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
         match self {
             Self::Root(partition) => partition.get_reporter().report_speciation(

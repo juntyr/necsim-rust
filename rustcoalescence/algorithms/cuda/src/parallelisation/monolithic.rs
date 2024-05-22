@@ -340,7 +340,7 @@ pub fn simulate<
 
     local_partition.report_progress_sync(slow_lineages.len() as u64);
 
-    let status = Status::paused(local_partition.reduce_vote_continue(!slow_lineages.is_empty()));
+    let status = Status::paused(local_partition.reduce_vote_any(!slow_lineages.is_empty()));
     let (global_time, global_steps) =
         local_partition.reduce_global_time_steps(total_time_max, total_steps_sum);
     let lineages = slow_lineages.into_iter().map(|(lineage, _)| lineage);

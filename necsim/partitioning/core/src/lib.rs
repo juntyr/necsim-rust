@@ -6,6 +6,8 @@ extern crate alloc;
 #[macro_use]
 extern crate contracts;
 
+use core::ops::ControlFlow;
+
 use necsim_core::{
     lineage::MigratingLineage,
     reporter::{boolean::Boolean, Reporter},
@@ -72,11 +74,11 @@ pub trait LocalPartition<'p, R: Reporter>: Sized {
     where
         'p: 'a;
 
-    fn reduce_vote_continue(&self, local_continue: bool) -> bool;
+    fn reduce_vote_any(&self, vote: bool) -> bool;
 
     fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64>;
 
-    fn wait_for_termination(&mut self) -> bool;
+    fn wait_for_termination(&mut self) -> ControlFlow<(), ()>;
 
     fn reduce_global_time_steps(
         &self,
