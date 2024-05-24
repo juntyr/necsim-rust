@@ -49,11 +49,13 @@ impl Partition {
     }
 
     #[must_use]
+    pub const fn root(size: PartitionSize) -> Self {
+        Self { rank: 0, size }
+    }
+
+    #[must_use]
     pub const fn monolithic() -> Self {
-        Self {
-            rank: 0,
-            size: PartitionSize::MONOLITHIC,
-        }
+        Self::root(PartitionSize::MONOLITHIC)
     }
 
     #[must_use]
@@ -89,6 +91,7 @@ struct PartitionRaw {
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[allow(clippy::unsafe_derive_deserialize)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct PartitionSize(pub NonZeroU32);
@@ -104,6 +107,12 @@ impl PartitionSize {
     #[must_use]
     pub const fn is_monolithic(self) -> bool {
         self.0.get() == 1
+    }
+
+    #[must_use]
+    pub fn partitions(self) -> impl ExactSizeIterator<Item = Partition> {
+        // Safety: rank is in bounds
+        (0..self.get()).map(move |rank| unsafe { Partition::new_unchecked(rank, self) })
     }
 }
 

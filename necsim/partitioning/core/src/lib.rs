@@ -74,14 +74,15 @@ pub trait LocalPartition<'p, R: Reporter>: Sized {
     where
         'p: 'a;
 
-    fn reduce_vote_any(&self, vote: bool) -> bool;
+    fn reduce_vote_any(&mut self, vote: bool) -> bool;
 
-    fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64>;
+    fn reduce_vote_min_time(&mut self, local_time: PositiveF64)
+        -> Result<PositiveF64, PositiveF64>;
 
     fn wait_for_termination(&mut self) -> ControlFlow<(), ()>;
 
     fn reduce_global_time_steps(
-        &self,
+        &mut self,
         local_time: NonNegativeF64,
         local_steps: u64,
     ) -> (NonNegativeF64, u64);

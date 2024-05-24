@@ -248,7 +248,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
         ImmigrantPopIterator::new(&mut self.migration_buffers[self.get_partition().rank() as usize])
     }
 
-    fn reduce_vote_any(&self, vote: bool) -> bool {
+    fn reduce_vote_any(&mut self, vote: bool) -> bool {
         let mut global_vote = vote;
 
         self.world
@@ -257,7 +257,10 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
         global_vote
     }
 
-    fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64> {
+    fn reduce_vote_min_time(
+        &mut self,
+        local_time: PositiveF64,
+    ) -> Result<PositiveF64, PositiveF64> {
         let local_partition_rank = self.get_partition().rank();
 
         let (global_min_time, global_min_rank) =
@@ -326,7 +329,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
     }
 
     fn reduce_global_time_steps(
-        &self,
+        &mut self,
         local_time: NonNegativeF64,
         local_steps: u64,
     ) -> (NonNegativeF64, u64) {

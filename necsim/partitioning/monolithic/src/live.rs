@@ -68,11 +68,14 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for LiveMonolithicLocalPartition<R> 
         ImmigrantPopIterator::new(&mut self.loopback)
     }
 
-    fn reduce_vote_any(&self, vote: bool) -> bool {
+    fn reduce_vote_any(&mut self, vote: bool) -> bool {
         vote
     }
 
-    fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64> {
+    fn reduce_vote_min_time(
+        &mut self,
+        local_time: PositiveF64,
+    ) -> Result<PositiveF64, PositiveF64> {
         Ok(local_time)
     }
 
@@ -85,7 +88,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for LiveMonolithicLocalPartition<R> 
     }
 
     fn reduce_global_time_steps(
-        &self,
+        &mut self,
         local_time: NonNegativeF64,
         local_steps: u64,
     ) -> (NonNegativeF64, u64) {

@@ -143,14 +143,17 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MonolithicLocalPartition<R> {
         }
     }
 
-    fn reduce_vote_any(&self, vote: bool) -> bool {
+    fn reduce_vote_any(&mut self, vote: bool) -> bool {
         match self {
             Self::Live(partition) => partition.reduce_vote_any(vote),
             Self::Recorded(partition) => partition.reduce_vote_any(vote),
         }
     }
 
-    fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64> {
+    fn reduce_vote_min_time(
+        &mut self,
+        local_time: PositiveF64,
+    ) -> Result<PositiveF64, PositiveF64> {
         match self {
             Self::Live(partition) => partition.reduce_vote_min_time(local_time),
             Self::Recorded(partition) => partition.reduce_vote_min_time(local_time),
@@ -165,7 +168,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MonolithicLocalPartition<R> {
     }
 
     fn reduce_global_time_steps(
-        &self,
+        &mut self,
         local_time: NonNegativeF64,
         local_steps: u64,
     ) -> (NonNegativeF64, u64) {

@@ -6,6 +6,7 @@ extern crate contracts;
 use std::{fmt, time::Duration};
 
 use humantime_serde::re::humantime::format_duration;
+use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 
@@ -15,21 +16,15 @@ use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_partitioning_core::{context::ReporterContext, partition::PartitionSize, Partitioning};
 
 mod partition;
+mod vote;
 
 pub use partition::{ThreadsLocalPartition, ThreadsParallelPartition, ThreadsRootPartition};
+use vote::Vote;
 
 #[derive(Error, Debug)]
 pub enum ThreadsPartitioningError {
     #[error("Threads partitioning must be initialised with at least two partitions.")]
     NoParallelism,
-}
-
-#[derive(Error, Debug)]
-pub enum MpiLocalPartitionError {
-    #[error("MPI partitioning requires an event log.")]
-    MissingEventLog,
-    #[error("Failed to create the event sub-log.")]
-    InvalidEventSubLog,
 }
 
 pub struct ThreadsPartitioning {
@@ -123,7 +118,47 @@ impl Partitioning for ThreadsPartitioning {
         _event_log: Self::Auxiliary,
         _inner: F,
     ) -> anyhow::Result<Q> {
-        unimplemented!()
+        let vote_any = Vote::new(self.size.get() as usize);
+        let vote_min_time = Vote::new_with_dummy(self.size.get() as usize, (PositiveF64::one(), 0));
+        let vote_time_steps =
+            Vote::new_with_dummy(self.size.get() as usize, (NonNegativeF64::zero(), 0));
+
+        std::thread::scope(|scope| {
+            let vote_any = &vote_any;
+            let vote_min_time = &vote_min_time;
+            let vote_time_steps = &vote_time_steps;
+
+            for partition in self.size.partitions() {
+                let thread_handle = scope.spawn::<_, ()>(move || {
+                    let _local_partition = if partition.is_root() {
+                        ThreadsLocalPartition::Root(Box::new(ThreadsRootPartition::<R>::new(
+                            partition,
+                            vote_any,
+                            vote_min_time,
+                            vote_time_steps,
+                            self.migration_interval,
+                            self.progress_interval,
+                        )))
+                    } else {
+                        ThreadsLocalPartition::Parallel(Box::new(
+                            ThreadsParallelPartition::<R>::new(
+                                partition,
+                                vote_any,
+                                vote_min_time,
+                                vote_time_steps,
+                                self.migration_interval,
+                                self.progress_interval,
+                            ),
+                        ))
+                    };
+                });
+
+                // we don't need the thread result and implicitly propagate thread panics
+                std::mem::drop(thread_handle);
+            }
+        });
+
+        todo!()
     }
 }
 

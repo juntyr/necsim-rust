@@ -11,8 +11,13 @@ use necsim_partitioning_core::{
     iterator::ImmigrantPopIterator, partition::Partition, LocalPartition, MigrationMode,
 };
 
+use crate::vote::Vote;
+
 pub struct ThreadsRootPartition<'p, R: Reporter> {
     partition: Partition,
+    vote_any: Vote<bool>,
+    vote_min_time: Vote<(PositiveF64, u32)>,
+    vote_time_steps: Vote<(NonNegativeF64, u64)>,
     _migration_interval: Duration,
     _progress_interval: Duration,
     _marker: PhantomData<(&'p (), R)>,
@@ -26,13 +31,19 @@ impl<'p, R: Reporter> fmt::Debug for ThreadsRootPartition<'p, R> {
 
 impl<'p, R: Reporter> ThreadsRootPartition<'p, R> {
     #[must_use]
-    pub(crate) fn _new(
+    pub(crate) fn new(
         partition: Partition,
+        vote_any: &Vote<bool>,
+        vote_min_time: &Vote<(PositiveF64, u32)>,
+        vote_time_steps: &Vote<(NonNegativeF64, u64)>,
         migration_interval: Duration,
         progress_interval: Duration,
     ) -> Self {
         Self {
             partition,
+            vote_any: vote_any.clone(),
+            vote_min_time: vote_min_time.clone(),
+            vote_time_steps: vote_time_steps.clone(),
             _migration_interval: migration_interval,
             _progress_interval: progress_interval,
             _marker: PhantomData::<(&'p (), R)>,
@@ -70,12 +81,29 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsRootPartition<'p, R> {
         unimplemented!()
     }
 
-    fn reduce_vote_any(&self, _vote: bool) -> bool {
-        unimplemented!()
+    fn reduce_vote_any(&mut self, vote: bool) -> bool {
+        self.vote_any.vote(|acc| match acc {
+            None => vote,
+            Some(acc) => *acc || vote,
+        })
     }
 
-    fn reduce_vote_min_time(&self, _local_time: PositiveF64) -> Result<PositiveF64, PositiveF64> {
-        unimplemented!()
+    fn reduce_vote_min_time(
+        &mut self,
+        local_time: PositiveF64,
+    ) -> Result<PositiveF64, PositiveF64> {
+        let vote = (local_time, self.partition.rank());
+
+        let result = self.vote_min_time.vote(|acc| match acc {
+            None => vote,
+            Some(acc) => vote.min(*acc),
+        });
+
+        if result.1 == self.partition.rank() {
+            Ok(result.0)
+        } else {
+            Err(result.0)
+        }
     }
 
     fn wait_for_termination(&mut self) -> ControlFlow<(), ()> {
@@ -83,11 +111,16 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsRootPartition<'p, R> {
     }
 
     fn reduce_global_time_steps(
-        &self,
-        _local_time: NonNegativeF64,
-        _local_steps: u64,
+        &mut self,
+        local_time: NonNegativeF64,
+        local_steps: u64,
     ) -> (NonNegativeF64, u64) {
-        unimplemented!()
+        self.vote_time_steps.vote(|acc| match acc {
+            None => (local_time, local_steps),
+            Some((global_time, global_steps)) => {
+                (local_time.max(*global_time), local_steps + (*global_steps))
+            },
+        })
     }
 
     fn report_progress_sync(&mut self, _remaining: u64) {
