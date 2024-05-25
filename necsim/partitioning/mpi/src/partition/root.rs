@@ -37,7 +37,6 @@ pub struct MpiRootPartition<'p, R: Reporter> {
     recorder: EventLogRecorder,
     finalised: bool,
     progress_interval: Duration,
-    // _marker: PhantomData<&'p ()>,
 }
 
 impl<'p, R: Reporter> fmt::Debug for MpiRootPartition<'p, R> {
@@ -95,7 +94,6 @@ impl<'p, R: Reporter> MpiRootPartition<'p, R> {
             recorder,
             finalised: false,
             progress_interval,
-            // _marker: PhantomData::<&'p ()>,
         }
     }
 }

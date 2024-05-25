@@ -3,7 +3,7 @@
 #[macro_use]
 extern crate contracts;
 
-use std::{fmt, sync::mpsc::sync_channel, time::Duration};
+use std::{fmt, num::Wrapping, ops::ControlFlow, sync::mpsc::sync_channel, time::Duration};
 
 use anyhow::Context;
 use humantime_serde::re::humantime::format_duration;
@@ -11,7 +11,10 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 
-use necsim_core::reporter::Reporter;
+use necsim_core::reporter::{
+    boolean::{False, True},
+    FilteredReporter, Reporter,
+};
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_partitioning_core::{context::ReporterContext, partition::PartitionSize, Partitioning};
@@ -19,8 +22,10 @@ use necsim_partitioning_core::{context::ReporterContext, partition::PartitionSiz
 mod partition;
 mod vote;
 
-pub use partition::{ThreadsLocalPartition, ThreadsParallelPartition, ThreadsRootPartition};
+pub use partition::ThreadsLocalPartition;
 use vote::Vote;
+
+use crate::vote::AsyncVote;
 
 #[derive(Error, Debug)]
 pub enum ThreadsPartitioningError {
@@ -128,25 +133,37 @@ impl Partitioning for ThreadsPartitioning {
         Q,
     >(
         self,
-        _reporter_context: P,
+        reporter_context: P,
         event_log: Self::Auxiliary,
         _inner: F,
     ) -> anyhow::Result<Q> {
+        // TODO: add support for multithread live reporting
+        let Some(event_log) = event_log else {
+            anyhow::bail!(ThreadsLocalPartitionError::MissingEventLog)
+        };
+
+        let mut progress_reporter: FilteredReporter<R, False, False, True> =
+            reporter_context.try_build()?;
+        let (progress_sender, progress_receiver) = sync_channel(self.size.get() as usize);
+        let progress_channels = self
+            .size
+            .partitions()
+            .map(|_| progress_sender.clone())
+            .collect::<Vec<_>>();
+        std::mem::drop(progress_sender);
+
         let vote_any = Vote::new(self.size.get() as usize);
         let vote_min_time = Vote::new_with_dummy(self.size.get() as usize, (PositiveF64::one(), 0));
         let vote_time_steps =
             Vote::new_with_dummy(self.size.get() as usize, (NonNegativeF64::zero(), 0));
+        let vote_termination =
+            AsyncVote::new_with_dummy(self.size.get() as usize, ControlFlow::Continue(()));
 
         let (emigration_channels, immigration_channels): (Vec<_>, Vec<_>) = self
             .size
             .partitions()
             .map(|_| sync_channel(self.size.get() as usize))
             .unzip();
-
-        // TODO: add support for multithread live reporting
-        let Some(event_log) = event_log else {
-            anyhow::bail!(ThreadsLocalPartitionError::MissingEventLog)
-        };
 
         let event_logs = self
             .size
@@ -166,46 +183,47 @@ impl Partitioning for ThreadsPartitioning {
             let vote_any = &vote_any;
             let vote_min_time = &vote_min_time;
             let vote_time_steps = &vote_time_steps;
+            let vote_termination = &vote_termination;
             let emigration_channels = emigration_channels.as_slice();
 
-            for ((partition, immigration_channel), event_log) in self
+            for (((partition, immigration_channel), event_log), progress_channel) in self
                 .size
                 .partitions()
                 .zip(immigration_channels)
                 .zip(event_logs)
+                .zip(progress_channels)
             {
                 let thread_handle = scope.spawn::<_, ()>(move || {
-                    let _local_partition = if partition.is_root() {
-                        ThreadsLocalPartition::Root(Box::new(ThreadsRootPartition::<R>::new(
-                            partition,
-                            vote_any,
-                            vote_min_time,
-                            vote_time_steps,
-                            emigration_channels,
-                            immigration_channel,
-                            self.migration_interval,
-                            event_log,
-                            self.progress_interval,
-                        )))
-                    } else {
-                        ThreadsLocalPartition::Parallel(Box::new(
-                            ThreadsParallelPartition::<R>::new(
-                                partition,
-                                vote_any,
-                                vote_min_time,
-                                vote_time_steps,
-                                emigration_channels,
-                                immigration_channel,
-                                self.migration_interval,
-                                event_log,
-                                self.progress_interval,
-                            ),
-                        ))
-                    };
+                    let _local_partition = ThreadsLocalPartition::<R>::new(
+                        partition,
+                        vote_any,
+                        vote_min_time,
+                        vote_time_steps,
+                        vote_termination,
+                        emigration_channels,
+                        immigration_channel,
+                        self.migration_interval,
+                        event_log,
+                        progress_channel,
+                        self.progress_interval,
+                    );
                 });
 
                 // we don't need the thread result and implicitly propagate thread panics
                 std::mem::drop(thread_handle);
+            }
+
+            let mut progress_remaining = vec![0; self.size.get() as usize].into_boxed_slice();
+            for (remaining, rank) in progress_receiver {
+                progress_remaining[rank as usize] = remaining;
+                progress_reporter.report_progress(
+                    (&progress_remaining
+                        .iter()
+                        .map(|r| Wrapping(*r))
+                        .sum::<Wrapping<u64>>()
+                        .0)
+                        .into(),
+                );
             }
         });
 

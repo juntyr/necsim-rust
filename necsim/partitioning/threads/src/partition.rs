@@ -3,6 +3,7 @@ use std::{
     marker::PhantomData,
     ops::ControlFlow,
     sync::mpsc::{Receiver, SyncSender, TrySendError},
+    task::Poll,
     time::{Duration, Instant},
 };
 
@@ -19,34 +20,37 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_partitioning_core::{partition::Partition, LocalPartition, MigrationMode};
 
-use crate::vote::Vote;
+use crate::vote::{AsyncVote, Vote};
 
-use super::ImmigrantPopIterator;
-
-pub struct ThreadsRootPartition<'p, R: Reporter> {
+#[allow(clippy::module_name_repetitions)]
+pub struct ThreadsLocalPartition<'p, R: Reporter> {
     partition: Partition,
     vote_any: Vote<bool>,
     vote_min_time: Vote<(PositiveF64, u32)>,
     vote_time_steps: Vote<(NonNegativeF64, u64)>,
+    vote_termination: AsyncVote<ControlFlow<(), ()>>,
     emigration_buffers: Box<[Vec<MigratingLineage>]>,
     emigration_channels: Box<[SyncSender<Vec<MigratingLineage>>]>,
     immigration_buffers: Vec<Vec<MigratingLineage>>,
     immigration_channel: Receiver<Vec<MigratingLineage>>,
     last_migration_times: Box<[Instant]>,
-    communicated_since_last_barrier: bool,
+    communicated_since_last_termination_vote: bool,
     migration_interval: Duration,
     recorder: EventLogRecorder,
-    _progress_interval: Duration,
+    local_remaining: u64,
+    progress_channel: SyncSender<(u64, u32)>,
+    last_report_time: Instant,
+    progress_interval: Duration,
     _marker: PhantomData<(&'p (), R)>,
 }
 
-impl<'p, R: Reporter> fmt::Debug for ThreadsRootPartition<'p, R> {
+impl<'p, R: Reporter> fmt::Debug for ThreadsLocalPartition<'p, R> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(ThreadsRootPartition)).finish()
     }
 }
 
-impl<'p, R: Reporter> ThreadsRootPartition<'p, R> {
+impl<'p, R: Reporter> ThreadsLocalPartition<'p, R> {
     #[allow(clippy::too_many_arguments)]
     #[must_use]
     pub(crate) fn new(
@@ -54,10 +58,12 @@ impl<'p, R: Reporter> ThreadsRootPartition<'p, R> {
         vote_any: &Vote<bool>,
         vote_min_time: &Vote<(PositiveF64, u32)>,
         vote_time_steps: &Vote<(NonNegativeF64, u64)>,
+        vote_termination: &AsyncVote<ControlFlow<(), ()>>,
         emigration_channels: &[SyncSender<Vec<MigratingLineage>>],
         immigration_channel: Receiver<Vec<MigratingLineage>>,
         migration_interval: Duration,
         mut recorder: EventLogRecorder,
+        progress_channel: SyncSender<(u64, u32)>,
         progress_interval: Duration,
     ) -> Self {
         recorder.set_event_filter(R::ReportSpeciation::VALUE, R::ReportDispersal::VALUE);
@@ -74,6 +80,7 @@ impl<'p, R: Reporter> ThreadsRootPartition<'p, R> {
             vote_any: vote_any.clone(),
             vote_min_time: vote_min_time.clone(),
             vote_time_steps: vote_time_steps.clone(),
+            vote_termination: vote_termination.clone(),
             emigration_buffers: emigration_buffers.into_boxed_slice(),
             emigration_channels: Vec::from(emigration_channels).into_boxed_slice(),
             immigration_buffers: Vec::new(),
@@ -83,17 +90,20 @@ impl<'p, R: Reporter> ThreadsRootPartition<'p, R> {
                 partition_size
             ]
             .into_boxed_slice(),
-            communicated_since_last_barrier: false,
+            communicated_since_last_termination_vote: false,
             migration_interval,
             recorder,
-            _progress_interval: progress_interval,
+            local_remaining: 0,
+            progress_channel,
+            last_report_time: now.checked_sub(progress_interval).unwrap_or(now),
+            progress_interval,
             _marker: PhantomData::<(&'p (), R)>,
         }
     }
 }
 
 #[contract_trait]
-impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsRootPartition<'p, R> {
+impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsLocalPartition<'p, R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
     type IsLive = False;
     type Reporter = Self;
@@ -167,7 +177,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsRootPartition<'p, R> {
                             self.last_migration_times[rank_index] = now;
 
                             // we cannot terminate in this round since this partition gave up work
-                            self.communicated_since_last_barrier = true;
+                            self.communicated_since_last_termination_vote = true;
                         },
                         Err(TrySendError::Full(emigration_buffer_message)) => {
                             *emigration_buffer = emigration_buffer_message;
@@ -209,7 +219,42 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsRootPartition<'p, R> {
     }
 
     fn wait_for_termination(&mut self) -> ControlFlow<(), ()> {
-        unimplemented!()
+        // This partition can only terminate once all emigrations have been processed
+        for buffer in self.emigration_buffers.iter() {
+            if !buffer.is_empty() {
+                return ControlFlow::Continue(());
+            }
+        }
+        // This partition can only terminate once all immigrations have been processed
+        if !self.immigration_buffers.is_empty() {
+            return ControlFlow::Continue(());
+        }
+
+        // This partition can only terminate if there was no communication since the
+        // last vote
+        let local_wait = if self.communicated_since_last_termination_vote {
+            ControlFlow::Continue(())
+        } else {
+            ControlFlow::Break(())
+        };
+
+        // Participate in an async poll, only blocks on a barrier once all votes are in
+        let async_vote = self.vote_termination.vote(
+            |global_wait| {
+                self.communicated_since_last_termination_vote = false;
+
+                match global_wait {
+                    Some(ControlFlow::Continue(())) => ControlFlow::Continue(()),
+                    Some(ControlFlow::Break(())) | None => local_wait,
+                }
+            },
+            self.partition.rank(),
+        );
+
+        match async_vote {
+            Poll::Pending => ControlFlow::Continue(()),
+            Poll::Ready(result) => result,
+        }
     }
 
     fn reduce_global_time_steps(
@@ -230,11 +275,11 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsRootPartition<'p, R> {
     }
 
     fn finalise_reporting(self) {
-        unimplemented!()
+        std::mem::drop(self);
     }
 }
 
-impl<'p, R: Reporter> Reporter for ThreadsRootPartition<'p, R> {
+impl<'p, R: Reporter> Reporter for ThreadsLocalPartition<'p, R> {
     impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
         self.recorder.record_speciation(speciation);
     });
@@ -243,7 +288,59 @@ impl<'p, R: Reporter> Reporter for ThreadsRootPartition<'p, R> {
         self.recorder.record_dispersal(dispersal);
     });
 
-    impl_report!(progress(&mut self, _remaining: MaybeUsed<R::ReportProgress>) {
-        unimplemented!()
+    impl_report!(progress(&mut self, remaining: MaybeUsed<R::ReportProgress>) {
+        if self.local_remaining == *remaining {
+            return;
+        }
+
+        // Only send progress if there is no ongoing termination vote
+        if !self.vote_termination.is_pending() {
+            let now = Instant::now();
+
+            if now.duration_since(self.last_report_time) >= self.progress_interval {
+                match self.progress_channel.try_send((*remaining, self.partition.rank())) {
+                    Ok(()) => {
+                        self.last_report_time = now;
+                        self.local_remaining = *remaining;
+                    },
+                    Err(TrySendError::Full(_)) => (),
+                    Err(TrySendError::Disconnected(_)) =>  {
+                        panic!("threads partitioning progress channel disconnected")
+                    },
+                }
+            }
+        }
     });
+}
+
+pub struct ImmigrantPopIterator<'i> {
+    immigrants: &'i mut Vec<Vec<MigratingLineage>>,
+}
+
+impl<'i> ImmigrantPopIterator<'i> {
+    fn new(immigrants: &'i mut Vec<Vec<MigratingLineage>>) -> Self {
+        Self { immigrants }
+    }
+}
+
+impl<'i> Iterator for ImmigrantPopIterator<'i> {
+    type Item = MigratingLineage;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut next_immigrants = self.immigrants.last_mut()?;
+
+        loop {
+            if let Some(next) = next_immigrants.pop() {
+                return Some(next);
+            }
+
+            self.immigrants.pop();
+            next_immigrants = self.immigrants.last_mut()?;
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.immigrants.iter().map(Vec::len).sum();
+        (len, Some(len))
+    }
 }
