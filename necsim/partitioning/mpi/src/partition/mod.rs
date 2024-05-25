@@ -11,6 +11,7 @@ use necsim_partitioning_core::{
     iterator::ImmigrantPopIterator, partition::Partition, LocalPartition, MigrationMode,
 };
 
+mod common;
 mod parallel;
 mod root;
 mod utils;
