@@ -3,8 +3,9 @@
 #[macro_use]
 extern crate contracts;
 
-use std::{fmt, time::Duration};
+use std::{fmt, sync::mpsc::sync_channel, time::Duration};
 
+use anyhow::Context;
 use humantime_serde::re::humantime::format_duration;
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
@@ -25,6 +26,14 @@ use vote::Vote;
 pub enum ThreadsPartitioningError {
     #[error("Threads partitioning must be initialised with at least two partitions.")]
     NoParallelism,
+}
+
+#[derive(Error, Debug)]
+pub enum ThreadsLocalPartitionError {
+    #[error("Threads partitioning requires an event log.")]
+    MissingEventLog,
+    #[error("Failed to create the event sub-log.")]
+    InvalidEventSubLog,
 }
 
 pub struct ThreadsPartitioning {
@@ -107,6 +116,11 @@ impl Partitioning for ThreadsPartitioning {
         self.size
     }
 
+    /// # Errors
+    ///
+    /// Returns `MissingEventLog` if the local partition is non-monolithic and
+    ///  the `event_log` is `None`.
+    /// Returns `InvalidEventSubLog` if creating a sub-`event_log` failed.
     fn with_local_partition<
         R: Reporter,
         P: ReporterContext<Reporter = R>,
@@ -115,7 +129,7 @@ impl Partitioning for ThreadsPartitioning {
     >(
         self,
         _reporter_context: P,
-        _event_log: Self::Auxiliary,
+        event_log: Self::Auxiliary,
         _inner: F,
     ) -> anyhow::Result<Q> {
         let vote_any = Vote::new(self.size.get() as usize);
@@ -123,12 +137,43 @@ impl Partitioning for ThreadsPartitioning {
         let vote_time_steps =
             Vote::new_with_dummy(self.size.get() as usize, (NonNegativeF64::zero(), 0));
 
+        let (emigration_channels, immigration_channels): (Vec<_>, Vec<_>) = self
+            .size
+            .partitions()
+            .map(|_| sync_channel(self.size.get() as usize))
+            .unzip();
+
+        // TODO: add support for multithread live reporting
+        let Some(event_log) = event_log else {
+            anyhow::bail!(ThreadsLocalPartitionError::MissingEventLog)
+        };
+
+        let event_logs = self
+            .size
+            .partitions()
+            .map(|partition| {
+                let mut directory = event_log.directory().to_owned();
+                directory.push(partition.rank().to_string());
+
+                event_log
+                    .clone_move(directory)
+                    .and_then(EventLogRecorder::assert_empty)
+                    .context(ThreadsLocalPartitionError::InvalidEventSubLog)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
         std::thread::scope(|scope| {
             let vote_any = &vote_any;
             let vote_min_time = &vote_min_time;
             let vote_time_steps = &vote_time_steps;
+            let emigration_channels = emigration_channels.as_slice();
 
-            for partition in self.size.partitions() {
+            for ((partition, immigration_channel), event_log) in self
+                .size
+                .partitions()
+                .zip(immigration_channels)
+                .zip(event_logs)
+            {
                 let thread_handle = scope.spawn::<_, ()>(move || {
                     let _local_partition = if partition.is_root() {
                         ThreadsLocalPartition::Root(Box::new(ThreadsRootPartition::<R>::new(
@@ -136,7 +181,10 @@ impl Partitioning for ThreadsPartitioning {
                             vote_any,
                             vote_min_time,
                             vote_time_steps,
+                            emigration_channels,
+                            immigration_channel,
                             self.migration_interval,
+                            event_log,
                             self.progress_interval,
                         )))
                     } else {
@@ -146,7 +194,10 @@ impl Partitioning for ThreadsPartitioning {
                                 vote_any,
                                 vote_min_time,
                                 vote_time_steps,
+                                emigration_channels,
+                                immigration_channel,
                                 self.migration_interval,
+                                event_log,
                                 self.progress_interval,
                             ),
                         ))

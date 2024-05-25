@@ -64,7 +64,7 @@ impl<'p, R: Reporter> MpiRootPartition<'p, R> {
     pub(crate) fn new(
         universe: Universe,
         mpi_local_global_wait: DataOrRequest<'p, (bool, bool), bool>,
-        mpi_migration_buffers: Box<
+        mpi_emigration_buffers: Box<
             [DataOrRequest<'p, Vec<MigratingLineage>, [MpiMigratingLineage]>],
         >,
         reporter: FilteredReporter<R, False, False, True>,
@@ -79,7 +79,7 @@ impl<'p, R: Reporter> MpiRootPartition<'p, R> {
         let common = MpiCommonPartition::new(
             universe,
             mpi_local_global_wait,
-            mpi_migration_buffers,
+            mpi_emigration_buffers,
             now,
             migration_interval,
         );

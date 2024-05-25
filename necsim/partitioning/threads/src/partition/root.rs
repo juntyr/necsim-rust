@@ -1,24 +1,41 @@
-use std::{fmt, marker::PhantomData, ops::ControlFlow, time::Duration};
+use std::{
+    fmt,
+    marker::PhantomData,
+    ops::ControlFlow,
+    sync::mpsc::{Receiver, SyncSender, TrySendError},
+    time::{Duration, Instant},
+};
 
 use necsim_core::{
     impl_report,
     lineage::MigratingLineage,
-    reporter::{boolean::False, Reporter},
+    reporter::{
+        boolean::{Boolean, False},
+        Reporter,
+    },
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
-use necsim_partitioning_core::{
-    iterator::ImmigrantPopIterator, partition::Partition, LocalPartition, MigrationMode,
-};
+use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use necsim_partitioning_core::{partition::Partition, LocalPartition, MigrationMode};
 
 use crate::vote::Vote;
+
+use super::ImmigrantPopIterator;
 
 pub struct ThreadsRootPartition<'p, R: Reporter> {
     partition: Partition,
     vote_any: Vote<bool>,
     vote_min_time: Vote<(PositiveF64, u32)>,
     vote_time_steps: Vote<(NonNegativeF64, u64)>,
-    _migration_interval: Duration,
+    emigration_buffers: Box<[Vec<MigratingLineage>]>,
+    emigration_channels: Box<[SyncSender<Vec<MigratingLineage>>]>,
+    immigration_buffers: Vec<Vec<MigratingLineage>>,
+    immigration_channel: Receiver<Vec<MigratingLineage>>,
+    last_migration_times: Box<[Instant]>,
+    communicated_since_last_barrier: bool,
+    migration_interval: Duration,
+    recorder: EventLogRecorder,
     _progress_interval: Duration,
     _marker: PhantomData<(&'p (), R)>,
 }
@@ -30,21 +47,45 @@ impl<'p, R: Reporter> fmt::Debug for ThreadsRootPartition<'p, R> {
 }
 
 impl<'p, R: Reporter> ThreadsRootPartition<'p, R> {
+    #[allow(clippy::too_many_arguments)]
     #[must_use]
     pub(crate) fn new(
         partition: Partition,
         vote_any: &Vote<bool>,
         vote_min_time: &Vote<(PositiveF64, u32)>,
         vote_time_steps: &Vote<(NonNegativeF64, u64)>,
+        emigration_channels: &[SyncSender<Vec<MigratingLineage>>],
+        immigration_channel: Receiver<Vec<MigratingLineage>>,
         migration_interval: Duration,
+        mut recorder: EventLogRecorder,
         progress_interval: Duration,
     ) -> Self {
+        recorder.set_event_filter(R::ReportSpeciation::VALUE, R::ReportDispersal::VALUE);
+
+        let partition_size = partition.size().get() as usize;
+
+        let mut emigration_buffers = Vec::with_capacity(partition_size);
+        emigration_buffers.resize_with(partition_size, Vec::new);
+
+        let now = Instant::now();
+
         Self {
             partition,
             vote_any: vote_any.clone(),
             vote_min_time: vote_min_time.clone(),
             vote_time_steps: vote_time_steps.clone(),
-            _migration_interval: migration_interval,
+            emigration_buffers: emigration_buffers.into_boxed_slice(),
+            emigration_channels: Vec::from(emigration_channels).into_boxed_slice(),
+            immigration_buffers: Vec::new(),
+            immigration_channel,
+            last_migration_times: vec![
+                now.checked_sub(migration_interval).unwrap_or(now);
+                partition_size
+            ]
+            .into_boxed_slice(),
+            communicated_since_last_barrier: false,
+            migration_interval,
+            recorder,
             _progress_interval: progress_interval,
             _marker: PhantomData::<(&'p (), R)>,
         }
@@ -71,14 +112,75 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsRootPartition<'p, R> {
 
     fn migrate_individuals<'a, E: Iterator<Item = (u32, MigratingLineage)>>(
         &'a mut self,
-        _emigrants: &mut E,
-        _emigration_mode: MigrationMode,
-        _immigration_mode: MigrationMode,
+        emigrants: &mut E,
+        emigration_mode: MigrationMode,
+        immigration_mode: MigrationMode,
     ) -> Self::ImmigrantIterator<'a>
     where
         'p: 'a,
     {
-        unimplemented!()
+        for (partition, emigrant) in emigrants {
+            self.emigration_buffers[partition as usize].push(emigrant);
+        }
+
+        let self_rank_index = self.get_partition().rank() as usize;
+
+        let now = Instant::now();
+
+        // Receive incoming immigrating lineages
+        if match immigration_mode {
+            MigrationMode::Force => true,
+            MigrationMode::Default => {
+                now.duration_since(self.last_migration_times[self_rank_index])
+                    >= self.migration_interval
+            },
+            MigrationMode::Hold => false,
+        } {
+            self.last_migration_times[self_rank_index] = now;
+
+            self.immigration_buffers
+                .extend(self.immigration_channel.try_iter());
+        }
+
+        // Send outgoing emigrating lineages
+        for partition in self.partition.size().partitions() {
+            let rank_index = partition.rank() as usize;
+
+            if rank_index != self_rank_index
+                && match emigration_mode {
+                    MigrationMode::Force => true,
+                    MigrationMode::Default => {
+                        now.duration_since(self.last_migration_times[rank_index])
+                            >= self.migration_interval
+                    },
+                    MigrationMode::Hold => false,
+                }
+            {
+                let emigration_buffer = &mut self.emigration_buffers[rank_index];
+
+                if !emigration_buffer.is_empty() {
+                    let emigration_buffer_message = std::mem::take(emigration_buffer);
+
+                    // Send a new non-empty request iff there is capacity
+                    match self.emigration_channels[rank_index].try_send(emigration_buffer_message) {
+                        Ok(()) => {
+                            self.last_migration_times[rank_index] = now;
+
+                            // we cannot terminate in this round since this partition gave up work
+                            self.communicated_since_last_barrier = true;
+                        },
+                        Err(TrySendError::Full(emigration_buffer_message)) => {
+                            *emigration_buffer = emigration_buffer_message;
+                        },
+                        Err(TrySendError::Disconnected(_)) => {
+                            panic!("threads partitioning migration channel disconnected")
+                        },
+                    }
+                }
+            }
+        }
+
+        ImmigrantPopIterator::new(&mut self.immigration_buffers)
     }
 
     fn reduce_vote_any(&mut self, vote: bool) -> bool {
@@ -133,12 +235,12 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsRootPartition<'p, R> {
 }
 
 impl<'p, R: Reporter> Reporter for ThreadsRootPartition<'p, R> {
-    impl_report!(speciation(&mut self, _speciation: MaybeUsed<R::ReportSpeciation>) {
-        unimplemented!()
+    impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
+        self.recorder.record_speciation(speciation);
     });
 
-    impl_report!(dispersal(&mut self, _dispersal: MaybeUsed<R::ReportDispersal>) {
-        unimplemented!()
+    impl_report!(dispersal(&mut self, dispersal: MaybeUsed<R::ReportDispersal>) {
+        self.recorder.record_dispersal(dispersal);
     });
 
     impl_report!(progress(&mut self, _remaining: MaybeUsed<R::ReportProgress>) {

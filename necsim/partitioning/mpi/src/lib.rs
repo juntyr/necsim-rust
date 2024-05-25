@@ -198,15 +198,15 @@ impl Partitioning for MpiPartitioning {
         #[allow(clippy::cast_sign_loss)]
         let world_size = self.world.size() as usize;
 
-        let mut mpi_migration_buffers: Vec<Vec<MigratingLineage>> = Vec::with_capacity(world_size);
-        mpi_migration_buffers.resize_with(world_size, Vec::new);
+        let mut mpi_emigration_buffers: Vec<Vec<MigratingLineage>> = Vec::with_capacity(world_size);
+        mpi_emigration_buffers.resize_with(world_size, Vec::new);
 
         mpi::request::scope(|scope| {
             let scope = reduce_scope(scope);
 
             let mpi_local_global_wait = DataOrRequest::new(&mut mpi_local_global_wait, scope);
             let mpi_local_remaining = DataOrRequest::new(&mut mpi_local_remaining, scope);
-            let mpi_migration_buffers = mpi_migration_buffers
+            let mpi_emigration_buffers = mpi_emigration_buffers
                 .iter_mut()
                 .map(|buffer| DataOrRequest::new(buffer, scope))
                 .collect::<Vec<_>>()
@@ -216,7 +216,7 @@ impl Partitioning for MpiPartitioning {
                 MpiLocalPartition::Root(Box::new(MpiRootPartition::new(
                     ManuallyDrop::into_inner(self.universe),
                     mpi_local_global_wait,
-                    mpi_migration_buffers,
+                    mpi_emigration_buffers,
                     reporter_context.try_build()?,
                     event_log,
                     self.migration_interval,
@@ -227,7 +227,7 @@ impl Partitioning for MpiPartitioning {
                     ManuallyDrop::into_inner(self.universe),
                     mpi_local_global_wait,
                     mpi_local_remaining,
-                    mpi_migration_buffers,
+                    mpi_emigration_buffers,
                     event_log,
                     self.migration_interval,
                     self.progress_interval,

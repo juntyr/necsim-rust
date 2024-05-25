@@ -154,9 +154,9 @@ pub fn simulate<
                 }
 
                 // Move the immigrating lineages into the simulation's immigration entry
-                for immigrant in immigrants.drain(..) {
-                    simulation.immigration_entry_mut().push(immigrant);
-                }
+                simulation
+                    .immigration_entry_mut()
+                    .extend(immigrants.drain(..));
             } else {
                 immigrants.clear();
                 last_immigrants.clear();

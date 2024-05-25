@@ -31,7 +31,7 @@ pub struct MpiCommonPartition<'p> {
     _universe: Universe,
     world: SimpleCommunicator,
     mpi_local_global_wait: DataOrRequest<'p, (bool, bool), bool>,
-    mpi_migration_buffers: Box<[DataOrRequest<'p, Vec<MigratingLineage>, [MpiMigratingLineage]>]>,
+    mpi_emigration_buffers: Box<[DataOrRequest<'p, Vec<MigratingLineage>, [MpiMigratingLineage]>]>,
     migration_buffers: Box<[Vec<MigratingLineage>]>,
     last_migration_times: Box<[Instant]>,
     communicated_since_last_barrier: bool,
@@ -43,7 +43,7 @@ impl<'p> MpiCommonPartition<'p> {
     pub(crate) fn new(
         universe: Universe,
         mpi_local_global_wait: DataOrRequest<'p, (bool, bool), bool>,
-        mpi_migration_buffers: Box<
+        mpi_emigration_buffers: Box<
             [DataOrRequest<'p, Vec<MigratingLineage>, [MpiMigratingLineage]>],
         >,
         now: Instant,
@@ -61,7 +61,7 @@ impl<'p> MpiCommonPartition<'p> {
             _universe: universe,
             world,
             mpi_local_global_wait,
-            mpi_migration_buffers,
+            mpi_emigration_buffers,
             migration_buffers: migration_buffers.into_boxed_slice(),
             last_migration_times: vec![
                 now.checked_sub(migration_interval).unwrap_or(now);
@@ -151,8 +151,8 @@ impl<'p> MpiCommonPartition<'p> {
         }
 
         // Send outgoing emigrating lineages
-        for rank in 0..self.get_partition().size().get() {
-            let rank_index = rank as usize;
+        for partition in self.get_partition().size().partitions() {
+            let rank_index = partition.rank() as usize;
 
             if rank_index != self_rank_index
                 && match emigration_mode {
@@ -167,7 +167,7 @@ impl<'p> MpiCommonPartition<'p> {
                 // Check if the prior send request has finished
                 //  and clear the buffer if it has finished
                 if let Some(emigration_buffer) =
-                    self.mpi_migration_buffers[rank_index].test_for_data_mut()
+                    self.mpi_emigration_buffers[rank_index].test_for_data_mut()
                 {
                     emigration_buffer.clear();
                 }
@@ -176,13 +176,13 @@ impl<'p> MpiCommonPartition<'p> {
 
                 if !emigration_buffer.is_empty() {
                     #[allow(clippy::cast_possible_wrap)]
-                    let receiver_process = self.world.process_at_rank(rank as i32);
+                    let receiver_process = self.world.process_at_rank(partition.rank() as i32);
 
                     let mut last_migration_time = self.last_migration_times[rank_index];
                     let mut communicated_since_last_barrier = self.communicated_since_last_barrier;
 
                     // Send a new non-empty request iff the prior one has finished
-                    self.mpi_migration_buffers[rank_index].request_if_data(
+                    self.mpi_emigration_buffers[rank_index].request_if_data(
                         |mpi_emigration_buffer, scope| {
                             last_migration_time = now;
 
@@ -248,7 +248,7 @@ impl<'p> MpiCommonPartition<'p> {
 
         // This partition can only terminate if all emigrations have been
         //  sent and acknowledged (request finished + empty buffers)
-        for buffer in self.mpi_migration_buffers.iter() {
+        for buffer in self.mpi_emigration_buffers.iter() {
             if !buffer.get_data().map_or(false, Vec::is_empty) {
                 return ControlFlow::Continue(());
             }

@@ -128,13 +128,12 @@ pub fn simulate<
                 total_steps += new_steps;
 
                 // Send off any emigration that might have occurred
-                for immigrant in local_partition.migrate_individuals(
-                    simulation.emigration_exit_mut(),
+                let (emigration_exit, immigration_entry) = simulation.migration_portals_mut();
+                immigration_entry.extend(local_partition.migrate_individuals(
+                    emigration_exit,
                     MigrationMode::Default,
                     MigrationMode::Default,
-                ) {
-                    simulation.immigration_entry_mut().push(immigrant);
-                }
+                ));
             },
             // All other partitions get to simulate until just before this next migration event
             Err(next_global_time) => {
@@ -155,13 +154,13 @@ pub fn simulate<
 
         // Synchronise after performing any inter-partition migration
         while local_partition.wait_for_termination().is_continue() {
-            for immigrant in local_partition.migrate_individuals(
-                &mut core::iter::empty(),
-                MigrationMode::Force,
-                MigrationMode::Force,
-            ) {
-                simulation.immigration_entry_mut().push(immigrant);
-            }
+            simulation
+                .immigration_entry_mut()
+                .extend(local_partition.migrate_individuals(
+                    &mut core::iter::empty(),
+                    MigrationMode::Force,
+                    MigrationMode::Force,
+                ));
         }
 
         // Advance the simulation backup to this new safe point

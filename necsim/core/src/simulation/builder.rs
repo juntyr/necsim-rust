@@ -288,4 +288,8 @@ impl<
     pub fn immigration_entry_mut(&mut self) -> &mut I {
         &mut self.immigration_entry
     }
+
+    pub fn migration_portals_mut(&mut self) -> (&mut X, &mut I) {
+        (&mut self.emigration_exit, &mut self.immigration_entry)
+    }
 }

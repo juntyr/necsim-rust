@@ -131,6 +131,32 @@ impl EventLogRecorder {
 
     /// # Errors
     ///
+    /// Fails to construct iff `path` is not a writable directory.
+    pub fn clone_move(&self, path: PathBuf) -> Result<Self> {
+        fs::create_dir_all(&path)?;
+
+        let metadata = fs::metadata(&path)?;
+
+        if !metadata.is_dir() {
+            return Err(anyhow::anyhow!("{:?} is not a directory.", path));
+        }
+
+        if metadata.permissions().readonly() {
+            return Err(anyhow::anyhow!("{:?} is a read-only directory.", path));
+        }
+
+        Ok(Self {
+            segment_capacity: self.segment_capacity,
+            directory: path,
+            segment_index: 0,
+            buffer: Vec::with_capacity(self.segment_capacity.get()),
+            record_speciation: self.record_speciation,
+            record_dispersal: self.record_dispersal,
+        })
+    }
+
+    /// # Errors
+    ///
     /// Fails to construct iff `path` is not an empty directory.
     pub fn assert_empty(self) -> Result<Self> {
         if fs::read_dir(&self.directory)?.next().is_some() {

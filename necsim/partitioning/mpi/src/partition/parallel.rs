@@ -51,7 +51,7 @@ impl<'p, R: Reporter> MpiParallelPartition<'p, R> {
         universe: Universe,
         mpi_local_global_wait: DataOrRequest<'p, (bool, bool), bool>,
         mpi_local_remaining: DataOrRequest<'p, u64, u64>,
-        mpi_migration_buffers: Box<
+        mpi_emigration_buffers: Box<
             [DataOrRequest<'p, Vec<MigratingLineage>, [MpiMigratingLineage]>],
         >,
         mut recorder: EventLogRecorder,
@@ -65,7 +65,7 @@ impl<'p, R: Reporter> MpiParallelPartition<'p, R> {
         let common = MpiCommonPartition::new(
             universe,
             mpi_local_global_wait,
-            mpi_migration_buffers,
+            mpi_emigration_buffers,
             now,
             migration_interval,
         );

@@ -46,4 +46,8 @@ impl BufferedImmigrationEntry {
     pub fn push(&mut self, immigrant: MigratingLineage) {
         self.immigrants.push(Reverse(immigrant));
     }
+
+    pub fn extend(&mut self, immigrants: impl Iterator<Item = MigratingLineage>) {
+        self.immigrants.extend(immigrants.map(Reverse));
+    }
 }
