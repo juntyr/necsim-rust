@@ -2,7 +2,10 @@ use std::{
     fmt,
     marker::PhantomData,
     ops::ControlFlow,
-    sync::mpsc::{Receiver, SyncSender, TrySendError},
+    sync::{
+        mpsc::{Receiver, SendError, SyncSender, TrySendError},
+        Arc, Barrier,
+    },
     task::Poll,
     time::{Duration, Instant},
 };
@@ -41,6 +44,7 @@ pub struct ThreadsLocalPartition<'p, R: Reporter> {
     progress_channel: SyncSender<(u64, u32)>,
     last_report_time: Instant,
     progress_interval: Duration,
+    sync_barrier: Arc<Barrier>,
     _marker: PhantomData<(&'p (), R)>,
 }
 
@@ -65,6 +69,7 @@ impl<'p, R: Reporter> ThreadsLocalPartition<'p, R> {
         mut recorder: EventLogRecorder,
         progress_channel: SyncSender<(u64, u32)>,
         progress_interval: Duration,
+        sync_barrier: &Arc<Barrier>,
     ) -> Self {
         recorder.set_event_filter(R::ReportSpeciation::VALUE, R::ReportDispersal::VALUE);
 
@@ -97,6 +102,7 @@ impl<'p, R: Reporter> ThreadsLocalPartition<'p, R> {
             progress_channel,
             last_report_time: now.checked_sub(progress_interval).unwrap_or(now),
             progress_interval,
+            sync_barrier: sync_barrier.clone(),
             _marker: PhantomData::<(&'p (), R)>,
         }
     }
@@ -270,8 +276,15 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsLocalPartition<'p, R> {
         })
     }
 
-    fn report_progress_sync(&mut self, _remaining: u64) {
-        unimplemented!()
+    fn report_progress_sync(&mut self, remaining: u64) {
+        if let Err(SendError(_)) = self
+            .progress_channel
+            .send((remaining, self.partition.rank()))
+        {
+            panic!("threads partitioning sync progress channel disconnected");
+        }
+
+        self.sync_barrier.wait();
     }
 
     fn finalise_reporting(self) {

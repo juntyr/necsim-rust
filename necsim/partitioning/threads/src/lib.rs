@@ -3,7 +3,13 @@
 #[macro_use]
 extern crate contracts;
 
-use std::{fmt, num::Wrapping, ops::ControlFlow, sync::mpsc::sync_channel, time::Duration};
+use std::{
+    fmt,
+    num::Wrapping,
+    ops::ControlFlow,
+    sync::{mpsc::sync_channel, Arc, Barrier},
+    time::Duration,
+};
 
 use anyhow::Context;
 use humantime_serde::re::humantime::format_duration;
@@ -179,12 +185,15 @@ impl Partitioning for ThreadsPartitioning {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
+        let sync_barrier = Arc::new(Barrier::new(self.size.get() as usize));
+
         std::thread::scope(|scope| {
             let vote_any = &vote_any;
             let vote_min_time = &vote_min_time;
             let vote_time_steps = &vote_time_steps;
             let vote_termination = &vote_termination;
             let emigration_channels = emigration_channels.as_slice();
+            let sync_barrier = &sync_barrier;
 
             for (((partition, immigration_channel), event_log), progress_channel) in self
                 .size
@@ -206,6 +215,7 @@ impl Partitioning for ThreadsPartitioning {
                         event_log,
                         progress_channel,
                         self.progress_interval,
+                        sync_barrier,
                     );
                 });
 
