@@ -59,8 +59,12 @@ where
             Partitioning::Monolithic(partitioning) => {
                 A::get_logical_partition_size(&algorithm_args, partitioning)
             },
-            #[cfg(feature = "necsim-partitioning-mpi")]
-            Partitioning::MPI(partitioning) => {
+            #[cfg(feature = "mpi-partitioning")]
+            Partitioning::Mpi(partitioning) => {
+                A::get_logical_partition_size(&algorithm_args, partitioning)
+            },
+            #[cfg(feature = "threads-partitioning")]
+            Partitioning::Threads(partitioning) => {
                 A::get_logical_partition_size(&algorithm_args, partitioning)
             },
         },

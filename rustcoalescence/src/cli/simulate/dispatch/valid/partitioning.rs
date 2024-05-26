@@ -7,7 +7,7 @@ use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_partitioning_core::{context::ReporterContext, LocalPartition, Partitioning as _};
 
 use necsim_partitioning_monolithic::MonolithicLocalPartition;
-#[cfg(feature = "necsim-partitioning-mpi")]
+#[cfg(feature = "mpi-partitioning")]
 use necsim_partitioning_mpi::MpiLocalPartition;
 use rustcoalescence_algorithms::{result::SimulationOutcome, Algorithm, AlgorithmDispatch};
 use rustcoalescence_scenarios::Scenario;
@@ -83,7 +83,7 @@ where
             },
             fold,
         ),
-        #[cfg(feature = "necsim-partitioning-mpi")]
+        #[cfg(feature = "mpi-partitioning")]
         Partitioning::Mpi(partitioning) => partitioning.with_local_partition(
             reporter_context,
             event_log,
@@ -113,6 +113,24 @@ where
                         )
                     },
                 }
+            },
+            fold,
+        ),
+        #[cfg(feature = "threads-partitioning")]
+        Partitioning::Threads(partitioning) => partitioning.with_local_partition(
+            reporter_context,
+            event_log,
+            args,
+            |partition, (sample, rng, scenario, algorithm_args, pause_before, normalised_args)| {
+                wrap::<M, G, A::Algorithm<'_, _>, O, R, _>(
+                    partition,
+                    sample,
+                    rng,
+                    scenario,
+                    algorithm_args,
+                    pause_before,
+                    normalised_args,
+                )
             },
             fold,
         ),

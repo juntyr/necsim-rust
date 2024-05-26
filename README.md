@@ -113,6 +113,7 @@ necsim-rust consists of the following crates:
         - core/: `necsim-partitioning-core` declares the core partitioning traits
         - monolithic/: `necsim-partitioning-monolithic` implements monolithic, i.e. non-parallel partitioning
         - mpi/: `necsim-partitioning-mpi` implements the MPI-based partitioning backend
+        - threads/: `necsim-partitioning-threads` implements the multithreading partitioning backend
 - rustcoalescence/: `rustcoalescence` provides the command-line interface.
     - scenarios/: `rustcoalescence-scenarios` contains the glue code to put together the cogs for the built-in scenarios. It is specifically built only for reducing code duplication in rustcoalescence, not for giving a minimal example of how to construct a simulation.
     - algorithms/:
