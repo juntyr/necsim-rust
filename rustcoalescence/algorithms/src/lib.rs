@@ -10,7 +10,10 @@ use necsim_core::{
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::cogs::origin_sampler::pre_sampler::OriginPreSampler;
-use necsim_partitioning_core::{partition::Partition, LocalPartition};
+use necsim_partitioning_core::{
+    partition::{Partition, PartitionSize},
+    LocalPartition, Partitioning,
+};
 
 use rustcoalescence_scenarios::Scenario;
 
@@ -30,6 +33,25 @@ pub trait AlgorithmDefaults {
     type Rng<M: MathsCore>: RngCore<M>;
 }
 
+pub trait AlgorithmDispatch<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>, R: Reporter>:
+    AlgorithmParamters + AlgorithmDefaults
+{
+    type Algorithm<'p, P: LocalPartition<'p, R>>: Algorithm<
+        'p,
+        M,
+        G,
+        O,
+        R,
+        P,
+        Arguments = Self::Arguments,
+    >;
+
+    fn get_logical_partition_size<P: Partitioning>(
+        args: &Self::Arguments,
+        partitioning: &P,
+    ) -> PartitionSize;
+}
+
 pub trait Algorithm<
     'p,
     M: MathsCore,
@@ -37,7 +59,7 @@ pub trait Algorithm<
     O: Scenario<M, G>,
     R: Reporter,
     P: LocalPartition<'p, R>,
->: Sized + AlgorithmParamters + AlgorithmDefaults
+>: Sized + AlgorithmParamters + AlgorithmDefaults + AlgorithmDispatch<M, G, O, R>
 {
     type LineageStore: LineageStore<M, O::Habitat>;
 

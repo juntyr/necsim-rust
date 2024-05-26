@@ -1,6 +1,7 @@
 use necsim_core::reporter::Reporter;
 use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
-use necsim_partitioning_core::LocalPartition;
+use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use necsim_partitioning_core::context::ReporterContext;
 
 use rustcoalescence_algorithms::AlgorithmDefaults;
 
@@ -31,8 +32,8 @@ use rustcoalescence_scenarios::Scenario;
 
 use crate::{
     args::config::{
-        algorithm::Algorithm as AlgorithmArgs, sample::Sample as SampleArgs,
-        scenario::Scenario as ScenarioArgs,
+        algorithm::Algorithm as AlgorithmArgs, partitioning::Partitioning,
+        sample::Sample as SampleArgs, scenario::Scenario as ScenarioArgs,
     },
     cli::simulate::SimulationOutcome,
 };
@@ -110,8 +111,10 @@ macro_rules! match_scenario_algorithm {
 }
 
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
-pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
-    local_partition: P,
+pub(super) fn dispatch<R: Reporter, P: ReporterContext<Reporter = R>>(
+    partitioning: Partitioning,
+    event_log: Option<EventLogRecorder>,
+    reporter_context: P,
 
     speciation_probability_per_generation: PositiveUnitF64,
     sample: SampleArgs,
@@ -132,7 +135,8 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
                 <GillespieAlgorithm as AlgorithmDefaults>::Rng<_>,
                 GillespieAlgorithm, ScenarioTy<_, _>, R, P,
             >(
-                local_partition, sample, algorithm_args, scenario,
+                partitioning, event_log, reporter_context,
+                sample, algorithm_args, scenario,
                 pause_before, ron_args, normalised_args,
             )
         },
@@ -143,7 +147,8 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
                 <EventSkippingAlgorithm as AlgorithmDefaults>::Rng<_>,
                 EventSkippingAlgorithm, ScenarioTy<_, _>, R, P,
             >(
-                local_partition, sample, algorithm_args, scenario,
+                partitioning, event_log, reporter_context,
+                sample, algorithm_args, scenario,
                 pause_before, ron_args, normalised_args,
             )
         },
@@ -154,7 +159,8 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
                 <IndependentAlgorithm as AlgorithmDefaults>::Rng<_>,
                 IndependentAlgorithm, ScenarioTy<_, _>, R, P,
             >(
-                local_partition, sample, algorithm_args, scenario,
+                partitioning, event_log, reporter_context,
+                sample, algorithm_args, scenario,
                 pause_before, ron_args, normalised_args,
             )
         },
@@ -165,7 +171,8 @@ pub(super) fn dispatch<'p, R: Reporter, P: LocalPartition<'p, R>>(
                 <CudaAlgorithm as AlgorithmDefaults>::Rng<_>,
                 CudaAlgorithm, ScenarioTy<_, _>, R, P,
             >(
-                local_partition, sample, algorithm_args, scenario,
+                partitioning, event_log, reporter_context,
+                sample, algorithm_args, scenario,
                 pause_before, ron_args, normalised_args,
             )
         }

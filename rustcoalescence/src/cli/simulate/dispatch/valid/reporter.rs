@@ -1,25 +1,19 @@
 use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
-use necsim_plugins_core::import::AnyReporterPluginVec;
+use necsim_plugins_core::{import::AnyReporterPluginVec, match_any_reporter_plugin_vec};
 
 use crate::{
     args::config::{
         algorithm::Algorithm, partitioning::Partitioning, sample::Sample, scenario::Scenario,
     },
     cli::simulate::SimulationOutcome,
+    reporter::DynamicReporterContext,
 };
 
-use super::super::BufferingSimulateArgsBuilder;
-
-mod algorithm_scenario;
-mod info;
-mod launch;
-mod partitioning;
-mod reporter;
-mod rng;
+use super::{super::super::BufferingSimulateArgsBuilder, algorithm_scenario};
 
 #[allow(clippy::too_many_arguments)]
-pub(in super::super) fn dispatch(
+pub(super) fn dispatch(
     partitioning: Partitioning,
     event_log: Option<EventLogRecorder>,
     reporters: AnyReporterPluginVec,
@@ -33,16 +27,11 @@ pub(in super::super) fn dispatch(
     ron_args: &str,
     normalised_args: &mut BufferingSimulateArgsBuilder,
 ) -> anyhow::Result<SimulationOutcome> {
-    reporter::dispatch(
-        partitioning,
-        event_log,
-        reporters,
-        speciation_probability_per_generation,
-        sample,
-        scenario,
-        algorithm,
-        pause_before,
-        ron_args,
-        normalised_args,
-    )
+    match_any_reporter_plugin_vec!(reporters => |reporter| {
+        algorithm_scenario::dispatch(
+            partitioning, event_log, DynamicReporterContext::new(reporter),
+            speciation_probability_per_generation, sample, scenario,
+            algorithm, pause_before, ron_args, normalised_args,
+        )
+    })
 }

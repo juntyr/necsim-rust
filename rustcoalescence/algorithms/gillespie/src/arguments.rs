@@ -5,7 +5,7 @@ use necsim_core::reporter::Reporter;
 use necsim_core_bond::PositiveF64;
 use necsim_partitioning_core::{
     partition::{Partition, PartitionSize},
-    LocalPartition,
+    LocalPartition, Partitioning,
 };
 
 #[derive(Serialize, Debug)]
@@ -99,6 +99,20 @@ impl<'de> DeserializeState<'de, PartitionSize> for ParallelismMode {
             },
             partition_mode => Ok(partition_mode),
         }
+    }
+}
+
+#[must_use]
+pub fn get_gillespie_logical_partition_size<P: Partitioning>(
+    args: &GillespieArguments,
+    partitioning: &P,
+) -> PartitionSize {
+    match &args.parallelism_mode {
+        ParallelismMode::Monolithic => PartitionSize::MONOLITHIC,
+        ParallelismMode::Optimistic(_)
+        | ParallelismMode::Lockstep
+        | ParallelismMode::OptimisticLockstep
+        | ParallelismMode::Averaging(_) => partitioning.get_size(),
     }
 }
 

@@ -31,12 +31,13 @@ pub(super) fn dispatch<
     R: Reporter,
     P: LocalPartition<'p, R>,
 >(
-    algorithm_args: A::Arguments,
+    mut local_partition: P,
+
+    sample: Sample,
     rng: G,
     scenario: O,
-    sample: Sample,
+    algorithm_args: A::Arguments,
     pause_before: Option<NonNegativeF64>,
-    mut local_partition: P,
 
     normalised_args: &BufferingSimulateArgsBuilder,
 ) -> anyhow::Result<SimulationOutcome<M, G>>
