@@ -169,16 +169,12 @@ impl Partitioning for MpiPartitioning {
     /// Returns `MissingEventLog` if the local partition is non-monolithic and
     ///  the `event_log` is `None`.
     /// Returns `InvalidEventSubLog` if creating a sub-`event_log` failed.
-    fn with_local_partition<
-        R: Reporter,
-        P: ReporterContext<Reporter = R>,
-        F: for<'p> FnOnce(Self::LocalPartition<'p, R>) -> Q,
-        Q,
-    >(
+    fn with_local_partition<R: Reporter, P: ReporterContext<Reporter = R>, A: Send + Clone, Q>(
         self,
         reporter_context: P,
         event_log: Self::Auxiliary,
-        inner: F,
+        args: A,
+        inner: for<'p> fn(Self::LocalPartition<'p, R>, A) -> Q,
     ) -> anyhow::Result<Q> {
         let Some(event_log) = event_log else {
             anyhow::bail!(MpiLocalPartitionError::MissingEventLog)
@@ -234,7 +230,7 @@ impl Partitioning for MpiPartitioning {
                 )))
             };
 
-            Ok(inner(local_partition))
+            Ok(inner(local_partition, args))
         })
     }
 }

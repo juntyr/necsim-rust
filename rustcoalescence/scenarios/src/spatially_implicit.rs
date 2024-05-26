@@ -22,6 +22,7 @@ use necsim_impls_no_std::{
 use crate::{Scenario, ScenarioParameters};
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Clone)]
 pub struct SpatiallyImplicitScenario<M: MathsCore, G: RngCore<M>> {
     habitat: SpatiallyImplicitHabitat<M>,
     dispersal_sampler: SpatiallyImplicitDispersalSampler<M, G>,

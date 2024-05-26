@@ -132,16 +132,12 @@ impl Partitioning for ThreadsPartitioning {
     /// Returns `MissingEventLog` if the local partition is non-monolithic and
     ///  the `event_log` is `None`.
     /// Returns `InvalidEventSubLog` if creating a sub-`event_log` failed.
-    fn with_local_partition<
-        R: Reporter,
-        P: ReporterContext<Reporter = R>,
-        F: for<'p> FnOnce(Self::LocalPartition<'p, R>) -> Q,
-        Q,
-    >(
+    fn with_local_partition<R: Reporter, P: ReporterContext<Reporter = R>, A: Send + Clone, Q>(
         self,
         reporter_context: P,
         event_log: Self::Auxiliary,
-        _inner: F,
+        args: A,
+        inner: for<'p> fn(Self::LocalPartition<'p, R>, A) -> Q,
     ) -> anyhow::Result<Q> {
         // TODO: add support for multithread live reporting
         let Some(event_log) = event_log else {
@@ -186,6 +182,11 @@ impl Partitioning for ThreadsPartitioning {
             .collect::<Result<Vec<_>, _>>()?;
 
         let sync_barrier = Arc::new(Barrier::new(self.size.get() as usize));
+        let args = self
+            .size
+            .partitions()
+            .map(|_| args.clone())
+            .collect::<Vec<_>>();
 
         std::thread::scope(|scope| {
             let vote_any = &vote_any;
@@ -195,15 +196,16 @@ impl Partitioning for ThreadsPartitioning {
             let emigration_channels = emigration_channels.as_slice();
             let sync_barrier = &sync_barrier;
 
-            for (((partition, immigration_channel), event_log), progress_channel) in self
+            for ((((partition, immigration_channel), event_log), progress_channel), args) in self
                 .size
                 .partitions()
                 .zip(immigration_channels)
                 .zip(event_logs)
                 .zip(progress_channels)
+                .zip(args)
             {
                 let thread_handle = scope.spawn::<_, ()>(move || {
-                    let _local_partition = ThreadsLocalPartition::<R>::new(
+                    let local_partition = ThreadsLocalPartition::<R>::new(
                         partition,
                         vote_any,
                         vote_min_time,
@@ -217,6 +219,8 @@ impl Partitioning for ThreadsPartitioning {
                         self.progress_interval,
                         sync_barrier,
                     );
+
+                    let _result = inner(local_partition, args);
                 });
 
                 // we don't need the thread result and implicitly propagate thread panics

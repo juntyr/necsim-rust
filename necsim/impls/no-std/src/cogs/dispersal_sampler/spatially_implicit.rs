@@ -10,7 +10,7 @@ use crate::cogs::{
 };
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct SpatiallyImplicitDispersalSampler<M: MathsCore, G: RngCore<M>> {

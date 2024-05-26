@@ -23,6 +23,7 @@ use crate::{Scenario, ScenarioParameters};
 use super::Sample;
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Clone)]
 pub struct AlmostInfiniteNormalDispersalScenario<M: MathsCore, G: RngCore<M>> {
     sample: Sample,
 

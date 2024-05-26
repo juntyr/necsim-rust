@@ -27,6 +27,7 @@ use necsim_impls_no_std::{
 use crate::{Scenario, ScenarioParameters};
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Clone)]
 pub struct WrappingNoiseScenario<M: MathsCore, G: RngCore<M>> {
     sample: LandscapeExtent,
 

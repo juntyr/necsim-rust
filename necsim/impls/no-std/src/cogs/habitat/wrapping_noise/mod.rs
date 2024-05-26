@@ -1,7 +1,6 @@
-use alloc::boxed::Box;
+use alloc::sync::Arc;
 use core::{fmt, num::NonZeroUsize};
 use necsim_core_bond::{ClosedUnitF64, OffByOneU64, OpenClosedUnitF64 as PositiveUnitF64};
-use r#final::Final;
 
 mod opensimplex_noise;
 
@@ -18,6 +17,7 @@ use crate::cogs::{
 };
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Clone)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct WrappingNoiseHabitat<M: MathsCore> {
@@ -29,7 +29,7 @@ pub struct WrappingNoiseHabitat<M: MathsCore> {
     persistence: PositiveUnitF64,
     octaves: NonZeroUsize,
     #[cfg_attr(feature = "cuda", cuda(embed))]
-    noise: Final<Box<OpenSimplexNoise>>,
+    noise: Arc<OpenSimplexNoise>,
 }
 
 impl<M: MathsCore> fmt::Debug for WrappingNoiseHabitat<M> {
@@ -52,7 +52,7 @@ impl<M: MathsCore> WrappingNoiseHabitat<M> {
         persistence: PositiveUnitF64,
         octaves: NonZeroUsize,
     ) -> Self {
-        let noise = Box::new(OpenSimplexNoise::new(Some(seed)));
+        let noise = Arc::new(OpenSimplexNoise::new(Some(seed)));
 
         // Emperically determine a threshold to uniformly sample habitat
         //  from the generated Simplex Noise
@@ -92,7 +92,7 @@ impl<M: MathsCore> WrappingNoiseHabitat<M> {
             scale,
             persistence,
             octaves,
-            noise: Final::new(noise),
+            noise,
         }
     }
 
@@ -128,7 +128,7 @@ impl<M: MathsCore> Backup for WrappingNoiseHabitat<M> {
             scale: self.scale,
             persistence: self.persistence,
             octaves: self.octaves,
-            noise: Final::new(self.noise.clone()),
+            noise: self.noise.clone(),
         }
     }
 }

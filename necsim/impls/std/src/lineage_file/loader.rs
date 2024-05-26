@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize, Serializer};
 
 use necsim_core::lineage::Lineage;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(try_from = "LineageFileLoaderRaw")]
 #[allow(clippy::module_name_repetitions)]
 pub struct LineageFileLoader {

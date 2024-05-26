@@ -29,16 +29,12 @@ pub trait Partitioning: Sized {
 
     fn get_size(&self) -> PartitionSize;
 
-    fn with_local_partition<
-        R: Reporter,
-        P: ReporterContext<Reporter = R>,
-        F: for<'p> FnOnce(Self::LocalPartition<'p, R>) -> Q,
-        Q,
-    >(
+    fn with_local_partition<R: Reporter, P: ReporterContext<Reporter = R>, A: Send + Clone, Q>(
         self,
         reporter_context: P,
         auxiliary: Self::Auxiliary,
-        inner: F,
+        args: A,
+        inner: for<'p> fn(Self::LocalPartition<'p, R>, A) -> Q,
     ) -> anyhow::Result<Q>;
 }
 

@@ -20,6 +20,7 @@ use necsim_impls_no_std::{
 use crate::{Scenario, ScenarioParameters};
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Clone)]
 pub struct NonSpatialScenario<M: MathsCore, G: RngCore<M>> {
     habitat: NonSpatialHabitat<M>,
     dispersal_sampler: NonSpatialDispersalSampler<M, G>,

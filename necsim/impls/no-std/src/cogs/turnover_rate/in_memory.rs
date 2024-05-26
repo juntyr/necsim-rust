@@ -17,7 +17,16 @@ use crate::{array2d::Array2D, cogs::habitat::in_memory::InMemoryHabitat};
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 pub struct InMemoryTurnoverRate {
     #[cfg_attr(feature = "cuda", cuda(embed))]
+    // TODO: use an Arc
     turnover_rate: Final<Box<[NonNegativeF64]>>,
+}
+
+impl Clone for InMemoryTurnoverRate {
+    fn clone(&self) -> Self {
+        Self {
+            turnover_rate: Final::new(self.turnover_rate.clone()),
+        }
+    }
 }
 
 #[contract_trait]

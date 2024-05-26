@@ -40,10 +40,22 @@ pub(super) fn dispatch<
 where
     Result<SimulationOutcome<M, G>, A::Error>: anyhow::Context<SimulationOutcome<M, G>, A::Error>,
 {
+    let args = (
+        sample,
+        rng,
+        scenario,
+        algorithm_args,
+        pause_before,
+        normalised_args,
+    );
+
     // Initialise the local partition and the simulation
     match partitioning {
-        Partitioning::Monolithic(partitioning) => {
-            partitioning.with_local_partition(reporter_context, event_log, |partition| {
+        Partitioning::Monolithic(partitioning) => partitioning.with_local_partition(
+            reporter_context,
+            event_log,
+            args,
+            |partition, (sample, rng, scenario, algorithm_args, pause_before, normalised_args)| {
                 match partition {
                     MonolithicLocalPartition::Live(partition) => {
                         info::dispatch::<M, G, A::Algorithm<'_, _>, O, R, _>(
@@ -68,11 +80,14 @@ where
                         )
                     },
                 }
-            })
-        },
+            },
+        ),
         #[cfg(feature = "necsim-partitioning-mpi")]
-        Partitioning::Mpi(partitioning) => {
-            partitioning.with_local_partition(reporter_context, event_log, |partition| {
+        Partitioning::Mpi(partitioning) => partitioning.with_local_partition(
+            reporter_context,
+            event_log,
+            args,
+            |partition, (sample, rng, scenario, algorithm_args, pause_before, normalised_args)| {
                 match partition {
                     MpiLocalPartition::Root(partition) => {
                         info::dispatch::<M, G, A::Algorithm<'_, _>, O, R, _>(
@@ -97,8 +112,8 @@ where
                         )
                     },
                 }
-            })
-        },
+            },
+        ),
     }
     .flatten()
 }

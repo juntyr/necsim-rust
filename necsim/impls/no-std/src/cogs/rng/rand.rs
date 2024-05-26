@@ -98,8 +98,10 @@ impl<
     }
 }
 
-impl<M: MathsCore, G: RandRngCore + RandSeedableRng + Clone + Serialize + DeserializeOwned>
-    RngCore<M> for RandRng<M, G>
+impl<
+        M: MathsCore,
+        G: RandRngCore + RandSeedableRng + Send + Clone + Serialize + DeserializeOwned,
+    > RngCore<M> for RandRng<M, G>
 {
     type Seed = G::Seed;
 

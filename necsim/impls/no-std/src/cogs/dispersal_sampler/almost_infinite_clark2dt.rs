@@ -9,7 +9,7 @@ use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveF64};
 use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "G"))]
 pub struct AlmostInfiniteClark2DtDispersalSampler<M: MathsCore, G: RngCore<M>> {

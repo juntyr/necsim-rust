@@ -9,7 +9,7 @@ use necsim_core_bond::ClosedUnitF64;
 use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "G"))]
 pub struct NonSpatialDispersalSampler<M: MathsCore, G: RngCore<M>> {

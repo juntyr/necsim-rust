@@ -42,7 +42,7 @@ pub trait ScenarioParameters {
     type Error;
 }
 
-pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + ScenarioParameters {
+pub trait Scenario<M: MathsCore, G: RngCore<M>>: Sized + Clone + Send + ScenarioParameters {
     type Habitat: UniformlySampleableHabitat<M, G>;
     type OriginSampler<'h, I: Iterator<Item = u64>>: TrustedOriginSampler<
         'h,

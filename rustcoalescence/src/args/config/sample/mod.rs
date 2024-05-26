@@ -11,7 +11,7 @@ use super::pause::{Pause, PauseMode};
 
 mod origin;
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Sample {
     pub percentage: ClosedUnitF64,
     pub origin: SampleOrigin,
@@ -31,7 +31,7 @@ impl Default for Sample {
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub enum SampleOrigin {
     Habitat,
     List(Vec<Lineage>),
@@ -39,7 +39,7 @@ pub enum SampleOrigin {
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SampleMode {
     Genesis,
     Resume,
@@ -54,7 +54,7 @@ impl Default for SampleMode {
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SampleModeRestart {
     pub after: NonNegativeF64,
 }

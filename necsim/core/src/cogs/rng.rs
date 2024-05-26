@@ -18,7 +18,7 @@ use crate::{
 
 #[allow(clippy::module_name_repetitions)]
 pub trait RngCore<M: MathsCore>:
-    crate::cogs::Backup + Sized + Clone + core::fmt::Debug + Serialize + DeserializeOwned
+    crate::cogs::Backup + Sized + Send + Clone + core::fmt::Debug + Serialize + DeserializeOwned
 {
     type Seed: AsMut<[u8]> + Default + Sized;
 

@@ -8,7 +8,7 @@ use necsim_partitioning_core::{
     LocalPartition, Partitioning,
 };
 
-#[derive(Serialize, Debug)]
+#[derive(Clone, Serialize, Debug)]
 #[allow(clippy::module_name_repetitions)]
 pub struct GillespieArguments {
     pub parallelism_mode: ParallelismMode,
@@ -48,17 +48,17 @@ struct GillespieArgumentsRaw {
     parallelism_mode: Option<ParallelismMode>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OptimisticParallelismMode {
     pub delta_sync: PositiveF64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AveragingParallelismMode {
     pub delta_sync: PositiveF64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ParallelismMode {
     Monolithic,
     Optimistic(OptimisticParallelismMode),

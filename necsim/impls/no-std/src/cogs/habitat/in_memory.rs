@@ -17,13 +17,26 @@ use crate::array2d::Array2D;
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct InMemoryHabitat<M: MathsCore> {
+    // TODO: use an Arc
     #[cfg_attr(feature = "cuda", cuda(embed))]
     habitat: Final<Box<[u32]>>,
+    // TODO: use an Arc
     #[cfg_attr(feature = "cuda", cuda(embed))]
     u64_injection: Final<Box<[u64]>>,
     #[cfg_attr(feature = "cuda", cuda(embed))]
     extent: LandscapeExtent,
     marker: PhantomData<M>,
+}
+
+impl<M: MathsCore> Clone for InMemoryHabitat<M> {
+    fn clone(&self) -> Self {
+        Self {
+            habitat: Final::new(self.habitat.clone()),
+            u64_injection: Final::new(self.u64_injection.clone()),
+            extent: self.extent.clone(),
+            marker: PhantomData::<M>,
+        }
+    }
 }
 
 #[contract_trait]

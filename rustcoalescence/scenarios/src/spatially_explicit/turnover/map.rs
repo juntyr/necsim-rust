@@ -40,8 +40,10 @@ pub enum SpatiallyExplicitTurnoverMapScenarioError {
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Clone)]
 pub struct SpatiallyExplicitTurnoverMapScenario<M: MathsCore, G: RngCore<M>> {
     habitat: InMemoryHabitat<M>,
+    // TODO: use an Arc
     dispersal_map: Array2D<NonNegativeF64>,
     turnover_rate: InMemoryTurnoverRate,
     speciation_probability: UniformSpeciationProbability,

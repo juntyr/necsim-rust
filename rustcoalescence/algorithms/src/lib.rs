@@ -24,7 +24,7 @@ use result::{ResumeError, SimulationOutcome};
 use strategy::RestartFixUpStrategy;
 
 pub trait AlgorithmParamters {
-    type Arguments;
+    type Arguments: Clone + Send + Sync + 'static;
     type Error: StdError + Send + Sync + 'static;
 }
 

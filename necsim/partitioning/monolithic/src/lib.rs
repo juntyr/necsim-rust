@@ -62,16 +62,12 @@ impl Partitioning for MonolithicPartitioning {
     /// # Errors
     ///
     /// Returns an error if the provided event log is not empty.
-    fn with_local_partition<
-        R: Reporter,
-        P: ReporterContext<Reporter = R>,
-        F: for<'p> FnOnce(Self::LocalPartition<'p, R>) -> Q,
-        Q,
-    >(
+    fn with_local_partition<R: Reporter, P: ReporterContext<Reporter = R>, A: Send + Clone, Q>(
         self,
         reporter_context: P,
         event_log: Self::Auxiliary,
-        inner: F,
+        args: A,
+        inner: for<'p> fn(Self::LocalPartition<'p, R>, A) -> Q,
     ) -> anyhow::Result<Q> {
         let local_partition = if let Some(event_log) = event_log {
             MonolithicLocalPartition::Recorded(Box::new(
@@ -88,7 +84,7 @@ impl Partitioning for MonolithicPartitioning {
             ))
         };
 
-        Ok(inner(local_partition))
+        Ok(inner(local_partition, args))
     }
 }
 
