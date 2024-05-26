@@ -1,4 +1,5 @@
 use std::{
+    marker::PhantomData,
     mem::{offset_of, MaybeUninit},
     os::raw::{c_int, c_void},
 };
@@ -150,4 +151,93 @@ unsafe impl Equivalence for MpiMigratingLineage {
             ],
         )
     }
+}
+
+pub fn reduce_partitioning_data<
+    T: serde::Serialize + serde::de::DeserializeOwned,
+    F: 'static + Copy + Fn(T, T) -> T,
+>(
+    world: &SimpleCommunicator,
+    data: T,
+    fold: F,
+) -> T {
+    let local_ser = postcard::to_stdvec(&data).expect("MPI data failed to serialize");
+    let mut global_ser = Vec::with_capacity(local_ser.len());
+
+    let operation =
+        unsafe { UnsafeUserOperation::commutative(unsafe_reduce_partitioning_data_op::<T, F>) };
+
+    world.all_reduce_into(local_ser.as_slice(), &mut global_ser, &operation);
+
+    postcard::from_bytes(&global_ser).expect("MPI data failed to deserialize")
+}
+
+#[cfg(not(all(msmpi, target_arch = "x86")))]
+unsafe extern "C" fn unsafe_reduce_partitioning_data_op<
+    T: serde::Serialize + serde::de::DeserializeOwned,
+    F: 'static + Copy + Fn(T, T) -> T,
+>(
+    invec: *mut c_void,
+    inoutvec: *mut c_void,
+    len: *mut c_int,
+    datatype: *mut MPI_Datatype,
+) {
+    unsafe_reduce_partitioning_data_op_inner::<T, F>(invec, inoutvec, len, datatype);
+}
+
+#[cfg(all(msmpi, target_arch = "x86"))]
+unsafe extern "stdcall" fn unsafe_reduce_partitioning_data_op<
+    T: serde::Serialize + serde::de::DeserializeOwned,
+    F: 'static + Copy + Fn(T, T) -> T,
+>(
+    invec: *mut c_void,
+    inoutvec: *mut c_void,
+    len: *mut c_int,
+    datatype: *mut MPI_Datatype,
+) {
+    unsafe_reduce_partitioning_data_op_inner::<T, F>(invec, inoutvec, len, datatype);
+}
+
+#[inline]
+unsafe fn unsafe_reduce_partitioning_data_op_inner<
+    T: serde::Serialize + serde::de::DeserializeOwned,
+    F: 'static + Copy + Fn(T, T) -> T,
+>(
+    invec: *mut c_void,
+    inoutvec: *mut c_void,
+    len: *mut c_int,
+    datatype: *mut MPI_Datatype,
+) {
+    debug_assert!(*len == 1);
+    debug_assert!(*datatype == mpi::raw::AsRaw::as_raw(&TimeRank::equivalent_datatype()));
+
+    reduce_partitioning_data_op_inner::<T, F>(&*invec.cast(), &mut *inoutvec.cast());
+}
+
+#[inline]
+fn reduce_partitioning_data_op_inner<
+    T: serde::Serialize + serde::de::DeserializeOwned,
+    F: 'static + Copy + Fn(T, T) -> T,
+>(
+    local_ser: &[u8],
+    global_ser: &mut Vec<u8>,
+) {
+    union Magic<T, F: 'static + Copy + Fn(T, T) -> T> {
+        func: F,
+        unit: (),
+        marker: PhantomData<T>,
+    }
+
+    let local_de: T = postcard::from_bytes(local_ser).expect("MPI data failed to deserialize");
+    let global_de: T = postcard::from_bytes(global_ser).expect("MPI data failed to deserialize");
+
+    const { assert!(std::mem::size_of::<F>() == 0) };
+    const { assert!(std::mem::align_of::<F>() == 1) };
+    let func: F = unsafe { Magic { unit: () }.func };
+
+    let folded = func(local_de, global_de);
+
+    global_ser.clear();
+
+    postcard::to_io(&folded, global_ser).expect("MPI data failed to serialize");
 }
