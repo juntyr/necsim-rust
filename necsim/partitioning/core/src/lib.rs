@@ -29,14 +29,23 @@ pub trait Partitioning: Sized {
 
     fn get_size(&self) -> PartitionSize;
 
-    fn with_local_partition<R: Reporter, P: ReporterContext<Reporter = R>, A: Send + Clone, Q>(
+    fn with_local_partition<
+        R: Reporter,
+        P: ReporterContext<Reporter = R>,
+        A: Data,
+        Q: Data + serde::Serialize + serde::de::DeserializeOwned,
+    >(
         self,
         reporter_context: P,
         auxiliary: Self::Auxiliary,
         args: A,
         inner: for<'p> fn(Self::LocalPartition<'p, R>, A) -> Q,
+        fold: fn(Q, Q) -> Q,
     ) -> anyhow::Result<Q>;
 }
+
+pub trait Data: Send + Clone {}
+impl<T: Send + Clone> Data for T {}
 
 #[derive(Copy, Clone)]
 pub enum MigrationMode {

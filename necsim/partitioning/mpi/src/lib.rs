@@ -20,7 +20,9 @@ use thiserror::Error;
 use necsim_core::{lineage::MigratingLineage, reporter::Reporter};
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
-use necsim_partitioning_core::{context::ReporterContext, partition::PartitionSize, Partitioning};
+use necsim_partitioning_core::{
+    context::ReporterContext, partition::PartitionSize, Data, Partitioning,
+};
 
 mod partition;
 mod request;
@@ -169,12 +171,19 @@ impl Partitioning for MpiPartitioning {
     /// Returns `MissingEventLog` if the local partition is non-monolithic and
     ///  the `event_log` is `None`.
     /// Returns `InvalidEventSubLog` if creating a sub-`event_log` failed.
-    fn with_local_partition<R: Reporter, P: ReporterContext<Reporter = R>, A: Send + Clone, Q>(
+    fn with_local_partition<
+        R: Reporter,
+        P: ReporterContext<Reporter = R>,
+        A: Data,
+        Q: Data + serde::Serialize + serde::de::DeserializeOwned,
+    >(
         self,
         reporter_context: P,
         event_log: Self::Auxiliary,
         args: A,
         inner: for<'p> fn(Self::LocalPartition<'p, R>, A) -> Q,
+        // TODO: use fold to return the same result in all partitions, then deprecate
+        _fold: fn(Q, Q) -> Q,
     ) -> anyhow::Result<Q> {
         let Some(event_log) = event_log else {
             anyhow::bail!(MpiLocalPartitionError::MissingEventLog)

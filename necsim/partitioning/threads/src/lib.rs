@@ -23,7 +23,9 @@ use necsim_core::reporter::{
 };
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
-use necsim_partitioning_core::{context::ReporterContext, partition::PartitionSize, Partitioning};
+use necsim_partitioning_core::{
+    context::ReporterContext, partition::PartitionSize, Data, Partitioning,
+};
 
 mod partition;
 mod vote;
@@ -127,17 +129,24 @@ impl Partitioning for ThreadsPartitioning {
         self.size
     }
 
+    #[allow(clippy::too_many_lines)]
     /// # Errors
     ///
     /// Returns `MissingEventLog` if the local partition is non-monolithic and
     ///  the `event_log` is `None`.
     /// Returns `InvalidEventSubLog` if creating a sub-`event_log` failed.
-    fn with_local_partition<R: Reporter, P: ReporterContext<Reporter = R>, A: Send + Clone, Q>(
+    fn with_local_partition<
+        R: Reporter,
+        P: ReporterContext<Reporter = R>,
+        A: Data,
+        Q: Data + serde::Serialize + serde::de::DeserializeOwned,
+    >(
         self,
         reporter_context: P,
         event_log: Self::Auxiliary,
         args: A,
         inner: for<'p> fn(Self::LocalPartition<'p, R>, A) -> Q,
+        fold: fn(Q, Q) -> Q,
     ) -> anyhow::Result<Q> {
         // TODO: add support for multithread live reporting
         let Some(event_log) = event_log else {
@@ -188,7 +197,7 @@ impl Partitioning for ThreadsPartitioning {
             .map(|_| args.clone())
             .collect::<Vec<_>>();
 
-        std::thread::scope(|scope| {
+        let result = std::thread::scope(|scope| {
             let vote_any = &vote_any;
             let vote_min_time = &vote_min_time;
             let vote_time_steps = &vote_time_steps;
@@ -196,36 +205,36 @@ impl Partitioning for ThreadsPartitioning {
             let emigration_channels = emigration_channels.as_slice();
             let sync_barrier = &sync_barrier;
 
-            for ((((partition, immigration_channel), event_log), progress_channel), args) in self
+            let thread_handles = self
                 .size
                 .partitions()
                 .zip(immigration_channels)
                 .zip(event_logs)
                 .zip(progress_channels)
                 .zip(args)
-            {
-                let thread_handle = scope.spawn::<_, ()>(move || {
-                    let local_partition = ThreadsLocalPartition::<R>::new(
-                        partition,
-                        vote_any,
-                        vote_min_time,
-                        vote_time_steps,
-                        vote_termination,
-                        emigration_channels,
-                        immigration_channel,
-                        self.migration_interval,
-                        event_log,
-                        progress_channel,
-                        self.progress_interval,
-                        sync_barrier,
-                    );
+                .map(
+                    |((((partition, immigration_channel), event_log), progress_channel), args)| {
+                        scope.spawn(move || {
+                            let local_partition = ThreadsLocalPartition::<R>::new(
+                                partition,
+                                vote_any,
+                                vote_min_time,
+                                vote_time_steps,
+                                vote_termination,
+                                emigration_channels,
+                                immigration_channel,
+                                self.migration_interval,
+                                event_log,
+                                progress_channel,
+                                self.progress_interval,
+                                sync_barrier,
+                            );
 
-                    let _result = inner(local_partition, args);
-                });
-
-                // we don't need the thread result and implicitly propagate thread panics
-                std::mem::drop(thread_handle);
-            }
+                            inner(local_partition, args)
+                        })
+                    },
+                )
+                .collect::<Vec<_>>();
 
             let mut progress_remaining = vec![0; self.size.get() as usize].into_boxed_slice();
             for (remaining, rank) in progress_receiver {
@@ -239,9 +248,22 @@ impl Partitioning for ThreadsPartitioning {
                         .into(),
                 );
             }
+
+            let mut folded_result = None;
+            for handle in thread_handles {
+                let result = match handle.join() {
+                    Ok(result) => result,
+                    Err(payload) => std::panic::resume_unwind(payload),
+                };
+                folded_result = Some(match folded_result.take() {
+                    Some(acc) => fold(acc, result),
+                    None => result,
+                });
+            }
+            folded_result.expect("at least one thread partitioning result")
         });
 
-        todo!()
+        Ok(result)
     }
 }
 

@@ -4,12 +4,12 @@ use necsim_core::{
 };
 use necsim_core_bond::NonNegativeF64;
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
-use necsim_partitioning_core::{context::ReporterContext, Partitioning as _};
+use necsim_partitioning_core::{context::ReporterContext, LocalPartition, Partitioning as _};
 
 use necsim_partitioning_monolithic::MonolithicLocalPartition;
 #[cfg(feature = "necsim-partitioning-mpi")]
 use necsim_partitioning_mpi::MpiLocalPartition;
-use rustcoalescence_algorithms::{result::SimulationOutcome, AlgorithmDispatch};
+use rustcoalescence_algorithms::{result::SimulationOutcome, Algorithm, AlgorithmDispatch};
 use rustcoalescence_scenarios::Scenario;
 
 use crate::args::config::{partitioning::Partitioning, sample::Sample};
@@ -58,7 +58,7 @@ where
             |partition, (sample, rng, scenario, algorithm_args, pause_before, normalised_args)| {
                 match partition {
                     MonolithicLocalPartition::Live(partition) => {
-                        info::dispatch::<M, G, A::Algorithm<'_, _>, O, R, _>(
+                        wrap::<M, G, A::Algorithm<'_, _>, O, R, _>(
                             *partition,
                             sample,
                             rng,
@@ -69,7 +69,7 @@ where
                         )
                     },
                     MonolithicLocalPartition::Recorded(partition) => {
-                        info::dispatch::<M, G, A::Algorithm<'_, _>, O, R, _>(
+                        wrap::<M, G, A::Algorithm<'_, _>, O, R, _>(
                             *partition,
                             sample,
                             rng,
@@ -81,6 +81,7 @@ where
                     },
                 }
             },
+            fold,
         ),
         #[cfg(feature = "necsim-partitioning-mpi")]
         Partitioning::Mpi(partitioning) => partitioning.with_local_partition(
@@ -90,7 +91,7 @@ where
             |partition, (sample, rng, scenario, algorithm_args, pause_before, normalised_args)| {
                 match partition {
                     MpiLocalPartition::Root(partition) => {
-                        info::dispatch::<M, G, A::Algorithm<'_, _>, O, R, _>(
+                        wrap::<M, G, A::Algorithm<'_, _>, O, R, _>(
                             *partition,
                             sample,
                             rng,
@@ -101,7 +102,7 @@ where
                         )
                     },
                     MpiLocalPartition::Parallel(partition) => {
-                        info::dispatch::<M, G, A::Algorithm<'_, _>, O, R, _>(
+                        wrap::<M, G, A::Algorithm<'_, _>, O, R, _>(
                             *partition,
                             sample,
                             rng,
@@ -113,7 +114,71 @@ where
                     },
                 }
             },
+            fold,
         ),
     }
-    .flatten()
+    .and_then(|result| result.map_err(anyhow::Error::msg))
+}
+
+fn wrap<
+    'p,
+    M: MathsCore,
+    G: RngCore<M>,
+    A: Algorithm<'p, M, G, O, R, P>,
+    O: Scenario<M, G>,
+    R: Reporter,
+    P: LocalPartition<'p, R>,
+>(
+    local_partition: P,
+
+    sample: Sample,
+    rng: G,
+    scenario: O,
+    algorithm_args: A::Arguments,
+    pause_before: Option<NonNegativeF64>,
+
+    normalised_args: &BufferingSimulateArgsBuilder,
+) -> Result<SimulationOutcome<M, G>, String>
+where
+    Result<SimulationOutcome<M, G>, A::Error>: anyhow::Context<SimulationOutcome<M, G>, A::Error>,
+{
+    info::dispatch::<M, G, A::Algorithm<'_, _>, O, R, _>(
+        local_partition,
+        sample,
+        rng,
+        scenario,
+        algorithm_args,
+        pause_before,
+        normalised_args,
+    )
+    .map_err(|err| format!("{err:?}"))
+}
+
+fn fold<M: MathsCore, G: RngCore<M>>(
+    a: Result<SimulationOutcome<M, G>, String>,
+    b: Result<SimulationOutcome<M, G>, String>,
+) -> Result<SimulationOutcome<M, G>, String> {
+    match (a, b) {
+        (
+            Ok(SimulationOutcome::Done {
+                time: time_a,
+                steps: steps_a,
+            }),
+            Ok(SimulationOutcome::Done {
+                time: time_b,
+                steps: steps_b,
+            }),
+        ) => Ok(SimulationOutcome::Done {
+            time: time_a.max(time_b),
+            steps: steps_a + steps_b,
+        }),
+        (Ok(SimulationOutcome::Paused { .. }), _) | (_, Ok(SimulationOutcome::Paused { .. })) => {
+            Err(String::from(
+                "parallel pausing is not yet supported, catching this at simulation completion is \
+                 a bug",
+            ))
+        },
+        (Err(err), Ok(_)) | (Ok(_), Err(err)) => Err(err),
+        (Err(err_a), Err(err_b)) => Err(format!("{err_a}\n|\n{err_b}")),
+    }
 }
