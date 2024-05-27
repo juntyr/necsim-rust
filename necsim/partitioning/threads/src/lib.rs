@@ -260,7 +260,7 @@ impl Partitioning for ThreadsPartitioning {
                     None => result,
                 });
             }
-            folded_result.expect("at least one thread partitioning result")
+            folded_result.expect("at least one threads partitioning result")
         });
 
         Ok(result)

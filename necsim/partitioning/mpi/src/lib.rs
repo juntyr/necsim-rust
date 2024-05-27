@@ -8,9 +8,11 @@ use std::{fmt, mem::ManuallyDrop, num::NonZeroU32, time::Duration};
 use anyhow::Context;
 use humantime_serde::re::humantime::format_duration;
 use mpi::{
+    datatype::PartitionMut,
     environment::Universe,
     topology::{Communicator, Rank, SimpleCommunicator},
-    Tag,
+    traits::CommunicatorCollectives,
+    Count, Tag,
 };
 use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 use serde_derive_state::DeserializeState;
@@ -182,8 +184,7 @@ impl Partitioning for MpiPartitioning {
         event_log: Self::Auxiliary,
         args: A,
         inner: for<'p> fn(Self::LocalPartition<'p, R>, A) -> Q,
-        // TODO: use fold to return the same result in all partitions, then deprecate
-        _fold: fn(Q, Q) -> Q,
+        fold: fn(Q, Q) -> Q,
     ) -> anyhow::Result<Q> {
         let Some(event_log) = event_log else {
             anyhow::bail!(MpiLocalPartitionError::MissingEventLog)
@@ -239,7 +240,9 @@ impl Partitioning for MpiPartitioning {
                 )))
             };
 
-            Ok(inner(local_partition, args))
+            let local_result = inner(local_partition, args);
+
+            reduce_partitioning_data(&self.world, local_result, fold)
         })
     }
 }
@@ -284,4 +287,57 @@ fn deserialize_state_mpi_world<'de, D: Deserializer<'de>>(
             "mismatch with MPI world size of {mpi_world}"
         ))),
     }
+}
+
+fn reduce_partitioning_data<T: serde::Serialize + serde::de::DeserializeOwned>(
+    world: &SimpleCommunicator,
+    data: T,
+    fold: fn(T, T) -> T,
+) -> anyhow::Result<T> {
+    let local_ser = postcard::to_stdvec(&data).context("MPI data failed to serialize")?;
+    std::mem::drop(data);
+
+    #[allow(clippy::cast_sign_loss)]
+    let mut counts = vec![0 as Count; world.size() as usize];
+    world.all_gather_into(&(Count::try_from(local_ser.len()).unwrap()), &mut counts);
+
+    let offsets = counts
+        .iter()
+        .scan(0 as Count, |acc, &x| {
+            let tmp = *acc;
+            *acc = (*acc).checked_add(x).unwrap();
+            Some(tmp)
+        })
+        .collect::<Vec<_>>();
+
+    #[allow(clippy::cast_sign_loss)]
+    let mut all_sers = vec![0_u8; counts.iter().copied().sum::<Count>() as usize];
+    world.all_gather_varcount_into(
+        local_ser.as_slice(),
+        &mut PartitionMut::new(all_sers.as_mut_slice(), counts.as_slice(), offsets),
+    );
+
+    let folded: Option<T> = counts
+        .iter()
+        .scan(0_usize, |acc, &x| {
+            let pre = *acc;
+            #[allow(clippy::cast_sign_loss)]
+            {
+                *acc += x as usize;
+            }
+            let post = *acc;
+
+            let de: anyhow::Result<T> = postcard::from_bytes(&all_sers[pre..post])
+                .context("MPI data failed to deserialize");
+
+            Some(de)
+        })
+        .try_fold(None, |acc, x| match (acc, x) {
+            (_, Err(err)) => Err(err),
+            (Some(acc), Ok(x)) => Ok(Some(fold(acc, x))),
+            (None, Ok(x)) => Ok(Some(x)),
+        })?;
+    let folded = folded.expect("at least one MPI partitioning result");
+
+    Ok(folded)
 }
