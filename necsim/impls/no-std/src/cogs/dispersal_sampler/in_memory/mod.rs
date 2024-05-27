@@ -7,6 +7,7 @@ pub mod contract;
 pub mod alias;
 pub mod cumulative;
 pub mod packed_alias;
+pub mod packed_separable_alias;
 pub mod separable_alias;
 
 use contract::explicit_in_memory_dispersal_check_contract;

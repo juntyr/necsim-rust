@@ -22,6 +22,14 @@ struct AliasMethodSamplerAtomRaw<E: Copy + PartialEq> {
 }
 
 impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
+    pub fn e(&self) -> &E {
+        &self.e
+    }
+
+    pub fn k(&self) -> &E {
+        &self.k
+    }
+
     #[allow(clippy::no_effect_underscore_binding)]
     #[debug_requires(!event_weights.is_empty(), "event_weights is non-empty")]
     #[debug_requires(
