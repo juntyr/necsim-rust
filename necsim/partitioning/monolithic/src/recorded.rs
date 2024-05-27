@@ -10,7 +10,7 @@ use necsim_core::{
         FilteredReporter, Reporter,
     },
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::PositiveF64;
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 
@@ -95,14 +95,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for RecordedMonolithicLocalPartition
         } else {
             ControlFlow::Continue(())
         }
-    }
-
-    fn reduce_global_time_steps(
-        &mut self,
-        local_time: NonNegativeF64,
-        local_steps: u64,
-    ) -> (NonNegativeF64, u64) {
-        (local_time, local_steps)
     }
 
     fn report_progress_sync(&mut self, remaining: u64) {

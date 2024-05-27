@@ -13,7 +13,7 @@ use mpi::{
 };
 
 use necsim_core::lineage::MigratingLineage;
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::PositiveF64;
 
 use necsim_partitioning_core::{
     iterator::ImmigrantPopIterator,
@@ -291,29 +291,5 @@ impl<'p> MpiCommonPartition<'p> {
         } else {
             ControlFlow::Break(())
         }
-    }
-
-    #[must_use]
-    pub fn reduce_global_time_steps(
-        &mut self,
-        local_time: NonNegativeF64,
-        local_steps: u64,
-    ) -> (NonNegativeF64, u64) {
-        let mut global_time_max = 0.0_f64;
-        let mut global_steps_sum = 0_u64;
-
-        self.world.all_reduce_into(
-            &local_time.get(),
-            &mut global_time_max,
-            SystemOperation::max(),
-        );
-        self.world
-            .all_reduce_into(&local_steps, &mut global_steps_sum, SystemOperation::sum());
-
-        // Safety: `global_time_max` is the max of multiple `NonNegativeF64`s
-        //         communicated through MPI
-        let global_time_max = unsafe { NonNegativeF64::new_unchecked(global_time_max) };
-
-        (global_time_max, global_steps_sum)
     }
 }

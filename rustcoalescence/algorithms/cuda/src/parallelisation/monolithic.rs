@@ -341,13 +341,13 @@ pub fn simulate<
     local_partition.report_progress_sync(slow_lineages.len() as u64);
 
     let status = Status::paused(local_partition.reduce_vote_any(!slow_lineages.is_empty()));
-    let (global_time, global_steps) =
-        local_partition.reduce_global_time_steps(total_time_max, total_steps_sum);
+    let local_time = total_time_max;
+    let local_steps = total_steps_sum;
     let lineages = slow_lineages.into_iter().map(|(lineage, _)| lineage);
 
     // Note: The simulation requires no mutation, since all components are
     //       either immutable or have singular swap states, and the list
     //       of all lineages (which does change) is returned separately
 
-    Ok((status, global_time, global_steps, lineages))
+    Ok((status, local_time, local_steps, lineages))
 }

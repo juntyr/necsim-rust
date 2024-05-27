@@ -13,7 +13,7 @@ use std::{
 
 use anyhow::Context;
 use humantime_serde::re::humantime::format_duration;
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::PositiveF64;
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 
@@ -129,7 +129,6 @@ impl Partitioning for ThreadsPartitioning {
         self.size
     }
 
-    #[allow(clippy::too_many_lines)]
     /// # Errors
     ///
     /// Returns `MissingEventLog` if the local partition is non-monolithic and
@@ -165,8 +164,6 @@ impl Partitioning for ThreadsPartitioning {
 
         let vote_any = Vote::new(self.size.get() as usize);
         let vote_min_time = Vote::new_with_dummy(self.size.get() as usize, (PositiveF64::one(), 0));
-        let vote_time_steps =
-            Vote::new_with_dummy(self.size.get() as usize, (NonNegativeF64::zero(), 0));
         let vote_termination =
             AsyncVote::new_with_dummy(self.size.get() as usize, ControlFlow::Continue(()));
 
@@ -200,7 +197,6 @@ impl Partitioning for ThreadsPartitioning {
         let result = std::thread::scope(|scope| {
             let vote_any = &vote_any;
             let vote_min_time = &vote_min_time;
-            let vote_time_steps = &vote_time_steps;
             let vote_termination = &vote_termination;
             let emigration_channels = emigration_channels.as_slice();
             let sync_barrier = &sync_barrier;
@@ -219,7 +215,6 @@ impl Partitioning for ThreadsPartitioning {
                                 partition,
                                 vote_any,
                                 vote_min_time,
-                                vote_time_steps,
                                 vote_termination,
                                 emigration_channels,
                                 immigration_channel,

@@ -221,9 +221,8 @@ pub fn simulate<
 
     proxy.local_partition().report_progress_sync(0_u64);
 
-    let (global_time, global_steps) = proxy
-        .local_partition()
-        .reduce_global_time_steps(max_time, total_steps);
+    let local_time = max_time;
+    let local_steps = total_steps;
 
-    (Status::Done, global_time, global_steps, lineages)
+    (Status::Done, local_time, local_steps, lineages)
 }

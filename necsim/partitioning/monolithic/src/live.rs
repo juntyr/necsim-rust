@@ -4,7 +4,7 @@ use necsim_core::{
     lineage::MigratingLineage,
     reporter::{boolean::True, FilteredReporter, Reporter},
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::PositiveF64;
 
 use necsim_partitioning_core::{
     context::ReporterContext, iterator::ImmigrantPopIterator, partition::Partition, LocalPartition,
@@ -85,14 +85,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for LiveMonolithicLocalPartition<R> 
         } else {
             ControlFlow::Continue(())
         }
-    }
-
-    fn reduce_global_time_steps(
-        &mut self,
-        local_time: NonNegativeF64,
-        local_steps: u64,
-    ) -> (NonNegativeF64, u64) {
-        (local_time, local_steps)
     }
 
     fn report_progress_sync(&mut self, remaining: u64) {

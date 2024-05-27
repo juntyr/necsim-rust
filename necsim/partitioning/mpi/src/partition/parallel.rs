@@ -17,7 +17,7 @@ use necsim_core::{
         Reporter,
     },
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::PositiveF64;
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_partitioning_core::{
@@ -125,15 +125,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
 
     fn wait_for_termination(&mut self) -> ControlFlow<(), ()> {
         self.common.wait_for_termination()
-    }
-
-    fn reduce_global_time_steps(
-        &mut self,
-        local_time: NonNegativeF64,
-        local_steps: u64,
-    ) -> (NonNegativeF64, u64) {
-        self.common
-            .reduce_global_time_steps(local_time, local_steps)
     }
 
     fn report_progress_sync(&mut self, remaining: u64) {

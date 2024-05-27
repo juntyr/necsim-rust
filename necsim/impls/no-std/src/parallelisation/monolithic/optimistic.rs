@@ -173,10 +173,8 @@ pub fn simulate<
 
     proxy.local_partition().report_progress_sync(0_u64);
 
-    let (global_time, global_steps) = proxy.local_partition().reduce_global_time_steps(
-        simulation.active_lineage_sampler().get_last_event_time(),
-        total_steps,
-    );
+    let local_time = simulation.active_lineage_sampler().get_last_event_time();
+    let local_steps = total_steps;
 
-    (Status::Done, global_time, global_steps)
+    (Status::Done, local_time, local_steps)
 }

@@ -5,7 +5,7 @@ use necsim_core::{
     lineage::MigratingLineage,
     reporter::{boolean::False, Reporter},
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::PositiveF64;
 
 use necsim_partitioning_core::{
     iterator::ImmigrantPopIterator, partition::Partition, LocalPartition, MigrationMode,
@@ -92,19 +92,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiLocalPartition<'p, R> {
         match self {
             Self::Root(partition) => partition.wait_for_termination(),
             Self::Parallel(partition) => partition.wait_for_termination(),
-        }
-    }
-
-    fn reduce_global_time_steps(
-        &mut self,
-        local_time: NonNegativeF64,
-        local_steps: u64,
-    ) -> (NonNegativeF64, u64) {
-        match self {
-            Self::Root(partition) => partition.reduce_global_time_steps(local_time, local_steps),
-            Self::Parallel(partition) => {
-                partition.reduce_global_time_steps(local_time, local_steps)
-            },
         }
     }
 

@@ -12,7 +12,7 @@ use necsim_core::{
     lineage::MigratingLineage,
     reporter::{boolean::Boolean, Reporter},
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::PositiveF64;
 
 pub mod context;
 pub mod iterator;
@@ -85,12 +85,6 @@ pub trait LocalPartition<'p, R: Reporter>: Sized {
         -> Result<PositiveF64, PositiveF64>;
 
     fn wait_for_termination(&mut self) -> ControlFlow<(), ()>;
-
-    fn reduce_global_time_steps(
-        &mut self,
-        local_time: NonNegativeF64,
-        local_steps: u64,
-    ) -> (NonNegativeF64, u64);
 
     fn report_progress_sync(&mut self, remaining: u64);
 

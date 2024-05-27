@@ -18,7 +18,7 @@ use necsim_core::{
         Reporter,
     },
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::PositiveF64;
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_partitioning_core::{partition::Partition, LocalPartition, MigrationMode};
@@ -30,7 +30,6 @@ pub struct ThreadsLocalPartition<'p, R: Reporter> {
     partition: Partition,
     vote_any: Vote<bool>,
     vote_min_time: Vote<(PositiveF64, u32)>,
-    vote_time_steps: Vote<(NonNegativeF64, u64)>,
     vote_termination: AsyncVote<ControlFlow<(), ()>>,
     emigration_buffers: Box<[Vec<MigratingLineage>]>,
     emigration_channels: Box<[SyncSender<Vec<MigratingLineage>>]>,
@@ -61,7 +60,6 @@ impl<'p, R: Reporter> ThreadsLocalPartition<'p, R> {
         partition: Partition,
         vote_any: &Vote<bool>,
         vote_min_time: &Vote<(PositiveF64, u32)>,
-        vote_time_steps: &Vote<(NonNegativeF64, u64)>,
         vote_termination: &AsyncVote<ControlFlow<(), ()>>,
         emigration_channels: &[SyncSender<Vec<MigratingLineage>>],
         immigration_channel: Receiver<Vec<MigratingLineage>>,
@@ -84,7 +82,6 @@ impl<'p, R: Reporter> ThreadsLocalPartition<'p, R> {
             partition,
             vote_any: vote_any.clone(),
             vote_min_time: vote_min_time.clone(),
-            vote_time_steps: vote_time_steps.clone(),
             vote_termination: vote_termination.clone(),
             emigration_buffers: emigration_buffers.into_boxed_slice(),
             emigration_channels: Vec::from(emigration_channels).into_boxed_slice(),
@@ -261,19 +258,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsLocalPartition<'p, R> {
             Poll::Pending => ControlFlow::Continue(()),
             Poll::Ready(result) => result,
         }
-    }
-
-    fn reduce_global_time_steps(
-        &mut self,
-        local_time: NonNegativeF64,
-        local_steps: u64,
-    ) -> (NonNegativeF64, u64) {
-        self.vote_time_steps.vote(|acc| match acc {
-            None => (local_time, local_steps),
-            Some((global_time, global_steps)) => {
-                (local_time.max(*global_time), local_steps + (*global_steps))
-            },
-        })
     }
 
     fn report_progress_sync(&mut self, remaining: u64) {

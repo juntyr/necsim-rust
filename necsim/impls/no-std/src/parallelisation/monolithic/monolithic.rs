@@ -87,7 +87,8 @@ pub fn simulate<
         local_partition
             .reduce_vote_any(simulation.active_lineage_sampler().number_active_lineages() > 0),
     );
-    let (global_time, global_steps) = local_partition.reduce_global_time_steps(time, steps);
+    let local_time = time;
+    let local_steps = steps;
 
-    (status, global_time, global_steps)
+    (status, local_time, local_steps)
 }
