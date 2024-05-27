@@ -43,7 +43,6 @@ pub enum SpatiallyExplicitTurnoverMapScenarioError {
 #[derive(Clone)]
 pub struct SpatiallyExplicitTurnoverMapScenario<M: MathsCore, G: RngCore<M>> {
     habitat: InMemoryHabitat<M>,
-    // TODO: use an Arc
     dispersal_map: Array2D<NonNegativeF64>,
     turnover_rate: InMemoryTurnoverRate,
     speciation_probability: UniformSpeciationProbability,
@@ -116,6 +115,7 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitTurnoverMa
         Self::OriginSamplerAuxiliary,
         Self::DecompositionAuxiliary,
     ) {
+        // TODO: push the Arc further into the dispersal sampler to maximise sharing
         let dispersal_sampler = D::unchecked_new(&self.dispersal_map, &self.habitat);
 
         (
