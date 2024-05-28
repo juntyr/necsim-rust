@@ -16,7 +16,7 @@ use necsim_impls_no_std::cogs::{
     },
     coalescence_sampler::unconditional::UnconditionalCoalescenceSampler,
     dispersal_sampler::{
-        in_memory::alias::InMemoryAliasDispersalSampler,
+        in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
         trespassing::{
             uniform::UniformAntiTrespassingDispersalSampler, TrespassingDispersalSampler,
         },
@@ -87,7 +87,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
         M,
         O::Habitat,
         G,
-        O::DispersalSampler<InMemoryAliasDispersalSampler<M, O::Habitat, G>>,
+        O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>,
         UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
     >;
 
@@ -103,7 +103,9 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: O::DispersalSampler<InMemoryAliasDispersalSampler<M, O::Habitat, G>>,
+        dispersal_sampler: O::DispersalSampler<
+            InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>,
+        >,
         local_partition: &mut P,
     ) -> Result<
         (

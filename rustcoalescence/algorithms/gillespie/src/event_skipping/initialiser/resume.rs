@@ -11,7 +11,7 @@ use necsim_core_bond::NonNegativeF64;
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::alias::location::LocationAliasActiveLineageSampler,
     coalescence_sampler::conditional::ConditionalCoalescenceSampler,
-    dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
+    dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
     event_sampler::gillespie::conditional::ConditionalGillespieEventSampler,
     origin_sampler::{resuming::ResumingOriginSampler, TrustedOriginSampler},
 };
@@ -31,7 +31,7 @@ pub struct ResumeInitialiser<L: ExactSizeIterator<Item = Lineage>> {
 impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
     EventSkippingLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for ResumeInitialiser<L>
 where
-    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
+    O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>:
         SeparableDispersalSampler<M, O::Habitat, G>,
 {
     type ActiveLineageSampler<
@@ -61,7 +61,7 @@ where
         I,
     >;
     type DispersalSampler =
-        O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>;
+        O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>;
 
     fn init<
         'h,
@@ -76,7 +76,7 @@ where
         self,
         origin_sampler: T,
         dispersal_sampler: O::DispersalSampler<
-            InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>,
+            InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>,
         >,
         coalescence_sampler: &ConditionalCoalescenceSampler<M, O::Habitat, S>,
         turnover_rate: &O::TurnoverRate,

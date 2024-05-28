@@ -13,7 +13,7 @@ use necsim_core_bond::NonNegativeF64;
 use necsim_impls_no_std::{
     cogs::{
         coalescence_sampler::conditional::ConditionalCoalescenceSampler,
-        dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
+        dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
         emigration_exit::{domain::DomainEmigrationExit, never::NeverEmigrationExit},
         immigration_entry::{buffered::BufferedImmigrationEntry, never::NeverImmigrationEntry},
         lineage_store::coherent::globally::gillespie::GillespieLineageStore,
@@ -56,7 +56,7 @@ pub fn initialise_and_simulate<
 where
     O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
         GloballyCoherentLineageStore<M, O::Habitat>,
-    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
+    O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>:
         SeparableDispersalSampler<M, O::Habitat, G>,
 {
     match args.parallelism_mode {
@@ -68,7 +68,7 @@ where
                 speciation_probability,
                 origin_sampler_auxiliary,
                 _decomposition_auxiliary,
-            ) = scenario.build::<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>();
+            ) = scenario.build::<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>();
             let coalescence_sampler = ConditionalCoalescenceSampler::default();
 
             let (lineage_store, dispersal_sampler, event_sampler, active_lineage_sampler): (
@@ -138,7 +138,7 @@ where
                 speciation_probability,
                 origin_sampler_auxiliary,
                 decomposition_auxiliary,
-            ) = scenario.build::<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>();
+            ) = scenario.build::<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>();
             let coalescence_sampler = ConditionalCoalescenceSampler::default();
 
             let decomposition = O::decompose(

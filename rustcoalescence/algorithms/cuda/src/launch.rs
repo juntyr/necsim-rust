@@ -11,7 +11,7 @@ use necsim_impls_no_std::{
     cogs::{
         active_lineage_sampler::independent::event_time_sampler::exp::ExpEventTimeSampler,
         coalescence_sampler::independent::IndependentCoalescenceSampler,
-        dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
+        dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
         emigration_exit::never::NeverEmigrationExit,
         event_sampler::independent::IndependentEventSampler,
         immigration_entry::never::NeverImmigrationEntry,
@@ -97,7 +97,8 @@ pub fn initialise_and_simulate<
 ) -> Result<SimulationOutcome<M, G>, Error>
 where
     O::Habitat: RustToCuda + Sync,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda + Sync,
+    O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>:
+        RustToCuda + Sync,
     O::TurnoverRate: RustToCuda + Sync,
     O::SpeciationProbability: RustToCuda + Sync,
 {
@@ -108,7 +109,7 @@ where
         speciation_probability,
         origin_sampler_auxiliary,
         decomposition_auxiliary,
-    ) = scenario.build::<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>();
+    ) = scenario.build::<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>();
     let coalescence_sampler = IndependentCoalescenceSampler::default();
     let event_sampler = IndependentEventSampler::default();
 

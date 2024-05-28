@@ -8,7 +8,7 @@ use necsim_core::{
 
 use necsim_impls_no_std::cogs::{
     coalescence_sampler::conditional::ConditionalCoalescenceSampler,
-    dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
+    dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
     event_sampler::gillespie::conditional::ConditionalGillespieEventSampler,
     origin_sampler::TrustedOriginSampler,
 };
@@ -27,7 +27,7 @@ pub trait EventSkippingLineageStoreSampleInitialiser<
     O: Scenario<M, G>,
     Error,
 > where
-    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
+    O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>:
         SeparableDispersalSampler<M, O::Habitat, G>,
 {
     type DispersalSampler: SeparableDispersalSampler<M, O::Habitat, G>;
@@ -72,7 +72,7 @@ pub trait EventSkippingLineageStoreSampleInitialiser<
         self,
         origin_sampler: T,
         dispersal_sampler: O::DispersalSampler<
-            InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>,
+            InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>,
         >,
         coalescence_sampler: &ConditionalCoalescenceSampler<M, O::Habitat, S>,
         turnover_rate: &O::TurnoverRate,

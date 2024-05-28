@@ -6,7 +6,7 @@ use necsim_core::{
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::cogs::{
-    dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
+    dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
     lineage_store::coherent::globally::gillespie::GillespieLineageStore,
     maths::intrinsics::IntrinsicsMathsCore, origin_sampler::pre_sampler::OriginPreSampler,
 };
@@ -52,7 +52,7 @@ impl<M: MathsCore, G: SplittableRng<M>, O: Scenario<M, G>, R: Reporter>
 where
     O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
         GloballyCoherentLineageStore<M, O::Habitat>,
-    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
+    O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>:
         SeparableDispersalSampler<M, O::Habitat, G>,
 {
     type Algorithm<'p, P: LocalPartition<'p, R>> = Self;
@@ -76,7 +76,7 @@ impl<
 where
     O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
         GloballyCoherentLineageStore<M, O::Habitat>,
-    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
+    O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>:
         SeparableDispersalSampler<M, O::Habitat, G>,
 {
     type LineageStore = O::LineageStore<GillespieLineageStore<M, O::Habitat>>;

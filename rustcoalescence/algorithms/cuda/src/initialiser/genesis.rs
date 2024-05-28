@@ -7,7 +7,7 @@ use necsim_impls_no_std::cogs::{
     active_lineage_sampler::independent::{
         event_time_sampler::EventTimeSampler, IndependentActiveLineageSampler,
     },
-    dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
+    dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
     lineage_store::independent::IndependentLineageStore,
     origin_sampler::TrustedOriginSampler,
 };
@@ -27,7 +27,8 @@ impl<M: MathsCore + Sync, G: PrimeableRng<M> + RustToCuda + Sync, O: Scenario<M,
     CudaLineageStoreSampleInitialiser<M, G, O, CudaError> for GenesisInitialiser
 where
     O::Habitat: RustToCuda + Sync,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda + Sync,
+    O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>:
+        RustToCuda + Sync,
     O::TurnoverRate: RustToCuda + Sync,
     O::SpeciationProbability: RustToCuda + Sync,
 {
@@ -47,7 +48,7 @@ where
         J,
     >;
     type DispersalSampler =
-        O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>;
+        O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>;
 
     fn init<
         'h,
@@ -60,7 +61,7 @@ where
         self,
         origin_sampler: T,
         dispersal_sampler: O::DispersalSampler<
-            InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>,
+            InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>,
         >,
         event_time_sampler: J,
     ) -> Result<

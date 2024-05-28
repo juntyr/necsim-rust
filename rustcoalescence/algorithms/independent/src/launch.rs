@@ -11,7 +11,7 @@ use necsim_impls_no_std::{
     cogs::{
         active_lineage_sampler::independent::event_time_sampler::poisson::PoissonEventTimeSampler,
         coalescence_sampler::independent::IndependentCoalescenceSampler,
-        dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
+        dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
         emigration_exit::{
             independent::{
                 choice::{
@@ -73,7 +73,7 @@ pub fn initialise_and_simulate<
                 speciation_probability,
                 origin_sampler_auxiliary,
                 decomposition_auxiliary,
-            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, G>>();
+            ) = scenario.build::<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>();
             let coalescence_sampler = IndependentCoalescenceSampler::default();
             let event_sampler = IndependentEventSampler::default();
 
@@ -166,7 +166,7 @@ pub fn initialise_and_simulate<
                 speciation_probability,
                 origin_sampler_auxiliary,
                 _decomposition_auxiliary,
-            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, G>>();
+            ) = scenario.build::<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>();
             let coalescence_sampler = IndependentCoalescenceSampler::default();
             let event_sampler = IndependentEventSampler::default();
 
@@ -221,7 +221,7 @@ pub fn initialise_and_simulate<
                 speciation_probability,
                 origin_sampler_auxiliary,
                 decomposition_auxiliary,
-            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, G>>();
+            ) = scenario.build::<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>();
             let coalescence_sampler = IndependentCoalescenceSampler::default();
             let event_sampler = IndependentEventSampler::default();
 
@@ -284,7 +284,7 @@ pub fn initialise_and_simulate<
                 speciation_probability,
                 origin_sampler_auxiliary,
                 decomposition_auxiliary,
-            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, G>>();
+            ) = scenario.build::<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>();
             let coalescence_sampler = IndependentCoalescenceSampler::default();
             let event_sampler = IndependentEventSampler::default();
 

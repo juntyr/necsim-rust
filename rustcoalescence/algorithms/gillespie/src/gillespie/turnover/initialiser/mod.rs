@@ -7,7 +7,7 @@ use necsim_core::{
 };
 
 use necsim_impls_no_std::cogs::{
-    dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
+    dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
     origin_sampler::TrustedOriginSampler,
 };
 use necsim_partitioning_core::LocalPartition;
@@ -72,7 +72,9 @@ pub trait GillespieLineageStoreSampleInitialiser<
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: O::DispersalSampler<InMemoryAliasDispersalSampler<M, O::Habitat, G>>,
+        dispersal_sampler: O::DispersalSampler<
+            InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>,
+        >,
         turnover_rate: &O::TurnoverRate,
         local_partition: &mut P,
     ) -> Result<

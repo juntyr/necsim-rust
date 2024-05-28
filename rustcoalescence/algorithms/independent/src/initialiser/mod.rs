@@ -8,7 +8,7 @@ use necsim_impls_no_std::cogs::{
         independent::event_time_sampler::EventTimeSampler, singular::SingularActiveLineageSampler,
     },
     coalescence_sampler::independent::IndependentCoalescenceSampler,
-    dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
+    dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
     event_sampler::independent::IndependentEventSampler,
     immigration_entry::never::NeverImmigrationEntry,
     lineage_store::independent::IndependentLineageStore,
@@ -52,7 +52,9 @@ pub trait IndependentLineageStoreSampleInitialiser<
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: O::DispersalSampler<InMemoryAliasDispersalSampler<M, O::Habitat, G>>,
+        dispersal_sampler: O::DispersalSampler<
+            InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>,
+        >,
         event_time_sampler: J,
     ) -> Result<
         (

@@ -10,7 +10,7 @@ use necsim_core_bond::NonNegativeF64;
 use necsim_impls_no_std::{
     cogs::{
         coalescence_sampler::unconditional::UnconditionalCoalescenceSampler,
-        dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
+        dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
         emigration_exit::{domain::DomainEmigrationExit, never::NeverEmigrationExit},
         event_sampler::unconditional::UnconditionalEventSampler,
         immigration_entry::{buffered::BufferedImmigrationEntry, never::NeverImmigrationEntry},
@@ -65,7 +65,7 @@ where
                 speciation_probability,
                 origin_sampler_auxiliary,
                 _decomposition_auxiliary,
-            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, G>>();
+            ) = scenario.build::<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>();
             let coalescence_sampler = UnconditionalCoalescenceSampler::default();
             let event_sampler = UnconditionalEventSampler::default();
 
@@ -133,7 +133,7 @@ where
                 speciation_probability,
                 origin_sampler_auxiliary,
                 decomposition_auxiliary,
-            ) = scenario.build::<InMemoryAliasDispersalSampler<M, O::Habitat, G>>();
+            ) = scenario.build::<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>();
             let coalescence_sampler = UnconditionalCoalescenceSampler::default();
             let event_sampler = UnconditionalEventSampler::default();
 

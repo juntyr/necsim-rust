@@ -13,7 +13,7 @@ use necsim_impls_no_std::cogs::{
         resuming::lineage::{ExceptionalLineage, SplitExceptionalLineages},
     },
     dispersal_sampler::{
-        in_memory::alias::InMemoryAliasDispersalSampler,
+        in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
         trespassing::{
             uniform::UniformAntiTrespassingDispersalSampler, TrespassingDispersalSampler,
         },
@@ -56,7 +56,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: PrimeableRng<M>, O: 
         M,
         O::Habitat,
         G,
-        O::DispersalSampler<InMemoryAliasDispersalSampler<M, O::Habitat, G>>,
+        O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>,
         UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
     >;
 
@@ -68,7 +68,9 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: PrimeableRng<M>, O: 
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: O::DispersalSampler<InMemoryAliasDispersalSampler<M, O::Habitat, G>>,
+        dispersal_sampler: O::DispersalSampler<
+            InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>,
+        >,
         _event_time_sampler: J,
     ) -> Result<
         (

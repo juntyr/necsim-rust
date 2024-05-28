@@ -325,7 +325,7 @@ link_kernel!(
     necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore
     >,
-    necsim_impls_no_std::cogs::dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler<
+    necsim_impls_no_std::cogs::dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
         necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore
@@ -346,7 +346,7 @@ link_kernel!(
     necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore
     >,
-    necsim_impls_no_std::cogs::dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler<
+    necsim_impls_no_std::cogs::dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
         necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore
