@@ -81,7 +81,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
 
                 if total_weight > 0.0_f64 {
                     // Safety: Normalisation limits the result to [0.0; 1.0]
-                    let dispersal_probability = unsafe {
+                    let self_dispersal_probability = unsafe {
                         ClosedUnitF64::new_unchecked(
                             (self_dispersal_at_location / total_weight).get(),
                         )
@@ -90,7 +90,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                     self_dispersal[(
                         row_index / usize::from(habitat_extent.width()),
                         row_index % usize::from(habitat_extent.width()),
-                    )] = dispersal_probability;
+                    )] = self_dispersal_probability;
                 }
 
                 if event_weights.is_empty() {

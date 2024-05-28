@@ -4,6 +4,7 @@ use necsim_core::{
     cogs::{DispersalSampler, Habitat, MathsCore, RngCore},
     landscape::Location,
 };
+use necsim_core_bond::ClosedUnitF64;
 
 use crate::alias::packed::AliasMethodSamplerAtom;
 
@@ -37,8 +38,11 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
         let alias_dispersals_at_location =
             unsafe { &self.alias_dispersal_buffer.get_unchecked(alias_range) };
 
-        let dispersal_target_index: usize =
-            AliasMethodSamplerAtom::sample_event(alias_dispersals_at_location, rng);
+        let dispersal_target_index: usize = AliasMethodSamplerAtom::sample_event(
+            alias_dispersals_at_location,
+            rng,
+            ClosedUnitF64::one(),
+        );
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
