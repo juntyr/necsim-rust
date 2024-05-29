@@ -18,11 +18,8 @@ use necsim_impls_no_std::cogs::{
         },
     },
     coalescence_sampler::conditional::ConditionalCoalescenceSampler,
-    dispersal_sampler::{
-        in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
-        trespassing::{
-            uniform::UniformAntiTrespassingDispersalSampler, TrespassingDispersalSampler,
-        },
+    dispersal_sampler::trespassing::{
+        uniform::UniformAntiTrespassingDispersalSampler, TrespassingDispersalSampler,
     },
     event_sampler::gillespie::conditional::ConditionalGillespieEventSampler,
     origin_sampler::{resuming::ResumingOriginSampler, TrustedOriginSampler},
@@ -48,8 +45,7 @@ pub struct FixUpInitialiser<L: ExactSizeIterator<Item = Lineage>> {
 impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
     EventSkippingLineageStoreSampleInitialiser<M, G, O, ResumeError<!>> for FixUpInitialiser<L>
 where
-    O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>:
-        SeparableDispersalSampler<M, O::Habitat, G>,
+    O::DispersalSampler: SeparableDispersalSampler<M, O::Habitat, G>,
 {
     type ActiveLineageSampler<
         S: GloballyCoherentLineageStore<M, O::Habitat>,
@@ -103,7 +99,7 @@ where
         M,
         O::Habitat,
         G,
-        O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>,
+        O::DispersalSampler,
         UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
     >;
 
@@ -119,9 +115,7 @@ where
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: O::DispersalSampler<
-            InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>,
-        >,
+        dispersal_sampler: O::DispersalSampler,
         coalescence_sampler: &ConditionalCoalescenceSampler<M, O::Habitat, S>,
         turnover_rate: &O::TurnoverRate,
         speciation_probability: &O::SpeciationProbability,

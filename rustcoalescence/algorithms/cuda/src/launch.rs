@@ -11,7 +11,6 @@ use necsim_impls_no_std::{
     cogs::{
         active_lineage_sampler::independent::event_time_sampler::exp::ExpEventTimeSampler,
         coalescence_sampler::independent::IndependentCoalescenceSampler,
-        dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
         emigration_exit::never::NeverEmigrationExit,
         event_sampler::independent::IndependentEventSampler,
         immigration_entry::never::NeverImmigrationEntry,
@@ -25,7 +24,7 @@ use necsim_impls_no_std::{
 use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_algorithms::result::SimulationOutcome;
-use rustcoalescence_scenarios::Scenario;
+use rustcoalescence_scenarios::{Scenario, ScenarioCogs};
 
 use rustcoalescence_algorithms_cuda_gpu_kernel::simulate;
 
@@ -89,7 +88,7 @@ pub fn initialise_and_simulate<
 >(
     args: &CudaArguments,
     rng: G,
-    scenario: O,
+    scenario: ScenarioCogs<M, G, O>,
     pre_sampler: OriginPreSampler<M, I>,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
@@ -97,19 +96,19 @@ pub fn initialise_and_simulate<
 ) -> Result<SimulationOutcome<M, G>, Error>
 where
     O::Habitat: RustToCuda + Sync,
-    O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>:
-        RustToCuda + Sync,
+    O::DispersalSampler: RustToCuda + Sync,
     O::TurnoverRate: RustToCuda + Sync,
     O::SpeciationProbability: RustToCuda + Sync,
 {
-    let (
+    let ScenarioCogs {
         habitat,
         dispersal_sampler,
         turnover_rate,
         speciation_probability,
         origin_sampler_auxiliary,
         decomposition_auxiliary,
-    ) = scenario.build::<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>();
+        ..
+    } = scenario;
     let coalescence_sampler = IndependentCoalescenceSampler::default();
     let event_sampler = IndependentEventSampler::default();
 

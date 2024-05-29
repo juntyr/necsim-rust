@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use alloc::vec::Vec;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore},
+    cogs::{Habitat, MathsCore, RngCore},
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
@@ -18,7 +18,9 @@ mod dispersal;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct InMemorySeparableAliasDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>> {
+    // TODO: use Arc
     alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
+    // TODO: use Arc
     self_dispersal: Array2D<ClosedUnitF64>,
     _marker: PhantomData<(M, H, G)>,
 }
@@ -112,11 +114,10 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Backup
+impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Clone
     for InMemorySeparableAliasDispersalSampler<M, H, G>
 {
-    unsafe fn backup_unchecked(&self) -> Self {
+    fn clone(&self) -> Self {
         Self {
             alias_dispersal: self.alias_dispersal.clone(),
             self_dispersal: self.self_dispersal.clone(),

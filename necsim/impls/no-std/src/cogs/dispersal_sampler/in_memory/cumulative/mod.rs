@@ -1,7 +1,9 @@
-use alloc::{boxed::Box, vec};
+use core::marker::PhantomData;
+
+use alloc::{boxed::Box, sync::Arc, vec};
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore},
+    cogs::{Habitat, MathsCore, RngCore},
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
@@ -13,14 +15,15 @@ mod dispersal;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
-pub struct InMemoryCumulativeDispersalSampler {
-    cumulative_dispersal: Box<[ClosedUnitF64]>,
-    valid_dispersal_targets: Box<[Option<usize>]>,
+pub struct InMemoryCumulativeDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>> {
+    cumulative_dispersal: Arc<[ClosedUnitF64]>,
+    valid_dispersal_targets: Arc<[Option<usize>]>,
+    marker: PhantomData<(M, H, G)>,
 }
 
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, G>
-    for InMemoryCumulativeDispersalSampler
+    for InMemoryCumulativeDispersalSampler<M, H, G>
 {
     /// Creates a new `InMemoryCumulativeDispersalSampler` from the
     /// `dispersal` map and extent of the habitat map.
@@ -99,18 +102,21 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
         };
 
         InMemoryCumulativeDispersalSampler {
-            cumulative_dispersal,
-            valid_dispersal_targets,
+            cumulative_dispersal: Arc::from(cumulative_dispersal),
+            valid_dispersal_targets: Arc::from(valid_dispersal_targets),
+            marker: PhantomData::<(M, H, G)>,
         }
     }
 }
 
-#[contract_trait]
-impl Backup for InMemoryCumulativeDispersalSampler {
-    unsafe fn backup_unchecked(&self) -> Self {
+impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Clone
+    for InMemoryCumulativeDispersalSampler<M, H, G>
+{
+    fn clone(&self) -> Self {
         Self {
             cumulative_dispersal: self.cumulative_dispersal.clone(),
             valid_dispersal_targets: self.valid_dispersal_targets.clone(),
+            marker: PhantomData::<(M, H, G)>,
         }
     }
 }

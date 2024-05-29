@@ -11,7 +11,6 @@ use necsim_impls_no_std::{
     cogs::{
         active_lineage_sampler::independent::event_time_sampler::poisson::PoissonEventTimeSampler,
         coalescence_sampler::independent::IndependentCoalescenceSampler,
-        dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
         emigration_exit::{
             independent::{
                 choice::{
@@ -32,7 +31,7 @@ use necsim_impls_no_std::{
 use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_algorithms::result::SimulationOutcome;
-use rustcoalescence_scenarios::Scenario;
+use rustcoalescence_scenarios::{Scenario, ScenarioCogs};
 
 use crate::{
     arguments::{
@@ -56,7 +55,7 @@ pub fn initialise_and_simulate<
 >(
     args: &IndependentArguments,
     rng: G,
-    scenario: O,
+    scenario: ScenarioCogs<M, G, O>,
     pre_sampler: OriginPreSampler<M, I>,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,
@@ -66,14 +65,15 @@ pub fn initialise_and_simulate<
         ParallelismMode::Monolithic(MonolithicParallelismMode { event_slice })
         | ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { event_slice, .. })
         | ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { event_slice, .. }) => {
-            let (
+            let ScenarioCogs {
                 habitat,
                 dispersal_sampler,
                 turnover_rate,
                 speciation_probability,
                 origin_sampler_auxiliary,
                 decomposition_auxiliary,
-            ) = scenario.build::<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>();
+                ..
+            } = scenario;
             let coalescence_sampler = IndependentCoalescenceSampler::default();
             let event_sampler = IndependentEventSampler::default();
 
@@ -159,14 +159,15 @@ pub fn initialise_and_simulate<
             }
         },
         ParallelismMode::Individuals => {
-            let (
+            let ScenarioCogs {
                 habitat,
                 dispersal_sampler,
                 turnover_rate,
                 speciation_probability,
                 origin_sampler_auxiliary,
-                _decomposition_auxiliary,
-            ) = scenario.build::<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>();
+                decomposition_auxiliary: _,
+                ..
+            } = scenario;
             let coalescence_sampler = IndependentCoalescenceSampler::default();
             let event_sampler = IndependentEventSampler::default();
 
@@ -214,14 +215,15 @@ pub fn initialise_and_simulate<
             Ok(SimulationOutcome::Done { time, steps })
         },
         ParallelismMode::Landscape => {
-            let (
+            let ScenarioCogs {
                 habitat,
                 dispersal_sampler,
                 turnover_rate,
                 speciation_probability,
                 origin_sampler_auxiliary,
                 decomposition_auxiliary,
-            ) = scenario.build::<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>();
+                ..
+            } = scenario;
             let coalescence_sampler = IndependentCoalescenceSampler::default();
             let event_sampler = IndependentEventSampler::default();
 
@@ -277,14 +279,15 @@ pub fn initialise_and_simulate<
         ParallelismMode::Probabilistic(ProbabilisticParallelismMode {
             communication_probability,
         }) => {
-            let (
+            let ScenarioCogs {
                 habitat,
                 dispersal_sampler,
                 turnover_rate,
                 speciation_probability,
                 origin_sampler_auxiliary,
                 decomposition_auxiliary,
-            ) = scenario.build::<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>();
+                ..
+            } = scenario;
             let coalescence_sampler = IndependentCoalescenceSampler::default();
             let event_sampler = IndependentEventSampler::default();
 

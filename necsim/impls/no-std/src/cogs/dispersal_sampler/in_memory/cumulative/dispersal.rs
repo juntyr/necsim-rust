@@ -7,7 +7,7 @@ use super::InMemoryCumulativeDispersalSampler;
 
 #[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
-    for InMemoryCumulativeDispersalSampler
+    for InMemoryCumulativeDispersalSampler<M, H, G>
 {
     #[must_use]
     fn sample_dispersal_from_location(

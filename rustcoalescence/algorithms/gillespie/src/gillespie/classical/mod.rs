@@ -16,7 +16,7 @@ use rustcoalescence_algorithms::{
     strategy::RestartFixUpStrategy,
     Algorithm,
 };
-use rustcoalescence_scenarios::Scenario;
+use rustcoalescence_scenarios::{Scenario, ScenarioCogs};
 
 use super::GillespieAlgorithm;
 
@@ -43,7 +43,7 @@ where
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         rng: G,
-        scenario: O,
+        scenario: ScenarioCogs<M, G, O>,
         pre_sampler: OriginPreSampler<M, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
@@ -66,7 +66,7 @@ where
     fn resume_and_simulate<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: G,
-        scenario: O,
+        scenario: ScenarioCogs<M, G, O>,
         pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         resume_after: Option<NonNegativeF64>,
@@ -94,7 +94,7 @@ where
     fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: G,
-        scenario: O,
+        scenario: ScenarioCogs<M, G, O>,
         pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         restart_at: PositiveF64,

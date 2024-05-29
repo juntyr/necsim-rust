@@ -9,7 +9,6 @@ use necsim_impls_no_std::cogs::{
         independent::{event_time_sampler::EventTimeSampler, IndependentActiveLineageSampler},
         resuming::lineage::ExceptionalLineage,
     },
-    dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
     lineage_store::independent::IndependentLineageStore,
     origin_sampler::{resuming::ResumingOriginSampler, TrustedOriginSampler},
 };
@@ -41,8 +40,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: PrimeableRng<M>, O: 
         O::SpeciationProbability,
         J,
     >;
-    type DispersalSampler =
-        O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>;
+    type DispersalSampler = O::DispersalSampler;
 
     fn init<
         'h,
@@ -52,9 +50,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: PrimeableRng<M>, O: 
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: O::DispersalSampler<
-            InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>,
-        >,
+        dispersal_sampler: O::DispersalSampler,
         event_time_sampler: J,
     ) -> Result<
         (

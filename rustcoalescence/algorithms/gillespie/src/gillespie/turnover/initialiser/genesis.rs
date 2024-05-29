@@ -8,7 +8,6 @@ use necsim_core::{
 
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::alias::individual::IndividualAliasActiveLineageSampler,
-    dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
     origin_sampler::TrustedOriginSampler,
 };
 use necsim_partitioning_core::LocalPartition;
@@ -52,8 +51,7 @@ impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
         E,
         I,
     >;
-    type DispersalSampler =
-        O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>;
+    type DispersalSampler = O::DispersalSampler;
 
     fn init<
         'h,
@@ -79,9 +77,7 @@ impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>>
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: O::DispersalSampler<
-            InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>,
-        >,
+        dispersal_sampler: O::DispersalSampler,
         turnover_rate: &O::TurnoverRate,
         _local_partition: &mut P,
     ) -> Result<

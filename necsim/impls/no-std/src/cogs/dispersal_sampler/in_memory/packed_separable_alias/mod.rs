@@ -1,11 +1,11 @@
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{sync::Arc, vec::Vec};
 use core::marker::PhantomData;
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
 use r#final::Final;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore},
+    cogs::{Habitat, MathsCore, RngCore},
     landscape::Location,
 };
 
@@ -42,12 +42,14 @@ pub struct SeparableAliasSelfDispersal {
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "H", free = "G"))]
 pub struct InMemoryPackedSeparableAliasDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>>
 {
+    // TODO: use Arc
     #[cfg_attr(feature = "cuda", cuda(embed))]
     alias_dispersal_ranges: Final<Array2D<AliasSamplerRange>>,
+    // TODO: use Arc
     #[cfg_attr(feature = "cuda", cuda(embed))]
     self_dispersal: Final<Array2D<SeparableAliasSelfDispersal>>,
     #[cfg_attr(feature = "cuda", cuda(embed))]
-    alias_dispersal_buffer: Final<Box<[AliasMethodSamplerAtom<usize>]>>,
+    alias_dispersal_buffer: Arc<[AliasMethodSamplerAtom<usize>]>,
     marker: PhantomData<(M, H, G)>,
 }
 
@@ -180,7 +182,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
         Self {
             alias_dispersal_ranges: Final::new(alias_dispersal_ranges),
             self_dispersal: Final::new(self_dispersal),
-            alias_dispersal_buffer: Final::new(alias_dispersal_buffer.into_boxed_slice()),
+            alias_dispersal_buffer: Arc::from(alias_dispersal_buffer.into_boxed_slice()),
             marker: PhantomData::<(M, H, G)>,
         }
     }
@@ -195,15 +197,14 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> core::fmt::Debug
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Backup
+impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Clone
     for InMemoryPackedSeparableAliasDispersalSampler<M, H, G>
 {
-    unsafe fn backup_unchecked(&self) -> Self {
+    fn clone(&self) -> Self {
         Self {
             alias_dispersal_ranges: Final::new(self.alias_dispersal_ranges.clone()),
             self_dispersal: Final::new(self.self_dispersal.clone()),
-            alias_dispersal_buffer: Final::new(self.alias_dispersal_buffer.clone()),
+            alias_dispersal_buffer: self.alias_dispersal_buffer.clone(),
             marker: PhantomData::<(M, H, G)>,
         }
     }

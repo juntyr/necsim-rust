@@ -77,7 +77,7 @@ macro_rules! match_scenario_algorithm {
                 $(#[$algmeta])* $algpat => {
                     match $scenario {
                         $($(#[$scenmeta])* $scenpat => {
-                            type $algscenty<M, G> = $scenty<M, G>;
+                            type $algscenty = $scenty;
                             let $algscen = $scencode;
                             $algcode
                         }),*
@@ -100,7 +100,7 @@ macro_rules! match_scenario_algorithm {
             $(#[$algmeta])* $algpat => {
                 match $scenario {
                     $($(#[$scenmeta])* $scenpat => {
-                        type $algscenty<M, G> = $scenty<M, G>;
+                        type $algscenty = $scenty;
                         let $algscen = $scencode;
                         $algcode
                     }),*
@@ -133,7 +133,7 @@ pub(super) fn dispatch<R: Reporter, P: ReporterContext<Reporter = R>>(
             rng::dispatch::<
                 <GillespieAlgorithm as AlgorithmDefaults>::MathsCore,
                 <GillespieAlgorithm as AlgorithmDefaults>::Rng<_>,
-                GillespieAlgorithm, ScenarioTy<_, _>, R, P,
+                GillespieAlgorithm, ScenarioTy, R, P,
             >(
                 partitioning, event_log, reporter_context,
                 sample, algorithm_args, scenario,
@@ -145,7 +145,7 @@ pub(super) fn dispatch<R: Reporter, P: ReporterContext<Reporter = R>>(
             rng::dispatch::<
                 <EventSkippingAlgorithm as AlgorithmDefaults>::MathsCore,
                 <EventSkippingAlgorithm as AlgorithmDefaults>::Rng<_>,
-                EventSkippingAlgorithm, ScenarioTy<_, _>, R, P,
+                EventSkippingAlgorithm, ScenarioTy, R, P,
             >(
                 partitioning, event_log, reporter_context,
                 sample, algorithm_args, scenario,
@@ -157,7 +157,7 @@ pub(super) fn dispatch<R: Reporter, P: ReporterContext<Reporter = R>>(
             rng::dispatch::<
                 <IndependentAlgorithm as AlgorithmDefaults>::MathsCore,
                 <IndependentAlgorithm as AlgorithmDefaults>::Rng<_>,
-                IndependentAlgorithm, ScenarioTy<_, _>, R, P,
+                IndependentAlgorithm, ScenarioTy, R, P,
             >(
                 partitioning, event_log, reporter_context,
                 sample, algorithm_args, scenario,
@@ -169,7 +169,7 @@ pub(super) fn dispatch<R: Reporter, P: ReporterContext<Reporter = R>>(
             rng::dispatch::<
                 <CudaAlgorithm as AlgorithmDefaults>::MathsCore,
                 <CudaAlgorithm as AlgorithmDefaults>::Rng<_>,
-                CudaAlgorithm, ScenarioTy<_, _>, R, P,
+                CudaAlgorithm, ScenarioTy, R, P,
             >(
                 partitioning, event_log, reporter_context,
                 sample, algorithm_args, scenario,
@@ -179,21 +179,21 @@ pub(super) fn dispatch<R: Reporter, P: ReporterContext<Reporter = R>>(
         <=>
         #[cfg(feature = "spatially-explicit-uniform-turnover-scenario")]
         ScenarioArgs::SpatiallyExplicitUniformTurnover(scenario_args) => {
-            SpatiallyExplicitUniformTurnoverScenario::initialise(
+            SpatiallyExplicitUniformTurnoverScenario::new(
                 scenario_args,
                 speciation_probability_per_generation,
             )?
         } => SpatiallyExplicitUniformTurnoverScenario,
         #[cfg(feature = "spatially-explicit-turnover-map-scenario")]
         ScenarioArgs::SpatiallyExplicitTurnoverMap(scenario_args) => {
-            SpatiallyExplicitTurnoverMapScenario::initialise(
+            SpatiallyExplicitTurnoverMapScenario::new(
                 scenario_args,
                 speciation_probability_per_generation,
             )?
         } => SpatiallyExplicitTurnoverMapScenario,
         #[cfg(feature = "non-spatial-scenario")]
         ScenarioArgs::NonSpatial(scenario_args) => {
-            NonSpatialScenario::initialise(
+            NonSpatialScenario::new(
                 scenario_args,
                 speciation_probability_per_generation,
             )
@@ -201,7 +201,7 @@ pub(super) fn dispatch<R: Reporter, P: ReporterContext<Reporter = R>>(
         } => NonSpatialScenario,
         #[cfg(feature = "almost-infinite-normal-dispersal-scenario")]
         ScenarioArgs::AlmostInfiniteNormalDispersal(scenario_args) => {
-            AlmostInfiniteNormalDispersalScenario::initialise(
+            AlmostInfiniteNormalDispersalScenario::new(
                 scenario_args,
                 speciation_probability_per_generation,
             )
@@ -209,7 +209,7 @@ pub(super) fn dispatch<R: Reporter, P: ReporterContext<Reporter = R>>(
         } => AlmostInfiniteNormalDispersalScenario,
         #[cfg(feature = "almost-infinite-clark2dt-dispersal-scenario")]
         ScenarioArgs::AlmostInfiniteClark2DtDispersal(scenario_args) => {
-            AlmostInfiniteClark2DtDispersalScenario::initialise(
+            AlmostInfiniteClark2DtDispersalScenario::new(
                 scenario_args,
                 speciation_probability_per_generation,
             )
@@ -217,7 +217,7 @@ pub(super) fn dispatch<R: Reporter, P: ReporterContext<Reporter = R>>(
         } => AlmostInfiniteClark2DtDispersalScenario,
         #[cfg(feature = "spatially-implicit-scenario")]
         ScenarioArgs::SpatiallyImplicit(scenario_args) => {
-            SpatiallyImplicitScenario::initialise(
+            SpatiallyImplicitScenario::new(
                 scenario_args,
                 speciation_probability_per_generation,
             )
@@ -225,7 +225,7 @@ pub(super) fn dispatch<R: Reporter, P: ReporterContext<Reporter = R>>(
         } => SpatiallyImplicitScenario,
         #[cfg(feature = "wrapping-noise-scenario")]
         ScenarioArgs::WrappingNoise(scenario_args) => {
-            WrappingNoiseScenario::initialise(
+            WrappingNoiseScenario::new(
                 scenario_args,
                 speciation_probability_per_generation,
             )

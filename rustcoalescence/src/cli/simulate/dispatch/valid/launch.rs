@@ -10,7 +10,7 @@ use necsim_core_bond::{NonNegativeF64, PositiveF64};
 use necsim_impls_no_std::cogs::origin_sampler::pre_sampler::OriginPreSampler;
 use necsim_partitioning_core::LocalPartition;
 
-use rustcoalescence_scenarios::Scenario;
+use rustcoalescence_scenarios::{Scenario, ScenarioCogs};
 
 use crate::args::config::sample::{Sample, SampleMode, SampleModeRestart, SampleOrigin};
 
@@ -25,7 +25,7 @@ pub(super) fn simulate<
 >(
     algorithm_args: A::Arguments,
     rng: G,
-    scenario: O,
+    scenario: ScenarioCogs<M, G, O>,
     sample: Sample,
     pause_before: Option<NonNegativeF64>,
     local_partition: &mut P,

@@ -6,7 +6,6 @@ use necsim_core::{
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::cogs::{
-    dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
     lineage_store::coherent::globally::gillespie::GillespieLineageStore,
     maths::intrinsics::IntrinsicsMathsCore, origin_sampler::pre_sampler::OriginPreSampler,
 };
@@ -21,7 +20,7 @@ use rustcoalescence_algorithms::{
     strategy::RestartFixUpStrategy,
     Algorithm, AlgorithmDefaults, AlgorithmDispatch, AlgorithmParamters,
 };
-use rustcoalescence_scenarios::Scenario;
+use rustcoalescence_scenarios::{Scenario, ScenarioCogs};
 
 use crate::arguments::{
     get_gillespie_logical_partition, get_gillespie_logical_partition_size, GillespieArguments,
@@ -52,8 +51,7 @@ impl<M: MathsCore, G: SplittableRng<M>, O: Scenario<M, G>, R: Reporter>
 where
     O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
         GloballyCoherentLineageStore<M, O::Habitat>,
-    O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>:
-        SeparableDispersalSampler<M, O::Habitat, G>,
+    O::DispersalSampler: SeparableDispersalSampler<M, O::Habitat, G>,
 {
     type Algorithm<'p, P: LocalPartition<'p, R>> = Self;
 
@@ -76,8 +74,7 @@ impl<
 where
     O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
         GloballyCoherentLineageStore<M, O::Habitat>,
-    O::DispersalSampler<InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>>:
-        SeparableDispersalSampler<M, O::Habitat, G>,
+    O::DispersalSampler: SeparableDispersalSampler<M, O::Habitat, G>,
 {
     type LineageStore = O::LineageStore<GillespieLineageStore<M, O::Habitat>>;
 
@@ -88,7 +85,7 @@ where
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         rng: G,
-        scenario: O,
+        scenario: ScenarioCogs<M, G, O>,
         pre_sampler: OriginPreSampler<M, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
@@ -111,7 +108,7 @@ where
     fn resume_and_simulate<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: G,
-        scenario: O,
+        scenario: ScenarioCogs<M, G, O>,
         pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         resume_after: Option<NonNegativeF64>,
@@ -139,7 +136,7 @@ where
     fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: G,
-        scenario: O,
+        scenario: ScenarioCogs<M, G, O>,
         pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         restart_at: PositiveF64,

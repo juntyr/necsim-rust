@@ -10,7 +10,7 @@ use necsim_partitioning_monolithic::MonolithicLocalPartition;
 #[cfg(feature = "mpi-partitioning")]
 use necsim_partitioning_mpi::MpiLocalPartition;
 use rustcoalescence_algorithms::{result::SimulationOutcome, Algorithm, AlgorithmDispatch};
-use rustcoalescence_scenarios::Scenario;
+use rustcoalescence_scenarios::{Scenario, ScenarioCogs};
 
 use crate::args::config::{partitioning::Partitioning, sample::Sample};
 
@@ -31,7 +31,7 @@ pub(super) fn dispatch<
 
     sample: Sample,
     rng: G,
-    scenario: O,
+    scenario: ScenarioCogs<M, G, O>,
     algorithm_args: A::Arguments,
     pause_before: Option<NonNegativeF64>,
 
@@ -151,7 +151,7 @@ fn wrap<
 
     sample: Sample,
     rng: G,
-    scenario: O,
+    scenario: ScenarioCogs<M, G, O>,
     algorithm_args: A::Arguments,
     pause_before: Option<NonNegativeF64>,
 

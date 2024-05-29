@@ -11,7 +11,7 @@ use necsim_core::{
 use necsim_core_bond::NonNegativeF64;
 use necsim_partitioning_core::LocalPartition;
 
-use rustcoalescence_scenarios::Scenario;
+use rustcoalescence_scenarios::{Scenario, ScenarioCogs};
 
 use crate::args::{
     config::sample::{Sample, SampleMode, SampleModeRestart},
@@ -35,7 +35,7 @@ pub(super) fn dispatch<
 
     sample: Sample,
     rng: G,
-    scenario: O,
+    scenario: ScenarioCogs<M, G, O>,
     algorithm_args: A::Arguments,
     pause_before: Option<NonNegativeF64>,
 

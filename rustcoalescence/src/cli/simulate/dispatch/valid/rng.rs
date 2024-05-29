@@ -12,7 +12,7 @@ use necsim_core::{
 };
 use necsim_core_bond::NonNegativeF64;
 
-use rustcoalescence_scenarios::Scenario;
+use rustcoalescence_scenarios::{Scenario, ScenarioCogs};
 
 use crate::{
     args::config::{
@@ -43,7 +43,7 @@ pub(super) fn dispatch<
 
     sample: Sample,
     algorithm_args: A::Arguments,
-    scenario: O,
+    scenario: ScenarioCogs<M, G, O>,
     pause_before: Option<NonNegativeF64>,
 
     ron_args: &str,

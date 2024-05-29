@@ -6,10 +6,7 @@ use necsim_core::{
     reporter::Reporter,
 };
 
-use necsim_impls_no_std::cogs::{
-    dispersal_sampler::in_memory::packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
-    origin_sampler::TrustedOriginSampler,
-};
+use necsim_impls_no_std::cogs::origin_sampler::TrustedOriginSampler;
 use necsim_partitioning_core::LocalPartition;
 
 use rustcoalescence_scenarios::Scenario;
@@ -72,9 +69,7 @@ pub trait GillespieLineageStoreSampleInitialiser<
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: O::DispersalSampler<
-            InMemoryPackedSeparableAliasDispersalSampler<M, O::Habitat, G>,
-        >,
+        dispersal_sampler: O::DispersalSampler,
         turnover_rate: &O::TurnoverRate,
         local_partition: &mut P,
     ) -> Result<
