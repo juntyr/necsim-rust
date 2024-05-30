@@ -9,7 +9,8 @@ use necsim_core::{
 use necsim_core_bond::NonNegativeF64;
 
 use crate::{
-    alias::AliasMethodSampler, array2d::Array2D,
+    alias::AliasMethodSampler,
+    array2d::{ArcArray2D, Array2D},
     cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler,
 };
 
@@ -18,8 +19,7 @@ mod dispersal;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct InMemoryAliasDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>> {
-    // TODO: use Arc
-    alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
+    alias_dispersal: ArcArray2D<Option<AliasMethodSampler<usize>>>,
     marker: PhantomData<(M, H, G)>,
 }
 

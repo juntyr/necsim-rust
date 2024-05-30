@@ -2,14 +2,15 @@ use alloc::{sync::Arc, vec::Vec};
 use core::marker::PhantomData;
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
-use r#final::Final;
-
 use necsim_core::{
     cogs::{Habitat, MathsCore, RngCore},
     landscape::Location,
 };
 
-use crate::{alias::packed::AliasMethodSamplerAtom, array2d::Array2D};
+use crate::{
+    alias::packed::AliasMethodSamplerAtom,
+    array2d::{ArcArray2D, Array2D, VecArray2D},
+};
 
 mod dispersal;
 
@@ -42,12 +43,10 @@ pub struct SeparableAliasSelfDispersal {
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "H", free = "G"))]
 pub struct InMemoryPackedSeparableAliasDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>>
 {
-    // TODO: use Arc
     #[cfg_attr(feature = "cuda", cuda(embed))]
-    alias_dispersal_ranges: Final<Array2D<AliasSamplerRange>>,
-    // TODO: use Arc
+    alias_dispersal_ranges: ArcArray2D<AliasSamplerRange>,
     #[cfg_attr(feature = "cuda", cuda(embed))]
-    self_dispersal: Final<Array2D<SeparableAliasSelfDispersal>>,
+    self_dispersal: ArcArray2D<SeparableAliasSelfDispersal>,
     #[cfg_attr(feature = "cuda", cuda(embed))]
     alias_dispersal_buffer: Arc<[AliasMethodSamplerAtom<usize>]>,
     marker: PhantomData<(M, H, G)>,
@@ -67,7 +66,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
 
         let mut alias_dispersal_buffer = Vec::new();
 
-        let mut self_dispersal = Array2D::filled_with(
+        let mut self_dispersal = VecArray2D::filled_with(
             SeparableAliasSelfDispersal {
                 self_dispersal: ClosedUnitF64::zero(),
                 non_self_dispersal_event: usize::MAX,
@@ -180,8 +179,8 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
         .unwrap(); // infallible by PRE;
 
         Self {
-            alias_dispersal_ranges: Final::new(alias_dispersal_ranges),
-            self_dispersal: Final::new(self_dispersal),
+            alias_dispersal_ranges,
+            self_dispersal: self_dispersal.switch_backend(),
             alias_dispersal_buffer: Arc::from(alias_dispersal_buffer.into_boxed_slice()),
             marker: PhantomData::<(M, H, G)>,
         }
@@ -202,8 +201,8 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Clone
 {
     fn clone(&self) -> Self {
         Self {
-            alias_dispersal_ranges: Final::new(self.alias_dispersal_ranges.clone()),
-            self_dispersal: Final::new(self.self_dispersal.clone()),
+            alias_dispersal_ranges: self.alias_dispersal_ranges.clone(),
+            self_dispersal: self.self_dispersal.clone(),
             alias_dispersal_buffer: self.alias_dispersal_buffer.clone(),
             marker: PhantomData::<(M, H, G)>,
         }

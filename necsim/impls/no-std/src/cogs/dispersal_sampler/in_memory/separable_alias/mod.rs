@@ -9,7 +9,8 @@ use necsim_core::{
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
 use crate::{
-    alias::AliasMethodSampler, array2d::Array2D,
+    alias::AliasMethodSampler,
+    array2d::{ArcArray2D, Array2D, VecArray2D},
     cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler,
 };
 
@@ -18,10 +19,8 @@ mod dispersal;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct InMemorySeparableAliasDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>> {
-    // TODO: use Arc
-    alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
-    // TODO: use Arc
-    self_dispersal: Array2D<ClosedUnitF64>,
+    alias_dispersal: ArcArray2D<Option<AliasMethodSampler<usize>>>,
+    self_dispersal: ArcArray2D<ClosedUnitF64>,
     _marker: PhantomData<(M, H, G)>,
 }
 
@@ -37,7 +36,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
         let mut event_weights: Vec<(usize, NonNegativeF64)> =
             Vec::with_capacity(dispersal.row_len());
 
-        let mut self_dispersal = Array2D::filled_with(
+        let mut self_dispersal = VecArray2D::filled_with(
             ClosedUnitF64::zero(),
             usize::from(habitat_extent.height()),
             usize::from(habitat_extent.width()),
@@ -108,7 +107,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
 
         Self {
             alias_dispersal,
-            self_dispersal,
+            self_dispersal: self_dispersal.switch_backend(),
             _marker: PhantomData::<(M, H, G)>,
         }
     }
