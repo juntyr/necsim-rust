@@ -12,7 +12,6 @@ use necsim_impls_no_std::{
     array2d::Array2D,
     cogs::{
         dispersal_sampler::in_memory::{
-            contract::explicit_in_memory_dispersal_check_contract,
             packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
             InMemoryDispersalSampler,
         },
@@ -24,7 +23,7 @@ use necsim_impls_no_std::{
     decomposition::equal::EqualDecomposition,
 };
 
-use necsim_impls_std::cogs::dispersal_sampler::in_memory::error::InMemoryDispersalSamplerError;
+use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSamplerError;
 
 use crate::{Scenario, ScenarioCogs, ScenarioParameters};
 
@@ -70,29 +69,11 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitTurnoverMa
             .map_err(SpatiallyExplicitTurnoverMapScenarioError::TurnoverMap)?;
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation.into());
-
-        let habitat_extent = habitat.get_extent();
-        let habitat_area =
-            usize::from(habitat_extent.width()) * usize::from(habitat_extent.height());
-
-        if args.dispersal_map.num_rows() != habitat_area
-            || args.dispersal_map.num_columns() != habitat_area
-        {
-            return Err(SpatiallyExplicitTurnoverMapScenarioError::DispersalMap(
-                InMemoryDispersalSamplerError::InconsistentDispersalMapSize,
-            ));
-        }
-
-        if !explicit_in_memory_dispersal_check_contract(&args.dispersal_map, &habitat) {
-            return Err(SpatiallyExplicitTurnoverMapScenarioError::DispersalMap(
-                InMemoryDispersalSamplerError::InconsistentDispersalProbabilities,
-            ));
-        }
-
-        let dispersal_sampler = InMemoryPackedSeparableAliasDispersalSampler::unchecked_new(
-            &args.dispersal_map,
-            &habitat,
-        );
+        let dispersal_sampler =
+            InMemoryPackedSeparableAliasDispersalSampler::new(&args.dispersal_map, &habitat)
+                .map_err(|err| {
+                    SpatiallyExplicitTurnoverMapScenarioError::DispersalMap(err.into())
+                })?;
 
         Ok(ScenarioCogs {
             habitat,

@@ -1,9 +1,11 @@
+#![allow(non_local_definitions)] // FIXME: displaydoc
+
 use necsim_core::cogs::{DispersalSampler, Habitat, MathsCore, RngCore};
 use necsim_core_bond::NonNegativeF64;
 
 use crate::array2d::Array2D;
 
-pub mod contract;
+mod contract;
 
 pub mod alias;
 pub mod cumulative;
@@ -11,25 +13,43 @@ pub mod packed_alias;
 pub mod packed_separable_alias;
 pub mod separable_alias;
 
-use contract::explicit_in_memory_dispersal_check_contract;
-
 #[allow(clippy::module_name_repetitions)]
-#[allow(clippy::inline_always, clippy::inline_fn_without_body)]
-#[contract_trait]
 pub trait InMemoryDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>>:
     DispersalSampler<M, H, G> + Sized
 {
-    // TODO: refactor to include contract and error here
-    #[debug_requires((
-        dispersal.num_columns() == (
-            usize::from(habitat.get_extent().width()) * usize::from(habitat.get_extent().height())
-        ) && dispersal.num_rows() == (
-            usize::from(habitat.get_extent().width()) * usize::from(habitat.get_extent().height())
-        )
-    ), "dispersal dimensions are consistent")]
-    #[debug_requires(
-        explicit_in_memory_dispersal_check_contract(dispersal, habitat),
-        "dispersal probabilities are consistent"
-    )]
-    fn unchecked_new(dispersal: &Array2D<NonNegativeF64>, habitat: &H) -> Self;
+    /// Creates a new in-memory dispersal sampler from the `dispersal` map and
+    /// the habitat.
+    ///
+    /// # Errors
+    ///
+    /// `Err(DispersalMapSizeMismatch)` is returned iff the dimensions of
+    /// `dispersal` are not `ExE` given `E=WxH` where habitat has width `W`
+    /// and height `W`.
+    ///
+    /// `Err(DispersalToNonHabitat)` is returned iff any dispersal targets a
+    /// non-habitat cell.
+    ///
+    /// `Err(DispersalFromNonHabitat)` is returned iff any non-habitat cell has
+    /// any dispersal.
+    ///
+    /// `Err(NoDispersalFromHabitat)` is returned iff any habitat cell does not
+    /// have any dispersal.
+    fn new(
+        dispersal: &Array2D<NonNegativeF64>,
+        habitat: &H,
+    ) -> Result<Self, InMemoryDispersalSamplerError>;
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, displaydoc::Display)]
+pub enum InMemoryDispersalSamplerError {
+    /** The size of the dispersal map is inconsistent with the size of the
+    habitat. */
+    DispersalMapSizeMismatch,
+    /// Some dispersal targets a non-habitat cell.
+    DispersalToNonHabitat,
+    /// Some non-habitat cell has outgoing dispersals.
+    DispersalFromNonHabitat,
+    /// Some habitat cell does not have any outgoing dispersals.
+    NoDispersalFromHabitat,
 }

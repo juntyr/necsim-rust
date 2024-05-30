@@ -460,7 +460,7 @@ impl<T, B: ArrayBackend<T>> Array2D<T, B> {
     /// # Examples
     ///
     /// ```
-    /// # use necsim_impls_no_std::array2d::{VecArray2D, Error};
+    /// # use necsim_impls_no_std::array2d::{Error, VecArray2D};
     /// # fn main() -> Result<(), Error> {
     /// let rows = vec![vec![1, 2, 3], vec![4, 5, 6]];
     /// let array = VecArray2D::from_rows(&rows)?;
@@ -482,11 +482,11 @@ impl<T, B: ArrayBackend<T>> Array2D<T, B> {
     /// # Examples
     ///
     /// ```
-    /// # use necsim_impls_no_std::array2d::{VecArray2D, Error};
+    /// # use necsim_impls_no_std::array2d::{BoxArray2D, Error, VecArray2D};
     /// # fn main() -> Result<(), Error> {
     /// let rows = vec![vec![1, 2, 3], vec![4, 5, 6]];
     /// let array = VecArray2D::from_rows(&rows)?;
-    /// let array: BoxArray2D = array.into_backend();
+    /// let array: BoxArray2D = array.switch_backend();
     /// assert_eq!(array.into_row_major(), vec![1, 2, 3, 4, 5, 6]);
     /// # Ok(())
     /// # }

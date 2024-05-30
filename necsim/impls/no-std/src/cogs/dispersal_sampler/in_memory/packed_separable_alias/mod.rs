@@ -14,7 +14,10 @@ use crate::{
 
 mod dispersal;
 
-use super::InMemoryDispersalSampler;
+use super::{
+    contract::check_in_memory_dispersal_contract, InMemoryDispersalSampler,
+    InMemoryDispersalSamplerError,
+};
 
 #[derive(Clone, Debug, TypeLayout)]
 #[allow(clippy::module_name_repetitions)]
@@ -52,13 +55,15 @@ pub struct InMemoryPackedSeparableAliasDispersalSampler<M: MathsCore, H: Habitat
     marker: PhantomData<(M, H, G)>,
 }
 
-#[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, G>
     for InMemoryPackedSeparableAliasDispersalSampler<M, H, G>
 {
-    /// Creates a new `InMemoryPackedSeparableAliasDispersalSampler` from the
-    /// `dispersal` map and extent of the habitat map.
-    fn unchecked_new(dispersal: &Array2D<NonNegativeF64>, habitat: &H) -> Self {
+    fn new(
+        dispersal: &Array2D<NonNegativeF64>,
+        habitat: &H,
+    ) -> Result<Self, InMemoryDispersalSamplerError> {
+        check_in_memory_dispersal_contract(dispersal, habitat)?;
+
         let habitat_extent = habitat.get_extent();
 
         let mut event_weights: Vec<(usize, NonNegativeF64)> =
@@ -178,12 +183,12 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
         )
         .unwrap(); // infallible by PRE;
 
-        Self {
+        Ok(Self {
             alias_dispersal_ranges,
             self_dispersal: self_dispersal.switch_backend(),
             alias_dispersal_buffer: Arc::from(alias_dispersal_buffer.into_boxed_slice()),
             marker: PhantomData::<(M, H, G)>,
-        }
+        })
     }
 }
 
