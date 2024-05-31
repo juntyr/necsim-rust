@@ -312,7 +312,7 @@ fn reduce_partitioning_data<T: serde::Serialize + serde::de::DeserializeOwned>(
                 *acc = a;
             } else {
                 return Some(Err(anyhow::anyhow!(
-                    "MPI all local partition results combined are too big to share"
+                    "MPI combined local partition results are too big to share"
                 )));
             }
             Some(Ok(tmp))

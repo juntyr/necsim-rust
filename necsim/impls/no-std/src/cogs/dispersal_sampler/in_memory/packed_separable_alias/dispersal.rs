@@ -87,7 +87,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> SeparableDispersalSampler<M, H,
         };
 
         // Since the atoms are pre-sorted s.t. all self-dispersal is on the right,
-        //  we can exclude sel-dispersal by providing 1-sd as the CDF limit
+        //  we can exclude self-dispersal by providing 1-sd as the CDF limit
         let mut dispersal_target_index: usize = AliasMethodSamplerAtom::sample_event_with_cdf_limit(
             alias_dispersals_at_location,
             rng,
