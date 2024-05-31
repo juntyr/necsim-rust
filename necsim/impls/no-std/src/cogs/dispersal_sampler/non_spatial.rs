@@ -1,7 +1,7 @@
 use core::{marker::PhantomData, num::NonZeroU64};
 
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, Habitat, MathsCore, RngCore, SeparableDispersalSampler},
+    cogs::{DispersalSampler, Habitat, MathsCore, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
 use necsim_core_bond::ClosedUnitF64;
@@ -9,7 +9,7 @@ use necsim_core_bond::ClosedUnitF64;
 use crate::cogs::habitat::non_spatial::NonSpatialHabitat;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "G"))]
 pub struct NonSpatialDispersalSampler<M: MathsCore, G: RngCore<M>> {
@@ -25,9 +25,8 @@ impl<M: MathsCore, G: RngCore<M>> Default for NonSpatialDispersalSampler<M, G> {
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> Backup for NonSpatialDispersalSampler<M, G> {
-    unsafe fn backup_unchecked(&self) -> Self {
+impl<M: MathsCore, G: RngCore<M>> Clone for NonSpatialDispersalSampler<M, G> {
+    fn clone(&self) -> Self {
         Self {
             marker: PhantomData::<(M, G)>,
         }

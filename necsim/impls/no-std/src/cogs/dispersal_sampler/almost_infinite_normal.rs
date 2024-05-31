@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, MathsCore, RngCore, SeparableDispersalSampler},
+    cogs::{DispersalSampler, MathsCore, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
@@ -9,7 +9,7 @@ use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "G"))]
 pub struct AlmostInfiniteNormalDispersalSampler<M: MathsCore, G: RngCore<M>> {
@@ -39,9 +39,8 @@ impl<M: MathsCore, G: RngCore<M>> AlmostInfiniteNormalDispersalSampler<M, G> {
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> Backup for AlmostInfiniteNormalDispersalSampler<M, G> {
-    unsafe fn backup_unchecked(&self) -> Self {
+impl<M: MathsCore, G: RngCore<M>> Clone for AlmostInfiniteNormalDispersalSampler<M, G> {
+    fn clone(&self) -> Self {
         Self {
             sigma: self.sigma,
             self_dispersal: self.self_dispersal,

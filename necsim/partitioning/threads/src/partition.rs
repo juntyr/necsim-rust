@@ -115,10 +115,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsLocalPartition<'p, R> {
         self
     }
 
-    fn is_root(&self) -> bool {
-        true
-    }
-
     fn get_partition(&self) -> Partition {
         self.partition
     }
@@ -255,7 +251,13 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsLocalPartition<'p, R> {
         );
 
         match async_vote {
-            Poll::Pending => ControlFlow::Continue(()),
+            Poll::Pending => {
+                // This partition doesn't have any work right now but we have
+                //  to do another round of voting, so let's yield to not busy
+                //  wait - we'll be woken up if more work comes in
+                std::thread::yield_now();
+                ControlFlow::Continue(())
+            },
             Poll::Ready(result) => result,
         }
     }

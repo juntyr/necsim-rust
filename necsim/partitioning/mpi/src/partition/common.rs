@@ -208,7 +208,7 @@ impl<'p> MpiCommonPartition<'p> {
             }
         }
 
-        ImmigrantPopIterator::new(&mut self.migration_buffers[self.get_partition().rank() as usize])
+        ImmigrantPopIterator::new(&mut self.migration_buffers[self_rank_index])
     }
 
     #[must_use]

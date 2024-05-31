@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, SpeciationProbability},
+    cogs::{Habitat, MathsCore, SpeciationProbability},
     landscape::Location,
 };
 use necsim_core_bond::ClosedUnitF64;
@@ -16,15 +16,6 @@ impl UniformSpeciationProbability {
     pub fn new(speciation_probability: ClosedUnitF64) -> Self {
         Self {
             speciation_probability,
-        }
-    }
-}
-
-#[contract_trait]
-impl Backup for UniformSpeciationProbability {
-    unsafe fn backup_unchecked(&self) -> Self {
-        Self {
-            speciation_probability: self.speciation_probability,
         }
     }
 }

@@ -38,13 +38,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiLocalPartition<'p, R> {
         self
     }
 
-    fn is_root(&self) -> bool {
-        match self {
-            Self::Root(partition) => partition.is_root(),
-            Self::Parallel(partition) => partition.is_root(),
-        }
-    }
-
     fn get_partition(&self) -> Partition {
         match self {
             Self::Root(partition) => partition.get_partition(),

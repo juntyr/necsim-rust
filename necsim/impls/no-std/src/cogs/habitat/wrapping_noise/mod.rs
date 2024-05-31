@@ -7,7 +7,7 @@ mod opensimplex_noise;
 use opensimplex_noise::OpenSimplexNoise;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
+    cogs::{Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -17,7 +17,6 @@ use crate::cogs::{
 };
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct WrappingNoiseHabitat<M: MathsCore> {
@@ -118,11 +117,10 @@ impl<M: MathsCore> Default for WrappingNoiseHabitat<M> {
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore> Backup for WrappingNoiseHabitat<M> {
-    unsafe fn backup_unchecked(&self) -> Self {
+impl<M: MathsCore> Clone for WrappingNoiseHabitat<M> {
+    fn clone(&self) -> Self {
         Self {
-            inner: self.inner.backup_unchecked(),
+            inner: self.inner.clone(),
             coverage: self.coverage,
             threshold: self.threshold,
             scale: self.scale,

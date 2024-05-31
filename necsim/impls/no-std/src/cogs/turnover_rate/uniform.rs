@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, TurnoverRate},
+    cogs::{Habitat, MathsCore, TurnoverRate},
     landscape::Location,
 };
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
@@ -15,15 +15,6 @@ impl Default for UniformTurnoverRate {
     fn default() -> Self {
         Self {
             turnover_rate: unsafe { PositiveF64::new_unchecked(0.5_f64) },
-        }
-    }
-}
-
-#[contract_trait]
-impl Backup for UniformTurnoverRate {
-    unsafe fn backup_unchecked(&self) -> Self {
-        Self {
-            turnover_rate: self.turnover_rate,
         }
     }
 }

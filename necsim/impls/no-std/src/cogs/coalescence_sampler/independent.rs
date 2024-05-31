@@ -1,9 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{
-        coalescence_sampler::CoalescenceRngSample, Backup, CoalescenceSampler, Habitat, MathsCore,
-    },
+    cogs::{coalescence_sampler::CoalescenceRngSample, CoalescenceSampler, Habitat, MathsCore},
     landscape::{IndexedLocation, Location},
     lineage::LineageInteraction,
 };
@@ -25,9 +23,8 @@ impl<M: MathsCore, H: Habitat<M>> Default for IndependentCoalescenceSampler<M, H
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore, H: Habitat<M>> Backup for IndependentCoalescenceSampler<M, H> {
-    unsafe fn backup_unchecked(&self) -> Self {
+impl<M: MathsCore, H: Habitat<M>> Clone for IndependentCoalescenceSampler<M, H> {
+    fn clone(&self) -> Self {
         Self(PhantomData::<(M, H)>)
     }
 }

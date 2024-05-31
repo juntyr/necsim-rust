@@ -108,10 +108,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
         self
     }
 
-    fn is_root(&self) -> bool {
-        true
-    }
-
     fn get_partition(&self) -> Partition {
         self.common.get_partition()
     }

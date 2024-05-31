@@ -464,7 +464,7 @@ impl<T, B: ArrayBackend<T>> Array2D<T, B> {
     /// # fn main() -> Result<(), Error> {
     /// let rows = vec![vec![1, 2, 3], vec![4, 5, 6]];
     /// let array = VecArray2D::from_rows(&rows)?;
-    /// assert_eq!(array.into_row_major_inner(), vec![1, 2, 3, 4, 5, 6]);
+    /// assert_eq!(array.into_row_major_backend(), vec![1, 2, 3, 4, 5, 6]);
     /// # Ok(())
     /// # }
     /// ```
@@ -472,7 +472,7 @@ impl<T, B: ArrayBackend<T>> Array2D<T, B> {
     /// [`Array2D`]: struct.Array2D.html
     /// [row major order]: https://en.wikipedia.org/wiki/Row-_and_column-major_order
     #[must_use]
-    pub fn into_row_major_inner(self) -> B {
+    pub fn into_row_major_backend(self) -> B {
         self.array
     }
 

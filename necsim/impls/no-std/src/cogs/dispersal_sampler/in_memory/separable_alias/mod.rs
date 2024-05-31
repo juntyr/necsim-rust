@@ -78,6 +78,8 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                     }
                 }
 
+                // total weight needs to extra include the self-dispersal,
+                //  since it was excluded from event_weights earlier
                 let total_weight = event_weights
                     .iter()
                     .map(|(_e, w)| *w)

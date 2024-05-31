@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use alloc::{sync::Arc, vec::Vec};
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
+    cogs::{Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 use necsim_core_bond::{OffByOneU32, OffByOneU64};
@@ -11,7 +11,7 @@ use necsim_core_bond::{OffByOneU32, OffByOneU64};
 use crate::array2d::Array2D;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct InMemoryHabitat<M: MathsCore> {
@@ -24,9 +24,8 @@ pub struct InMemoryHabitat<M: MathsCore> {
     marker: PhantomData<M>,
 }
 
-#[contract_trait]
-impl<M: MathsCore> Backup for InMemoryHabitat<M> {
-    unsafe fn backup_unchecked(&self) -> Self {
+impl<M: MathsCore> Clone for InMemoryHabitat<M> {
+    fn clone(&self) -> Self {
         Self {
             habitat: self.habitat.clone(),
             u64_injection: self.u64_injection.clone(),

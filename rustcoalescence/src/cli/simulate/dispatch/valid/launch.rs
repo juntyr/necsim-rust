@@ -23,12 +23,13 @@ pub(super) fn simulate<
     R: Reporter,
     P: LocalPartition<'p, R>,
 >(
-    algorithm_args: A::Arguments,
+    local_partition: &mut P,
+
+    sample: Sample,
     rng: G,
     scenario: ScenarioCogs<M, G, O>,
-    sample: Sample,
+    algorithm_args: A::Arguments,
     pause_before: Option<NonNegativeF64>,
-    local_partition: &mut P,
 ) -> anyhow::Result<SimulationOutcome<M, G>> {
     let lineages = match sample.origin {
         SampleOrigin::Habitat => {

@@ -1,8 +1,5 @@
 use necsim_core::{
-    cogs::{
-        Backup, DispersalSampler, Habitat, MathsCore, RngCore, RngSampler,
-        SeparableDispersalSampler,
-    },
+    cogs::{DispersalSampler, Habitat, MathsCore, RngCore, RngSampler, SeparableDispersalSampler},
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
@@ -13,7 +10,7 @@ use crate::cogs::{
 };
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct WrappingNoiseApproximateNormalDispersalSampler<M: MathsCore, G: RngCore<M>> {
@@ -30,11 +27,10 @@ impl<M: MathsCore, G: RngCore<M>> WrappingNoiseApproximateNormalDispersalSampler
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> Backup for WrappingNoiseApproximateNormalDispersalSampler<M, G> {
-    unsafe fn backup_unchecked(&self) -> Self {
+impl<M: MathsCore, G: RngCore<M>> Clone for WrappingNoiseApproximateNormalDispersalSampler<M, G> {
+    fn clone(&self) -> Self {
         Self {
-            inner: self.inner.backup_unchecked(),
+            inner: self.inner.clone(),
         }
     }
 }

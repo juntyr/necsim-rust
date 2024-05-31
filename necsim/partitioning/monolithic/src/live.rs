@@ -44,10 +44,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for LiveMonolithicLocalPartition<R> 
         &mut self.reporter
     }
 
-    fn is_root(&self) -> bool {
-        true
-    }
-
     fn get_partition(&self) -> Partition {
         Partition::monolithic()
     }

@@ -50,7 +50,7 @@ pub enum ThreadsLocalPartitionError {
 }
 
 pub struct ThreadsPartitioning {
-    size: PartitionSize,
+    num_threads: PartitionSize,
     migration_interval: Duration,
     progress_interval: Duration,
 }
@@ -66,7 +66,7 @@ impl fmt::Debug for ThreadsPartitioning {
         }
 
         fmt.debug_struct(stringify!(ThreadsPartitioning))
-            .field("size", &self.get_size().get())
+            .field("num_threads", &self.num_threads.get())
             .field(
                 "migration_interval",
                 &FormattedDuration(self.migration_interval),
@@ -82,7 +82,7 @@ impl fmt::Debug for ThreadsPartitioning {
 impl Serialize for ThreadsPartitioning {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut args = serializer.serialize_struct(stringify!(ThreadsPartitioning), 3)?;
-        args.serialize_field("size", &self.get_size())?;
+        args.serialize_field("threads", &self.num_threads)?;
         args.serialize_field(
             "migration",
             &format_duration(self.migration_interval).to_string(),
@@ -100,7 +100,7 @@ impl<'de> Deserialize<'de> for ThreadsPartitioning {
         let raw = ThreadsPartitioningRaw::deserialize(deserializer)?;
 
         Ok(Self {
-            size: raw.num_threads,
+            num_threads: raw.num_threads,
             migration_interval: raw.migration_interval,
             progress_interval: raw.progress_interval,
         })
@@ -126,9 +126,10 @@ impl Partitioning for ThreadsPartitioning {
     type LocalPartition<'p, R: Reporter> = ThreadsLocalPartition<'p, R>;
 
     fn get_size(&self) -> PartitionSize {
-        self.size
+        self.num_threads
     }
 
+    #[allow(clippy::too_many_lines)]
     /// # Errors
     ///
     /// Returns `MissingEventLog` if the local partition is non-monolithic and
@@ -154,27 +155,28 @@ impl Partitioning for ThreadsPartitioning {
 
         let mut progress_reporter: FilteredReporter<R, False, False, True> =
             reporter_context.try_build()?;
-        let (progress_sender, progress_receiver) = sync_channel(self.size.get() as usize);
+        let (progress_sender, progress_receiver) = sync_channel(self.num_threads.get() as usize);
         let progress_channels = self
-            .size
+            .num_threads
             .partitions()
             .map(|_| progress_sender.clone())
             .collect::<Vec<_>>();
         std::mem::drop(progress_sender);
 
-        let vote_any = Vote::new(self.size.get() as usize);
-        let vote_min_time = Vote::new_with_dummy(self.size.get() as usize, (PositiveF64::one(), 0));
+        let vote_any = Vote::new(self.num_threads.get() as usize);
+        let vote_min_time =
+            Vote::new_with_dummy(self.num_threads.get() as usize, (PositiveF64::one(), 0));
         let vote_termination =
-            AsyncVote::new_with_dummy(self.size.get() as usize, ControlFlow::Continue(()));
+            AsyncVote::new_with_dummy(self.num_threads.get() as usize, ControlFlow::Continue(()));
 
         let (emigration_channels, immigration_channels): (Vec<_>, Vec<_>) = self
-            .size
+            .num_threads
             .partitions()
-            .map(|_| sync_channel(self.size.get() as usize))
+            .map(|_| sync_channel(self.num_threads.get() as usize))
             .unzip();
 
         let event_logs = self
-            .size
+            .num_threads
             .partitions()
             .map(|partition| {
                 let mut directory = event_log.directory().to_owned();
@@ -187,9 +189,9 @@ impl Partitioning for ThreadsPartitioning {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        let sync_barrier = Arc::new(Barrier::new(self.size.get() as usize));
+        let sync_barrier = Arc::new(Barrier::new(self.num_threads.get() as usize));
         let args = self
-            .size
+            .num_threads
             .partitions()
             .map(|_| args.clone())
             .collect::<Vec<_>>();
@@ -202,7 +204,7 @@ impl Partitioning for ThreadsPartitioning {
             let sync_barrier = &sync_barrier;
 
             let thread_handles = self
-                .size
+                .num_threads
                 .partitions()
                 .zip(immigration_channels)
                 .zip(event_logs)
@@ -231,7 +233,8 @@ impl Partitioning for ThreadsPartitioning {
                 )
                 .collect::<Vec<_>>();
 
-            let mut progress_remaining = vec![0; self.size.get() as usize].into_boxed_slice();
+            let mut progress_remaining =
+                vec![0; self.num_threads.get() as usize].into_boxed_slice();
             for (remaining, rank) in progress_receiver {
                 progress_remaining[rank as usize] = remaining;
                 progress_reporter.report_progress(

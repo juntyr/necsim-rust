@@ -29,18 +29,15 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
                 .unwrap_unchecked()
         };
 
-        // Safe by the construction of `InMemoryPackedAliasDispersalSampler`
+        // Safe by the construction of `InMemoryPackedSeparableAliasDispersalSampler`
         let alias_dispersals_at_location = unsafe {
             &self
                 .alias_dispersal_buffer
                 .get_unchecked(alias_range.start..alias_range.end)
         };
 
-        let dispersal_target_index: usize = AliasMethodSamplerAtom::sample_event(
-            alias_dispersals_at_location,
-            rng,
-            ClosedUnitF64::one(),
-        );
+        let dispersal_target_index: usize =
+            AliasMethodSamplerAtom::sample_event(alias_dispersals_at_location, rng);
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
@@ -82,7 +79,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> SeparableDispersalSampler<M, H,
                 .unwrap_unchecked()
         };
 
-        // Safe by the construction of `InMemoryPackedAliasDispersalSampler`
+        // Safe by the construction of `InMemoryPackedSeparableAliasDispersalSampler`
         let alias_dispersals_at_location = unsafe {
             &self
                 .alias_dispersal_buffer
@@ -90,8 +87,8 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> SeparableDispersalSampler<M, H,
         };
 
         // Since the atoms are pre-sorted s.t. all self-dispersal is on the right,
-        //  exclude it by providing 1-sd as the index sampling factor
-        let mut dispersal_target_index: usize = AliasMethodSamplerAtom::sample_event(
+        //  we can exclude sel-dispersal by providing 1-sd as the CDF limit
+        let mut dispersal_target_index: usize = AliasMethodSamplerAtom::sample_event_with_cdf_limit(
             alias_dispersals_at_location,
             rng,
             self_dispersal.self_dispersal.one_minus(),
@@ -121,10 +118,15 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> SeparableDispersalSampler<M, H,
         location: &Location,
         habitat: &H,
     ) -> ClosedUnitF64 {
-        self.self_dispersal[(
-            location.y().wrapping_sub(habitat.get_extent().origin().y()) as usize,
-            location.x().wrapping_sub(habitat.get_extent().origin().x()) as usize,
-        )]
-            .self_dispersal
+        // Only safe as trait precondition that `location` is inside `habitat`
+        unsafe {
+            self.self_dispersal
+                .get(
+                    location.y().wrapping_sub(habitat.get_extent().origin().y()) as usize,
+                    location.x().wrapping_sub(habitat.get_extent().origin().x()) as usize,
+                )
+                .unwrap_unchecked()
+        }
+        .self_dispersal
     }
 }

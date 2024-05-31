@@ -294,21 +294,30 @@ fn reduce_partitioning_data<T: serde::Serialize + serde::de::DeserializeOwned>(
     data: T,
     fold: fn(T, T) -> T,
 ) -> anyhow::Result<T> {
-    let local_ser = postcard::to_stdvec(&data).context("MPI data failed to serialize")?;
+    let local_ser =
+        postcard::to_stdvec(&data).context("MPI local partition result failed to serialize")?;
     std::mem::drop(data);
+    let local_ser_len = Count::try_from(local_ser.len())
+        .context("MPI local partition result is too big to share")?;
 
     #[allow(clippy::cast_sign_loss)]
     let mut counts = vec![0 as Count; world.size() as usize];
-    world.all_gather_into(&(Count::try_from(local_ser.len()).unwrap()), &mut counts);
+    world.all_gather_into(&local_ser_len, &mut counts);
 
     let offsets = counts
         .iter()
         .scan(0 as Count, |acc, &x| {
             let tmp = *acc;
-            *acc = (*acc).checked_add(x).unwrap();
-            Some(tmp)
+            if let Some(a) = (*acc).checked_add(x) {
+                *acc = a;
+            } else {
+                return Some(Err(anyhow::anyhow!(
+                    "MPI all local partition results combined are too big to share"
+                )));
+            }
+            Some(Ok(tmp))
         })
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, _>>()?;
 
     #[allow(clippy::cast_sign_loss)]
     let mut all_sers = vec![0_u8; counts.iter().copied().sum::<Count>() as usize];

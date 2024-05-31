@@ -91,10 +91,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
         self
     }
 
-    fn is_root(&self) -> bool {
-        false
-    }
-
     fn get_partition(&self) -> Partition {
         self.common.get_partition()
     }

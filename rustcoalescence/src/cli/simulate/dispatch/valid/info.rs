@@ -120,12 +120,12 @@ where
     }
 
     let result = launch::simulate::<M, G, A, O, R, P>(
-        algorithm_args,
+        &mut local_partition,
+        sample,
         rng,
         scenario,
-        sample,
+        algorithm_args,
         pause_before,
-        &mut local_partition,
     )?;
 
     if log::log_enabled!(log::Level::Info) {

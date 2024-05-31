@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use crate::cogs::Backup;
-
 #[allow(clippy::module_name_repetitions)]
 #[derive(
     Eq, PartialEq, PartialOrd, Ord, Clone, Hash, Debug, Serialize, Deserialize, TypeLayout,
@@ -13,13 +11,6 @@ use crate::cogs::Backup;
 pub struct Location {
     x: u32,
     y: u32,
-}
-
-#[contract_trait]
-impl Backup for Location {
-    unsafe fn backup_unchecked(&self) -> Self {
-        self.clone()
-    }
 }
 
 impl Location {

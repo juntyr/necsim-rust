@@ -120,11 +120,11 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                         end: range_from,
                     }
                 } else {
+                    // total weight already contains self-dispersal
                     let total_weight = event_weights
                         .iter()
                         .map(|(_e, w)| *w)
-                        .sum::<NonNegativeF64>()
-                        + self_dispersal_at_location;
+                        .sum::<NonNegativeF64>();
                     // Safety: Normalisation limits the result to [0.0; 1.0]
                     let self_dispersal_probability = unsafe {
                         ClosedUnitF64::new_unchecked(

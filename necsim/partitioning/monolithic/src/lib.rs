@@ -107,13 +107,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MonolithicLocalPartition<R> {
         self
     }
 
-    fn is_root(&self) -> bool {
-        match self {
-            Self::Live(partition) => partition.is_root(),
-            Self::Recorded(partition) => partition.is_root(),
-        }
-    }
-
     fn get_partition(&self) -> Partition {
         match self {
             Self::Live(partition) => partition.get_partition(),

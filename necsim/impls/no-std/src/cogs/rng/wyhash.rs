@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{Backup, MathsCore, PrimeableRng, RngCore};
+use necsim_core::cogs::{MathsCore, PrimeableRng, RngCore};
 
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +12,7 @@ const P2: u64 = 0x8ebc_6af0_9c88_c6e3;
 const P5: u64 = 0xeb44_acca_b455_d165;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug, Serialize, Deserialize, TypeLayout)]
+#[derive(Debug, Serialize, Deserialize, TypeLayout)]
 #[layout(free = "M")]
 #[serde(deny_unknown_fields)]
 #[repr(C)]
@@ -23,10 +23,13 @@ pub struct WyHash<M: MathsCore> {
     marker: PhantomData<M>,
 }
 
-#[contract_trait]
-impl<M: MathsCore> Backup for WyHash<M> {
-    unsafe fn backup_unchecked(&self) -> Self {
-        self.clone()
+impl<M: MathsCore> Clone for WyHash<M> {
+    fn clone(&self) -> Self {
+        Self {
+            seed: self.seed,
+            state: self.state,
+            marker: PhantomData::<M>,
+        }
     }
 }
 

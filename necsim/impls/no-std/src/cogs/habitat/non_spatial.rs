@@ -4,13 +4,13 @@ use core::{
 };
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
+    cogs::{Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 use necsim_core_bond::{OffByOneU32, OffByOneU64};
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct NonSpatialHabitat<M: MathsCore> {
@@ -54,9 +54,8 @@ impl<M: MathsCore> NonSpatialHabitat<M> {
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore> Backup for NonSpatialHabitat<M> {
-    unsafe fn backup_unchecked(&self) -> Self {
+impl<M: MathsCore> Clone for NonSpatialHabitat<M> {
+    fn clone(&self) -> Self {
         Self {
             extent: self.extent.clone(),
             deme: self.deme,

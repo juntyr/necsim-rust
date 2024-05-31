@@ -66,8 +66,6 @@ pub trait LocalPartition<'p, R: Reporter>: Sized {
 
     fn get_reporter(&mut self) -> &mut Self::Reporter;
 
-    fn is_root(&self) -> bool;
-
     fn get_partition(&self) -> Partition;
 
     fn migrate_individuals<'a, E: Iterator<Item = (u32, MigratingLineage)>>(
