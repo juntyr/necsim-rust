@@ -190,8 +190,8 @@ impl Partitioning for MpiPartitioning {
             anyhow::bail!(MpiLocalPartitionError::MissingEventLog)
         };
 
-        let event_log = event_log
-            .into_sublog(&self.world.rank().to_string())
+        let partition_event_log = event_log
+            .new_child_log(&self.world.rank().to_string())
             .context(MpiLocalPartitionError::InvalidEventSubLog)?;
 
         let mut mpi_local_global_wait = (false, false);
@@ -220,7 +220,7 @@ impl Partitioning for MpiPartitioning {
                     mpi_local_global_wait,
                     mpi_emigration_buffers,
                     reporter_context.try_build()?,
-                    event_log,
+                    partition_event_log,
                     self.migration_interval,
                     self.progress_interval,
                 )))
@@ -230,7 +230,7 @@ impl Partitioning for MpiPartitioning {
                     mpi_local_global_wait,
                     mpi_local_remaining,
                     mpi_emigration_buffers,
-                    event_log,
+                    partition_event_log,
                     self.migration_interval,
                     self.progress_interval,
                 )))

@@ -100,27 +100,9 @@ impl EventLogRecorder {
     /// # Errors
     ///
     /// Fails to construct iff
-    /// - `suffix` is not a valid single-component path
+    /// - `child` is not a valid single-component path
     /// - newly creating a writable child directory fails
-    pub fn into_sublog(mut self, child: &str) -> Result<Self> {
-        Self::check_valid_component(child)?;
-
-        if !self.buffer.is_empty() {
-            self.sort_and_write_segment()?;
-        }
-
-        self.directory.push(child);
-        self.segment_index = 0;
-
-        self.create_valid_directory()
-    }
-
-    /// # Errors
-    ///
-    /// Fails to construct iff
-    /// - `suffix` is not a valid single-component path
-    /// - newly creating a writable child directory fails
-    pub fn sublog(&mut self, child: &str) -> Result<Self> {
+    pub fn new_child_log(&self, child: &str) -> Result<Self> {
         Self::check_valid_component(child)?;
 
         Self {
