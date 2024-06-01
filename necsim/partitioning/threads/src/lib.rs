@@ -149,7 +149,7 @@ impl Partitioning for ThreadsPartitioning {
         fold: fn(Q, Q) -> Q,
     ) -> anyhow::Result<Q> {
         // TODO: add support for multithread live reporting
-        let Some(event_log) = event_log else {
+        let Some(mut event_log) = event_log else {
             anyhow::bail!(ThreadsLocalPartitionError::MissingEventLog)
         };
 
@@ -179,12 +179,8 @@ impl Partitioning for ThreadsPartitioning {
             .num_threads
             .partitions()
             .map(|partition| {
-                let mut directory = event_log.directory().to_owned();
-                directory.push(partition.rank().to_string());
-
                 event_log
-                    .clone_move(directory)
-                    .and_then(EventLogRecorder::assert_empty)
+                    .sublog(&partition.rank().to_string())
                     .context(ThreadsLocalPartitionError::InvalidEventSubLog)
             })
             .collect::<Result<Vec<_>, _>>()?;

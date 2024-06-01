@@ -5,7 +5,6 @@ extern crate contracts;
 
 use std::{fmt, ops::ControlFlow};
 
-use anyhow::Context;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use necsim_core::{
@@ -74,9 +73,7 @@ impl Partitioning for MonolithicPartitioning {
             MonolithicLocalPartition::Recorded(Box::new(
                 recorded::RecordedMonolithicLocalPartition::try_from_context_and_recorder(
                     reporter_context,
-                    event_log
-                        .assert_empty()
-                        .context("Failed to create the event log.")?,
+                    event_log,
                 )?,
             ))
         } else {

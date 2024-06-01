@@ -190,12 +190,8 @@ impl Partitioning for MpiPartitioning {
             anyhow::bail!(MpiLocalPartitionError::MissingEventLog)
         };
 
-        let mut directory = event_log.directory().to_owned();
-        directory.push(self.world.rank().to_string());
-
         let event_log = event_log
-            .r#move(&directory)
-            .and_then(EventLogRecorder::assert_empty)
+            .into_sublog(&self.world.rank().to_string())
             .context(MpiLocalPartitionError::InvalidEventSubLog)?;
 
         let mut mpi_local_global_wait = (false, false);

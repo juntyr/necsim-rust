@@ -20,10 +20,10 @@ use std::{
     fs::{self, OpenOptions},
     io::BufWriter,
     num::NonZeroUsize,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
-use anyhow::{Error, Result};
+use anyhow::{Context, Error, Result};
 use serde::{Deserialize, Serialize, Serializer};
 
 use necsim_core::event::{DispersalEvent, PackedEvent, SpeciationEvent};
@@ -63,12 +63,12 @@ impl Serialize for EventLogRecorder {
 
 impl Drop for EventLogRecorder {
     fn drop(&mut self) {
-        if self.buffer.is_empty() {
-            // Try to remove the directory if it is empty
-            std::mem::drop(fs::remove_dir(&self.directory));
-        } else {
+        if !self.buffer.is_empty() {
             std::mem::drop(self.sort_and_write_segment());
         }
+
+        // Try to remove the directory if it is empty
+        std::mem::drop(fs::remove_dir(&self.directory));
     }
 }
 
@@ -77,99 +77,103 @@ impl EventLogRecorder {
     ///
     /// Fails to construct iff `path` is not a writable directory.
     pub fn try_new(path: &Path, segment_capacity: NonZeroUsize) -> Result<Self> {
-        fs::create_dir_all(path)?;
+        let path = path.canonicalize()?;
 
-        let metadata = fs::metadata(path)?;
-
-        if !metadata.is_dir() {
-            return Err(anyhow::anyhow!("{:?} is not a directory.", path));
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).with_context(|| {
+                format!("failed to ensure that the parent path for {path:?} exists")
+            })?;
         }
 
-        if metadata.permissions().readonly() {
-            return Err(anyhow::anyhow!("{:?} is a read-only directory.", path));
-        }
-
-        Ok(Self {
+        Self {
             segment_capacity,
-            directory: path.to_owned(),
+            directory: path,
             segment_index: 0_usize,
             buffer: Vec::with_capacity(segment_capacity.get()),
 
             record_speciation: false,
             record_dispersal: false,
-        })
+        }
+        .create_valid_directory()
     }
 
     /// # Errors
     ///
-    /// Fails to construct iff `path` is not a writable directory.
-    pub fn r#move(mut self, path: &Path) -> Result<Self> {
+    /// Fails to construct iff
+    /// - `suffix` is not a valid single-component path
+    /// - newly creating a writable child directory fails
+    pub fn into_sublog(mut self, child: &str) -> Result<Self> {
+        Self::check_valid_component(child)?;
+
         if !self.buffer.is_empty() {
             self.sort_and_write_segment()?;
-        } else if !path.starts_with(&self.directory) {
-            // Try to remove the directory if it is empty and the
-            //  new path is not a child of the current directory
-            std::mem::drop(fs::remove_dir(&self.directory));
         }
 
-        fs::create_dir_all(path)?;
+        self.directory.push(child);
+        self.segment_index = 0;
 
-        let metadata = fs::metadata(path)?;
-
-        if !metadata.is_dir() {
-            return Err(anyhow::anyhow!("{:?} is not a directory.", path));
-        }
-
-        if metadata.permissions().readonly() {
-            return Err(anyhow::anyhow!("{:?} is a read-only directory.", path));
-        }
-
-        path.clone_into(&mut self.directory);
-
-        Ok(self)
+        self.create_valid_directory()
     }
 
     /// # Errors
     ///
-    /// Fails to construct iff `path` is not a writable directory.
-    pub fn clone_move(&self, path: PathBuf) -> Result<Self> {
-        fs::create_dir_all(&path)?;
+    /// Fails to construct iff
+    /// - `suffix` is not a valid single-component path
+    /// - newly creating a writable child directory fails
+    pub fn sublog(&mut self, child: &str) -> Result<Self> {
+        Self::check_valid_component(child)?;
 
-        let metadata = fs::metadata(&path)?;
-
-        if !metadata.is_dir() {
-            return Err(anyhow::anyhow!("{:?} is not a directory.", path));
-        }
-
-        if metadata.permissions().readonly() {
-            return Err(anyhow::anyhow!("{:?} is a read-only directory.", path));
-        }
-
-        Ok(Self {
+        Self {
             segment_capacity: self.segment_capacity,
-            directory: path,
+            directory: self.directory.join(child),
             segment_index: 0,
             buffer: Vec::with_capacity(self.segment_capacity.get()),
             record_speciation: self.record_speciation,
             record_dispersal: self.record_dispersal,
-        })
+        }
+        .create_valid_directory()
     }
 
-    /// # Errors
-    ///
-    /// Fails to construct iff `path` is not an empty directory.
-    pub fn assert_empty(self) -> Result<Self> {
-        if fs::read_dir(&self.directory)?.next().is_some() {
+    fn create_valid_directory(self) -> Result<Self> {
+        fs::create_dir(&self.directory).with_context(|| {
+            format!(
+                "failed to newly create the directory {:?}\n\nIf you are starting a new \
+                 simulation, clean out the existing log.\nIf you are pausing or resuming a \
+                 simulation, try appending a simulation-slice-specific postfix to your log path, \
+                 and keep all these log-slices in the same parent directory for easy analysis.",
+                self.directory
+            )
+        })?;
+
+        let metadata = fs::metadata(&self.directory)?;
+
+        if !metadata.is_dir() {
+            return Err(anyhow::anyhow!("{:?} is not a directory.", self.directory));
+        }
+
+        if metadata.permissions().readonly() {
             return Err(anyhow::anyhow!(
-                "{:?} is not an empty directory.\n\nIf you are starting a new simulation, clean \
-                 out the existing log.\nIf you are pausing or resuming a simulation, try \
-                 appending a\n simulation-slice-specific postfix to your log path, and keep all\n \
-                 these log-slices in the same parent directory for easy analysis.",
-                &self.directory
+                "{:?} is a read-only directory.",
+                self.directory
             ));
         }
 
         Ok(self)
+    }
+
+    fn check_valid_component(component: &str) -> Result<()> {
+        let mut child_components = Path::new(component).components();
+
+        anyhow::ensure!(
+            matches!(child_components.next(), Some(Component::Normal(first)) if first == component),
+            "{component:?} is not a regular path component"
+        );
+        anyhow::ensure!(
+            child_components.next().is_none(),
+            "{component:?} must be a singular path component"
+        );
+
+        Ok(())
     }
 
     #[must_use]
