@@ -1,8 +1,5 @@
 #![deny(clippy::pedantic)]
 
-#[macro_use]
-extern crate contracts;
-
 use std::{
     fmt,
     num::Wrapping,
@@ -24,7 +21,9 @@ use necsim_core::reporter::{
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_partitioning_core::{
-    context::ReporterContext, partition::PartitionSize, Data, Partitioning,
+    partition::PartitionSize,
+    reporter::{FinalisableReporter, ReporterContext},
+    Data, Partitioning,
 };
 
 mod partition;
@@ -120,10 +119,10 @@ impl ThreadsPartitioning {
     }
 }
 
-#[contract_trait]
 impl Partitioning for ThreadsPartitioning {
     type Auxiliary = Option<EventLogRecorder>;
-    type LocalPartition<'p, R: Reporter> = ThreadsLocalPartition<'p, R>;
+    type FinalisableReporter<R: Reporter> = FinalisableThreadsReporter<R>;
+    type LocalPartition<R: Reporter> = ThreadsLocalPartition<R>;
 
     fn get_size(&self) -> PartitionSize {
         self.num_threads
@@ -145,9 +144,9 @@ impl Partitioning for ThreadsPartitioning {
         reporter_context: P,
         event_log: Self::Auxiliary,
         args: A,
-        inner: for<'p> fn(Self::LocalPartition<'p, R>, A) -> Q,
+        inner: fn(&mut Self::LocalPartition<R>, A) -> Q,
         fold: fn(Q, Q) -> Q,
-    ) -> anyhow::Result<Q> {
+    ) -> anyhow::Result<(Q, Self::FinalisableReporter<R>)> {
         // TODO: add support for multithread live reporting
         let Some(event_log) = event_log else {
             anyhow::bail!(ThreadsLocalPartitionError::MissingEventLog)
@@ -209,7 +208,7 @@ impl Partitioning for ThreadsPartitioning {
                 .map(
                     |((((partition, immigration_channel), event_log), progress_channel), args)| {
                         scope.spawn(move || {
-                            let local_partition = ThreadsLocalPartition::<R>::new(
+                            let mut local_partition = ThreadsLocalPartition::<R>::new(
                                 partition,
                                 vote_any,
                                 vote_min_time,
@@ -223,7 +222,7 @@ impl Partitioning for ThreadsPartitioning {
                                 sync_barrier,
                             );
 
-                            inner(local_partition, args)
+                            inner(&mut local_partition, args)
                         })
                     },
                 )
@@ -257,7 +256,22 @@ impl Partitioning for ThreadsPartitioning {
             folded_result.expect("at least one threads partitioning result")
         });
 
-        Ok(result)
+        Ok((
+            result,
+            FinalisableThreadsReporter {
+                reporter: progress_reporter,
+            },
+        ))
+    }
+}
+
+pub struct FinalisableThreadsReporter<R: Reporter> {
+    reporter: FilteredReporter<R, False, False, True>,
+}
+
+impl<R: Reporter> FinalisableReporter for FinalisableThreadsReporter<R> {
+    fn finalise(self) {
+        self.reporter.finalise();
     }
 }
 

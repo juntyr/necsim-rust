@@ -117,7 +117,7 @@ pub fn get_gillespie_logical_partition_size<P: Partitioning>(
 }
 
 #[must_use]
-pub fn get_gillespie_logical_partition<'p, R: Reporter, P: LocalPartition<'p, R>>(
+pub fn get_gillespie_logical_partition<R: Reporter, P: LocalPartition<R>>(
     args: &GillespieArguments,
     local_partition: &P,
 ) -> Partition {

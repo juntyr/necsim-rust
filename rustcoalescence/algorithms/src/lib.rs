@@ -36,15 +36,7 @@ pub trait AlgorithmDefaults {
 pub trait AlgorithmDispatch<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>, R: Reporter>:
     AlgorithmParamters + AlgorithmDefaults
 {
-    type Algorithm<'p, P: LocalPartition<'p, R>>: Algorithm<
-        'p,
-        M,
-        G,
-        O,
-        R,
-        P,
-        Arguments = Self::Arguments,
-    >;
+    type Algorithm<P: LocalPartition<R>>: Algorithm<M, G, O, R, P, Arguments = Self::Arguments>;
 
     fn get_logical_partition_size<P: Partitioning>(
         args: &Self::Arguments,
@@ -53,12 +45,11 @@ pub trait AlgorithmDispatch<M: MathsCore, G: RngCore<M>, O: Scenario<M, G>, R: R
 }
 
 pub trait Algorithm<
-    'p,
     M: MathsCore,
     G: RngCore<M>,
     O: Scenario<M, G>,
     R: Reporter,
-    P: LocalPartition<'p, R>,
+    P: LocalPartition<R>,
 >: Sized + AlgorithmParamters + AlgorithmDefaults + AlgorithmDispatch<M, G, O, R>
 {
     type LineageStore: LineageStore<M, O::Habitat>;

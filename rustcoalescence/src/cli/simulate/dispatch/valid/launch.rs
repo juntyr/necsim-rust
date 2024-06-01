@@ -15,13 +15,12 @@ use rustcoalescence_scenarios::{Scenario, ScenarioCogs};
 use crate::args::config::sample::{Sample, SampleMode, SampleModeRestart, SampleOrigin};
 
 pub(super) fn simulate<
-    'p,
     M: MathsCore,
     G: RngCore<M>,
-    A: Algorithm<'p, M, G, O, R, P>,
+    A: Algorithm<M, G, O, R, P>,
     O: Scenario<M, G>,
     R: Reporter,
-    P: LocalPartition<'p, R>,
+    P: LocalPartition<R>,
 >(
     local_partition: &mut P,
 

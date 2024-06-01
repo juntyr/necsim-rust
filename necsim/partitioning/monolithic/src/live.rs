@@ -7,8 +7,7 @@ use necsim_core::{
 use necsim_core_bond::PositiveF64;
 
 use necsim_partitioning_core::{
-    context::ReporterContext, iterator::ImmigrantPopIterator, partition::Partition, LocalPartition,
-    MigrationMode,
+    iterator::ImmigrantPopIterator, partition::Partition, LocalPartition, MigrationMode,
 };
 
 #[allow(clippy::module_name_repetitions)]
@@ -34,9 +33,8 @@ impl<R: Reporter> fmt::Debug for LiveMonolithicLocalPartition<R> {
     }
 }
 
-#[contract_trait]
-impl<'p, R: Reporter> LocalPartition<'p, R> for LiveMonolithicLocalPartition<R> {
-    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
+impl<R: Reporter> LocalPartition<R> for LiveMonolithicLocalPartition<R> {
+    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where R: 'a;
     type IsLive = True;
     type Reporter = FilteredReporter<R, True, True, True>;
 
@@ -53,10 +51,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for LiveMonolithicLocalPartition<R> 
         emigrants: &mut E,
         _emigration_mode: MigrationMode,
         _immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'a>
-    where
-        'p: 'a,
-    {
+    ) -> Self::ImmigrantIterator<'a> {
         for (_, emigrant) in emigrants {
             self.loopback.push(emigrant);
         }
@@ -86,10 +81,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for LiveMonolithicLocalPartition<R> 
     fn report_progress_sync(&mut self, remaining: u64) {
         self.reporter.report_progress(&remaining.into());
     }
-
-    fn finalise_reporting(self) {
-        self.reporter.finalise();
-    }
 }
 
 impl<R: Reporter> LiveMonolithicLocalPartition<R> {
@@ -100,12 +91,7 @@ impl<R: Reporter> LiveMonolithicLocalPartition<R> {
         }
     }
 
-    /// # Errors
-    ///
-    /// Returns any error which occured while building the context's reporter
-    pub(crate) fn try_from_context<P: ReporterContext<Reporter = R>>(
-        context: P,
-    ) -> anyhow::Result<Self> {
-        Ok(Self::from_reporter(context.try_build()?))
+    pub(crate) fn into_reporter(self) -> FilteredReporter<R, True, True, True> {
+        self.reporter
     }
 }

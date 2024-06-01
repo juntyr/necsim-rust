@@ -2,7 +2,7 @@ use std::fmt;
 
 use necsim_core::reporter::{boolean::Boolean, FilteredReporter, Reporter};
 
-use necsim_partitioning_core::context::ReporterContext;
+use necsim_partitioning_core::reporter::{FinalisableReporter, ReporterContext};
 
 use necsim_plugins_core::import::ReporterPluginVec;
 
@@ -51,6 +51,27 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
         match filtered_reporter.initialise() {
             Ok(()) => Ok(FilteredReporter::from(filtered_reporter)),
             Err(err) => Err(anyhow::Error::msg(err)),
+        }
+    }
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub enum FinalisablePartitioningReporter<R: Reporter> {
+    Monolithic(<necsim_partitioning_monolithic::MonolithicPartitioning as necsim_partitioning_core::Partitioning>::FinalisableReporter<R>),
+    #[cfg(feature = "mpi-partitioning")]
+    Mpi(<necsim_partitioning_mpi::MpiPartitioning as necsim_partitioning_core::Partitioning>::FinalisableReporter<R>),
+    #[cfg(feature = "threads-partitioning")]
+    Threads(<necsim_partitioning_threads::ThreadsPartitioning as necsim_partitioning_core::Partitioning>::FinalisableReporter<R>),
+}
+
+impl<R: Reporter> FinalisableReporter for FinalisablePartitioningReporter<R> {
+    fn finalise(self) {
+        match self {
+            Self::Monolithic(reporter) => reporter.finalise(),
+            #[cfg(feature = "mpi-partitioning")]
+            Self::Mpi(reporter) => reporter.finalise(),
+            #[cfg(feature = "threads-partitioning")]
+            Self::Threads(reporter) => reporter.finalise(),
         }
     }
 }

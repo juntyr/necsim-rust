@@ -19,11 +19,19 @@ use serde_derive_state::DeserializeState;
 use serde_state::{DeserializeState, Deserializer};
 use thiserror::Error;
 
-use necsim_core::{lineage::MigratingLineage, reporter::Reporter};
+use necsim_core::{
+    lineage::MigratingLineage,
+    reporter::{
+        boolean::{False, True},
+        FilteredReporter, Reporter,
+    },
+};
 
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 use necsim_partitioning_core::{
-    context::ReporterContext, partition::PartitionSize, Data, Partitioning,
+    partition::PartitionSize,
+    reporter::{FinalisableReporter, ReporterContext},
+    Data, Partitioning,
 };
 
 mod partition;
@@ -156,10 +164,10 @@ impl MpiPartitioning {
     }
 }
 
-#[contract_trait]
 impl Partitioning for MpiPartitioning {
     type Auxiliary = Option<EventLogRecorder>;
-    type LocalPartition<'p, R: Reporter> = MpiLocalPartition<'p, R>;
+    type FinalisableReporter<R: Reporter> = FinalisableMpiReporter<R>;
+    type LocalPartition<R: Reporter> = MpiLocalPartition<'static, R>;
 
     fn get_size(&self) -> PartitionSize {
         #[allow(clippy::cast_sign_loss)]
@@ -183,9 +191,9 @@ impl Partitioning for MpiPartitioning {
         reporter_context: P,
         event_log: Self::Auxiliary,
         args: A,
-        inner: for<'p> fn(Self::LocalPartition<'p, R>, A) -> Q,
+        inner: fn(&mut Self::LocalPartition<R>, A) -> Q,
         fold: fn(Q, Q) -> Q,
-    ) -> anyhow::Result<Q> {
+    ) -> anyhow::Result<(Q, Self::FinalisableReporter<R>)> {
         let Some(event_log) = event_log else {
             anyhow::bail!(MpiLocalPartitionError::MissingEventLog)
         };
@@ -235,10 +243,16 @@ impl Partitioning for MpiPartitioning {
                     self.progress_interval,
                 )))
             };
+            // TODO: clean up to not expose the lifetime
+            // Safety: we only expose the partition through an outer reference
+            let mut local_partition: MpiLocalPartition<'static, R> =
+                unsafe { std::mem::transmute(local_partition) };
 
-            let local_result = inner(local_partition, args);
+            let local_result = inner(&mut local_partition, args);
 
-            reduce_partitioning_data(&self.world, local_result, fold)
+            let result = reduce_partitioning_data(&self.world, local_result, fold)?;
+
+            Ok((result, local_partition.into_reporter()))
         })
     }
 }
@@ -345,4 +359,17 @@ fn reduce_partitioning_data<T: serde::Serialize + serde::de::DeserializeOwned>(
     let folded = folded.expect("at least one MPI partitioning result");
 
     Ok(folded)
+}
+
+pub enum FinalisableMpiReporter<R: Reporter> {
+    Root(FilteredReporter<R, False, False, True>),
+    Parallel,
+}
+
+impl<R: Reporter> FinalisableReporter for FinalisableMpiReporter<R> {
+    fn finalise(self) {
+        if let Self::Root(reporter) = self {
+            reporter.finalise();
+        }
+    }
 }

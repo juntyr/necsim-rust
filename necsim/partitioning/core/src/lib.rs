@@ -3,9 +3,6 @@
 
 extern crate alloc;
 
-#[macro_use]
-extern crate contracts;
-
 use core::ops::ControlFlow;
 
 use necsim_core::{
@@ -14,21 +11,21 @@ use necsim_core::{
 };
 use necsim_core_bond::PositiveF64;
 
-pub mod context;
 pub mod iterator;
 pub mod partition;
+pub mod reporter;
 
-use context::ReporterContext;
 use partition::{Partition, PartitionSize};
+use reporter::{FinalisableReporter, ReporterContext};
 
-#[allow(clippy::inline_always, clippy::inline_fn_without_body)]
-#[contract_trait]
 pub trait Partitioning: Sized {
-    type LocalPartition<'p, R: Reporter>: LocalPartition<'p, R>;
+    type LocalPartition<R: Reporter>: LocalPartition<R>;
+    type FinalisableReporter<R: Reporter>: FinalisableReporter;
     type Auxiliary;
 
     fn get_size(&self) -> PartitionSize;
 
+    #[allow(clippy::missing_errors_doc)]
     fn with_local_partition<
         R: Reporter,
         P: ReporterContext<Reporter = R>,
@@ -39,9 +36,9 @@ pub trait Partitioning: Sized {
         reporter_context: P,
         auxiliary: Self::Auxiliary,
         args: A,
-        inner: for<'p> fn(Self::LocalPartition<'p, R>, A) -> Q,
+        inner: fn(&mut Self::LocalPartition<R>, A) -> Q,
         fold: fn(Q, Q) -> Q,
-    ) -> anyhow::Result<Q>;
+    ) -> anyhow::Result<(Q, Self::FinalisableReporter<R>)>;
 }
 
 pub trait Data: Send + Clone {}
@@ -54,15 +51,12 @@ pub enum MigrationMode {
     Hold,
 }
 
-#[allow(clippy::inline_always, clippy::inline_fn_without_body)]
-#[contract_trait]
-pub trait LocalPartition<'p, R: Reporter>: Sized {
+pub trait LocalPartition<R: Reporter>: Sized {
     type Reporter: Reporter;
     type IsLive: Boolean;
     type ImmigrantIterator<'a>: Iterator<Item = MigratingLineage>
     where
-        Self: 'a,
-        'p: 'a;
+        Self: 'a;
 
     fn get_reporter(&mut self) -> &mut Self::Reporter;
 
@@ -73,18 +67,15 @@ pub trait LocalPartition<'p, R: Reporter>: Sized {
         emigrants: &mut E,
         emigration_mode: MigrationMode,
         immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'a>
-    where
-        'p: 'a;
+    ) -> Self::ImmigrantIterator<'a>;
 
     fn reduce_vote_any(&mut self, vote: bool) -> bool;
 
+    #[allow(clippy::missing_errors_doc)]
     fn reduce_vote_min_time(&mut self, local_time: PositiveF64)
         -> Result<PositiveF64, PositiveF64>;
 
     fn wait_for_termination(&mut self) -> ControlFlow<(), ()>;
 
     fn report_progress_sync(&mut self, remaining: u64);
-
-    fn finalise_reporting(self);
 }

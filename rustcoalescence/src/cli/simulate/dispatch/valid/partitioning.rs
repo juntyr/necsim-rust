@@ -4,7 +4,7 @@ use necsim_core::{
 };
 use necsim_core_bond::NonNegativeF64;
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
-use necsim_partitioning_core::{context::ReporterContext, LocalPartition, Partitioning as _};
+use necsim_partitioning_core::{reporter::ReporterContext, LocalPartition, Partitioning as _};
 
 use necsim_partitioning_monolithic::MonolithicLocalPartition;
 #[cfg(feature = "mpi-partitioning")]
@@ -12,9 +12,12 @@ use necsim_partitioning_mpi::MpiLocalPartition;
 use rustcoalescence_algorithms::{result::SimulationOutcome, Algorithm, AlgorithmDispatch};
 use rustcoalescence_scenarios::{Scenario, ScenarioCogs};
 
-use crate::args::config::{partitioning::Partitioning, sample::Sample};
+use crate::{
+    args::config::{partitioning::Partitioning, sample::Sample},
+    reporter::FinalisablePartitioningReporter,
+};
 
-use super::{super::super::BufferingSimulateArgsBuilder, info};
+use super::launch;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn dispatch<
@@ -34,140 +37,127 @@ pub(super) fn dispatch<
     scenario: ScenarioCogs<M, G, O>,
     algorithm_args: A::Arguments,
     pause_before: Option<NonNegativeF64>,
-
-    normalised_args: &BufferingSimulateArgsBuilder,
-) -> anyhow::Result<SimulationOutcome<M, G>>
+) -> anyhow::Result<(SimulationOutcome<M, G>, FinalisablePartitioningReporter<R>)>
 where
     Result<SimulationOutcome<M, G>, A::Error>: anyhow::Context<SimulationOutcome<M, G>, A::Error>,
 {
-    let args = (
-        sample,
-        rng,
-        scenario,
-        algorithm_args,
-        pause_before,
-        normalised_args,
-    );
+    let args = (sample, rng, scenario, algorithm_args, pause_before);
 
     // Initialise the local partition and the simulation
     match partitioning {
-        Partitioning::Monolithic(partitioning) => partitioning.with_local_partition(
-            reporter_context,
-            event_log,
-            args,
-            |partition, (sample, rng, scenario, algorithm_args, pause_before, normalised_args)| {
-                match partition {
+        Partitioning::Monolithic(partitioning) => partitioning
+            .with_local_partition(
+                reporter_context,
+                event_log,
+                args,
+                |partition, (sample, rng, scenario, algorithm_args, pause_before)| match partition {
                     MonolithicLocalPartition::Live(partition) => {
-                        wrap::<M, G, A::Algorithm<'_, _>, O, R, _>(
-                            *partition,
+                        wrap::<M, G, A::Algorithm<_>, O, R, _>(
+                            &mut **partition,
                             sample,
                             rng,
                             scenario,
                             algorithm_args,
                             pause_before,
-                            normalised_args,
                         )
                     },
                     MonolithicLocalPartition::Recorded(partition) => {
-                        wrap::<M, G, A::Algorithm<'_, _>, O, R, _>(
-                            *partition,
+                        wrap::<M, G, A::Algorithm<_>, O, R, _>(
+                            &mut **partition,
                             sample,
                             rng,
                             scenario,
                             algorithm_args,
                             pause_before,
-                            normalised_args,
                         )
                     },
-                }
-            },
-            fold,
-        ),
-        #[cfg(feature = "mpi-partitioning")]
-        Partitioning::Mpi(partitioning) => partitioning.with_local_partition(
-            reporter_context,
-            event_log,
-            args,
-            |partition, (sample, rng, scenario, algorithm_args, pause_before, normalised_args)| {
-                match partition {
-                    MpiLocalPartition::Root(partition) => {
-                        wrap::<M, G, A::Algorithm<'_, _>, O, R, _>(
-                            *partition,
-                            sample,
-                            rng,
-                            scenario,
-                            algorithm_args,
-                            pause_before,
-                            normalised_args,
-                        )
-                    },
-                    MpiLocalPartition::Parallel(partition) => {
-                        wrap::<M, G, A::Algorithm<'_, _>, O, R, _>(
-                            *partition,
-                            sample,
-                            rng,
-                            scenario,
-                            algorithm_args,
-                            pause_before,
-                            normalised_args,
-                        )
-                    },
-                }
-            },
-            fold,
-        ),
-        #[cfg(feature = "threads-partitioning")]
-        Partitioning::Threads(partitioning) => partitioning.with_local_partition(
-            reporter_context,
-            event_log,
-            args,
-            |partition, (sample, rng, scenario, algorithm_args, pause_before, normalised_args)| {
-                wrap::<M, G, A::Algorithm<'_, _>, O, R, _>(
-                    partition,
-                    sample,
-                    rng,
-                    scenario,
-                    algorithm_args,
-                    pause_before,
-                    normalised_args,
+                },
+                fold,
+            )
+            .map(|(result, reporter)| {
+                (
+                    result,
+                    FinalisablePartitioningReporter::Monolithic(reporter),
                 )
-            },
-            fold,
-        ),
+            }),
+        #[cfg(feature = "mpi-partitioning")]
+        Partitioning::Mpi(partitioning) => partitioning
+            .with_local_partition(
+                reporter_context,
+                event_log,
+                args,
+                |partition, (sample, rng, scenario, algorithm_args, pause_before)| match partition {
+                    MpiLocalPartition::Root(partition) => wrap::<M, G, A::Algorithm<_>, O, R, _>(
+                        &mut **partition,
+                        sample,
+                        rng,
+                        scenario,
+                        algorithm_args,
+                        pause_before,
+                    ),
+                    MpiLocalPartition::Parallel(partition) => {
+                        wrap::<M, G, A::Algorithm<_>, O, R, _>(
+                            &mut **partition,
+                            sample,
+                            rng,
+                            scenario,
+                            algorithm_args,
+                            pause_before,
+                        )
+                    },
+                },
+                fold,
+            )
+            .map(|(result, reporter)| (result, FinalisablePartitioningReporter::Mpi(reporter))),
+        #[cfg(feature = "threads-partitioning")]
+        Partitioning::Threads(partitioning) => partitioning
+            .with_local_partition(
+                reporter_context,
+                event_log,
+                args,
+                |partition, (sample, rng, scenario, algorithm_args, pause_before)| {
+                    wrap::<M, G, A::Algorithm<_>, O, R, _>(
+                        partition,
+                        sample,
+                        rng,
+                        scenario,
+                        algorithm_args,
+                        pause_before,
+                    )
+                },
+                fold,
+            )
+            .map(|(result, reporter)| (result, FinalisablePartitioningReporter::Threads(reporter))),
     }
-    .and_then(|result| result.map_err(anyhow::Error::msg))
+    .and_then(|(result, reporter)| Ok((result.map_err(anyhow::Error::msg)?, reporter)))
 }
 
 fn wrap<
-    'p,
     M: MathsCore,
     G: RngCore<M>,
-    A: Algorithm<'p, M, G, O, R, P>,
+    A: Algorithm<M, G, O, R, P>,
     O: Scenario<M, G>,
     R: Reporter,
-    P: LocalPartition<'p, R>,
+    P: LocalPartition<R>,
 >(
-    local_partition: P,
+    local_partition: &mut P,
 
     sample: Sample,
     rng: G,
     scenario: ScenarioCogs<M, G, O>,
     algorithm_args: A::Arguments,
     pause_before: Option<NonNegativeF64>,
-
-    normalised_args: &BufferingSimulateArgsBuilder,
 ) -> Result<SimulationOutcome<M, G>, String>
 where
     Result<SimulationOutcome<M, G>, A::Error>: anyhow::Context<SimulationOutcome<M, G>, A::Error>,
 {
-    info::dispatch::<M, G, A::Algorithm<'_, _>, O, R, _>(
+    launch::simulate::<M, G, A::Algorithm<_>, O, R, _>(
         local_partition,
         sample,
         rng,
         scenario,
         algorithm_args,
         pause_before,
-        normalised_args,
     )
     .map_err(|err| format!("{err:?}"))
 }

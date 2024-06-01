@@ -1,6 +1,5 @@
 use std::{
     fmt,
-    mem::ManuallyDrop,
     num::Wrapping,
     ops::ControlFlow,
     time::{Duration, Instant},
@@ -33,28 +32,14 @@ pub struct MpiRootPartition<'p, R: Reporter> {
     common: MpiCommonPartition<'p>,
     all_remaining: Box<[u64]>,
     last_report_time: Instant,
-    reporter: ManuallyDrop<FilteredReporter<R, False, False, True>>,
+    reporter: FilteredReporter<R, False, False, True>,
     recorder: EventLogRecorder,
-    finalised: bool,
     progress_interval: Duration,
 }
 
 impl<'p, R: Reporter> fmt::Debug for MpiRootPartition<'p, R> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(MpiRootPartition)).finish()
-    }
-}
-
-impl<'p, R: Reporter> Drop for MpiRootPartition<'p, R> {
-    fn drop(&mut self) {
-        // Safety: destructor is only run once
-        if self.finalised {
-            unsafe { ManuallyDrop::take(&mut self.reporter) }.finalise();
-        } else {
-            unsafe {
-                ManuallyDrop::drop(&mut self.reporter);
-            }
-        }
     }
 }
 
@@ -90,16 +75,14 @@ impl<'p, R: Reporter> MpiRootPartition<'p, R> {
             common,
             all_remaining,
             last_report_time: now.checked_sub(progress_interval).unwrap_or(now),
-            reporter: ManuallyDrop::new(reporter),
+            reporter,
             recorder,
-            finalised: false,
             progress_interval,
         }
     }
 }
 
-#[contract_trait]
-impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
+impl<'p, R: Reporter> LocalPartition<R> for MpiRootPartition<'p, R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
     type IsLive = False;
     type Reporter = Self;
@@ -117,10 +100,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
         emigrants: &mut E,
         emigration_mode: MigrationMode,
         immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'a>
-    where
-        'p: 'a,
-    {
+    ) -> Self::ImmigrantIterator<'a> {
         self.common
             .migrate_individuals(emigrants, emigration_mode, immigration_mode)
     }
@@ -167,12 +147,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
                 .into(),
         );
     }
-
-    fn finalise_reporting(mut self) {
-        self.finalised = true;
-
-        std::mem::drop(self);
-    }
 }
 
 impl<'p, R: Reporter> Reporter for MpiRootPartition<'p, R> {
@@ -213,4 +187,10 @@ impl<'p, R: Reporter> Reporter for MpiRootPartition<'p, R> {
             );
         }
     });
+}
+
+impl<'p, R: Reporter> MpiRootPartition<'p, R> {
+    pub(crate) fn into_reporter(self) -> FilteredReporter<R, False, False, True> {
+        self.reporter
+    }
 }

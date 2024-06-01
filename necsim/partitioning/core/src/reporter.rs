@@ -11,3 +11,8 @@ pub trait ReporterContext: core::fmt::Debug {
         self,
     ) -> anyhow::Result<FilteredReporter<Self::Reporter, KeepSpeciation, KeepDispersal, KeepProgress>>;
 }
+
+#[allow(clippy::module_name_repetitions)]
+pub trait FinalisableReporter {
+    fn finalise(self);
+}

@@ -1,5 +1,5 @@
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
-use necsim_partitioning_core::context::ReporterContext;
+use necsim_partitioning_core::reporter::ReporterContext;
 use tiny_keccak::{Hasher, Keccak};
 
 use rustcoalescence_algorithms::{
@@ -25,7 +25,7 @@ use crate::{
 
 use super::{
     super::super::{BufferingSimulateArgsBuilder, SimulationOutcome},
-    partitioning,
+    info,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -55,19 +55,7 @@ where
     let rng: G = match parse::rng::parse_and_normalise(
         ron_args,
         normalised_args,
-        match &partitioning {
-            Partitioning::Monolithic(partitioning) => {
-                A::get_logical_partition_size(&algorithm_args, partitioning)
-            },
-            #[cfg(feature = "mpi-partitioning")]
-            Partitioning::Mpi(partitioning) => {
-                A::get_logical_partition_size(&algorithm_args, partitioning)
-            },
-            #[cfg(feature = "threads-partitioning")]
-            Partitioning::Threads(partitioning) => {
-                A::get_logical_partition_size(&algorithm_args, partitioning)
-            },
-        },
+        partitioning.get_logical_partition_size::<M, G, O, R, A>(&algorithm_args),
     )? {
         RngArgs::Seed(seed) => SeedableRng::seed_from_u64(seed),
         RngArgs::Sponge(bytes) => {
@@ -82,7 +70,7 @@ where
         RngArgs::State(state) => state.into(),
     };
 
-    let result = partitioning::dispatch::<M, G, A, O, R, P>(
+    let result = info::dispatch::<M, G, A, O, R, P>(
         partitioning,
         event_log,
         reporter_context,

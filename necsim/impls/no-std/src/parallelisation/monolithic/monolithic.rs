@@ -22,7 +22,6 @@ use crate::{
 
 #[allow(clippy::type_complexity)]
 pub fn simulate<
-    'p,
     M: MathsCore,
     H: Habitat<M>,
     G: RngCore<M>,
@@ -34,7 +33,7 @@ pub fn simulate<
     E: EventSampler<M, H, G, S, NeverEmigrationExit, D, C, T, N>,
     A: ActiveLineageSampler<M, H, G, S, NeverEmigrationExit, D, C, T, N, E, NeverImmigrationEntry>,
     P: Reporter,
-    L: LocalPartition<'p, P>,
+    L: LocalPartition<P>,
 >(
     simulation: &mut Simulation<
         M,

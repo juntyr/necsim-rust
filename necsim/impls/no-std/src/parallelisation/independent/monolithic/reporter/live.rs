@@ -13,18 +13,16 @@ use necsim_partitioning_core::LocalPartition;
 use super::WaterLevelReporterProxy;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct LiveWaterLevelReporterProxy<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> {
+pub struct LiveWaterLevelReporterProxy<'p, R: Reporter, P: LocalPartition<R>> {
     water_level: NonNegativeF64,
     slow_events: Vec<PackedEvent>,
     fast_events: Vec<PackedEvent>,
 
-    local_partition: &'l mut P,
-    _marker: PhantomData<(&'p (), R)>,
+    local_partition: &'p mut P,
+    _marker: PhantomData<R>,
 }
 
-impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> fmt::Debug
-    for LiveWaterLevelReporterProxy<'l, 'p, R, P>
-{
+impl<'p, R: Reporter, P: LocalPartition<R>> fmt::Debug for LiveWaterLevelReporterProxy<'p, R, P> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         struct EventBufferLen(usize);
 
@@ -42,9 +40,7 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> fmt::Debug
     }
 }
 
-impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> Reporter
-    for LiveWaterLevelReporterProxy<'l, 'p, R, P>
-{
+impl<'p, R: Reporter, P: LocalPartition<R>> Reporter for LiveWaterLevelReporterProxy<'p, R, P> {
     impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
         if speciation.event_time < self.water_level {
             self.slow_events.push(speciation.clone().into());
@@ -65,10 +61,10 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> Reporter
 }
 
 #[contract_trait]
-impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> WaterLevelReporterProxy<'l, 'p, R, P>
-    for LiveWaterLevelReporterProxy<'l, 'p, R, P>
+impl<'p, R: Reporter, P: LocalPartition<R>> WaterLevelReporterProxy<'p, R, P>
+    for LiveWaterLevelReporterProxy<'p, R, P>
 {
-    fn new(capacity: usize, local_partition: &'l mut P) -> Self {
+    fn new(capacity: usize, local_partition: &'p mut P) -> Self {
         info!("Events will be reported using the live water-level algorithm ...");
 
         Self {
@@ -77,7 +73,7 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> WaterLevelReporterProxy<'l, 
             fast_events: Vec::with_capacity(capacity),
 
             local_partition,
-            _marker: PhantomData::<(&'p (), R)>,
+            _marker: PhantomData::<R>,
         }
     }
 
@@ -119,9 +115,7 @@ impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> WaterLevelReporterProxy<'l, 
     }
 }
 
-impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> Drop
-    for LiveWaterLevelReporterProxy<'l, 'p, R, P>
-{
+impl<'p, R: Reporter, P: LocalPartition<R>> Drop for LiveWaterLevelReporterProxy<'p, R, P> {
     fn drop(&mut self) {
         // Report all events below the water level in sorted order
         self.slow_events.sort_unstable();

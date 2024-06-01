@@ -15,8 +15,7 @@ use necsim_core_bond::PositiveF64;
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
 
 use necsim_partitioning_core::{
-    context::ReporterContext, iterator::ImmigrantPopIterator, partition::Partition, LocalPartition,
-    MigrationMode,
+    iterator::ImmigrantPopIterator, partition::Partition, LocalPartition, MigrationMode,
 };
 
 #[allow(clippy::module_name_repetitions)]
@@ -44,9 +43,8 @@ impl<R: Reporter> fmt::Debug for RecordedMonolithicLocalPartition<R> {
     }
 }
 
-#[contract_trait]
-impl<'p, R: Reporter> LocalPartition<'p, R> for RecordedMonolithicLocalPartition<R> {
-    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
+impl<R: Reporter> LocalPartition<R> for RecordedMonolithicLocalPartition<R> {
+    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where R: 'a;
     type IsLive = False;
     type Reporter = Self;
 
@@ -63,10 +61,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for RecordedMonolithicLocalPartition
         emigrants: &mut E,
         _emigration_mode: MigrationMode,
         _immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'a>
-    where
-        'p: 'a,
-    {
+    ) -> Self::ImmigrantIterator<'a> {
         for (_, emigrant) in emigrants {
             self.loopback.push(emigrant);
         }
@@ -96,27 +91,24 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for RecordedMonolithicLocalPartition
     fn report_progress_sync(&mut self, remaining: u64) {
         self.reporter.report_progress(&remaining.into());
     }
-
-    fn finalise_reporting(self) {
-        self.reporter.finalise();
-    }
 }
 
 impl<R: Reporter> RecordedMonolithicLocalPartition<R> {
-    /// # Errors
-    ///
-    /// Returns any error which occured while building the context's reporter
-    pub(crate) fn try_from_context_and_recorder<P: ReporterContext<Reporter = R>>(
-        context: P,
+    pub(crate) fn from_reporter_and_recorder(
+        reporter: FilteredReporter<R, False, False, True>,
         mut recorder: EventLogRecorder,
-    ) -> anyhow::Result<Self> {
+    ) -> Self {
         recorder.set_event_filter(R::ReportSpeciation::VALUE, R::ReportDispersal::VALUE);
 
-        Ok(Self {
-            reporter: context.try_build()?,
+        Self {
+            reporter,
             recorder,
             loopback: Vec::new(),
-        })
+        }
+    }
+
+    pub(crate) fn into_reporter(self) -> FilteredReporter<R, False, False, True> {
+        self.reporter
     }
 }
 

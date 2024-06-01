@@ -81,8 +81,7 @@ impl<'p, R: Reporter> MpiParallelPartition<'p, R> {
     }
 }
 
-#[contract_trait]
-impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
+impl<'p, R: Reporter> LocalPartition<R> for MpiParallelPartition<'p, R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
     type IsLive = False;
     type Reporter = Self;
@@ -100,10 +99,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
         emigrants: &mut E,
         emigration_mode: MigrationMode,
         immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'a>
-    where
-        'p: 'a,
-    {
+    ) -> Self::ImmigrantIterator<'a> {
         self.common
             .migrate_individuals(emigrants, emigration_mode, immigration_mode)
     }
@@ -130,10 +126,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiParallelPartition<'p, R> {
             .process_at_rank(MpiPartitioning::ROOT_RANK);
 
         root_process.gather_into(&remaining);
-    }
-
-    fn finalise_reporting(self) {
-        std::mem::drop(self);
     }
 }
 

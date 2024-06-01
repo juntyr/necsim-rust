@@ -1,3 +1,10 @@
+use necsim_core::{
+    cogs::{MathsCore, RngCore},
+    reporter::Reporter,
+};
+use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use rustcoalescence_algorithms::AlgorithmDispatch;
+use rustcoalescence_scenarios::Scenario;
 use serde::{Deserialize, Serialize};
 
 use necsim_partitioning_core::partition::PartitionSize;
@@ -42,6 +49,42 @@ impl Partitioning {
                 )),
                 Ok(()),
             ),
+        }
+    }
+
+    pub fn get_logical_partition_size<
+        M: MathsCore,
+        G: RngCore<M>,
+        O: Scenario<M, G>,
+        R: Reporter,
+        A: AlgorithmDispatch<M, G, O, R>,
+    >(
+        &self,
+        algorithm_args: &A::Arguments,
+    ) -> PartitionSize {
+        match self {
+            Partitioning::Monolithic(partitioning) => {
+                A::get_logical_partition_size(algorithm_args, partitioning)
+            },
+            #[cfg(feature = "mpi-partitioning")]
+            Partitioning::Mpi(partitioning) => {
+                A::get_logical_partition_size(algorithm_args, partitioning)
+            },
+            #[cfg(feature = "threads-partitioning")]
+            Partitioning::Threads(partitioning) => {
+                A::get_logical_partition_size(algorithm_args, partitioning)
+            },
+        }
+    }
+
+    pub fn will_report_live(&self, event_log: &Option<EventLogRecorder>) -> bool {
+        // TODO: get this information from the partitioning
+        match self {
+            Partitioning::Monolithic(_) => event_log.is_none(),
+            #[cfg(feature = "mpi-partitioning")]
+            Partitioning::Mpi(_) => false,
+            #[cfg(feature = "threads-partitioning")]
+            Partitioning::Threads(_) => false,
         }
     }
 }

@@ -21,6 +21,8 @@ pub use parallel::MpiParallelPartition;
 #[allow(clippy::module_name_repetitions)]
 pub use root::MpiRootPartition;
 
+use crate::FinalisableMpiReporter;
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub enum MpiLocalPartition<'p, R: Reporter> {
@@ -28,8 +30,7 @@ pub enum MpiLocalPartition<'p, R: Reporter> {
     Parallel(Box<MpiParallelPartition<'p, R>>),
 }
 
-#[contract_trait]
-impl<'p, R: Reporter> LocalPartition<'p, R> for MpiLocalPartition<'p, R> {
+impl<'p, R: Reporter> LocalPartition<R> for MpiLocalPartition<'p, R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
     type IsLive = False;
     type Reporter = Self;
@@ -50,10 +51,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiLocalPartition<'p, R> {
         emigrants: &mut E,
         emigration_mode: MigrationMode,
         immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'a>
-    where
-        'p: 'a,
-    {
+    ) -> Self::ImmigrantIterator<'a> {
         match self {
             Self::Root(partition) => {
                 partition.migrate_individuals(emigrants, emigration_mode, immigration_mode)
@@ -94,13 +92,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiLocalPartition<'p, R> {
             Self::Parallel(partition) => partition.report_progress_sync(remaining),
         }
     }
-
-    fn finalise_reporting(self) {
-        match self {
-            Self::Root(partition) => partition.finalise_reporting(),
-            Self::Parallel(partition) => partition.finalise_reporting(),
-        }
-    }
 }
 
 impl<'p, R: Reporter> Reporter for MpiLocalPartition<'p, R> {
@@ -136,4 +127,13 @@ impl<'p, R: Reporter> Reporter for MpiLocalPartition<'p, R> {
             ),
         }
     });
+}
+
+impl<'p, R: Reporter> MpiLocalPartition<'p, R> {
+    pub(crate) fn into_reporter(self) -> FinalisableMpiReporter<R> {
+        match self {
+            Self::Root(partition) => FinalisableMpiReporter::Root(partition.into_reporter()),
+            Self::Parallel(_) => FinalisableMpiReporter::Parallel,
+        }
+    }
 }

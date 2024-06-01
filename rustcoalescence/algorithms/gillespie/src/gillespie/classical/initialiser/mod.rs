@@ -59,13 +59,12 @@ pub trait ClassicalLineageStoreSampleInitialiser<
     #[allow(clippy::type_complexity)]
     fn init<
         'h,
-        'p,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
         S: LocallyCoherentLineageStore<M, O::Habitat>,
         X: EmigrationExit<M, O::Habitat, G, S>,
         I: ImmigrationEntry<M>,
         Q: Reporter,
-        P: LocalPartition<'p, Q>,
+        P: LocalPartition<Q>,
     >(
         self,
         origin_sampler: T,

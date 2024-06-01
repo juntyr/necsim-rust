@@ -1,7 +1,7 @@
 use necsim_core::reporter::Reporter;
 use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_impls_std::event_log::recorder::EventLogRecorder;
-use necsim_partitioning_core::context::ReporterContext;
+use necsim_partitioning_core::reporter::ReporterContext;
 
 use rustcoalescence_algorithms::AlgorithmDefaults;
 

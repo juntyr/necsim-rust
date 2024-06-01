@@ -23,7 +23,6 @@ use crate::{
 
 #[allow(clippy::type_complexity)]
 pub fn simulate<
-    'p,
     M: MathsCore,
     H: Habitat<M>,
     G: RngCore<M>,
@@ -48,7 +47,7 @@ pub fn simulate<
         BufferedImmigrationEntry,
     >,
     P: Reporter,
-    L: LocalPartition<'p, P>,
+    L: LocalPartition<P>,
 >(
     simulation: &mut Simulation<
         M,

@@ -53,7 +53,7 @@ where
         GloballyCoherentLineageStore<M, O::Habitat>,
     O::DispersalSampler: SeparableDispersalSampler<M, O::Habitat, G>,
 {
-    type Algorithm<'p, P: LocalPartition<'p, R>> = Self;
+    type Algorithm<P: LocalPartition<R>> = Self;
 
     fn get_logical_partition_size<P: Partitioning>(
         args: &Self::Arguments,
@@ -63,14 +63,8 @@ where
     }
 }
 
-impl<
-        'p,
-        O: Scenario<M, G>,
-        R: Reporter,
-        P: LocalPartition<'p, R>,
-        M: MathsCore,
-        G: SplittableRng<M>,
-    > Algorithm<'p, M, G, O, R, P> for EventSkippingAlgorithm
+impl<O: Scenario<M, G>, R: Reporter, P: LocalPartition<R>, M: MathsCore, G: SplittableRng<M>>
+    Algorithm<M, G, O, R, P> for EventSkippingAlgorithm
 where
     O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
         GloballyCoherentLineageStore<M, O::Habitat>,

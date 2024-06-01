@@ -26,7 +26,7 @@ use necsim_partitioning_core::{partition::Partition, LocalPartition, MigrationMo
 use crate::vote::{AsyncVote, Vote};
 
 #[allow(clippy::module_name_repetitions)]
-pub struct ThreadsLocalPartition<'p, R: Reporter> {
+pub struct ThreadsLocalPartition<R: Reporter> {
     partition: Partition,
     vote_any: Vote<bool>,
     vote_min_time: Vote<(PositiveF64, u32)>,
@@ -44,16 +44,16 @@ pub struct ThreadsLocalPartition<'p, R: Reporter> {
     last_report_time: Instant,
     progress_interval: Duration,
     sync_barrier: Arc<Barrier>,
-    _marker: PhantomData<(&'p (), R)>,
+    _marker: PhantomData<R>,
 }
 
-impl<'p, R: Reporter> fmt::Debug for ThreadsLocalPartition<'p, R> {
+impl<R: Reporter> fmt::Debug for ThreadsLocalPartition<R> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct(stringify!(ThreadsRootPartition)).finish()
+        fmt.debug_struct(stringify!(ThreadsLocalPartition)).finish()
     }
 }
 
-impl<'p, R: Reporter> ThreadsLocalPartition<'p, R> {
+impl<R: Reporter> ThreadsLocalPartition<R> {
     #[allow(clippy::too_many_arguments)]
     #[must_use]
     pub(crate) fn new(
@@ -100,14 +100,13 @@ impl<'p, R: Reporter> ThreadsLocalPartition<'p, R> {
             last_report_time: now.checked_sub(progress_interval).unwrap_or(now),
             progress_interval,
             sync_barrier: sync_barrier.clone(),
-            _marker: PhantomData::<(&'p (), R)>,
+            _marker: PhantomData::<R>,
         }
     }
 }
 
-#[contract_trait]
-impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsLocalPartition<'p, R> {
-    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
+impl<R: Reporter> LocalPartition<R> for ThreadsLocalPartition<R> {
+    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where R: 'a;
     type IsLive = False;
     type Reporter = Self;
 
@@ -124,10 +123,7 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsLocalPartition<'p, R> {
         emigrants: &mut E,
         emigration_mode: MigrationMode,
         immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'a>
-    where
-        'p: 'a,
-    {
+    ) -> Self::ImmigrantIterator<'a> {
         for (partition, emigrant) in emigrants {
             self.emigration_buffers[partition as usize].push(emigrant);
         }
@@ -272,13 +268,9 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsLocalPartition<'p, R> {
 
         self.sync_barrier.wait();
     }
-
-    fn finalise_reporting(self) {
-        std::mem::drop(self);
-    }
 }
 
-impl<'p, R: Reporter> Reporter for ThreadsLocalPartition<'p, R> {
+impl<R: Reporter> Reporter for ThreadsLocalPartition<R> {
     impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
         self.recorder.record_speciation(speciation);
     });

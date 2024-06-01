@@ -77,8 +77,6 @@ impl EventLogRecorder {
     ///
     /// Fails to construct iff `path` is not a writable directory.
     pub fn try_new(path: &Path, segment_capacity: NonZeroUsize) -> Result<Self> {
-        let path = path.canonicalize()?;
-
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).with_context(|| {
                 format!("failed to ensure that the parent path for {path:?} exists")
@@ -87,7 +85,7 @@ impl EventLogRecorder {
 
         Self {
             segment_capacity,
-            directory: path,
+            directory: path.to_owned(),
             segment_index: 0_usize,
             buffer: Vec::with_capacity(segment_capacity.get()),
 
@@ -116,7 +114,8 @@ impl EventLogRecorder {
         .create_valid_directory()
     }
 
-    fn create_valid_directory(self) -> Result<Self> {
+    fn create_valid_directory(mut self) -> Result<Self> {
+        // TODO: MPI cannot newly co-create all entries
         fs::create_dir(&self.directory).with_context(|| {
             format!(
                 "failed to newly create the directory {:?}\n\nIf you are starting a new \
@@ -126,6 +125,8 @@ impl EventLogRecorder {
                 self.directory
             )
         })?;
+
+        self.directory = self.directory.canonicalize()?;
 
         let metadata = fs::metadata(&self.directory)?;
 
