@@ -2,7 +2,7 @@ use necsim_core::{
     cogs::{MathsCore, RngCore},
     reporter::Reporter,
 };
-use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use necsim_impls_std::event_log::recorder::EventLogConfig;
 use rustcoalescence_algorithms::AlgorithmDispatch;
 use rustcoalescence_scenarios::Scenario;
 use serde::{Deserialize, Serialize};
@@ -52,6 +52,14 @@ impl Partitioning {
         }
     }
 
+    #[cfg_attr(
+        not(any(
+            feature = "gillespie-algorithms",
+            feature = "independent-algorithm",
+            feature = "cuda-algorithm"
+        )),
+        allow(dead_code)
+    )]
     pub fn get_logical_partition_size<
         M: MathsCore,
         G: RngCore<M>,
@@ -77,7 +85,15 @@ impl Partitioning {
         }
     }
 
-    pub fn will_report_live(&self, event_log: &Option<EventLogRecorder>) -> bool {
+    #[cfg_attr(
+        not(any(
+            feature = "gillespie-algorithms",
+            feature = "independent-algorithm",
+            feature = "cuda-algorithm"
+        )),
+        allow(dead_code)
+    )]
+    pub fn will_report_live(&self, event_log: &Option<EventLogConfig>) -> bool {
         // TODO: get this information from the partitioning
         match self {
             Partitioning::Monolithic(_) => event_log.is_none(),

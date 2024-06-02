@@ -27,7 +27,7 @@ use necsim_core::{
     },
 };
 
-use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use necsim_impls_std::event_log::recorder::EventLogConfig;
 use necsim_partitioning_core::{
     partition::PartitionSize,
     reporter::{FinalisableReporter, ReporterContext},
@@ -165,7 +165,7 @@ impl MpiPartitioning {
 }
 
 impl Partitioning for MpiPartitioning {
-    type Auxiliary = Option<EventLogRecorder>;
+    type Auxiliary = Option<EventLogConfig>;
     type FinalisableReporter<R: Reporter> = FinalisableMpiReporter<R>;
     type LocalPartition<R: Reporter> = MpiLocalPartition<'static, R>;
 
@@ -200,6 +200,7 @@ impl Partitioning for MpiPartitioning {
 
         let partition_event_log = event_log
             .new_child_log(&self.world.rank().to_string())
+            .and_then(EventLogConfig::create)
             .context(MpiLocalPartitionError::InvalidEventSubLog)?;
 
         let mut mpi_local_global_wait = (false, false);

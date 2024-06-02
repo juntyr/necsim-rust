@@ -3,7 +3,7 @@ use necsim_core::{
     reporter::Reporter,
 };
 use necsim_core_bond::NonNegativeF64;
-use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use necsim_impls_std::event_log::recorder::EventLogConfig;
 use necsim_partitioning_core::{reporter::ReporterContext, LocalPartition, Partitioning as _};
 
 use necsim_partitioning_monolithic::MonolithicLocalPartition;
@@ -29,7 +29,7 @@ pub(super) fn dispatch<
     P: ReporterContext<Reporter = R>,
 >(
     partitioning: Partitioning,
-    event_log: Option<EventLogRecorder>,
+    event_log: Option<EventLogConfig>,
     reporter_context: P,
 
     sample: Sample,

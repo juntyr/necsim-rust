@@ -21,7 +21,7 @@ use necsim_partitioning_core::{
     LocalPartition, MigrationMode, Partitioning,
 };
 
-use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use necsim_impls_std::event_log::recorder::EventLogConfig;
 
 pub mod live;
 pub mod recorded;
@@ -50,7 +50,7 @@ impl<'de> Deserialize<'de> for MonolithicPartitioning {
 }
 
 impl Partitioning for MonolithicPartitioning {
-    type Auxiliary = Option<EventLogRecorder>;
+    type Auxiliary = Option<EventLogConfig>;
     type FinalisableReporter<R: Reporter> = FinalisableMonolithicReporter<R>;
     type LocalPartition<R: Reporter> = MonolithicLocalPartition<R>;
 
@@ -73,7 +73,7 @@ impl Partitioning for MonolithicPartitioning {
             MonolithicLocalPartition::Recorded(Box::new(
                 recorded::RecordedMonolithicLocalPartition::from_reporter_and_recorder(
                     reporter_context.try_build()?,
-                    event_log,
+                    event_log.create()?,
                 ),
             ))
         } else {

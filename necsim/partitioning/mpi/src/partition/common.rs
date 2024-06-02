@@ -280,8 +280,10 @@ impl<'p> MpiCommonPartition<'p> {
         {
             *global_wait
         } else {
-            // Block until any new message has been received
-            self.world.any_process().probe();
+            // This partition doesn't have any work right now but we have
+            //  to do another round of voting, so let's yield to not busy
+            //  wait - we'll be woken up if more work comes in
+            std::thread::yield_now();
 
             true
         };

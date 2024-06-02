@@ -1,5 +1,5 @@
 use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
-use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use necsim_impls_std::event_log::recorder::EventLogConfig;
 use necsim_plugins_core::import::AnyReporterPluginVec;
 
 use crate::{
@@ -21,7 +21,7 @@ mod rng;
 #[allow(clippy::too_many_arguments)]
 pub(in super::super) fn dispatch(
     partitioning: Partitioning,
-    event_log: Option<EventLogRecorder>,
+    event_log: Option<EventLogConfig>,
     reporters: AnyReporterPluginVec,
 
     speciation_probability_per_generation: PositiveUnitF64,

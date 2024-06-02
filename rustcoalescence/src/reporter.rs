@@ -55,6 +55,14 @@ impl<ReportSpeciation: Boolean, ReportDispersal: Boolean, ReportProgress: Boolea
     }
 }
 
+#[cfg_attr(
+    not(any(
+        feature = "gillespie-algorithms",
+        feature = "independent-algorithm",
+        feature = "cuda-algorithm"
+    )),
+    allow(dead_code)
+)]
 #[allow(clippy::module_name_repetitions)]
 pub enum FinalisablePartitioningReporter<R: Reporter> {
     Monolithic(<necsim_partitioning_monolithic::MonolithicPartitioning as necsim_partitioning_core::Partitioning>::FinalisableReporter<R>),

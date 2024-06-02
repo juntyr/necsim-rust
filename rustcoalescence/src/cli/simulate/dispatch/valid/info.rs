@@ -2,7 +2,7 @@ use std::fmt::Write;
 
 use anyhow::{Context, Result};
 
-use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use necsim_impls_std::event_log::recorder::EventLogConfig;
 use rustcoalescence_algorithms::{result::SimulationOutcome, AlgorithmDispatch};
 
 use necsim_core::{
@@ -35,7 +35,7 @@ pub(super) fn dispatch<
     P: ReporterContext<Reporter = R>,
 >(
     partitioning: Partitioning,
-    event_log: Option<EventLogRecorder>,
+    event_log: Option<EventLogConfig>,
     reporter_context: P,
 
     sample: Sample,

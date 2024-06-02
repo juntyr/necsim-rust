@@ -119,7 +119,7 @@ impl<'p, R: Reporter> LocalPartition<R> for MpiRootPartition<'p, R> {
     fn wait_for_termination(&mut self) -> ControlFlow<(), ()> {
         let result = self.common.wait_for_termination();
 
-        if result.is_break() || !self.common.has_ongoing_termination_vote() {
+        if !self.common.has_ongoing_termination_vote() {
             // Check for pending progress updates from other partitions
             let remaining = self.all_remaining[self.get_partition().rank() as usize];
             self.report_progress(&remaining.into());

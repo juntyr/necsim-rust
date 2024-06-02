@@ -3,7 +3,7 @@ use std::path::Path;
 use serde::{Deserialize, Deserializer};
 use serde_state::DeserializeState;
 
-use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use necsim_impls_std::event_log::recorder::EventLogConfig;
 
 use crate::args::{
     config::{
@@ -22,7 +22,7 @@ pub(in super::super) fn parse_and_normalise(
     partitioning: &Partitioning,
     sample: &Sample,
     pause: &Option<Pause>,
-) -> anyhow::Result<Option<EventLogRecorder>> {
+) -> anyhow::Result<Option<EventLogConfig>> {
     let mut event_log_check = partitioning.get_event_log_check();
     if event_log_check.0.is_ok() && (pause.is_some() || !matches!(sample.mode, SampleMode::Genesis))
     {
@@ -49,7 +49,7 @@ pub(in super::super) fn parse_and_normalise(
 }
 
 struct SimulateArgsEventLogOnly {
-    event_log: Option<EventLogRecorder>,
+    event_log: Option<EventLogConfig>,
 }
 
 impl<'de> DeserializeState<'de, (anyhow::Result<()>, anyhow::Result<()>)>
@@ -89,14 +89,14 @@ struct SimulateArgsEventLogOnlyRaw {
     #[serde(alias = "log")]
     #[serde(default)]
     #[serde(deserialize_state_with = "deserialize_state_event_log")]
-    event_log: Option<EventLogRecorder>,
+    event_log: Option<EventLogConfig>,
 }
 
 fn deserialize_state_event_log<'de, D: Deserializer<'de>>(
     event_log_check: &mut (anyhow::Result<()>, anyhow::Result<()>),
     deserializer: D,
-) -> Result<Option<EventLogRecorder>, D::Error> {
-    let maybe_event_log = <Option<EventLogRecorder>>::deserialize(deserializer)?;
+) -> Result<Option<EventLogConfig>, D::Error> {
+    let maybe_event_log = <Option<EventLogConfig>>::deserialize(deserializer)?;
 
     if maybe_event_log.is_none() {
         event_log_check

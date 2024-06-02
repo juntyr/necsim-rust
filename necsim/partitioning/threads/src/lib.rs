@@ -19,7 +19,7 @@ use necsim_core::reporter::{
     FilteredReporter, Reporter,
 };
 
-use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use necsim_impls_std::event_log::recorder::EventLogConfig;
 use necsim_partitioning_core::{
     partition::PartitionSize,
     reporter::{FinalisableReporter, ReporterContext},
@@ -120,7 +120,7 @@ impl ThreadsPartitioning {
 }
 
 impl Partitioning for ThreadsPartitioning {
-    type Auxiliary = Option<EventLogRecorder>;
+    type Auxiliary = Option<EventLogConfig>;
     type FinalisableReporter<R: Reporter> = FinalisableThreadsReporter<R>;
     type LocalPartition<R: Reporter> = ThreadsLocalPartition<R>;
 
@@ -180,6 +180,7 @@ impl Partitioning for ThreadsPartitioning {
             .map(|partition| {
                 event_log
                     .new_child_log(&partition.rank().to_string())
+                    .and_then(EventLogConfig::create)
                     .context(ThreadsLocalPartitionError::InvalidEventSubLog)
             })
             .collect::<Result<Vec<_>, _>>()?;

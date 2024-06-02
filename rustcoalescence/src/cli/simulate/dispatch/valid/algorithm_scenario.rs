@@ -1,6 +1,6 @@
 use necsim_core::reporter::Reporter;
 use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
-use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use necsim_impls_std::event_log::recorder::EventLogConfig;
 use necsim_partitioning_core::reporter::ReporterContext;
 
 use rustcoalescence_algorithms::AlgorithmDefaults;
@@ -113,7 +113,7 @@ macro_rules! match_scenario_algorithm {
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 pub(super) fn dispatch<R: Reporter, P: ReporterContext<Reporter = R>>(
     partitioning: Partitioning,
-    event_log: Option<EventLogRecorder>,
+    event_log: Option<EventLogConfig>,
     reporter_context: P,
 
     speciation_probability_per_generation: PositiveUnitF64,

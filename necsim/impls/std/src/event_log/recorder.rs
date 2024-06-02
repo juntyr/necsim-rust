@@ -15,10 +15,12 @@
 // limitations under the License.
 
 use std::{
+    borrow::Cow,
     convert::TryFrom,
     fmt,
     fs::{self, OpenOptions},
     io::BufWriter,
+    mem::ManuallyDrop,
     num::NonZeroUsize,
     path::{Component, Path, PathBuf},
 };
@@ -31,8 +33,6 @@ use necsim_core::event::{DispersalEvent, PackedEvent, SpeciationEvent};
 use super::EventLogHeader;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Deserialize)]
-#[serde(try_from = "EventLogRecorderRaw")]
 pub struct EventLogRecorder {
     segment_capacity: NonZeroUsize,
     directory: PathBuf,
@@ -41,24 +41,6 @@ pub struct EventLogRecorder {
 
     record_speciation: bool,
     record_dispersal: bool,
-}
-
-impl TryFrom<EventLogRecorderRaw> for EventLogRecorder {
-    type Error = Error;
-
-    fn try_from(raw: EventLogRecorderRaw) -> Result<Self, Self::Error> {
-        Self::try_new(&raw.directory, raw.capacity)
-    }
-}
-
-impl Serialize for EventLogRecorder {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        EventLogRecorderRaw {
-            directory: self.directory.clone(),
-            capacity: self.segment_capacity,
-        }
-        .serialize(serializer)
-    }
 }
 
 impl Drop for EventLogRecorder {
@@ -75,17 +57,17 @@ impl Drop for EventLogRecorder {
 impl EventLogRecorder {
     /// # Errors
     ///
-    /// Fails to construct iff `path` is not a writable directory.
-    pub fn try_new(path: &Path, segment_capacity: NonZeroUsize) -> Result<Self> {
-        if let Some(parent) = path.parent() {
+    /// Fails to construct iff `directory` is not a writable directory.
+    pub fn try_new(directory: PathBuf, segment_capacity: NonZeroUsize) -> Result<Self> {
+        if let Some(parent) = directory.parent() {
             fs::create_dir_all(parent).with_context(|| {
-                format!("failed to ensure that the parent path for {path:?} exists")
+                format!("failed to ensure that the parent path for {directory:?} exists")
             })?;
         }
 
         Self {
             segment_capacity,
-            directory: path.to_owned(),
+            directory,
             segment_index: 0_usize,
             buffer: Vec::with_capacity(segment_capacity.get()),
 
@@ -242,11 +224,143 @@ impl fmt::Debug for EventLogRecorder {
     }
 }
 
+#[allow(clippy::unsafe_derive_deserialize)]
+#[derive(Debug, Deserialize)]
+#[serde(try_from = "EventLogRecorderRaw")]
+pub struct EventLogConfig {
+    directory: PathBuf,
+    #[serde(default = "default_event_log_recorder_segment_capacity")]
+    capacity: NonZeroUsize,
+}
+
+impl<'a> TryFrom<EventLogRecorderRaw<'a>> for EventLogConfig {
+    type Error = Error;
+
+    fn try_from(raw: EventLogRecorderRaw) -> Result<Self, Self::Error> {
+        Self::try_new(raw.directory.into_owned(), raw.capacity)
+    }
+}
+
+impl Serialize for EventLogConfig {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        EventLogRecorderRaw {
+            directory: Cow::Borrowed(&self.directory),
+            capacity: self.capacity,
+        }
+        .serialize(serializer)
+    }
+}
+
+impl EventLogConfig {
+    /// # Errors
+    ///
+    /// Fails to construct iff the parent of `directory` cannot be created or
+    /// is not a writable directory.
+    pub fn try_new(directory: PathBuf, capacity: NonZeroUsize) -> Result<Self> {
+        Self {
+            directory,
+            capacity,
+        }
+        .create_parent_directory()
+    }
+
+    /// # Errors
+    ///
+    /// Fails to construct iff
+    /// - `child` is not a valid single-component path
+    /// - newly creating a writable child directory fails
+    pub fn new_child_log(&self, child: &str) -> Result<Self> {
+        EventLogRecorder::check_valid_component(child)?;
+
+        Self {
+            directory: self.directory.join(child),
+            capacity: self.capacity,
+        }
+        .create_parent_directory()
+    }
+
+    fn create_parent_directory(mut self) -> Result<Self> {
+        let Some(name) = self.directory.file_name() else {
+            anyhow::bail!(
+                "{:?} does not terminate in a directory name",
+                self.directory
+            );
+        };
+
+        let Some(parent) = self.directory.parent() else {
+            return Ok(self);
+        };
+        let parent = if parent.as_os_str().is_empty() {
+            Path::new(".")
+        } else {
+            parent
+        };
+
+        fs::create_dir_all(parent).with_context(|| {
+            format!(
+                "failed to ensure that the parent path for {:?} exists",
+                self.directory
+            )
+        })?;
+
+        let mut directory = parent.canonicalize()?;
+        directory.push(name);
+        self.directory = directory;
+
+        let Some(parent) = self.directory.parent() else {
+            return Ok(self);
+        };
+
+        let metadata = fs::metadata(parent)?;
+
+        if !metadata.is_dir() {
+            return Err(anyhow::anyhow!(
+                "the parent path of {:?} is not a directory.",
+                self.directory
+            ));
+        }
+
+        if metadata.permissions().readonly() {
+            return Err(anyhow::anyhow!(
+                "the parent path of {:?} is a read-only directory.",
+                self.directory
+            ));
+        }
+
+        Ok(self)
+    }
+
+    #[must_use]
+    pub fn directory(&self) -> &Path {
+        &self.directory
+    }
+
+    /// # Errors
+    ///
+    /// Fails to construct iff `self.directory()` is not a writable directory.
+    pub fn create(self) -> Result<EventLogRecorder> {
+        let this = ManuallyDrop::new(self);
+        // Safety: self will not be dropped and self.directory is only read once
+        let directory = unsafe { std::ptr::read(&this.directory) };
+        EventLogRecorder::try_new(directory, this.capacity)
+    }
+}
+
+impl Drop for EventLogConfig {
+    fn drop(&mut self) {
+        // Try to remove the directory parent if it is empty
+        if let Some(parent) = self.directory.parent() {
+            std::mem::drop(fs::remove_dir(parent));
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(rename = "EventLog")]
 #[serde(deny_unknown_fields)]
-struct EventLogRecorderRaw {
-    directory: PathBuf,
+struct EventLogRecorderRaw<'a> {
+    #[serde(borrow)]
+    directory: Cow<'a, Path>,
     #[serde(default = "default_event_log_recorder_segment_capacity")]
     capacity: NonZeroUsize,
 }
