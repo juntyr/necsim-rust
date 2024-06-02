@@ -167,7 +167,7 @@ impl MpiPartitioning {
 impl Partitioning for MpiPartitioning {
     type Auxiliary = Option<EventLogConfig>;
     type FinalisableReporter<R: Reporter> = FinalisableMpiReporter<R>;
-    type LocalPartition<R: Reporter> = MpiLocalPartition<'static, R>;
+    type LocalPartition<'p, R: Reporter> = MpiLocalPartition<'p, R>;
 
     fn get_size(&self) -> PartitionSize {
         #[allow(clippy::cast_sign_loss)]
@@ -191,7 +191,7 @@ impl Partitioning for MpiPartitioning {
         reporter_context: P,
         event_log: Self::Auxiliary,
         args: A,
-        inner: fn(&mut Self::LocalPartition<R>, A) -> Q,
+        inner: for<'p> fn(&mut Self::LocalPartition<'p, R>, A) -> Q,
         fold: fn(Q, Q) -> Q,
     ) -> anyhow::Result<(Q, Self::FinalisableReporter<R>)> {
         let Some(event_log) = event_log else {
@@ -223,7 +223,7 @@ impl Partitioning for MpiPartitioning {
                 .collect::<Vec<_>>()
                 .into_boxed_slice();
 
-            let local_partition = if self.world.rank() == MpiPartitioning::ROOT_RANK {
+            let mut local_partition = if self.world.rank() == MpiPartitioning::ROOT_RANK {
                 MpiLocalPartition::Root(Box::new(MpiRootPartition::new(
                     ManuallyDrop::into_inner(self.universe),
                     mpi_local_global_wait,
@@ -244,10 +244,6 @@ impl Partitioning for MpiPartitioning {
                     self.progress_interval,
                 )))
             };
-            // TODO: clean up to not expose the lifetime
-            // Safety: we only expose the partition through an outer reference
-            let mut local_partition: MpiLocalPartition<'static, R> =
-                unsafe { std::mem::transmute(local_partition) };
 
             let local_result = inner(&mut local_partition, args);
 

@@ -82,7 +82,7 @@ impl<'p, R: Reporter> MpiRootPartition<'p, R> {
     }
 }
 
-impl<'p, R: Reporter> LocalPartition<R> for MpiRootPartition<'p, R> {
+impl<'p, R: Reporter> LocalPartition<'p, R> for MpiRootPartition<'p, R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
     type IsLive = False;
     type Reporter = Self;
@@ -100,7 +100,10 @@ impl<'p, R: Reporter> LocalPartition<R> for MpiRootPartition<'p, R> {
         emigrants: &mut E,
         emigration_mode: MigrationMode,
         immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'a> {
+    ) -> Self::ImmigrantIterator<'a>
+    where
+        'p: 'a,
+    {
         self.common
             .migrate_individuals(emigrants, emigration_mode, immigration_mode)
     }

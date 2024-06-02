@@ -258,7 +258,7 @@ where
         >,
     >,
 {
-    type Algorithm<P: LocalPartition<R>> = Self;
+    type Algorithm<'p, P: LocalPartition<'p, R>> = Self;
 
     fn get_logical_partition_size<P: Partitioning>(
         args: &Self::Arguments,
@@ -275,12 +275,13 @@ where
 }
 
 impl<
+        'p,
         M: MathsCore + Sync,
         G: PrimeableRng<M> + RustToCuda + Sync,
         O: Scenario<M, G>,
         R: Reporter,
-        P: LocalPartition<R>,
-    > Algorithm<M, G, O, R, P> for CudaAlgorithm
+        P: LocalPartition<'p, R>,
+    > Algorithm<'p, M, G, O, R, P> for CudaAlgorithm
 where
     O::Habitat: RustToCuda + Sync,
     O::DispersalSampler: RustToCuda + Sync,

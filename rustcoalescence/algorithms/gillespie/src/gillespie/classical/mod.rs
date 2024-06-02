@@ -29,12 +29,13 @@ use initialiser::{
 
 // Optimised 'Classical' implementation for the `UniformTurnoverSampler`
 impl<
+        'p,
         O: Scenario<M, G, TurnoverRate = UniformTurnoverRate>,
         R: Reporter,
-        P: LocalPartition<R>,
+        P: LocalPartition<'p, R>,
         M: MathsCore,
         G: SplittableRng<M>,
-    > Algorithm<M, G, O, R, P> for GillespieAlgorithm
+    > Algorithm<'p, M, G, O, R, P> for GillespieAlgorithm
 where
     O::LineageStore<ClassicalLineageStore<M, O::Habitat>>:
         LocallyCoherentLineageStore<M, O::Habitat>,

@@ -19,7 +19,7 @@ use partition::{Partition, PartitionSize};
 use reporter::{FinalisableReporter, ReporterContext};
 
 pub trait Partitioning: Sized {
-    type LocalPartition<R: Reporter>: LocalPartition<R>;
+    type LocalPartition<'p, R: Reporter>: LocalPartition<'p, R>;
     type FinalisableReporter<R: Reporter>: FinalisableReporter;
     type Auxiliary;
 
@@ -36,7 +36,7 @@ pub trait Partitioning: Sized {
         reporter_context: P,
         auxiliary: Self::Auxiliary,
         args: A,
-        inner: fn(&mut Self::LocalPartition<R>, A) -> Q,
+        inner: for<'p> fn(&mut Self::LocalPartition<'p, R>, A) -> Q,
         fold: fn(Q, Q) -> Q,
     ) -> anyhow::Result<(Q, Self::FinalisableReporter<R>)>;
 }
@@ -51,12 +51,13 @@ pub enum MigrationMode {
     Hold,
 }
 
-pub trait LocalPartition<R: Reporter>: Sized {
+pub trait LocalPartition<'p, R: Reporter>: Sized {
     type Reporter: Reporter;
     type IsLive: Boolean;
     type ImmigrantIterator<'a>: Iterator<Item = MigratingLineage>
     where
-        Self: 'a;
+        Self: 'a,
+        'p: 'a;
 
     fn get_reporter(&mut self) -> &mut Self::Reporter;
 
@@ -67,7 +68,9 @@ pub trait LocalPartition<R: Reporter>: Sized {
         emigrants: &mut E,
         emigration_mode: MigrationMode,
         immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'a>;
+    ) -> Self::ImmigrantIterator<'a>
+    where
+        'p: 'a;
 
     fn reduce_vote_any(&mut self, vote: bool) -> bool;
 

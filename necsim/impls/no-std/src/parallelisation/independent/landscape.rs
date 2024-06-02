@@ -39,6 +39,7 @@ use super::{reporter::IgnoreProgressReporterProxy, DedupCache};
 
 #[allow(clippy::type_complexity, clippy::too_many_lines)]
 pub fn simulate<
+    'p,
     M: MathsCore,
     H: Habitat<M>,
     C: Decomposition<M, H>,
@@ -61,7 +62,7 @@ pub fn simulate<
         NeverImmigrationEntry,
     >,
     R: Reporter,
-    P: LocalPartition<R>,
+    P: LocalPartition<'p, R>,
     L: IntoIterator<Item = Lineage>,
 >(
     simulation: &mut Simulation<

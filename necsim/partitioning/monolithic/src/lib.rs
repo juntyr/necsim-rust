@@ -52,7 +52,7 @@ impl<'de> Deserialize<'de> for MonolithicPartitioning {
 impl Partitioning for MonolithicPartitioning {
     type Auxiliary = Option<EventLogConfig>;
     type FinalisableReporter<R: Reporter> = FinalisableMonolithicReporter<R>;
-    type LocalPartition<R: Reporter> = MonolithicLocalPartition<R>;
+    type LocalPartition<'p, R: Reporter> = MonolithicLocalPartition<R>;
 
     fn get_size(&self) -> PartitionSize {
         PartitionSize::MONOLITHIC
@@ -66,7 +66,7 @@ impl Partitioning for MonolithicPartitioning {
         reporter_context: P,
         event_log: Self::Auxiliary,
         args: A,
-        inner: fn(&mut Self::LocalPartition<R>, A) -> Q,
+        inner: for<'p> fn(&mut Self::LocalPartition<'p, R>, A) -> Q,
         _fold: fn(Q, Q) -> Q,
     ) -> anyhow::Result<(Q, Self::FinalisableReporter<R>)> {
         let mut local_partition = if let Some(event_log) = event_log {
@@ -95,8 +95,8 @@ pub enum MonolithicLocalPartition<R: Reporter> {
     Recorded(Box<recorded::RecordedMonolithicLocalPartition<R>>),
 }
 
-impl<R: Reporter> LocalPartition<R> for MonolithicLocalPartition<R> {
-    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where R: 'a;
+impl<'p, R: Reporter> LocalPartition<'p, R> for MonolithicLocalPartition<R> {
+    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
     // pessimistic
     type IsLive = True;
     type Reporter = Self;
@@ -117,7 +117,10 @@ impl<R: Reporter> LocalPartition<R> for MonolithicLocalPartition<R> {
         emigrants: &mut E,
         emigration_mode: MigrationMode,
         immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'a> {
+    ) -> Self::ImmigrantIterator<'a>
+    where
+        'p: 'a,
+    {
         match self {
             Self::Live(partition) => {
                 partition.migrate_individuals(emigrants, emigration_mode, immigration_mode)

@@ -52,7 +52,7 @@ impl AlgorithmDefaults for IndependentAlgorithm {
 impl<M: MathsCore, G: PrimeableRng<M>, O: Scenario<M, G>, R: Reporter> AlgorithmDispatch<M, G, O, R>
     for IndependentAlgorithm
 {
-    type Algorithm<P: LocalPartition<R>> = Self;
+    type Algorithm<'p, P: LocalPartition<'p, R>> = Self;
 
     fn get_logical_partition_size<P: Partitioning>(
         args: &Self::Arguments,
@@ -71,8 +71,14 @@ impl<M: MathsCore, G: PrimeableRng<M>, O: Scenario<M, G>, R: Reporter> Algorithm
     }
 }
 
-impl<O: Scenario<M, G>, R: Reporter, P: LocalPartition<R>, M: MathsCore, G: PrimeableRng<M>>
-    Algorithm<M, G, O, R, P> for IndependentAlgorithm
+impl<
+        'p,
+        O: Scenario<M, G>,
+        R: Reporter,
+        P: LocalPartition<'p, R>,
+        M: MathsCore,
+        G: PrimeableRng<M>,
+    > Algorithm<'p, M, G, O, R, P> for IndependentAlgorithm
 {
     type LineageStore = IndependentLineageStore<M, O::Habitat>;
 

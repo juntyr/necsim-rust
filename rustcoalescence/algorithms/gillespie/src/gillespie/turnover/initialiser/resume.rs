@@ -61,6 +61,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
 
     fn init<
         'h,
+        'p,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
         S: LocallyCoherentLineageStore<M, O::Habitat>,
         X: EmigrationExit<M, O::Habitat, G, S>,
@@ -78,7 +79,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
         >,
         I: ImmigrationEntry<M>,
         Q: Reporter,
-        P: LocalPartition<Q>,
+        P: LocalPartition<'p, Q>,
     >(
         self,
         origin_sampler: T,

@@ -28,6 +28,7 @@ use super::reporter::BufferingReporterProxy;
 
 #[allow(clippy::type_complexity)]
 pub fn simulate<
+    'p,
     M: MathsCore,
     H: Habitat<M>,
     G: RngCore<M>,
@@ -52,7 +53,7 @@ pub fn simulate<
         BufferedImmigrationEntry,
     >,
     P: Reporter,
-    L: LocalPartition<P>,
+    L: LocalPartition<'p, P>,
 >(
     simulation: &mut Simulation<
         M,

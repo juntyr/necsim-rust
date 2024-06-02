@@ -8,15 +8,15 @@ use necsim_partitioning_core::LocalPartition;
 use super::WaterLevelReporterProxy;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct RecordedWaterLevelReporterProxy<'p, R: Reporter, P: LocalPartition<R>> {
+pub struct RecordedWaterLevelReporterProxy<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> {
     water_level: NonNegativeF64,
 
-    local_partition: &'p mut P,
-    _marker: PhantomData<R>,
+    local_partition: &'l mut P,
+    _marker: PhantomData<(&'p (), R)>,
 }
 
-impl<'p, R: Reporter, P: LocalPartition<R>> fmt::Debug
-    for RecordedWaterLevelReporterProxy<'p, R, P>
+impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> fmt::Debug
+    for RecordedWaterLevelReporterProxy<'l, 'p, R, P>
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(RecordedWaterLevelReporterProxy))
@@ -25,7 +25,9 @@ impl<'p, R: Reporter, P: LocalPartition<R>> fmt::Debug
     }
 }
 
-impl<'p, R: Reporter, P: LocalPartition<R>> Reporter for RecordedWaterLevelReporterProxy<'p, R, P> {
+impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> Reporter
+    for RecordedWaterLevelReporterProxy<'l, 'p, R, P>
+{
     impl_report!(speciation(&mut self, speciation: MaybeUsed<R::ReportSpeciation>) {
         self.local_partition.get_reporter().report_speciation(speciation.into());
     });
@@ -38,17 +40,17 @@ impl<'p, R: Reporter, P: LocalPartition<R>> Reporter for RecordedWaterLevelRepor
 }
 
 #[contract_trait]
-impl<'p, R: Reporter, P: LocalPartition<R>> WaterLevelReporterProxy<'p, R, P>
-    for RecordedWaterLevelReporterProxy<'p, R, P>
+impl<'l, 'p, R: Reporter, P: LocalPartition<'p, R>> WaterLevelReporterProxy<'l, 'p, R, P>
+    for RecordedWaterLevelReporterProxy<'l, 'p, R, P>
 {
-    fn new(_capacity: usize, local_partition: &'p mut P) -> Self {
+    fn new(_capacity: usize, local_partition: &'l mut P) -> Self {
         info!("Events will be reported using the recorded water-level algorithm ...");
 
         Self {
             water_level: NonNegativeF64::zero(),
 
             local_partition,
-            _marker: PhantomData::<R>,
+            _marker: PhantomData::<(&'p (), R)>,
         }
     }
 

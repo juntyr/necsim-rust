@@ -30,8 +30,14 @@ use initialiser::{
 };
 
 // Default 'Gillespie' implementation for any turnover sampler
-impl<O: Scenario<M, G>, R: Reporter, P: LocalPartition<R>, M: MathsCore, G: SplittableRng<M>>
-    Algorithm<M, G, O, R, P> for GillespieAlgorithm
+impl<
+        'p,
+        O: Scenario<M, G>,
+        R: Reporter,
+        P: LocalPartition<'p, R>,
+        M: MathsCore,
+        G: SplittableRng<M>,
+    > Algorithm<'p, M, G, O, R, P> for GillespieAlgorithm
 where
     O::LineageStore<ClassicalLineageStore<M, O::Habitat>>:
         LocallyCoherentLineageStore<M, O::Habitat>,

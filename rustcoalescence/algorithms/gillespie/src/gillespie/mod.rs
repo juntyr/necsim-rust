@@ -36,7 +36,7 @@ where
     O::LineageStore<ClassicalLineageStore<M, O::Habitat>>:
         LocallyCoherentLineageStore<M, O::Habitat>,
 {
-    type Algorithm<P: LocalPartition<R>> = Self;
+    type Algorithm<'p, P: LocalPartition<'p, R>> = Self;
 
     fn get_logical_partition_size<P: Partitioning>(
         args: &Self::Arguments,

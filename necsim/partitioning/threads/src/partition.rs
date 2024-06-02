@@ -105,8 +105,8 @@ impl<R: Reporter> ThreadsLocalPartition<R> {
     }
 }
 
-impl<R: Reporter> LocalPartition<R> for ThreadsLocalPartition<R> {
-    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where R: 'a;
+impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsLocalPartition<R> {
+    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
     type IsLive = False;
     type Reporter = Self;
 
@@ -123,7 +123,10 @@ impl<R: Reporter> LocalPartition<R> for ThreadsLocalPartition<R> {
         emigrants: &mut E,
         emigration_mode: MigrationMode,
         immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'a> {
+    ) -> Self::ImmigrantIterator<'a>
+    where
+        'p: 'a,
+    {
         for (partition, emigrant) in emigrants {
             self.emigration_buffers[partition as usize].push(emigrant);
         }

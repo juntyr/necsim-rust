@@ -45,6 +45,8 @@ type Result<T, E = CudaError> = std::result::Result<T, E>;
 
 #[allow(clippy::type_complexity, clippy::too_many_lines)]
 pub fn simulate<
+    'l,
+    'p,
     M: MathsCore + Sync,
     H: Habitat<M> + RustToCuda + Sync,
     G: PrimeableRng<M> + RustToCuda + Sync,
@@ -58,7 +60,7 @@ pub fn simulate<
     I: ImmigrationEntry<M> + RustToCuda + Sync,
     A: SingularActiveLineageSampler<M, H, G, S, X, D, C, T, N, E, I> + RustToCuda + Sync,
     P: Reporter,
-    L: LocalPartition<P>,
+    L: LocalPartition<'p, P>,
     LI: IntoIterator<Item = Lineage>,
 >(
     simulation: &mut Simulation<M, H, G, S, X, D, C, T, N, E, I, A>,
@@ -82,7 +84,7 @@ pub fn simulate<
     lineages: LI,
     event_slice: EventSlice,
     pause_before: Option<NonNegativeF64>,
-    local_partition: &mut L,
+    local_partition: &'l mut L,
 ) -> Result<(
     Status,
     NonNegativeF64,

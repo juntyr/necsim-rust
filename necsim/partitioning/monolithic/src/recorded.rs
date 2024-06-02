@@ -43,8 +43,8 @@ impl<R: Reporter> fmt::Debug for RecordedMonolithicLocalPartition<R> {
     }
 }
 
-impl<R: Reporter> LocalPartition<R> for RecordedMonolithicLocalPartition<R> {
-    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where R: 'a;
+impl<'p, R: Reporter> LocalPartition<'p, R> for RecordedMonolithicLocalPartition<R> {
+    type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
     type IsLive = False;
     type Reporter = Self;
 
@@ -61,7 +61,10 @@ impl<R: Reporter> LocalPartition<R> for RecordedMonolithicLocalPartition<R> {
         emigrants: &mut E,
         _emigration_mode: MigrationMode,
         _immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'a> {
+    ) -> Self::ImmigrantIterator<'a>
+    where
+        'p: 'a,
+    {
         for (_, emigrant) in emigrants {
             self.loopback.push(emigrant);
         }

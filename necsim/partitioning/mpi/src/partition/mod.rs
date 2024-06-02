@@ -30,7 +30,7 @@ pub enum MpiLocalPartition<'p, R: Reporter> {
     Parallel(Box<MpiParallelPartition<'p, R>>),
 }
 
-impl<'p, R: Reporter> LocalPartition<R> for MpiLocalPartition<'p, R> {
+impl<'p, R: Reporter> LocalPartition<'p, R> for MpiLocalPartition<'p, R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
     type IsLive = False;
     type Reporter = Self;
@@ -51,7 +51,10 @@ impl<'p, R: Reporter> LocalPartition<R> for MpiLocalPartition<'p, R> {
         emigrants: &mut E,
         emigration_mode: MigrationMode,
         immigration_mode: MigrationMode,
-    ) -> Self::ImmigrantIterator<'a> {
+    ) -> Self::ImmigrantIterator<'a>
+    where
+        'p: 'a,
+    {
         match self {
             Self::Root(partition) => {
                 partition.migrate_individuals(emigrants, emigration_mode, immigration_mode)

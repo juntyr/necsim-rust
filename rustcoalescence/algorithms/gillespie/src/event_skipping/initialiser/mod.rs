@@ -59,12 +59,13 @@ pub trait EventSkippingLineageStoreSampleInitialiser<
     #[allow(clippy::type_complexity)]
     fn init<
         'h,
+        'p,
         T: TrustedOriginSampler<'h, M, Habitat = O::Habitat>,
         S: GloballyCoherentLineageStore<M, O::Habitat>,
         X: EmigrationExit<M, O::Habitat, G, S>,
         I: ImmigrationEntry<M>,
         Q: Reporter,
-        P: LocalPartition<Q>,
+        P: LocalPartition<'p, Q>,
     >(
         self,
         origin_sampler: T,

@@ -52,7 +52,7 @@ where
                 args,
                 |partition, (sample, rng, scenario, algorithm_args, pause_before)| match partition {
                     MonolithicLocalPartition::Live(partition) => {
-                        wrap::<M, G, A::Algorithm<_>, O, R, _>(
+                        wrap::<M, G, A::Algorithm<'_, _>, O, R, _>(
                             &mut **partition,
                             sample,
                             rng,
@@ -62,7 +62,7 @@ where
                         )
                     },
                     MonolithicLocalPartition::Recorded(partition) => {
-                        wrap::<M, G, A::Algorithm<_>, O, R, _>(
+                        wrap::<M, G, A::Algorithm<'_, _>, O, R, _>(
                             &mut **partition,
                             sample,
                             rng,
@@ -87,16 +87,18 @@ where
                 event_log,
                 args,
                 |partition, (sample, rng, scenario, algorithm_args, pause_before)| match partition {
-                    MpiLocalPartition::Root(partition) => wrap::<M, G, A::Algorithm<_>, O, R, _>(
-                        &mut **partition,
-                        sample,
-                        rng,
-                        scenario,
-                        algorithm_args,
-                        pause_before,
-                    ),
+                    MpiLocalPartition::Root(partition) => {
+                        wrap::<M, G, A::Algorithm<'_, _>, O, R, _>(
+                            &mut **partition,
+                            sample,
+                            rng,
+                            scenario,
+                            algorithm_args,
+                            pause_before,
+                        )
+                    },
                     MpiLocalPartition::Parallel(partition) => {
-                        wrap::<M, G, A::Algorithm<_>, O, R, _>(
+                        wrap::<M, G, A::Algorithm<'_, _>, O, R, _>(
                             &mut **partition,
                             sample,
                             rng,
@@ -116,7 +118,7 @@ where
                 event_log,
                 args,
                 |partition, (sample, rng, scenario, algorithm_args, pause_before)| {
-                    wrap::<M, G, A::Algorithm<_>, O, R, _>(
+                    wrap::<M, G, A::Algorithm<'_, _>, O, R, _>(
                         partition,
                         sample,
                         rng,
@@ -133,12 +135,13 @@ where
 }
 
 fn wrap<
+    'p,
     M: MathsCore,
     G: RngCore<M>,
-    A: Algorithm<M, G, O, R, P>,
+    A: Algorithm<'p, M, G, O, R, P>,
     O: Scenario<M, G>,
     R: Reporter,
-    P: LocalPartition<R>,
+    P: LocalPartition<'p, R>,
 >(
     local_partition: &mut P,
 
@@ -151,7 +154,7 @@ fn wrap<
 where
     Result<SimulationOutcome<M, G>, A::Error>: anyhow::Context<SimulationOutcome<M, G>, A::Error>,
 {
-    launch::simulate::<M, G, A::Algorithm<_>, O, R, _>(
+    launch::simulate::<M, G, A::Algorithm<'_, _>, O, R, _>(
         local_partition,
         sample,
         rng,

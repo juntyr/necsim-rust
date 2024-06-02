@@ -122,7 +122,7 @@ impl ThreadsPartitioning {
 impl Partitioning for ThreadsPartitioning {
     type Auxiliary = Option<EventLogConfig>;
     type FinalisableReporter<R: Reporter> = FinalisableThreadsReporter<R>;
-    type LocalPartition<R: Reporter> = ThreadsLocalPartition<R>;
+    type LocalPartition<'p, R: Reporter> = ThreadsLocalPartition<R>;
 
     fn get_size(&self) -> PartitionSize {
         self.num_threads
@@ -144,7 +144,7 @@ impl Partitioning for ThreadsPartitioning {
         reporter_context: P,
         event_log: Self::Auxiliary,
         args: A,
-        inner: fn(&mut Self::LocalPartition<R>, A) -> Q,
+        inner: for<'p> fn(&'p mut Self::LocalPartition<'p, R>, A) -> Q,
         fold: fn(Q, Q) -> Q,
     ) -> anyhow::Result<(Q, Self::FinalisableReporter<R>)> {
         // TODO: add support for multithread live reporting
