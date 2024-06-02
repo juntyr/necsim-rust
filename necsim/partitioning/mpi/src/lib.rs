@@ -30,7 +30,7 @@ use necsim_core::{
 use necsim_impls_std::event_log::recorder::EventLogConfig;
 use necsim_partitioning_core::{
     partition::PartitionSize,
-    reporter::{FinalisableReporter, ReporterContext},
+    reporter::{FinalisableReporter, OpaqueFinalisableReporter, ReporterContext},
     Data, Partitioning,
 };
 
@@ -359,7 +359,7 @@ fn reduce_partitioning_data<T: serde::Serialize + serde::de::DeserializeOwned>(
 }
 
 pub enum FinalisableMpiReporter<R: Reporter> {
-    Root(FilteredReporter<R, False, False, True>),
+    Root(OpaqueFinalisableReporter<FilteredReporter<R, False, False, True>>),
     Parallel,
 }
 

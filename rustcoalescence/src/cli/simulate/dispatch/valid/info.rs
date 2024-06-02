@@ -97,7 +97,6 @@ where
         );
     }
 
-    // TODO: get this information from the partitioning
     let will_report_live = partitioning.will_report_live(&event_log);
 
     if R::ReportSpeciation::VALUE {

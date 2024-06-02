@@ -17,7 +17,7 @@ use necsim_core_bond::PositiveF64;
 use necsim_partitioning_core::{
     iterator::ImmigrantPopIterator,
     partition::{Partition, PartitionSize},
-    reporter::{FinalisableReporter, ReporterContext},
+    reporter::{FinalisableReporter, OpaqueFinalisableReporter, ReporterContext},
     LocalPartition, MigrationMode, Partitioning,
 };
 
@@ -201,17 +201,19 @@ impl<R: Reporter> Reporter for MonolithicLocalPartition<R> {
 impl<R: Reporter> MonolithicLocalPartition<R> {
     fn into_reporter(self) -> FinalisableMonolithicReporter<R> {
         match self {
-            Self::Live(partition) => FinalisableMonolithicReporter::Live(partition.into_reporter()),
+            Self::Live(partition) => {
+                FinalisableMonolithicReporter::Live(partition.into_reporter().into())
+            },
             Self::Recorded(partition) => {
-                FinalisableMonolithicReporter::Recorded(partition.into_reporter())
+                FinalisableMonolithicReporter::Recorded(partition.into_reporter().into())
             },
         }
     }
 }
 
 pub enum FinalisableMonolithicReporter<R: Reporter> {
-    Live(FilteredReporter<R, True, True, True>),
-    Recorded(FilteredReporter<R, False, False, True>),
+    Live(OpaqueFinalisableReporter<FilteredReporter<R, True, True, True>>),
+    Recorded(OpaqueFinalisableReporter<FilteredReporter<R, False, False, True>>),
 }
 
 impl<R: Reporter> FinalisableReporter for FinalisableMonolithicReporter<R> {

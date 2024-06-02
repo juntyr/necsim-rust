@@ -135,7 +135,7 @@ impl<'p, R: Reporter> Reporter for MpiLocalPartition<'p, R> {
 impl<'p, R: Reporter> MpiLocalPartition<'p, R> {
     pub(crate) fn into_reporter(self) -> FinalisableMpiReporter<R> {
         match self {
-            Self::Root(partition) => FinalisableMpiReporter::Root(partition.into_reporter()),
+            Self::Root(partition) => FinalisableMpiReporter::Root(partition.into_reporter().into()),
             Self::Parallel(_) => FinalisableMpiReporter::Parallel,
         }
     }

@@ -217,24 +217,30 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for ThreadsLocalPartition<R> {
     }
 
     fn wait_for_termination(&mut self) -> ControlFlow<(), ()> {
+        let mut local_wait = ControlFlow::Break(());
+
         // This partition can only terminate once all emigrations have been processed
         for buffer in self.emigration_buffers.iter() {
             if !buffer.is_empty() {
-                return ControlFlow::Continue(());
+                local_wait = ControlFlow::Continue(());
+                break;
             }
         }
         // This partition can only terminate once all immigrations have been processed
         if !self.immigration_buffers.is_empty() {
+            local_wait = ControlFlow::Continue(());
+        }
+
+        // Continue early if no vote is ongoing
+        if local_wait.is_continue() && !self.vote_termination.is_ongoing() {
             return ControlFlow::Continue(());
         }
 
         // This partition can only terminate if there was no communication since the
-        // last vote
-        let local_wait = if self.communicated_since_last_termination_vote {
-            ControlFlow::Continue(())
-        } else {
-            ControlFlow::Break(())
-        };
+        //  last vote
+        if self.communicated_since_last_termination_vote {
+            local_wait = ControlFlow::Continue(());
+        }
 
         // Participate in an async poll, only blocks on a barrier once all votes are in
         let async_vote = self.vote_termination.vote(
@@ -288,7 +294,7 @@ impl<R: Reporter> Reporter for ThreadsLocalPartition<R> {
         }
 
         // Only send progress if there is no ongoing termination vote
-        if !self.vote_termination.is_pending() {
+        if !self.vote_termination.is_ongoing() {
             let now = Instant::now();
 
             if now.duration_since(self.last_report_time) >= self.progress_interval {

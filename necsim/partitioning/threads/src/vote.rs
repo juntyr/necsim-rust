@@ -124,7 +124,7 @@ impl<T: Clone> AsyncVote<T> {
                 // restart the vote with the next generation
                 generational_data.data = vote(None);
                 generational_data.generation = self.generation;
-                generational_data.submissions.clear();
+                assert!(generational_data.submissions.is_empty());
                 generational_data.submissions.insert(rank as usize);
             } else if !generational_data.submissions.insert(rank as usize) {
                 // first submission for this rank
@@ -138,9 +138,13 @@ impl<T: Clone> AsyncVote<T> {
             }
         }
 
-        self.shared.barrier.wait();
+        let wait = self.shared.barrier.wait();
 
-        let result = {
+        let result = if wait.is_leader() {
+            let mut data = self.shared.data.write().unwrap();
+            data.submissions.clear();
+            data.data.clone()
+        } else {
             let data = self.shared.data.read().unwrap();
             data.data.clone()
         };
@@ -153,9 +157,10 @@ impl<T: Clone> AsyncVote<T> {
     }
 
     #[must_use]
-    pub fn is_pending(&self) -> bool {
-        let data = self.shared.data.read().unwrap();
-        data.submissions.len() < self.shared.n
+    pub fn is_ongoing(&self) -> bool {
+        let data: std::sync::RwLockReadGuard<AsyncGenerationalData<T>> =
+            self.shared.data.read().unwrap();
+        !data.submissions.is_empty()
     }
 }
 

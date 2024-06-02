@@ -1,17 +1,21 @@
 #![deny(clippy::pedantic)]
+#![feature(extract_if)]
 
 use std::{
     fmt,
     num::Wrapping,
     ops::ControlFlow,
-    sync::{mpsc::sync_channel, Arc, Barrier},
+    sync::{
+        mpsc::{sync_channel, RecvTimeoutError},
+        Arc, Barrier,
+    },
     time::Duration,
 };
 
 use anyhow::Context;
 use humantime_serde::re::humantime::format_duration;
 use necsim_core_bond::PositiveF64;
-use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 
 use necsim_core::reporter::{
@@ -22,7 +26,7 @@ use necsim_core::reporter::{
 use necsim_impls_std::event_log::recorder::EventLogConfig;
 use necsim_partitioning_core::{
     partition::PartitionSize,
-    reporter::{FinalisableReporter, ReporterContext},
+    reporter::{FinalisableReporter, OpaqueFinalisableReporter, ReporterContext},
     Data, Partitioning,
 };
 
@@ -52,6 +56,7 @@ pub struct ThreadsPartitioning {
     num_threads: PartitionSize,
     migration_interval: Duration,
     progress_interval: Duration,
+    panic_interval: Duration,
 }
 
 impl fmt::Debug for ThreadsPartitioning {
@@ -74,23 +79,20 @@ impl fmt::Debug for ThreadsPartitioning {
                 "progress_interval",
                 &FormattedDuration(self.progress_interval),
             )
+            .field("panic_interval", &FormattedDuration(self.panic_interval))
             .finish_non_exhaustive()
     }
 }
 
 impl Serialize for ThreadsPartitioning {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut args = serializer.serialize_struct(stringify!(ThreadsPartitioning), 3)?;
-        args.serialize_field("threads", &self.num_threads)?;
-        args.serialize_field(
-            "migration",
-            &format_duration(self.migration_interval).to_string(),
-        )?;
-        args.serialize_field(
-            "progress",
-            &format_duration(self.progress_interval).to_string(),
-        )?;
-        args.end()
+        ThreadsPartitioningRaw {
+            num_threads: self.num_threads,
+            migration_interval: self.migration_interval,
+            progress_interval: self.progress_interval,
+            panic_interval: self.panic_interval,
+        }
+        .serialize(serializer)
     }
 }
 
@@ -102,12 +104,14 @@ impl<'de> Deserialize<'de> for ThreadsPartitioning {
             num_threads: raw.num_threads,
             migration_interval: raw.migration_interval,
             progress_interval: raw.progress_interval,
+            panic_interval: raw.panic_interval,
         })
     }
 }
 
 impl ThreadsPartitioning {
     const DEFAULT_MIGRATION_INTERVAL: Duration = Duration::from_millis(100_u64);
+    const DEFAULT_PANIC_INTERVAL: Duration = Duration::from_millis(200_u64);
     const DEFAULT_PROGRESS_INTERVAL: Duration = Duration::from_millis(100_u64);
 
     pub fn set_migration_interval(&mut self, migration_interval: Duration) {
@@ -116,6 +120,10 @@ impl ThreadsPartitioning {
 
     pub fn set_progress_interval(&mut self, progress_interval: Duration) {
         self.progress_interval = progress_interval;
+    }
+
+    pub fn set_panic_interval(&mut self, panic_interval: Duration) {
+        self.panic_interval = panic_interval;
     }
 }
 
@@ -199,7 +207,7 @@ impl Partitioning for ThreadsPartitioning {
             let emigration_channels = emigration_channels.as_slice();
             let sync_barrier = &sync_barrier;
 
-            let thread_handles = self
+            let mut thread_handles = self
                 .num_threads
                 .partitions()
                 .zip(immigration_channels)
@@ -229,26 +237,49 @@ impl Partitioning for ThreadsPartitioning {
                 )
                 .collect::<Vec<_>>();
 
+            let mut local_results = Vec::with_capacity(thread_handles.len());
+
             let mut progress_remaining =
                 vec![0; self.num_threads.get() as usize].into_boxed_slice();
-            for (remaining, rank) in progress_receiver {
-                progress_remaining[rank as usize] = remaining;
-                progress_reporter.report_progress(
-                    (&progress_remaining
-                        .iter()
-                        .map(|r| Wrapping(*r))
-                        .sum::<Wrapping<u64>>()
-                        .0)
-                        .into(),
-                );
+
+            loop {
+                match progress_receiver.recv_timeout(self.panic_interval) {
+                    // report the combined progress to the reporter
+                    Ok((remaining, rank)) => {
+                        progress_remaining[rank as usize] = remaining;
+                        progress_reporter.report_progress(
+                            (&progress_remaining
+                                .iter()
+                                .map(|r| Wrapping(*r))
+                                .sum::<Wrapping<u64>>()
+                                .0)
+                                .into(),
+                        );
+                    },
+                    // all partitions are done and so are we
+                    Err(RecvTimeoutError::Disconnected) => break,
+                    // nothing has happened in a while, check if any partition panicked
+                    Err(RecvTimeoutError::Timeout) => {
+                        for handle in thread_handles.extract_if(|handle| handle.is_finished()) {
+                            match handle.join() {
+                                Ok(result) => local_results.push(result),
+                                Err(payload) => std::panic::resume_unwind(payload),
+                            };
+                        }
+                    },
+                }
+            }
+
+            // collect the remaining partition results
+            for handle in thread_handles {
+                match handle.join() {
+                    Ok(result) => local_results.push(result),
+                    Err(payload) => std::panic::resume_unwind(payload),
+                };
             }
 
             let mut folded_result = None;
-            for handle in thread_handles {
-                let result = match handle.join() {
-                    Ok(result) => result,
-                    Err(payload) => std::panic::resume_unwind(payload),
-                };
+            for result in local_results {
                 folded_result = Some(match folded_result.take() {
                     Some(acc) => fold(acc, result),
                     None => result,
@@ -260,14 +291,14 @@ impl Partitioning for ThreadsPartitioning {
         Ok((
             result,
             FinalisableThreadsReporter {
-                reporter: progress_reporter,
+                reporter: progress_reporter.into(),
             },
         ))
     }
 }
 
 pub struct FinalisableThreadsReporter<R: Reporter> {
-    reporter: FilteredReporter<R, False, False, True>,
+    reporter: OpaqueFinalisableReporter<FilteredReporter<R, False, False, True>>,
 }
 
 impl<R: Reporter> FinalisableReporter for FinalisableThreadsReporter<R> {
@@ -276,7 +307,7 @@ impl<R: Reporter> FinalisableReporter for FinalisableThreadsReporter<R> {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename = "ThreadsPartitioning")]
 #[serde(deny_unknown_fields)]
 struct ThreadsPartitioningRaw {
@@ -290,6 +321,10 @@ struct ThreadsPartitioningRaw {
     #[serde(with = "humantime_serde")]
     #[serde(default = "default_progress_interval")]
     progress_interval: Duration,
+    #[serde(alias = "progress")]
+    #[serde(with = "humantime_serde")]
+    #[serde(default = "default_panic_interval")]
+    panic_interval: Duration,
 }
 
 fn default_migration_interval() -> Duration {
@@ -298,4 +333,8 @@ fn default_migration_interval() -> Duration {
 
 fn default_progress_interval() -> Duration {
     ThreadsPartitioning::DEFAULT_PROGRESS_INTERVAL
+}
+
+fn default_panic_interval() -> Duration {
+    ThreadsPartitioning::DEFAULT_PANIC_INTERVAL
 }

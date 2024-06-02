@@ -16,3 +16,27 @@ pub trait ReporterContext: core::fmt::Debug {
 pub trait FinalisableReporter {
     fn finalise(self);
 }
+
+#[allow(clippy::module_name_repetitions)]
+pub struct OpaqueFinalisableReporter<R: Reporter> {
+    reporter: R,
+}
+
+impl<R: Reporter> OpaqueFinalisableReporter<R> {
+    #[must_use]
+    pub fn new(reporter: R) -> Self {
+        Self { reporter }
+    }
+}
+
+impl<R: Reporter> From<R> for OpaqueFinalisableReporter<R> {
+    fn from(reporter: R) -> Self {
+        Self::new(reporter)
+    }
+}
+
+impl<R: Reporter> FinalisableReporter for OpaqueFinalisableReporter<R> {
+    fn finalise(self) {
+        self.reporter.finalise();
+    }
+}
