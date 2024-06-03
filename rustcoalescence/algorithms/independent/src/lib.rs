@@ -15,14 +15,17 @@ use necsim_impls_no_std::cogs::{
     lineage_store::independent::IndependentLineageStore, maths::intrinsics::IntrinsicsMathsCore,
     origin_sampler::pre_sampler::OriginPreSampler, rng::wyhash::WyHash,
 };
-use necsim_partitioning_core::{partition::Partition, LocalPartition};
+use necsim_partitioning_core::{
+    partition::{Partition, PartitionSize},
+    LocalPartition, Partitioning,
+};
 
 use rustcoalescence_algorithms::{
     result::{ResumeError, SimulationOutcome},
     strategy::RestartFixUpStrategy,
-    Algorithm, AlgorithmDefaults, AlgorithmParamters,
+    Algorithm, AlgorithmDefaults, AlgorithmDispatch, AlgorithmParamters,
 };
-use rustcoalescence_scenarios::Scenario;
+use rustcoalescence_scenarios::{Scenario, ScenarioCogs};
 
 mod arguments;
 mod initialiser;
@@ -44,6 +47,28 @@ impl AlgorithmParamters for IndependentAlgorithm {
 impl AlgorithmDefaults for IndependentAlgorithm {
     type MathsCore = IntrinsicsMathsCore;
     type Rng<M: MathsCore> = WyHash<M>;
+}
+
+impl<M: MathsCore, G: PrimeableRng<M>, O: Scenario<M, G>, R: Reporter> AlgorithmDispatch<M, G, O, R>
+    for IndependentAlgorithm
+{
+    type Algorithm<'p, P: LocalPartition<'p, R>> = Self;
+
+    fn get_logical_partition_size<P: Partitioning>(
+        args: &Self::Arguments,
+        partitioning: &P,
+    ) -> PartitionSize {
+        match &args.parallelism_mode {
+            ParallelismMode::Monolithic(_) => PartitionSize::MONOLITHIC,
+            ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { partition, .. })
+            | ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { partition, .. }) => {
+                partition.size()
+            },
+            ParallelismMode::Individuals
+            | ParallelismMode::Landscape
+            | ParallelismMode::Probabilistic(_) => partitioning.get_size(),
+        }
+    }
 }
 
 impl<
@@ -73,7 +98,7 @@ impl<
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         rng: G,
-        scenario: O,
+        scenario: ScenarioCogs<M, G, O>,
         pre_sampler: OriginPreSampler<M, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
@@ -96,7 +121,7 @@ impl<
     fn resume_and_simulate<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: G,
-        scenario: O,
+        scenario: ScenarioCogs<M, G, O>,
         pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         resume_after: Option<NonNegativeF64>,
@@ -124,7 +149,7 @@ impl<
     fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: G,
-        scenario: O,
+        scenario: ScenarioCogs<M, G, O>,
         pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         restart_at: PositiveF64,

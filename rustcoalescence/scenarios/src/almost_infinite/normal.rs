@@ -1,6 +1,8 @@
+use std::marker::PhantomData;
+
 use serde::{Deserialize, Serialize};
 
-use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
+use necsim_core::cogs::{LineageStore, MathsCore, RngCore};
 use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::partition::Partition;
 
@@ -18,19 +20,12 @@ use necsim_impls_no_std::{
     decomposition::radial::RadialDecomposition,
 };
 
-use crate::{Scenario, ScenarioParameters};
+use crate::{Scenario, ScenarioCogs, ScenarioParameters};
 
 use super::Sample;
 
-#[allow(clippy::module_name_repetitions)]
-pub struct AlmostInfiniteNormalDispersalScenario<M: MathsCore, G: RngCore<M>> {
-    sample: Sample,
-
-    habitat: AlmostInfiniteHabitat<M>,
-    dispersal_sampler: AlmostInfiniteNormalDispersalSampler<M, G>,
-    turnover_rate: UniformTurnoverRate,
-    speciation_probability: UniformSpeciationProbability,
-}
+#[allow(clippy::module_name_repetitions, clippy::empty_enum)]
+pub enum AlmostInfiniteNormalDispersalScenario {}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
@@ -40,18 +35,15 @@ pub struct AlmostInfiniteNormalDispersalArguments {
     pub sigma: NonNegativeF64,
 }
 
-impl<M: MathsCore, G: RngCore<M>> ScenarioParameters
-    for AlmostInfiniteNormalDispersalScenario<M, G>
-{
+impl ScenarioParameters for AlmostInfiniteNormalDispersalScenario {
     type Arguments = AlmostInfiniteNormalDispersalArguments;
     type Error = !;
 }
 
-impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteNormalDispersalScenario<M, G> {
+impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteNormalDispersalScenario {
     type Decomposition = RadialDecomposition;
     type DecompositionAuxiliary = ();
-    type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
-        AlmostInfiniteNormalDispersalSampler<M, G>;
+    type DispersalSampler = AlmostInfiniteNormalDispersalSampler<M, G>;
     type Habitat = AlmostInfiniteHabitat<M>;
     type LineageStore<L: LineageStore<M, Self::Habitat>> =
         SingletonDemesLineageStore<M, Self::Habitat>;
@@ -60,44 +52,25 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for AlmostInfiniteNormalDispers
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
 
-    fn initialise(
+    fn new(
         args: Self::Arguments,
         speciation_probability_per_generation: PositiveUnitF64,
-    ) -> Result<Self, Self::Error> {
+    ) -> Result<ScenarioCogs<M, G, Self>, Self::Error> {
         let habitat = AlmostInfiniteHabitat::default();
         let dispersal_sampler = AlmostInfiniteNormalDispersalSampler::new(args.sigma);
         let turnover_rate = UniformTurnoverRate::default();
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation.into());
 
-        Ok(Self {
-            sample: args.sample,
-
+        Ok(ScenarioCogs {
             habitat,
             dispersal_sampler,
             turnover_rate,
             speciation_probability,
+            origin_sampler_auxiliary: (args.sample,),
+            decomposition_auxiliary: (),
+            _marker: PhantomData::<(M, G, Self)>,
         })
-    }
-
-    fn build<D: DispersalSampler<M, Self::Habitat, G>>(
-        self,
-    ) -> (
-        Self::Habitat,
-        Self::DispersalSampler<D>,
-        Self::TurnoverRate,
-        Self::SpeciationProbability,
-        Self::OriginSamplerAuxiliary,
-        Self::DecompositionAuxiliary,
-    ) {
-        (
-            self.habitat,
-            self.dispersal_sampler,
-            self.turnover_rate,
-            self.speciation_probability,
-            (self.sample,),
-            (),
-        )
     }
 
     fn sample_habitat<'h, I: Iterator<Item = u64>>(

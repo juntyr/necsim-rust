@@ -10,7 +10,6 @@ use necsim_core_bond::NonNegativeF64;
 
 use necsim_impls_no_std::cogs::{
     active_lineage_sampler::alias::individual::IndividualAliasActiveLineageSampler,
-    dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
     origin_sampler::{resuming::ResumingOriginSampler, TrustedOriginSampler},
 };
 use necsim_partitioning_core::LocalPartition;
@@ -58,7 +57,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
         E,
         I,
     >;
-    type DispersalSampler = O::DispersalSampler<InMemoryAliasDispersalSampler<M, O::Habitat, G>>;
+    type DispersalSampler = O::DispersalSampler;
 
     fn init<
         'h,
@@ -84,7 +83,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: O::DispersalSampler<InMemoryAliasDispersalSampler<M, O::Habitat, G>>,
+        dispersal_sampler: O::DispersalSampler,
         turnover_rate: &O::TurnoverRate,
         _local_partition: &mut P,
     ) -> Result<

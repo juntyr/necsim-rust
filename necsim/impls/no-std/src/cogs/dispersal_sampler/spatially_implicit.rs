@@ -1,5 +1,5 @@
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, Habitat, MathsCore, RngCore, SeparableDispersalSampler},
+    cogs::{DispersalSampler, Habitat, MathsCore, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, OpenClosedUnitF64 as PositiveUnitF64};
@@ -32,12 +32,11 @@ impl<M: MathsCore, G: RngCore<M>> SpatiallyImplicitDispersalSampler<M, G> {
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> Backup for SpatiallyImplicitDispersalSampler<M, G> {
-    unsafe fn backup_unchecked(&self) -> Self {
+impl<M: MathsCore, G: RngCore<M>> Clone for SpatiallyImplicitDispersalSampler<M, G> {
+    fn clone(&self) -> Self {
         Self {
-            local: self.local.backup_unchecked(),
-            meta: self.meta.backup_unchecked(),
+            local: self.local.clone(),
+            meta: self.meta.clone(),
             local_migration_probability_per_generation: self
                 .local_migration_probability_per_generation,
         }

@@ -1,9 +1,9 @@
-use std::num::NonZeroUsize;
+use std::{marker::PhantomData, num::NonZeroUsize};
 
 use serde::{Deserialize, Serialize};
 
 use necsim_core::{
-    cogs::{DispersalSampler, LineageStore, MathsCore, RngCore},
+    cogs::{LineageStore, MathsCore, RngCore},
     landscape::LandscapeExtent,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
@@ -24,17 +24,11 @@ use necsim_impls_no_std::{
     decomposition::radial::RadialDecomposition,
 };
 
-use crate::{Scenario, ScenarioParameters};
+use crate::{Scenario, ScenarioCogs, ScenarioParameters};
 
-#[allow(clippy::module_name_repetitions)]
-pub struct WrappingNoiseScenario<M: MathsCore, G: RngCore<M>> {
-    sample: LandscapeExtent,
-
-    habitat: WrappingNoiseHabitat<M>,
-    dispersal_sampler: WrappingNoiseApproximateNormalDispersalSampler<M, G>,
-    turnover_rate: UniformTurnoverRate,
-    speciation_probability: UniformSpeciationProbability,
-}
+#[allow(clippy::module_name_repetitions, clippy::empty_enum)]
+#[derive(Clone)]
+pub enum WrappingNoiseScenario {}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
@@ -57,16 +51,15 @@ pub enum Sample {
     Rectangle(LandscapeExtent),
 }
 
-impl<M: MathsCore, G: RngCore<M>> ScenarioParameters for WrappingNoiseScenario<M, G> {
+impl ScenarioParameters for WrappingNoiseScenario {
     type Arguments = WrappingNoiseArguments;
     type Error = !;
 }
 
-impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for WrappingNoiseScenario<M, G> {
+impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for WrappingNoiseScenario {
     type Decomposition = RadialDecomposition;
     type DecompositionAuxiliary = ();
-    type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
-        WrappingNoiseApproximateNormalDispersalSampler<M, G>;
+    type DispersalSampler = WrappingNoiseApproximateNormalDispersalSampler<M, G>;
     type Habitat = WrappingNoiseHabitat<M>;
     type LineageStore<L: LineageStore<M, Self::Habitat>> =
         SingletonDemesLineageStore<M, Self::Habitat>;
@@ -75,10 +68,10 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for WrappingNoiseScenario<M, G>
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
 
-    fn initialise(
+    fn new(
         args: Self::Arguments,
         speciation_probability_per_generation: PositiveUnitF64,
-    ) -> Result<Self, Self::Error> {
+    ) -> Result<ScenarioCogs<M, G, Self>, Self::Error> {
         let habitat = WrappingNoiseHabitat::new(
             args.seed,
             args.coverage,
@@ -91,37 +84,17 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for WrappingNoiseScenario<M, G>
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation.into());
 
-        Ok(Self {
-            sample: match args.sample {
-                Sample::Rectangle(extent) => extent,
-            },
+        let Sample::Rectangle(sample) = args.sample;
 
+        Ok(ScenarioCogs {
             habitat,
             dispersal_sampler,
             turnover_rate,
             speciation_probability,
+            origin_sampler_auxiliary: (sample,),
+            decomposition_auxiliary: (),
+            _marker: PhantomData::<(M, G, Self)>,
         })
-    }
-
-    #[allow(clippy::type_complexity)]
-    fn build<D: DispersalSampler<M, Self::Habitat, G>>(
-        self,
-    ) -> (
-        Self::Habitat,
-        Self::DispersalSampler<D>,
-        Self::TurnoverRate,
-        Self::SpeciationProbability,
-        Self::OriginSamplerAuxiliary,
-        Self::DecompositionAuxiliary,
-    ) {
-        (
-            self.habitat,
-            self.dispersal_sampler,
-            self.turnover_rate,
-            self.speciation_probability,
-            (self.sample,),
-            (),
-        )
     }
 
     fn sample_habitat<'h, I: Iterator<Item = u64>>(

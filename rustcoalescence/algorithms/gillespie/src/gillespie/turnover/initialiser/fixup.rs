@@ -17,11 +17,8 @@ use necsim_impls_no_std::cogs::{
             RestartFixUpActiveLineageSampler,
         },
     },
-    dispersal_sampler::{
-        in_memory::alias::InMemoryAliasDispersalSampler,
-        trespassing::{
-            uniform::UniformAntiTrespassingDispersalSampler, TrespassingDispersalSampler,
-        },
+    dispersal_sampler::trespassing::{
+        uniform::UniformAntiTrespassingDispersalSampler, TrespassingDispersalSampler,
     },
     origin_sampler::{resuming::ResumingOriginSampler, TrustedOriginSampler},
 };
@@ -92,7 +89,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
         M,
         O::Habitat,
         G,
-        O::DispersalSampler<InMemoryAliasDispersalSampler<M, O::Habitat, G>>,
+        O::DispersalSampler,
         UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
     >;
 
@@ -120,7 +117,7 @@ impl<L: ExactSizeIterator<Item = Lineage>, M: MathsCore, G: RngCore<M>, O: Scena
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: O::DispersalSampler<InMemoryAliasDispersalSampler<M, O::Habitat, G>>,
+        dispersal_sampler: O::DispersalSampler,
         turnover_rate: &O::TurnoverRate,
         local_partition: &mut P,
     ) -> Result<

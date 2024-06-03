@@ -1,28 +1,27 @@
 #![deny(clippy::pedantic)]
 
-#[macro_use]
-extern crate contracts;
+use std::{fmt, ops::ControlFlow};
 
-use std::fmt;
-
-use anyhow::Context;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use necsim_core::{
     impl_report,
     lineage::MigratingLineage,
-    reporter::{boolean::True, Reporter},
+    reporter::{
+        boolean::{False, True},
+        FilteredReporter, Reporter,
+    },
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::PositiveF64;
 
 use necsim_partitioning_core::{
-    context::ReporterContext,
     iterator::ImmigrantPopIterator,
     partition::{Partition, PartitionSize},
+    reporter::{FinalisableReporter, OpaqueFinalisableReporter, ReporterContext},
     LocalPartition, MigrationMode, Partitioning,
 };
 
-use necsim_impls_std::event_log::recorder::EventLogRecorder;
+use necsim_impls_std::event_log::recorder::EventLogConfig;
 
 pub mod live;
 pub mod recorded;
@@ -50,9 +49,9 @@ impl<'de> Deserialize<'de> for MonolithicPartitioning {
     }
 }
 
-#[contract_trait]
 impl Partitioning for MonolithicPartitioning {
-    type Auxiliary = Option<EventLogRecorder>;
+    type Auxiliary = Option<EventLogConfig>;
+    type FinalisableReporter<R: Reporter> = FinalisableMonolithicReporter<R>;
     type LocalPartition<'p, R: Reporter> = MonolithicLocalPartition<R>;
 
     fn get_size(&self) -> PartitionSize {
@@ -62,33 +61,30 @@ impl Partitioning for MonolithicPartitioning {
     /// # Errors
     ///
     /// Returns an error if the provided event log is not empty.
-    fn with_local_partition<
-        R: Reporter,
-        P: ReporterContext<Reporter = R>,
-        F: for<'p> FnOnce(Self::LocalPartition<'p, R>) -> Q,
-        Q,
-    >(
+    fn with_local_partition<R: Reporter, P: ReporterContext<Reporter = R>, A, Q>(
         self,
         reporter_context: P,
         event_log: Self::Auxiliary,
-        inner: F,
-    ) -> anyhow::Result<Q> {
-        let local_partition = if let Some(event_log) = event_log {
+        args: A,
+        inner: for<'p> fn(&mut Self::LocalPartition<'p, R>, A) -> Q,
+        _fold: fn(Q, Q) -> Q,
+    ) -> anyhow::Result<(Q, Self::FinalisableReporter<R>)> {
+        let mut local_partition = if let Some(event_log) = event_log {
             MonolithicLocalPartition::Recorded(Box::new(
-                recorded::RecordedMonolithicLocalPartition::try_from_context_and_recorder(
-                    reporter_context,
-                    event_log
-                        .assert_empty()
-                        .context("Failed to create the event log.")?,
-                )?,
+                recorded::RecordedMonolithicLocalPartition::from_reporter_and_recorder(
+                    reporter_context.try_build()?,
+                    event_log.create()?,
+                ),
             ))
         } else {
             MonolithicLocalPartition::Live(Box::new(
-                live::LiveMonolithicLocalPartition::try_from_context(reporter_context)?,
+                live::LiveMonolithicLocalPartition::from_reporter(reporter_context.try_build()?),
             ))
         };
 
-        Ok(inner(local_partition))
+        let result = inner(&mut local_partition, args);
+
+        Ok((result, local_partition.into_reporter()))
     }
 }
 
@@ -99,7 +95,6 @@ pub enum MonolithicLocalPartition<R: Reporter> {
     Recorded(Box<recorded::RecordedMonolithicLocalPartition<R>>),
 }
 
-#[contract_trait]
 impl<'p, R: Reporter> LocalPartition<'p, R> for MonolithicLocalPartition<R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
     // pessimistic
@@ -108,13 +103,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MonolithicLocalPartition<R> {
 
     fn get_reporter(&mut self) -> &mut Self::Reporter {
         self
-    }
-
-    fn is_root(&self) -> bool {
-        match self {
-            Self::Live(partition) => partition.is_root(),
-            Self::Recorded(partition) => partition.is_root(),
-        }
     }
 
     fn get_partition(&self) -> Partition {
@@ -143,37 +131,27 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MonolithicLocalPartition<R> {
         }
     }
 
-    fn reduce_vote_continue(&self, local_continue: bool) -> bool {
+    fn reduce_vote_any(&mut self, vote: bool) -> bool {
         match self {
-            Self::Live(partition) => partition.reduce_vote_continue(local_continue),
-            Self::Recorded(partition) => partition.reduce_vote_continue(local_continue),
+            Self::Live(partition) => partition.reduce_vote_any(vote),
+            Self::Recorded(partition) => partition.reduce_vote_any(vote),
         }
     }
 
-    fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64> {
+    fn reduce_vote_min_time(
+        &mut self,
+        local_time: PositiveF64,
+    ) -> Result<PositiveF64, PositiveF64> {
         match self {
             Self::Live(partition) => partition.reduce_vote_min_time(local_time),
             Self::Recorded(partition) => partition.reduce_vote_min_time(local_time),
         }
     }
 
-    fn wait_for_termination(&mut self) -> bool {
+    fn wait_for_termination(&mut self) -> ControlFlow<(), ()> {
         match self {
             Self::Live(partition) => partition.wait_for_termination(),
             Self::Recorded(partition) => partition.wait_for_termination(),
-        }
-    }
-
-    fn reduce_global_time_steps(
-        &self,
-        local_time: NonNegativeF64,
-        local_steps: u64,
-    ) -> (NonNegativeF64, u64) {
-        match self {
-            Self::Live(partition) => partition.reduce_global_time_steps(local_time, local_steps),
-            Self::Recorded(partition) => {
-                partition.reduce_global_time_steps(local_time, local_steps)
-            },
         }
     }
 
@@ -181,13 +159,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MonolithicLocalPartition<R> {
         match self {
             Self::Live(partition) => partition.report_progress_sync(remaining),
             Self::Recorded(partition) => partition.report_progress_sync(remaining),
-        }
-    }
-
-    fn finalise_reporting(self) {
-        match self {
-            Self::Live(partition) => partition.finalise_reporting(),
-            Self::Recorded(partition) => partition.finalise_reporting(),
         }
     }
 }
@@ -225,4 +196,31 @@ impl<R: Reporter> Reporter for MonolithicLocalPartition<R> {
             ),
         }
     });
+}
+
+impl<R: Reporter> MonolithicLocalPartition<R> {
+    fn into_reporter(self) -> FinalisableMonolithicReporter<R> {
+        match self {
+            Self::Live(partition) => {
+                FinalisableMonolithicReporter::Live(partition.into_reporter().into())
+            },
+            Self::Recorded(partition) => {
+                FinalisableMonolithicReporter::Recorded(partition.into_reporter().into())
+            },
+        }
+    }
+}
+
+pub enum FinalisableMonolithicReporter<R: Reporter> {
+    Live(OpaqueFinalisableReporter<FilteredReporter<R, True, True, True>>),
+    Recorded(OpaqueFinalisableReporter<FilteredReporter<R, False, False, True>>),
+}
+
+impl<R: Reporter> FinalisableReporter for FinalisableMonolithicReporter<R> {
+    fn finalise(self) {
+        match self {
+            Self::Live(reporter) => reporter.finalise(),
+            Self::Recorded(reporter) => reporter.finalise(),
+        }
+    }
 }

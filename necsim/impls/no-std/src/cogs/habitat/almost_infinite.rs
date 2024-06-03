@@ -1,7 +1,7 @@
 use core::{fmt, marker::PhantomData};
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
+    cogs::{Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 use necsim_core_bond::{OffByOneU32, OffByOneU64};
@@ -32,9 +32,8 @@ impl<M: MathsCore> Default for AlmostInfiniteHabitat<M> {
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore> Backup for AlmostInfiniteHabitat<M> {
-    unsafe fn backup_unchecked(&self) -> Self {
+impl<M: MathsCore> Clone for AlmostInfiniteHabitat<M> {
+    fn clone(&self) -> Self {
         Self {
             marker: PhantomData::<M>,
         }

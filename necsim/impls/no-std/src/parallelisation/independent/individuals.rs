@@ -98,7 +98,7 @@ pub fn simulate<
 
     while !lineages.is_empty()
         || simulation.active_lineage_sampler().number_active_lineages() > 0
-        || proxy.local_partition().wait_for_termination()
+        || proxy.local_partition().wait_for_termination().is_continue()
     {
         proxy.report_total_progress(
             (Wrapping(lineages.len() as u64) + simulation.get_balanced_remaining_work()).0,
@@ -141,9 +141,8 @@ pub fn simulate<
 
     proxy.local_partition().report_progress_sync(0_u64);
 
-    let (global_time, global_steps) = proxy
-        .local_partition()
-        .reduce_global_time_steps(max_time, total_steps);
+    let local_time = max_time;
+    let local_steps = total_steps;
 
-    (Status::Done, global_time, global_steps, lineages)
+    (Status::Done, local_time, local_steps, lineages)
 }

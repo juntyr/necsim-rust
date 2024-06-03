@@ -261,10 +261,10 @@ pub fn simulate<
         (Wrapping(slow_lineages.len() as u64) + simulation.get_balanced_remaining_work()).0,
     );
 
-    let status = Status::paused(local_partition.reduce_vote_continue(!slow_lineages.is_empty()));
-    let (global_time, global_steps) =
-        local_partition.reduce_global_time_steps(max_time, total_steps);
+    let status = Status::paused(local_partition.reduce_vote_any(!slow_lineages.is_empty()));
+    let local_time = max_time;
+    let local_steps = total_steps;
     let lineages = slow_lineages.into_iter().map(|(lineage, _)| lineage);
 
-    (status, global_time, global_steps, lineages)
+    (status, local_time, local_steps, lineages)
 }

@@ -1,14 +1,13 @@
-use alloc::boxed::Box;
+use alloc::sync::Arc;
 use core::{fmt, num::NonZeroUsize};
 use necsim_core_bond::{ClosedUnitF64, OffByOneU64, OpenClosedUnitF64 as PositiveUnitF64};
-use r#final::Final;
 
 mod opensimplex_noise;
 
 use opensimplex_noise::OpenSimplexNoise;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
+    cogs::{Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 
@@ -29,7 +28,7 @@ pub struct WrappingNoiseHabitat<M: MathsCore> {
     persistence: PositiveUnitF64,
     octaves: NonZeroUsize,
     #[cfg_attr(feature = "cuda", cuda(embed))]
-    noise: Final<Box<OpenSimplexNoise>>,
+    noise: Arc<OpenSimplexNoise>,
 }
 
 impl<M: MathsCore> fmt::Debug for WrappingNoiseHabitat<M> {
@@ -52,7 +51,7 @@ impl<M: MathsCore> WrappingNoiseHabitat<M> {
         persistence: PositiveUnitF64,
         octaves: NonZeroUsize,
     ) -> Self {
-        let noise = Box::new(OpenSimplexNoise::new(Some(seed)));
+        let noise = Arc::new(OpenSimplexNoise::new(Some(seed)));
 
         // Emperically determine a threshold to uniformly sample habitat
         //  from the generated Simplex Noise
@@ -92,7 +91,7 @@ impl<M: MathsCore> WrappingNoiseHabitat<M> {
             scale,
             persistence,
             octaves,
-            noise: Final::new(noise),
+            noise,
         }
     }
 
@@ -118,17 +117,16 @@ impl<M: MathsCore> Default for WrappingNoiseHabitat<M> {
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore> Backup for WrappingNoiseHabitat<M> {
-    unsafe fn backup_unchecked(&self) -> Self {
+impl<M: MathsCore> Clone for WrappingNoiseHabitat<M> {
+    fn clone(&self) -> Self {
         Self {
-            inner: self.inner.backup_unchecked(),
+            inner: self.inner.clone(),
             coverage: self.coverage,
             threshold: self.threshold,
             scale: self.scale,
             persistence: self.persistence,
             octaves: self.octaves,
-            noise: Final::new(self.noise.clone()),
+            noise: self.noise.clone(),
         }
     }
 }

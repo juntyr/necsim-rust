@@ -20,11 +20,8 @@ use necsim_impls_no_std::cogs::{
         IndependentActiveLineageSampler,
     },
     coalescence_sampler::independent::IndependentCoalescenceSampler,
-    dispersal_sampler::{
-        in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
-        trespassing::{
-            uniform::UniformAntiTrespassingDispersalSampler, TrespassingDispersalSampler,
-        },
+    dispersal_sampler::trespassing::{
+        uniform::UniformAntiTrespassingDispersalSampler, TrespassingDispersalSampler,
     },
     emigration_exit::never::NeverEmigrationExit,
     event_sampler::independent::IndependentEventSampler,
@@ -33,14 +30,17 @@ use necsim_impls_no_std::cogs::{
     origin_sampler::pre_sampler::OriginPreSampler,
     rng::wyhash::WyHash,
 };
-use necsim_partitioning_core::{partition::Partition, LocalPartition};
+use necsim_partitioning_core::{
+    partition::{Partition, PartitionSize},
+    LocalPartition, Partitioning,
+};
 
 use rustcoalescence_algorithms::{
     result::{ResumeError, SimulationOutcome},
     strategy::RestartFixUpStrategy,
-    Algorithm, AlgorithmDefaults, AlgorithmParamters,
+    Algorithm, AlgorithmDefaults, AlgorithmDispatch, AlgorithmParamters,
 };
-use rustcoalescence_scenarios::Scenario;
+use rustcoalescence_scenarios::{Scenario, ScenarioCogs};
 
 use rustcoalescence_algorithms_cuda_cpu_kernel::SimulationKernelPtx;
 use rustcoalescence_algorithms_cuda_gpu_kernel::simulate;
@@ -77,16 +77,14 @@ impl AlgorithmDefaults for CudaAlgorithm {
 }
 
 impl<
-        'p,
         M: MathsCore + Sync,
         G: PrimeableRng<M> + RustToCuda + Sync,
         O: Scenario<M, G>,
         R: Reporter,
-        P: LocalPartition<'p, R>,
-    > Algorithm<'p, M, G, O, R, P> for CudaAlgorithm
+    > AlgorithmDispatch<M, G, O, R> for CudaAlgorithm
 where
     O::Habitat: RustToCuda + Sync,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda + Sync,
+    O::DispersalSampler: RustToCuda + Sync,
     O::TurnoverRate: RustToCuda + Sync,
     O::SpeciationProbability: RustToCuda + Sync,
     SimulationKernelPtx<
@@ -95,7 +93,7 @@ where
         G,
         IndependentLineageStore<M, O::Habitat>,
         NeverEmigrationExit,
-        O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+        O::DispersalSampler,
         IndependentCoalescenceSampler<M, O::Habitat>,
         O::TurnoverRate,
         O::SpeciationProbability,
@@ -104,7 +102,7 @@ where
             O::Habitat,
             G,
             NeverEmigrationExit,
-            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+            O::DispersalSampler,
             O::TurnoverRate,
             O::SpeciationProbability,
         >,
@@ -114,7 +112,7 @@ where
             O::Habitat,
             G,
             NeverEmigrationExit,
-            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+            O::DispersalSampler,
             O::TurnoverRate,
             O::SpeciationProbability,
             ExpEventTimeSampler,
@@ -128,7 +126,7 @@ where
             G,
             IndependentLineageStore<M, O::Habitat>,
             NeverEmigrationExit,
-            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+            O::DispersalSampler,
             IndependentCoalescenceSampler<M, O::Habitat>,
             O::TurnoverRate,
             O::SpeciationProbability,
@@ -137,7 +135,7 @@ where
                 O::Habitat,
                 G,
                 NeverEmigrationExit,
-                O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+                O::DispersalSampler,
                 O::TurnoverRate,
                 O::SpeciationProbability,
             >,
@@ -147,7 +145,7 @@ where
                 O::Habitat,
                 G,
                 NeverEmigrationExit,
-                O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+                O::DispersalSampler,
                 O::TurnoverRate,
                 O::SpeciationProbability,
                 ExpEventTimeSampler,
@@ -166,7 +164,7 @@ where
             M,
             O::Habitat,
             G,
-            O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+            O::DispersalSampler,
             UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
         >,
         IndependentCoalescenceSampler<M, O::Habitat>,
@@ -181,7 +179,7 @@ where
                 M,
                 O::Habitat,
                 G,
-                O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+                O::DispersalSampler,
                 UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
             >,
             O::TurnoverRate,
@@ -197,7 +195,7 @@ where
                 M,
                 O::Habitat,
                 G,
-                O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+                O::DispersalSampler,
                 UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
             >,
             O::TurnoverRate,
@@ -217,7 +215,7 @@ where
                 M,
                 O::Habitat,
                 G,
-                O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+                O::DispersalSampler,
                 UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
             >,
             IndependentCoalescenceSampler<M, O::Habitat>,
@@ -232,7 +230,7 @@ where
                     M,
                     O::Habitat,
                     G,
-                    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+                    O::DispersalSampler,
                     UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
                 >,
                 O::TurnoverRate,
@@ -248,7 +246,207 @@ where
                     M,
                     O::Habitat,
                     G,
-                    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+                    O::DispersalSampler,
+                    UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
+                >,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+                ConstEventTimeSampler,
+            >,
+            R::ReportSpeciation,
+            R::ReportDispersal,
+        >,
+    >,
+{
+    type Algorithm<'p, P: LocalPartition<'p, R>> = Self;
+
+    fn get_logical_partition_size<P: Partitioning>(
+        args: &Self::Arguments,
+        _partitioning: &P,
+    ) -> PartitionSize {
+        match &args.parallelism_mode {
+            ParallelismMode::Monolithic(_) => PartitionSize::MONOLITHIC,
+            ParallelismMode::IsolatedIndividuals(IsolatedParallelismMode { partition, .. })
+            | ParallelismMode::IsolatedLandscape(IsolatedParallelismMode { partition, .. }) => {
+                partition.size()
+            },
+        }
+    }
+}
+
+impl<
+        'p,
+        M: MathsCore + Sync,
+        G: PrimeableRng<M> + RustToCuda + Sync,
+        O: Scenario<M, G>,
+        R: Reporter,
+        P: LocalPartition<'p, R>,
+    > Algorithm<'p, M, G, O, R, P> for CudaAlgorithm
+where
+    O::Habitat: RustToCuda + Sync,
+    O::DispersalSampler: RustToCuda + Sync,
+    O::TurnoverRate: RustToCuda + Sync,
+    O::SpeciationProbability: RustToCuda + Sync,
+    SimulationKernelPtx<
+        M,
+        O::Habitat,
+        G,
+        IndependentLineageStore<M, O::Habitat>,
+        NeverEmigrationExit,
+        O::DispersalSampler,
+        IndependentCoalescenceSampler<M, O::Habitat>,
+        O::TurnoverRate,
+        O::SpeciationProbability,
+        IndependentEventSampler<
+            M,
+            O::Habitat,
+            G,
+            NeverEmigrationExit,
+            O::DispersalSampler,
+            O::TurnoverRate,
+            O::SpeciationProbability,
+        >,
+        NeverImmigrationEntry,
+        IndependentActiveLineageSampler<
+            M,
+            O::Habitat,
+            G,
+            NeverEmigrationExit,
+            O::DispersalSampler,
+            O::TurnoverRate,
+            O::SpeciationProbability,
+            ExpEventTimeSampler,
+        >,
+        R::ReportSpeciation,
+        R::ReportDispersal,
+    >: CompiledKernelPtx<
+        simulate<
+            M,
+            O::Habitat,
+            G,
+            IndependentLineageStore<M, O::Habitat>,
+            NeverEmigrationExit,
+            O::DispersalSampler,
+            IndependentCoalescenceSampler<M, O::Habitat>,
+            O::TurnoverRate,
+            O::SpeciationProbability,
+            IndependentEventSampler<
+                M,
+                O::Habitat,
+                G,
+                NeverEmigrationExit,
+                O::DispersalSampler,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+            >,
+            NeverImmigrationEntry,
+            IndependentActiveLineageSampler<
+                M,
+                O::Habitat,
+                G,
+                NeverEmigrationExit,
+                O::DispersalSampler,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+                ExpEventTimeSampler,
+            >,
+            R::ReportSpeciation,
+            R::ReportDispersal,
+        >,
+    >,
+    SimulationKernelPtx<
+        M,
+        O::Habitat,
+        G,
+        IndependentLineageStore<M, O::Habitat>,
+        NeverEmigrationExit,
+        TrespassingDispersalSampler<
+            M,
+            O::Habitat,
+            G,
+            O::DispersalSampler,
+            UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
+        >,
+        IndependentCoalescenceSampler<M, O::Habitat>,
+        O::TurnoverRate,
+        O::SpeciationProbability,
+        IndependentEventSampler<
+            M,
+            O::Habitat,
+            G,
+            NeverEmigrationExit,
+            TrespassingDispersalSampler<
+                M,
+                O::Habitat,
+                G,
+                O::DispersalSampler,
+                UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
+            >,
+            O::TurnoverRate,
+            O::SpeciationProbability,
+        >,
+        NeverImmigrationEntry,
+        IndependentActiveLineageSampler<
+            M,
+            O::Habitat,
+            G,
+            NeverEmigrationExit,
+            TrespassingDispersalSampler<
+                M,
+                O::Habitat,
+                G,
+                O::DispersalSampler,
+                UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
+            >,
+            O::TurnoverRate,
+            O::SpeciationProbability,
+            ConstEventTimeSampler,
+        >,
+        R::ReportSpeciation,
+        R::ReportDispersal,
+    >: CompiledKernelPtx<
+        simulate<
+            M,
+            O::Habitat,
+            G,
+            IndependentLineageStore<M, O::Habitat>,
+            NeverEmigrationExit,
+            TrespassingDispersalSampler<
+                M,
+                O::Habitat,
+                G,
+                O::DispersalSampler,
+                UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
+            >,
+            IndependentCoalescenceSampler<M, O::Habitat>,
+            O::TurnoverRate,
+            O::SpeciationProbability,
+            IndependentEventSampler<
+                M,
+                O::Habitat,
+                G,
+                NeverEmigrationExit,
+                TrespassingDispersalSampler<
+                    M,
+                    O::Habitat,
+                    G,
+                    O::DispersalSampler,
+                    UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
+                >,
+                O::TurnoverRate,
+                O::SpeciationProbability,
+            >,
+            NeverImmigrationEntry,
+            IndependentActiveLineageSampler<
+                M,
+                O::Habitat,
+                G,
+                NeverEmigrationExit,
+                TrespassingDispersalSampler<
+                    M,
+                    O::Habitat,
+                    G,
+                    O::DispersalSampler,
                     UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
                 >,
                 O::TurnoverRate,
@@ -275,7 +473,7 @@ where
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         rng: G,
-        scenario: O,
+        scenario: ScenarioCogs<M, G, O>,
         pre_sampler: OriginPreSampler<M, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
@@ -313,7 +511,7 @@ where
     fn resume_and_simulate<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: G,
-        scenario: O,
+        scenario: ScenarioCogs<M, G, O>,
         pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         resume_after: Option<NonNegativeF64>,
@@ -356,7 +554,7 @@ where
     fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: G,
-        scenario: O,
+        scenario: ScenarioCogs<M, G, O>,
         pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         restart_at: PositiveF64,

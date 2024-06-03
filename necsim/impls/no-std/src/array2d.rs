@@ -4,12 +4,17 @@
 /// Based on a subset of Harrison McCullough's MIT-licensed [`array2d`] crate.
 ///
 /// [`array2d`]: https://github.com/HarrisonMc555/array2d
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, rc::Rc, sync::Arc, vec::Vec};
 
-use core::ops::{Index, IndexMut};
+use core::{
+    marker::PhantomData,
+    ops::{Deref, DerefMut, Index, IndexMut},
+};
+
+pub trait ArrayBackend<T>: From<Vec<T>> + Deref<Target = [T]> {}
+impl<T, B: From<Vec<T>> + Deref<Target = [T]>> ArrayBackend<T> for B {}
 
 /// A fixed sized two-dimensional array.
-#[derive(Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(
     feature = "cuda",
@@ -18,13 +23,36 @@ use core::ops::{Index, IndexMut};
         bound = "T: rust_cuda::safety::PortableBitSemantics + const_type_layout::TypeGraphLayout"
     )
 )]
-pub struct Array2D<T> {
+pub struct Array2D<T, B: ArrayBackend<T> = Box<[T]>> {
     #[cfg_attr(feature = "cuda", cuda(embed))]
-    array: Box<[T]>,
+    array: B,
     num_rows: usize,
+    marker: PhantomData<T>,
 }
 
-impl<T> core::fmt::Debug for Array2D<T> {
+impl<T, B: ArrayBackend<T> + Clone> Clone for Array2D<T, B> {
+    fn clone(&self) -> Self {
+        Self {
+            array: self.array.clone(),
+            num_rows: self.num_rows,
+            marker: PhantomData::<T>,
+        }
+    }
+}
+
+impl<T, B: ArrayBackend<T> + PartialEq> PartialEq for Array2D<T, B> {
+    fn eq(&self, other: &Self) -> bool {
+        (self.array == other.array) && (self.num_rows == other.num_rows)
+    }
+}
+impl<T, B: ArrayBackend<T> + Eq> Eq for Array2D<T, B> {}
+
+pub type ArcArray2D<T> = Array2D<T, Arc<[T]>>;
+pub type BoxArray2D<T> = Array2D<T, Box<[T]>>;
+pub type RcArray2D<T> = Array2D<T, Rc<[T]>>;
+pub type VecArray2D<T> = Array2D<T, Vec<T>>;
+
+impl<T, B: ArrayBackend<T>> core::fmt::Debug for Array2D<T, B> {
     fn fmt(&self, fmt: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(
             fmt,
@@ -49,7 +77,7 @@ pub enum Error {
     NotEnoughElements,
 }
 
-impl<T> Array2D<T> {
+impl<T, B: ArrayBackend<T>> Array2D<T, B> {
     /// Creates a new [`Array2D`] from a slice of rows, each of which is a
     /// [`Vec`] of elements.
     ///
@@ -64,7 +92,7 @@ impl<T> Array2D<T> {
     /// # use necsim_impls_no_std::array2d::{Array2D, Error};
     /// # fn main() -> Result<(), Error> {
     /// let rows = vec![vec![1, 2, 3], vec![4, 5, 6]];
-    /// let array = Array2D::from_rows(&rows)?;
+    /// let array = Array2D::<_>::from_rows(&rows)?;
     /// assert_eq!(array[(1, 2)], 6);
     /// assert_eq!(array.as_rows(), rows);
     /// # Ok(())
@@ -86,8 +114,9 @@ impl<T> Array2D<T> {
                 .iter()
                 .flat_map(Vec::clone)
                 .collect::<Vec<_>>()
-                .into_boxed_slice(),
+                .into(),
             num_rows: elements.len(),
+            marker: PhantomData::<T>,
         })
     }
 
@@ -109,7 +138,7 @@ impl<T> Array2D<T> {
     /// # use necsim_impls_no_std::array2d::{Array2D, Error};
     /// # fn main() -> Result<(), Error> {
     /// let row_major = vec![1, 2, 3, 4, 5, 6];
-    /// let array = Array2D::from_row_major(&row_major, 2, 3)?;
+    /// let array = Array2D::<_>::from_row_major(&row_major, 2, 3)?;
     /// assert_eq!(array[(1, 2)], 6);
     /// assert_eq!(array.as_rows(), vec![vec![1, 2, 3], vec![4, 5, 6]]);
     /// # Ok(())
@@ -131,8 +160,9 @@ impl<T> Array2D<T> {
             return Err(Error::DimensionMismatch);
         }
         Ok(Array2D {
-            array: elements.to_vec().into_boxed_slice(),
+            array: elements.to_vec().into(),
             num_rows,
+            marker: PhantomData::<T>,
         })
     }
 
@@ -143,7 +173,7 @@ impl<T> Array2D<T> {
     ///
     /// ```
     /// # use necsim_impls_no_std::array2d::{Array2D, Error};
-    /// let array = Array2D::filled_with(42, 2, 3);
+    /// let array = Array2D::<_>::filled_with(42, 2, 3);
     /// assert_eq!(array.as_rows(), vec![vec![42, 42, 42], vec![42, 42, 42]]);
     /// ```
     ///
@@ -155,8 +185,9 @@ impl<T> Array2D<T> {
         let total_len = num_rows * num_columns;
         let array = alloc::vec![element; total_len];
         Array2D {
-            array: array.into_boxed_slice(),
+            array: array.into(),
             num_rows,
+            marker: PhantomData::<T>,
         }
     }
 
@@ -179,7 +210,7 @@ impl<T> Array2D<T> {
     /// # use necsim_impls_no_std::array2d::{Array2D, Error};
     /// # fn main() -> Result<(), Error> {
     /// let iterator = (1..);
-    /// let array = Array2D::from_iter_row_major(iterator, 2, 3)?;
+    /// let array = Array2D::<_>::from_iter_row_major(iterator, 2, 3)?;
     /// assert_eq!(array.as_rows(), vec![vec![1, 2, 3], vec![4, 5, 6]]);
     /// # Ok(())
     /// # }
@@ -201,8 +232,9 @@ impl<T> Array2D<T> {
             return Err(Error::NotEnoughElements);
         }
         Ok(Array2D {
-            array: array.into_boxed_slice(),
+            array: array.into(),
             num_rows,
+            marker: PhantomData::<T>,
         })
     }
 
@@ -245,7 +277,7 @@ impl<T> Array2D<T> {
     ///
     /// ```
     /// # use necsim_impls_no_std::array2d::{Array2D, Error};
-    /// let array = Array2D::filled_with(42, 2, 3);
+    /// let array = Array2D::<_>::filled_with(42, 2, 3);
     /// assert_eq!(array.get(0, 0), Some(&42));
     /// assert_eq!(array.get(10, 10), None);
     /// ```
@@ -265,7 +297,7 @@ impl<T> Array2D<T> {
     ///
     /// ```
     /// # use necsim_impls_no_std::array2d::{Array2D, Error};
-    /// let mut array = Array2D::filled_with(42, 2, 3);
+    /// let mut array = Array2D::<_>::filled_with(42, 2, 3);
     ///
     /// assert_eq!(array.get_mut(0, 0), Some(&mut 42));
     /// assert_eq!(array.get_mut(10, 10), None);
@@ -279,7 +311,10 @@ impl<T> Array2D<T> {
     ///
     /// [`Some`]: https://doc.rust-lang.org/std/option/enum.Option.html#variant.Some
     /// [`None`]: https://doc.rust-lang.org/std/option/enum.Option.html#variant.None
-    pub fn get_mut(&mut self, row: usize, column: usize) -> Option<&mut T> {
+    pub fn get_mut(&mut self, row: usize, column: usize) -> Option<&mut T>
+    where
+        B: DerefMut,
+    {
         self.get_index(row, column)
             .map(move |index| &mut self.array[index])
     }
@@ -298,7 +333,7 @@ impl<T> Array2D<T> {
     /// # use necsim_impls_no_std::array2d::{Array2D, Error};
     /// # fn main() -> Result<(), Error> {
     /// let rows = vec![vec![1, 2, 3], vec![4, 5, 6]];
-    /// let array = Array2D::from_rows(&rows)?;
+    /// let array = Array2D::<_>::from_rows(&rows)?;
     /// let mut row_iter = array.row_iter(1)?;
     /// assert_eq!(row_iter.next(), Some(&4));
     /// assert_eq!(row_iter.next(), Some(&5));
@@ -327,7 +362,7 @@ impl<T> Array2D<T> {
     /// # use necsim_impls_no_std::array2d::{Array2D, Error};
     /// # fn main() -> Result<(), Error> {
     /// let rows = vec![vec![1, 2, 3], vec![4, 5, 6]];
-    /// let array = Array2D::from_rows(&rows)?;
+    /// let array = Array2D::<_>::from_rows(&rows)?;
     /// for row_iter in array.rows_iter() {
     ///     for element in row_iter {
     ///         print!("{} ", element);
@@ -375,7 +410,7 @@ impl<T> Array2D<T> {
     /// # use necsim_impls_no_std::array2d::{Array2D, Error};
     /// # fn main() -> Result<(), Error> {
     /// let rows = vec![vec![1, 2, 3], vec![4, 5, 6]];
-    /// let array = Array2D::from_rows(&rows)?;
+    /// let array = Array2D::<_>::from_rows(&rows)?;
     /// assert_eq!(array.as_rows(), rows);
     /// # Ok(())
     /// # }
@@ -402,7 +437,7 @@ impl<T> Array2D<T> {
     /// # use necsim_impls_no_std::array2d::{Array2D, Error};
     /// # fn main() -> Result<(), Error> {
     /// let rows = vec![vec![1, 2, 3], vec![4, 5, 6]];
-    /// let array = Array2D::from_rows(&rows)?;
+    /// let array = Array2D::<_>::from_rows(&rows)?;
     /// assert_eq!(array.into_row_major(), vec![1, 2, 3, 4, 5, 6]);
     /// # Ok(())
     /// # }
@@ -412,8 +447,60 @@ impl<T> Array2D<T> {
     /// [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
     /// [row major order]: https://en.wikipedia.org/wiki/Row-_and_column-major_order
     #[must_use]
-    pub fn into_row_major(self) -> Vec<T> {
+    pub fn into_row_major(self) -> Vec<T>
+    where
+        B: Into<Vec<T>>,
+    {
         self.array.into()
+    }
+
+    /// Converts the [`Array2D`] into its inner [`ArrayBackend`] `B` of
+    /// elements in [row major order].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use necsim_impls_no_std::array2d::{Error, VecArray2D};
+    /// # fn main() -> Result<(), Error> {
+    /// let rows = vec![vec![1, 2, 3], vec![4, 5, 6]];
+    /// let array = VecArray2D::from_rows(&rows)?;
+    /// assert_eq!(array.into_row_major_backend(), vec![1, 2, 3, 4, 5, 6]);
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Array2D`]: struct.Array2D.html
+    /// [row major order]: https://en.wikipedia.org/wiki/Row-_and_column-major_order
+    #[must_use]
+    pub fn into_row_major_backend(self) -> B {
+        self.array
+    }
+
+    /// Converts the [`Array2D`] into from its current into a new
+    /// [`ArrayBackend`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use necsim_impls_no_std::array2d::{BoxArray2D, Error, VecArray2D};
+    /// # fn main() -> Result<(), Error> {
+    /// let rows = vec![vec![1, 2, 3], vec![4, 5, 6]];
+    /// let array = VecArray2D::from_rows(&rows)?;
+    /// let array: BoxArray2D<_> = array.switch_backend();
+    /// assert_eq!(array.into_row_major(), vec![1, 2, 3, 4, 5, 6]);
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Array2D`]: struct.Array2D.html
+    /// [row major order]: https://en.wikipedia.org/wiki/Row-_and_column-major_order
+    #[must_use]
+    pub fn switch_backend<B2: ArrayBackend<T> + From<B>>(self) -> Array2D<T, B2> {
+        Array2D {
+            array: self.array.into(),
+            num_rows: self.num_rows,
+            marker: PhantomData::<T>,
+        }
     }
 
     /// Returns an [`Iterator`] over references to all elements in
@@ -426,7 +513,7 @@ impl<T> Array2D<T> {
     /// # fn main() -> Result<(), Error> {
     /// let rows = vec![vec![1, 2, 3], vec![4, 5, 6]];
     /// let elements = vec![1, 2, 3, 4, 5, 6];
-    /// let array = Array2D::from_rows(&rows)?;
+    /// let array = Array2D::<_>::from_rows(&rows)?;
     /// let row_major = array.elements_row_major_iter();
     /// assert_eq!(row_major.cloned().collect::<Vec<_>>(), elements);
     /// # Ok(())
@@ -449,7 +536,7 @@ impl<T> Array2D<T> {
     }
 }
 
-impl<T> Index<(usize, usize)> for Array2D<T> {
+impl<T, B: ArrayBackend<T>> Index<(usize, usize)> for Array2D<T, B> {
     type Output = T;
 
     /// Returns the element at the given indices, given as `(row, column)`.
@@ -458,7 +545,7 @@ impl<T> Index<(usize, usize)> for Array2D<T> {
     ///
     /// ```
     /// # use necsim_impls_no_std::array2d::{Array2D, Error};
-    /// let array = Array2D::filled_with(42, 2, 3);
+    /// let array = Array2D::<_>::filled_with(42, 2, 3);
     /// assert_eq!(array[(0, 0)], 42);
     /// ```
     ///
@@ -468,7 +555,7 @@ impl<T> Index<(usize, usize)> for Array2D<T> {
     ///
     /// ```rust,should_panic
     /// # use necsim_impls_no_std::array2d::Array2D;
-    /// let array = Array2D::filled_with(42, 2, 3);
+    /// let array = Array2D::<_>::filled_with(42, 2, 3);
     /// let element = array[(10, 10)];
     /// ```
     fn index(&self, (row, column): (usize, usize)) -> &Self::Output {
@@ -477,7 +564,7 @@ impl<T> Index<(usize, usize)> for Array2D<T> {
     }
 }
 
-impl<T> IndexMut<(usize, usize)> for Array2D<T> {
+impl<T, B: ArrayBackend<T> + DerefMut> IndexMut<(usize, usize)> for Array2D<T, B> {
     /// Returns a mutable version of the element at the given indices, given as
     /// `(row, column)`.
     ///
@@ -485,7 +572,7 @@ impl<T> IndexMut<(usize, usize)> for Array2D<T> {
     ///
     /// ```
     /// # use necsim_impls_no_std::array2d::{Array2D, Error};
-    /// let mut array = Array2D::filled_with(42, 2, 3);
+    /// let mut array = Array2D::<_>::filled_with(42, 2, 3);
     /// array[(0, 0)] = 100;
     /// assert_eq!(array[(0, 0)], 100);
     /// ```
@@ -496,7 +583,7 @@ impl<T> IndexMut<(usize, usize)> for Array2D<T> {
     ///
     /// ```rust,should_panic
     /// # use necsim_impls_no_std::array2d::Array2D;
-    /// let mut array = Array2D::filled_with(42, 2, 3);
+    /// let mut array = Array2D::<_>::filled_with(42, 2, 3);
     /// array[(10, 10)] = 7;
     /// ```
     fn index_mut(&mut self, (row, column): (usize, usize)) -> &mut Self::Output {

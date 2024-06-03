@@ -7,7 +7,6 @@ use necsim_impls_no_std::cogs::{
     active_lineage_sampler::independent::{
         event_time_sampler::EventTimeSampler, IndependentActiveLineageSampler,
     },
-    dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
     lineage_store::independent::IndependentLineageStore,
     origin_sampler::TrustedOriginSampler,
 };
@@ -27,7 +26,7 @@ impl<M: MathsCore + Sync, G: PrimeableRng<M> + RustToCuda + Sync, O: Scenario<M,
     CudaLineageStoreSampleInitialiser<M, G, O, CudaError> for GenesisInitialiser
 where
     O::Habitat: RustToCuda + Sync,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda + Sync,
+    O::DispersalSampler: RustToCuda + Sync,
     O::TurnoverRate: RustToCuda + Sync,
     O::SpeciationProbability: RustToCuda + Sync,
 {
@@ -46,8 +45,7 @@ where
         O::SpeciationProbability,
         J,
     >;
-    type DispersalSampler =
-        O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>;
+    type DispersalSampler = O::DispersalSampler;
 
     fn init<
         'h,
@@ -59,9 +57,7 @@ where
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: O::DispersalSampler<
-            InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>,
-        >,
+        dispersal_sampler: O::DispersalSampler,
         event_time_sampler: J,
     ) -> Result<
         (

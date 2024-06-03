@@ -4,7 +4,7 @@ use std::{convert::TryFrom, marker::PhantomData, path::PathBuf};
 
 use serde::{Deserialize, Serialize, Serializer};
 
-use necsim_core::cogs::{DispersalSampler, Habitat, LineageStore, MathsCore, RngCore};
+use necsim_core::cogs::{Habitat, LineageStore, MathsCore, RngCore};
 use necsim_core_bond::{NonNegativeF64, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::partition::Partition;
 
@@ -12,7 +12,8 @@ use necsim_impls_no_std::{
     array2d::Array2D,
     cogs::{
         dispersal_sampler::in_memory::{
-            contract::explicit_in_memory_dispersal_check_contract, InMemoryDispersalSampler,
+            packed_separable_alias::InMemoryPackedSeparableAliasDispersalSampler,
+            InMemoryDispersalSampler,
         },
         habitat::in_memory::InMemoryHabitat,
         origin_sampler::{in_memory::InMemoryOriginSampler, pre_sampler::OriginPreSampler},
@@ -22,9 +23,9 @@ use necsim_impls_no_std::{
     decomposition::equal::EqualDecomposition,
 };
 
-use necsim_impls_std::cogs::dispersal_sampler::in_memory::error::InMemoryDispersalSamplerError;
+use necsim_impls_std::cogs::dispersal_sampler::in_memory::InMemoryDispersalSamplerError;
 
-use crate::{Scenario, ScenarioParameters};
+use crate::{Scenario, ScenarioCogs, ScenarioParameters};
 
 use super::super::maps::{self, MapLoadingMode};
 
@@ -39,26 +40,18 @@ pub enum SpatiallyExplicitTurnoverMapScenarioError {
     TurnoverMap(InMemoryTurnoverRateError),
 }
 
-#[allow(clippy::module_name_repetitions)]
-pub struct SpatiallyExplicitTurnoverMapScenario<M: MathsCore, G: RngCore<M>> {
-    habitat: InMemoryHabitat<M>,
-    dispersal_map: Array2D<NonNegativeF64>,
-    turnover_rate: InMemoryTurnoverRate,
-    speciation_probability: UniformSpeciationProbability,
-    _marker: PhantomData<G>,
-}
+#[allow(clippy::module_name_repetitions, clippy::empty_enum)]
+pub enum SpatiallyExplicitTurnoverMapScenario {}
 
-impl<M: MathsCore, G: RngCore<M>> ScenarioParameters
-    for SpatiallyExplicitTurnoverMapScenario<M, G>
-{
+impl ScenarioParameters for SpatiallyExplicitTurnoverMapScenario {
     type Arguments = SpatiallyExplicitTurnoverMapArguments;
     type Error = SpatiallyExplicitTurnoverMapScenarioError;
 }
 
-impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitTurnoverMapScenario<M, G> {
+impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitTurnoverMapScenario {
     type Decomposition = EqualDecomposition<M, Self::Habitat>;
     type DecompositionAuxiliary = ();
-    type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> = D;
+    type DispersalSampler = InMemoryPackedSeparableAliasDispersalSampler<M, Self::Habitat, G>;
     type Habitat = InMemoryHabitat<M>;
     type LineageStore<L: LineageStore<M, Self::Habitat>> = L;
     type OriginSampler<'h, I: Iterator<Item = u64>> = InMemoryOriginSampler<'h, M, I> where G: 'h;
@@ -66,64 +59,31 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyExplicitTurnoverMa
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = InMemoryTurnoverRate;
 
-    fn initialise(
+    fn new(
         args: Self::Arguments,
         speciation_probability_per_generation: PositiveUnitF64,
-    ) -> Result<Self, Self::Error> {
+    ) -> Result<ScenarioCogs<M, G, Self>, Self::Error> {
         let habitat = InMemoryHabitat::try_new(args.habitat_map)
             .ok_or(SpatiallyExplicitTurnoverMapScenarioError::EmptyHabitatMap)?;
         let turnover_rate = InMemoryTurnoverRate::new(args.turnover_map, &habitat)
             .map_err(SpatiallyExplicitTurnoverMapScenarioError::TurnoverMap)?;
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation.into());
+        let dispersal_sampler =
+            InMemoryPackedSeparableAliasDispersalSampler::new(&args.dispersal_map, &habitat)
+                .map_err(|err| {
+                    SpatiallyExplicitTurnoverMapScenarioError::DispersalMap(err.into())
+                })?;
 
-        let habitat_extent = habitat.get_extent();
-        let habitat_area =
-            usize::from(habitat_extent.width()) * usize::from(habitat_extent.height());
-
-        if args.dispersal_map.num_rows() != habitat_area
-            || args.dispersal_map.num_columns() != habitat_area
-        {
-            return Err(SpatiallyExplicitTurnoverMapScenarioError::DispersalMap(
-                InMemoryDispersalSamplerError::InconsistentDispersalMapSize,
-            ));
-        }
-
-        if !explicit_in_memory_dispersal_check_contract(&args.dispersal_map, &habitat) {
-            return Err(SpatiallyExplicitTurnoverMapScenarioError::DispersalMap(
-                InMemoryDispersalSamplerError::InconsistentDispersalProbabilities,
-            ));
-        }
-
-        Ok(Self {
+        Ok(ScenarioCogs {
             habitat,
-            dispersal_map: args.dispersal_map,
+            dispersal_sampler,
             turnover_rate,
             speciation_probability,
-            _marker: PhantomData::<G>,
+            origin_sampler_auxiliary: (),
+            decomposition_auxiliary: (),
+            _marker: PhantomData::<(M, G, Self)>,
         })
-    }
-
-    fn build<D: InMemoryDispersalSampler<M, Self::Habitat, G>>(
-        self,
-    ) -> (
-        Self::Habitat,
-        Self::DispersalSampler<D>,
-        Self::TurnoverRate,
-        Self::SpeciationProbability,
-        Self::OriginSamplerAuxiliary,
-        Self::DecompositionAuxiliary,
-    ) {
-        let dispersal_sampler = D::unchecked_new(&self.dispersal_map, &self.habitat);
-
-        (
-            self.habitat,
-            dispersal_sampler,
-            self.turnover_rate,
-            self.speciation_probability,
-            (),
-            (),
-        )
     }
 
     fn sample_habitat<'h, I: Iterator<Item = u64>>(

@@ -1,11 +1,9 @@
 use core::marker::PhantomData;
 
-use alloc::{boxed::Box, vec::Vec};
-
-use r#final::Final;
+use alloc::{sync::Arc, vec::Vec};
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
+    cogs::{Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 use necsim_core_bond::{OffByOneU32, OffByOneU64};
@@ -18,20 +16,19 @@ use crate::array2d::Array2D;
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
 pub struct InMemoryHabitat<M: MathsCore> {
     #[cfg_attr(feature = "cuda", cuda(embed))]
-    habitat: Final<Box<[u32]>>,
+    habitat: Arc<[u32]>,
     #[cfg_attr(feature = "cuda", cuda(embed))]
-    u64_injection: Final<Box<[u64]>>,
+    u64_injection: Arc<[u64]>,
     #[cfg_attr(feature = "cuda", cuda(embed))]
     extent: LandscapeExtent,
     marker: PhantomData<M>,
 }
 
-#[contract_trait]
-impl<M: MathsCore> Backup for InMemoryHabitat<M> {
-    unsafe fn backup_unchecked(&self) -> Self {
+impl<M: MathsCore> Clone for InMemoryHabitat<M> {
+    fn clone(&self) -> Self {
         Self {
-            habitat: Final::new(self.habitat.clone()),
-            u64_injection: Final::new(self.u64_injection.clone()),
+            habitat: self.habitat.clone(),
+            u64_injection: self.u64_injection.clone(),
             extent: self.extent.clone(),
             marker: PhantomData::<M>,
         }
@@ -174,8 +171,8 @@ impl<M: MathsCore> InMemoryHabitat<M> {
         let extent = LandscapeExtent::new(Location::new(0, 0), width, height);
 
         Some(Self {
-            habitat: Final::new(habitat),
-            u64_injection: Final::new(u64_injection),
+            habitat: Arc::from(habitat),
+            u64_injection: Arc::from(u64_injection),
             extent,
             marker: PhantomData::<M>,
         })

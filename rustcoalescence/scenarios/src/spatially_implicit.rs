@@ -1,8 +1,8 @@
-use std::num::NonZeroU32;
+use std::{marker::PhantomData, num::NonZeroU32};
 
 use serde::{Deserialize, Serialize};
 
-use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
+use necsim_core::cogs::{LineageStore, MathsCore, RngCore};
 use necsim_core_bond::{OffByOneU32, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::partition::Partition;
 
@@ -19,15 +19,10 @@ use necsim_impls_no_std::{
     decomposition::modulo::ModuloDecomposition,
 };
 
-use crate::{Scenario, ScenarioParameters};
+use crate::{Scenario, ScenarioCogs, ScenarioParameters};
 
-#[allow(clippy::module_name_repetitions)]
-pub struct SpatiallyImplicitScenario<M: MathsCore, G: RngCore<M>> {
-    habitat: SpatiallyImplicitHabitat<M>,
-    dispersal_sampler: SpatiallyImplicitDispersalSampler<M, G>,
-    turnover_rate: UniformTurnoverRate,
-    speciation_probability: SpatiallyImplicitSpeciationProbability,
-}
+#[allow(clippy::module_name_repetitions, clippy::empty_enum)]
+pub enum SpatiallyImplicitScenario {}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
@@ -43,16 +38,15 @@ pub struct SpatiallyImplicitArguments {
     pub migration_probability_per_generation: PositiveUnitF64,
 }
 
-impl<M: MathsCore, G: RngCore<M>> ScenarioParameters for SpatiallyImplicitScenario<M, G> {
+impl ScenarioParameters for SpatiallyImplicitScenario {
     type Arguments = SpatiallyImplicitArguments;
     type Error = !;
 }
 
-impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyImplicitScenario<M, G> {
+impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyImplicitScenario {
     type Decomposition = ModuloDecomposition;
     type DecompositionAuxiliary = ();
-    type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
-        SpatiallyImplicitDispersalSampler<M, G>;
+    type DispersalSampler = SpatiallyImplicitDispersalSampler<M, G>;
     type Habitat = SpatiallyImplicitHabitat<M>;
     type LineageStore<L: LineageStore<M, Self::Habitat>> = L;
     type OriginSampler<'h, I: Iterator<Item = u64>> = SpatiallyImplicitOriginSampler<'h, M, I> where G: 'h;
@@ -60,10 +54,10 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyImplicitScenario<M
     type SpeciationProbability = SpatiallyImplicitSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
 
-    fn initialise(
+    fn new(
         args: Self::Arguments,
         speciation_probability_per_generation: PositiveUnitF64,
-    ) -> Result<Self, Self::Error> {
+    ) -> Result<ScenarioCogs<M, G, Self>, Self::Error> {
         let habitat = SpatiallyImplicitHabitat::new(
             args.local_area,
             args.local_deme,
@@ -76,32 +70,15 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for SpatiallyImplicitScenario<M
         let speciation_probability =
             SpatiallyImplicitSpeciationProbability::new(speciation_probability_per_generation);
 
-        Ok(Self {
+        Ok(ScenarioCogs {
             habitat,
             dispersal_sampler,
             turnover_rate,
             speciation_probability,
+            origin_sampler_auxiliary: (),
+            decomposition_auxiliary: (),
+            _marker: PhantomData::<(M, G, Self)>,
         })
-    }
-
-    fn build<D: DispersalSampler<M, Self::Habitat, G>>(
-        self,
-    ) -> (
-        Self::Habitat,
-        Self::DispersalSampler<D>,
-        Self::TurnoverRate,
-        Self::SpeciationProbability,
-        Self::OriginSamplerAuxiliary,
-        Self::DecompositionAuxiliary,
-    ) {
-        (
-            self.habitat,
-            self.dispersal_sampler,
-            self.turnover_rate,
-            self.speciation_probability,
-            (),
-            (),
-        )
     }
 
     fn sample_habitat<'h, I: Iterator<Item = u64>>(

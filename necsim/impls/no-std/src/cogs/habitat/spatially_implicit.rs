@@ -1,7 +1,7 @@
 use core::num::NonZeroU32;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
+    cogs::{Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
 };
 use necsim_core_bond::{OffByOneU32, OffByOneU64};
@@ -62,12 +62,11 @@ impl<M: MathsCore> SpatiallyImplicitHabitat<M> {
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore> Backup for SpatiallyImplicitHabitat<M> {
-    unsafe fn backup_unchecked(&self) -> Self {
+impl<M: MathsCore> Clone for SpatiallyImplicitHabitat<M> {
+    fn clone(&self) -> Self {
         Self {
-            local: self.local.backup_unchecked(),
-            meta: self.meta.backup_unchecked(),
+            local: self.local.clone(),
+            meta: self.meta.clone(),
         }
     }
 }

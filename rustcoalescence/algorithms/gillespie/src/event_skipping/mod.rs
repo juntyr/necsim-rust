@@ -6,21 +6,25 @@ use necsim_core::{
 use necsim_core_bond::{NonNegativeF64, PositiveF64};
 
 use necsim_impls_no_std::cogs::{
-    dispersal_sampler::in_memory::separable_alias::InMemorySeparableAliasDispersalSampler,
     lineage_store::coherent::globally::gillespie::GillespieLineageStore,
     maths::intrinsics::IntrinsicsMathsCore, origin_sampler::pre_sampler::OriginPreSampler,
 };
 use necsim_impls_std::cogs::rng::pcg::Pcg;
-use necsim_partitioning_core::{partition::Partition, LocalPartition};
+use necsim_partitioning_core::{
+    partition::{Partition, PartitionSize},
+    LocalPartition, Partitioning,
+};
 
 use rustcoalescence_algorithms::{
     result::{ResumeError, SimulationOutcome},
     strategy::RestartFixUpStrategy,
-    Algorithm, AlgorithmDefaults, AlgorithmParamters,
+    Algorithm, AlgorithmDefaults, AlgorithmDispatch, AlgorithmParamters,
 };
-use rustcoalescence_scenarios::Scenario;
+use rustcoalescence_scenarios::{Scenario, ScenarioCogs};
 
-use crate::arguments::{get_gillespie_logical_partition, GillespieArguments};
+use crate::arguments::{
+    get_gillespie_logical_partition, get_gillespie_logical_partition_size, GillespieArguments,
+};
 
 mod initialiser;
 mod launch;
@@ -42,6 +46,23 @@ impl AlgorithmDefaults for EventSkippingAlgorithm {
     type Rng<M: MathsCore> = Pcg<M>;
 }
 
+impl<M: MathsCore, G: SplittableRng<M>, O: Scenario<M, G>, R: Reporter>
+    AlgorithmDispatch<M, G, O, R> for EventSkippingAlgorithm
+where
+    O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
+        GloballyCoherentLineageStore<M, O::Habitat>,
+    O::DispersalSampler: SeparableDispersalSampler<M, O::Habitat, G>,
+{
+    type Algorithm<'p, P: LocalPartition<'p, R>> = Self;
+
+    fn get_logical_partition_size<P: Partitioning>(
+        args: &Self::Arguments,
+        partitioning: &P,
+    ) -> PartitionSize {
+        get_gillespie_logical_partition_size(args, partitioning)
+    }
+}
+
 impl<
         'p,
         O: Scenario<M, G>,
@@ -53,8 +74,7 @@ impl<
 where
     O::LineageStore<GillespieLineageStore<M, O::Habitat>>:
         GloballyCoherentLineageStore<M, O::Habitat>,
-    O::DispersalSampler<InMemorySeparableAliasDispersalSampler<M, O::Habitat, G>>:
-        SeparableDispersalSampler<M, O::Habitat, G>,
+    O::DispersalSampler: SeparableDispersalSampler<M, O::Habitat, G>,
 {
     type LineageStore = O::LineageStore<GillespieLineageStore<M, O::Habitat>>;
 
@@ -65,7 +85,7 @@ where
     fn initialise_and_simulate<I: Iterator<Item = u64>>(
         args: Self::Arguments,
         rng: G,
-        scenario: O,
+        scenario: ScenarioCogs<M, G, O>,
         pre_sampler: OriginPreSampler<M, I>,
         pause_before: Option<NonNegativeF64>,
         local_partition: &mut P,
@@ -88,7 +108,7 @@ where
     fn resume_and_simulate<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: G,
-        scenario: O,
+        scenario: ScenarioCogs<M, G, O>,
         pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         resume_after: Option<NonNegativeF64>,
@@ -116,7 +136,7 @@ where
     fn fixup_for_restart<I: Iterator<Item = u64>, L: ExactSizeIterator<Item = Lineage>>(
         args: Self::Arguments,
         rng: G,
-        scenario: O,
+        scenario: ScenarioCogs<M, G, O>,
         pre_sampler: OriginPreSampler<M, I>,
         lineages: L,
         restart_at: PositiveF64,

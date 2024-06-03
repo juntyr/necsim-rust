@@ -1,19 +1,23 @@
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{sync::Arc, vec::Vec};
 use core::{marker::PhantomData, ops::Range};
 use necsim_core_bond::NonNegativeF64;
 
-use r#final::Final;
-
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore},
+    cogs::{Habitat, MathsCore, RngCore},
     landscape::Location,
 };
 
-use crate::{alias::packed::AliasMethodSamplerAtom, array2d::Array2D};
+use crate::{
+    alias::packed::AliasMethodSamplerAtom,
+    array2d::{ArcArray2D, Array2D},
+};
 
 mod dispersal;
 
-use super::InMemoryDispersalSampler;
+use super::{
+    contract::check_in_memory_dispersal_contract, InMemoryDispersalSampler,
+    InMemoryDispersalSamplerError,
+};
 
 #[derive(Clone, Debug, TypeLayout)]
 #[allow(clippy::module_name_repetitions)]
@@ -44,19 +48,21 @@ impl From<AliasSamplerRange> for Range<usize> {
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "H", free = "G"))]
 pub struct InMemoryPackedAliasDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>> {
     #[cfg_attr(feature = "cuda", cuda(embed))]
-    alias_dispersal_ranges: Final<Array2D<AliasSamplerRange>>,
+    alias_dispersal_ranges: ArcArray2D<AliasSamplerRange>,
     #[cfg_attr(feature = "cuda", cuda(embed))]
-    alias_dispersal_buffer: Final<Box<[AliasMethodSamplerAtom<usize>]>>,
+    alias_dispersal_buffer: Arc<[AliasMethodSamplerAtom<usize>]>,
     marker: PhantomData<(M, H, G)>,
 }
 
-#[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, G>
     for InMemoryPackedAliasDispersalSampler<M, H, G>
 {
-    /// Creates a new `InMemoryPackedAliasDispersalSampler` from the
-    /// `dispersal` map and extent of the habitat map.
-    fn unchecked_new(dispersal: &Array2D<NonNegativeF64>, habitat: &H) -> Self {
+    fn new(
+        dispersal: &Array2D<NonNegativeF64>,
+        habitat: &H,
+    ) -> Result<Self, InMemoryDispersalSamplerError> {
+        check_in_memory_dispersal_contract(dispersal, habitat)?;
+
         let habitat_extent = habitat.get_extent();
 
         let mut event_weights: Vec<(usize, NonNegativeF64)> =
@@ -105,11 +111,11 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
         )
         .unwrap(); // infallible by PRE;
 
-        Self {
-            alias_dispersal_ranges: Final::new(alias_dispersal_ranges),
-            alias_dispersal_buffer: Final::new(alias_dispersal_buffer.into_boxed_slice()),
+        Ok(Self {
+            alias_dispersal_ranges,
+            alias_dispersal_buffer: Arc::from(alias_dispersal_buffer.into_boxed_slice()),
             marker: PhantomData::<(M, H, G)>,
-        }
+        })
     }
 }
 
@@ -131,14 +137,13 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> core::fmt::Debug
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Backup
+impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Clone
     for InMemoryPackedAliasDispersalSampler<M, H, G>
 {
-    unsafe fn backup_unchecked(&self) -> Self {
+    fn clone(&self) -> Self {
         Self {
-            alias_dispersal_ranges: Final::new(self.alias_dispersal_ranges.clone()),
-            alias_dispersal_buffer: Final::new(self.alias_dispersal_buffer.clone()),
+            alias_dispersal_ranges: self.alias_dispersal_ranges.clone(),
+            alias_dispersal_buffer: self.alias_dispersal_buffer.clone(),
             marker: PhantomData::<(M, H, G)>,
         }
     }

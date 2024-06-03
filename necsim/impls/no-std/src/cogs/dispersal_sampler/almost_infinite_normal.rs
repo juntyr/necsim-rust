@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use necsim_core::{
-    cogs::{Backup, DispersalSampler, MathsCore, RngCore, SeparableDispersalSampler},
+    cogs::{DispersalSampler, MathsCore, RngCore, SeparableDispersalSampler},
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
@@ -39,9 +39,8 @@ impl<M: MathsCore, G: RngCore<M>> AlmostInfiniteNormalDispersalSampler<M, G> {
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> Backup for AlmostInfiniteNormalDispersalSampler<M, G> {
-    unsafe fn backup_unchecked(&self) -> Self {
+impl<M: MathsCore, G: RngCore<M>> Clone for AlmostInfiniteNormalDispersalSampler<M, G> {
+    fn clone(&self) -> Self {
         Self {
             sigma: self.sigma,
             self_dispersal: self.self_dispersal,

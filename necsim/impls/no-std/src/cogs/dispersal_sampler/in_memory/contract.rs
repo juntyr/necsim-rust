@@ -7,12 +7,22 @@ use necsim_core_bond::NonNegativeF64;
 
 use crate::array2d::Array2D;
 
+use super::InMemoryDispersalSamplerError;
+
 #[allow(clippy::module_name_repetitions)]
-pub fn explicit_in_memory_dispersal_check_contract<M: MathsCore, H: Habitat<M>>(
+pub fn check_in_memory_dispersal_contract<M: MathsCore, H: Habitat<M>>(
     dispersal: &Array2D<NonNegativeF64>,
     habitat: &H,
-) -> bool {
-    let habitat_width = habitat.get_extent().width();
+) -> Result<(), InMemoryDispersalSamplerError> {
+    let habitat_extent = habitat.get_extent();
+
+    let habitat_area = usize::from(habitat_extent.width()) * usize::from(habitat_extent.height());
+
+    if dispersal.num_rows() != habitat_area || dispersal.num_columns() != habitat_area {
+        return Err(InMemoryDispersalSamplerError::DispersalMapSizeMismatch);
+    }
+
+    let habitat_width = habitat_extent.width();
 
     for row_index in 0..dispersal.num_rows() {
         #[allow(clippy::cast_possible_truncation)]
@@ -33,8 +43,7 @@ pub fn explicit_in_memory_dispersal_check_contract<M: MathsCore, H: Habitat<M>>(
 
                 if dispersal[(row_index, col_index)] > 0.0_f64 {
                     if habitat.get_habitat_at_location(&dispersal_target) == 0 {
-                        // Dispersal from habitat to non-habitat
-                        return false;
+                        return Err(InMemoryDispersalSamplerError::DispersalToNonHabitat);
                     }
 
                     any_dispersal = true;
@@ -42,8 +51,7 @@ pub fn explicit_in_memory_dispersal_check_contract<M: MathsCore, H: Habitat<M>>(
             }
 
             if !any_dispersal {
-                // No dispersal from habitat
-                return false;
+                return Err(InMemoryDispersalSamplerError::NoDispersalFromHabitat);
             }
         } else {
             for col_index in 0..dispersal.num_columns() {
@@ -51,11 +59,11 @@ pub fn explicit_in_memory_dispersal_check_contract<M: MathsCore, H: Habitat<M>>(
                     // Dispersal probability from non-habitat must be 0.0
                     // - Dispersal from non-habitat (> 0.0)
                     // - Dispersal probabilities must be non-negative (< 0.0)
-                    return false;
+                    return Err(InMemoryDispersalSamplerError::DispersalFromNonHabitat);
                 }
             }
         }
     }
 
-    true
+    Ok(())
 }

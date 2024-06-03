@@ -5,10 +5,10 @@ use necsim_core::reporter::Reporter;
 use necsim_core_bond::PositiveF64;
 use necsim_partitioning_core::{
     partition::{Partition, PartitionSize},
-    LocalPartition,
+    LocalPartition, Partitioning,
 };
 
-#[derive(Serialize, Debug)]
+#[derive(Clone, Serialize, Debug)]
 #[allow(clippy::module_name_repetitions)]
 pub struct GillespieArguments {
     pub parallelism_mode: ParallelismMode,
@@ -48,17 +48,17 @@ struct GillespieArgumentsRaw {
     parallelism_mode: Option<ParallelismMode>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OptimisticParallelismMode {
     pub delta_sync: PositiveF64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AveragingParallelismMode {
     pub delta_sync: PositiveF64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ParallelismMode {
     Monolithic,
     Optimistic(OptimisticParallelismMode),
@@ -99,6 +99,20 @@ impl<'de> DeserializeState<'de, PartitionSize> for ParallelismMode {
             },
             partition_mode => Ok(partition_mode),
         }
+    }
+}
+
+#[must_use]
+pub fn get_gillespie_logical_partition_size<P: Partitioning>(
+    args: &GillespieArguments,
+    partitioning: &P,
+) -> PartitionSize {
+    match &args.parallelism_mode {
+        ParallelismMode::Monolithic => PartitionSize::MONOLITHIC,
+        ParallelismMode::Optimistic(_)
+        | ParallelismMode::Lockstep
+        | ParallelismMode::OptimisticLockstep
+        | ParallelismMode::Averaging(_) => partitioning.get_size(),
     }
 }
 

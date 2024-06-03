@@ -1,11 +1,9 @@
 #![allow(non_local_definitions)] // FIXME: displaydoc
 
-use alloc::boxed::Box;
-
-use r#final::Final;
+use alloc::sync::Arc;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, TurnoverRate},
+    cogs::{Habitat, MathsCore, TurnoverRate},
     landscape::Location,
 };
 use necsim_core_bond::NonNegativeF64;
@@ -13,20 +11,11 @@ use necsim_core_bond::NonNegativeF64;
 use crate::{array2d::Array2D, cogs::habitat::in_memory::InMemoryHabitat};
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 pub struct InMemoryTurnoverRate {
     #[cfg_attr(feature = "cuda", cuda(embed))]
-    turnover_rate: Final<Box<[NonNegativeF64]>>,
-}
-
-#[contract_trait]
-impl Backup for InMemoryTurnoverRate {
-    unsafe fn backup_unchecked(&self) -> Self {
-        Self {
-            turnover_rate: Final::new(self.turnover_rate.clone()),
-        }
-    }
+    turnover_rate: Arc<[NonNegativeF64]>,
 }
 
 #[contract_trait]
@@ -76,7 +65,7 @@ impl InMemoryTurnoverRate {
             })
         {
             Ok(Self {
-                turnover_rate: Final::new(turnover_rate.into_row_major().into_boxed_slice()),
+                turnover_rate: Arc::from(turnover_rate.into_row_major().into_boxed_slice()),
             })
         } else {
             Err(InMemoryTurnoverRateError::ZeroTurnoverHabitat)

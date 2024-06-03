@@ -22,6 +22,23 @@ struct AliasMethodSamplerAtomRaw<E: Copy + PartialEq> {
 }
 
 impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
+    pub fn u(&self) -> ClosedUnitF64 {
+        self.u
+    }
+
+    pub fn e(&self) -> E {
+        self.e
+    }
+
+    pub fn k(&self) -> E {
+        self.k
+    }
+
+    pub fn flip(&mut self) {
+        core::mem::swap(&mut self.e, &mut self.k);
+        self.u = self.u.one_minus();
+    }
+
     #[allow(clippy::no_effect_underscore_binding)]
     #[debug_requires(!event_weights.is_empty(), "event_weights is non-empty")]
     #[debug_requires(
@@ -102,29 +119,39 @@ impl<E: Copy + PartialEq> AliasMethodSamplerAtom<E> {
         }
     }
 
+    pub fn sample_event<M: MathsCore, G: RngCore<M>>(
+        alias_samplers: &[AliasMethodSamplerAtom<E>],
+        rng: &mut G,
+    ) -> E {
+        Self::sample_event_with_cdf_limit(alias_samplers, rng, ClosedUnitF64::one())
+    }
+
     #[allow(clippy::no_effect_underscore_binding)]
     #[debug_requires(!alias_samplers.is_empty(), "alias_samplers is non-empty")]
     #[debug_ensures(
         old(alias_samplers).iter().map(|s| s.e).any(|e| e == ret),
         "returns one of the weighted events"
     )]
-    pub fn sample_event<M: MathsCore, G: RngCore<M>>(
+    pub fn sample_event_with_cdf_limit<M: MathsCore, G: RngCore<M>>(
         alias_samplers: &[AliasMethodSamplerAtom<E>],
         rng: &mut G,
+        limit: ClosedUnitF64,
     ) -> E {
         use necsim_core::cogs::RngSampler;
 
-        let x = rng.sample_uniform_closed_open();
+        #[allow(clippy::cast_precision_loss)]
+        let f =
+            rng.sample_uniform_closed_open().get() * limit.get() * (alias_samplers.len() as f64);
 
         #[allow(
             clippy::cast_precision_loss,
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss
         )]
-        let i = M::floor(x.get() * (alias_samplers.len() as f64)) as usize; // index into events
+        let i = M::floor(f) as usize; // index into events
 
         #[allow(clippy::cast_precision_loss)]
-        let y = x.get() * (alias_samplers.len() as f64) - (i as f64); // U(0,1) to compare against U[i]
+        let y = f - (i as f64); // U(0,1) to compare against U[i]
 
         let sample = &alias_samplers[i];
 

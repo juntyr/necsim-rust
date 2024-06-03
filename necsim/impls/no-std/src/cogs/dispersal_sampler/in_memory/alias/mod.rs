@@ -3,32 +3,37 @@ use core::marker::PhantomData;
 use alloc::vec::Vec;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore},
+    cogs::{Habitat, MathsCore, RngCore},
     landscape::Location,
 };
 use necsim_core_bond::NonNegativeF64;
 
 use crate::{
-    alias::AliasMethodSampler, array2d::Array2D,
+    alias::AliasMethodSampler,
+    array2d::{ArcArray2D, Array2D},
     cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler,
 };
+
+use super::{contract::check_in_memory_dispersal_contract, InMemoryDispersalSamplerError};
 
 mod dispersal;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct InMemoryAliasDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>> {
-    alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
+    alias_dispersal: ArcArray2D<Option<AliasMethodSampler<usize>>>,
     marker: PhantomData<(M, H, G)>,
 }
 
-#[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, G>
     for InMemoryAliasDispersalSampler<M, H, G>
 {
-    /// Creates a new `InMemoryAliasDispersalSampler` from the
-    /// `dispersal` map and extent of the habitat map.
-    fn unchecked_new(dispersal: &Array2D<NonNegativeF64>, habitat: &H) -> Self {
+    fn new(
+        dispersal: &Array2D<NonNegativeF64>,
+        habitat: &H,
+    ) -> Result<Self, InMemoryDispersalSamplerError> {
+        check_in_memory_dispersal_contract(dispersal, habitat)?;
+
         let habitat_extent = habitat.get_extent();
 
         let mut event_weights: Vec<(usize, NonNegativeF64)> =
@@ -70,16 +75,15 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
         )
         .unwrap(); // infallible by PRE
 
-        Self {
+        Ok(Self {
             alias_dispersal,
             marker: PhantomData::<(M, H, G)>,
-        }
+        })
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Backup for InMemoryAliasDispersalSampler<M, H, G> {
-    unsafe fn backup_unchecked(&self) -> Self {
+impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Clone for InMemoryAliasDispersalSampler<M, H, G> {
+    fn clone(&self) -> Self {
         Self {
             alias_dispersal: self.alias_dispersal.clone(),
             marker: PhantomData::<(M, H, G)>,

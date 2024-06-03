@@ -676,6 +676,24 @@
              * optional, default = "100ms" */
             progress: (DurationString),
         )
+        /* the simulation is divided up across multiple threads, which
+            communicate using message passing and may share immutable data
+         * multi-threaded, single-process
+         * requires the `threads-partitioning` feature */
+      | Threads(
+            /* number of threads to distribute the simulation across */
+            threads: (1 < u32),
+            /* minimum time interval between migration messages
+             * optional, default = "100ms" */
+            migration: (DurationString),
+            /* minimum time interval between progress messages
+             * optional, default = "100ms" */
+            progress: (DurationString),
+            /* minimum time duration to wait after each progress message
+             *  before checking if any of the thread partitions has panicked
+             * optional, default = "200ms" */
+            panic: (DurationString),
+        )
     ),
 
     /* selection of the event persistence strategy

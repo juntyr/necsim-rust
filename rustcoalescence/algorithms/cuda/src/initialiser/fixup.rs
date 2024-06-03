@@ -12,11 +12,8 @@ use necsim_impls_no_std::cogs::{
         },
         resuming::lineage::{ExceptionalLineage, SplitExceptionalLineages},
     },
-    dispersal_sampler::{
-        in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
-        trespassing::{
-            uniform::UniformAntiTrespassingDispersalSampler, TrespassingDispersalSampler,
-        },
+    dispersal_sampler::trespassing::{
+        uniform::UniformAntiTrespassingDispersalSampler, TrespassingDispersalSampler,
     },
     lineage_store::independent::IndependentLineageStore,
     origin_sampler::{resuming::ResumingOriginSampler, TrustedOriginSampler},
@@ -48,7 +45,7 @@ impl<
     > CudaLineageStoreSampleInitialiser<M, G, O, ResumeError<CudaError>> for FixUpInitialiser<L>
 where
     O::Habitat: RustToCuda + Sync,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda + Sync,
+    O::DispersalSampler: RustToCuda + Sync,
     O::TurnoverRate: RustToCuda + Sync,
     O::SpeciationProbability: RustToCuda + Sync,
 {
@@ -71,7 +68,7 @@ where
         M,
         O::Habitat,
         G,
-        O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>,
+        O::DispersalSampler,
         UniformAntiTrespassingDispersalSampler<M, O::Habitat, G>,
     >;
 
@@ -85,9 +82,7 @@ where
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: O::DispersalSampler<
-            InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>,
-        >,
+        dispersal_sampler: O::DispersalSampler,
         _event_time_sampler: J,
     ) -> Result<
         (

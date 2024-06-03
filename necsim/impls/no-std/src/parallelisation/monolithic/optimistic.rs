@@ -87,7 +87,7 @@ pub fn simulate<
 
     while proxy
         .local_partition()
-        .reduce_vote_continue(!simulation.is_done())
+        .reduce_vote_any(!simulation.is_done())
     {
         let next_safe_time = global_safe_time + independent_time_slice;
 
@@ -127,7 +127,7 @@ pub fn simulate<
                 MigrationMode::Default,
             ));
 
-            while proxy.local_partition().wait_for_termination() {
+            while proxy.local_partition().wait_for_termination().is_continue() {
                 immigrants.extend(proxy.local_partition().migrate_individuals(
                     &mut core::iter::empty(),
                     MigrationMode::Force,
@@ -141,7 +141,7 @@ pub fn simulate<
             // immigration
             if proxy
                 .local_partition()
-                .reduce_vote_continue(immigrants != last_immigrants)
+                .reduce_vote_any(immigrants != last_immigrants)
             {
                 // Roll back the simulation to the last backup, clear out all generated events
                 *simulation = simulation_backup.resume();
@@ -154,9 +154,9 @@ pub fn simulate<
                 }
 
                 // Move the immigrating lineages into the simulation's immigration entry
-                for immigrant in immigrants.drain(..) {
-                    simulation.immigration_entry_mut().push(immigrant);
-                }
+                simulation
+                    .immigration_entry_mut()
+                    .extend(immigrants.drain(..));
             } else {
                 immigrants.clear();
                 last_immigrants.clear();
@@ -173,10 +173,8 @@ pub fn simulate<
 
     proxy.local_partition().report_progress_sync(0_u64);
 
-    let (global_time, global_steps) = proxy.local_partition().reduce_global_time_steps(
-        simulation.active_lineage_sampler().get_last_event_time(),
-        total_steps,
-    );
+    let local_time = simulation.active_lineage_sampler().get_last_event_time();
+    let local_steps = total_steps;
 
-    (Status::Done, global_time, global_steps)
+    (Status::Done, local_time, local_steps)
 }

@@ -54,13 +54,6 @@ impl<'de> Deserialize<'de> for GlobalLineageReference {
     }
 }
 
-#[contract_trait]
-impl Backup for GlobalLineageReference {
-    unsafe fn backup_unchecked(&self) -> Self {
-        GlobalLineageReference(self.0)
-    }
-}
-
 impl<M: MathsCore, H: Habitat<M>> LineageReference<M, H> for GlobalLineageReference {}
 
 #[allow(clippy::module_name_repetitions)]

@@ -3,7 +3,7 @@
 #![allow(internal_features)]
 #![feature(core_intrinsics)]
 
-pub trait MathsCore: 'static + Clone + core::fmt::Debug {
+pub trait MathsCore: 'static + Send + Sync + Clone + core::fmt::Debug {
     #[must_use]
     fn floor(x: f64) -> f64;
     #[must_use]

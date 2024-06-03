@@ -19,4 +19,8 @@ impl<'i> Iterator for ImmigrantPopIterator<'i> {
     fn next(&mut self) -> Option<Self::Item> {
         self.immigrants.pop()
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.immigrants.len(), Some(self.immigrants.len()))
+    }
 }

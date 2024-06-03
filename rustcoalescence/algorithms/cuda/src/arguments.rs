@@ -8,20 +8,20 @@ use necsim_partitioning_core::partition::{Partition, PartitionSize};
 
 use necsim_impls_no_std::parallelisation::independent::{DedupCache, EventSlice, RelativeCapacity};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MonolithicParallelismMode {
     pub event_slice: EventSlice,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct IsolatedParallelismMode {
     pub event_slice: EventSlice,
     pub partition: Partition,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ParallelismMode {
     Monolithic(MonolithicParallelismMode),
     IsolatedIndividuals(IsolatedParallelismMode),
@@ -56,7 +56,7 @@ impl<'de> DeserializeState<'de, PartitionSize> for ParallelismMode {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 #[allow(clippy::module_name_repetitions)]
 pub struct CudaArguments {
     pub device: u32,

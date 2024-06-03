@@ -8,7 +8,6 @@ use necsim_core::{
 
 use necsim_impls_no_std::cogs::{
     coalescence_sampler::unconditional::UnconditionalCoalescenceSampler,
-    dispersal_sampler::in_memory::alias::InMemoryAliasDispersalSampler,
     event_sampler::unconditional::UnconditionalEventSampler, origin_sampler::TrustedOriginSampler,
     turnover_rate::uniform::UniformTurnoverRate,
 };
@@ -70,7 +69,7 @@ pub trait ClassicalLineageStoreSampleInitialiser<
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: O::DispersalSampler<InMemoryAliasDispersalSampler<M, O::Habitat, G>>,
+        dispersal_sampler: O::DispersalSampler,
         local_partition: &mut P,
     ) -> Result<
         (

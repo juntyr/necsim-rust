@@ -3,39 +3,44 @@ use core::marker::PhantomData;
 use alloc::vec::Vec;
 
 use necsim_core::{
-    cogs::{Backup, Habitat, MathsCore, RngCore},
+    cogs::{Habitat, MathsCore, RngCore},
     landscape::Location,
 };
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
 use crate::{
-    alias::AliasMethodSampler, array2d::Array2D,
+    alias::AliasMethodSampler,
+    array2d::{ArcArray2D, Array2D, VecArray2D},
     cogs::dispersal_sampler::in_memory::InMemoryDispersalSampler,
 };
+
+use super::{contract::check_in_memory_dispersal_contract, InMemoryDispersalSamplerError};
 
 mod dispersal;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct InMemorySeparableAliasDispersalSampler<M: MathsCore, H: Habitat<M>, G: RngCore<M>> {
-    alias_dispersal: Array2D<Option<AliasMethodSampler<usize>>>,
-    self_dispersal: Array2D<ClosedUnitF64>,
+    alias_dispersal: ArcArray2D<Option<AliasMethodSampler<usize>>>,
+    self_dispersal: ArcArray2D<ClosedUnitF64>,
     _marker: PhantomData<(M, H, G)>,
 }
 
-#[contract_trait]
 impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, G>
     for InMemorySeparableAliasDispersalSampler<M, H, G>
 {
-    /// Creates a new `InMemorySeparableAliasDispersalSampler` from the
-    /// `dispersal` map and extent of the habitat map.
-    fn unchecked_new(dispersal: &Array2D<NonNegativeF64>, habitat: &H) -> Self {
+    fn new(
+        dispersal: &Array2D<NonNegativeF64>,
+        habitat: &H,
+    ) -> Result<Self, InMemoryDispersalSamplerError> {
+        check_in_memory_dispersal_contract(dispersal, habitat)?;
+
         let habitat_extent = habitat.get_extent();
 
         let mut event_weights: Vec<(usize, NonNegativeF64)> =
             Vec::with_capacity(dispersal.row_len());
 
-        let mut self_dispersal = Array2D::filled_with(
+        let mut self_dispersal = VecArray2D::filled_with(
             ClosedUnitF64::zero(),
             usize::from(habitat_extent.height()),
             usize::from(habitat_extent.width()),
@@ -73,6 +78,8 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                     }
                 }
 
+                // total weight needs to extra include the self-dispersal,
+                //  since it was excluded from event_weights earlier
                 let total_weight = event_weights
                     .iter()
                     .map(|(_e, w)| *w)
@@ -81,7 +88,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
 
                 if total_weight > 0.0_f64 {
                     // Safety: Normalisation limits the result to [0.0; 1.0]
-                    let dispersal_probability = unsafe {
+                    let self_dispersal_probability = unsafe {
                         ClosedUnitF64::new_unchecked(
                             (self_dispersal_at_location / total_weight).get(),
                         )
@@ -90,7 +97,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                     self_dispersal[(
                         row_index / usize::from(habitat_extent.width()),
                         row_index % usize::from(habitat_extent.width()),
-                    )] = dispersal_probability;
+                    )] = self_dispersal_probability;
                 }
 
                 if event_weights.is_empty() {
@@ -104,19 +111,18 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
         )
         .unwrap(); // infallible by PRE
 
-        Self {
+        Ok(Self {
             alias_dispersal,
-            self_dispersal,
+            self_dispersal: self_dispersal.switch_backend(),
             _marker: PhantomData::<(M, H, G)>,
-        }
+        })
     }
 }
 
-#[contract_trait]
-impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Backup
+impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> Clone
     for InMemorySeparableAliasDispersalSampler<M, H, G>
 {
-    unsafe fn backup_unchecked(&self) -> Self {
+    fn clone(&self) -> Self {
         Self {
             alias_dispersal: self.alias_dispersal.clone(),
             self_dispersal: self.self_dispersal.clone(),

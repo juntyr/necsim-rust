@@ -8,7 +8,6 @@ use necsim_impls_no_std::cogs::{
         independent::event_time_sampler::EventTimeSampler, singular::SingularActiveLineageSampler,
     },
     coalescence_sampler::independent::IndependentCoalescenceSampler,
-    dispersal_sampler::in_memory::packed_alias::InMemoryPackedAliasDispersalSampler,
     event_sampler::independent::IndependentEventSampler,
     immigration_entry::never::NeverImmigrationEntry,
     lineage_store::independent::IndependentLineageStore,
@@ -33,7 +32,7 @@ pub trait CudaLineageStoreSampleInitialiser<
     Error: From<CudaError>,
 > where
     O::Habitat: RustToCuda + Sync,
-    O::DispersalSampler<InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>>: RustToCuda + Sync,
+    O::DispersalSampler: RustToCuda + Sync,
     O::TurnoverRate: RustToCuda + Sync,
     O::SpeciationProbability: RustToCuda + Sync,
 {
@@ -65,9 +64,7 @@ pub trait CudaLineageStoreSampleInitialiser<
     >(
         self,
         origin_sampler: T,
-        dispersal_sampler: O::DispersalSampler<
-            InMemoryPackedAliasDispersalSampler<M, O::Habitat, G>,
-        >,
+        dispersal_sampler: O::DispersalSampler,
         event_time_sampler: J,
     ) -> Result<
         (

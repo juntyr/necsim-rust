@@ -3,42 +3,46 @@
 
 extern crate alloc;
 
-#[macro_use]
-extern crate contracts;
+use core::ops::ControlFlow;
 
 use necsim_core::{
     lineage::MigratingLineage,
     reporter::{boolean::Boolean, Reporter},
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::PositiveF64;
 
-pub mod context;
 pub mod iterator;
 pub mod partition;
+pub mod reporter;
 
-use context::ReporterContext;
 use partition::{Partition, PartitionSize};
+use reporter::{FinalisableReporter, ReporterContext};
 
-#[allow(clippy::inline_always, clippy::inline_fn_without_body)]
-#[contract_trait]
 pub trait Partitioning: Sized {
     type LocalPartition<'p, R: Reporter>: LocalPartition<'p, R>;
+    type FinalisableReporter<R: Reporter>: FinalisableReporter;
     type Auxiliary;
 
     fn get_size(&self) -> PartitionSize;
 
+    #[allow(clippy::missing_errors_doc)]
     fn with_local_partition<
         R: Reporter,
         P: ReporterContext<Reporter = R>,
-        F: for<'p> FnOnce(Self::LocalPartition<'p, R>) -> Q,
-        Q,
+        A: Data,
+        Q: Data + serde::Serialize + serde::de::DeserializeOwned,
     >(
         self,
         reporter_context: P,
         auxiliary: Self::Auxiliary,
-        inner: F,
-    ) -> anyhow::Result<Q>;
+        args: A,
+        inner: for<'p> fn(&mut Self::LocalPartition<'p, R>, A) -> Q,
+        fold: fn(Q, Q) -> Q,
+    ) -> anyhow::Result<(Q, Self::FinalisableReporter<R>)>;
 }
+
+pub trait Data: Send + Clone {}
+impl<T: Send + Clone> Data for T {}
 
 #[derive(Copy, Clone)]
 pub enum MigrationMode {
@@ -47,8 +51,6 @@ pub enum MigrationMode {
     Hold,
 }
 
-#[allow(clippy::inline_always, clippy::inline_fn_without_body)]
-#[contract_trait]
 pub trait LocalPartition<'p, R: Reporter>: Sized {
     type Reporter: Reporter;
     type IsLive: Boolean;
@@ -58,8 +60,6 @@ pub trait LocalPartition<'p, R: Reporter>: Sized {
         'p: 'a;
 
     fn get_reporter(&mut self) -> &mut Self::Reporter;
-
-    fn is_root(&self) -> bool;
 
     fn get_partition(&self) -> Partition;
 
@@ -72,19 +72,13 @@ pub trait LocalPartition<'p, R: Reporter>: Sized {
     where
         'p: 'a;
 
-    fn reduce_vote_continue(&self, local_continue: bool) -> bool;
+    fn reduce_vote_any(&mut self, vote: bool) -> bool;
 
-    fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64>;
+    #[allow(clippy::missing_errors_doc)]
+    fn reduce_vote_min_time(&mut self, local_time: PositiveF64)
+        -> Result<PositiveF64, PositiveF64>;
 
-    fn wait_for_termination(&mut self) -> bool;
-
-    fn reduce_global_time_steps(
-        &self,
-        local_time: NonNegativeF64,
-        local_steps: u64,
-    ) -> (NonNegativeF64, u64);
+    fn wait_for_termination(&mut self) -> ControlFlow<(), ()>;
 
     fn report_progress_sync(&mut self, remaining: u64);
-
-    fn finalise_reporting(self);
 }

@@ -74,7 +74,7 @@ pub fn simulate<
 
     let mut total_steps = 0_u64;
 
-    while local_partition.reduce_vote_continue(!simulation.is_done()) {
+    while local_partition.reduce_vote_any(!simulation.is_done()) {
         let next_safe_time = global_safe_time + independent_time_slice;
 
         let (_, new_steps) = simulation.simulate_incremental_early_stop(
@@ -98,31 +98,38 @@ pub fn simulate<
         //  i.e. no coalescence occurs
 
         // Send off the possible emigrant and recieve immigrants
-        for mut immigrant in local_partition.migrate_individuals(
-            simulation.emigration_exit_mut(),
-            MigrationMode::Default,
-            MigrationMode::Default,
-        ) {
-            // Push all immigrations to the next safe point such that they do
-            //  not conflict with the independence of the current time slice
-            immigrant.event_time = immigrant.event_time.max(next_safe_time);
+        let (emigration_exit, immigration_entry) = simulation.migration_portals_mut();
+        immigration_entry.extend(
+            local_partition
+                .migrate_individuals(
+                    emigration_exit,
+                    MigrationMode::Default,
+                    MigrationMode::Default,
+                )
+                .map(|mut immigrant| {
+                    // Push all immigrations to the next safe point such that they do
+                    //  not conflict with the independence of the current time slice
+                    immigrant.event_time = immigrant.event_time.max(next_safe_time);
+                    immigrant
+                }),
+        );
 
-            simulation.immigration_entry_mut().push(immigrant);
-        }
-
-        while local_partition.wait_for_termination() {
-            for mut immigrant in local_partition.migrate_individuals(
-                &mut core::iter::empty(),
-                MigrationMode::Force,
-                MigrationMode::Force,
-            ) {
-                // Push all immigrations to the next safe point such that they
-                //  do not conflict with the independence of the current time
-                //  slice
-                immigrant.event_time = immigrant.event_time.max(next_safe_time);
-
-                simulation.immigration_entry_mut().push(immigrant);
-            }
+        while local_partition.wait_for_termination().is_continue() {
+            simulation.immigration_entry_mut().extend(
+                local_partition
+                    .migrate_individuals(
+                        &mut core::iter::empty(),
+                        MigrationMode::Force,
+                        MigrationMode::Force,
+                    )
+                    .map(|mut immigrant| {
+                        // Push all immigrations to the next safe point such that they
+                        //  do not conflict with the independence of the current time
+                        //  slice
+                        immigrant.event_time = immigrant.event_time.max(next_safe_time);
+                        immigrant
+                    }),
+            );
         }
 
         // Globally advance the simulation to the next safe point
@@ -131,10 +138,8 @@ pub fn simulate<
 
     local_partition.report_progress_sync(0_u64);
 
-    let (global_time, global_steps) = local_partition.reduce_global_time_steps(
-        simulation.active_lineage_sampler().get_last_event_time(),
-        total_steps,
-    );
+    let local_time = simulation.active_lineage_sampler().get_last_event_time();
+    let local_steps = total_steps;
 
-    (Status::Done, global_time, global_steps)
+    (Status::Done, local_time, local_steps)
 }

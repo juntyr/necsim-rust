@@ -73,7 +73,7 @@ pub fn simulate<
 
     let mut total_steps = 0_u64;
 
-    while local_partition.reduce_vote_continue(!simulation.is_done()) {
+    while local_partition.reduce_vote_any(!simulation.is_done()) {
         // Get the next local emigration event time or +inf
         //  (we already know at least one partition has some next event time)
         let next_local_emigration_time = {
@@ -128,13 +128,12 @@ pub fn simulate<
                 total_steps += new_steps;
 
                 // Send off any emigration that might have occurred
-                for immigrant in local_partition.migrate_individuals(
-                    simulation.emigration_exit_mut(),
+                let (emigration_exit, immigration_entry) = simulation.migration_portals_mut();
+                immigration_entry.extend(local_partition.migrate_individuals(
+                    emigration_exit,
                     MigrationMode::Default,
                     MigrationMode::Default,
-                ) {
-                    simulation.immigration_entry_mut().push(immigrant);
-                }
+                ));
             },
             // All other partitions get to simulate until just before this next migration event
             Err(next_global_time) => {
@@ -154,14 +153,14 @@ pub fn simulate<
         }
 
         // Synchronise after performing any inter-partition migration
-        while local_partition.wait_for_termination() {
-            for immigrant in local_partition.migrate_individuals(
-                &mut core::iter::empty(),
-                MigrationMode::Force,
-                MigrationMode::Force,
-            ) {
-                simulation.immigration_entry_mut().push(immigrant);
-            }
+        while local_partition.wait_for_termination().is_continue() {
+            simulation
+                .immigration_entry_mut()
+                .extend(local_partition.migrate_individuals(
+                    &mut core::iter::empty(),
+                    MigrationMode::Force,
+                    MigrationMode::Force,
+                ));
         }
 
         // Advance the simulation backup to this new safe point
@@ -170,10 +169,8 @@ pub fn simulate<
 
     local_partition.report_progress_sync(0_u64);
 
-    let (global_time, global_steps) = local_partition.reduce_global_time_steps(
-        simulation.active_lineage_sampler().get_last_event_time(),
-        total_steps,
-    );
+    let local_time = simulation.active_lineage_sampler().get_last_event_time();
+    let local_steps = total_steps;
 
-    (Status::Done, global_time, global_steps)
+    (Status::Done, local_time, local_steps)
 }

@@ -1,11 +1,11 @@
 use core::marker::PhantomData;
 
-use necsim_core::cogs::{Backup, MathsCore, PrimeableRng, RngCore};
+use necsim_core::cogs::{MathsCore, PrimeableRng, RngCore};
 
 use serde::{Deserialize, Serialize};
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug, Serialize, Deserialize, TypeLayout)]
+#[derive(Debug, Serialize, Deserialize, TypeLayout)]
 #[serde(deny_unknown_fields)]
 #[layout(free = "M")]
 pub struct SeaHash<M: MathsCore> {
@@ -17,10 +17,15 @@ pub struct SeaHash<M: MathsCore> {
     marker: PhantomData<M>,
 }
 
-#[contract_trait]
-impl<M: MathsCore> Backup for SeaHash<M> {
-    unsafe fn backup_unchecked(&self) -> Self {
-        self.clone()
+impl<M: MathsCore> Clone for SeaHash<M> {
+    fn clone(&self) -> Self {
+        Self {
+            seed: self.seed,
+            location: self.location,
+            time: self.time,
+            offset: self.offset,
+            marker: PhantomData::<M>,
+        }
     }
 }
 

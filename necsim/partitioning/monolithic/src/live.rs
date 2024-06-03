@@ -1,14 +1,13 @@
-use std::fmt;
+use std::{fmt, ops::ControlFlow};
 
 use necsim_core::{
     lineage::MigratingLineage,
     reporter::{boolean::True, FilteredReporter, Reporter},
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::PositiveF64;
 
 use necsim_partitioning_core::{
-    context::ReporterContext, iterator::ImmigrantPopIterator, partition::Partition, LocalPartition,
-    MigrationMode,
+    iterator::ImmigrantPopIterator, partition::Partition, LocalPartition, MigrationMode,
 };
 
 #[allow(clippy::module_name_repetitions)]
@@ -34,7 +33,6 @@ impl<R: Reporter> fmt::Debug for LiveMonolithicLocalPartition<R> {
     }
 }
 
-#[contract_trait]
 impl<'p, R: Reporter> LocalPartition<'p, R> for LiveMonolithicLocalPartition<R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
     type IsLive = True;
@@ -42,10 +40,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for LiveMonolithicLocalPartition<R> 
 
     fn get_reporter(&mut self) -> &mut Self::Reporter {
         &mut self.reporter
-    }
-
-    fn is_root(&self) -> bool {
-        true
     }
 
     fn get_partition(&self) -> Partition {
@@ -68,32 +62,27 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for LiveMonolithicLocalPartition<R> 
         ImmigrantPopIterator::new(&mut self.loopback)
     }
 
-    fn reduce_vote_continue(&self, local_continue: bool) -> bool {
-        local_continue
+    fn reduce_vote_any(&mut self, vote: bool) -> bool {
+        vote
     }
 
-    fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64> {
+    fn reduce_vote_min_time(
+        &mut self,
+        local_time: PositiveF64,
+    ) -> Result<PositiveF64, PositiveF64> {
         Ok(local_time)
     }
 
-    fn wait_for_termination(&mut self) -> bool {
-        !self.loopback.is_empty()
-    }
-
-    fn reduce_global_time_steps(
-        &self,
-        local_time: NonNegativeF64,
-        local_steps: u64,
-    ) -> (NonNegativeF64, u64) {
-        (local_time, local_steps)
+    fn wait_for_termination(&mut self) -> ControlFlow<(), ()> {
+        if self.loopback.is_empty() {
+            ControlFlow::Break(())
+        } else {
+            ControlFlow::Continue(())
+        }
     }
 
     fn report_progress_sync(&mut self, remaining: u64) {
         self.reporter.report_progress(&remaining.into());
-    }
-
-    fn finalise_reporting(self) {
-        self.reporter.finalise();
     }
 }
 
@@ -105,12 +94,7 @@ impl<R: Reporter> LiveMonolithicLocalPartition<R> {
         }
     }
 
-    /// # Errors
-    ///
-    /// Returns any error which occured while building the context's reporter
-    pub(crate) fn try_from_context<P: ReporterContext<Reporter = R>>(
-        context: P,
-    ) -> anyhow::Result<Self> {
-        Ok(Self::from_reporter(context.try_build()?))
+    pub(crate) fn into_reporter(self) -> FilteredReporter<R, True, True, True> {
+        self.reporter
     }
 }

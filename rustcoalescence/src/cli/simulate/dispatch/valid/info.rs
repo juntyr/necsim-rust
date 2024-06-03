@@ -2,41 +2,47 @@ use std::fmt::Write;
 
 use anyhow::{Context, Result};
 
-use rustcoalescence_algorithms::{result::SimulationOutcome, Algorithm};
+use necsim_impls_std::event_log::recorder::EventLogConfig;
+use rustcoalescence_algorithms::{result::SimulationOutcome, AlgorithmDispatch};
 
 use necsim_core::{
     cogs::{MathsCore, RngCore},
     reporter::{boolean::Boolean, Reporter},
 };
 use necsim_core_bond::NonNegativeF64;
-use necsim_partitioning_core::LocalPartition;
+use necsim_partitioning_core::reporter::{FinalisableReporter, ReporterContext};
 
-use rustcoalescence_scenarios::Scenario;
+use rustcoalescence_scenarios::{Scenario, ScenarioCogs};
 
 use crate::args::{
-    config::sample::{Sample, SampleMode, SampleModeRestart},
+    config::{
+        partitioning::Partitioning,
+        sample::{Sample, SampleMode, SampleModeRestart},
+    },
     utils::parse::try_print,
 };
 
-use super::{super::super::BufferingSimulateArgsBuilder, launch};
+use super::{super::super::BufferingSimulateArgsBuilder, partitioning};
 
 #[allow(dead_code)]
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 pub(super) fn dispatch<
-    'p,
     M: MathsCore,
     G: RngCore<M>,
-    A: Algorithm<'p, M, G, O, R, P>,
+    A: AlgorithmDispatch<M, G, O, R>,
     O: Scenario<M, G>,
     R: Reporter,
-    P: LocalPartition<'p, R>,
+    P: ReporterContext<Reporter = R>,
 >(
-    algorithm_args: A::Arguments,
-    rng: G,
-    scenario: O,
+    partitioning: Partitioning,
+    event_log: Option<EventLogConfig>,
+    reporter_context: P,
+
     sample: Sample,
+    rng: G,
+    scenario: ScenarioCogs<M, G, O>,
+    algorithm_args: A::Arguments,
     pause_before: Option<NonNegativeF64>,
-    mut local_partition: P,
 
     normalised_args: &BufferingSimulateArgsBuilder,
 ) -> anyhow::Result<SimulationOutcome<M, G>>
@@ -70,36 +76,39 @@ where
     }
     info!("{}", resume_pause);
 
-    let logical_partition = A::get_logical_partition(&algorithm_args, &local_partition);
-    if logical_partition.size().get() <= 1 {
+    let logical_partition_size =
+        partitioning.get_logical_partition_size::<M, G, O, R, A>(&algorithm_args);
+    if logical_partition_size.get() <= 1 {
         info!("The scenario will be simulated as one monolithic partition.");
     } else {
         info!(
             "The scenario will be simulated across {} logical partitions.",
-            logical_partition.size()
+            logical_partition_size
         );
     }
 
-    let physical_partition = local_partition.get_partition();
-    if physical_partition.size().get() <= 1 {
+    let physical_partition_size = partitioning.get_size();
+    if physical_partition_size.get() <= 1 {
         info!("The simulation will be run on one processing unit.");
     } else {
         info!(
             "The simulation will be distributed across {} processing units.",
-            physical_partition.size()
+            physical_partition_size
         );
     }
 
-    if <P::Reporter as Reporter>::ReportSpeciation::VALUE {
-        if P::IsLive::VALUE {
+    let will_report_live = partitioning.will_report_live(&event_log);
+
+    if R::ReportSpeciation::VALUE {
+        if will_report_live {
             info!("The simulation will report speciation events live.");
         } else {
             info!("The simulation will record speciation events.");
         }
     }
 
-    if <P::Reporter as Reporter>::ReportDispersal::VALUE {
-        if P::IsLive::VALUE {
+    if R::ReportDispersal::VALUE {
+        if will_report_live {
             info!("The simulation will report dispersal events live.");
         } else {
             info!("The simulation will record dispersal events.");
@@ -107,24 +116,23 @@ where
         }
     }
 
-    if <P::Reporter as Reporter>::ReportProgress::VALUE {
+    if R::ReportProgress::VALUE {
         info!("The simulation will report progress events live.");
     }
 
-    if !<P::Reporter as Reporter>::ReportSpeciation::VALUE
-        && !<P::Reporter as Reporter>::ReportDispersal::VALUE
-        && !<P::Reporter as Reporter>::ReportProgress::VALUE
-    {
+    if !R::ReportSpeciation::VALUE && !R::ReportDispersal::VALUE && !R::ReportProgress::VALUE {
         warn!("The simulation will report no events.");
     }
 
-    let result = launch::simulate::<M, G, A, O, R, P>(
-        algorithm_args,
+    let (result, reporter) = partitioning::dispatch::<M, G, A, O, R, P>(
+        partitioning,
+        event_log,
+        reporter_context,
+        sample,
         rng,
         scenario,
-        sample,
+        algorithm_args,
         pause_before,
-        &mut local_partition,
     )?;
 
     if log::log_enabled!(log::Level::Info) {
@@ -140,7 +148,7 @@ where
         println!();
     }
 
-    local_partition.finalise_reporting();
+    reporter.finalise();
 
     if log::log_enabled!(log::Level::Info) {
         println!();

@@ -1,14 +1,17 @@
+use std::ops::ControlFlow;
+
 use necsim_core::{
     impl_report,
     lineage::MigratingLineage,
     reporter::{boolean::False, Reporter},
 };
-use necsim_core_bond::{NonNegativeF64, PositiveF64};
+use necsim_core_bond::PositiveF64;
 
 use necsim_partitioning_core::{
     iterator::ImmigrantPopIterator, partition::Partition, LocalPartition, MigrationMode,
 };
 
+mod common;
 mod parallel;
 mod root;
 mod utils;
@@ -18,6 +21,8 @@ pub use parallel::MpiParallelPartition;
 #[allow(clippy::module_name_repetitions)]
 pub use root::MpiRootPartition;
 
+use crate::FinalisableMpiReporter;
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub enum MpiLocalPartition<'p, R: Reporter> {
@@ -25,7 +30,6 @@ pub enum MpiLocalPartition<'p, R: Reporter> {
     Parallel(Box<MpiParallelPartition<'p, R>>),
 }
 
-#[contract_trait]
 impl<'p, R: Reporter> LocalPartition<'p, R> for MpiLocalPartition<'p, R> {
     type ImmigrantIterator<'a> = ImmigrantPopIterator<'a> where 'p: 'a, R: 'a;
     type IsLive = False;
@@ -33,13 +37,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiLocalPartition<'p, R> {
 
     fn get_reporter(&mut self) -> &mut Self::Reporter {
         self
-    }
-
-    fn is_root(&self) -> bool {
-        match self {
-            Self::Root(partition) => partition.is_root(),
-            Self::Parallel(partition) => partition.is_root(),
-        }
     }
 
     fn get_partition(&self) -> Partition {
@@ -68,37 +65,27 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiLocalPartition<'p, R> {
         }
     }
 
-    fn reduce_vote_continue(&self, local_continue: bool) -> bool {
+    fn reduce_vote_any(&mut self, vote: bool) -> bool {
         match self {
-            Self::Root(partition) => partition.reduce_vote_continue(local_continue),
-            Self::Parallel(partition) => partition.reduce_vote_continue(local_continue),
+            Self::Root(partition) => partition.reduce_vote_any(vote),
+            Self::Parallel(partition) => partition.reduce_vote_any(vote),
         }
     }
 
-    fn reduce_vote_min_time(&self, local_time: PositiveF64) -> Result<PositiveF64, PositiveF64> {
+    fn reduce_vote_min_time(
+        &mut self,
+        local_time: PositiveF64,
+    ) -> Result<PositiveF64, PositiveF64> {
         match self {
             Self::Root(partition) => partition.reduce_vote_min_time(local_time),
             Self::Parallel(partition) => partition.reduce_vote_min_time(local_time),
         }
     }
 
-    fn wait_for_termination(&mut self) -> bool {
+    fn wait_for_termination(&mut self) -> ControlFlow<(), ()> {
         match self {
             Self::Root(partition) => partition.wait_for_termination(),
             Self::Parallel(partition) => partition.wait_for_termination(),
-        }
-    }
-
-    fn reduce_global_time_steps(
-        &self,
-        local_time: NonNegativeF64,
-        local_steps: u64,
-    ) -> (NonNegativeF64, u64) {
-        match self {
-            Self::Root(partition) => partition.reduce_global_time_steps(local_time, local_steps),
-            Self::Parallel(partition) => {
-                partition.reduce_global_time_steps(local_time, local_steps)
-            },
         }
     }
 
@@ -106,13 +93,6 @@ impl<'p, R: Reporter> LocalPartition<'p, R> for MpiLocalPartition<'p, R> {
         match self {
             Self::Root(partition) => partition.report_progress_sync(remaining),
             Self::Parallel(partition) => partition.report_progress_sync(remaining),
-        }
-    }
-
-    fn finalise_reporting(self) {
-        match self {
-            Self::Root(partition) => partition.finalise_reporting(),
-            Self::Parallel(partition) => partition.finalise_reporting(),
         }
     }
 }
@@ -150,4 +130,13 @@ impl<'p, R: Reporter> Reporter for MpiLocalPartition<'p, R> {
             ),
         }
     });
+}
+
+impl<'p, R: Reporter> MpiLocalPartition<'p, R> {
+    pub(crate) fn into_reporter(self) -> FinalisableMpiReporter<R> {
+        match self {
+            Self::Root(partition) => FinalisableMpiReporter::Root(partition.into_reporter().into()),
+            Self::Parallel(_) => FinalisableMpiReporter::Parallel,
+        }
+    }
 }

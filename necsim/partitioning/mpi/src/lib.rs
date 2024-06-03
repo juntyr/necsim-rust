@@ -8,19 +8,31 @@ use std::{fmt, mem::ManuallyDrop, num::NonZeroU32, time::Duration};
 use anyhow::Context;
 use humantime_serde::re::humantime::format_duration;
 use mpi::{
+    datatype::PartitionMut,
     environment::Universe,
     topology::{Communicator, Rank, SimpleCommunicator},
-    Tag,
+    traits::CommunicatorCollectives,
+    Count, Tag,
 };
 use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 use serde_derive_state::DeserializeState;
 use serde_state::{DeserializeState, Deserializer};
 use thiserror::Error;
 
-use necsim_core::{lineage::MigratingLineage, reporter::Reporter};
+use necsim_core::{
+    lineage::MigratingLineage,
+    reporter::{
+        boolean::{False, True},
+        FilteredReporter, Reporter,
+    },
+};
 
-use necsim_impls_std::event_log::recorder::EventLogRecorder;
-use necsim_partitioning_core::{context::ReporterContext, partition::PartitionSize, Partitioning};
+use necsim_impls_std::event_log::recorder::EventLogConfig;
+use necsim_partitioning_core::{
+    partition::PartitionSize,
+    reporter::{FinalisableReporter, OpaqueFinalisableReporter, ReporterContext},
+    Data, Partitioning,
+};
 
 mod partition;
 mod request;
@@ -152,9 +164,9 @@ impl MpiPartitioning {
     }
 }
 
-#[contract_trait]
 impl Partitioning for MpiPartitioning {
-    type Auxiliary = Option<EventLogRecorder>;
+    type Auxiliary = Option<EventLogConfig>;
+    type FinalisableReporter<R: Reporter> = FinalisableMpiReporter<R>;
     type LocalPartition<'p, R: Reporter> = MpiLocalPartition<'p, R>;
 
     fn get_size(&self) -> PartitionSize {
@@ -172,24 +184,23 @@ impl Partitioning for MpiPartitioning {
     fn with_local_partition<
         R: Reporter,
         P: ReporterContext<Reporter = R>,
-        F: for<'p> FnOnce(Self::LocalPartition<'p, R>) -> Q,
-        Q,
+        A: Data,
+        Q: Data + serde::Serialize + serde::de::DeserializeOwned,
     >(
         self,
         reporter_context: P,
         event_log: Self::Auxiliary,
-        inner: F,
-    ) -> anyhow::Result<Q> {
+        args: A,
+        inner: for<'p> fn(&mut Self::LocalPartition<'p, R>, A) -> Q,
+        fold: fn(Q, Q) -> Q,
+    ) -> anyhow::Result<(Q, Self::FinalisableReporter<R>)> {
         let Some(event_log) = event_log else {
             anyhow::bail!(MpiLocalPartitionError::MissingEventLog)
         };
 
-        let mut directory = event_log.directory().to_owned();
-        directory.push(self.world.rank().to_string());
-
-        let event_log = event_log
-            .r#move(&directory)
-            .and_then(EventLogRecorder::assert_empty)
+        let partition_event_log = event_log
+            .new_child_log(&self.world.rank().to_string())
+            .and_then(EventLogConfig::create)
             .context(MpiLocalPartitionError::InvalidEventSubLog)?;
 
         let mut mpi_local_global_wait = (false, false);
@@ -198,27 +209,27 @@ impl Partitioning for MpiPartitioning {
         #[allow(clippy::cast_sign_loss)]
         let world_size = self.world.size() as usize;
 
-        let mut mpi_migration_buffers: Vec<Vec<MigratingLineage>> = Vec::with_capacity(world_size);
-        mpi_migration_buffers.resize_with(world_size, Vec::new);
+        let mut mpi_emigration_buffers: Vec<Vec<MigratingLineage>> = Vec::with_capacity(world_size);
+        mpi_emigration_buffers.resize_with(world_size, Vec::new);
 
         mpi::request::scope(|scope| {
             let scope = reduce_scope(scope);
 
             let mpi_local_global_wait = DataOrRequest::new(&mut mpi_local_global_wait, scope);
             let mpi_local_remaining = DataOrRequest::new(&mut mpi_local_remaining, scope);
-            let mpi_migration_buffers = mpi_migration_buffers
+            let mpi_emigration_buffers = mpi_emigration_buffers
                 .iter_mut()
                 .map(|buffer| DataOrRequest::new(buffer, scope))
                 .collect::<Vec<_>>()
                 .into_boxed_slice();
 
-            let local_partition = if self.world.rank() == MpiPartitioning::ROOT_RANK {
+            let mut local_partition = if self.world.rank() == MpiPartitioning::ROOT_RANK {
                 MpiLocalPartition::Root(Box::new(MpiRootPartition::new(
                     ManuallyDrop::into_inner(self.universe),
                     mpi_local_global_wait,
-                    mpi_migration_buffers,
+                    mpi_emigration_buffers,
                     reporter_context.try_build()?,
-                    event_log,
+                    partition_event_log,
                     self.migration_interval,
                     self.progress_interval,
                 )))
@@ -227,14 +238,18 @@ impl Partitioning for MpiPartitioning {
                     ManuallyDrop::into_inner(self.universe),
                     mpi_local_global_wait,
                     mpi_local_remaining,
-                    mpi_migration_buffers,
-                    event_log,
+                    mpi_emigration_buffers,
+                    partition_event_log,
                     self.migration_interval,
                     self.progress_interval,
                 )))
             };
 
-            Ok(inner(local_partition))
+            let local_result = inner(&mut local_partition, args);
+
+            let result = reduce_partitioning_data(&self.world, local_result, fold)?;
+
+            Ok((result, local_partition.into_reporter()))
         })
     }
 }
@@ -278,5 +293,80 @@ fn deserialize_state_mpi_world<'de, D: Deserializer<'de>>(
         Some(_) => Err(serde::de::Error::custom(format!(
             "mismatch with MPI world size of {mpi_world}"
         ))),
+    }
+}
+
+fn reduce_partitioning_data<T: serde::Serialize + serde::de::DeserializeOwned>(
+    world: &SimpleCommunicator,
+    data: T,
+    fold: fn(T, T) -> T,
+) -> anyhow::Result<T> {
+    let local_ser =
+        postcard::to_stdvec(&data).context("MPI local partition result failed to serialize")?;
+    std::mem::drop(data);
+    let local_ser_len = Count::try_from(local_ser.len())
+        .context("MPI local partition result is too big to share")?;
+
+    #[allow(clippy::cast_sign_loss)]
+    let mut counts = vec![0 as Count; world.size() as usize];
+    world.all_gather_into(&local_ser_len, &mut counts);
+
+    let offsets = counts
+        .iter()
+        .scan(0 as Count, |acc, &x| {
+            let tmp = *acc;
+            if let Some(a) = (*acc).checked_add(x) {
+                *acc = a;
+            } else {
+                return Some(Err(anyhow::anyhow!(
+                    "MPI combined local partition results are too big to share"
+                )));
+            }
+            Some(Ok(tmp))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    #[allow(clippy::cast_sign_loss)]
+    let mut all_sers = vec![0_u8; counts.iter().copied().sum::<Count>() as usize];
+    world.all_gather_varcount_into(
+        local_ser.as_slice(),
+        &mut PartitionMut::new(all_sers.as_mut_slice(), counts.as_slice(), offsets),
+    );
+
+    let folded: Option<T> = counts
+        .iter()
+        .scan(0_usize, |acc, &x| {
+            let pre = *acc;
+            #[allow(clippy::cast_sign_loss)]
+            {
+                *acc += x as usize;
+            }
+            let post = *acc;
+
+            let de: anyhow::Result<T> = postcard::from_bytes(&all_sers[pre..post])
+                .context("MPI data failed to deserialize");
+
+            Some(de)
+        })
+        .try_fold(None, |acc, x| match (acc, x) {
+            (_, Err(err)) => Err(err),
+            (Some(acc), Ok(x)) => Ok(Some(fold(acc, x))),
+            (None, Ok(x)) => Ok(Some(x)),
+        })?;
+    let folded = folded.expect("at least one MPI partitioning result");
+
+    Ok(folded)
+}
+
+pub enum FinalisableMpiReporter<R: Reporter> {
+    Root(OpaqueFinalisableReporter<FilteredReporter<R, False, False, True>>),
+    Parallel,
+}
+
+impl<R: Reporter> FinalisableReporter for FinalisableMpiReporter<R> {
+    fn finalise(self) {
+        if let Self::Root(reporter) = self {
+            reporter.finalise();
+        }
     }
 }

@@ -1,8 +1,8 @@
-use std::num::NonZeroU32;
+use std::{marker::PhantomData, num::NonZeroU32};
 
 use serde::{Deserialize, Serialize};
 
-use necsim_core::cogs::{DispersalSampler, LineageStore, MathsCore, RngCore};
+use necsim_core::cogs::{LineageStore, MathsCore, RngCore};
 use necsim_core_bond::{OffByOneU32, OpenClosedUnitF64 as PositiveUnitF64};
 use necsim_partitioning_core::partition::Partition;
 
@@ -17,15 +17,10 @@ use necsim_impls_no_std::{
     decomposition::modulo::ModuloDecomposition,
 };
 
-use crate::{Scenario, ScenarioParameters};
+use crate::{Scenario, ScenarioCogs, ScenarioParameters};
 
-#[allow(clippy::module_name_repetitions)]
-pub struct NonSpatialScenario<M: MathsCore, G: RngCore<M>> {
-    habitat: NonSpatialHabitat<M>,
-    dispersal_sampler: NonSpatialDispersalSampler<M, G>,
-    turnover_rate: UniformTurnoverRate,
-    speciation_probability: UniformSpeciationProbability,
-}
+#[allow(clippy::module_name_repetitions, clippy::empty_enum)]
+pub enum NonSpatialScenario {}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
@@ -36,16 +31,15 @@ pub struct NonSpatialArguments {
     pub deme: NonZeroU32,
 }
 
-impl<M: MathsCore, G: RngCore<M>> ScenarioParameters for NonSpatialScenario<M, G> {
+impl ScenarioParameters for NonSpatialScenario {
     type Arguments = NonSpatialArguments;
     type Error = !;
 }
 
-impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for NonSpatialScenario<M, G> {
+impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for NonSpatialScenario {
     type Decomposition = ModuloDecomposition;
     type DecompositionAuxiliary = ();
-    type DispersalSampler<D: DispersalSampler<M, Self::Habitat, G>> =
-        NonSpatialDispersalSampler<M, G>;
+    type DispersalSampler = NonSpatialDispersalSampler<M, G>;
     type Habitat = NonSpatialHabitat<M>;
     type LineageStore<L: LineageStore<M, Self::Habitat>> = L;
     type OriginSampler<'h, I: Iterator<Item = u64>> = NonSpatialOriginSampler<'h, M, I> where G: 'h;
@@ -53,42 +47,25 @@ impl<M: MathsCore, G: RngCore<M>> Scenario<M, G> for NonSpatialScenario<M, G> {
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;
 
-    fn initialise(
+    fn new(
         args: Self::Arguments,
         speciation_probability_per_generation: PositiveUnitF64,
-    ) -> Result<Self, Self::Error> {
+    ) -> Result<ScenarioCogs<M, G, Self>, Self::Error> {
         let habitat = NonSpatialHabitat::new(args.area, args.deme);
         let dispersal_sampler = NonSpatialDispersalSampler::default();
         let turnover_rate = UniformTurnoverRate::default();
         let speciation_probability =
             UniformSpeciationProbability::new(speciation_probability_per_generation.into());
 
-        Ok(Self {
+        Ok(ScenarioCogs {
             habitat,
             dispersal_sampler,
             turnover_rate,
             speciation_probability,
+            origin_sampler_auxiliary: (),
+            decomposition_auxiliary: (),
+            _marker: PhantomData::<(M, G, Self)>,
         })
-    }
-
-    fn build<D: DispersalSampler<M, Self::Habitat, G>>(
-        self,
-    ) -> (
-        Self::Habitat,
-        Self::DispersalSampler<D>,
-        Self::TurnoverRate,
-        Self::SpeciationProbability,
-        Self::OriginSamplerAuxiliary,
-        Self::DecompositionAuxiliary,
-    ) {
-        (
-            self.habitat,
-            self.dispersal_sampler,
-            self.turnover_rate,
-            self.speciation_probability,
-            (),
-            (),
-        )
     }
 
     fn sample_habitat<'h, I: Iterator<Item = u64>>(
