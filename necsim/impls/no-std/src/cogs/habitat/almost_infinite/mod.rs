@@ -8,6 +8,8 @@ use necsim_core_bond::{OffByOneU32, OffByOneU64};
 
 use crate::cogs::lineage_store::coherent::globally::singleton_demes::SingletonDemesHabitat;
 
+pub mod downscaled;
+
 const ALMOST_INFINITE_EXTENT: LandscapeExtent =
     LandscapeExtent::new(Location::new(0, 0), OffByOneU32::max(), OffByOneU32::max());
 
