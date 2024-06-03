@@ -185,18 +185,6 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                         start: range_from,
                         end: alias_dispersal_buffer.len(),
                     }
-
-                    // static DEBUG: core::sync::atomic::AtomicUsize =
-                    // core::sync::atomic::AtomicUsize::new(0);
-
-                    // if self_dispersal_probability.get() > 0.0 &&
-                    // self_dispersal_probability < 1.0 {
-                    //     log::warn!("{row_index} {atoms:?}
-                    // {non_self_dispersal_event}
-                    // {self_dispersal_probability}");
-                    //     assert!(DEBUG.fetch_add(1,
-                    // core::sync::atomic::Ordering::SeqCst) <= 10);
-                    // }
                 }
             }),
             usize::from(habitat_extent.height()),
