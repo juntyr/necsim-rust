@@ -38,9 +38,9 @@ pub struct SeparableAliasSelfDispersal {
     self_dispersal: ClosedUnitF64,
     // non-self-dispersal event to sample in case rounding errors cause
     //  self-dispersal to be sampled in no-self-dispersal mode
-    // if `Some(x)`, then x is the event
-    // if `None`, then self-dispersal is not part of the alias sampler
-    non_self_dispersal_event: Option<usize>,
+    // if it is set to self-dispersal, then it marks self-dispersal not
+    //  being part of the alias sampler
+    non_self_dispersal_event: usize,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -74,14 +74,16 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
 
         let mut alias_dispersal_buffer = Vec::new();
 
-        let mut self_dispersal = VecArray2D::filled_with(
-            SeparableAliasSelfDispersal {
+        let mut self_dispersal = VecArray2D::from_iter_row_major(
+            (0..).map(|self_dispersal_event| SeparableAliasSelfDispersal {
                 self_dispersal: ClosedUnitF64::zero(),
-                non_self_dispersal_event: None,
-            },
+                // no self-dispersal
+                non_self_dispersal_event: self_dispersal_event,
+            }),
             usize::from(habitat_extent.height()),
             usize::from(habitat_extent.width()),
-        );
+        )
+        .unwrap();
 
         let alias_dispersal_ranges = Array2D::from_iter_row_major(
             dispersal.rows_iter().enumerate().map(|(row_index, row)| {
@@ -140,7 +142,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                         / total_weight;
 
                     let mut atoms;
-                    let mut non_self_dispersal_event = None;
+                    let mut non_self_dispersal_event = row_index;
 
                     if self_dispersal_u < 1.0 {
                         atoms = AliasMethodSamplerAtom::create(&event_weights);
@@ -160,7 +162,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                             if self_dispersal_atom.e() == row_index {
                                 self_dispersal_atom.flip();
                             }
-                            non_self_dispersal_event = Some(self_dispersal_atom.e());
+                            non_self_dispersal_event = self_dispersal_atom.e();
                             let last_atom_index = atoms.len() - 1;
                             atoms.swap(self_dispersal_index, last_atom_index);
                         };

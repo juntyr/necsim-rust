@@ -23,7 +23,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
 
         let location_row = location.y().wrapping_sub(habitat.get_extent().origin().y()) as usize;
         let location_column = location.x().wrapping_sub(habitat.get_extent().origin().x()) as usize;
-        let location_index =
+        let self_dispersal_index =
             location_row * usize::from(habitat.get_extent().width()) + location_column;
 
         // Only safe as trait precondition that `location` is inside `habitat`
@@ -41,13 +41,13 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
         let dispersal_target_index: usize = if self_dispersal.self_dispersal == ClosedUnitF64::one()
         {
             // guaranteed self-dispersal
-            location_index
+            self_dispersal_index
         } else if (
             // guaranteed non-self-dispersal
             self_dispersal.self_dispersal == ClosedUnitF64::zero()
         ) || (
             // self-dispersal with an underfull atom, so included
-            self_dispersal.non_self_dispersal_event.is_some()
+            self_dispersal.non_self_dispersal_event != self_dispersal_index
         ) || (
             // excluded self-dispersal, but we sampled non-self-dispersal
             rng.sample_uniform_closed_open() >= self_dispersal.self_dispersal
@@ -62,7 +62,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
             AliasMethodSamplerAtom::sample_event(alias_dispersals_at_location, rng)
         } else {
             // excluded self-dispersal, and we sampled it
-            location_index
+            self_dispersal_index
         };
 
         #[allow(clippy::cast_possible_truncation)]
@@ -90,7 +90,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> SeparableDispersalSampler<M, H,
     ) -> Location {
         let location_row = location.y().wrapping_sub(habitat.get_extent().origin().y()) as usize;
         let location_column = location.x().wrapping_sub(habitat.get_extent().origin().x()) as usize;
-        let location_index =
+        let self_dispersal_index =
             location_row * usize::from(habitat.get_extent().width()) + location_column;
 
         // Only safe as trait precondition that `location` is inside `habitat`
@@ -120,7 +120,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> SeparableDispersalSampler<M, H,
             // if non_self_dispersal_event is None, self-dispersal is already
             //  excluded from the alias sampler and so we can sample the full
             //  CDF
-            if self_dispersal.non_self_dispersal_event.is_none() {
+            if self_dispersal.non_self_dispersal_event == self_dispersal_index {
                 ClosedUnitF64::one()
             } else {
                 self_dispersal.self_dispersal.one_minus()
@@ -129,8 +129,8 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> SeparableDispersalSampler<M, H,
 
         // if rounding errors caused self-dispersal, replace with the non-self-dispersal
         //  event
-        if dispersal_target_index == location_index {
-            dispersal_target_index = self_dispersal.non_self_dispersal_event.unwrap();
+        if dispersal_target_index == self_dispersal_index {
+            dispersal_target_index = self_dispersal.non_self_dispersal_event;
         }
 
         #[allow(clippy::cast_possible_truncation)]
