@@ -38,7 +38,9 @@ pub struct SeparableAliasSelfDispersal {
     self_dispersal: ClosedUnitF64,
     // non-self-dispersal event to sample in case rounding errors cause
     //  self-dispersal to be sampled in no-self-dispersal mode
-    non_self_dispersal_event: usize,
+    // if `Some(x)`, then x is the event
+    // if `None`, then self-dispersal is not part of the alias sampler
+    non_self_dispersal_event: Option<usize>,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -58,6 +60,7 @@ pub struct InMemoryPackedSeparableAliasDispersalSampler<M: MathsCore, H: Habitat
 impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, G>
     for InMemoryPackedSeparableAliasDispersalSampler<M, H, G>
 {
+    #[allow(clippy::too_many_lines)]
     fn new(
         dispersal: &Array2D<NonNegativeF64>,
         habitat: &H,
@@ -74,7 +77,7 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
         let mut self_dispersal = VecArray2D::filled_with(
             SeparableAliasSelfDispersal {
                 self_dispersal: ClosedUnitF64::zero(),
-                non_self_dispersal_event: usize::MAX,
+                non_self_dispersal_event: None,
             },
             usize::from(habitat_extent.height()),
             usize::from(habitat_extent.width()),
@@ -132,37 +135,41 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                         )
                     };
 
-                    // sort the alias sampling atoms to push self-dispersal to the right
-                    let mut atoms = AliasMethodSamplerAtom::create(&event_weights);
-                    atoms.sort_by_key(|a| {
-                        usize::from(a.e() == row_index) + usize::from(a.k() == row_index)
-                    });
+                    let self_dispersal_u = self_dispersal_at_location
+                        * NonNegativeF64::from(event_weights.len())
+                        / total_weight;
 
-                    // find the index amongst the atoms of the first atom that includes
-                    //  self-dispersal, either with u < 1.0 (uniquely) or u = 1.0 (iff
-                    //  no self-dispersal with u < 1.0 exists)
-                    // use this index to find the non-self-dispersal event to return
-                    //  if rounding errors sample self-dispersal in no-self-dispersal mode
-                    let non_self_dispersal_event = match atoms.binary_search_by_key(&1, |a| {
-                        usize::from(a.e() == row_index) + usize::from(a.k() == row_index)
-                    }) {
-                        Ok(i) => {
-                            // ensure that even the partial self-dispersal atom pushes
-                            //  the self-dispersal event to the right
-                            if atoms[i].e() == row_index {
-                                atoms[i].flip();
+                    let mut atoms;
+                    let mut non_self_dispersal_event = None;
+
+                    if self_dispersal_u < 1.0 {
+                        atoms = AliasMethodSamplerAtom::create(&event_weights);
+
+                        assert_eq!(atoms.len(), event_weights.len());
+
+                        // if self-dispersal exists, since the self-dispersal u is underfull,
+                        //  the alias method table construction guarantees that there will be
+                        //  exactly one atom which contains self-dispersal - let's find it
+                        if let Some((self_dispersal_index, self_dispersal_atom)) = atoms
+                            .iter_mut()
+                            .enumerate()
+                            .find(|(_, atom)| (atom.e() == row_index) || (atom.k() == row_index))
+                        {
+                            // ensure that self-dispersal is in the last atom on the right
+                            //  and in its right slot
+                            if self_dispersal_atom.e() == row_index {
+                                self_dispersal_atom.flip();
                             }
-                            atoms[i].e()
-                        },
-                        // partial self-dispersal atom doesn't exist but would be first
-                        //  i.e. all atoms are self-dispersal
-                        Err(0) => row_index,
-                        // partial self-dispersal atom doesn't exist, find the atom just
-                        //  prior to self-dispersal
-                        Err(i) => atoms[i - 1].k(),
+                            non_self_dispersal_event = Some(self_dispersal_atom.e());
+                            let last_atom_index = atoms.len() - 1;
+                            atoms.swap(self_dispersal_index, last_atom_index);
+                        };
+                    } else {
+                        // remove self-dispersal from the alias sampler as it is cheaper to handle
+                        //  it separately
+                        event_weights.retain(|(event, _)| *event != row_index);
+                        atoms = AliasMethodSamplerAtom::create(&event_weights);
                     };
-
-                    alias_dispersal_buffer.append(&mut atoms);
 
                     self_dispersal[(
                         row_index / usize::from(habitat_extent.width()),
@@ -172,10 +179,24 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> InMemoryDispersalSampler<M, H, 
                         non_self_dispersal_event,
                     };
 
+                    alias_dispersal_buffer.append(&mut atoms);
+
                     AliasSamplerRange {
                         start: range_from,
                         end: alias_dispersal_buffer.len(),
                     }
+
+                    // static DEBUG: core::sync::atomic::AtomicUsize =
+                    // core::sync::atomic::AtomicUsize::new(0);
+
+                    // if self_dispersal_probability.get() > 0.0 &&
+                    // self_dispersal_probability < 1.0 {
+                    //     log::warn!("{row_index} {atoms:?}
+                    // {non_self_dispersal_event}
+                    // {self_dispersal_probability}");
+                    //     assert!(DEBUG.fetch_add(1,
+                    // core::sync::atomic::Ordering::SeqCst) <= 10);
+                    // }
                 }
             }),
             usize::from(habitat_extent.height()),

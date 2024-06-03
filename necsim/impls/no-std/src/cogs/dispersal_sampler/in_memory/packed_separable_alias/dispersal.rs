@@ -19,8 +19,12 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
         habitat: &H,
         rng: &mut G,
     ) -> Location {
+        use necsim_core::cogs::RngSampler;
+
         let location_row = location.y().wrapping_sub(habitat.get_extent().origin().y()) as usize;
         let location_column = location.x().wrapping_sub(habitat.get_extent().origin().x()) as usize;
+        let location_index =
+            location_row * usize::from(habitat.get_extent().width()) + location_column;
 
         // Only safe as trait precondition that `location` is inside `habitat`
         let alias_range = unsafe {
@@ -28,16 +32,38 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> DispersalSampler<M, H, G>
                 .get(location_row, location_column)
                 .unwrap_unchecked()
         };
-
-        // Safe by the construction of `InMemoryPackedSeparableAliasDispersalSampler`
-        let alias_dispersals_at_location = unsafe {
-            &self
-                .alias_dispersal_buffer
-                .get_unchecked(alias_range.start..alias_range.end)
+        let self_dispersal = unsafe {
+            self.self_dispersal
+                .get(location_row, location_column)
+                .unwrap_unchecked()
         };
 
-        let dispersal_target_index: usize =
-            AliasMethodSamplerAtom::sample_event(alias_dispersals_at_location, rng);
+        let dispersal_target_index: usize = if self_dispersal.self_dispersal == ClosedUnitF64::one()
+        {
+            // guaranteed self-dispersal
+            location_index
+        } else if (
+            // guaranteed non-self-dispersal
+            self_dispersal.self_dispersal == ClosedUnitF64::zero()
+        ) || (
+            // self-dispersal with an underfull atom, so included
+            self_dispersal.non_self_dispersal_event.is_some()
+        ) || (
+            // excluded self-dispersal, but we sampled non-self-dispersal
+            rng.sample_uniform_closed_open() >= self_dispersal.self_dispersal
+        ) {
+            // Safe by the construction of `InMemoryPackedSeparableAliasDispersalSampler`
+            let alias_dispersals_at_location = unsafe {
+                &self
+                    .alias_dispersal_buffer
+                    .get_unchecked(alias_range.start..alias_range.end)
+            };
+
+            AliasMethodSamplerAtom::sample_event(alias_dispersals_at_location, rng)
+        } else {
+            // excluded self-dispersal, and we sampled it
+            location_index
+        };
 
         #[allow(clippy::cast_possible_truncation)]
         Location::new(
@@ -91,13 +117,20 @@ impl<M: MathsCore, H: Habitat<M>, G: RngCore<M>> SeparableDispersalSampler<M, H,
         let mut dispersal_target_index: usize = AliasMethodSamplerAtom::sample_event_with_cdf_limit(
             alias_dispersals_at_location,
             rng,
-            self_dispersal.self_dispersal.one_minus(),
+            // if non_self_dispersal_event is None, self-dispersal is already
+            //  excluded from the alias sampler and so we can sample the full
+            //  CDF
+            if self_dispersal.non_self_dispersal_event.is_none() {
+                ClosedUnitF64::one()
+            } else {
+                self_dispersal.self_dispersal.one_minus()
+            },
         );
 
         // if rounding errors caused self-dispersal, replace with the non-self-dispersal
-        // event
+        //  event
         if dispersal_target_index == location_index {
-            dispersal_target_index = self_dispersal.non_self_dispersal_event;
+            dispersal_target_index = self_dispersal.non_self_dispersal_event.unwrap();
         }
 
         #[allow(clippy::cast_possible_truncation)]
