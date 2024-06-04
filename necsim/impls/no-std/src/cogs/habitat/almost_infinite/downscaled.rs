@@ -1,3 +1,5 @@
+use core::num::NonZeroU32;
+
 use necsim_core::{
     cogs::{Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
@@ -13,7 +15,7 @@ const ALMOST_INFINITE_EXTENT: LandscapeExtent =
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M"))]
-pub struct AlmostInfiniteScaledHabitat<M: MathsCore> {
+pub struct AlmostInfiniteDownscaledHabitat<M: MathsCore> {
     #[cfg_attr(feature = "cuda", cuda(embed))]
     habitat: AlmostInfiniteHabitat<M>,
     downscale_x: Log2U16,
@@ -41,7 +43,7 @@ pub enum Log2U16 {
     Shl15 = 1 << 15,
 }
 
-impl<M: MathsCore> Clone for AlmostInfiniteScaledHabitat<M> {
+impl<M: MathsCore> Clone for AlmostInfiniteDownscaledHabitat<M> {
     fn clone(&self) -> Self {
         Self {
             habitat: self.habitat.clone(),
@@ -51,8 +53,40 @@ impl<M: MathsCore> Clone for AlmostInfiniteScaledHabitat<M> {
     }
 }
 
+impl<M: MathsCore> AlmostInfiniteDownscaledHabitat<M> {
+    #[must_use]
+    pub fn new(downscale_x: Log2U16, downscale_y: Log2U16) -> Self {
+        Self {
+            habitat: AlmostInfiniteHabitat::default(),
+            downscale_x,
+            downscale_y,
+        }
+    }
+
+    #[must_use]
+    pub fn downscale_x(&self) -> Log2U16 {
+        self.downscale_x
+    }
+
+    #[must_use]
+    pub fn downscale_y(&self) -> Log2U16 {
+        self.downscale_y
+    }
+
+    #[must_use]
+    pub fn downscale_area(&self) -> NonZeroU32 {
+        // 2^{0..15} * 2^{0..15} >=1 and < 2^32
+        unsafe { NonZeroU32::new_unchecked((self.downscale_x as u32) * (self.downscale_y as u32)) }
+    }
+
+    #[must_use]
+    pub fn unscaled(&self) -> &AlmostInfiniteHabitat<M> {
+        &self.habitat
+    }
+}
+
 #[contract_trait]
-impl<M: MathsCore> Habitat<M> for AlmostInfiniteScaledHabitat<M> {
+impl<M: MathsCore> Habitat<M> for AlmostInfiniteDownscaledHabitat<M> {
     type LocationIterator<'a> = impl Iterator<Item = Location>;
 
     #[must_use]
@@ -84,16 +118,23 @@ impl<M: MathsCore> Habitat<M> for AlmostInfiniteScaledHabitat<M> {
 
     #[must_use]
     fn map_indexed_location_to_u64_injective(&self, indexed_location: &IndexedLocation) -> u64 {
+        // TODO: optimise
+        let index_x = indexed_location.index() % (self.downscale_x as u32);
+        let index_y = indexed_location.index() / (self.downscale_x as u32);
+
         self.habitat
             .map_indexed_location_to_u64_injective(&IndexedLocation::new(
-                indexed_location.location().clone(),
+                Location::new(
+                    indexed_location.location().x() + index_x,
+                    indexed_location.location().y() + index_y,
+                ),
                 0,
             ))
-            + u64::from(indexed_location.index())
     }
 
     #[must_use]
     fn iter_habitable_locations(&self) -> Self::LocationIterator<'_> {
+        // TODO: optimise
         let width = unsafe {
             OffByOneU32::new_unchecked(OffByOneU32::max().get() / (self.downscale_x as u64))
         };
@@ -114,11 +155,23 @@ impl<M: MathsCore> Habitat<M> for AlmostInfiniteScaledHabitat<M> {
 
 #[contract_trait]
 impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G>
-    for AlmostInfiniteScaledHabitat<M>
+    for AlmostInfiniteDownscaledHabitat<M>
 {
     #[must_use]
     #[inline]
-    fn sample_habitable_indexed_location(&self, _rng: &mut G) -> IndexedLocation {
-        unimplemented!()
+    fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
+        // TODO: optimise
+        let location = self.habitat.sample_habitable_indexed_location(rng);
+
+        let index_x = location.location().x() % (self.downscale_x as u32);
+        let index_y = location.location().y() % (self.downscale_y as u32);
+
+        IndexedLocation::new(
+            Location::new(
+                location.location().x() - index_x,
+                location.location().y() - index_y,
+            ),
+            index_y * (self.downscale_x as u32) + index_x,
+        )
     }
 }

@@ -22,6 +22,7 @@ use necsim_core_bond::PositiveF64;
 
 #[cfg(feature = "almost-infinite-clark2dt-dispersal")]
 pub mod clark2dt;
+pub mod downscaled;
 #[cfg(feature = "almost-infinite-normal-dispersal")]
 pub mod normal;
 

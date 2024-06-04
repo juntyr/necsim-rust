@@ -4,21 +4,29 @@ use necsim_core::{
     cogs::{DispersalSampler, MathsCore, RngCore, RngSampler, SeparableDispersalSampler},
     landscape::Location,
 };
-use necsim_core_bond::{ClosedUnitF64, NonNegativeF64, PositiveF64};
+use necsim_core_bond::ClosedUnitF64;
 
-use crate::cogs::habitat::almost_infinite::AlmostInfiniteHabitat;
+use crate::cogs::habitat::almost_infinite::{
+    downscaled::AlmostInfiniteDownscaledHabitat, AlmostInfiniteHabitat,
+};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 #[cfg_attr(feature = "cuda", derive(rust_cuda::lend::LendRustToCuda))]
 #[cfg_attr(feature = "cuda", cuda(free = "M", free = "G"))]
-pub struct AlmostInfiniteDownscaledDispersalSampler<M: MathsCore, G: RngCore<M>, D: DispersalSampler<M, AlmostInfiniteHabitat<M>, G>> {
+pub struct AlmostInfiniteDownscaledDispersalSampler<
+    M: MathsCore,
+    G: RngCore<M>,
+    D: Clone + DispersalSampler<M, AlmostInfiniteHabitat<M>, G>,
+> {
     #[cuda(embed)]
     dispersal: D,
     marker: PhantomData<(M, G)>,
 }
 
-impl<M: MathsCore, G: RngCore<M>, D: DispersalSampler<M, AlmostInfiniteHabitat<M>, G>> AlmostInfiniteDownscaledDispersalSampler<M, G, D> {
+impl<M: MathsCore, G: RngCore<M>, D: Clone + DispersalSampler<M, AlmostInfiniteHabitat<M>, G>>
+    AlmostInfiniteDownscaledDispersalSampler<M, G, D>
+{
     #[must_use]
     pub fn new(dispersal: D) -> Self {
         Self {
@@ -28,48 +36,61 @@ impl<M: MathsCore, G: RngCore<M>, D: DispersalSampler<M, AlmostInfiniteHabitat<M
     }
 }
 
-impl<M: MathsCore, G: RngCore<M>> Clone for AlmostInfiniteDownscaledDispersalSampler<M, G> {
+impl<M: MathsCore, G: RngCore<M>, D: Clone + DispersalSampler<M, AlmostInfiniteHabitat<M>, G>> Clone
+    for AlmostInfiniteDownscaledDispersalSampler<M, G, D>
+{
     fn clone(&self) -> Self {
         Self {
-            shape_u: self.shape_u,
-            tail_p: self.tail_p,
-            self_dispersal: self.self_dispersal,
+            dispersal: self.dispersal.clone(),
             marker: PhantomData::<(M, G)>,
         }
     }
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> DispersalSampler<M, AlmostInfiniteHabitat<M>, G>
-    for AlmostInfiniteDownscaledDispersalSampler<M, G>
+impl<M: MathsCore, G: RngCore<M>, D: Clone + DispersalSampler<M, AlmostInfiniteHabitat<M>, G>>
+    DispersalSampler<M, AlmostInfiniteDownscaledHabitat<M>, G>
+    for AlmostInfiniteDownscaledDispersalSampler<M, G, D>
 {
     #[must_use]
     fn sample_dispersal_from_location(
         &self,
         location: &Location,
-        _habitat: &AlmostInfiniteHabitat<M>,
+        habitat: &AlmostInfiniteDownscaledHabitat<M>,
         rng: &mut G,
     ) -> Location {
-        let jump =
-            clark2dt::cdf_inverse::<M>(rng.sample_uniform_closed_open(), self.shape_u, self.tail_p);
-        let theta = rng.sample_uniform_open_closed().get() * 2.0 * core::f64::consts::PI;
+        // TODO: optimise
+        let sub_index = rng.sample_index_u32(habitat.downscale_area());
 
-        let dx = M::cos(theta) * jump;
-        let dy = M::sin(theta) * jump;
+        let index_x = sub_index % (habitat.downscale_x() as u32);
+        let index_y = sub_index % (habitat.downscale_y() as u32);
 
-        AlmostInfiniteHabitat::<M>::clamp_round_dispersal(location, dx, dy)
+        // generate an upscaled location by sampling a random sub-location
+        let location = Location::new(location.x() + index_x, location.y() + index_y);
+
+        // sample dispersal from the inner dispersal sampler as normal
+        let target_location =
+            self.dispersal
+                .sample_dispersal_from_location(&location, habitat.unscaled(), rng);
+
+        let index_x = target_location.x() % (habitat.downscale_x() as u32);
+        let index_y = target_location.y() % (habitat.downscale_y() as u32);
+
+        // downscale the target location
+        Location::new(target_location.x() - index_x, target_location.y() - index_y)
     }
 }
 
 #[contract_trait]
-impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, AlmostInfiniteHabitat<M>, G>
-    for AlmostInfiniteDownscaledDispersalSampler<M, G>
+impl<M: MathsCore, G: RngCore<M>, D: Clone + DispersalSampler<M, AlmostInfiniteHabitat<M>, G>>
+    SeparableDispersalSampler<M, AlmostInfiniteDownscaledHabitat<M>, G>
+    for AlmostInfiniteDownscaledDispersalSampler<M, G, D>
 {
     #[must_use]
     fn sample_non_self_dispersal_from_location(
         &self,
         location: &Location,
-        habitat: &AlmostInfiniteHabitat<M>,
+        habitat: &AlmostInfiniteDownscaledHabitat<M>,
         rng: &mut G,
     ) -> Location {
         let mut target_location = self.sample_dispersal_from_location(location, habitat, rng);
@@ -86,8 +107,8 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, AlmostInfiniteHab
     fn get_self_dispersal_probability_at_location(
         &self,
         _location: &Location,
-        _habitat: &AlmostInfiniteHabitat<M>,
+        _habitat: &AlmostInfiniteDownscaledHabitat<M>,
     ) -> ClosedUnitF64 {
-        self.self_dispersal
+        unimplemented!()
     }
 }
