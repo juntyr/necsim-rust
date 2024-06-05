@@ -80,8 +80,17 @@ impl<M: MathsCore> Clone for AlmostInfiniteDownscaledHabitat<M> {
 impl<M: MathsCore> AlmostInfiniteDownscaledHabitat<M> {
     #[must_use]
     pub fn new(downscale_x: Log2U16, downscale_y: Log2U16) -> Self {
+        Self::new_with_habitat(AlmostInfiniteHabitat::default(), downscale_x, downscale_y)
+    }
+
+    #[must_use]
+    pub fn new_with_habitat(
+        habitat: AlmostInfiniteHabitat<M>,
+        downscale_x: Log2U16,
+        downscale_y: Log2U16,
+    ) -> Self {
         Self {
-            habitat: AlmostInfiniteHabitat::default(),
+            habitat,
             downscale_x,
             downscale_y,
         }

@@ -320,6 +320,60 @@ link_kernel!(
     necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
 );
 
+#[cfg(feature = "almost-infinite-downscaled-normal-dispersal-scenario")]
+link_kernel!(
+    necsim_impls_no_std::cogs::habitat::almost_infinite::downscaled::AlmostInfiniteDownscaledHabitat<
+        necsim_impls_cuda::cogs::maths::NvptxMathsCore
+    >,
+    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite_downscaled::AlmostInfiniteDownscaledDispersalSampler<
+        necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+        necsim_impls_cuda::cogs::rng::CudaRng<
+            necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+            necsim_impls_no_std::cogs::rng::wyhash::WyHash<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore
+            >,
+        >,
+        necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler<
+            necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+            necsim_impls_cuda::cogs::rng::CudaRng<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                necsim_impls_no_std::cogs::rng::wyhash::WyHash<
+                    necsim_impls_cuda::cogs::maths::NvptxMathsCore
+                >,
+            >,
+        >,
+    >,
+    necsim_impls_no_std::cogs::turnover_rate::uniform::UniformTurnoverRate,
+    necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
+);
+
+#[cfg(feature = "almost-infinite-downscaled-clark2dt-dispersal-scenario")]
+link_kernel!(
+    necsim_impls_no_std::cogs::habitat::almost_infinite::downscaled::AlmostInfiniteDownscaledHabitat<
+        necsim_impls_cuda::cogs::maths::NvptxMathsCore
+    >,
+    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite_downscaled::AlmostInfiniteDownscaledDispersalSampler<
+        necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+        necsim_impls_cuda::cogs::rng::CudaRng<
+            necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+            necsim_impls_no_std::cogs::rng::wyhash::WyHash<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore
+            >,
+        >,
+        necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite_clark2dt::AlmostInfiniteClark2DtDispersalSampler<
+            necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+            necsim_impls_cuda::cogs::rng::CudaRng<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                necsim_impls_no_std::cogs::rng::wyhash::WyHash<
+                    necsim_impls_cuda::cogs::maths::NvptxMathsCore
+                >,
+            >,
+        >,
+    >,
+    necsim_impls_no_std::cogs::turnover_rate::uniform::UniformTurnoverRate,
+    necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
+);
+
 #[cfg(feature = "spatially-explicit-uniform-turnover-scenario")]
 link_kernel!(
     necsim_impls_no_std::cogs::habitat::in_memory::InMemoryHabitat<

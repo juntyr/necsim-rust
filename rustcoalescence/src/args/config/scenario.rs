@@ -18,6 +18,10 @@ pub enum Scenario {
     AlmostInfiniteNormalDispersal(rustcoalescence_scenarios::almost_infinite::normal::AlmostInfiniteNormalDispersalArguments),
     #[cfg(feature = "almost-infinite-clark2dt-dispersal-scenario")]
     AlmostInfiniteClark2DtDispersal(rustcoalescence_scenarios::almost_infinite::clark2dt::AlmostInfiniteClark2DtDispersalArguments),
+    #[cfg(feature = "almost-infinite-normal-dispersal-scenario")]
+    AlmostInfiniteDownscaledNormalDispersal(rustcoalescence_scenarios::almost_infinite::downscaled::AlmostInfiniteDownscaledArguments<rustcoalescence_scenarios::almost_infinite::normal::AlmostInfiniteNormalDispersalScenario>),
+    #[cfg(feature = "almost-infinite-clark2dt-dispersal-scenario")]
+    AlmostInfiniteDownscaledClark2DtDispersal(rustcoalescence_scenarios::almost_infinite::downscaled::AlmostInfiniteDownscaledArguments<rustcoalescence_scenarios::almost_infinite::clark2dt::AlmostInfiniteClark2DtDispersalScenario>),
     #[cfg(feature = "wrapping-noise-scenario")]
     WrappingNoise(rustcoalescence_scenarios::wrapping_noise::WrappingNoiseArguments),
 }
@@ -45,6 +49,14 @@ impl Serialize for Scenario {
             #[cfg(feature = "almost-infinite-clark2dt-dispersal-scenario")]
             Self::AlmostInfiniteClark2DtDispersal(ref args) => ScenarioRaw::AlmostInfinite(
                 rustcoalescence_scenarios::almost_infinite::AlmostInfiniteArguments::from_clark2dt(args),
+            ),
+            #[cfg(feature = "almost-infinite-downscaled-normal-dispersal-scenario")]
+            Self::AlmostInfiniteDownscaledNormalDispersal(ref args) => ScenarioRaw::AlmostInfinite(
+                rustcoalescence_scenarios::almost_infinite::AlmostInfiniteArguments::from_downscaled_normal(args),
+            ),
+            #[cfg(feature = "almost-infinite-downscaled-clark2dt-dispersal-scenario")]
+            Self::AlmostInfiniteDownscaledClark2DtDispersal(ref args) => ScenarioRaw::AlmostInfinite(
+                rustcoalescence_scenarios::almost_infinite::AlmostInfiniteArguments::from_downscaled_clark2dt(args),
             ),
             #[cfg(feature = "wrapping-noise-scenario")]
             Self::WrappingNoise(ref args) => ScenarioRaw::WrappingNoise(args.clone()),

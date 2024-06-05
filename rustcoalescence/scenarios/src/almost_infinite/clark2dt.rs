@@ -25,6 +25,7 @@ use crate::{Scenario, ScenarioCogs, ScenarioParameters};
 use super::Sample;
 
 #[allow(clippy::module_name_repetitions, clippy::empty_enum)]
+#[derive(Debug)]
 pub enum AlmostInfiniteClark2DtDispersalScenario {}
 
 #[derive(Debug, Serialize, Deserialize)]

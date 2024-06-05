@@ -22,6 +22,7 @@ use necsim_core_bond::PositiveF64;
 
 #[cfg(feature = "almost-infinite-clark2dt-dispersal")]
 pub mod clark2dt;
+#[cfg(feature = "almost-infinite-downscaled")]
 pub mod downscaled;
 #[cfg(feature = "almost-infinite-normal-dispersal")]
 pub mod normal;
@@ -33,6 +34,7 @@ pub mod normal;
 pub struct AlmostInfiniteArguments {
     sample: Sample,
     dispersal: Dispersal,
+    // TODO: add optional downscaled
 }
 
 #[cfg(feature = "almost-infinite-normal-dispersal")]
@@ -83,6 +85,43 @@ impl AlmostInfiniteArguments {
             dispersal: Dispersal::Clark2Dt {
                 shape_u: args.shape_u,
                 tail_p: args.tail_p,
+            },
+        }
+    }
+
+    #[cfg(all(
+        feature = "almost-infinite-downscaled",
+        feature = "almost-infinite-normal-dispersal"
+    ))]
+    #[must_use]
+    pub fn from_downscaled_normal(
+        args: &downscaled::AlmostInfiniteDownscaledArguments<
+            normal::AlmostInfiniteNormalDispersalScenario,
+        >,
+    ) -> Self {
+        Self {
+            sample: args.args.sample.clone(),
+            dispersal: Dispersal::Normal {
+                sigma: args.args.sigma,
+            },
+        }
+    }
+
+    #[cfg(all(
+        feature = "almost-infinite-downscaled",
+        feature = "almost-infinite-clark2dt-dispersal"
+    ))]
+    #[must_use]
+    pub fn from_downscaled_clark2dt(
+        args: &downscaled::AlmostInfiniteDownscaledArguments<
+            clark2dt::AlmostInfiniteClark2DtDispersalScenario,
+        >,
+    ) -> Self {
+        Self {
+            sample: args.args.sample.clone(),
+            dispersal: Dispersal::Clark2Dt {
+                shape_u: args.args.shape_u,
+                tail_p: args.args.tail_p,
             },
         }
     }
