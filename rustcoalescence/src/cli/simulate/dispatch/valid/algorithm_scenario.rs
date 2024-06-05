@@ -93,8 +93,6 @@ macro_rules! match_scenario_algorithm {
                 $(#[$algmeta])* $algpat => {
                     match $scenario {
                         $($(#[$scenmeta])* $scenpat => {
-                            // type AlgScenTy<M, G> = fn(M, G) -> $scenty;
-                            // type $algscenty<M, G> = fn(M, G) -> $scenty; //<AlgScenTy<M, G> as FnOnce(M, G) -> $scenty>::Output;
                             type $algscenty<M, G> = PhantomData<(M, G, $scenty)>;
                             let $algscen = $scencode;
                             $algcode
@@ -118,8 +116,6 @@ macro_rules! match_scenario_algorithm {
             $(#[$algmeta])* $algpat => {
                 match $scenario {
                     $($(#[$scenmeta])* $scenpat => {
-                        // type AlgScenTy<M, G> = fn(M, G) -> $scenty;
-                        // type $algscenty<M, G> = fn(M, G) -> $scenty;//<AlgScenTy<M, G> as FnOnce(M, G) -> $scenty>::Output;
                         type $algscenty<M, G> = PhantomData<(M, G, $scenty)>;
                         let $algscen = $scencode;
                         $algcode
