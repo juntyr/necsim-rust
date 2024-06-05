@@ -18,7 +18,10 @@ use necsim_impls_no_std::{
         },
         lineage_store::coherent::globally::singleton_demes::SingletonDemesLineageStore,
         origin_sampler::{
-            pre_sampler::OriginPreSampler, singleton_demes::SingletonDemesOriginSampler,
+            pre_sampler::OriginPreSampler,
+            singleton_demes::{
+                downscaled::AlmostInfiniteDownscaledOriginSampler, SingletonDemesOriginSampler,
+            },
         },
         speciation_probability::uniform::UniformSpeciationProbability,
         turnover_rate::uniform::UniformTurnoverRate,
@@ -63,7 +66,7 @@ impl<M: MathsCore, G: RngCore<M>, O: Scenario<M, G, Habitat = AlmostInfiniteHabi
     type DispersalSampler = AlmostInfiniteDownscaledDispersalSampler<M, G, O::DispersalSampler>;
     type Habitat = AlmostInfiniteDownscaledHabitat<M>;
     type LineageStore<L: LineageStore<M, Self::Habitat>> = L;
-    type OriginSampler<'h, I: Iterator<Item = u64>> = SingletonDemesOriginSampler<'h, M, Self::Habitat, I> where G: 'h;
+    type OriginSampler<'h, I: Iterator<Item = u64>> = AlmostInfiniteDownscaledOriginSampler<'h, M, I> where G: 'h;
     type OriginSamplerAuxiliary = (Sample,);
     type SpeciationProbability = UniformSpeciationProbability;
     type TurnoverRate = UniformTurnoverRate;

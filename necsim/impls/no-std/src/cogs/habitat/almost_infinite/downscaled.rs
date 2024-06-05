@@ -43,6 +43,30 @@ pub enum Log2U16 {
     Shl15 = 1 << 15,
 }
 
+impl Log2U16 {
+    #[must_use]
+    pub const fn log2(self) -> u32 {
+        match self {
+            Self::Shl0 => 0,
+            Self::Shl1 => 1,
+            Self::Shl2 => 2,
+            Self::Shl3 => 3,
+            Self::Shl4 => 4,
+            Self::Shl5 => 5,
+            Self::Shl6 => 6,
+            Self::Shl7 => 7,
+            Self::Shl8 => 8,
+            Self::Shl9 => 9,
+            Self::Shl10 => 10,
+            Self::Shl11 => 11,
+            Self::Shl12 => 12,
+            Self::Shl13 => 13,
+            Self::Shl14 => 14,
+            Self::Shl15 => 15,
+        }
+    }
+}
+
 impl<M: MathsCore> Clone for AlmostInfiniteDownscaledHabitat<M> {
     fn clone(&self) -> Self {
         Self {
@@ -173,5 +197,105 @@ impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G>
             ),
             index_y * (self.downscale_x as u32) + index_x,
         )
+    }
+}
+
+impl serde::Serialize for Log2U16 {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if serializer.is_human_readable() {
+            serializer.collect_str(&format_args!("1B{}", self.log2()))
+        } else {
+            serializer.serialize_u32((*self) as u32)
+        }
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Log2U16 {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Log2U16Visitor;
+
+        impl<'de> serde::de::Visitor<'de> for Log2U16Visitor {
+            type Value = Log2U16;
+
+            fn expecting(&self, fmt: &mut alloc::fmt::Formatter) -> alloc::fmt::Result {
+                fmt.write_str(
+                    "an integer in 2^{0; ...; 15} or its base-two scientific notation string",
+                )
+            }
+
+            fn visit_u64<E: serde::de::Error>(self, v: u64) -> Result<Self::Value, E> {
+                match v {
+                    const { Log2U16::Shl0 as u64 } => Ok(Log2U16::Shl0),
+                    const { Log2U16::Shl1 as u64 } => Ok(Log2U16::Shl1),
+                    const { Log2U16::Shl2 as u64 } => Ok(Log2U16::Shl2),
+                    const { Log2U16::Shl3 as u64 } => Ok(Log2U16::Shl3),
+                    const { Log2U16::Shl4 as u64 } => Ok(Log2U16::Shl4),
+                    const { Log2U16::Shl5 as u64 } => Ok(Log2U16::Shl5),
+                    const { Log2U16::Shl6 as u64 } => Ok(Log2U16::Shl6),
+                    const { Log2U16::Shl7 as u64 } => Ok(Log2U16::Shl7),
+                    const { Log2U16::Shl8 as u64 } => Ok(Log2U16::Shl8),
+                    const { Log2U16::Shl9 as u64 } => Ok(Log2U16::Shl9),
+                    const { Log2U16::Shl10 as u64 } => Ok(Log2U16::Shl10),
+                    const { Log2U16::Shl11 as u64 } => Ok(Log2U16::Shl11),
+                    const { Log2U16::Shl12 as u64 } => Ok(Log2U16::Shl12),
+                    const { Log2U16::Shl13 as u64 } => Ok(Log2U16::Shl13),
+                    const { Log2U16::Shl14 as u64 } => Ok(Log2U16::Shl14),
+                    const { Log2U16::Shl15 as u64 } => Ok(Log2U16::Shl15),
+                    v => Err(serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Unsigned(v),
+                        &self,
+                    )),
+                }
+            }
+
+            fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                let Some(exp) = v.strip_prefix("1B") else {
+                    return Err(serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Str(v),
+                        &self,
+                    ));
+                };
+
+                let Ok(exp) = exp.parse::<usize>() else {
+                    return Err(serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Str(v),
+                        &self,
+                    ));
+                };
+
+                let Some(v) = [
+                    Log2U16::Shl0,
+                    Log2U16::Shl1,
+                    Log2U16::Shl2,
+                    Log2U16::Shl3,
+                    Log2U16::Shl4,
+                    Log2U16::Shl5,
+                    Log2U16::Shl6,
+                    Log2U16::Shl7,
+                    Log2U16::Shl8,
+                    Log2U16::Shl9,
+                    Log2U16::Shl10,
+                    Log2U16::Shl11,
+                    Log2U16::Shl12,
+                    Log2U16::Shl13,
+                    Log2U16::Shl14,
+                    Log2U16::Shl15,
+                ]
+                .get(exp) else {
+                    return Err(serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Str(v),
+                        &self,
+                    ));
+                };
+
+                Ok(*v)
+            }
+        }
+
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_str(Log2U16Visitor)
+        } else {
+            deserializer.deserialize_u32(Log2U16Visitor)
+        }
     }
 }
