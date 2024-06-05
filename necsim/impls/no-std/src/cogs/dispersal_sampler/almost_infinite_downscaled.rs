@@ -19,7 +19,7 @@ pub struct AlmostInfiniteDownscaledDispersalSampler<
     G: RngCore<M>,
     D: Clone + DispersalSampler<M, AlmostInfiniteHabitat<M>, G>,
 > {
-    #[cuda(embed)]
+    #[cfg_attr(feature = "cuda", cuda(embed))]
     dispersal: D,
     marker: PhantomData<(M, G)>,
 }
