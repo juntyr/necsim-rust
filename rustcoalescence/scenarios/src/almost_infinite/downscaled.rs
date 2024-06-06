@@ -102,7 +102,8 @@ impl<
             args.downscale_x,
             args.downscale_y,
         );
-        let dispersal_sampler = AlmostInfiniteDownscaledDispersalSampler::new(dispersal_sampler);
+        let dispersal_sampler =
+            AlmostInfiniteDownscaledDispersalSampler::new(&habitat, dispersal_sampler);
 
         Ok(ScenarioCogs {
             habitat,

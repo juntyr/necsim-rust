@@ -21,6 +21,7 @@ pub struct AlmostInfiniteDownscaledDispersalSampler<
 > {
     #[cfg_attr(feature = "cuda", cuda(embed))]
     dispersal: D,
+    self_dispersal: ClosedUnitF64,
     marker: PhantomData<(M, G)>,
 }
 
@@ -28,9 +29,42 @@ impl<M: MathsCore, G: RngCore<M>, D: Clone + DispersalSampler<M, AlmostInfiniteH
     AlmostInfiniteDownscaledDispersalSampler<M, G, D>
 {
     #[must_use]
-    pub fn new(dispersal: D) -> Self {
-        Self {
+    pub fn new(habitat: &AlmostInfiniteDownscaledHabitat<M>, dispersal: D) -> Self {
+        use necsim_core::cogs::SeedableRng;
+
+        const N: i32 = 1 << 22;
+
+        let dispersal = Self {
             dispersal,
+            // since the dispersal sampler doesn't need to know its self-dispersal
+            //  to perform non-separable dispersal, we can set it to zero here
+            self_dispersal: ClosedUnitF64::zero(),
+            marker: PhantomData::<(M, G)>,
+        };
+
+        let mut rng = G::seed_from_u64(42);
+        let mut counter = 0_i32;
+
+        let origin = Location::new(0, 0);
+
+        // TODO: optimise
+        for _ in 0..N {
+            let target = dispersal.sample_dispersal_from_location(&origin, habitat, &mut rng);
+
+            if target == origin {
+                counter += 1;
+            }
+        }
+
+        let self_dispersal_emperical = f64::from(counter) / f64::from(N);
+        // Safety: the fraction of 0 >= counter <= N and N must be in [0.0; 1.0]
+        // Note: we still clamp to account for rounding errors
+        let self_dispersal_emperical =
+            unsafe { ClosedUnitF64::new_unchecked(self_dispersal_emperical.clamp(0.0, 1.0)) };
+
+        Self {
+            dispersal: dispersal.dispersal,
+            self_dispersal: self_dispersal_emperical,
             marker: PhantomData::<(M, G)>,
         }
     }
@@ -42,6 +76,7 @@ impl<M: MathsCore, G: RngCore<M>, D: Clone + DispersalSampler<M, AlmostInfiniteH
     fn clone(&self) -> Self {
         Self {
             dispersal: self.dispersal.clone(),
+            self_dispersal: self.self_dispersal,
             marker: PhantomData::<(M, G)>,
         }
     }
@@ -109,6 +144,6 @@ impl<M: MathsCore, G: RngCore<M>, D: Clone + DispersalSampler<M, AlmostInfiniteH
         _location: &Location,
         _habitat: &AlmostInfiniteDownscaledHabitat<M>,
     ) -> ClosedUnitF64 {
-        unimplemented!()
+        self.self_dispersal
     }
 }
