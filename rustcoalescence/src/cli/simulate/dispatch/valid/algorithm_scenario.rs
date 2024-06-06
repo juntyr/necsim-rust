@@ -19,20 +19,17 @@ use rustcoalescence_algorithms_gillespie::{
 #[cfg(feature = "independent-algorithm")]
 use rustcoalescence_algorithms_independent::IndependentAlgorithm;
 
-#[cfg(any(
-    feature = "almost-infinite-clark2dt-dispersal-scenario",
-    feature = "almost-infinite-downscaled-clark2dt-dispersal-scenario",
-))]
+#[cfg(feature = "almost-infinite-clark2dt-dispersal-scenario")]
 use rustcoalescence_scenarios::almost_infinite::clark2dt::AlmostInfiniteClark2DtDispersalScenario;
-#[cfg(any(
-    feature = "almost-infinite-downscaled-clark2dt-dispersal-scenario",
-    feature = "almost-infinite-downscaled-normal-dispersal-scenario",
+#[cfg(all(
+    any(
+        feature = "almost-infinite-clark2dt-dispersal-scenario",
+        feature = "almost-infinite-normal-dispersal-scenario",
+    ),
+    feature = "almost-infinite-downscaled-scenario",
 ))]
 use rustcoalescence_scenarios::almost_infinite::downscaled::AlmostInfiniteDownscaledScenario;
-#[cfg(any(
-    feature = "almost-infinite-normal-dispersal-scenario",
-    feature = "almost-infinite-downscaled-normal-dispersal-scenario",
-))]
+#[cfg(feature = "almost-infinite-normal-dispersal-scenario")]
 use rustcoalescence_scenarios::almost_infinite::normal::AlmostInfiniteNormalDispersalScenario;
 #[cfg(feature = "non-spatial-scenario")]
 use rustcoalescence_scenarios::non_spatial::NonSpatialScenario;
@@ -243,7 +240,10 @@ pub(super) fn dispatch<R: Reporter, P: ReporterContext<Reporter = R>>(
             )
             .into_ok()
         } => AlmostInfiniteClark2DtDispersalScenario,
-        #[cfg(feature = "almost-infinite-downscaled-normal-dispersal-scenario")]
+        #[cfg(all(
+            feature = "almost-infinite-normal-dispersal-scenario",
+            feature = "almost-infinite-downscaled-scenario",
+        ))]
         ScenarioArgs::AlmostInfiniteDownscaledNormalDispersal(scenario_args) => {
             AlmostInfiniteDownscaledScenario::new(
                 scenario_args,
@@ -251,7 +251,10 @@ pub(super) fn dispatch<R: Reporter, P: ReporterContext<Reporter = R>>(
             )
             .into_ok()
         } => AlmostInfiniteDownscaledScenario<M, G, AlmostInfiniteNormalDispersalScenario>,
-        #[cfg(feature = "almost-infinite-downscaled-clark2dt-dispersal-scenario")]
+        #[cfg(all(
+            feature = "almost-infinite-clark2dt-dispersal-scenario",
+            feature = "almost-infinite-downscaled-scenario",
+        ))]
         ScenarioArgs::AlmostInfiniteDownscaledClark2DtDispersal(scenario_args) => {
             AlmostInfiniteDownscaledScenario::new(
                 scenario_args,

@@ -32,6 +32,12 @@ pub struct AlmostInfiniteDownscaledScenario<
     _marker: PhantomData<(M, G, O)>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Downscale {
+    pub x: Log2U16,
+    pub y: Log2U16,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
 #[serde(rename = "AlmostInfiniteDownscaled")]
@@ -39,8 +45,7 @@ pub struct AlmostInfiniteDownscaledScenario<
 pub struct AlmostInfiniteDownscaledArguments<O: ScenarioParameters> {
     #[serde(flatten)]
     pub args: O::Arguments,
-    pub downscale_x: Log2U16,
-    pub downscale_y: Log2U16,
+    pub downscale: Downscale,
 }
 
 impl<
@@ -99,8 +104,8 @@ impl<
 
         let habitat = AlmostInfiniteDownscaledHabitat::new_with_habitat(
             habitat,
-            args.downscale_x,
-            args.downscale_y,
+            args.downscale.x,
+            args.downscale.y,
         );
         let dispersal_sampler =
             AlmostInfiniteDownscaledDispersalSampler::new(&habitat, dispersal_sampler);

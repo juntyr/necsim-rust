@@ -320,7 +320,10 @@ link_kernel!(
     necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
 );
 
-#[cfg(feature = "almost-infinite-downscaled-normal-dispersal-scenario")]
+#[cfg(all(
+    feature = "almost-infinite-normal-dispersal-scenario",
+    feature = "almost-infinite-downscaled-scenario",
+))]
 link_kernel!(
     necsim_impls_no_std::cogs::habitat::almost_infinite::downscaled::AlmostInfiniteDownscaledHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore
@@ -347,7 +350,10 @@ link_kernel!(
     necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
 );
 
-#[cfg(feature = "almost-infinite-downscaled-clark2dt-dispersal-scenario")]
+#[cfg(all(
+    feature = "almost-infinite-clark2dt-dispersal-scenario",
+    feature = "almost-infinite-downscaled-scenario",
+))]
 link_kernel!(
     necsim_impls_no_std::cogs::habitat::almost_infinite::downscaled::AlmostInfiniteDownscaledHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore

@@ -280,6 +280,33 @@
                     tail_p: (0.0 < f64),
                 )
             ),
+            /* downscale the habitat to consider adjacent locations to be part
+             *  of the same larger deme
+             * downscaling reduces the accuracy of the simulation but may speed
+             *  up its execution with EventSkipping algorithm
+             * downscaling may be worth during the tail of the simulation, when
+             *  few lineages remain, the speciation probability is low, and
+             *  waiting for all lineages to speciate or coalesce dominates
+             *  simulation times
+             * optional, default = None
+             * requires the `almost-infinite-downscaled-scenario` feature */
+            downscale: (
+                /* no downscaling is used */
+              | None
+                /* downscale the habitat by separate dx and dy factors
+                 * each of the 1/(dx*dy) habitable locations now has a deme of
+                 *  size dx*dy */
+              | Downscale(
+                    /* downscale factor along the x-axis of the habitat
+                     * expressed either as a power-of-two integer
+                     *  or as a base-two scientific notation string */
+                    x: (u32 = 2^{1..=15}) or ("1B{1..=15}"),
+                    /* downscale factor along the y-axis of the habitat
+                     * expressed either as a power-of-two integer
+                     *  or as a base-two scientific notation string */
+                    y: (u32 = 2^{1..=15}) or ("1B{1..=15}"),
+                )
+            )
         )
         /* (almost) infinite spatially-explicit scenario with (approximate) Gaussian distributed dispersal
          * each location (x, y) in the landscape has either habitat for exactly one individual,
