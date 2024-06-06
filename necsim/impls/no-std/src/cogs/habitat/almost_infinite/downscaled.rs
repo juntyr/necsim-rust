@@ -227,9 +227,7 @@ impl<'de> serde::Deserialize<'de> for Log2U16 {
             type Value = Log2U16;
 
             fn expecting(&self, fmt: &mut alloc::fmt::Formatter) -> alloc::fmt::Result {
-                fmt.write_str(
-                    "an integer in 2^{0; ...; 15} or its base-two scientific notation string",
-                )
+                fmt.write_str("an integer in 2^{0..=15} or its base-two scientific notation string")
             }
 
             fn visit_u64<E: serde::de::Error>(self, v: u64) -> Result<Self::Value, E> {

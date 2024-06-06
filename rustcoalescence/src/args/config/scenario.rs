@@ -18,9 +18,15 @@ pub enum Scenario {
     AlmostInfiniteNormalDispersal(rustcoalescence_scenarios::almost_infinite::normal::AlmostInfiniteNormalDispersalArguments),
     #[cfg(feature = "almost-infinite-clark2dt-dispersal-scenario")]
     AlmostInfiniteClark2DtDispersal(rustcoalescence_scenarios::almost_infinite::clark2dt::AlmostInfiniteClark2DtDispersalArguments),
-    #[cfg(feature = "almost-infinite-normal-dispersal-scenario")]
+    #[cfg(all(
+        feature = "almost-infinite-normal-dispersal-scenario",
+        feature = "almost-infinite-downscaled-scenario",
+    ))]
     AlmostInfiniteDownscaledNormalDispersal(rustcoalescence_scenarios::almost_infinite::downscaled::AlmostInfiniteDownscaledArguments<rustcoalescence_scenarios::almost_infinite::normal::AlmostInfiniteNormalDispersalScenario>),
-    #[cfg(feature = "almost-infinite-clark2dt-dispersal-scenario")]
+    #[cfg(all(
+        feature = "almost-infinite-clark2dt-dispersal-scenario",
+        feature = "almost-infinite-downscaled-scenario",
+    ))]
     AlmostInfiniteDownscaledClark2DtDispersal(rustcoalescence_scenarios::almost_infinite::downscaled::AlmostInfiniteDownscaledArguments<rustcoalescence_scenarios::almost_infinite::clark2dt::AlmostInfiniteClark2DtDispersalScenario>),
     #[cfg(feature = "wrapping-noise-scenario")]
     WrappingNoise(rustcoalescence_scenarios::wrapping_noise::WrappingNoiseArguments),
