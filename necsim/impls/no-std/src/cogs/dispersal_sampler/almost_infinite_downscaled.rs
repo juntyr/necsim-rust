@@ -128,14 +128,38 @@ impl<M: MathsCore, G: RngCore<M>, D: Clone + DispersalSampler<M, AlmostInfiniteH
         habitat: &AlmostInfiniteDownscaledHabitat<M>,
         rng: &mut G,
     ) -> Location {
-        let mut target_location = self.sample_dispersal_from_location(location, habitat, rng);
+        // // TODO: must be optimised
+        // let mut target_location = self.sample_dispersal_from_location(location,
+        // habitat, rng);
 
-        // For now, we just use rejection sampling here
-        while &target_location == location {
-            target_location = self.sample_dispersal_from_location(location, habitat, rng);
-        }
+        // // For now, we just use rejection sampling here
+        // while &target_location == location {
+        //     target_location = self.sample_dispersal_from_location(location, habitat,
+        // rng); }
 
-        target_location
+        // target_location
+
+        // very dirty nearest neighbour dispersal
+        let direction = rng.sample_index(core::num::NonZeroUsize::MIN.saturating_add(7));
+
+        // 0 1 2
+        // 7   3
+        // 6 5 4
+
+        let x = match direction {
+            0 | 6 | 7 => location.x().wrapping_sub(habitat.downscale_x() as u32),
+            1 | 5 => location.x(),
+            2..=4 => location.x().wrapping_add(habitat.downscale_x() as u32),
+            _ => unreachable!(),
+        };
+        let y = match direction {
+            0..=2 => location.y().wrapping_add(habitat.downscale_y() as u32),
+            3 | 7 => location.y(),
+            4..=6 => location.y().wrapping_sub(habitat.downscale_y() as u32),
+            _ => unreachable!(),
+        };
+
+        Location::new(x, y)
     }
 
     #[must_use]

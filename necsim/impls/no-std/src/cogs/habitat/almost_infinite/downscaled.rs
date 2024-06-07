@@ -25,44 +25,44 @@ pub struct AlmostInfiniteDownscaledHabitat<M: MathsCore> {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, TypeLayout)]
 #[repr(u16)]
 pub enum Log2U16 {
-    Shl0 = 1 << 0,
-    Shl1 = 1 << 1,
-    Shl2 = 1 << 2,
-    Shl3 = 1 << 3,
-    Shl4 = 1 << 4,
-    Shl5 = 1 << 5,
-    Shl6 = 1 << 6,
-    Shl7 = 1 << 7,
-    Shl8 = 1 << 8,
-    Shl9 = 1 << 9,
-    Shl10 = 1 << 10,
-    Shl11 = 1 << 11,
-    Shl12 = 1 << 12,
-    Shl13 = 1 << 13,
-    Shl14 = 1 << 14,
-    Shl15 = 1 << 15,
+    _1B0 = 1 << 0,
+    _1B1 = 1 << 1,
+    _1B2 = 1 << 2,
+    _1B3 = 1 << 3,
+    _1B4 = 1 << 4,
+    _1B5 = 1 << 5,
+    _1B6 = 1 << 6,
+    _1B7 = 1 << 7,
+    _1B8 = 1 << 8,
+    _1B9 = 1 << 9,
+    _1B10 = 1 << 10,
+    _1B11 = 1 << 11,
+    _1B12 = 1 << 12,
+    _1B13 = 1 << 13,
+    _1B14 = 1 << 14,
+    _1B15 = 1 << 15,
 }
 
 impl Log2U16 {
     #[must_use]
     pub const fn log2(self) -> u32 {
         match self {
-            Self::Shl0 => 0,
-            Self::Shl1 => 1,
-            Self::Shl2 => 2,
-            Self::Shl3 => 3,
-            Self::Shl4 => 4,
-            Self::Shl5 => 5,
-            Self::Shl6 => 6,
-            Self::Shl7 => 7,
-            Self::Shl8 => 8,
-            Self::Shl9 => 9,
-            Self::Shl10 => 10,
-            Self::Shl11 => 11,
-            Self::Shl12 => 12,
-            Self::Shl13 => 13,
-            Self::Shl14 => 14,
-            Self::Shl15 => 15,
+            Self::_1B0 => 0,
+            Self::_1B1 => 1,
+            Self::_1B2 => 2,
+            Self::_1B3 => 3,
+            Self::_1B4 => 4,
+            Self::_1B5 => 5,
+            Self::_1B6 => 6,
+            Self::_1B7 => 7,
+            Self::_1B8 => 8,
+            Self::_1B9 => 9,
+            Self::_1B10 => 10,
+            Self::_1B11 => 11,
+            Self::_1B12 => 12,
+            Self::_1B13 => 13,
+            Self::_1B14 => 14,
+            Self::_1B15 => 15,
         }
     }
 }
@@ -232,22 +232,22 @@ impl<'de> serde::Deserialize<'de> for Log2U16 {
 
             fn visit_u64<E: serde::de::Error>(self, v: u64) -> Result<Self::Value, E> {
                 match v {
-                    const { Log2U16::Shl0 as u64 } => Ok(Log2U16::Shl0),
-                    const { Log2U16::Shl1 as u64 } => Ok(Log2U16::Shl1),
-                    const { Log2U16::Shl2 as u64 } => Ok(Log2U16::Shl2),
-                    const { Log2U16::Shl3 as u64 } => Ok(Log2U16::Shl3),
-                    const { Log2U16::Shl4 as u64 } => Ok(Log2U16::Shl4),
-                    const { Log2U16::Shl5 as u64 } => Ok(Log2U16::Shl5),
-                    const { Log2U16::Shl6 as u64 } => Ok(Log2U16::Shl6),
-                    const { Log2U16::Shl7 as u64 } => Ok(Log2U16::Shl7),
-                    const { Log2U16::Shl8 as u64 } => Ok(Log2U16::Shl8),
-                    const { Log2U16::Shl9 as u64 } => Ok(Log2U16::Shl9),
-                    const { Log2U16::Shl10 as u64 } => Ok(Log2U16::Shl10),
-                    const { Log2U16::Shl11 as u64 } => Ok(Log2U16::Shl11),
-                    const { Log2U16::Shl12 as u64 } => Ok(Log2U16::Shl12),
-                    const { Log2U16::Shl13 as u64 } => Ok(Log2U16::Shl13),
-                    const { Log2U16::Shl14 as u64 } => Ok(Log2U16::Shl14),
-                    const { Log2U16::Shl15 as u64 } => Ok(Log2U16::Shl15),
+                    const { Log2U16::_1B0 as u64 } => Ok(Log2U16::_1B0),
+                    const { Log2U16::_1B1 as u64 } => Ok(Log2U16::_1B1),
+                    const { Log2U16::_1B2 as u64 } => Ok(Log2U16::_1B2),
+                    const { Log2U16::_1B3 as u64 } => Ok(Log2U16::_1B3),
+                    const { Log2U16::_1B4 as u64 } => Ok(Log2U16::_1B4),
+                    const { Log2U16::_1B5 as u64 } => Ok(Log2U16::_1B5),
+                    const { Log2U16::_1B6 as u64 } => Ok(Log2U16::_1B6),
+                    const { Log2U16::_1B7 as u64 } => Ok(Log2U16::_1B7),
+                    const { Log2U16::_1B8 as u64 } => Ok(Log2U16::_1B8),
+                    const { Log2U16::_1B9 as u64 } => Ok(Log2U16::_1B9),
+                    const { Log2U16::_1B10 as u64 } => Ok(Log2U16::_1B10),
+                    const { Log2U16::_1B11 as u64 } => Ok(Log2U16::_1B11),
+                    const { Log2U16::_1B12 as u64 } => Ok(Log2U16::_1B12),
+                    const { Log2U16::_1B13 as u64 } => Ok(Log2U16::_1B13),
+                    const { Log2U16::_1B14 as u64 } => Ok(Log2U16::_1B14),
+                    const { Log2U16::_1B15 as u64 } => Ok(Log2U16::_1B15),
                     v => Err(serde::de::Error::invalid_value(
                         serde::de::Unexpected::Unsigned(v),
                         &self,
@@ -271,22 +271,22 @@ impl<'de> serde::Deserialize<'de> for Log2U16 {
                 };
 
                 let Some(v) = [
-                    Log2U16::Shl0,
-                    Log2U16::Shl1,
-                    Log2U16::Shl2,
-                    Log2U16::Shl3,
-                    Log2U16::Shl4,
-                    Log2U16::Shl5,
-                    Log2U16::Shl6,
-                    Log2U16::Shl7,
-                    Log2U16::Shl8,
-                    Log2U16::Shl9,
-                    Log2U16::Shl10,
-                    Log2U16::Shl11,
-                    Log2U16::Shl12,
-                    Log2U16::Shl13,
-                    Log2U16::Shl14,
-                    Log2U16::Shl15,
+                    Log2U16::_1B0,
+                    Log2U16::_1B1,
+                    Log2U16::_1B2,
+                    Log2U16::_1B3,
+                    Log2U16::_1B4,
+                    Log2U16::_1B5,
+                    Log2U16::_1B6,
+                    Log2U16::_1B7,
+                    Log2U16::_1B8,
+                    Log2U16::_1B9,
+                    Log2U16::_1B10,
+                    Log2U16::_1B11,
+                    Log2U16::_1B12,
+                    Log2U16::_1B13,
+                    Log2U16::_1B14,
+                    Log2U16::_1B15,
                 ]
                 .get(exp) else {
                     return Err(serde::de::Error::invalid_value(
@@ -299,10 +299,6 @@ impl<'de> serde::Deserialize<'de> for Log2U16 {
             }
         }
 
-        if deserializer.is_human_readable() {
-            deserializer.deserialize_str(Log2U16Visitor)
-        } else {
-            deserializer.deserialize_u32(Log2U16Visitor)
-        }
+        deserializer.deserialize_any(Log2U16Visitor)
     }
 }
