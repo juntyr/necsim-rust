@@ -1,13 +1,18 @@
 use core::marker::PhantomData;
 
+use alloc::{sync::Arc, vec::Vec};
+use hashbrown::HashMap;
 use necsim_core::{
     cogs::{DispersalSampler, MathsCore, RngCore, RngSampler, SeparableDispersalSampler},
     landscape::Location,
 };
-use necsim_core_bond::ClosedUnitF64;
+use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
-use crate::cogs::habitat::almost_infinite::{
-    downscaled::AlmostInfiniteDownscaledHabitat, AlmostInfiniteHabitat,
+use crate::{
+    alias::packed::AliasMethodSamplerAtom,
+    cogs::habitat::almost_infinite::{
+        downscaled::AlmostInfiniteDownscaledHabitat, AlmostInfiniteHabitat,
+    },
 };
 
 #[allow(clippy::module_name_repetitions)]
@@ -22,6 +27,8 @@ pub struct AlmostInfiniteDownscaledDispersalSampler<
     #[cfg_attr(feature = "cuda", cuda(embed))]
     dispersal: D,
     self_dispersal: ClosedUnitF64,
+    #[cfg_attr(feature = "cuda", cuda(embed))]
+    non_self_dispersal: Arc<[AliasMethodSamplerAtom<(u32, u32)>]>,
     marker: PhantomData<(M, G)>,
 }
 
@@ -37,34 +44,51 @@ impl<M: MathsCore, G: RngCore<M>, D: Clone + DispersalSampler<M, AlmostInfiniteH
         let dispersal = Self {
             dispersal,
             // since the dispersal sampler doesn't need to know its self-dispersal
-            //  to perform non-separable dispersal, we can set it to zero here
+            //  and non-self-dispersal to perform non-separable dispersal, we can
+            //  set it to zero here
             self_dispersal: ClosedUnitF64::zero(),
+            non_self_dispersal: Arc::from(Vec::new()),
             marker: PhantomData::<(M, G)>,
         };
 
-        let mut rng = G::seed_from_u64(42);
-        let mut counter = 0_i32;
-
         let origin = Location::new(0, 0);
+        let mut rng = G::seed_from_u64(42);
+
+        let mut targets = HashMap::new();
 
         // TODO: optimise
         for _ in 0..N {
             let target = dispersal.sample_dispersal_from_location(&origin, habitat, &mut rng);
 
-            if target == origin {
-                counter += 1;
-            }
+            *targets.entry(target).or_insert(0_u32) += 1;
         }
 
-        let self_dispersal_emperical = f64::from(counter) / f64::from(N);
+        let self_dispersal_count = targets.get(&origin).copied().unwrap_or(0);
+        let self_dispersal_emperical = f64::from(self_dispersal_count) / f64::from(N);
         // Safety: the fraction of 0 >= counter <= N and N must be in [0.0; 1.0]
         // Note: we still clamp to account for rounding errors
         let self_dispersal_emperical =
             unsafe { ClosedUnitF64::new_unchecked(self_dispersal_emperical.clamp(0.0, 1.0)) };
 
+        let mut non_self_dispersal = targets
+            .into_iter()
+            .filter_map(|(target, count)| {
+                if target == origin {
+                    None
+                } else {
+                    Some(((target.x(), target.y()), NonNegativeF64::from(count)))
+                }
+            })
+            .collect::<Vec<_>>();
+        // sort to ensure reproducible construction of the non-self-dispersal alias
+        //  sampler
+        non_self_dispersal.sort_unstable();
+        let non_self_dispersal = AliasMethodSamplerAtom::create(&non_self_dispersal);
+
         Self {
             dispersal: dispersal.dispersal,
             self_dispersal: self_dispersal_emperical,
+            non_self_dispersal: Arc::from(non_self_dispersal),
             marker: PhantomData::<(M, G)>,
         }
     }
@@ -77,6 +101,7 @@ impl<M: MathsCore, G: RngCore<M>, D: Clone + DispersalSampler<M, AlmostInfiniteH
         Self {
             dispersal: self.dispersal.clone(),
             self_dispersal: self.self_dispersal,
+            non_self_dispersal: self.non_self_dispersal.clone(),
             marker: PhantomData::<(M, G)>,
         }
     }
@@ -125,41 +150,17 @@ impl<M: MathsCore, G: RngCore<M>, D: Clone + DispersalSampler<M, AlmostInfiniteH
     fn sample_non_self_dispersal_from_location(
         &self,
         location: &Location,
-        habitat: &AlmostInfiniteDownscaledHabitat<M>,
+        _habitat: &AlmostInfiniteDownscaledHabitat<M>,
         rng: &mut G,
     ) -> Location {
-        // // TODO: must be optimised
-        // let mut target_location = self.sample_dispersal_from_location(location,
-        // habitat, rng);
+        // TODO: improve accuracy
+        let (offset_x, offset_y) =
+            AliasMethodSamplerAtom::sample_event(&self.non_self_dispersal, rng);
 
-        // // For now, we just use rejection sampling here
-        // while &target_location == location {
-        //     target_location = self.sample_dispersal_from_location(location, habitat,
-        // rng); }
-
-        // target_location
-
-        // very dirty nearest neighbour dispersal
-        let direction = rng.sample_index(core::num::NonZeroUsize::MIN.saturating_add(7));
-
-        // 0 1 2
-        // 7   3
-        // 6 5 4
-
-        let x = match direction {
-            0 | 6 | 7 => location.x().wrapping_sub(habitat.downscale_x() as u32),
-            1 | 5 => location.x(),
-            2..=4 => location.x().wrapping_add(habitat.downscale_x() as u32),
-            _ => unreachable!(),
-        };
-        let y = match direction {
-            0..=2 => location.y().wrapping_add(habitat.downscale_y() as u32),
-            3 | 7 => location.y(),
-            4..=6 => location.y().wrapping_sub(habitat.downscale_y() as u32),
-            _ => unreachable!(),
-        };
-
-        Location::new(x, y)
+        Location::new(
+            location.x().wrapping_add(offset_x),
+            location.y().wrapping_add(offset_y),
+        )
     }
 
     #[must_use]
