@@ -118,14 +118,26 @@ impl<M: MathsCore, G: RngCore<M>, D: Clone + DispersalSampler<M, AlmostInfiniteH
             >= non_self_dispersal.non_self_dispersal_rejection_sampling_probability_threshold()
         {
             // if the non-self-dispersal probability is larger (or equal) than the
-            // threshold, use rejection sampling for non-self-dispersal
+            //  threshold, use rejection sampling for non-self-dispersal
             // if the threshold is 1.0, we still favour rejection sampling if the
-            // non-self-dispersal probability is also 1.0 if the threshold is
-            // 0.0, we always use rejection sampling
+            //  non-self-dispersal probability is also 1.0
+            // if the threshold is 0.0, we always use rejection sampling
+            log::info!(
+                "Rejection sampling is used for separate non-self-dispersal, which has a \
+                 probability of {}%",
+                self_dispersal_emperical.one_minus().get() * 100.0
+            );
+
             None
         } else {
             // if the non-self-dispersal probability is smaller than the threshold,
-            // precompute a discrete alias sampler for non-self-dispersal
+            //  precompute a discrete alias sampler for non-self-dispersal
+            log::info!(
+                "A precomputed alias sampler is used for separate non-self-dispersal, which has a \
+                 probability of {}%",
+                self_dispersal_emperical.one_minus().get() * 100.0
+            );
+
             let mut non_self_dispersal = targets
                 .into_iter()
                 .filter_map(|(target, count)| {

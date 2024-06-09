@@ -122,7 +122,8 @@ pub trait RngSampler<M: MathsCore>: RngCore<M> {
             clippy::cast_sign_loss
         )]
         let index =
-            M::floor(self.sample_uniform_closed_open().get() * (length.get() as f64)) as u32;
+            M::floor(self.sample_uniform_closed_open().get() * (f64::from(length.sub_one()) + 1.0))
+                as u32;
         // Safety in case of f64 rounding errors
         index.min(length.sub_one())
     }
@@ -139,7 +140,8 @@ pub trait RngSampler<M: MathsCore>: RngCore<M> {
             clippy::cast_sign_loss
         )]
         let index =
-            M::floor(self.sample_uniform_closed_open().get() * (length.get() as f64)) as u64;
+            M::floor(self.sample_uniform_closed_open().get() * ((length.sub_one() as f64) + 1.0))
+                as u64;
         // Safety in case of f64 rounding errors
         index.min(length.sub_one())
     }
