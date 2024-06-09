@@ -132,7 +132,7 @@ impl<M: MathsCore, G: RngCore<M>> SeparableDispersalSampler<M, AlmostInfiniteHab
     }
 }
 
-#[allow(clippy::doc_markdown)]
+#[allow(clippy::doc_markdown, clippy::module_inception)]
 /// Clark2Dt dispersal:
 ///
 /// Clark, J.S., Silman, M., Kern, R., Macklin, E. and HilleRisLambers, J.

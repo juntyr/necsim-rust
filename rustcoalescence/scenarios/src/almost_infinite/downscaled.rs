@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, num::NonZeroU32};
 
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +8,9 @@ use necsim_partitioning_core::partition::Partition;
 
 use necsim_impls_no_std::{
     cogs::{
-        dispersal_sampler::almost_infinite_downscaled::AlmostInfiniteDownscaledDispersalSampler,
+        dispersal_sampler::almost_infinite::downscaled::{
+            AlmostInfiniteDownscaledDispersalSampler, NonSelfDispersal,
+        },
         habitat::almost_infinite::{
             downscaled::{AlmostInfiniteDownscaledHabitat, Log2U16},
             AlmostInfiniteHabitat,
@@ -36,6 +38,18 @@ pub struct AlmostInfiniteDownscaledScenario<
 pub struct Downscale {
     pub x: Log2U16,
     pub y: Log2U16,
+    #[serde(default = "default_downscale_samples")]
+    pub samples: NonZeroU32,
+    #[serde(default = "default_non_self_dispersal")]
+    pub non_self_dispersal: NonSelfDispersal,
+}
+
+fn default_downscale_samples() -> NonZeroU32 {
+    (NonZeroU32::MIN.saturating_add(1)).saturating_pow(22)
+}
+
+fn default_non_self_dispersal() -> NonSelfDispersal {
+    NonSelfDispersal::AccurateRejectionSampling
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -107,8 +121,12 @@ impl<
             args.downscale.x,
             args.downscale.y,
         );
-        let dispersal_sampler =
-            AlmostInfiniteDownscaledDispersalSampler::new(&habitat, dispersal_sampler);
+        let dispersal_sampler = AlmostInfiniteDownscaledDispersalSampler::new(
+            &habitat,
+            dispersal_sampler,
+            args.downscale.samples,
+            args.downscale.non_self_dispersal,
+        );
 
         Ok(ScenarioCogs {
             habitat,

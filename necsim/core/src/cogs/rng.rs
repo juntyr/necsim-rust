@@ -1,14 +1,15 @@
 use core::{
     convert::AsMut,
     default::Default,
-    num::{NonZeroU128, NonZeroU32, NonZeroU64, NonZeroUsize},
+    num::{NonZeroU128, NonZeroUsize},
     ptr::copy_nonoverlapping,
 };
 
 use serde::{de::DeserializeOwned, Serialize};
 
 use necsim_core_bond::{
-    ClosedOpenUnitF64, ClosedUnitF64, NonNegativeF64, OpenClosedUnitF64, PositiveF64,
+    ClosedOpenUnitF64, ClosedUnitF64, NonNegativeF64, OffByOneU32, OffByOneU64, OpenClosedUnitF64,
+    PositiveF64,
 };
 
 use crate::{
@@ -111,8 +112,8 @@ pub trait RngSampler<M: MathsCore>: RngCore<M> {
 
     #[must_use]
     #[inline]
-    #[debug_ensures(ret < length.get(), "samples U(0, length - 1)")]
-    fn sample_index_u32(&mut self, length: NonZeroU32) -> u32 {
+    #[debug_ensures(u64::from(ret) < length.get(), "samples U(0, length - 1)")]
+    fn sample_index_u32(&mut self, length: OffByOneU32) -> u32 {
         // attributes on expressions are experimental
         // see https://github.com/rust-lang/rust/issues/15701
         #[allow(
@@ -121,15 +122,15 @@ pub trait RngSampler<M: MathsCore>: RngCore<M> {
             clippy::cast_sign_loss
         )]
         let index =
-            M::floor(self.sample_uniform_closed_open().get() * f64::from(length.get())) as u32;
+            M::floor(self.sample_uniform_closed_open().get() * (length.get() as f64)) as u32;
         // Safety in case of f64 rounding errors
-        index.min(length.get() - 1)
+        index.min(length.sub_one())
     }
 
     #[must_use]
     #[inline]
-    #[debug_ensures(ret < length.get(), "samples U(0, length - 1)")]
-    fn sample_index_u64(&mut self, length: NonZeroU64) -> u64 {
+    #[debug_ensures(u128::from(ret) < length.get(), "samples U(0, length - 1)")]
+    fn sample_index_u64(&mut self, length: OffByOneU64) -> u64 {
         // attributes on expressions are experimental
         // see https://github.com/rust-lang/rust/issues/15701
         #[allow(
@@ -140,7 +141,7 @@ pub trait RngSampler<M: MathsCore>: RngCore<M> {
         let index =
             M::floor(self.sample_uniform_closed_open().get() * (length.get() as f64)) as u64;
         // Safety in case of f64 rounding errors
-        index.min(length.get() - 1)
+        index.min(length.sub_one())
     }
 
     #[must_use]

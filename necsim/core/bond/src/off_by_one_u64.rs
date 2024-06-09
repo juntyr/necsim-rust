@@ -64,6 +64,11 @@ impl OffByOneU64 {
     }
 
     #[must_use]
+    pub const fn sub_one(self) -> u64 {
+        self.0
+    }
+
+    #[must_use]
     pub const fn add_incl(self, other: u64) -> u64 {
         other.wrapping_add(self.0)
     }

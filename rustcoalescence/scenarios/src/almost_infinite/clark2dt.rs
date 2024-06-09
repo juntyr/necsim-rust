@@ -8,7 +8,7 @@ use necsim_partitioning_core::partition::Partition;
 
 use necsim_impls_no_std::{
     cogs::{
-        dispersal_sampler::almost_infinite_clark2dt::AlmostInfiniteClark2DtDispersalSampler,
+        dispersal_sampler::almost_infinite::clark2dt::AlmostInfiniteClark2DtDispersalSampler,
         habitat::almost_infinite::AlmostInfiniteHabitat,
         lineage_store::coherent::globally::singleton_demes::SingletonDemesLineageStore,
         origin_sampler::{

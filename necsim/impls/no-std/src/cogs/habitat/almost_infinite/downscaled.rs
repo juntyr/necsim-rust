@@ -1,5 +1,3 @@
-use core::num::NonZeroU32;
-
 use necsim_core::{
     cogs::{Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
     landscape::{IndexedLocation, LandscapeExtent, Location},
@@ -23,7 +21,7 @@ pub struct AlmostInfiniteDownscaledHabitat<M: MathsCore> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, TypeLayout)]
-#[repr(u16)]
+#[repr(u32)]
 pub enum Log2U16 {
     _1B0 = 1 << 0,
     _1B1 = 1 << 1,
@@ -41,6 +39,7 @@ pub enum Log2U16 {
     _1B13 = 1 << 13,
     _1B14 = 1 << 14,
     _1B15 = 1 << 15,
+    _1B16 = 1 << 16,
 }
 
 impl Log2U16 {
@@ -63,6 +62,7 @@ impl Log2U16 {
             Self::_1B13 => 13,
             Self::_1B14 => 14,
             Self::_1B15 => 15,
+            Self::_1B16 => 16,
         }
     }
 }
@@ -107,9 +107,9 @@ impl<M: MathsCore> AlmostInfiniteDownscaledHabitat<M> {
     }
 
     #[must_use]
-    pub fn downscale_area(&self) -> NonZeroU32 {
-        // 2^{0..15} * 2^{0..15} >=1 and < 2^32
-        unsafe { NonZeroU32::new_unchecked((self.downscale_x as u32) * (self.downscale_y as u32)) }
+    pub fn downscale_area(&self) -> OffByOneU32 {
+        // 2^{0..16} * 2^{0..16} >=1 and < 2^32
+        unsafe { OffByOneU32::new_unchecked((self.downscale_x as u64) * (self.downscale_y as u64)) }
     }
 
     #[must_use]
@@ -227,7 +227,7 @@ impl<'de> serde::Deserialize<'de> for Log2U16 {
             type Value = Log2U16;
 
             fn expecting(&self, fmt: &mut alloc::fmt::Formatter) -> alloc::fmt::Result {
-                fmt.write_str("an integer in 2^{0..=15} or its base-two scientific notation string")
+                fmt.write_str("an integer in 2^{0..=16} or its base-two scientific notation string")
             }
 
             fn visit_u64<E: serde::de::Error>(self, v: u64) -> Result<Self::Value, E> {
@@ -248,6 +248,7 @@ impl<'de> serde::Deserialize<'de> for Log2U16 {
                     const { Log2U16::_1B13 as u64 } => Ok(Log2U16::_1B13),
                     const { Log2U16::_1B14 as u64 } => Ok(Log2U16::_1B14),
                     const { Log2U16::_1B15 as u64 } => Ok(Log2U16::_1B15),
+                    const { Log2U16::_1B16 as u64 } => Ok(Log2U16::_1B16),
                     v => Err(serde::de::Error::invalid_value(
                         serde::de::Unexpected::Unsigned(v),
                         &self,
@@ -287,6 +288,7 @@ impl<'de> serde::Deserialize<'de> for Log2U16 {
                     Log2U16::_1B13,
                     Log2U16::_1B14,
                     Log2U16::_1B15,
+                    Log2U16::_1B16,
                 ]
                 .get(exp) else {
                     return Err(serde::de::Error::invalid_value(

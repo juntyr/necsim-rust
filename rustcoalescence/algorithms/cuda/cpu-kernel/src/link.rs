@@ -289,7 +289,7 @@ link_kernel!(
     necsim_impls_no_std::cogs::habitat::almost_infinite::AlmostInfiniteHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore
     >,
-    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler<
+    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite::normal::AlmostInfiniteNormalDispersalSampler<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
         necsim_impls_cuda::cogs::rng::CudaRng<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
@@ -307,7 +307,7 @@ link_kernel!(
     necsim_impls_no_std::cogs::habitat::almost_infinite::AlmostInfiniteHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore
     >,
-    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite_clark2dt::AlmostInfiniteClark2DtDispersalSampler<
+    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite::clark2dt::AlmostInfiniteClark2DtDispersalSampler<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
         necsim_impls_cuda::cogs::rng::CudaRng<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
@@ -328,7 +328,7 @@ link_kernel!(
     necsim_impls_no_std::cogs::habitat::almost_infinite::downscaled::AlmostInfiniteDownscaledHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore
     >,
-    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite_downscaled::AlmostInfiniteDownscaledDispersalSampler<
+    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite::downscaled::AlmostInfiniteDownscaledDispersalSampler<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
         necsim_impls_cuda::cogs::rng::CudaRng<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
@@ -336,7 +336,7 @@ link_kernel!(
                 necsim_impls_cuda::cogs::maths::NvptxMathsCore
             >,
         >,
-        necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler<
+        necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite::normal::AlmostInfiniteNormalDispersalSampler<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
             necsim_impls_cuda::cogs::rng::CudaRng<
                 necsim_impls_cuda::cogs::maths::NvptxMathsCore,
@@ -358,7 +358,7 @@ link_kernel!(
     necsim_impls_no_std::cogs::habitat::almost_infinite::downscaled::AlmostInfiniteDownscaledHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore
     >,
-    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite_downscaled::AlmostInfiniteDownscaledDispersalSampler<
+    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite::downscaled::AlmostInfiniteDownscaledDispersalSampler<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
         necsim_impls_cuda::cogs::rng::CudaRng<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
@@ -366,7 +366,7 @@ link_kernel!(
                 necsim_impls_cuda::cogs::maths::NvptxMathsCore
             >,
         >,
-        necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite_clark2dt::AlmostInfiniteClark2DtDispersalSampler<
+        necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite::clark2dt::AlmostInfiniteClark2DtDispersalSampler<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
             necsim_impls_cuda::cogs::rng::CudaRng<
                 necsim_impls_cuda::cogs::maths::NvptxMathsCore,
