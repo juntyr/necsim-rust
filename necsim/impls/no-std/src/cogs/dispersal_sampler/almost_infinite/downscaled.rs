@@ -124,7 +124,7 @@ impl<M: MathsCore, G: RngCore<M>, D: Clone + DispersalSampler<M, AlmostInfiniteH
             // if the threshold is 0.0, we always use rejection sampling
             log::info!(
                 "Rejection sampling is used for separate non-self-dispersal, which has a \
-                 probability of {}%",
+                 probability of {:.3}%",
                 self_dispersal_emperical.one_minus().get() * 100.0
             );
 
@@ -134,7 +134,7 @@ impl<M: MathsCore, G: RngCore<M>, D: Clone + DispersalSampler<M, AlmostInfiniteH
             //  precompute a discrete alias sampler for non-self-dispersal
             log::info!(
                 "A precomputed alias sampler is used for separate non-self-dispersal, which has a \
-                 probability of {}%",
+                 probability of {:.3}%",
                 self_dispersal_emperical.one_minus().get() * 100.0
             );
 
