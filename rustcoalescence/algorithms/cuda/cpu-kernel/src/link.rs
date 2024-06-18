@@ -289,7 +289,7 @@ link_kernel!(
     necsim_impls_no_std::cogs::habitat::almost_infinite::AlmostInfiniteHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore
     >,
-    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler<
+    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite::normal::AlmostInfiniteNormalDispersalSampler<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
         necsim_impls_cuda::cogs::rng::CudaRng<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
@@ -307,12 +307,72 @@ link_kernel!(
     necsim_impls_no_std::cogs::habitat::almost_infinite::AlmostInfiniteHabitat<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore
     >,
-    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite_clark2dt::AlmostInfiniteClark2DtDispersalSampler<
+    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite::clark2dt::AlmostInfiniteClark2DtDispersalSampler<
         necsim_impls_cuda::cogs::maths::NvptxMathsCore,
         necsim_impls_cuda::cogs::rng::CudaRng<
             necsim_impls_cuda::cogs::maths::NvptxMathsCore,
             necsim_impls_no_std::cogs::rng::wyhash::WyHash<
                 necsim_impls_cuda::cogs::maths::NvptxMathsCore
+            >,
+        >,
+    >,
+    necsim_impls_no_std::cogs::turnover_rate::uniform::UniformTurnoverRate,
+    necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
+);
+
+#[cfg(all(
+    feature = "almost-infinite-normal-dispersal-scenario",
+    feature = "almost-infinite-downscaled-scenario",
+))]
+link_kernel!(
+    necsim_impls_no_std::cogs::habitat::almost_infinite::downscaled::AlmostInfiniteDownscaledHabitat<
+        necsim_impls_cuda::cogs::maths::NvptxMathsCore
+    >,
+    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite::downscaled::AlmostInfiniteDownscaledDispersalSampler<
+        necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+        necsim_impls_cuda::cogs::rng::CudaRng<
+            necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+            necsim_impls_no_std::cogs::rng::wyhash::WyHash<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore
+            >,
+        >,
+        necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite::normal::AlmostInfiniteNormalDispersalSampler<
+            necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+            necsim_impls_cuda::cogs::rng::CudaRng<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                necsim_impls_no_std::cogs::rng::wyhash::WyHash<
+                    necsim_impls_cuda::cogs::maths::NvptxMathsCore
+                >,
+            >,
+        >,
+    >,
+    necsim_impls_no_std::cogs::turnover_rate::uniform::UniformTurnoverRate,
+    necsim_impls_no_std::cogs::speciation_probability::uniform::UniformSpeciationProbability
+);
+
+#[cfg(all(
+    feature = "almost-infinite-clark2dt-dispersal-scenario",
+    feature = "almost-infinite-downscaled-scenario",
+))]
+link_kernel!(
+    necsim_impls_no_std::cogs::habitat::almost_infinite::downscaled::AlmostInfiniteDownscaledHabitat<
+        necsim_impls_cuda::cogs::maths::NvptxMathsCore
+    >,
+    necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite::downscaled::AlmostInfiniteDownscaledDispersalSampler<
+        necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+        necsim_impls_cuda::cogs::rng::CudaRng<
+            necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+            necsim_impls_no_std::cogs::rng::wyhash::WyHash<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore
+            >,
+        >,
+        necsim_impls_no_std::cogs::dispersal_sampler::almost_infinite::clark2dt::AlmostInfiniteClark2DtDispersalSampler<
+            necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+            necsim_impls_cuda::cogs::rng::CudaRng<
+                necsim_impls_cuda::cogs::maths::NvptxMathsCore,
+                necsim_impls_no_std::cogs::rng::wyhash::WyHash<
+                    necsim_impls_cuda::cogs::maths::NvptxMathsCore
+                >,
             >,
         >,
     >,

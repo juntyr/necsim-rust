@@ -67,8 +67,8 @@ impl LineageFileSaver {
     ///
     /// Fails if a the lineages could not be written to the file at `path`
     pub fn write<'a, I: Iterator<Item = &'a Lineage>>(mut self, lineages: I) -> anyhow::Result<()> {
-        let mut serializer =
-            bincode::Serializer::new(BufWriter::new(&mut self.file), bincode::options());
+        let mut serializer = rmp_serde::Serializer::new(BufWriter::new(&mut self.file));
+        // bincode::Serializer::new(BufWriter::new(&mut self.file), bincode::options());
 
         serializer.collect_seq(lineages)?;
 

@@ -1,4 +1,8 @@
-use core::{convert::TryFrom, fmt, num::NonZeroU64};
+use core::{
+    convert::TryFrom,
+    fmt,
+    num::{NonZeroU32, NonZeroU64},
+};
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -57,6 +61,11 @@ impl OffByOneU32 {
     }
 
     #[must_use]
+    pub const fn sub_one(self) -> u32 {
+        self.0
+    }
+
+    #[must_use]
     pub const fn add_incl(self, other: u32) -> u32 {
         other.wrapping_add(self.0)
     }
@@ -79,6 +88,12 @@ impl OffByOneU32 {
     #[must_use]
     pub const fn inv(self) -> u32 {
         u32::MAX - self.0
+    }
+}
+
+impl From<NonZeroU32> for OffByOneU32 {
+    fn from(value: NonZeroU32) -> Self {
+        Self(value.get() - 1)
     }
 }
 

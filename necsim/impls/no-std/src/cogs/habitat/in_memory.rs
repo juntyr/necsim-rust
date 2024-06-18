@@ -110,7 +110,7 @@ impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for InMemoryH
     fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
         use necsim_core::cogs::RngSampler;
 
-        let indexed_location_index = rng.sample_index_u64(self.get_total_habitat().into());
+        let indexed_location_index = rng.sample_index_u64(self.get_total_habitat());
 
         let location_index = match self.u64_injection.binary_search(&indexed_location_index) {
             Ok(index) => index,

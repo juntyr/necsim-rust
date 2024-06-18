@@ -9,10 +9,8 @@ use necsim_core_bond::OffByOneU32;
 
 use crate::cogs::{
     lineage_store::coherent::globally::singleton_demes::SingletonDemesHabitat,
-    origin_sampler::pre_sampler::OriginPreSampler,
+    origin_sampler::{pre_sampler::OriginPreSampler, TrustedOriginSampler, UntrustedOriginSampler},
 };
-
-use super::{TrustedOriginSampler, UntrustedOriginSampler};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct SingletonDemesCircleOriginSampler<

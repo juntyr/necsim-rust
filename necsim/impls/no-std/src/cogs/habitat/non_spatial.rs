@@ -1,7 +1,4 @@
-use core::{
-    marker::PhantomData,
-    num::{NonZeroU32, NonZeroU64},
-};
+use core::{marker::PhantomData, num::NonZeroU32};
 
 use necsim_core::{
     cogs::{Habitat, MathsCore, RngCore, UniformlySampleableHabitat},
@@ -121,12 +118,7 @@ impl<M: MathsCore, G: RngCore<M>> UniformlySampleableHabitat<M, G> for NonSpatia
     fn sample_habitable_indexed_location(&self, rng: &mut G) -> IndexedLocation {
         use necsim_core::cogs::RngSampler;
 
-        let habitat_index_max =
-            self.extent.width().get() * self.extent.height().get() * u64::from(self.deme.get());
-
-        // Safety: habitat width, height, and deme are all > 0
-        let mut dispersal_target_index =
-            rng.sample_index_u64(unsafe { NonZeroU64::new_unchecked(habitat_index_max) });
+        let mut dispersal_target_index = rng.sample_index_u64(self.get_total_habitat());
         #[allow(clippy::cast_possible_truncation)]
         let index = (dispersal_target_index % u64::from(self.deme.get())) as u32;
         dispersal_target_index /= u64::from(self.deme.get());

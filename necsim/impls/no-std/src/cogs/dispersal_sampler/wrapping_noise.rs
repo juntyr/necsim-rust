@@ -5,7 +5,7 @@ use necsim_core::{
 use necsim_core_bond::{ClosedUnitF64, NonNegativeF64};
 
 use crate::cogs::{
-    dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
+    dispersal_sampler::almost_infinite::normal::AlmostInfiniteNormalDispersalSampler,
     habitat::wrapping_noise::WrappingNoiseHabitat,
 };
 

@@ -8,7 +8,7 @@ use necsim_partitioning_core::partition::Partition;
 
 use necsim_impls_no_std::{
     cogs::{
-        dispersal_sampler::almost_infinite_normal::AlmostInfiniteNormalDispersalSampler,
+        dispersal_sampler::almost_infinite::normal::AlmostInfiniteNormalDispersalSampler,
         habitat::almost_infinite::AlmostInfiniteHabitat,
         lineage_store::coherent::globally::singleton_demes::SingletonDemesLineageStore,
         origin_sampler::{
@@ -25,6 +25,7 @@ use crate::{Scenario, ScenarioCogs, ScenarioParameters};
 use super::Sample;
 
 #[allow(clippy::module_name_repetitions, clippy::empty_enum)]
+#[derive(Debug)]
 pub enum AlmostInfiniteNormalDispersalScenario {}
 
 #[derive(Debug, Serialize, Deserialize)]
